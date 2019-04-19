@@ -270,7 +270,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var isHighlighted: Bool = false
     
     override var canBeSelected: Bool {
-        if self.selectableControlNode != nil {
+        if self.selectableControlNode != nil || self.item?.editing == true {
             return false
         } else {
             return super.canBeSelected
@@ -511,7 +511,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         guard let item = self.item, item.editing else {
             return
         }
-        item.interaction.togglePeerSelected(item.index.messageIndex.id.peerId)
+        if case .peer = item.content {
+            item.interaction.togglePeerSelected(item.index.messageIndex.id.peerId)
+        }
     }
     
     func asyncLayout() -> (_ item: ChatListItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
@@ -620,7 +622,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var reorderInset: CGFloat = 0.0
             if item.editing {
                 let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, item.selected, true)
-                if !isAd {
+                if !isAd && !isPeerGroup {
                     selectableControlSizeAndApply = sizeAndApply
                 }
                 editingOffset = sizeAndApply.0
@@ -1046,10 +1048,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let _ = currentBadgeBackgroundImage {
                         let previousBadgeFrame = strongSelf.badgeNode.frame
                         let badgeFrame = CGRect(x: contentRect.maxX - badgeLayout.width, y: contentRect.maxY - badgeLayout.height - 2.0, width: badgeLayout.width, height: badgeLayout.height)
-                        strongSelf.badgeNode.frame = badgeFrame
                         
-                        if animateContent && !previousBadgeFrame.width.isZero && !badgeFrame.width.isZero && badgeFrame != previousBadgeFrame {
-                            strongSelf.badgeNode.layer.animateFrame(from: previousBadgeFrame, to: badgeFrame, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
+                        if !previousBadgeFrame.width.isZero && !badgeFrame.width.isZero && badgeFrame != previousBadgeFrame {
+                            if animateContent {
+                                strongSelf.badgeNode.frame = badgeFrame
+                                strongSelf.badgeNode.layer.animateFrame(from: previousBadgeFrame, to: badgeFrame, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
+                            } else {
+                                transition.updateFrame(node: strongSelf.badgeNode, frame: badgeFrame)
+                            }
+                        } else {
+                            strongSelf.badgeNode.frame = badgeFrame
                         }
                     }
                     
