@@ -61,6 +61,21 @@ public extension Message {
         }
         return false
     }
+    
+    var isScam: Bool {
+        if let author = self.author, author.isScam {
+            return true
+        }
+        if let forwardAuthor = self.forwardInfo?.author, forwardAuthor.isScam {
+            return true
+        }
+        for attribute in self.attributes {
+            if let attribute = attribute as? InlineBotMessageAttribute, let peerId = attribute.peerId, let bot = self.peers[peerId] as? TelegramUser, bot.isScam {
+               return true
+            }
+        }
+        return false
+    }
 }
 
 func messagesIdsGroupedByPeerId(_ ids: Set<MessageId>) -> [PeerId: [MessageId]] {

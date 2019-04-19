@@ -142,6 +142,7 @@ public struct TelegramChannelFlags: OptionSet {
     
     public static let isVerified = TelegramChannelFlags(rawValue: 1 << 0)
     public static let isCreator = TelegramChannelFlags(rawValue: 1 << 1)
+    public static let isScam = TelegramChannelFlags(rawValue: 1 << 2)
 }
 
 public final class TelegramChannel: Peer {
