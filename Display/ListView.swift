@@ -130,6 +130,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private final let scroller: ListViewScroller
     private final var visibleSize: CGSize = CGSize()
     public private(set) final var insets = UIEdgeInsets()
+    public final var visualInsets: UIEdgeInsets?
     public private(set) final var headerInsets = UIEdgeInsets()
     public private(set) final var scrollIndicatorInsets = UIEdgeInsets()
     private final var ensureTopInsetForOverlayHighlightedItems: CGFloat?
@@ -2069,18 +2070,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         
-        /*if true {
-            print("----------")
-            for itemNode in self.itemNodes {
-                var anim = ""
-                if let animation = itemNode.animationForKey("apparentHeight") {
-                    anim = "\(animation.from)->\(animation.to)"
-                }
-                print("\(itemNode.index) \(itemNode.apparentFrame.height) \(anim)")
-            }
-            print("----------")
-        }*/
-        
         let timestamp = CACurrentMediaTime()
         
         let listInsets = updateSizeAndInsets?.insets ?? self.insets
@@ -2429,7 +2418,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.visibleSize = updateSizeAndInsets.size
                 
                 var offsetFix: CGFloat
-                if self.isTracking || scrollToItem != nil {
+                if self.isTracking {
                     offsetFix = 0.0
                 } else if self.snapToBottomInsetUntilFirstInteraction {
                     offsetFix = -updateSizeAndInsets.insets.bottom + self.insets.bottom
@@ -3446,10 +3435,22 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             let updatedApparentHeight = itemNode.apparentHeight
             let apparentHeightDelta = updatedApparentHeight - previousApparentHeight
             if abs(apparentHeightDelta) > CGFloat.ulpOfOne {
-                if itemNode.apparentFrame.maxY < self.insets.top + CGFloat.ulpOfOne {
+                let visualInsets = self.visualInsets ?? self.insets
+                
+                if itemNode.apparentFrame.maxY <= visualInsets.top {
                     offsetRanges.offset(IndexRange(first: 0, last: index), offset: -apparentHeightDelta)
                 } else {
-                    offsetRanges.offset(IndexRange(first: index + 1, last: Int.max), offset: apparentHeightDelta)
+                    var offsetDelta = apparentHeightDelta
+                    if offsetDelta < 0.0 {
+                        let maxDelta = visualInsets.top - itemNode.apparentFrame.maxY
+                        if maxDelta > offsetDelta {
+                            let remainingOffset = maxDelta - offsetDelta
+                            offsetRanges.offset(IndexRange(first: 0, last: index), offset: remainingOffset)
+                            offsetDelta = maxDelta
+                        }
+                    }
+                    
+                    offsetRanges.offset(IndexRange(first: index + 1, last: Int.max), offset: offsetDelta)
                 }
                 
                 if let accessoryItemNode = itemNode.accessoryItemNode {

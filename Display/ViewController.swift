@@ -174,6 +174,18 @@ open class ViewControllerPresentationArguments {
         }
     }
     
+    open var visualNavigationInsetHeight: CGFloat {
+        if let navigationBar = self.navigationBar {
+            var height = navigationBar.frame.maxY
+            if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode {
+                height += contentNode.height
+            }
+            return height
+        } else {
+            return 0.0
+        }
+    }
+    
     private let _ready = Promise<Bool>(true)
     open var ready: Promise<Bool> {
         return self._ready
@@ -467,7 +479,7 @@ open class ViewControllerPresentationArguments {
         return traceViewVisibility(view: self.view, rect: self.view.bounds)
     }
     
-    public func setToolbar(_ toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
+    open func setToolbar(_ toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
         if self.toolbar != toolbar {
             self.toolbar = toolbar
             if let parent = self.parent as? TabBarController {

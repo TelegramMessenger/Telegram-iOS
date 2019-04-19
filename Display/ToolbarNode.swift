@@ -1,8 +1,9 @@
 import Foundation
 import AsyncDisplayKit
 
-final class ToolbarNode: ASDisplayNode {
+public final class ToolbarNode: ASDisplayNode {
     private var theme: TabBarControllerTheme
+    private let displaySeparator: Bool
     private let left: () -> Void
     private let right: () -> Void
     
@@ -12,8 +13,9 @@ final class ToolbarNode: ASDisplayNode {
     private let rightTitle: ImmediateTextNode
     private let rightButton: HighlightableButtonNode
     
-    init(theme: TabBarControllerTheme, left: @escaping () -> Void, right: @escaping () -> Void) {
+    public init(theme: TabBarControllerTheme, displaySeparator: Bool = false, left: @escaping () -> Void, right: @escaping () -> Void) {
         self.theme = theme
+        self.displaySeparator = displaySeparator
         self.left = left
         self.right = right
         
@@ -33,6 +35,9 @@ final class ToolbarNode: ASDisplayNode {
         self.addSubnode(self.leftButton)
         self.addSubnode(self.rightTitle)
         self.addSubnode(self.rightButton)
+        if self.displaySeparator {
+            self.addSubnode(self.separatorNode)
+        }
         
         self.updateTheme(theme)
         
@@ -62,12 +67,12 @@ final class ToolbarNode: ASDisplayNode {
         }
     }
     
-    func updateTheme(_ theme: TabBarControllerTheme) {
+    public func updateTheme(_ theme: TabBarControllerTheme) {
         self.separatorNode.backgroundColor = theme.tabBarSeparatorColor
         self.backgroundColor = theme.tabBarBackgroundColor
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, toolbar: Toolbar, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, toolbar: Toolbar, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel)))
         
         let sideInset: CGFloat = 16.0
