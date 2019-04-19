@@ -4,10 +4,12 @@ import Postbox
 
 private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case voipDerivedState = 16
+    case chatArchiveSettings = 17
 }
 
 public struct ApplicationSpecificPreferencesKeys {
     public static let voipDerivedState = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.voipDerivedState.rawValue)
+    public static let chatArchiveSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.chatArchiveSettings.rawValue)
 }
 
 private enum ApplicationSpecificSharedDataKeyValues: Int32 {

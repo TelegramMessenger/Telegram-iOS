@@ -28,9 +28,13 @@ final class ChatListControllerNode: ASDisplayNode {
     var navigationBar: NavigationBar?
     weak var controller: ChatListController?
     
+    var toolbar: Toolbar?
+    private var toolbarNode: ToolbarNode?
+    var toolbarActionSelected: ((Bool) -> Void)?
+    
     private(set) var searchDisplayController: SearchDisplayController?
     
-    private var containerLayout: (ContainerViewLayout, CGFloat)?
+    private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((Peer, Bool) -> Void)?
@@ -69,8 +73,8 @@ final class ChatListControllerNode: ASDisplayNode {
                         let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings)
                         strongSelf.chatListEmptyNode = chatListEmptyNode
                         strongSelf.insertSubnode(chatListEmptyNode, belowSubnode: strongSelf.chatListNode)
-                        if let (layout, navigationHeight) = strongSelf.containerLayout {
-                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                        if let (layout, navigationHeight, visualNavigationHeight) = strongSelf.containerLayout {
+                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, transition: .immediate)
                         }
                     }
                 default:
@@ -87,8 +91,8 @@ final class ChatListControllerNode: ASDisplayNode {
                         let chatListEmptyIndicator = ActivityIndicator(type: .custom(strongSelf.presentationData.theme.list.itemAccentColor, 22.0, 1.0, false))
                         strongSelf.chatListEmptyIndicator = chatListEmptyIndicator
                         strongSelf.insertSubnode(chatListEmptyIndicator, belowSubnode: strongSelf.chatListNode)
-                        if let (layout, navigationHeight) = strongSelf.containerLayout {
-                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                        if let (layout, navigationHeight, visualNavigationHeight) = strongSelf.containerLayout {
+                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, transition: .immediate)
                         }
                     }
                 default:
@@ -114,10 +118,14 @@ final class ChatListControllerNode: ASDisplayNode {
         self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
         self.searchDisplayController?.updatePresentationData(presentationData)
         self.chatListEmptyNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        
+        if let toolbarNode = self.toolbarNode {
+            toolbarNode.updateTheme(TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
+        }
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.containerLayout = (layout, navigationBarHeight)
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.containerLayout = (layout, navigationBarHeight, visualNavigationHeight)
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
@@ -152,6 +160,7 @@ final class ChatListControllerNode: ASDisplayNode {
         
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve)
         
+        self.chatListNode.visualInsets = UIEdgeInsets(top: visualNavigationHeight, left: 0.0, bottom: 0.0, right: 0.0)
         self.chatListNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         
         if let chatListEmptyNode = self.chatListEmptyNode {
@@ -168,10 +177,49 @@ final class ChatListControllerNode: ASDisplayNode {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
+        
+        if let toolbar = self.toolbar {
+            var tabBarHeight: CGFloat
+            var options: ContainerViewLayoutInsetOptions = []
+            if layout.metrics.widthClass == .regular {
+                options.insert(.input)
+            }
+            let bottomInset: CGFloat = layout.insets(options: options).bottom
+            if !layout.safeInsets.left.isZero {
+                tabBarHeight = 34.0 + bottomInset
+            } else {
+                tabBarHeight = 49.0 + bottomInset
+            }
+            
+            let tabBarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight))
+            
+            if let toolbarNode = self.toolbarNode {
+                transition.updateFrame(node: toolbarNode, frame: tabBarFrame)
+                toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right,  bottomInset: bottomInset, toolbar: toolbar, transition: transition)
+            } else {
+                let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
+                    self?.toolbarActionSelected?(true)
+                }, right: { [weak self] in
+                    self?.toolbarActionSelected?(false)
+                })
+                toolbarNode.frame = tabBarFrame
+                toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: bottomInset, toolbar: toolbar, transition: .immediate)
+                self.addSubnode(toolbarNode)
+                self.toolbarNode = toolbarNode
+                if transition.isAnimated {
+                    toolbarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+        } else if let toolbarNode = self.toolbarNode {
+            self.toolbarNode = nil
+            transition.updateAlpha(node: toolbarNode, alpha: 0.0, completion: { [weak toolbarNode] _ in
+                toolbarNode?.removeFromSupernode()
+            })
+        }
     }
     
     func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
-        guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
+        guard let (containerLayout, navigationBarHeight, _) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return
         }
         

@@ -1151,6 +1151,7 @@
 		D0F0AAE61EC21B68005EE2A5 /* CallControllerButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F0AAE51EC21B68005EE2A5 /* CallControllerButton.swift */; };
 		D0F19F6220E5694D00EEC860 /* GroupStickerPackCurrentItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F19F6120E5694D00EEC860 /* GroupStickerPackCurrentItem.swift */; };
 		D0F19F6420E5A15B00EEC860 /* ChatMediaInputPeerSpecificItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F19F6320E5A15B00EEC860 /* ChatMediaInputPeerSpecificItem.swift */; };
+		D0F339372269D83500CFF53F /* ChatArchiveSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F339362269D83500CFF53F /* ChatArchiveSettings.swift */; };
 		D0F4B01A211073C500912B92 /* DeviceContactInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F4B019211073C500912B92 /* DeviceContactInfoController.swift */; };
 		D0F4B0222110972300912B92 /* ContactInfoStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F4B0212110972300912B92 /* ContactInfoStrings.swift */; };
 		D0F67FF01EE6B8A8000E5906 /* ChannelMembersSearchController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F67FEF1EE6B8A8000E5906 /* ChannelMembersSearchController.swift */; };
@@ -2301,6 +2302,7 @@
 		D0F0AAE51EC21B68005EE2A5 /* CallControllerButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallControllerButton.swift; sourceTree = "<group>"; };
 		D0F19F6120E5694D00EEC860 /* GroupStickerPackCurrentItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupStickerPackCurrentItem.swift; sourceTree = "<group>"; };
 		D0F19F6320E5A15B00EEC860 /* ChatMediaInputPeerSpecificItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMediaInputPeerSpecificItem.swift; sourceTree = "<group>"; };
+		D0F339362269D83500CFF53F /* ChatArchiveSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatArchiveSettings.swift; sourceTree = "<group>"; };
 		D0F3A8AA1E82D83E00B4C64C /* TelegramAccountAuxiliaryMethods.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramAccountAuxiliaryMethods.swift; sourceTree = "<group>"; };
 		D0F3A8B51E83120A00B4C64C /* FetchResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchResource.swift; sourceTree = "<group>"; };
 		D0F3A8B71E83125C00B4C64C /* MediaResources.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResources.swift; sourceTree = "<group>"; };
@@ -3598,6 +3600,7 @@
 				0952D1762177FB5400194860 /* WatchPresetSettings.swift */,
 				0962E67C21BA048D00245FD9 /* WebSearchSettings.swift */,
 				D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */,
+				D0F339362269D83500CFF53F /* ChatArchiveSettings.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -6262,6 +6265,7 @@
 				D005808B21CAB8F000CB7CD3 /* VoipDerivedState.swift in Sources */,
 				D0471B621EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift in Sources */,
 				D09250041FE5363D003F693F /* ExperimentalSettings.swift in Sources */,
+				D0F339372269D83500CFF53F /* ChatArchiveSettings.swift in Sources */,
 				D0E8175B201254FA00B82BBB /* ChatRecentActionsEmptyNode.swift in Sources */,
 				D0C44B641FC64D0500227BE0 /* SwipeToDismissGestureRecognizer.swift in Sources */,
 				D0EC6E7D1EB9F58900EBF1C3 /* ChangePhoneNumberIntroController.swift in Sources */,

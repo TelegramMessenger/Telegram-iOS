@@ -202,14 +202,18 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.titleDisposable = combineLatest(queue: .mainQueue(), context.account.networkState, hasProxy, passcode, self.chatListDisplayNode.chatListNode.state).start(next: { [weak self] networkState, proxy, passcode, state in
                 if let strongSelf = self {
                     if state.editing {
-                        strongSelf.navigationItem.rightBarButtonItem = nil
+                        if strongSelf.groupId == nil {
+                            strongSelf.navigationItem.rightBarButtonItem = nil
+                        }
                         
                         let title = !state.selectedPeerIds.isEmpty ? strongSelf.presentationData.strings.ChatList_SelectedChats(Int32(state.selectedPeerIds.count)) : strongSelf.presentationData.strings.DialogList_Title
                         strongSelf.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
                     } else {
-                        let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
-                        rightBarButtonItem.accessibilityLabel = "Compose"
-                        strongSelf.navigationItem.rightBarButtonItem = rightBarButtonItem
+                        if strongSelf.groupId == nil {
+                            let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
+                            rightBarButtonItem.accessibilityLabel = "Compose"
+                            strongSelf.navigationItem.rightBarButtonItem = rightBarButtonItem
+                        }
                         
                         let (hasProxy, connectsViaProxy) = proxy
                         let (isPasscodeSet, isManuallyLocked) = passcode
@@ -738,15 +742,19 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 }
                 searchContentNode.updateExpansionProgress(progress)
             }
-        }
+        }*/
         
-        self.chatListDisplayNode.chatListNode.contentScrollingEnded = { [weak self] listView in
+        /*self.chatListDisplayNode.chatListNode.contentScrollingEnded = { [weak self] listView in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
                 return fixListNodeScrolling(listView, searchNode: searchContentNode)
             } else {
                 return false
             }
         }*/
+        
+        self.chatListDisplayNode.toolbarActionSelected = { [weak self] left in
+            self?.toolbarActionSelected(left: left)
+        }
         
         let context = self.context
         let peerIdsAndOptions: Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> = self.chatListDisplayNode.chatListNode.state
@@ -769,18 +777,29 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
         
         self.stateDisposable.set(combineLatest(queue: .mainQueue(), self.presentationDataValue.get(), peerIdsAndOptions).start(next: { [weak self] presentationData, peerIdsAndOptions in
-            var toolbar: Toolbar?
-            if let (options, _) = peerIdsAndOptions {
-                let leftAction: ToolbarAction
-                switch options.read {
-                    case let .all(enabled):
-                        leftAction = ToolbarAction(title: presentationData.strings.ChatList_ReadAll, isEnabled: enabled)
-                    case let .selective(enabled):
-                        leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
-                }
-                toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete))
+            guard let strongSelf = self else {
+                return
             }
-            self?.setToolbar(toolbar, transition: .animated(duration: 0.3, curve: .easeInOut))
+            var toolbar: Toolbar?
+            if strongSelf.groupId == nil {
+                if let (options, _) = peerIdsAndOptions {
+                    let leftAction: ToolbarAction
+                    switch options.read {
+                        case let .all(enabled):
+                            leftAction = ToolbarAction(title: presentationData.strings.ChatList_ReadAll, isEnabled: enabled)
+                        case let .selective(enabled):
+                            leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
+                    }
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete))
+                }
+            } else {
+                if let (options, peerIds) = peerIdsAndOptions {
+                    let leftAction: ToolbarAction
+                    leftAction = ToolbarAction(title: presentationData.strings.ChatList_UnarchiveAction, isEnabled: !peerIds.isEmpty)
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete))
+                }
+            }
+            strongSelf.setToolbar(toolbar, transition: .animated(duration: 0.3, curve: .easeInOut))
         }))
         
         /*self.badgeIconDisposable = (self.chatListDisplayNode.chatListNode.scrollToTopOption
@@ -939,7 +958,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.chatListDisplayNode.chatListNode.scrollToPosition(.top)
         }
         
-        self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
+        self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, visualNavigationHeight: self.visualNavigationInsetHeight, transition: transition)
     }
     
     override public func navigationStackConfigurationUpdated(next: [ViewController]) {
@@ -1089,7 +1108,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     } else {
                         return nil
                     }
-                case let .groupReference(groupId, _, _):
+                case let .groupReference(groupId, _, _, _, _):
                     let chatListController = ChatListController(context: self.context, groupId: groupId, controlsHistoryPreload: false)
                     chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatListController, sourceRect)
@@ -1186,24 +1205,40 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     override public func toolbarActionSelected(left: Bool) {
         let peerIds = self.chatListDisplayNode.chatListNode.currentState.selectedPeerIds
         if left {
-            let signal: Signal<Void, NoError>
-            let context = self.context
-            if !peerIds.isEmpty {
-                signal = self.context.account.postbox.transaction { transaction -> Void in
-                    for peerId in peerIds {
-                        togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: context.account.viewTracker, peerId: peerId, setToValue: false)
+            if self.groupId == nil {
+                let signal: Signal<Void, NoError>
+                let context = self.context
+                if !peerIds.isEmpty {
+                    signal = self.context.account.postbox.transaction { transaction -> Void in
+                        for peerId in peerIds {
+                            togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: context.account.viewTracker, peerId: peerId, setToValue: false)
+                        }
+                    }
+                } else {
+                    signal = self.context.account.postbox.transaction { transaction -> Void in
+                        markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker)
                     }
                 }
-            } else {
-                signal = self.context.account.postbox.transaction { transaction -> Void in
-                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker)
+                let _ = (signal
+                |> deliverOnMainQueue).start(completed: { [weak self] in
+                    self?.donePressed()
+                })
+            } else if !peerIds.isEmpty {
+                self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds.first!)
+                let _ = (self.context.account.postbox.transaction { transaction -> Void in
+                    for peerId in peerIds {
+                        updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: nil)
+                    }
                 }
+                |> deliverOnMainQueue).start(completed: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                    strongSelf.donePressed()
+                })
             }
-            let _ = (signal
-            |> deliverOnMainQueue).start(completed: { [weak self] in
-                self?.donePressed()
-            })
-        } else if !peerIds.isEmpty {
+        } else if !left && !peerIds.isEmpty {
             let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
             var items: [ActionSheetItem] = []
             items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteConfirmation(Int32(peerIds.count)), color: .destructive, action: { [weak self, weak actionSheet] in
@@ -1413,5 +1448,14 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
             }
         }), in: .window(.root))
+    }
+    
+    override public func setToolbar(_ toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
+        if self.groupId == nil {
+            super.setToolbar(toolbar, transition: transition)
+        } else {
+            self.chatListDisplayNode.toolbar = toolbar
+            self.requestLayout(transition: transition)
+        }
     }
 }
