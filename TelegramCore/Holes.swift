@@ -398,7 +398,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             }
             
             if let replacePinnedItemIds = fetchedChats.pinnedItemIds {
-                transaction.setPinnedItemIds(replacePinnedItemIds)
+                transaction.setPinnedItemIds(groupId: groupId, itemIds: replacePinnedItemIds)
             }
             
             for (peerId, summary) in fetchedChats.mentionTagSummaries {

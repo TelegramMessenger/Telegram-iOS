@@ -3963,8 +3963,6 @@ extension Api {
         case updateChannelReadMessagesContents(channelId: Int32, messages: [Int32])
         case updateContactsReset
         case updateChannelAvailableMessages(channelId: Int32, availableMinId: Int32)
-        case updateDialogPinned(flags: Int32, peer: Api.DialogPeer)
-        case updatePinnedDialogs(flags: Int32, order: [Api.DialogPeer]?)
         case updateDialogUnreadMark(flags: Int32, peer: Api.DialogPeer)
         case updateLangPackTooLong(langCode: String)
         case updateUserPinnedMessage(userId: Int32, id: Int32)
@@ -3972,6 +3970,8 @@ extension Api {
         case updateChatDefaultBannedRights(peer: Api.Peer, defaultBannedRights: Api.ChatBannedRights, version: Int32)
         case updateChatPinnedMessage(chatId: Int32, id: Int32, version: Int32)
         case updateFolderPeers(folderPeers: [Api.FolderPeer], pts: Int32, ptsCount: Int32)
+        case updateDialogPinned(flags: Int32, folderId: Int32?, peer: Api.DialogPeer)
+        case updatePinnedDialogs(flags: Int32, folderId: Int32?, order: [Api.DialogPeer]?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4480,24 +4480,6 @@ extension Api {
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     serializeInt32(availableMinId, buffer: buffer, boxed: false)
                     break
-                case .updateDialogPinned(let flags, let peer):
-                    if boxed {
-                        buffer.appendInt32(433225532)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    break
-                case .updatePinnedDialogs(let flags, let order):
-                    if boxed {
-                        buffer.appendInt32(-364071333)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(order!.count))
-                    for item in order! {
-                        item.serialize(buffer, true)
-                    }}
-                    break
                 case .updateDialogUnreadMark(let flags, let peer):
                     if boxed {
                         buffer.appendInt32(-513517117)
@@ -4554,6 +4536,26 @@ extension Api {
                     }
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
+                    break
+                case .updateDialogPinned(let flags, let folderId, let peer):
+                    if boxed {
+                        buffer.appendInt32(1852826908)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
+                    peer.serialize(buffer, true)
+                    break
+                case .updatePinnedDialogs(let flags, let folderId, let order):
+                    if boxed {
+                        buffer.appendInt32(-99664734)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(order!.count))
+                    for item in order! {
+                        item.serialize(buffer, true)
+                    }}
                     break
     }
     }
@@ -4682,10 +4684,6 @@ extension Api {
                 return ("updateContactsReset", [])
                 case .updateChannelAvailableMessages(let channelId, let availableMinId):
                 return ("updateChannelAvailableMessages", [("channelId", channelId), ("availableMinId", availableMinId)])
-                case .updateDialogPinned(let flags, let peer):
-                return ("updateDialogPinned", [("flags", flags), ("peer", peer)])
-                case .updatePinnedDialogs(let flags, let order):
-                return ("updatePinnedDialogs", [("flags", flags), ("order", order)])
                 case .updateDialogUnreadMark(let flags, let peer):
                 return ("updateDialogUnreadMark", [("flags", flags), ("peer", peer)])
                 case .updateLangPackTooLong(let langCode):
@@ -4700,6 +4698,10 @@ extension Api {
                 return ("updateChatPinnedMessage", [("chatId", chatId), ("id", id), ("version", version)])
                 case .updateFolderPeers(let folderPeers, let pts, let ptsCount):
                 return ("updateFolderPeers", [("folderPeers", folderPeers), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updateDialogPinned(let flags, let folderId, let peer):
+                return ("updateDialogPinned", [("flags", flags), ("folderId", folderId), ("peer", peer)])
+                case .updatePinnedDialogs(let flags, let folderId, let order):
+                return ("updatePinnedDialogs", [("flags", flags), ("folderId", folderId), ("order", order)])
     }
     }
     
@@ -5723,38 +5725,6 @@ extension Api {
                 return nil
             }
         }
-        static func parse_updateDialogPinned(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.DialogPeer?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.DialogPeer
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateDialogPinned(flags: _1!, peer: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_updatePinnedDialogs(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.DialogPeer]?
-            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DialogPeer.self)
-            } }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updatePinnedDialogs(flags: _1!, order: _2)
-            }
-            else {
-                return nil
-            }
-        }
         static func parse_updateDialogUnreadMark(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -5872,6 +5842,44 @@ extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateFolderPeers(folderPeers: _1!, pts: _2!, ptsCount: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_updateDialogPinned(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_2 = reader.readInt32() }
+            var _3: Api.DialogPeer?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.DialogPeer
+            }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateDialogPinned(flags: _1!, folderId: _2, peer: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_updatePinnedDialogs(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_2 = reader.readInt32() }
+            var _3: [Api.DialogPeer]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DialogPeer.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updatePinnedDialogs(flags: _1!, folderId: _2, order: _3)
             }
             else {
                 return nil
@@ -6780,19 +6788,13 @@ extension Api {
     
     }
     enum InputNotifyPeer: TypeConstructorDescription {
-        case inputNotifyPeer(peer: Api.InputPeer)
         case inputNotifyUsers
         case inputNotifyChats
         case inputNotifyBroadcasts
+        case inputNotifyPeer(peer: Api.InputPeer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .inputNotifyPeer(let peer):
-                    if boxed {
-                        buffer.appendInt32(-1195615476)
-                    }
-                    peer.serialize(buffer, true)
-                    break
                 case .inputNotifyUsers:
                     if boxed {
                         buffer.appendInt32(423314455)
@@ -6811,22 +6813,37 @@ extension Api {
                     }
                     
                     break
+                case .inputNotifyPeer(let peer):
+                    if boxed {
+                        buffer.appendInt32(-1195615476)
+                    }
+                    peer.serialize(buffer, true)
+                    break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .inputNotifyPeer(let peer):
-                return ("inputNotifyPeer", [("peer", peer)])
                 case .inputNotifyUsers:
                 return ("inputNotifyUsers", [])
                 case .inputNotifyChats:
                 return ("inputNotifyChats", [])
                 case .inputNotifyBroadcasts:
                 return ("inputNotifyBroadcasts", [])
+                case .inputNotifyPeer(let peer):
+                return ("inputNotifyPeer", [("peer", peer)])
     }
     }
     
+        static func parse_inputNotifyUsers(_ reader: BufferReader) -> InputNotifyPeer? {
+            return Api.InputNotifyPeer.inputNotifyUsers
+        }
+        static func parse_inputNotifyChats(_ reader: BufferReader) -> InputNotifyPeer? {
+            return Api.InputNotifyPeer.inputNotifyChats
+        }
+        static func parse_inputNotifyBroadcasts(_ reader: BufferReader) -> InputNotifyPeer? {
+            return Api.InputNotifyPeer.inputNotifyBroadcasts
+        }
         static func parse_inputNotifyPeer(_ reader: BufferReader) -> InputNotifyPeer? {
             var _1: Api.InputPeer?
             if let signature = reader.readInt32() {
@@ -6839,15 +6856,6 @@ extension Api {
             else {
                 return nil
             }
-        }
-        static func parse_inputNotifyUsers(_ reader: BufferReader) -> InputNotifyPeer? {
-            return Api.InputNotifyPeer.inputNotifyUsers
-        }
-        static func parse_inputNotifyChats(_ reader: BufferReader) -> InputNotifyPeer? {
-            return Api.InputNotifyPeer.inputNotifyChats
-        }
-        static func parse_inputNotifyBroadcasts(_ reader: BufferReader) -> InputNotifyPeer? {
-            return Api.InputNotifyPeer.inputNotifyBroadcasts
         }
     
     }
@@ -11094,13 +11102,13 @@ extension Api {
     
     }
     enum Config: TypeConstructorDescription {
-        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], dcTxtDomainName: String, chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, revokeTimeLimit: Int32, revokePmTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, stickersFavedLimit: Int32, channelsReadMediaPeriod: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, autoupdateUrlPrefix: String?, gifSearchUsername: String?, venueSearchUsername: String?, imgSearchUsername: String?, staticMapsProvider: String?, captionLengthMax: Int32, messageLengthMax: Int32, webfileDcId: Int32, suggestedLangCode: String?, langPackVersion: Int32?, baseLangPackVersion: Int32?)
+        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], dcTxtDomainName: String, chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, revokeTimeLimit: Int32, revokePmTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, stickersFavedLimit: Int32, channelsReadMediaPeriod: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, pinnedInfolderCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, autoupdateUrlPrefix: String?, gifSearchUsername: String?, venueSearchUsername: String?, imgSearchUsername: String?, staticMapsProvider: String?, captionLengthMax: Int32, messageLengthMax: Int32, webfileDcId: Int32, suggestedLangCode: String?, langPackVersion: Int32?, baseLangPackVersion: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let staticMapsProvider, let captionLengthMax, let messageLengthMax, let webfileDcId, let suggestedLangCode, let langPackVersion, let baseLangPackVersion):
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let pinnedInfolderCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let staticMapsProvider, let captionLengthMax, let messageLengthMax, let webfileDcId, let suggestedLangCode, let langPackVersion, let baseLangPackVersion):
                     if boxed {
-                        buffer.appendInt32(-422959626)
+                        buffer.appendInt32(856375399)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
@@ -11134,6 +11142,7 @@ extension Api {
                     serializeInt32(channelsReadMediaPeriod, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(tmpSessions!, buffer: buffer, boxed: false)}
                     serializeInt32(pinnedDialogsCountMax, buffer: buffer, boxed: false)
+                    serializeInt32(pinnedInfolderCountMax, buffer: buffer, boxed: false)
                     serializeInt32(callReceiveTimeoutMs, buffer: buffer, boxed: false)
                     serializeInt32(callRingTimeoutMs, buffer: buffer, boxed: false)
                     serializeInt32(callConnectTimeoutMs, buffer: buffer, boxed: false)
@@ -11156,8 +11165,8 @@ extension Api {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let staticMapsProvider, let captionLengthMax, let messageLengthMax, let webfileDcId, let suggestedLangCode, let langPackVersion, let baseLangPackVersion):
-                return ("config", [("flags", flags), ("date", date), ("expires", expires), ("testMode", testMode), ("thisDc", thisDc), ("dcOptions", dcOptions), ("dcTxtDomainName", dcTxtDomainName), ("chatSizeMax", chatSizeMax), ("megagroupSizeMax", megagroupSizeMax), ("forwardedCountMax", forwardedCountMax), ("onlineUpdatePeriodMs", onlineUpdatePeriodMs), ("offlineBlurTimeoutMs", offlineBlurTimeoutMs), ("offlineIdleTimeoutMs", offlineIdleTimeoutMs), ("onlineCloudTimeoutMs", onlineCloudTimeoutMs), ("notifyCloudDelayMs", notifyCloudDelayMs), ("notifyDefaultDelayMs", notifyDefaultDelayMs), ("pushChatPeriodMs", pushChatPeriodMs), ("pushChatLimit", pushChatLimit), ("savedGifsLimit", savedGifsLimit), ("editTimeLimit", editTimeLimit), ("revokeTimeLimit", revokeTimeLimit), ("revokePmTimeLimit", revokePmTimeLimit), ("ratingEDecay", ratingEDecay), ("stickersRecentLimit", stickersRecentLimit), ("stickersFavedLimit", stickersFavedLimit), ("channelsReadMediaPeriod", channelsReadMediaPeriod), ("tmpSessions", tmpSessions), ("pinnedDialogsCountMax", pinnedDialogsCountMax), ("callReceiveTimeoutMs", callReceiveTimeoutMs), ("callRingTimeoutMs", callRingTimeoutMs), ("callConnectTimeoutMs", callConnectTimeoutMs), ("callPacketTimeoutMs", callPacketTimeoutMs), ("meUrlPrefix", meUrlPrefix), ("autoupdateUrlPrefix", autoupdateUrlPrefix), ("gifSearchUsername", gifSearchUsername), ("venueSearchUsername", venueSearchUsername), ("imgSearchUsername", imgSearchUsername), ("staticMapsProvider", staticMapsProvider), ("captionLengthMax", captionLengthMax), ("messageLengthMax", messageLengthMax), ("webfileDcId", webfileDcId), ("suggestedLangCode", suggestedLangCode), ("langPackVersion", langPackVersion), ("baseLangPackVersion", baseLangPackVersion)])
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let pinnedInfolderCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let staticMapsProvider, let captionLengthMax, let messageLengthMax, let webfileDcId, let suggestedLangCode, let langPackVersion, let baseLangPackVersion):
+                return ("config", [("flags", flags), ("date", date), ("expires", expires), ("testMode", testMode), ("thisDc", thisDc), ("dcOptions", dcOptions), ("dcTxtDomainName", dcTxtDomainName), ("chatSizeMax", chatSizeMax), ("megagroupSizeMax", megagroupSizeMax), ("forwardedCountMax", forwardedCountMax), ("onlineUpdatePeriodMs", onlineUpdatePeriodMs), ("offlineBlurTimeoutMs", offlineBlurTimeoutMs), ("offlineIdleTimeoutMs", offlineIdleTimeoutMs), ("onlineCloudTimeoutMs", onlineCloudTimeoutMs), ("notifyCloudDelayMs", notifyCloudDelayMs), ("notifyDefaultDelayMs", notifyDefaultDelayMs), ("pushChatPeriodMs", pushChatPeriodMs), ("pushChatLimit", pushChatLimit), ("savedGifsLimit", savedGifsLimit), ("editTimeLimit", editTimeLimit), ("revokeTimeLimit", revokeTimeLimit), ("revokePmTimeLimit", revokePmTimeLimit), ("ratingEDecay", ratingEDecay), ("stickersRecentLimit", stickersRecentLimit), ("stickersFavedLimit", stickersFavedLimit), ("channelsReadMediaPeriod", channelsReadMediaPeriod), ("tmpSessions", tmpSessions), ("pinnedDialogsCountMax", pinnedDialogsCountMax), ("pinnedInfolderCountMax", pinnedInfolderCountMax), ("callReceiveTimeoutMs", callReceiveTimeoutMs), ("callRingTimeoutMs", callRingTimeoutMs), ("callConnectTimeoutMs", callConnectTimeoutMs), ("callPacketTimeoutMs", callPacketTimeoutMs), ("meUrlPrefix", meUrlPrefix), ("autoupdateUrlPrefix", autoupdateUrlPrefix), ("gifSearchUsername", gifSearchUsername), ("venueSearchUsername", venueSearchUsername), ("imgSearchUsername", imgSearchUsername), ("staticMapsProvider", staticMapsProvider), ("captionLengthMax", captionLengthMax), ("messageLengthMax", messageLengthMax), ("webfileDcId", webfileDcId), ("suggestedLangCode", suggestedLangCode), ("langPackVersion", langPackVersion), ("baseLangPackVersion", baseLangPackVersion)])
     }
     }
     
@@ -11230,30 +11239,32 @@ extension Api {
             _31 = reader.readInt32()
             var _32: Int32?
             _32 = reader.readInt32()
-            var _33: String?
-            _33 = parseString(reader)
+            var _33: Int32?
+            _33 = reader.readInt32()
             var _34: String?
-            if Int(_1!) & Int(1 << 7) != 0 {_34 = parseString(reader) }
+            _34 = parseString(reader)
             var _35: String?
-            if Int(_1!) & Int(1 << 9) != 0 {_35 = parseString(reader) }
+            if Int(_1!) & Int(1 << 7) != 0 {_35 = parseString(reader) }
             var _36: String?
-            if Int(_1!) & Int(1 << 10) != 0 {_36 = parseString(reader) }
+            if Int(_1!) & Int(1 << 9) != 0 {_36 = parseString(reader) }
             var _37: String?
-            if Int(_1!) & Int(1 << 11) != 0 {_37 = parseString(reader) }
+            if Int(_1!) & Int(1 << 10) != 0 {_37 = parseString(reader) }
             var _38: String?
-            if Int(_1!) & Int(1 << 12) != 0 {_38 = parseString(reader) }
-            var _39: Int32?
-            _39 = reader.readInt32()
+            if Int(_1!) & Int(1 << 11) != 0 {_38 = parseString(reader) }
+            var _39: String?
+            if Int(_1!) & Int(1 << 12) != 0 {_39 = parseString(reader) }
             var _40: Int32?
             _40 = reader.readInt32()
             var _41: Int32?
             _41 = reader.readInt32()
-            var _42: String?
-            if Int(_1!) & Int(1 << 2) != 0 {_42 = parseString(reader) }
-            var _43: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_43 = reader.readInt32() }
+            var _42: Int32?
+            _42 = reader.readInt32()
+            var _43: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_43 = parseString(reader) }
             var _44: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_44 = reader.readInt32() }
+            var _45: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_45 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -11287,19 +11298,20 @@ extension Api {
             let _c31 = _31 != nil
             let _c32 = _32 != nil
             let _c33 = _33 != nil
-            let _c34 = (Int(_1!) & Int(1 << 7) == 0) || _34 != nil
-            let _c35 = (Int(_1!) & Int(1 << 9) == 0) || _35 != nil
-            let _c36 = (Int(_1!) & Int(1 << 10) == 0) || _36 != nil
-            let _c37 = (Int(_1!) & Int(1 << 11) == 0) || _37 != nil
-            let _c38 = (Int(_1!) & Int(1 << 12) == 0) || _38 != nil
-            let _c39 = _39 != nil
+            let _c34 = _34 != nil
+            let _c35 = (Int(_1!) & Int(1 << 7) == 0) || _35 != nil
+            let _c36 = (Int(_1!) & Int(1 << 9) == 0) || _36 != nil
+            let _c37 = (Int(_1!) & Int(1 << 10) == 0) || _37 != nil
+            let _c38 = (Int(_1!) & Int(1 << 11) == 0) || _38 != nil
+            let _c39 = (Int(_1!) & Int(1 << 12) == 0) || _39 != nil
             let _c40 = _40 != nil
             let _c41 = _41 != nil
-            let _c42 = (Int(_1!) & Int(1 << 2) == 0) || _42 != nil
+            let _c42 = _42 != nil
             let _c43 = (Int(_1!) & Int(1 << 2) == 0) || _43 != nil
             let _c44 = (Int(_1!) & Int(1 << 2) == 0) || _44 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 && _c35 && _c36 && _c37 && _c38 && _c39 && _c40 && _c41 && _c42 && _c43 && _c44 {
-                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, dcTxtDomainName: _7!, chatSizeMax: _8!, megagroupSizeMax: _9!, forwardedCountMax: _10!, onlineUpdatePeriodMs: _11!, offlineBlurTimeoutMs: _12!, offlineIdleTimeoutMs: _13!, onlineCloudTimeoutMs: _14!, notifyCloudDelayMs: _15!, notifyDefaultDelayMs: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, revokeTimeLimit: _21!, revokePmTimeLimit: _22!, ratingEDecay: _23!, stickersRecentLimit: _24!, stickersFavedLimit: _25!, channelsReadMediaPeriod: _26!, tmpSessions: _27, pinnedDialogsCountMax: _28!, callReceiveTimeoutMs: _29!, callRingTimeoutMs: _30!, callConnectTimeoutMs: _31!, callPacketTimeoutMs: _32!, meUrlPrefix: _33!, autoupdateUrlPrefix: _34, gifSearchUsername: _35, venueSearchUsername: _36, imgSearchUsername: _37, staticMapsProvider: _38, captionLengthMax: _39!, messageLengthMax: _40!, webfileDcId: _41!, suggestedLangCode: _42, langPackVersion: _43, baseLangPackVersion: _44)
+            let _c45 = (Int(_1!) & Int(1 << 2) == 0) || _45 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 && _c35 && _c36 && _c37 && _c38 && _c39 && _c40 && _c41 && _c42 && _c43 && _c44 && _c45 {
+                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, dcTxtDomainName: _7!, chatSizeMax: _8!, megagroupSizeMax: _9!, forwardedCountMax: _10!, onlineUpdatePeriodMs: _11!, offlineBlurTimeoutMs: _12!, offlineIdleTimeoutMs: _13!, onlineCloudTimeoutMs: _14!, notifyCloudDelayMs: _15!, notifyDefaultDelayMs: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, revokeTimeLimit: _21!, revokePmTimeLimit: _22!, ratingEDecay: _23!, stickersRecentLimit: _24!, stickersFavedLimit: _25!, channelsReadMediaPeriod: _26!, tmpSessions: _27, pinnedDialogsCountMax: _28!, pinnedInfolderCountMax: _29!, callReceiveTimeoutMs: _30!, callRingTimeoutMs: _31!, callConnectTimeoutMs: _32!, callPacketTimeoutMs: _33!, meUrlPrefix: _34!, autoupdateUrlPrefix: _35, gifSearchUsername: _36, venueSearchUsername: _37, imgSearchUsername: _38, staticMapsProvider: _39, captionLengthMax: _40!, messageLengthMax: _41!, webfileDcId: _42!, suggestedLangCode: _43, langPackVersion: _44, baseLangPackVersion: _45)
             }
             else {
                 return nil

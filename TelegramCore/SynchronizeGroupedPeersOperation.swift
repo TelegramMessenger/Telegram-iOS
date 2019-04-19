@@ -37,6 +37,19 @@ public func updatePeerGroupIdInteractively(postbox: Postbox, peerId: PeerId, gro
         
         if previousGroupId != groupId {
             transaction.updatePeerGroupId(peerId, groupId: groupId)
+            if peerId.namespace != Namespaces.Peer.SecretChat {
+                addSynchronizeGroupedPeersOperation(transaction: transaction, peerId: peerId, groupId: groupId)
+            }
+        }
+    }
+}
+
+public func updatePeerGroupIdInteractively(transaction: Transaction, peerId: PeerId, groupId: PeerGroupId?) {
+    let previousGroupId = transaction.getPeerGroupId(peerId)
+    
+    if previousGroupId != groupId {
+        transaction.updatePeerGroupId(peerId, groupId: groupId)
+        if peerId.namespace != Namespaces.Peer.SecretChat {
             addSynchronizeGroupedPeersOperation(transaction: transaction, peerId: peerId, groupId: groupId)
         }
     }
