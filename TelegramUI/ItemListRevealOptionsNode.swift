@@ -6,7 +6,7 @@ import Lottie
 enum ItemListRevealOptionIcon: Equatable {
     case none
     case image(image: UIImage)
-    case animation(animation: String, keysToColor: [String]?)
+    case animation(animation: String, offset: CGFloat, keysToColor: [String]?)
     
     public static func ==(lhs: ItemListRevealOptionIcon, rhs: ItemListRevealOptionIcon) -> Bool {
         switch lhs {
@@ -22,8 +22,8 @@ enum ItemListRevealOptionIcon: Equatable {
                 } else {
                     return false
                 }
-            case let .animation(lhsAnimation, lhsKeysToColor):
-                if case let .animation(rhsAnimation, rhsKeysToColor) = rhs, lhsAnimation == rhsAnimation, lhsKeysToColor == rhsKeysToColor {
+            case let .animation(lhsAnimation, lhsOffset, lhsKeysToColor):
+                if case let .animation(rhsAnimation, rhsOffset, rhsKeysToColor) = rhs, lhsAnimation == rhsAnimation, lhsOffset == rhsOffset, lhsKeysToColor == rhsKeysToColor {
                     return true
                 } else {
                     return false
@@ -126,6 +126,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
     private let titleNode: ASTextNode
     private let iconNode: ASImageNode?
     private let animationNode: ItemListRevealAnimationNode?
+    private var animationNodeOffset: CGFloat = 0.0
     var alignment: ItemListRevealOptionAlignment?
     
     init(title: String, icon: ItemListRevealOptionIcon, color: UIColor, textColor: UIColor) {
@@ -142,9 +143,10 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
                 self.iconNode = iconNode
                 self.animationNode = nil
             
-            case let .animation(animation, keysToColor):
+            case let .animation(animation, offset, keysToColor):
                 self.iconNode = nil
                 self.animationNode = ItemListRevealAnimationNode(animation: animation, keysToColor: keysToColor, color: color)
+                self.animationNodeOffset = offset
                 break
             
             case .none:
@@ -209,7 +211,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
         }
         
         if let animationNode = self.animationNode, let imageSize = animationNode.preferredSize() {
-            let iconOffset: CGFloat = -2.0
+            let iconOffset: CGFloat = -2.0 + self.animationNodeOffset
             let titleIconSpacing: CGFloat = 11.0
             let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - imageSize.width + sideInset) / 2.0), y: contentRect.midY - imageSize.height / 2.0 + iconOffset), size: imageSize)
             if animateAdditive {

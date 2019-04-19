@@ -391,6 +391,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
+    var replaceTopControllerImpl: ((ViewController) -> Void)?
     var pushControllerInstantImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
@@ -537,15 +538,13 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             }
         }))
     }, openPasscode: {
-        let _ = passcodeOptionsAccessController(context: context, completion: { animated in
-            if animated {
-                pushControllerImpl?(passcodeOptionsController(context: context))
-            } else {
-                pushControllerInstantImpl?(passcodeOptionsController(context: context))
-            }
+        let _ = passcodeOptionsAccessController(context: context, pushController: { controller in
+            replaceTopControllerImpl?(controller)
+        }, completion: { _ in
+            replaceTopControllerImpl?(passcodeOptionsController(context: context))
         }).start(next: { controller in
             if let controller = controller {
-                presentControllerImpl?(controller)
+                pushControllerImpl?(controller)
             }
         })
     }, openTwoStepVerification: {
@@ -641,6 +640,9 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
+    }
+    replaceTopControllerImpl = { [weak controller] c in
+        (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: true)
     }
     pushControllerInstantImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c, animated: false)

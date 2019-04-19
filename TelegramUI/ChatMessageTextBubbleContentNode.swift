@@ -149,12 +149,16 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         isUnsupportedMedia = true
                     }
                 }
-                                
+                
                 if isUnsupportedMedia {
                     rawText = item.presentationData.strings.Conversation_UnsupportedMediaPlaceholder
                     messageEntities = [MessageTextEntity(range: 0..<rawText.count, type: .Italic)]
                 } else {
-                    rawText = item.message.text
+                    if item.message.isScam {
+                        rawText = "\(item.message.text)\n\n\(item.presentationData.strings.Conversation_ScamWarning)"
+                    } else {
+                        rawText = item.message.text
+                    }
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? TextEntitiesMessageAttribute {
                             messageEntities = attribute.entities

@@ -71,7 +71,7 @@ final class ChatBackgroundNode: ASDisplayNode {
 private var backgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 private var serviceBackgroundColorForWallpaper: (TelegramWallpaper, UIColor)?
 
-func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: MediaBox, composed: Bool = false) -> UIImage? {
+func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: MediaBox, composed: Bool = true) -> UIImage? {
     var backgroundImage: UIImage?
     if wallpaper == backgroundImageForWallpaper?.0, (wallpaper.settings?.blur ?? false) == backgroundImageForWallpaper?.1 {
         backgroundImage = backgroundImageForWallpaper?.2

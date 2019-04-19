@@ -119,7 +119,7 @@ final public class PasscodeEntryController: ViewController {
 //                    transaction.setAccessChallengeData(data)
 //                }).start()
                 
-                strongSelf.controllerNode.animateFailure()
+                strongSelf.controllerNode.animateError()
             }
         }
         self.controllerNode.requestBiometrics = { [weak self] in

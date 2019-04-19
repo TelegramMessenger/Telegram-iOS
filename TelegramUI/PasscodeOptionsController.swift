@@ -224,6 +224,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     }
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
+    var replaceTopControllerImpl: ((ViewController, Bool) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -284,6 +286,34 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                     passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge)))
                 })
+                
+                var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
+                let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
+                    let setupController = PasscodeSetupController(context: context, mode: .setup(.digits6))
+                    setupController.complete = { passcode, numerical in
+                        let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
+                            var data = transaction.getAccessChallengeData()
+                            if numerical {
+                                data = PostboxAccessChallengeData.numericalPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                            } else {
+                                data = PostboxAccessChallengeData.plaintextPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                            }
+                            transaction.setAccessChallengeData(data)
+                        }) |> deliverOnMainQueue).start(next: { _ in
+                        }, error: { _ in
+                        }, completed: {
+                            innerReplaceTopControllerImpl?(passcodeOptionsController(context: context), true)
+                        })
+                    }
+                    innerReplaceTopControllerImpl?(setupController, true)
+                    innerReplaceTopControllerImpl = { [weak setupController] c, animated in
+                        (setupController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
+                    }
+                })
+                replaceTopControllerImpl?(controller, false)
+                innerReplaceTopControllerImpl = { [weak controller] c, animated in
+                    (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
+                }
             })
             ]), ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
@@ -429,35 +459,64 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             controller.present(c, in: .window(.root), with: p)
         }
     }
+    pushControllerImpl = { [weak controller] c in
+        (controller?.navigationController as? NavigationController)?.pushViewController(c)
+    }
+    replaceTopControllerImpl = { [weak controller] c, animated in
+        (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
+    }
     
     return controller
 }
 
-public func passcodeOptionsAccessController(context: AccountContext, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
+public func passcodeOptionsAccessController(context: AccountContext, animateIn: Bool = true, pushController: ((ViewController) -> Void)?, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
     return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
         return transaction.getAccessChallengeData()
     }
     |> deliverOnMainQueue
     |> map { challenge -> ViewController? in
         if case .none = challenge {
+            let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
+                let setupController = PasscodeSetupController(context: context, mode: .setup(.digits6))
+                setupController.complete = { passcode, numerical in
+                    let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
+                        var data = transaction.getAccessChallengeData()
+                        if numerical {
+                            data = PostboxAccessChallengeData.numericalPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                        } else {
+                            data = PostboxAccessChallengeData.plaintextPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                        }
+                        transaction.setAccessChallengeData(data)
+                    }) |> deliverOnMainQueue).start(next: { _ in
+                    }, error: { _ in
+                    }, completed: {
+                        completion(true)
+                    })
+                }
+                pushController?(setupController)
+            })
+            return controller
+        } else {
             completion(true)
             return nil
-        } else {
+//            let controller = PasscodeSetupController(context: context, mode: .entry(challenge))
+//            return controller
+
             var attemptData: TGPasscodeEntryAttemptData?
             if let attempts = challenge.attempts {
                 attemptData = TGPasscodeEntryAttemptData(numberOfInvalidAttempts: Int(attempts.count), dateOfLastInvalidAttempt: Double(attempts.timestamp))
             }
             var dismissImpl: (() -> Void)?
-            
+
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            
+
             let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
             let mode: TGPasscodeEntryControllerMode
             switch challenge {
-                case .none, .numericalPassword:
-                    mode = TGPasscodeEntryControllerModeVerifySimple
-                case .plaintextPassword:
-                    mode = TGPasscodeEntryControllerModeVerifyComplex
+            case .none, .numericalPassword:
+                mode = TGPasscodeEntryControllerModeVerifySimple
+            case .plaintextPassword:
+                mode = TGPasscodeEntryControllerModeVerifyComplex
             }
             let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: mode, cancelEnabled: true, allowTouchId: false, attemptData: attemptData, completion: { value in
                 if value != nil {
@@ -468,12 +527,12 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
             controller.checkCurrentPasscode = { value in
                 if let value = value {
                     switch challenge {
-                        case .none:
-                            return true
-                        case let .numericalPassword(code, _, _):
-                            return value == code
-                        case let .plaintextPassword(code, _, _):
-                            return value == code
+                    case .none:
+                        return true
+                    case let .numericalPassword(code, _, _):
+                        return value == code
+                    case let .plaintextPassword(code, _, _):
+                        return value == code
                     }
                 } else {
                     return false
@@ -487,12 +546,12 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                     }
                     var data = transaction.getAccessChallengeData()
                     switch data {
-                        case .none:
-                            break
-                        case let .numericalPassword(value, timeout, _):
-                            data = .numericalPassword(value: value, timeout: timeout, attempts: attempts)
-                        case let .plaintextPassword(value, timeout, _):
-                            data = .plaintextPassword(value: value, timeout: timeout, attempts: attempts)
+                    case .none:
+                        break
+                    case let .numericalPassword(value, timeout, _):
+                        data = .numericalPassword(value: value, timeout: timeout, attempts: attempts)
+                    case let .plaintextPassword(value, timeout, _):
+                        data = .plaintextPassword(value: value, timeout: timeout, attempts: attempts)
                     }
                     transaction.setAccessChallengeData(data)
                 }).start()

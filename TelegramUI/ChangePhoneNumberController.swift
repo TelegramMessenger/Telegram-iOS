@@ -132,7 +132,7 @@ final class ChangePhoneNumberController: ViewController {
                 }
             }))
         } else {
-            hapticFeedback.error()
+            self.hapticFeedback.error()
             self.controllerNode.animateError()
         }
     }

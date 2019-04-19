@@ -156,7 +156,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             var online = false
-            if let peer = peer.peer, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && peer.id != account.peerId  {
+            if let peer = peer.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != account.peerId  {
                 let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: timestamp)
                 if case .online = relativeStatus {
                     online = true

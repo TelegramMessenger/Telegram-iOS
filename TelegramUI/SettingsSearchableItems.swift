@@ -506,7 +506,9 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             presentSelectivePrivacySettings(context, .groupInvitations, present)
         }),
         SettingsSearchableItem(id: .privacy(7), title: passcodeTitle, alternate: passcodeAlternate, icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            let _ = passcodeOptionsAccessController(context: context, completion: { animated in
+            let _ = passcodeOptionsAccessController(context: context, pushController: { c in 
+                
+            }, completion: { animated in
                 let controller = passcodeOptionsController(context: context)
                 if animated {
                     present(.push, controller)

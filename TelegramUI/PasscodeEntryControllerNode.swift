@@ -23,8 +23,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     private let inputFieldNode: PasscodeEntryInputFieldNode
     private let subtitleNode: ASTextNode
     private let keyboardNode: PasscodeEntryKeyboardNode
-    private let biometricNode: HighlightableButtonNode
     private let deleteButtonNode: HighlightableButtonNode
+    private let biometricButtonNode: HighlightableButtonNode
     private let effectView: UIVisualEffectView
     
     private let hapticFeedback = HapticFeedback()
@@ -46,11 +46,11 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.backgroundNode = ASImageNode()
         self.iconNode = PasscodeLockIconNode()
         self.titleNode = PasscodeEntryTitleNode()
-        self.inputFieldNode = PasscodeEntryInputFieldNode(color: .white, fieldType: passcodeType)
+        self.inputFieldNode = PasscodeEntryInputFieldNode(color: .white, fieldType: passcodeType, keyboardAppearance: .dark, useCustomNumpad: true)
         self.subtitleNode = ASTextNode()
         self.keyboardNode = PasscodeEntryKeyboardNode()
-        self.biometricNode = HighlightableButtonNode()
         self.deleteButtonNode = HighlightableButtonNode()
+        self.biometricButtonNode = HighlightableButtonNode()
         self.effectView = UIVisualEffectView(effect: nil)
             
         super.init()
@@ -68,12 +68,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             self?.checkPasscode?(passcode)
         }
         
+        self.deleteButtonNode.setImage(UIImage(bundleImageName: "Settings/PasscodeClearIcon"), for: .normal)
+    
         if let biometricsType = self.biometricsType {
             switch biometricsType {
                 case .touchId:
-                    self.biometricNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/PasscodeTouchId"), color: .white), for: .normal)
+                    self.biometricButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/PasscodeTouchId"), color: .white), for: .normal)
                 case .faceId:
-                    self.biometricNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/PasscodeFaceId"), color: .white), for: .normal)
+                    self.biometricButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/PasscodeFaceId"), color: .white), for: .normal)
             }
         }
         
@@ -82,15 +84,21 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.inputFieldNode)
         self.addSubnode(self.keyboardNode)
-        self.addSubnode(self.biometricNode)
         self.addSubnode(self.deleteButtonNode)
+        self.addSubnode(self.biometricButtonNode)
     }
     
     override func didLoad() {
         super.didLoad()
         
         self.view.insertSubview(self.effectView, at: 0)
-        self.biometricNode.addTarget(self, action: #selector(self.biometricsPressed), forControlEvents: .touchUpInside)
+        
+        self.deleteButtonNode.addTarget(self, action: #selector(self.deletePressed), forControlEvents: .touchUpInside)
+        self.biometricButtonNode.addTarget(self, action: #selector(self.biometricsPressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc private func deletePressed() {
+        self.inputFieldNode.delete()
     }
     
     @objc private func biometricsPressed() {
@@ -105,8 +113,6 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.wallpaper = presentationData.chatWallpaper
-        
-        self.deleteButtonNode.setTitle(self.strings.Common_Delete, with: Font.regular(17.0), with: .white, for: .normal)
     }
     
     func updateBackground() {
@@ -159,20 +165,24 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         self.inputFieldNode.isHidden = true
         self.keyboardNode.isHidden = true
-        self.biometricNode.isHidden = true
+        self.deleteButtonNode.isHidden = true
+        self.biometricButtonNode.isHidden = true
         
         self.titleNode.setAttributedText(NSAttributedString(string: self.strings.Passcode_AppLockedAlert.replacingOccurrences(of: "\n", with: " "), font: titleFont, textColor: .white), animation: .slideIn, completion: {
             self.inputFieldNode.isHidden = false
             self.keyboardNode.isHidden = false
-            self.biometricNode.isHidden = false
+            self.deleteButtonNode.isHidden = false
+            self.biometricButtonNode.isHidden = false
             
             self.inputFieldNode.animateIn()
             self.keyboardNode.animateIn()
             var biometricDelay = 0.3
             if case .alphanumeric = self.passcodeType {
                 biometricDelay = 0.0
+            } else {
+                self.deleteButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: 0.15, timingFunction: kCAMediaTimingFunctionEaseOut)
             }
-            self.biometricNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.2, delay: biometricDelay, timingFunction: kCAMediaTimingFunctionEaseOut)
+            self.biometricButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: biometricDelay, timingFunction: kCAMediaTimingFunctionEaseOut)
             
             Queue.mainQueue().after(1.5, {
                 self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .crossFade)
@@ -189,7 +199,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         })
     }
     
-    func animateFailure() {
+    func animateError() {
         self.inputFieldNode.reset()
         self.inputFieldNode.layer.addShakeAnimation(amplitude: -30.0, duration: 0.5, count: 6, decay: true)
         self.iconNode.layer.addShakeAnimation(amplitude: -8.0, duration: 0.5, count: 6, decay: true)
@@ -213,12 +223,12 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0) + 6.0, y: layout.insets(options: .statusBar).top + 15.0), size: iconSize))
         
         let titleSize = self.titleNode.updateLayout(layout: layout, transition: transition)
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 123.0), size: titleSize))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 162.0), size: titleSize))
         
         let inputFieldFrame = self.inputFieldNode.updateLayout(layout: layout, transition: transition)
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let keyboardFrame = self.keyboardNode.updateLayout(layout: layout, transition: transition)
+        let (keyboardFrame, keyboardButtonSize) = self.keyboardNode.updateLayout(layout: layout, transition: transition)
         transition.updateFrame(node: self.keyboardNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         switch self.passcodeType {
@@ -228,7 +238,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 self.keyboardNode.alpha = 0.0
         }
         
-        if let biometricIcon = self.biometricNode.image(for: .normal) {
+        transition.updateFrame(node: self.deleteButtonNode, frame: CGRect(origin: CGPoint(x: keyboardFrame.maxX - keyboardButtonSize.width, y: keyboardFrame.maxY - keyboardButtonSize.height), size: keyboardButtonSize))
+        
+        if let biometricIcon = self.biometricButtonNode.image(for: .normal) {
             var biometricY: CGFloat = 0.0
             let bottomInset = layout.inputHeight ?? 0.0
             if bottomInset > 0 && self.keyboardNode.alpha < 1.0 {
@@ -236,7 +248,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             } else {
                 biometricY = keyboardFrame.maxY + 30.0
             }
-            transition.updateFrame(node: self.biometricNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - biometricIcon.size.width) / 2.0), y: biometricY), size: biometricIcon.size))
+            transition.updateFrame(node: self.biometricButtonNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - biometricIcon.size.width) / 2.0), y: biometricY), size: biometricIcon.size))
         }
+
     }
 }

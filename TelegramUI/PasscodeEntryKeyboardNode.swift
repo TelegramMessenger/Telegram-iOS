@@ -223,7 +223,7 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGRect {
+    func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> (CGRect, CGSize) {
         let buttonSize: CGFloat
         let horizontalSecond: CGFloat
         let horizontalThird: CGFloat
@@ -279,7 +279,7 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
                     verticalSecond = 91.0
                     verticalThird = 182.0
                     verticalFourth = 273.0
-                    size = CGSize(width: 281.0, height: 345.0)
+                    size = CGSize(width: 281.0, height: 348.0)
                     offset = 294.0
                 case .iPhoneXSMax:
                     buttonSize = 85.0
@@ -340,7 +340,7 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
                 transition.updateFrame(node: subnodes[i], frame: CGRect(origin: origin, size: CGSize(width: buttonSize, height: buttonSize)))
             }
         }
-        return CGRect(origin: origin, size: size)
+        return (CGRect(origin: origin, size: size), CGSize(width: buttonSize, height: buttonSize))
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

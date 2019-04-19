@@ -70,6 +70,15 @@ enum PasscodeEntryFieldType {
                 return nil
         }
     }
+    
+    var keyboardType: UIKeyboardType {
+        switch self {
+            case .digits6, .digits4:
+                return .numberPad
+            case .alphanumeric:
+                return .default
+        }
+    }
 }
 
 private class PasscodeEntryInputView: UIView {
@@ -111,6 +120,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var background: PasscodeBackground?
     private var color: UIColor
     private var fieldType: PasscodeEntryFieldType
+    private let useCustomNumpad: Bool
     
     private let textFieldNode: TextFieldNode
     private let borderNode: ASImageNode
@@ -120,9 +130,21 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     
     var complete: ((String) -> Void)?
     
-    init(color: UIColor, fieldType: PasscodeEntryFieldType) {
+    var text: String {
+        return self.textFieldNode.textField.text ?? ""
+    }
+    
+    var keyboardAppearance: UIKeyboardAppearance {
+        didSet {
+            self.textFieldNode.textField.keyboardAppearance = self.keyboardAppearance
+        }
+    }
+    
+    init(color: UIColor, fieldType: PasscodeEntryFieldType, keyboardAppearance: UIKeyboardAppearance, useCustomNumpad: Bool = false) {
         self.color = color
         self.fieldType = fieldType
+        self.keyboardAppearance = keyboardAppearance
+        self.useCustomNumpad = useCustomNumpad
         
         self.textFieldNode = TextFieldNode()
         self.borderNode = ASImageNode()
@@ -143,17 +165,30 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         super.didLoad()
         
         self.textFieldNode.textField.isSecureTextEntry = true
-        self.textFieldNode.textField.textColor = .white
+        self.textFieldNode.textField.textColor = self.color
         self.textFieldNode.textField.delegate = self
         self.textFieldNode.textField.returnKeyType = .done
-        self.textFieldNode.textField.tintColor = .white
-        self.textFieldNode.textField.keyboardAppearance = .dark
+        self.textFieldNode.textField.tintColor = self.color
+        self.textFieldNode.textField.keyboardAppearance = self.keyboardAppearance
+        self.textFieldNode.textField.keyboardType = self.fieldType.keyboardType
         
-        switch self.fieldType {
-            case .digits6, .digits4:
-                self.textFieldNode.textField.inputView = PasscodeEntryInputView()
-            case .alphanumeric:
-                break
+        if self.useCustomNumpad {
+            switch self.fieldType {
+                case .digits6, .digits4:
+                    self.textFieldNode.textField.inputView = PasscodeEntryInputView()
+                case .alphanumeric:
+                    break
+            }
+        }
+    }
+    
+    func updateFieldType(_ fieldType: PasscodeEntryFieldType, animated: Bool) {
+        self.fieldType = fieldType
+        
+        self.textFieldNode.textField.keyboardType = self.fieldType.keyboardType
+        
+        if let validLayout = self.validLayout {
+            let _ = self.updateLayout(layout: validLayout, transition: animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate)
         }
     }
     
@@ -180,14 +215,14 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func reset() {
+    func reset(animated: Bool = true) {
         var delay: Double = 0.0
         for node in self.dotNodes.reversed() {
             if node.alpha < 1.0 {
                 continue
             }
             
-            node.updateState(filled: false, animated: true, delay: delay)
+            node.updateState(filled: false, animated: animated, delay: delay)
             delay += 0.05
         }
         self.textFieldNode.textField.text = ""
@@ -245,29 +280,30 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGRect {
         self.validLayout = layout
         
+        let fieldAlpha: CGFloat
         switch self.fieldType {
-            case .digits6:
-                self.textFieldNode.alpha = 0.0
-                self.borderNode.alpha = 0.0
-            case .digits4:
-                self.textFieldNode.alpha = 0.0
-                self.borderNode.alpha = 0.0
+            case .digits6, .digits4:
+                fieldAlpha = 0.0
             case .alphanumeric:
-                self.textFieldNode.alpha = 1.0
-                self.borderNode.alpha = 1.0
+                fieldAlpha = 1.0
         }
         
-        let origin = CGPoint(x: floor((layout.size.width - dotDiameter * 6 - dotSpacing * 5) / 2.0), y: 164.0)
+        transition.updateAlpha(node: self.textFieldNode, alpha: fieldAlpha)
+        transition.updateAlpha(node: self.borderNode, alpha: fieldAlpha)
+        
+        let origin = CGPoint(x: floor((layout.size.width - dotDiameter * 6 - dotSpacing * 5) / 2.0), y: 206.0)
         for i in 0 ..< self.dotNodes.count {
             let node = self.dotNodes[i]
+            let dotAlpha: CGFloat
             switch self.fieldType {
                 case .digits6:
-                    node.alpha = 1.0
+                    dotAlpha = 1.0
                 case .digits4:
-                    node.alpha = (i > 0 && i < self.dotNodes.count - 1) ? 1.0 : 0.0
+                    dotAlpha = (i > 0 && i < self.dotNodes.count - 1) ? 1.0 : 0.0
                 case .alphanumeric:
-                    node.alpha = 0.0
+                    dotAlpha = 0.0
             }
+            transition.updateAlpha(node: node, alpha: dotAlpha)
             
             let dotFrame = CGRect(x: origin.x + CGFloat(i) * (dotDiameter + dotSpacing), y: origin.y, width: dotDiameter, height: dotDiameter)
             transition.updateFrame(node: node, frame: dotFrame)

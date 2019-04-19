@@ -112,6 +112,13 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 return .none
             }))
         
+            options.append(OpenInOption(application: .other(title: "DuckDuckGo", identifier: 663592361, scheme: "ddgQuickLink"), action: {
+                if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) {
+                    return .openUrl(url: "ddgQuickLink://\(escapedUrl)")
+                }
+                return .none
+            }))
+        
         
         case let .location(location, withDirections):
             let lat = location.latitude

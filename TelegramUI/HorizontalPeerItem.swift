@@ -164,7 +164,7 @@ final class HorizontalPeerItemNode: ListViewItemNode {
             
             var online = false
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            if let presence = item.presence as? TelegramUserPresence, !isServicePeer(item.peer) {
+            if let peer = item.peer as? TelegramUser, let presence = item.presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) {
                 let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
                 if case .online = relativeStatus {
                     online = true

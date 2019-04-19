@@ -147,19 +147,19 @@ private let textFont = Font.regular(15.0)
 private let dateFont = Font.regular(14.0)
 private let badgeFont = Font.regular(14.0)
 
-private let pinIcon = ItemListRevealOptionIcon.animation(animation: "anim_pin", keysToColor: nil)
-private let unpinIcon = ItemListRevealOptionIcon.animation(animation: "anim_unpin", keysToColor: ["un Outlines.Group 1.Stroke 1"])
-private let muteIcon = ItemListRevealOptionIcon.animation(animation: "anim_mute", keysToColor: ["un Outlines.Group 1.Stroke 1"])
-private let unmuteIcon = ItemListRevealOptionIcon.animation(animation: "anim_unmute", keysToColor: nil)
-private let deleteIcon = ItemListRevealOptionIcon.animation(animation: "anim_delete", keysToColor: nil)
-private let groupIcon = ItemListRevealOptionIcon.animation(animation: "anim_group", keysToColor: nil)
-private let ungroupIcon = ItemListRevealOptionIcon.animation(animation: "anim_ungroup", keysToColor: ["un Outlines.Group 1.Stroke 1"])
-private let readIcon = ItemListRevealOptionIcon.animation(animation: "anim_read", keysToColor: nil)
-private let unreadIcon = ItemListRevealOptionIcon.animation(animation: "anim_unread", keysToColor: ["Oval.Oval.Stroke 1"])
-private let archiveIcon = ItemListRevealOptionIcon.image(image: UIImage(bundleImageName: "Chat List/RevealActionArchiveIcon")!)
-private let unarchiveIcon = ItemListRevealOptionIcon.image(image: UIImage(bundleImageName: "Chat List/RevealActionUnarchiveIcon")!)
-private let hideIcon = ItemListRevealOptionIcon.image(image: UIImage(bundleImageName: "Chat List/RevealActionHideIcon")!)
-private let unhideIcon = ItemListRevealOptionIcon.image(image: UIImage(bundleImageName: "Chat List/RevealActionUnhideIcon")!)
+private let pinIcon = ItemListRevealOptionIcon.animation(animation: "anim_pin", offset: 0.0, keysToColor: nil)
+private let unpinIcon = ItemListRevealOptionIcon.animation(animation: "anim_unpin", offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"])
+private let muteIcon = ItemListRevealOptionIcon.animation(animation: "anim_mute", offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"])
+private let unmuteIcon = ItemListRevealOptionIcon.animation(animation: "anim_unmute", offset: 0.0, keysToColor: nil)
+private let deleteIcon = ItemListRevealOptionIcon.animation(animation: "anim_delete", offset: 0.0, keysToColor: nil)
+private let groupIcon = ItemListRevealOptionIcon.animation(animation: "anim_group", offset: 0.0, keysToColor: nil)
+private let ungroupIcon = ItemListRevealOptionIcon.animation(animation: "anim_ungroup", offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"])
+private let readIcon = ItemListRevealOptionIcon.animation(animation: "anim_read", offset: 0.0, keysToColor: nil)
+private let unreadIcon = ItemListRevealOptionIcon.animation(animation: "anim_unread", offset: 0.0, keysToColor: ["Oval.Oval.Stroke 1"])
+private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_archive", offset: 1.0, keysToColor: nil)
+private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_unarchive", offset: 1.0, keysToColor: nil)
+private let hideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", offset: 0.0, keysToColor: nil)
+private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "anim_unhide", offset: 0.0, keysToColor: nil)
 
 private enum RevealOptionKey: Int32 {
     case pin
@@ -890,7 +890,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let peerLeftRevealOptions: [ItemListRevealOption]
             switch item.content {
                 case let .peer(_, renderedPeer, _, _, presence, _ ,_ ,_, _, _):
-                    if let peer = renderedPeer.peer, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && peer.id != item.account.peerId  {
+                    if let peer = renderedPeer.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.account.peerId  {
                         let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: timestamp)
                         if case .online = relativeStatus {
                             online = true
