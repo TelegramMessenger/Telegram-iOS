@@ -3,6 +3,13 @@
 # rlottie
 A platform independent standalone library that plays Lottie Animation.
 
+For any resource test, please visit rlottie online viewer:
+https://www.rlottie.com
+
+Query about rlottie or request troubleshooting online, please visit Gitter:
+https://gitter.im/rLottie-dev/community#
+
+
 ## BUILD INSTRUCTIONS
 
 1. install meson build system. ( follow instruction in this link http://mesonbuild.com/Getting-meson.html )
