@@ -142,7 +142,7 @@ func snapshotChatList(application: UIApplication, mainWindow: UIWindow, window: 
                 transaction.updateCurrentPeerNotificationSettings([peer.id: TelegramPeerNotificationSettings.defaultSettings])
             }
         }
-        transaction.setPinnedItemIds(chatList.filter{ $0.isPinned }.map{ .peer($0.message.peer.peerId) })
+        transaction.setPinnedItemIds(groupId: nil, itemIds: chatList.filter{ $0.isPinned }.map{ .peer($0.message.peer.peerId) })
     }).start()
     
     let rootController = TelegramRootController(context: context)
