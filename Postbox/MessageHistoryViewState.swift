@@ -88,6 +88,22 @@ func binaryIndexOrLower(_ inputArr: [MessageHistoryEntry], _ searchItem: History
     return hi
 }
 
+func binaryIndexOrLower(_ inputArr: [MessageHistoryMessageEntry], _ searchItem: HistoryViewAnchor) -> Int {
+    var lo = 0
+    var hi = inputArr.count - 1
+    while lo <= hi {
+        let mid = (lo + hi) / 2
+        if searchItem.isGreater(than: inputArr[mid].message.index) {
+            lo = mid + 1
+        } else if searchItem.isLower(than: inputArr[mid].message.index) {
+            hi = mid - 1
+        } else {
+            return mid
+        }
+    }
+    return hi
+}
+
 private func binaryIndexOrLower(_ inputArr: [MutableMessageHistoryEntry], _ searchItem: HistoryViewAnchor) -> Int {
     var lo = 0
     var hi = inputArr.count - 1
@@ -215,7 +231,7 @@ private func isIndex(index: MessageIndex, closerTo anchor: HistoryViewAnchor, th
 
 private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries], holes: HistoryViewHoles, anchor: HistoryViewAnchor, tag: MessageTags?) -> (clipRanges: [ClosedRange<MessageIndex>], sampledHole: SampledHistoryViewHole?) {
     var clipRanges: [ClosedRange<MessageIndex>] = []
-    var sampledHole: (itemIndex: Int, hole: SampledHistoryViewHole)?
+    var sampledHole: (itemIndex: Int?, hole: SampledHistoryViewHole)?
     
     for (space, indices) in holes.holesBySpace {
         if indices.isEmpty {
@@ -242,7 +258,12 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                 case .upperBound, .index:
                     holeBounds = (Int32.max - 1, 1)
             }
-            return ([MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound()], SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: holeBounds.startId, endId: holeBounds.endId))
+            if case let .index(index) = anchor, index.id.peerId == space.peerId {
+                return ([MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound()], SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: holeBounds.startId, endId: holeBounds.endId))
+            } else {
+                sampledHole = (nil, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: holeBounds.startId, endId: holeBounds.endId))
+                continue
+            }
         }
         guard let bounds = items.bounds else {
             assertionFailure("A non-empty entry list should have non-nil bounds")
@@ -285,7 +306,7 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                     clipRanges.append(MessageIndex.absoluteLowerBound() ... itemClipIndex)
                     var replaceHole = false
                     if let (currentItemIndex, _) = sampledHole {
-                        if abs(lowerDirectionIndex - anchorIndex) < abs(currentItemIndex - anchorIndex) {
+                        if let currentItemIndex = currentItemIndex, abs(lowerDirectionIndex - anchorIndex) < abs(currentItemIndex - anchorIndex) {
                             replaceHole = true
                         }
                     } else {
@@ -327,7 +348,7 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                     clipRanges.append(itemClipIndex ... MessageIndex.absoluteUpperBound())
                     var replaceHole = false
                     if let (currentItemIndex, _) = sampledHole {
-                        if abs(higherDirectionIndex - anchorIndex) < abs(currentItemIndex - anchorIndex) {
+                        if let currentItemIndex = currentItemIndex, abs(higherDirectionIndex - anchorIndex) < abs(currentItemIndex - anchorIndex) {
                             replaceHole = true
                         }
                     } else {
@@ -800,7 +821,7 @@ private func fetchHoles(postbox: Postbox, locations: MessageHistoryViewPeerIds, 
 
 enum HistoryViewLoadingSample {
     case ready(HistoryViewAnchor, HistoryViewHoles)
-    case loadHole(PeerId, MessageId.Namespace, MessageTags?, IndexSet, MessageId.Id)
+    case loadHole(PeerId, MessageId.Namespace, MessageTags?, MessageId.Id)
 }
 
 final class HistoryViewLoadingState {
@@ -828,7 +849,7 @@ final class HistoryViewLoadingState {
         while true {
             if let indices = self.holes.holesBySpace[PeerIdAndNamespace(peerId: self.messageId.peerId, namespace: self.messageId.namespace)] {
                 if indices.contains(Int(messageId.id)) {
-                    return .loadHole(messageId.peerId, messageId.namespace, self.tag, indices, messageId.id)
+                    return .loadHole(messageId.peerId, messageId.namespace, self.tag, messageId.id)
                 }
             }
             

@@ -245,7 +245,6 @@ final class ViewTracker {
         
         for (mutableView, pipe) in self.messageHistoryViews.copyItems() {
             if mutableView.refreshDueToExternalTransaction(postbox: postbox) {
-                mutableView.render(postbox: postbox)
                 pipe.putNext((MessageHistoryView(mutableView), .Generic))
                 
                 updateTrackedHoles = true
@@ -292,12 +291,11 @@ final class ViewTracker {
         }
         
         for (mutableView, pipe) in self.messageHistoryViews.copyItems() {
-            let context = MutableMessageHistoryViewReplayContext()
             var updated = false
             
             let previousPeerIds = mutableView.peerIds
         
-            if mutableView.replay(postbox: postbox, transaction: transaction, updatedMedia: transaction.updatedMedia, updatedCachedPeerData: transaction.currentUpdatedCachedPeerData, context: context, renderIntermediateMessage: self.renderMessage) {
+            if mutableView.replay(postbox: postbox, transaction: transaction) {
                 updated = true
             }
             
@@ -331,10 +329,6 @@ final class ViewTracker {
                         }
                     }
             }
-        
-            if mutableView.updatePeers(transaction.currentUpdatedPeers) {
-                updated = true
-            }
             
             mutableView.updatePeerIds(transaction: transaction)
             if mutableView.peerIds != previousPeerIds {
@@ -346,8 +340,6 @@ final class ViewTracker {
         
             if updated {
                 updateTrackedHoles = true
-                mutableView.render(postbox: postbox)
-                
                 pipe.putNext((MessageHistoryView(mutableView), updateType))
             }
         }

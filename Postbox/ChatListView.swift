@@ -46,6 +46,7 @@ public struct ChatListMessageTagSummaryInfo: Equatable {
 
 public struct ChatListGroupReferenceEntry: Equatable {
     public let groupId: PeerGroupId
+    public let renderedPeer: RenderedPeer
     public let message: Message?
     public let unreadState: ChatListTotalUnreadState
     
@@ -54,6 +55,9 @@ public struct ChatListGroupReferenceEntry: Equatable {
             return false
         }
         if lhs.unreadState != rhs.unreadState {
+            return false
+        }
+        if lhs.renderedPeer != rhs.renderedPeer {
             return false
         }
         if lhs.message?.stableVersion != rhs.message?.stableVersion {
@@ -331,16 +335,77 @@ final class MutableChatListView {
         self.groupEntries.removeAll()
         for groupId in postbox.chatListTable.existingGroups() {
             var upperBound: (ChatListIndex, Bool)?
+            var foundMessage: IntermediateMessage?
+            var foundPeerWithIndex: (PeerId, MessageIndex)?
             inner: while true {
                 if let entry = postbox.chatListTable.earlierEntries(groupId: groupId, index: upperBound, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1).first {
-                    if case let .message(_, maybeMessage, _) = entry, let message = maybeMessage {
-                        self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, message: postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable), unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
-                        break inner
+                    var currentTopIndex: MessageIndex?
+                    if let (_, foundIndex) = foundPeerWithIndex {
+                        currentTopIndex = foundIndex
+                    }
+                    if let foundMessageValue = foundMessage {
+                        if let currentTopIndexValue = currentTopIndex {
+                            if foundMessageValue.index > currentTopIndexValue {
+                                currentTopIndex = foundMessageValue.index
+                            }
+                        } else {
+                            currentTopIndex = foundMessageValue.index
+                        }
+                    }
+                    
+                    if case let .message(index, maybeMessage, _) = entry {
+                        if let message = maybeMessage {
+                            if let currentTopIndex = currentTopIndex {
+                                if message.index > currentTopIndex {
+                                    foundMessage = message
+                                    foundPeerWithIndex = nil
+                                }
+                            } else {
+                                foundMessage = message
+                                foundPeerWithIndex = nil
+                            }
+                            if index.pinningIndex == nil {
+                                break inner
+                            }
+                            upperBound = (entry.index, true)
+                        } else {
+                            if let currentTopIndex = currentTopIndex {
+                                if index.messageIndex > currentTopIndex {
+                                    foundMessage = nil
+                                    foundPeerWithIndex = (index.messageIndex.id.peerId, index.messageIndex)
+                                }
+                            } else {
+                                foundMessage = nil
+                                foundPeerWithIndex = (index.messageIndex.id.peerId, index.messageIndex)
+                            }
+                            if index.pinningIndex == nil {
+                                break inner
+                            }
+                            upperBound = (entry.index.predecessor, true)
+                        }
                     } else {
                         upperBound = (entry.index, false)
                     }
                 } else {
                     break inner
+                }
+            }
+            
+            if let peerId = foundMessage?.id.peerId ?? foundPeerWithIndex?.0, let peer = postbox.peerTable.get(peerId) {
+                var peers = SimpleDictionary<PeerId, Peer>()
+                peers[peer.id] = peer
+                if let associatedPeerId = peer.associatedPeerId {
+                    if let associatedPeer = postbox.peerTable.get(associatedPeerId) {
+                        peers[associatedPeer.id] = associatedPeer
+                    }
+                }
+                
+                let renderedPeer = RenderedPeer(peerId: peerId, peers: peers)
+                
+                if let message = foundMessage {
+                    self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeer: renderedPeer, message: postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable), unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
+                } else if let (peerId, _) = foundPeerWithIndex {
+                    self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeer: renderedPeer, message: nil, unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
                 }
             }
         }
@@ -418,7 +483,7 @@ final class MutableChatListView {
             } else {
                 for i in 0 ..< self.groupEntries.count {
                     if let updatedState = transaction.currentUpdatedTotalUnreadStates[WrappedPeerGroupId(groupId: self.groupEntries[i].groupId)] {
-                        self.groupEntries[i] = ChatListGroupReferenceEntry(groupId: self.groupEntries[i].groupId, message: self.groupEntries[i].message, unreadState: updatedState)
+                        self.groupEntries[i] = ChatListGroupReferenceEntry(groupId: self.groupEntries[i].groupId, renderedPeer: self.groupEntries[i].renderedPeer, message: self.groupEntries[i].message, unreadState: updatedState)
                         hasChanges = true
                     }
                 }
