@@ -901,7 +901,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if item.enableContextActions && !isAd {
                         peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, groupId: item.peerGroupId, canDelete: true, isEditing: item.editing)
-                        peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId != item.account.peerId)
+                        peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.account.peerId)
                     } else {
                         peerRevealOptions = []
                         peerLeftRevealOptions = []
