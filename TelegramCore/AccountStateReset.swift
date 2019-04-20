@@ -124,7 +124,7 @@ private struct ResolvedChatListResetRange {
 }
 
 func accountStateReset(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
-    let pinnedChats: Signal<Api.messages.PeerDialogs, NoError> = network.request(Api.functions.messages.getPinnedDialogs())
+    let pinnedChats: Signal<Api.messages.PeerDialogs, NoError> = network.request(Api.functions.messages.getPinnedDialogs(folderId: 0))
     |> retryRequest
     let state: Signal<Api.updates.State, NoError> = network.request(Api.functions.updates.getState())
     |> retryRequest
@@ -279,7 +279,7 @@ func accountStateReset(postbox: Postbox, network: Network, accountPeerId: PeerId
                     }
                     
                     if range.head {
-                        transaction.setPinnedItemIds(range.remote.pinnedItemIds ?? [])
+                        transaction.setPinnedItemIds(groupId: nil, itemIds: range.remote.pinnedItemIds ?? [])
                     }
                 }
                 

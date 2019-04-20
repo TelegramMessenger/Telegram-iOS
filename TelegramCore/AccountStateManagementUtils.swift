@@ -1163,7 +1163,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 if let date = updatesDate, date + 60 > serverTime {
                     updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), peerId: nil, activity: .typingText)
                 }
-            case let .updateDialogPinned(flags, peer):
+            case let .updateDialogPinned(flags, folderId, peer):
+                let groupId: PeerGroupId? = folderId.flatMap(PeerGroupId.init(rawValue:))
                 let item: PinnedItemId
                 switch peer {
                     case let .dialogPeer(peer):
@@ -1172,13 +1173,14 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         preconditionFailure()
                 }
                 if (flags & (1 << 0)) != 0 {
-                    updatedState.addUpdatePinnedItemIds(.pin(item))
+                    updatedState.addUpdatePinnedItemIds(groupId: groupId, operation: .pin(item))
                 } else {
-                    updatedState.addUpdatePinnedItemIds(.unpin(item))
+                    updatedState.addUpdatePinnedItemIds(groupId: groupId, operation: .unpin(item))
                 }
-            case let .updatePinnedDialogs(_, order):
+            case let .updatePinnedDialogs(_, folderId, order):
+                let groupId: PeerGroupId? = folderId.flatMap(PeerGroupId.init(rawValue:))
                 if let order = order {
-                    updatedState.addUpdatePinnedItemIds(.reorder(order.map {
+                    updatedState.addUpdatePinnedItemIds(groupId: groupId, operation: .reorder(order.map {
                         let item: PinnedItemId
                         switch $0 {
                             case let .dialogPeer(peer):
@@ -1189,7 +1191,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         return item
                     }))
                 } else {
-                    updatedState.addUpdatePinnedItemIds(.sync)
+                    updatedState.addUpdatePinnedItemIds(groupId: groupId, operation: .sync)
                 }
             case let .updateReadMessagesContents(messages, _, _):
                 updatedState.addReadMessagesContents((nil, messages))
@@ -2304,45 +2306,45 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 } else if chatPeerId.namespace == Namespaces.Peer.SecretChat {
                     updatedSecretChatTypingActivities.insert(chatPeerId)
                 }
-            case let .UpdatePinnedItemIds(pinnedOperation):
+            case let .UpdatePinnedItemIds(groupId, pinnedOperation):
                 switch pinnedOperation {
                     case let .pin(itemId):
                         switch itemId {
                             case let .peer(peerId):
                                 if transaction.getPeer(peerId) == nil || transaction.getPeerChatListInclusion(peerId) == .notSpecified {
-                                    addSynchronizePinnedChatsOperation(transaction: transaction)
+                                    addSynchronizePinnedChatsOperation(transaction: transaction, groupId: groupId)
                                 } else {
-                                    var currentItemIds = transaction.getPinnedItemIds()
+                                    var currentItemIds = transaction.getPinnedItemIds(groupId: groupId)
                                     if !currentItemIds.contains(.peer(peerId)) {
                                         currentItemIds.insert(.peer(peerId), at: 0)
-                                        transaction.setPinnedItemIds(currentItemIds)
+                                        transaction.setPinnedItemIds(groupId: groupId, itemIds: currentItemIds)
                                     }
                                 }
-                            case let .group(groupId):
+                            case .group:
                                 break
                         }
                     case let .unpin(itemId):
                         switch itemId {
                             case let .peer(peerId):
-                                var currentItemIds = transaction.getPinnedItemIds()
+                                var currentItemIds = transaction.getPinnedItemIds(groupId: groupId)
                                 if let index = currentItemIds.index(of: .peer(peerId)) {
                                     currentItemIds.remove(at: index)
-                                    transaction.setPinnedItemIds(currentItemIds)
+                                    transaction.setPinnedItemIds(groupId: groupId, itemIds: currentItemIds)
                                 } else {
-                                    addSynchronizePinnedChatsOperation(transaction: transaction)
+                                    addSynchronizePinnedChatsOperation(transaction: transaction, groupId: groupId)
                                 }
-                            case let .group(groupId):
+                            case .group:
                                 break
                         }
                     case let .reorder(itemIds):
-                        let currentItemIds = transaction.getPinnedItemIds()
+                        let currentItemIds = transaction.getPinnedItemIds(groupId: groupId)
                         if Set(itemIds) == Set(currentItemIds) {
-                            transaction.setPinnedItemIds(itemIds)
+                            transaction.setPinnedItemIds(groupId: groupId, itemIds: itemIds)
                         } else {
-                            addSynchronizePinnedChatsOperation(transaction: transaction)
+                            addSynchronizePinnedChatsOperation(transaction: transaction, groupId: groupId)
                         }
                     case .sync:
-                        addSynchronizePinnedChatsOperation(transaction: transaction)
+                        addSynchronizePinnedChatsOperation(transaction: transaction, groupId: groupId)
                 }
             case let .ReadMessageContents(peerId, messageIds):
                 if let peerId = peerId {

@@ -8,6 +8,8 @@ import Foundation
 public struct LimitsConfiguration: Equatable, PreferencesEntry {
     public static let timeIntervalForever: Int32 = 0x7fffffff
     
+    public var maxPinnedChatCount: Int32
+    public var maxArchivedPinnedChatCount: Int32
     public var maxGroupMemberCount: Int32
     public var maxSupergroupMemberCount: Int32
     public var maxMessageForwardBatchSize: Int32
@@ -20,10 +22,12 @@ public struct LimitsConfiguration: Equatable, PreferencesEntry {
     public var maxMessageRevokeIntervalInPrivateChats: Int32
     
     public static var defaultValue: LimitsConfiguration {
-        return LimitsConfiguration(maxGroupMemberCount: 200, maxSupergroupMemberCount: 200000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60, maxMediaCaptionLength: 1000, canRemoveIncomingMessagesInPrivateChats: false, maxMessageRevokeInterval: 2 * 24 * 60 * 60, maxMessageRevokeIntervalInPrivateChats: 2 * 24 * 60 * 60)
+        return LimitsConfiguration(maxPinnedChatCount: 5, maxArchivedPinnedChatCount: 20, maxGroupMemberCount: 200, maxSupergroupMemberCount: 200000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60, maxMediaCaptionLength: 1000, canRemoveIncomingMessagesInPrivateChats: false, maxMessageRevokeInterval: 2 * 24 * 60 * 60, maxMessageRevokeIntervalInPrivateChats: 2 * 24 * 60 * 60)
     }
     
-    init(maxGroupMemberCount: Int32, maxSupergroupMemberCount: Int32, maxMessageForwardBatchSize: Int32, maxSavedGifCount: Int32, maxRecentStickerCount: Int32, maxMessageEditingInterval: Int32, maxMediaCaptionLength: Int32, canRemoveIncomingMessagesInPrivateChats: Bool, maxMessageRevokeInterval: Int32, maxMessageRevokeIntervalInPrivateChats: Int32) {
+    init(maxPinnedChatCount: Int32, maxArchivedPinnedChatCount: Int32, maxGroupMemberCount: Int32, maxSupergroupMemberCount: Int32, maxMessageForwardBatchSize: Int32, maxSavedGifCount: Int32, maxRecentStickerCount: Int32, maxMessageEditingInterval: Int32, maxMediaCaptionLength: Int32, canRemoveIncomingMessagesInPrivateChats: Bool, maxMessageRevokeInterval: Int32, maxMessageRevokeIntervalInPrivateChats: Int32) {
+        self.maxPinnedChatCount = maxPinnedChatCount
+        self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
         self.maxGroupMemberCount = maxGroupMemberCount
         self.maxSupergroupMemberCount = maxSupergroupMemberCount
         self.maxMessageForwardBatchSize = maxMessageForwardBatchSize
@@ -37,6 +41,8 @@ public struct LimitsConfiguration: Equatable, PreferencesEntry {
     }
     
     public init(decoder: PostboxDecoder) {
+        self.maxPinnedChatCount = decoder.decodeInt32ForKey("maxPinnedChatCount", orElse: 5)
+        self.maxArchivedPinnedChatCount = decoder.decodeInt32ForKey("maxArchivedPinnedChatCount", orElse: 20)
         self.maxGroupMemberCount = decoder.decodeInt32ForKey("maxGroupMemberCount", orElse: 200)
         self.maxSupergroupMemberCount = decoder.decodeInt32ForKey("maxSupergroupMemberCount", orElse: 5000)
         self.maxMessageForwardBatchSize = decoder.decodeInt32ForKey("maxMessageForwardBatchSize", orElse: 50)
@@ -50,6 +56,8 @@ public struct LimitsConfiguration: Equatable, PreferencesEntry {
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.maxPinnedChatCount, forKey: "maxPinnedChatCount")
+        encoder.encodeInt32(self.maxArchivedPinnedChatCount, forKey: "maxArchivedPinnedChatCount")
         encoder.encodeInt32(self.maxGroupMemberCount, forKey: "maxGroupMemberCount")
         encoder.encodeInt32(self.maxSupergroupMemberCount, forKey: "maxSupergroupMemberCount")
         encoder.encodeInt32(self.maxMessageForwardBatchSize, forKey: "maxMessageForwardBatchSize")

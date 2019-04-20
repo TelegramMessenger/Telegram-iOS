@@ -220,8 +220,15 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
         return offset
         |> mapToSignal { (timestamp, id, peer) -> Signal<FetchedChatList?, NoError> in
             let additionalPinnedChats: Signal<Api.messages.PeerDialogs?, NoError>
-            if case .general = location, case .inputPeerEmpty = peer, timestamp == 0 {
-                additionalPinnedChats = network.request(Api.functions.messages.getPinnedDialogs())
+            if case .inputPeerEmpty = peer, timestamp == 0 {
+                let folderId: Int32
+                switch location {
+                    case .general:
+                        folderId = 0
+                    case let .group(groupId):
+                        folderId = groupId.rawValue
+                }
+                additionalPinnedChats = network.request(Api.functions.messages.getPinnedDialogs(folderId: folderId))
                 |> retryRequest
                 |> map(Optional.init)
             } else {
@@ -343,9 +350,10 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         for itemId in parsedPinnedChats.itemIds {
                             switch itemId {
                                 case let .peer(peerId):
-                                    if peerGroupIds[peerId] == nil {
-                                        array.append(itemId)
+                                    if case let .group(groupId) = location {
+                                        peerGroupIds[peerId] = groupId
                                     }
+                                    array.append(itemId)
                                 case .group:
                                     break
                             }

@@ -81,7 +81,7 @@ enum AccountStateMutationOperation {
     case AddSecretMessages([Api.EncryptedMessage])
     case ReadSecretOutbox(peerId: PeerId, maxTimestamp: Int32, actionTimestamp: Int32)
     case AddPeerInputActivity(chatPeerId: PeerId, peerId: PeerId?, activity: PeerInputActivity?)
-    case UpdatePinnedItemIds(AccountStateUpdatePinnedItemIdsOperation)
+    case UpdatePinnedItemIds(PeerGroupId?, AccountStateUpdatePinnedItemIdsOperation)
     case ReadMessageContents((PeerId?, [Int32]))
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
@@ -327,8 +327,8 @@ struct AccountMutableState {
         self.addOperation(.AddPeerInputActivity(chatPeerId: chatPeerId, peerId: peerId, activity: activity))
     }
     
-    mutating func addUpdatePinnedItemIds(_ operation: AccountStateUpdatePinnedItemIdsOperation) {
-        self.addOperation(.UpdatePinnedItemIds(operation))
+    mutating func addUpdatePinnedItemIds(groupId: PeerGroupId?, operation: AccountStateUpdatePinnedItemIdsOperation) {
+        self.addOperation(.UpdatePinnedItemIds(groupId, operation))
     }
     
     mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, [Int32])) {
