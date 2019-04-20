@@ -221,8 +221,8 @@ private final class OpenInAppNode : ASDisplayNode {
                 if let image = UIImage(bundleImageName: "Open In/Maps") {
                     self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .image(image: image)))
                 }
-            case let .other(_, identifier, _):
-                self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .resource(resource: OpenInAppIconResource(appStoreId: identifier))))
+            case let .other(_, identifier, _, store):
+                self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .resource(resource: OpenInAppIconResource(appStoreId: identifier, store: store))))
         }
         
         self.action = {

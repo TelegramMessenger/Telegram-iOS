@@ -25,17 +25,25 @@ public struct OpenInAppIconResourceId: MediaResourceId {
 
 public class OpenInAppIconResource: TelegramMediaResource {
     public let appStoreId: Int64
+    public let store: String?
     
-    public init(appStoreId: Int64) {
+    public init(appStoreId: Int64, store: String?) {
         self.appStoreId = appStoreId
+        self.store = store
     }
     
     public required init(decoder: PostboxDecoder) {
         self.appStoreId = decoder.decodeInt64ForKey("i", orElse: 0)
+        self.store = decoder.decodeOptionalStringForKey("s")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.appStoreId, forKey: "i")
+        if let store = self.store {
+            encoder.encodeString(store, forKey: "s")
+        } else {
+            encoder.encodeNil(forKey: "s")
+        }
     }
     
     public var id: MediaResourceId {
@@ -55,7 +63,12 @@ func fetchOpenInAppIconResource(resource: OpenInAppIconResource) -> Signal<Media
     return Signal { subscriber in
         subscriber.putNext(.reset)
 
-        let metaUrl = "https://itunes.apple.com/lookup?id=\(resource.appStoreId)"
+        let metaUrl: String
+        if let store = resource.store {
+            metaUrl = "https://itunes.apple.com/\(store)/lookup?id=\(resource.appStoreId)"
+        } else {
+            metaUrl = "https://itunes.apple.com/lookup?id=\(resource.appStoreId)"
+        }
         
         let fetchDisposable = MetaDisposable()
         
