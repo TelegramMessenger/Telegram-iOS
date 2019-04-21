@@ -35,6 +35,10 @@ class ChatListItem: ListViewItem {
     
     let selectable: Bool = true
     
+    var approximateHeight: CGFloat {
+        return self.hiddenOffset ? 0.0 : 44.0
+    }
+    
     let header: ListViewItemHeader?
     
     init(presentationData: ChatListPresentationData, account: Account, peerGroupId: PeerGroupId?, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
@@ -837,7 +841,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var layoutOffset: CGFloat = 0.0
             if item.hiddenOffset {
-                layoutOffset = -itemHeight
+                //layoutOffset = -itemHeight
             }
             
             let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
@@ -918,11 +922,18 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: max(0.0, itemHeight + layoutOffset)), insets: insets)
+            var heightOffset: CGFloat = 0.0
+            if item.hiddenOffset {
+                heightOffset = -itemHeight
+            }
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: max(0.0, itemHeight + heightOffset)), insets: insets)
             
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params)
+                    if true || !animated {
+                        strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, layout.contentSize.height - itemHeight, 0.0)
+                    }
                     
                     if let _ = updatedTheme {
                         strongSelf.separatorNode.backgroundColor = item.presentationData.theme.chatList.itemSeparatorColor
@@ -1049,21 +1060,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let previousBadgeFrame = strongSelf.badgeNode.frame
                         let badgeFrame = CGRect(x: contentRect.maxX - badgeLayout.width, y: contentRect.maxY - badgeLayout.height - 2.0, width: badgeLayout.width, height: badgeLayout.height)
                         
-                        if !previousBadgeFrame.width.isZero && !badgeFrame.width.isZero && badgeFrame != previousBadgeFrame {
-                            if animateContent {
-                                strongSelf.badgeNode.frame = badgeFrame
-                                strongSelf.badgeNode.layer.animateFrame(from: previousBadgeFrame, to: badgeFrame, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
-                            } else {
-                                transition.updateFrame(node: strongSelf.badgeNode, frame: badgeFrame)
-                            }
-                        } else {
-                            strongSelf.badgeNode.frame = badgeFrame
-                        }
+                        transition.updateFrame(node: strongSelf.badgeNode, frame: badgeFrame)
                     }
                     
                     if currentMentionBadgeImage != nil || currentBadgeBackgroundImage != nil {
-                        let previousBadgeFrame = strongSelf.mentionBadgeNode.frame
-                        
                         let mentionBadgeOffset: CGFloat
                         if badgeLayout.width.isZero {
                             mentionBadgeOffset = contentRect.maxX - mentionBadgeLayout.width
@@ -1072,13 +1072,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         
                         let badgeFrame = CGRect(x: mentionBadgeOffset, y: contentRect.maxY - mentionBadgeLayout.height - 2.0, width: mentionBadgeLayout.width, height: mentionBadgeLayout.height)
-                        strongSelf.mentionBadgeNode.position = badgeFrame.center
-                        strongSelf.mentionBadgeNode.bounds = CGRect(origin: CGPoint(), size: badgeFrame.size)
                         
-                        if animateContent && !previousBadgeFrame.width.isZero && !badgeFrame.width.isZero && badgeFrame != previousBadgeFrame {                            
-                            strongSelf.mentionBadgeNode.layer.animatePosition(from: previousBadgeFrame.center, to: badgeFrame.center, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
-                            strongSelf.mentionBadgeNode.layer.animateBounds(from: CGRect(origin: CGPoint(), size: previousBadgeFrame.size), to: CGRect(origin: CGPoint(), size: badgeFrame.size), duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
-                        }
+                        transition.updateFrame(node: strongSelf.mentionBadgeNode, frame: badgeFrame)
                     }
                     
                     if let currentPinnedIconImage = currentPinnedIconImage {
@@ -1219,7 +1214,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let separatorInset: CGFloat
-                    if (!nextIsPinned && item.index.pinningIndex != nil) || last || groupHiddenByDefault {
+                    if (!nextIsPinned && item.index.pinningIndex != nil) || last {
                         separatorInset = 0.0
                     } else {
                         separatorInset = editingOffset + leftInset + rawContentRect.origin.x
@@ -1227,7 +1222,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: layoutOffset + itemHeight - separatorHeight), size: CGSize(width: params.width - separatorInset, height: separatorHeight)))
                     
-                    transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.contentSize))
+                    transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: itemHeight)))
                     if item.selected {
                         strongSelf.backgroundNode.backgroundColor = theme.itemSelectedBackgroundColor
                     } else if item.index.pinningIndex != nil {
@@ -1291,7 +1286,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var layoutOffset: CGFloat = 0.0
             if item.hiddenOffset {
-                layoutOffset = -itemHeight
+                //layoutOffset = -itemHeight
             }
             
             if let reorderControlNode = self.reorderControlNode {
@@ -1356,7 +1351,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.badgeNode, frame: updatedBadgeFrame)
             
             var mentionBadgeFrame = self.mentionBadgeNode.frame
-            mentionBadgeFrame.origin.x = updatedBadgeFrame.minX - 6.0 - mentionBadgeFrame.width
+            if updatedBadgeFrame.width.isZero {
+                mentionBadgeFrame.origin.x = updatedBadgeFrame.minX - mentionBadgeFrame.width
+            } else {
+                mentionBadgeFrame.origin.x = updatedBadgeFrame.minX - 6.0 - mentionBadgeFrame.width
+            }
             transition.updateFrame(node: self.mentionBadgeNode, frame: mentionBadgeFrame)
             
             let pinnedIconSize = self.pinnedIconNode.bounds.size
@@ -1431,6 +1430,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     close = false
                 case RevealOptionKey.hide.rawValue, RevealOptionKey.unhide.rawValue:
                     item.interaction.toggleArchivedFolderHiddenByDefault()
+                    close = false
                 default:
                     break
             }
@@ -1457,5 +1457,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode.layer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseOut, duration: 0.3, delay: 0.7, completion: { [weak self] _ in
             self?.updateIsHighlighted(transition: .immediate)
         })
+    }
+    
+    override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
+        super.animateFrameTransition(progress, currentValue)
+        
+        self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue - itemHeight, 0.0)
     }
 }

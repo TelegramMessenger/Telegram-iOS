@@ -1981,6 +1981,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             return chatLocationInfoReady
         })
         
+        if self.context.sharedContext.immediateExperimentalUISettings.crashOnLongQueries {
+            let _ = (self.ready.get()
+            |> filter({ $0 })
+            |> take(1)
+            |> timeout(0.8, queue: .concurrentDefaultQueue(), alternate: Signal { _ in
+                preconditionFailure()
+            })).start()
+        }
+        
         self.chatDisplayNode.historyNode.contentPositionChanged = { [weak self] offset in
             if let strongSelf = self {
                 let offsetAlpha: CGFloat

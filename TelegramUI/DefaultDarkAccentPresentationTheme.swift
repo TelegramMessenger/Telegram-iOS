@@ -141,7 +141,8 @@ private let chatList = PresentationThemeChatList(
     searchBarKeyboardColor: .dark,
     verifiedIconFillColor: accentColor,
     verifiedIconForegroundColor: .white,
-    secretIconColor: secretColor
+    secretIconColor: secretColor,
+    neutralAvatarColor: UIColor(rgb: 0xDBF5FF, alpha: 0.4)
 )
 
 private let bubble = PresentationThemeChatBubble(

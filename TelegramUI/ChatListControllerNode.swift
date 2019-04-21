@@ -133,6 +133,47 @@ final class ChatListControllerNode: ASDisplayNode {
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
         
+        if let toolbar = self.toolbar {
+            var tabBarHeight: CGFloat
+            var options: ContainerViewLayoutInsetOptions = []
+            if layout.metrics.widthClass == .regular {
+                options.insert(.input)
+            }
+            let bottomInset: CGFloat = layout.insets(options: options).bottom
+            if !layout.safeInsets.left.isZero {
+                tabBarHeight = 34.0 + bottomInset
+                insets.bottom += 34.0
+            } else {
+                tabBarHeight = 49.0 + bottomInset
+                insets.bottom += 49.0
+            }
+            
+            let tabBarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight))
+            
+            if let toolbarNode = self.toolbarNode {
+                transition.updateFrame(node: toolbarNode, frame: tabBarFrame)
+                toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right,  bottomInset: bottomInset, toolbar: toolbar, transition: transition)
+            } else {
+                let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
+                    self?.toolbarActionSelected?(true)
+                    }, right: { [weak self] in
+                        self?.toolbarActionSelected?(false)
+                })
+                toolbarNode.frame = tabBarFrame
+                toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: bottomInset, toolbar: toolbar, transition: .immediate)
+                self.addSubnode(toolbarNode)
+                self.toolbarNode = toolbarNode
+                if transition.isAnimated {
+                    toolbarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+        } else if let toolbarNode = self.toolbarNode {
+            self.toolbarNode = nil
+            transition.updateAlpha(node: toolbarNode, alpha: 0.0, completion: { [weak toolbarNode] _ in
+                toolbarNode?.removeFromSupernode()
+            })
+        }
+        
         self.chatListNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.chatListNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
         
@@ -176,45 +217,6 @@ final class ChatListControllerNode: ASDisplayNode {
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
-        }
-        
-        if let toolbar = self.toolbar {
-            var tabBarHeight: CGFloat
-            var options: ContainerViewLayoutInsetOptions = []
-            if layout.metrics.widthClass == .regular {
-                options.insert(.input)
-            }
-            let bottomInset: CGFloat = layout.insets(options: options).bottom
-            if !layout.safeInsets.left.isZero {
-                tabBarHeight = 34.0 + bottomInset
-            } else {
-                tabBarHeight = 49.0 + bottomInset
-            }
-            
-            let tabBarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight))
-            
-            if let toolbarNode = self.toolbarNode {
-                transition.updateFrame(node: toolbarNode, frame: tabBarFrame)
-                toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right,  bottomInset: bottomInset, toolbar: toolbar, transition: transition)
-            } else {
-                let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
-                    self?.toolbarActionSelected?(true)
-                }, right: { [weak self] in
-                    self?.toolbarActionSelected?(false)
-                })
-                toolbarNode.frame = tabBarFrame
-                toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: bottomInset, toolbar: toolbar, transition: .immediate)
-                self.addSubnode(toolbarNode)
-                self.toolbarNode = toolbarNode
-                if transition.isAnimated {
-                    toolbarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                }
-            }
-        } else if let toolbarNode = self.toolbarNode {
-            self.toolbarNode = nil
-            transition.updateAlpha(node: toolbarNode, alpha: 0.0, completion: { [weak toolbarNode] _ in
-                toolbarNode?.removeFromSupernode()
-            })
         }
     }
     

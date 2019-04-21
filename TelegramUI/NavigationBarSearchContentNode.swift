@@ -72,7 +72,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
     }
     
     func updateExpansionProgress(_ progress: CGFloat, animated: Bool = false) {
-        let newProgress = max(0.0, min(1.0, progress))
+        let newProgress = max(0.0, min(10.0, progress))
         if abs(newProgress - self.expansionProgress) > 0.0001 {
             self.expansionProgress = newProgress
         
@@ -121,13 +121,16 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         
         let fieldHeight: CGFloat = 36.0
         let fraction = fieldHeight / self.nominalHeight
-        let visibleProgress = max(0.0, self.expansionProgress - 1.0 + fraction) / fraction
+        
+        let visibleProgress = max(0.0, min(1.0, self.expansionProgress) - 1.0 + fraction) / fraction
+        
+        let overscrollProgress = max(0.0, max(0.0, self.expansionProgress - 1.0 + fraction) / fraction - visibleProgress)
         
         let searchBarNodeLayout = self.placeholderNode.asyncLayout()
         let (searchBarHeight, searchBarApply) = searchBarNodeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.activeNavigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.activeNavigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.activeNavigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.backgroundColor ?? .clear, transition)
         searchBarApply()
         
-        let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: 8.0), size: CGSize(width: baseWidth, height: fieldHeight))
+        let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: 8.0 + overscrollProgress * fieldHeight), size: CGSize(width: baseWidth, height: fieldHeight))
         transition.updateFrame(node: self.placeholderNode, frame: searchBarFrame)
         
         self.placeholderHeight = searchBarHeight

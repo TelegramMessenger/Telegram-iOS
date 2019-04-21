@@ -269,9 +269,21 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
                             reveal = false
                         }
                     }
-                    self.updateRevealOffsetInternal(offset: reveal ? -revealSize.width : 0.0, transition: .animated(duration: 0.3, curve: .spring))
-                    if !reveal {
-                        self.revealOptionsInteractivelyClosed()
+                    
+                    var selectedOption: ItemListRevealOption?
+                    if reveal && rightRevealNode.isDisplayingExtendedAction() {
+                        reveal = false
+                        selectedOption = self.revealOptions.right.last
+                    } else {
+                        self.updateRevealOffsetInternal(offset: reveal ? -revealSize.width : 0.0, transition: .animated(duration: 0.3, curve: .spring))
+                    }
+                    
+                    if let selectedOption = selectedOption {
+                        self.revealOptionSelected(selectedOption, animated: true)
+                    } else {
+                        if !reveal {
+                            self.revealOptionsInteractivelyClosed()
+                        }
                     }
                 }
             default:

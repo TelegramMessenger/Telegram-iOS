@@ -316,15 +316,10 @@ public final class AvatarNode: ASDisplayNode {
         
         let colorIndex: Int
         if let parameters = parameters as? AvatarNodeParameters {
-            if case .archivedChatsIcon = parameters.icon {
-                let path = UIBezierPath(roundedRect: bounds, cornerRadius: floor(bounds.width / 3.8))
-                path.addClip()
-            } else {
-                context.beginPath()
-                context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height:
-                    bounds.size.height))
-                context.clip()
-            }
+            context.beginPath()
+            context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height:
+                bounds.size.height))
+            context.clip()
             
             if let explicitColorIndex = parameters.explicitColorIndex {
                 colorIndex = explicitColorIndex
@@ -349,8 +344,8 @@ public final class AvatarNode: ASDisplayNode {
                 colorsArray = savedMessagesColors
             } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme {
                 colorsArray = [theme.list.blocksBackgroundColor.cgColor, theme.list.blocksBackgroundColor.cgColor]
-            } else if case .archivedChatsIcon = parameters.icon {
-                let color = UIColor(rgb: 0x4ac058)
+            } else if case .archivedChatsIcon = parameters.icon, let theme = parameters.theme {
+                let color = theme.chatList.neutralAvatarColor
                 colorsArray = [color.cgColor, color.cgColor]
             } else {
                 colorsArray = grayscaleColors

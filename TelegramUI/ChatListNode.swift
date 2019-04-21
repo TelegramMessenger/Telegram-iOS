@@ -367,6 +367,8 @@ final class ChatListNode: ListView {
         let _ = self.currentRemovingPeerId.swap(peerId)
     }
     
+    private var hapticFeedback: HapticFeedback?
+    
     init(context: AccountContext, groupId: PeerGroupId?, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
         self.controlsHistoryPreload = controlsHistoryPreload
@@ -380,6 +382,7 @@ final class ChatListNode: ListView {
         super.init()
         
         self.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
+        self.verticalScrollIndicatorFollowsOverscroll = true
         
         let nodeInteraction = ChatListNodeInteraction(activateSearch: { [weak self] in
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
@@ -468,12 +471,17 @@ final class ChatListNode: ListView {
                 })
                 return updatedValue
             }
-            |> deliverOnMainQueue).start(next: { updatedValue in
+            |> deliverOnMainQueue).start(next: { value in
                 guard let strongSelf = self else {
                     return
                 }
-                if !updatedValue {
-                    
+                strongSelf.updateState { state in
+                    var state = state
+                    if !value {
+                        state.archiveShouldBeTemporaryRevealed = false
+                    }
+                    state.peerIdWithRevealedOptions = nil
+                    return state
                 }
             })
         })
@@ -488,6 +496,7 @@ final class ChatListNode: ListView {
         
         let previousState = Atomic<ChatListNodeState>(value: self.currentState)
         let previousView = Atomic<ChatListNodeView?>(value: nil)
+        let previousHideArchivedFolderByDefault = Atomic<Bool?>(value: nil)
         let currentRemovingPeerId = self.currentRemovingPeerId
         
         let savedMessagesPeer: Signal<Peer?, NoError>
@@ -508,6 +517,8 @@ final class ChatListNode: ListView {
         let currentPeerId: PeerId = context.account.peerId
         
         let chatListNodeViewTransition = combineLatest(hideArchivedFolderByDefault, savedMessagesPeer, chatListViewUpdate, self.statePromise.get()) |> mapToQueue { (hideArchivedFolderByDefault, savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
+            
+            let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
             let (rawEntries, isLoading) = chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, hideArchivedFolderByDefault: hideArchivedFolderByDefault, mode: mode)
             let entries = rawEntries.filter { entry in
@@ -644,12 +655,16 @@ final class ChatListNode: ListView {
                 if doesIncludeRemovingPeerId != didIncludeRemovingPeerId {
                     disableAnimations = false
                 }
-                if previousState.archiveShouldBeTemporaryRevealed != state.archiveShouldBeTemporaryRevealed && doesIncludeArchive {
+                if hideArchivedFolderByDefault && previousState.archiveShouldBeTemporaryRevealed != state.archiveShouldBeTemporaryRevealed && doesIncludeArchive {
                     disableAnimations = false
                 }
                 if didIncludeHiddenByDefaultArchive != doesIncludeHiddenByDefaultArchive {
                     disableAnimations = false
                 }
+            }
+            
+            if let _ = previousHideArchivedFolderByDefaultValue, previousHideArchivedFolderByDefaultValue != hideArchivedFolderByDefault {
+                disableAnimations = false
             }
             
             var searchMode = false
@@ -689,6 +704,7 @@ final class ChatListNode: ListView {
                 
                 var rawUnreadCount: Int32 = 0
                 var filteredUnreadCount: Int32 = 0
+                var archiveVisible = false
                 if let range = range.visibleRange {
                     let entryCount = chatListView.filteredEntries.count
                     for i in range.firstIndex ..< range.lastIndex {
@@ -705,6 +721,8 @@ final class ChatListNode: ListView {
                                         filteredUnreadCount += count
                                     }
                                 }
+                            case .GroupReferenceEntry:
+                                archiveVisible = true
                             default:
                                 break
                         }
@@ -714,6 +732,13 @@ final class ChatListNode: ListView {
                 visibleUnreadCountsValue.raw = rawUnreadCount
                 visibleUnreadCountsValue.filtered = filteredUnreadCount
                 strongSelf.visibleUnreadCountsValue = visibleUnreadCountsValue
+                if !archiveVisible && strongSelf.currentState.archiveShouldBeTemporaryRevealed {
+                    strongSelf.updateState { state in
+                        var state = state
+                        state.archiveShouldBeTemporaryRevealed = false
+                        return state
+                    }
+                }
             }
         }
         
@@ -925,7 +950,7 @@ final class ChatListNode: ListView {
                 case .none, .unknown:
                     revealHiddenItems = false
                 case let .known(value):
-                    revealHiddenItems = value <= 76.0
+                    revealHiddenItems = value <= 54.0
             }
             if !revealHiddenItems && strongSelf.currentState.archiveShouldBeTemporaryRevealed {
                 strongSelf.updateState { state in
@@ -974,16 +999,30 @@ final class ChatListNode: ListView {
                 case let .known(value):
                     atTop = value <= 0.0
                     if startedScrollingAtUpperBound && strongSelf.isTracking {
-                        revealHiddenItems = value <= -32.0
+                        revealHiddenItems = value <= -76.0
                     }
             }
             strongSelf.scrolledAtTopValue = atTop
             strongSelf.contentOffsetChanged?(offset)
             if revealHiddenItems && !strongSelf.currentState.archiveShouldBeTemporaryRevealed {
-                strongSelf.updateState { state in
-                    var state = state
-                    state.archiveShouldBeTemporaryRevealed = true
-                    return state
+                var isArchiveVisible = false
+                strongSelf.forEachItemNode({ itemNode in
+                    if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
+                        if case .groupReference = item.content {
+                            isArchiveVisible = true
+                        }
+                    }
+                })
+                if isArchiveVisible {
+                    if strongSelf.hapticFeedback == nil {
+                        strongSelf.hapticFeedback = HapticFeedback()
+                    }
+                    strongSelf.hapticFeedback?.impact(.medium)
+                    strongSelf.updateState { state in
+                        var state = state
+                        state.archiveShouldBeTemporaryRevealed = true
+                        return state
+                    }
                 }
             }
         }

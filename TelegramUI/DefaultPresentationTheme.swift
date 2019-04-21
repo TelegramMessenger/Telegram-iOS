@@ -141,7 +141,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         searchBarKeyboardColor: .light,
         verifiedIconFillColor: accentColor,
         verifiedIconForegroundColor: .white,
-        secretIconColor: secretColor
+        secretIconColor: secretColor,
+        neutralAvatarColor: UIColor(rgb: 0xb6b6ba)
     )
     
     let chatListDay = PresentationThemeChatList(
@@ -172,7 +173,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         searchBarKeyboardColor: .light,
         verifiedIconFillColor: accentColor,
         verifiedIconForegroundColor: .white,
-        secretIconColor: secretColor
+        secretIconColor: secretColor,
+        neutralAvatarColor: UIColor(rgb: 0xb6b6ba)
     )
     
     let bubble = PresentationThemeChatBubble(

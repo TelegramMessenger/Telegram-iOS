@@ -13,10 +13,10 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
         let scrollToItem: ListViewScrollToItem
         let targetProgress: CGFloat
         if searchNode.expansionProgress < 0.6 {
-            scrollToItem = ListViewScrollToItem(index: 1, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+            scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
             targetProgress = 0.0
         } else {
-            scrollToItem = ListViewScrollToItem(index: 1, position: .top(0.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+            scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
             targetProgress = 1.0
         }
         searchNode.updateExpansionProgress(targetProgress, animated: true)
@@ -35,7 +35,7 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
             }
         })
         
-        if let sortItemNode = sortItemNode {
+        if false, let sortItemNode = sortItemNode {
             let itemFrame = sortItemNode.apparentFrame
             if itemFrame.contains(CGPoint(x: 0.0, y: listNode.insets.top)) {
                 var scrollToItem: ListViewScrollToItem?
@@ -744,13 +744,13 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }*/
         
-        /*self.chatListDisplayNode.chatListNode.contentScrollingEnded = { [weak self] listView in
+        self.chatListDisplayNode.chatListNode.contentScrollingEnded = { [weak self] listView in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
                 return fixListNodeScrolling(listView, searchNode: searchContentNode)
             } else {
                 return false
             }
-        }*/
+        }
         
         self.chatListDisplayNode.toolbarActionSelected = { [weak self] left in
             self?.toolbarActionSelected(left: left)

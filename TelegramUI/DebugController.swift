@@ -40,6 +40,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case enableRaiseToSpeak(PresentationTheme, Bool)
     case keepChatNavigationStack(PresentationTheme, Bool)
     case skipReadHistory(PresentationTheme, Bool)
+    case crashOnSlowQueries(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
     case reimport(PresentationTheme)
     case resetData(PresentationTheme)
@@ -54,7 +55,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logs.rawValue
             case .logToFile, .logToConsole, .redactSensitiveData:
                 return DebugControllerSection.logging.rawValue
-            case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory:
+            case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
             case .clearTips, .reimport, .resetData, .animatedStickers:
                 return DebugControllerSection.experiments.rawValue
@@ -85,12 +86,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 8
             case .skipReadHistory:
                 return 9
-            case .clearTips:
+            case .crashOnSlowQueries:
                 return 10
-            case .reimport:
+            case .clearTips:
                 return 11
-            case .resetData:
+            case .reimport:
                 return 12
+            case .resetData:
+                return 13
             case .animatedStickers:
                 return 14
             case .versionInfo:
@@ -275,6 +278,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return settings
                     }).start()
                 })
+            case let .crashOnSlowQueries(theme, value):
+                return ItemListSwitchItem(theme: theme, title: "Crash when slow", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
+                        var settings = settings
+                        settings.crashOnLongQueries = value
+                        return settings
+                    }).start()
+                })
             case let .clearTips(theme):
                 return ItemListActionItem(theme: theme, title: "Clear Tips", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     let _ = (arguments.sharedContext.accountManager.transaction { transaction -> Void in
@@ -346,6 +357,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     #if DEBUG
     entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
     #endif
+    entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
     entries.append(.clearTips(presentationData.theme))
     if hasLegacyAppData {
         entries.append(.reimport(presentationData.theme))
