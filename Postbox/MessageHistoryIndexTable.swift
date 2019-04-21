@@ -96,8 +96,13 @@ final class MessageHistoryIndexTable: Table {
         for message in messages {
             let index = MessageIndex(id: message.id, timestamp: message.timestamp)
             
-            if self.valueBox.exists(self.table, key: self.key(index.id)) {
-                operations.append(.InsertExistingMessage(message))
+            if let currentIndex = self.getIndex(index.id) {
+                if currentIndex.timestamp == index.timestamp {
+                    operations.append(.InsertExistingMessage(message))
+                } else {
+                    self.justRemove(currentIndex, operations: &operations)
+                    self.justInsertMessage(message, operations: &operations)
+                }
             } else {
                 self.justInsertMessage(message, operations: &operations)
                 

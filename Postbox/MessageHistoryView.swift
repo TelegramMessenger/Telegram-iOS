@@ -690,15 +690,19 @@ final class MutableMessageHistoryView {
         }
         
         if hasChanges {
-            for namespace in self.topTaggedMessages.keys {
-                if let entry = self.topTaggedMessages[namespace]!, case let .intermediate(message) = entry {
-                    let item: MessageHistoryTopTaggedMessage? = .message(postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable))
-                    self.topTaggedMessages[namespace] = item
-                }
-            }
+            self.render(postbox: postbox)
         }
         
         return hasChanges
+    }
+    
+    private func render(postbox: Postbox) {
+        for namespace in self.topTaggedMessages.keys {
+            if let entry = self.topTaggedMessages[namespace]!, case let .intermediate(message) = entry {
+                let item: MessageHistoryTopTaggedMessage? = .message(postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable))
+                self.topTaggedMessages[namespace] = item
+            }
+        }
     }
     
     func firstHole() -> (MessageHistoryViewHole, MessageHistoryViewRelativeHoleDirection)? {

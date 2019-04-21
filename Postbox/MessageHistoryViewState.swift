@@ -720,7 +720,6 @@ final class HistoryViewLoadedState {
             return false
         }
         
-        
         if let itemIndex = binarySearch(self.orderedEntriesBySpace[space]!.entries, extract: { $0.index }, searchItem: index) {
             if let currentBounds = self.orderedEntriesBySpace[space]!.bounds {
                 if currentBounds.lower == index || currentBounds.upper

@@ -2604,6 +2604,7 @@ final class MessageHistoryTable: Table {
             self.valueBox.range(self.table, start: startKey, end: self.key(toIndex), values: { key, value in
                 let message = self.readIntermediateEntry(key, value: value).message
                 assert(message.id.peerId == peerId && message.id.namespace == namespace)
+                assert(message.index == extractKey(key))
                 result.append(message)
                 return true
             }, limit: limit)
