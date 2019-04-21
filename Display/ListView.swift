@@ -208,6 +208,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
     }
+    public final var verticalScrollIndicatorFollowsOverscroll: Bool = false
     
     private var touchesPosition = CGPoint()
     public private(set) var isTracking = false
@@ -3154,7 +3155,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             var topIndexAndBoundary: (Int, CGFloat, CGFloat)?
             var bottomIndexAndBoundary: (Int, CGFloat, CGFloat)?
             for itemNode in self.itemNodes {
-                if itemNode.apparentFrame.maxY > self.insets.top, let index = itemNode.index {
+                if itemNode.apparentFrame.maxY >= self.insets.top, let index = itemNode.index {
                     topIndexAndBoundary = (index, itemNode.apparentFrame.minY, itemNode.apparentFrame.height)
                     break
                 }
@@ -3166,10 +3167,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             }
             if let topIndexAndBoundary = topIndexAndBoundary, let bottomIndexAndBoundary = bottomIndexAndBoundary {
-                let averageRangeItemHeight: CGFloat = 44.0 //(bottomIndexAndBoundary.1 - topIndexAndBoundary.1) / CGFloat(bottomIndexAndBoundary.0 - topIndexAndBoundary.0 + 1)
+                let averageRangeItemHeight: CGFloat = 44.0
                 
-                let upperItemsHeight = floor(averageRangeItemHeight * CGFloat(topIndexAndBoundary.0))
-                let approximateContentHeight = CGFloat(self.items.count) * averageRangeItemHeight
+                var upperItemsHeight = floor(averageRangeItemHeight * CGFloat(topIndexAndBoundary.0))
+                var approximateContentHeight = CGFloat(self.items.count) * averageRangeItemHeight
+                if topIndexAndBoundary.0 >= 0 && self.items[topIndexAndBoundary.0].approximateHeight.isZero {
+                    upperItemsHeight -= averageRangeItemHeight
+                    approximateContentHeight -= averageRangeItemHeight
+                }
                 
                 var convertedTopBoundary: CGFloat
                 if topIndexAndBoundary.1 < self.insets.top {
@@ -3192,32 +3197,36 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 let approximateVisibleHeight = max(0.0, convertedBottomBoundary - approximateOffset)
                 
                 let approximateScrollingProgress = approximateOffset / (approximateContentHeight - approximateVisibleHeight)
-                /*#if targetEnvironment(simulator)
-                print("approximateOffset = \(approximateOffset), convertedBottomBoundary = \(convertedBottomBoundary) / \(vanillaBoundary), approximateScrollingProgress = \(approximateScrollingProgress)")
-                #endif*/
                 
-                let indicatorInsets: CGFloat = 3.0
+                let indicatorSideInset: CGFloat = 3.0
+                var indicatorTopInset: CGFloat = 3.0
+                if self.verticalScrollIndicatorFollowsOverscroll {
+                    if topIndexAndBoundary.0 == 0 {
+                        indicatorTopInset = max(topIndexAndBoundary.1 + 3.0 - self.insets.top, 3.0)
+                    }
+                }
+                let indicatorBottomInset: CGFloat = 3.0
                 let minIndicatorContentHeight: CGFloat = 12.0
                 let minIndicatorHeight: CGFloat = 6.0
                 
-                let visibleHeightWithoutIndicatorInsets = self.visibleSize.height - self.scrollIndicatorInsets.top - self.scrollIndicatorInsets.bottom - indicatorInsets * 2.0
+                let visibleHeightWithoutIndicatorInsets = self.visibleSize.height - self.scrollIndicatorInsets.top - self.scrollIndicatorInsets.bottom - indicatorTopInset - indicatorBottomInset
                 let indicatorHeight: CGFloat = max(minIndicatorContentHeight, floor(visibleHeightWithoutIndicatorInsets * (self.visibleSize.height - self.insets.top - self.insets.bottom) / approximateContentHeight))
                 
-                let upperBound = self.scrollIndicatorInsets.top + indicatorInsets
-                let lowerBound = self.visibleSize.height - self.scrollIndicatorInsets.bottom - indicatorInsets - indicatorHeight
+                let upperBound = self.scrollIndicatorInsets.top + indicatorTopInset
+                let lowerBound = self.visibleSize.height - self.scrollIndicatorInsets.bottom - indicatorTopInset - indicatorBottomInset - indicatorHeight
                 
                 let indicatorOffset = ceilToScreenPixels(upperBound * (1.0 - approximateScrollingProgress) + lowerBound * approximateScrollingProgress)
                 
-                var indicatorFrame = CGRect(origin: CGPoint(x: self.rotated ? indicatorInsets : (self.visibleSize.width - 3.0 - indicatorInsets), y: indicatorOffset), size: CGSize(width: 3.0, height: indicatorHeight))
-                if indicatorFrame.minY < self.scrollIndicatorInsets.top + indicatorInsets {
-                    indicatorFrame.size.height -= self.scrollIndicatorInsets.top + indicatorInsets - indicatorFrame.minY
-                    indicatorFrame.origin.y = self.scrollIndicatorInsets.top + indicatorInsets
+                var indicatorFrame = CGRect(origin: CGPoint(x: self.rotated ? indicatorSideInset : (self.visibleSize.width - 3.0 - indicatorSideInset), y: indicatorOffset), size: CGSize(width: 3.0, height: indicatorHeight))
+                if indicatorFrame.minY < self.scrollIndicatorInsets.top + indicatorTopInset {
+                    indicatorFrame.size.height -= self.scrollIndicatorInsets.top + indicatorTopInset - indicatorFrame.minY
+                    indicatorFrame.origin.y = self.scrollIndicatorInsets.top + indicatorTopInset
                     indicatorFrame.size.height = max(minIndicatorHeight, indicatorFrame.height)
                 }
-                if indicatorFrame.maxY > self.visibleSize.height - (self.scrollIndicatorInsets.bottom + indicatorInsets) {
-                    indicatorFrame.size.height -= indicatorFrame.maxY - (self.visibleSize.height - (self.scrollIndicatorInsets.bottom + indicatorInsets))
+                if indicatorFrame.maxY > self.visibleSize.height - (self.scrollIndicatorInsets.bottom + indicatorTopInset + indicatorBottomInset) {
+                    indicatorFrame.size.height -= indicatorFrame.maxY - (self.visibleSize.height - (self.scrollIndicatorInsets.bottom + indicatorTopInset))
                     indicatorFrame.size.height = max(minIndicatorHeight, indicatorFrame.height)
-                    indicatorFrame.origin.y = self.visibleSize.height - (self.scrollIndicatorInsets.bottom + indicatorInsets) - indicatorFrame.height
+                    indicatorFrame.origin.y = self.visibleSize.height - (self.scrollIndicatorInsets.bottom + indicatorBottomInset) - indicatorFrame.height
                 }
                 
                 if indicatorHeight >= visibleHeightWithoutIndicatorInsets {

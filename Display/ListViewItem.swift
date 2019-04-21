@@ -47,6 +47,7 @@ public protocol ListViewItem {
     var accessoryItem: ListViewAccessoryItem? { get }
     var headerAccessoryItem: ListViewAccessoryItem? { get }
     var selectable: Bool { get }
+    var approximateHeight: CGFloat { get }
     
     func selected(listView: ListView)
 }
@@ -62,6 +63,10 @@ public extension ListViewItem {
     
     var selectable: Bool {
         return false
+    }
+    
+    var approximateHeight: CGFloat {
+        return 44.0
     }
     
     func selected(listView: ListView) {
