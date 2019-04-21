@@ -93,11 +93,11 @@ final class PasscodeLockIconNode: ASDisplayNode {
         var topRadius: CGFloat
         var offset: CGFloat = 0.0
         if lockProgress < 0.5 {
-            topRect = CGRect(x: 19.0, y: lineWidth / 2.0, width: 14.0 * (0.5 - lockProgress) / 0.5, height: 22.0)
-            topRadius = 6.0 * (0.5 - lockProgress)
+            topRect = CGRect(x: 19.0, y: lineWidth / 2.0 + 1.0, width: 14.0 * (0.5 - lockProgress) / 0.5, height: 22.0)
+            topRadius = 6.0 * (0.5 - lockProgress) * 2.0
         } else {
             let width = 14.0 * (lockProgress - 0.5) * 2.0
-            topRect = CGRect(x: 19.0 - width, y: lineWidth / 2.0, width: width, height: 22.0)
+            topRect = CGRect(x: 19.0 - width, y: lineWidth / 2.0 + 1.0, width: width, height: 22.0)
             topRadius = 6.0 * (lockProgress - 0.5) * 2.0
         }
         if progress > 0.85 {
@@ -128,7 +128,7 @@ final class PasscodeLockIconNode: ASDisplayNode {
         context.setFillColor(color.cgColor)
         
         
-        let basePath = UIBezierPath(roundedRect: CGRect(x: 0.0, y: bounds.height - 21.0 + offset, width: 24.0, height: 18.0), cornerRadius: 3.5)
+        let basePath = UIBezierPath(roundedRect: CGRect(x: 0.0, y: bounds.height - 21.0 + offset, width: 24.0, height: 19.0), cornerRadius: 3.5)
         context.addPath(basePath.cgPath)
         context.fillPath()
     }

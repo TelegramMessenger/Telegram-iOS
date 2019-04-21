@@ -104,20 +104,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         }
         
         if self.telegramFile == nil && !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
-            var textFont = item.presentationData.messageFont
-            let emojis = item.message.text.emojiString
-            switch emojis.count {
-                case 1:
-                    textFont = item.presentationData.messageEmojiFont1
-                case 2:
-                    textFont = item.presentationData.messageEmojiFont2
-                case 3:
-                    textFont = item.presentationData.messageEmojiFont3
-                default:
-                    break
-            }
-            
-            self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text, fontSize: textFont.pointSize))
+            self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text, fontSize: item.presentationData.messageEmojiFont1.pointSize))
         }
     }
     
@@ -150,20 +137,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             var isEmoji = false
             if !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
-                var textFont = item.presentationData.messageFont
-                let emojis = item.message.text.emojis
-                switch emojis.count {
-                    case 1:
-                        textFont = item.presentationData.messageEmojiFont1
-                    case 2:
-                        textFont = item.presentationData.messageEmojiFont2
-                    case 3:
-                        textFont = item.presentationData.messageEmojiFont3
-                    default:
-                        break
-                }
-                
-                let attributedText = NSAttributedString(string: item.message.text, font: textFont, textColor: .black)
+                let attributedText = NSAttributedString(string: item.message.text, font: item.presentationData.messageEmojiFont1, textColor: .black)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 180.0, height: 90.0), alignment: .natural))
                 
                 imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: textLayoutAndApply!.0.size.height)

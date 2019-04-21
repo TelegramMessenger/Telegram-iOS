@@ -1520,4 +1520,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.requestLayout(transition: transition)
         }
     }
+    
+    public var lockViewFrame: CGRect? {
+        if let lockViewFrame = self.titleView.lockViewFrame {
+            return self.titleView.convert(lockViewFrame, to: self.view)
+        } else {
+            return nil
+        }
+    }
 }

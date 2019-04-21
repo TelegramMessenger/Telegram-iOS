@@ -26,7 +26,7 @@ final class ChatListTitleLockView: UIView {
     }
     
     private func layoutItems() {
-        self.topView.frame = CGRect(x: 6.0, y: 0.0, width: 7.0, height: 6.0)
+        self.topView.frame = CGRect(x: 7.0, y: 0.0, width: 7.0, height: 6.0)
         self.bottomView.frame = CGRect(x: 0.0, y: 6.0, width: 10.0, height: 8.0)
     }
     
