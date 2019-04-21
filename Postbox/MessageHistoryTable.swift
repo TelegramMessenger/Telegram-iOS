@@ -645,7 +645,7 @@ final class MessageHistoryTable: Table {
         return nil
     }
     
-    private func getMessageGroup(startingAt index: MessageIndex, initialPredicate: (IntermediateMessage) -> Bool, predicate: (IntermediateMessage, IntermediateMessage) -> Bool) -> [IntermediateMessage]? {
+    private func getMessageGroup(startingAt index: MessageIndex, limit: Int, initialPredicate: (IntermediateMessage) -> Bool, predicate: (IntermediateMessage, IntermediateMessage) -> Bool) -> [IntermediateMessage]? {
         guard let value = self.valueBox.get(self.table, key: self.key(index)) else {
             return nil
         }
@@ -671,6 +671,9 @@ final class MessageHistoryTable: Table {
             }, limit: 1)
             if let previous = previous, predicate(previous.message, centralMessage) {
                 result.insert(previous.message, at: 0)
+                if result.count == limit {
+                    return result
+                }
                 previousIndex = previous.message.index
             } else {
                 break
@@ -678,6 +681,9 @@ final class MessageHistoryTable: Table {
         }
         
         result.append(centralMessage)
+        if result.count == limit {
+            return result
+        }
         
         var nextIndex = index
         while true {
@@ -688,6 +694,9 @@ final class MessageHistoryTable: Table {
             }, limit: 1)
             if let next = next, predicate(next.message, centralMessage) {
                 result.append(next.message)
+                if result.count == limit {
+                    return result
+                }
                 nextIndex = next.message.index
             } else {
                 break
@@ -696,8 +705,8 @@ final class MessageHistoryTable: Table {
         return result
     }
     
-    func getMessageGroup(index: MessageIndex) -> [IntermediateMessage]? {
-        return self.getMessageGroup(startingAt: index, initialPredicate: { _ in
+    func getMessageGroup(at index: MessageIndex, limit: Int) -> [IntermediateMessage]? {
+        return self.getMessageGroup(startingAt: index, limit: limit, initialPredicate: { _ in
             return true
         }, predicate: { lhs, rhs in
             guard let lhsGroupingKey = lhs.groupingKey, let rhsGroupingKey = rhs.groupingKey else {
@@ -707,8 +716,8 @@ final class MessageHistoryTable: Table {
         })
     }
     
-    func getMessageForwardedGroup(_ index: MessageIndex) -> [IntermediateMessage]? {
-        return self.getMessageGroup(startingAt: index, initialPredicate: { message in
+    func getMessageForwardedGroup(at index: MessageIndex, limit: Int) -> [IntermediateMessage]? {
+        return self.getMessageGroup(startingAt: index, limit: limit, initialPredicate: { message in
             return message.forwardInfo != nil
         }, predicate: { lhs, rhs in
             if lhs.forwardInfo == nil {
@@ -720,12 +729,15 @@ final class MessageHistoryTable: Table {
             if lhs.authorId != rhs.authorId {
                 return false
             }
+            if lhs.timestamp != rhs.timestamp {
+                return false
+            }
             return true
         })
     }
     
-    func getMessageFailedGroup(_ index: MessageIndex) -> [IntermediateMessage]? {
-        return self.getMessageGroup(startingAt: index, initialPredicate: { message in
+    func getMessageFailedGroup(at index: MessageIndex, limit: Int) -> [IntermediateMessage]? {
+        return self.getMessageGroup(startingAt: index, limit: limit, initialPredicate: { message in
             return message.flags.contains(.Failed)
         }, predicate: { lhs, rhs in
             if !lhs.flags.contains(.Failed) {
