@@ -314,6 +314,8 @@ final class MutableMessageHistoryView {
             }
         }
         self.sampledState = self.state.sample(postbox: postbox)
+        
+        self.render(postbox: postbox)
     }
     
     private func reset(postbox: Postbox) {
