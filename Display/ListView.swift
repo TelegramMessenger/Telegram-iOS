@@ -2046,6 +2046,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     private func replayOperations(animated: Bool, animateAlpha: Bool, animateCrossfade: Bool, animateTopItemVerticalOrigin: Bool, operations: [ListViewStateOperation], requestItemInsertionAnimationsIndices: Set<Int>, scrollToItem originalScrollToItem: ListViewScrollToItem?, additionalScrollDistance: CGFloat, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemIndex: Int?, updateOpaqueState: Any?, completion: () -> Void) {
         var scrollToItem: ListViewScrollToItem?
+        var isExperimentalSnapToScrollToItem = false
         if let originalScrollToItem = originalScrollToItem {
             scrollToItem = originalScrollToItem
             if self.experimentalSnapScrollToItem {
@@ -2059,6 +2060,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 animated = !updateSizeAndInsets.duration.isZero
             }
             scrollToItem = ListViewScrollToItem(index: scrolledToItem.0, position: scrolledToItem.1, animated: animated, curve: curve, directionHint: .Down)
+            isExperimentalSnapToScrollToItem = true
         }
         
         weak var highlightedItemNode: ListViewItemNode?
@@ -2328,36 +2330,38 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             
             for itemNode in self.itemNodes {
                 if let index = itemNode.index, index == scrollToItem.index {
+                    let insets = updateSizeAndInsets?.insets ?? self.insets
+                    
                     let offset: CGFloat
                     switch scrollToItem.position {
                         case let .bottom(additionalOffset):
-                            offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom + additionalOffset
+                            offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom + additionalOffset
                         case let .top(additionalOffset):
-                            offset = self.insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top + additionalOffset
+                            offset = insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top + additionalOffset
                         case let .center(overflow):
-                            let contentAreaHeight = self.visibleSize.height - self.insets.bottom - self.insets.top
+                            let contentAreaHeight = self.visibleSize.height - insets.bottom - insets.top
                             if itemNode.apparentFrame.size.height <= contentAreaHeight + CGFloat.ulpOfOne {
-                                offset = self.insets.top + floor(((self.visibleSize.height - self.insets.bottom - self.insets.top) - itemNode.frame.size.height) / 2.0) - itemNode.apparentFrame.minY
+                                offset = insets.top + floor(((self.visibleSize.height - insets.bottom - insets.top) - itemNode.frame.size.height) / 2.0) - itemNode.apparentFrame.minY
                             } else {
                                 switch overflow {
                                     case .top:
-                                        offset = self.insets.top - itemNode.apparentFrame.minY
+                                        offset = insets.top - itemNode.apparentFrame.minY
                                     case .bottom:
-                                        offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY
+                                        offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY
                                 }
                             }
                         case .visible:
-                            if itemNode.apparentFrame.size.height > self.visibleSize.height - self.insets.top - self.insets.bottom {
-                                if itemNode.apparentFrame.maxY > self.visibleSize.height - self.insets.bottom {
-                                    offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom
+                            if itemNode.apparentFrame.size.height > self.visibleSize.height - insets.top - insets.bottom {
+                                if itemNode.apparentFrame.maxY > self.visibleSize.height - insets.bottom {
+                                    offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom
                                 } else {
                                     offset = 0.0
                                 }
                             } else {
-                                if itemNode.apparentFrame.maxY > self.visibleSize.height - self.insets.bottom {
-                                    offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom
-                                } else if itemNode.apparentFrame.minY < self.insets.top {
-                                    offset = self.insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top
+                                if itemNode.apparentFrame.maxY > self.visibleSize.height - insets.bottom {
+                                    offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom
+                                } else if itemNode.apparentFrame.minY < insets.top {
+                                    offset = insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top
                                 } else {
                                     offset = 0.0
                                 }
@@ -2419,7 +2423,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.visibleSize = updateSizeAndInsets.size
                 
                 var offsetFix: CGFloat
-                if self.isTracking {
+                if self.isTracking || isExperimentalSnapToScrollToItem {
                     offsetFix = 0.0
                 } else if self.snapToBottomInsetUntilFirstInteraction {
                     offsetFix = -updateSizeAndInsets.insets.bottom + self.insets.bottom
