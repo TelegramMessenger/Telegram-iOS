@@ -15,6 +15,7 @@ struct SetupTwoStepVerificationContentAction {
 }
 
 final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDelegate {
+    private var theme: PresentationTheme
     let kind: SetupTwoStepVerificationStateKind
     private let leftAction: SetupTwoStepVerificationContentAction?
     private let rightAction: SetupTwoStepVerificationContentAction?
@@ -32,27 +33,31 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
     private var clearOnce: Bool = false
     
     init(theme: PresentationTheme, kind: SetupTwoStepVerificationStateKind, title: String, subtitle: String, inputType: SetupTwoStepVerificationInputType, placeholder: String, text: String, isPassword: Bool, textUpdated: @escaping (String) -> Void, returnPressed: @escaping () -> Void, leftAction: SetupTwoStepVerificationContentAction?, rightAction: SetupTwoStepVerificationContentAction?) {
+        self.theme = theme
+        self.kind = kind
         self.leftAction = leftAction
         self.rightAction = rightAction
         self.textUpdated = textUpdated
         self.returnPressed = returnPressed
-        self.kind = kind
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.displaysAsynchronously = false
         self.titleNode.textAlignment = .center
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.light(30.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        
         self.subtitleNode = ImmediateTextNode()
         self.subtitleNode.maximumNumberOfLines = 0
         self.subtitleNode.displaysAsynchronously = false
         self.subtitleNode.textAlignment = .center
         self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        
         self.inputNode = TextFieldNode()
         self.inputNode.textField.textColor = theme.list.itemPrimaryTextColor
         self.inputNode.textField.font = Font.regular(22.0)
         self.inputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(22.0), textColor: theme.list.itemPlaceholderTextColor)
         self.inputNode.textField.textAlignment = .center
+        self.inputNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
         switch inputType {
             case .password:
                 self.inputNode.textField.isSecureTextEntry = true
@@ -110,6 +115,12 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
             self.addSubnode(self.rightActionButton)
             self.rightActionButton.addTarget(self, action: #selector(self.actionButtonPressed(_:)), forControlEvents: .touchUpInside)
         }
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.theme = presentationData.theme
+        self.inputNode.textField.keyboardAppearance = self.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.inputSeparator.backgroundColor = self.theme.list.itemPlainSeparatorColor
     }
     
     func updateIsEnabled(_ isEnabled: Bool) {

@@ -216,31 +216,31 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
 }
 
 enum TwoStepVerificationUnlockSettingsControllerMode {
-    case access
+    case access(intro: Bool, data: Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>?)
     case manage(password: String, email: String, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
-private struct PendingEmailState {
+struct TwoStepVerificationPendingEmailState {
     let password: String?
     let email: TwoStepVerificationPendingEmail
 }
 
-private enum TwoStepVeriticationAccessConfiguration {
-    case notSet(pendingEmail: PendingEmailState?)
+enum TwoStepVerificationAccessConfiguration {
+    case notSet(pendingEmail: TwoStepVerificationPendingEmailState?)
     case set(hint: String, hasRecoveryEmail: Bool, hasSecureValues: Bool)
     
     init(configuration: TwoStepVerificationConfiguration, password: String?) {
         switch configuration {
             case let .notSet(pendingEmail):
-                self = .notSet(pendingEmail: pendingEmail.flatMap({ PendingEmailState(password: password, email: $0) }))
+                self = .notSet(pendingEmail: pendingEmail.flatMap({ TwoStepVerificationPendingEmailState(password: password, email: $0) }))
             case let .set(hint, hasRecoveryEmail, _, hasSecureValues):
                 self = .set(hint: hint, hasRecoveryEmail: hasRecoveryEmail, hasSecureValues: hasSecureValues)
         }
     }
 }
 
-private enum TwoStepVerificationUnlockSettingsControllerData {
-    case access(configuration: TwoStepVeriticationAccessConfiguration?)
+enum TwoStepVerificationUnlockSettingsControllerData {
+    case access(configuration: TwoStepVerificationAccessConfiguration?)
     case manage(password: String, emailSet: Bool, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
@@ -253,7 +253,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var replaceControllerImpl: ((ViewController) -> Void)?
+    var replaceControllerImpl: ((ViewController, Bool) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -268,11 +268,17 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
     actionsDisposable.add(setupResultDisposable)
     
     let dataPromise = Promise<TwoStepVerificationUnlockSettingsControllerData>()
+    let remoteDataPromise = Promise<TwoStepVerificationUnlockSettingsControllerData>()
     
     switch mode {
-        case .access:
-            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: nil))
-                |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: nil)) }))
+        case let .access(_, data):
+            if let data = data {
+                dataPromise.set(data)
+            } else {
+                dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: nil))
+                |> then(remoteDataPromise.get()))
+                remoteDataPromise.set(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil)) })
+            }
         case let .manage(password, email, pendingEmail, hasSecureValues):
             dataPromise.set(.single(.manage(password: password, emailSet: !email.isEmpty, pendingEmail: pendingEmail, hasSecureValues: hasSecureValues)))
     }
@@ -281,7 +287,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
         let _ = (dataPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { data in
-            var pendingEmailData: PendingEmailState?
+            var pendingEmailData: TwoStepVerificationPendingEmailState?
             switch data {
                 case let .access(configuration):
                     guard let configuration = configuration else {
@@ -295,7 +301,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                     }
                 case let .manage(password, _, pendingEmail, _):
                     if let pendingEmail = pendingEmail {
-                        pendingEmailData = PendingEmailState(password: password, email: pendingEmail)
+                        pendingEmailData = TwoStepVerificationPendingEmailState(password: password, email: pendingEmail)
                     }
             }
             if let pendingEmail = pendingEmailData {
@@ -358,7 +364,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                         dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: password, emailSet: true, pendingEmail: nil, hasSecureValues: false)))
                                     } else {
                                         dataPromise.set(.single(.access(configuration: nil))
-                                            |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: pendingEmail.password)) }))
+                                            |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: pendingEmail.password)) }))
                                     }
                                 case let .manage(manage):
                                     dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: manage.password, emailSet: true, pendingEmail: nil, hasSecureValues: manage.hasSecureValues)))
@@ -416,7 +422,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                     return state
                 }
                 
-                replaceControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .manage(password: password, email: settings.email, pendingEmail: pendingEmail, hasSecureValues: settings.secureSecret != nil)))
+                replaceControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .manage(password: password, email: settings.email, pendingEmail: pendingEmail, hasSecureValues: settings.secureSecret != nil)), true)
             }, error: { error in
                 updateState { state in
                     var state = state
@@ -509,7 +515,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                         case .noPassword:
                                             dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: nil))))
                                         case let .awaitingEmailConfirmation(password, pattern, codeLength):
-                                            dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: PendingEmailState(password: password, email: TwoStepVerificationPendingEmail(pattern: pattern, codeLength: codeLength))))))
+                                            dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: TwoStepVerificationPendingEmailState(password: password, email: TwoStepVerificationPendingEmail(pattern: pattern, codeLength: codeLength))))))
                                         case let .passwordSet(password, hasRecoveryEmail, hasSecureValues):
                                             if let password = password {
                                                 dataPromise.set(.single(.manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)))
@@ -517,14 +523,19 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.TwoStepAuth_EnabledSuccess, false)), nil)
                                             } else {
                                                 dataPromise.set(.single(.access(configuration: nil))
-                                                    |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
+                                                |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
                                             }
                                     }
                                     if shouldDismiss {
                                         controller.dismiss()
                                     }
                                 })
-                                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet, completion: {
+                                    if case let .access(intro, _) = mode, intro {
+                                        let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: dataPromise.get()))
+                                        replaceControllerImpl?(controller, false)
+                                    }
+                                }))
                             case .set:
                                 break
                         }
@@ -544,7 +555,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                     presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.TwoStepAuth_PasswordChangeSuccess, false)), nil)
                                 } else {
                                     dataPromise.set(.single(.access(configuration: nil))
-                                        |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
+                                    |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
                                 }
                         }
                         if shouldDismiss {
@@ -636,7 +647,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                     presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(emailSet ? presentationData.strings.TwoStepAuth_EmailChangeSuccess : presentationData.strings.TwoStepAuth_EmailAddSuccess, false)), nil)
                                 } else {
                                     dataPromise.set(.single(.access(configuration: nil))
-                                        |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
+                                        |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
                                 }
                         }
                         if shouldDismiss {
@@ -723,7 +734,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                     dataPromise.set(.single(data))
                                 } else {
                                     dataPromise.set(.single(.access(configuration: nil))
-                                        |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
+                                    |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
                                 }
                         }
                         if shouldDismiss {
@@ -757,7 +768,6 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                         checkEmailConfirmation()
                                     })
                                 }
-                                break
                             case .set:
                                 rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: true, action: {
                                     arguments.checkPassword()
@@ -786,12 +796,12 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
         return (controllerState, (listState, arguments))
     }
     |> afterDisposed {
-            actionsDisposable.dispose()
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal)
-    replaceControllerImpl = { [weak controller] c in
-        (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: true)
+    replaceControllerImpl = { [weak controller] c, animated in
+        (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
     }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
@@ -820,6 +830,27 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
         }
         didAppear = true
         initialFocusImpl?()
+    }
+    
+    if case let .access(intro, _) = mode, intro {
+        actionsDisposable.add((remoteDataPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { data in
+            if case let .access(configuration) = data, let config = configuration, case let .notSet(pendingEmail) = config, pendingEmail == nil {
+                let controller = PrivacyIntroController(context: context, mode: .twoStepVerification, arguments: PrivacyIntroControllerPresentationArguments(fadeIn: true), proceedAction: {
+                        arguments.openSetupPassword()
+                })
+                replaceControllerImpl?(controller, false)
+                replaceControllerImpl = { [weak controller] c, animated in
+                    (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
+                }
+                presentControllerImpl = { [weak controller] c, p in
+                    if let controller = controller {
+                        controller.present(c, in: .window(.root), with: p)
+                    }
+                }
+            }
+        }))
     }
     
     return controller

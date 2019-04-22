@@ -33,9 +33,3 @@ GradientProgram get_gradient_program(GLuint program)
         glGetAttribLocation(program, "a_Color"),
         glGetUniformLocation(program, "u_Alpha")};
 }
-
-
-
-
-
-

@@ -193,10 +193,13 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+        self.contentNode?.updatePresentationData(presentationData)
     }
     
-    func animateIn() {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+    func animateIn(completion: (() -> Void)? = nil) {
+        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+            completion?()
+        })
     }
     
     func animateOut(completion: (() -> Void)? = nil) {

@@ -376,8 +376,9 @@ public final class PresentationThemeChatList {
     public let verifiedIconForegroundColor: UIColor
     public let secretIconColor: UIColor
     public let neutralAvatarColor: UIColor
+    public let onlineDotColor: UIColor
     
-    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemSelectedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, searchBarKeyboardColor: PresentationThemeKeyboardColor, verifiedIconFillColor: UIColor, verifiedIconForegroundColor: UIColor, secretIconColor: UIColor, neutralAvatarColor: UIColor) {
+    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemSelectedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, searchBarKeyboardColor: PresentationThemeKeyboardColor, verifiedIconFillColor: UIColor, verifiedIconForegroundColor: UIColor, secretIconColor: UIColor, neutralAvatarColor: UIColor, onlineDotColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.itemSeparatorColor = itemSeparatorColor
         self.itemBackgroundColor = itemBackgroundColor
@@ -407,6 +408,7 @@ public final class PresentationThemeChatList {
         self.verifiedIconForegroundColor = verifiedIconForegroundColor
         self.secretIconColor = secretIconColor
         self.neutralAvatarColor = neutralAvatarColor
+        self.onlineDotColor = onlineDotColor
     }
 }
 

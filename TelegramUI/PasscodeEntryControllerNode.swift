@@ -20,9 +20,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     
     private let backgroundNode: ASImageNode
     private let iconNode: PasscodeLockIconNode
-    private let titleNode: PasscodeEntryTitleNode
+    private let titleNode: PasscodeEntryLabelNode
     private let inputFieldNode: PasscodeEntryInputFieldNode
-    private let subtitleNode: ASTextNode
+    private let subtitleNode: PasscodeEntryLabelNode
     private let keyboardNode: PasscodeEntryKeyboardNode
     private let deleteButtonNode: HighlightableButtonNode
     private let biometricButtonNode: HighlightableButtonNode
@@ -46,9 +46,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         self.backgroundNode = ASImageNode()
         self.iconNode = PasscodeLockIconNode()
-        self.titleNode = PasscodeEntryTitleNode()
+        self.titleNode = PasscodeEntryLabelNode()
         self.inputFieldNode = PasscodeEntryInputFieldNode(color: .white, fieldType: passcodeType, keyboardAppearance: .dark, useCustomNumpad: true)
-        self.subtitleNode = ASTextNode()
+        self.subtitleNode = PasscodeEntryLabelNode()
         self.keyboardNode = PasscodeEntryKeyboardNode()
         self.deleteButtonNode = HighlightableButtonNode()
         self.biometricButtonNode = HighlightableButtonNode()
@@ -61,6 +61,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         })
         
         self.backgroundColor = .clear
+        self.iconNode.unlockedColor = theme.rootController.navigationBar.primaryTextColor
         
         self.keyboardNode.charactedEntered = { [weak self] character in
             self?.inputFieldNode.append(character)
@@ -84,6 +85,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.inputFieldNode)
+        self.addSubnode(self.subtitleNode)
         self.addSubnode(self.keyboardNode)
         self.addSubnode(self.deleteButtonNode)
         self.addSubnode(self.biometricButtonNode)
@@ -256,6 +258,5 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             }
             transition.updateFrame(node: self.biometricButtonNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - biometricIcon.size.width) / 2.0), y: biometricY), size: biometricIcon.size))
         }
-
     }
 }

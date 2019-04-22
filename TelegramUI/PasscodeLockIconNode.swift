@@ -20,6 +20,12 @@ private final class PasscodeLockIconNodeParameters: NSObject {
 }
 
 final class PasscodeLockIconNode: ASDisplayNode {
+    var unlockedColor: UIColor = .black {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
+    
     private var effectiveProgress: CGFloat = 1.0 {
         didSet {
             self.setNeedsDisplay()
@@ -58,7 +64,7 @@ final class PasscodeLockIconNode: ASDisplayNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return PasscodeLockIconNodeParameters(unlockedColor: .black, lockedColor: .white, progress: self.effectiveProgress, fromScale: self.fromScale)
+        return PasscodeLockIconNodeParameters(unlockedColor: self.unlockedColor, lockedColor: .white, progress: self.effectiveProgress, fromScale: self.fromScale)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {

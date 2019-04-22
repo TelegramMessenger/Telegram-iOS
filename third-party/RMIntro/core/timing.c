@@ -1,12 +1,3 @@
-//
-//  timing.c
-//  IntroOpenGL
-//
-//  Created by Ilya Rimchikov on 03/05/14.
-//  Copyright (c) 2014 IntroOpenGL. All rights reserved.
-//
-
-
 #include "timing.h"
 
 static inline float evaluateAtParameterWithCoefficients(float t, float coefficients[])

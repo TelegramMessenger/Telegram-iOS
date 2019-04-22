@@ -690,20 +690,23 @@ private func fetchLargeEmojiRepresentation(account: Account, resource: MediaReso
         var emojiSize = nsString.size(withAttributes: stringAttributes)
         emojiSize = CGSize(width: ceil(emojiSize.width) + 2.0, height: ceil(emojiSize.height) + 2.0)
         
-        let image = generateImage(emojiSize, contextGenerator: { size, context in
+        let context = DrawingContext(size: emojiSize, clear: true)
+        context.withFlippedContext { context in
+            let size = emojiSize
             let bounds = CGRect(origin: CGPoint(), size: size)
             
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.textMatrix = .identity
-
+            
             let path = CGMutablePath()
             path.addRect(bounds)
             let string = NSAttributedString(string: resource.emoji, font: font, textColor: .black)
             let framesetter = CTFramesetterCreateWithAttributedString(string as CFAttributedString)
             let frame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, string.length), path, nil)
             CTFrameDraw(frame, context)
-        })!
+        }
         
+        let image = context.generateImage()!
         let borderImage = generateTintedImage(image: image, color: .white)!
         
         let lineWidth: CGFloat = 1.0

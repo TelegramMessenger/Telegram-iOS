@@ -154,7 +154,7 @@
 		09F2159A2263E62900AEDF6D /* PasscodeEntryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F215992263E62900AEDF6D /* PasscodeEntryController.swift */; };
 		09F2159C2263E63200AEDF6D /* PasscodeEntryControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F2159B2263E63200AEDF6D /* PasscodeEntryControllerNode.swift */; };
 		09F215A022649BCB00AEDF6D /* PasscodeEntryInputFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F2159F22649BCB00AEDF6D /* PasscodeEntryInputFieldNode.swift */; };
-		09F215A422649C2200AEDF6D /* PasscodeEntryTitleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F215A322649C2200AEDF6D /* PasscodeEntryTitleNode.swift */; };
+		09F215A422649C2200AEDF6D /* PasscodeEntryLabelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F215A322649C2200AEDF6D /* PasscodeEntryLabelNode.swift */; };
 		09F215A622649C3000AEDF6D /* PasscodeLockIconNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F215A522649C3000AEDF6D /* PasscodeLockIconNode.swift */; };
 		09F215A822649C7900AEDF6D /* PasscodeEntryKeyboardNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F215A722649C7900AEDF6D /* PasscodeEntryKeyboardNode.swift */; };
 		09F215AB2264ABA600AEDF6D /* PasscodeBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F215AA2264ABA600AEDF6D /* PasscodeBackground.swift */; };
@@ -1336,7 +1336,7 @@
 		09F215992263E62900AEDF6D /* PasscodeEntryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasscodeEntryController.swift; sourceTree = "<group>"; };
 		09F2159B2263E63200AEDF6D /* PasscodeEntryControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasscodeEntryControllerNode.swift; sourceTree = "<group>"; };
 		09F2159F22649BCB00AEDF6D /* PasscodeEntryInputFieldNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasscodeEntryInputFieldNode.swift; sourceTree = "<group>"; };
-		09F215A322649C2200AEDF6D /* PasscodeEntryTitleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasscodeEntryTitleNode.swift; sourceTree = "<group>"; };
+		09F215A322649C2200AEDF6D /* PasscodeEntryLabelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasscodeEntryLabelNode.swift; sourceTree = "<group>"; };
 		09F215A522649C3000AEDF6D /* PasscodeLockIconNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasscodeLockIconNode.swift; sourceTree = "<group>"; };
 		09F215A722649C7900AEDF6D /* PasscodeEntryKeyboardNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasscodeEntryKeyboardNode.swift; sourceTree = "<group>"; };
 		09F215AA2264ABA600AEDF6D /* PasscodeBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasscodeBackground.swift; sourceTree = "<group>"; };
@@ -2731,7 +2731,7 @@
 				09F2159B2263E63200AEDF6D /* PasscodeEntryControllerNode.swift */,
 				09F215A722649C7900AEDF6D /* PasscodeEntryKeyboardNode.swift */,
 				09F2159F22649BCB00AEDF6D /* PasscodeEntryInputFieldNode.swift */,
-				09F215A322649C2200AEDF6D /* PasscodeEntryTitleNode.swift */,
+				09F215A322649C2200AEDF6D /* PasscodeEntryLabelNode.swift */,
 				09F215A522649C3000AEDF6D /* PasscodeLockIconNode.swift */,
 				09F215AC2264DC4500AEDF6D /* PasscodeSetupController.swift */,
 				09DE2F242269B7E80045E975 /* PasscodeSetupControllerNode.swift */,
@@ -6134,7 +6134,7 @@
 				D099D74F1EEFEE6A00A3128C /* GameControllerNode.swift in Sources */,
 				D0943AF61FDAAE7E001522CC /* MultipleAvatarsNode.swift in Sources */,
 				D0EC6E2B1EB9F58900EBF1C3 /* ComposeController.swift in Sources */,
-				09F215A422649C2200AEDF6D /* PasscodeEntryTitleNode.swift in Sources */,
+				09F215A422649C2200AEDF6D /* PasscodeEntryLabelNode.swift in Sources */,
 				D099D74D1EEFEE1500A3128C /* GameController.swift in Sources */,
 				09749BCF21F236F2008FDDE9 /* ModernCheckNode.swift in Sources */,
 				D0EC6E2C1EB9F58900EBF1C3 /* ComposeControllerNode.swift in Sources */,

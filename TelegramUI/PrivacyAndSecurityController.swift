@@ -548,7 +548,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             }
         })
     }, openTwoStepVerification: {
-        pushControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .access))
+        pushControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: true, data: nil)))
     }, openActiveSessions: {
         pushControllerImpl?(recentSessionsController(context: context))
     }, setupAccountAutoremove: {

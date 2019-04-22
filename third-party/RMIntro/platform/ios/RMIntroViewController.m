@@ -576,11 +576,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     
     set_powerful_textures(setup_texture(@"powerful_mask.png", color), setup_texture(@"powerful_star.png", color), setup_texture(@"powerful_infinity.png", color), setup_texture(@"powerful_infinity_white.png", color));
     
-     set_private_textures(setup_texture(@"private_door.png", color), setup_texture(@"private_screw.png", color));
-    
-    
-    set_need_pages(0);
-    
+    set_private_textures(setup_texture(@"private_door.png", color), setup_texture(@"private_screw.png", color));
     
     on_surface_created();
     on_surface_changed(200, 200, 1, 0,0,0,0,0);

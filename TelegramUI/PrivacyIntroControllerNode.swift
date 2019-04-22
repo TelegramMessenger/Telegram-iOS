@@ -42,7 +42,7 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
     private let buttonTextNode: ASTextNode
     private let noticeNode: ASTextNode
     
-    private var validLayout: ContainerViewLayout?
+    private var validLayout: (ContainerViewLayout, CGFloat)?
     
     init(context: AccountContext, mode: PrivacyIntroControllerMode, proceedAction: @escaping () -> Void) {
         self.context = context
@@ -101,43 +101,59 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         self.buttonBackgroundNode.image = generateButtonImage(backgroundColor: presentationData.theme.list.itemBlocksBackgroundColor, borderColor: presentationData.theme.list.itemBlocksSeparatorColor, highlightColor: nil)
         self.buttonHighlightedBackgroundNode.image = generateButtonImage(backgroundColor: presentationData.theme.list.itemBlocksBackgroundColor, borderColor: presentationData.theme.list.itemBlocksSeparatorColor, highlightColor: presentationData.theme.list.itemHighlightedBackgroundColor)
         
-        if let validLayout = self.validLayout {
-            self.containerLayoutUpdated(validLayout, navigationBarHeight: 0.0, transition: .immediate)
+        if let (layout, navigationBarHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.validLayout = layout
+        self.validLayout = (layout, navigationBarHeight)
         
-        if let iconSize = self.iconNode.image?.size {
-            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: 151.0), size: iconSize))
+        var insets = layout.insets(options: [.statusBar])
+        insets.top += navigationBarHeight
+        
+        var iconSize = CGSize()
+        if let size = self.iconNode.image?.size {
+            iconSize = size
             
             var iconAlpha: CGFloat = 1.0
             if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
                 iconAlpha = 0.0
+                iconSize = CGSize()
             }
             transition.updateAlpha(node: self.iconNode, alpha: iconAlpha)
         }
         
         let inset: CGFloat = 30.0
-        
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: 409.0), size: titleSize))
-        
         let textSize = self.textNode.measure(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: 441.0), size: textSize))
-        
         let noticeSize = self.noticeNode.measure(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.noticeNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - noticeSize.width) / 2.0), y: 610.0), size: noticeSize))
         
-        let buttonFrame = CGRect(x: 0.0, y: 530.0, width: layout.size.width, height: 44.0)
-        transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        transition.updateFrame(node: self.buttonBackgroundNode, frame: buttonFrame)
-        transition.updateFrame(node: self.buttonHighlightedBackgroundNode, frame: buttonFrame)
+        let items: [AuthorizationLayoutItem] = [
+            AuthorizationLayoutItem(node: self.iconNode, size: iconSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 20.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.textNode, size: textSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 16.0, maxValue: 16.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.buttonNode, size: CGSize(width: layout.size.width, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 40.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 44.0, maxValue: 44.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 20.0, maxValue: 40.0))
+        ]
+        
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 10.0)), items: items, transition: transition, failIfDoesNotFit: false)
+        
+        transition.updateFrame(node: self.buttonBackgroundNode, frame: self.buttonNode.frame)
+        transition.updateFrame(node: self.buttonHighlightedBackgroundNode, frame: self.buttonNode.frame)
         
         let buttonTextSize = self.buttonTextNode.measure(layout.size)
-        let buttonTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonTextSize.width) / 2.0), y: floor(buttonFrame.center.y - buttonTextSize.height / 2.0)), size: buttonTextSize)
+        let buttonTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonTextSize.width) / 2.0), y: floor(self.buttonNode.frame.center.y - buttonTextSize.height / 2.0)), size: buttonTextSize)
         transition.updateFrame(node: self.buttonTextNode, frame: buttonTextFrame)
+    }
+    
+    func animateIn() {
+        self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.buttonBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.buttonTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.noticeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
     }
     
     @objc func buttonPressed() {
