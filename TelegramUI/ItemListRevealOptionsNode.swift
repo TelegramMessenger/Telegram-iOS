@@ -405,11 +405,11 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
                 extendedWidth = size.width * max(1.0, abs(revealFactor))
             } else if self.isLeft {
                 let offset = basicNodeWidth * CGFloat(self.optionNodes.count - 1 - i)
-                extendedWidth = size.width - offset
+                extendedWidth = (size.width - offset) * max(1.0, abs(revealFactor))
                 nodeLeftOffset = startingOffset - extendedWidth - floorToScreenPixels(offset * abs(revealFactor))
             } else {
                 let offset = basicNodeWidth * CGFloat(i)
-                extendedWidth = size.width - offset
+                extendedWidth = (size.width - offset) * max(1.0, abs(revealFactor))
                 nodeLeftOffset = startingOffset + floorToScreenPixels(offset * abs(revealFactor))
             }
             
