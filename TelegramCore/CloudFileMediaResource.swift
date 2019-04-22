@@ -464,11 +464,7 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource, TelegramMul
     }
     
     func apiInputLocation(fileReference: Data?) -> Api.InputFileLocation? {
-        if let fileReference = fileReference {
-            return Api.InputFileLocation.inputDocumentFileLocation(id: self.fileId, accessHash: self.accessHash, fileReference: Buffer(data: fileReference), thumbSize: "")
-        } else {
-            return nil
-        }
+        return Api.InputFileLocation.inputDocumentFileLocation(id: self.fileId, accessHash: self.accessHash, fileReference: Buffer(data: fileReference ?? Data()), thumbSize: "")
     }
     
     public init(datacenterId: Int, fileId: Int64, accessHash: Int64, size: Int?, fileReference: Data?, fileName: String?) {
