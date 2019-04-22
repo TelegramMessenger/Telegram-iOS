@@ -224,15 +224,19 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             let titleIconSpacing: CGFloat = 11.0
             let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - imageSize.width + sideInset) / 2.0), y: contentRect.midY - imageSize.height / 2.0 + iconOffset), size: imageSize)
             if animateAdditive {
+                animationNode.frame = iconFrame
                 transition.animatePositionAdditive(node: animationNode, offset: CGPoint(x: deltaX, y: 0.0))
+            } else {
+                transition.updateFrame(node: animationNode, frame: iconFrame)
             }
-            animationNode.frame = iconFrame
             
             let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width + sideInset) / 2.0), y: contentRect.midY + titleIconSpacing), size: titleSize)
             if animateAdditive {
+                self.titleNode.frame = titleFrame
                 transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: deltaX, y: 0.0))
+            } else {
+                transition.updateFrame(node: self.titleNode, frame: titleFrame)
             }
-            self.titleNode.frame = titleFrame
             
             if (abs(revealFactor) >= 0.4) {
                 animationNode.play()
@@ -244,17 +248,27 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             let titleIconSpacing: CGFloat = 11.0
             let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - imageSize.width + sideInset) / 2.0), y: contentRect.midY - imageSize.height / 2.0 + iconOffset), size: imageSize)
             if animateAdditive {
+                iconNode.frame = iconFrame
                 transition.animatePositionAdditive(node: iconNode, offset: CGPoint(x: deltaX, y: 0.0))
+            } else {
+                transition.updateFrame(node: iconNode, frame: iconFrame)
             }
-            iconNode.frame = iconFrame
             
             let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width + sideInset) / 2.0), y: contentRect.midY + titleIconSpacing), size: titleSize)
             if animateAdditive {
+                self.titleNode.frame = titleFrame
                 transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: deltaX, y: 0.0))
+            } else {
+                transition.updateFrame(node: self.titleNode, frame: titleFrame)
             }
-            self.titleNode.frame = titleFrame
         } else {
-            self.titleNode.frame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width + sideInset) / 2.0), y: contentRect.minY + floor((baseSize.height - titleSize.height) / 2.0)), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width + sideInset) / 2.0), y: contentRect.minY + floor((baseSize.height - titleSize.height) / 2.0)), size: titleSize)
+            if animateAdditive {
+                self.titleNode.frame = titleFrame
+                transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: deltaX, y: 0.0))
+            } else {
+                transition.updateFrame(node: self.titleNode, frame: titleFrame)
+            }
         }
     }
     
@@ -296,7 +310,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
             }
             for node in strongSelf.optionNodes {
                 if node.frame.contains(location) {
-                    node.setHighlighted(true)
+                    //node.setHighlighted(true)
                     break
                 }
             }
@@ -350,28 +364,25 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         if size.width.isLessThanOrEqualTo(0.0) || self.optionNodes.isEmpty {
             return
         }
-        let basicNodeWidth = floorToScreenPixels((size.width - abs(self.sideInset)) / CGFloat(self.optionNodes.count))
+        let basicNodeWidth = floor((size.width - abs(self.sideInset)) / CGFloat(self.optionNodes.count))
         let lastNodeWidth = size.width - basicNodeWidth * CGFloat(self.optionNodes.count - 1)
         let revealFactor = self.revealOffset / size.width
-        let boundaryRevealFactor: CGFloat = 1.0 + basicNodeWidth / size.width * 0.7
-        var leftOffset: CGFloat
+        let boundaryRevealFactor: CGFloat = 1.0 + 16.0 / size.width
+        let startingOffset: CGFloat
         if self.isLeft {
-            leftOffset = size.width + max(0.0, abs(revealFactor) - 1.0) * size.width
+            startingOffset = size.width + max(0.0, abs(revealFactor) - 1.0) * size.width
         } else {
-            leftOffset = 0.0
+            startingOffset = 0.0
         }
         var i = self.isLeft ? (self.optionNodes.count - 1) : 0
         while i >= 0 && i < self.optionNodes.count {
             let node = self.optionNodes[i]
             let nodeWidth = i == (self.optionNodes.count - 1) ? lastNodeWidth : basicNodeWidth
-            var extendedWidth = nodeWidth
             let defaultAlignment: ItemListRevealOptionAlignment = isLeft ? .right : .left
             var nodeTransition = transition
-            extendedWidth = floorToScreenPixels(nodeWidth * max(1.0, abs(revealFactor)))
             var isExpanded = false
             if (isLeft && i == 0) || (!isLeft && i == self.optionNodes.count - 1) {
                 if abs(revealFactor) > boundaryRevealFactor {
-                    extendedWidth = size.width * max(1.0, abs(revealFactor))
                     isExpanded = true
                 }
             }
@@ -387,31 +398,34 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
                 sideInset = self.sideInset
             }
             
-            var nodeLeftOffset = leftOffset
-            if self.isLeft {
-                nodeLeftOffset -= extendedWidth
-            } else {
-                nodeLeftOffset *= abs(revealFactor)
-            }
+            let extendedWidth: CGFloat
+            let nodeLeftOffset: CGFloat
             if isExpanded {
                 nodeLeftOffset = 0.0
+                extendedWidth = size.width * max(1.0, abs(revealFactor))
+            } else if self.isLeft {
+                let offset = basicNodeWidth * CGFloat(self.optionNodes.count - 1 - i)
+                extendedWidth = size.width - offset
+                nodeLeftOffset = startingOffset - extendedWidth - floorToScreenPixels(offset * abs(revealFactor))
+            } else {
+                let offset = basicNodeWidth * CGFloat(i)
+                extendedWidth = size.width - offset
+                nodeLeftOffset = startingOffset + floorToScreenPixels(offset * abs(revealFactor))
             }
             
-            transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: floorToScreenPixels(nodeLeftOffset), y: 0.0), size: CGSize(width: extendedWidth, height: size.height)))
+            transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: nodeLeftOffset, y: 0.0), size: CGSize(width: extendedWidth, height: size.height)))
             node.updateLayout(isFirst: (self.isLeft && i == 0) || (!self.isLeft && i == self.optionNodes.count - 1), isLeft: self.isLeft, baseSize: CGSize(width: nodeWidth, height: size.height), alignment: defaultAlignment, isExpanded: isExpanded, extendedWidth: extendedWidth, sideInset: sideInset, transition: nodeTransition, additive: !transition.isAnimated, revealFactor: revealFactor)
             
             if self.isLeft {
-                leftOffset -= extendedWidth
                 i -= 1
             } else {
-                leftOffset += nodeWidth
                 i += 1
             }
         }
     }
     
     @objc func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
-        if case .ended = recognizer.state {
+        if case .ended = recognizer.state, let gesture = recognizer.lastRecognizedGestureAndLocation?.0, case .tap = gesture {
             let location = recognizer.location(in: self.view)
             var selectedOption: Int?
             for i in 0 ..< self.optionNodes.count {

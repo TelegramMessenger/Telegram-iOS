@@ -227,7 +227,7 @@ public final class AvatarNode: ASDisplayNode {
             representation = peer?.smallProfileImage
         }
         let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? PeerId(namespace: 0, id: 0), peer?.displayLetters ?? [], representation)
-        if updatedState != self.state {
+        if updatedState != self.state || theme !== self.theme {
             self.state = updatedState
             
             let parameters: AvatarNodeParameters
