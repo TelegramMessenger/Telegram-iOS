@@ -556,7 +556,7 @@ public final class Transaction {
     
     public func getMessageGroup(_ id: MessageId) -> [Message]? {
         assert(!self.disposed)
-        return self.postbox?.getMessageGroup(id)
+        return self.postbox?.getMessageGroup(at: id)
     }
     
     public func getMessageForwardedGroup(_ id: MessageId) -> [Message]? {
@@ -928,7 +928,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
-            debugRestoreState(basePath: basePath, name: "previous1")
+            //debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -3042,11 +3042,11 @@ public final class Postbox {
         return nil
     }
     
-    fileprivate func getMessageGroup(_ id: MessageId) -> [Message]? {
+    fileprivate func getMessageGroup(at id: MessageId) -> [Message]? {
         guard let index = self.messageHistoryIndexTable.getIndex(id) else {
             return nil
         }
-        if let messages = self.messageHistoryTable.getMessageGroup(index: index) {
+        if let messages = self.messageHistoryTable.getMessageGroup(at: index, limit: 16) {
             return messages.map(self.renderIntermediateMessage)
         } else {
             return nil
@@ -3057,7 +3057,7 @@ public final class Postbox {
         guard let index = self.messageHistoryIndexTable.getIndex(id) else {
             return nil
         }
-        if let messages = self.messageHistoryTable.getMessageForwardedGroup(index) {
+        if let messages = self.messageHistoryTable.getMessageForwardedGroup(at: index, limit: 200) {
             return messages.map(self.renderIntermediateMessage)
         } else {
             return nil
@@ -3068,7 +3068,7 @@ public final class Postbox {
         guard let index = self.messageHistoryIndexTable.getIndex(id) else {
             return nil
         }
-        if let messages = self.messageHistoryTable.getMessageFailedGroup(index) {
+        if let messages = self.messageHistoryTable.getMessageFailedGroup(at: index, limit: 100) {
             return messages.map(self.renderIntermediateMessage)
         } else {
             return nil

@@ -6,6 +6,8 @@ import sqlcipher
     import SwiftSignalKit
 #endif
 
+let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
 private func checkTableKey(_ table: ValueBoxTable, _ key: ValueBoxKey) {
     switch table.keyType {
         case .binary:
@@ -19,11 +21,11 @@ struct SqlitePreparedStatement {
     let statement: OpaquePointer?
     
     func bind(_ index: Int, data: UnsafeRawPointer, length: Int) {
-        sqlite3_bind_blob(statement, Int32(index), data, Int32(length), nil)
+        sqlite3_bind_blob(statement, Int32(index), data, Int32(length), SQLITE_TRANSIENT)
     }
     
     func bindText(_ index: Int, data: UnsafeRawPointer, length: Int) {
-        sqlite3_bind_text(statement, Int32(index), data.assumingMemoryBound(to: Int8.self), Int32(length), nil)
+        sqlite3_bind_text(statement, Int32(index), data.assumingMemoryBound(to: Int8.self), Int32(length), SQLITE_TRANSIENT)
     }
     
     func bind(_ index: Int, number: Int64) {
@@ -66,10 +68,12 @@ struct SqlitePreparedStatement {
     func tryStep(handle: OpaquePointer?, _ initial: Bool = false, path: String?) -> Bool {
         let res = sqlite3_step(statement)
         if res != SQLITE_ROW && res != SQLITE_DONE {
-            if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
-                postboxLog("SQL error \(res): \(str) on step")
-            } else {
-                postboxLog("SQL error \(res) on step")
+            if res != SQLITE_MISUSE {
+                if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
+                    postboxLog("SQL error \(res): \(str) on step")
+                } else {
+                    postboxLog("SQL error \(res) on step")
+                }
             }
             
             if res == SQLITE_CORRUPT {
@@ -444,7 +448,6 @@ final class SqliteValueBox: ValueBox {
     
     private func isEncrypted(_ database: Database) -> Bool {
         var statement: OpaquePointer? = nil
-        let startTime = CFAbsoluteTimeGetCurrent()
         let status = sqlite3_prepare_v2(database.handle, "SELECT * FROM sqlite_master LIMIT 1", -1, &statement, nil)
         if status == SQLITE_NOTADB {
             return true
@@ -454,7 +457,6 @@ final class SqliteValueBox: ValueBox {
             preparedStatement.destroy()
             return true
         }
-        let endTime = CFAbsoluteTimeGetCurrent()
         preparedStatement.destroy()
         return status == SQLITE_NOTADB
     }
@@ -1706,6 +1708,7 @@ final class SqliteValueBox: ValueBox {
             let value = statement.int32At(0)
             result = Int(value)
         }
+        statement.reset()
         statement.destroy()
         return result
     }
@@ -1723,6 +1726,7 @@ final class SqliteValueBox: ValueBox {
             let value = statement.int32At(0)
             result = Int(value)
         }
+        statement.reset()
         statement.destroy()
         return result
     }
