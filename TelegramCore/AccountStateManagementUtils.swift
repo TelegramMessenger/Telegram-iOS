@@ -930,11 +930,11 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 } else {
                     updatedState.addDisplayAlert(text, isDropAuth: type.hasPrefix("AUTH_KEY_DROP_"))
                 }
-            case let .updateReadChannelInbox(channelId, maxId):
+            case let .updateReadChannelInbox(_, _, channelId, maxId, _, _):
                 updatedState.readInbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadChannelOutbox(channelId, maxId):
                 updatedState.readOutbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId), timestamp: nil)
-            case let .updateReadHistoryInbox(peer, maxId, _, _):
+            case let .updateReadHistoryInbox(_, _, peer, maxId, _, _, _):
                 updatedState.readInbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId), timestamp: updatesDate)
