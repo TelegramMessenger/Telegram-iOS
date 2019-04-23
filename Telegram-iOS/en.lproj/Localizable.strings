@@ -4236,6 +4236,8 @@ Unused sets are archived when you add more.";
 
 "ChatList.UndoArchiveTitle" = "Chat Archived";
 "ChatList.UndoArchiveText" = "Muted chats will stay archived after new messages arrive.";
+"ChatList.UndoArchiveHiddenTitle" = "Archive Hidden";
+"ChatList.UndoArchiveHiddenText" = "Swipe down to see archive.";
 "ChatList.ArchivedChatsTitle" = "Archived Chats";
 
 "PasscodeSettings.PasscodeOptions" = "Passcode Options";
