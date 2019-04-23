@@ -217,14 +217,17 @@ public func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor
     return tintedImage
 }
 
-public func generateScaledImage(image: UIImage?, size: CGSize, scale: CGFloat? = nil) -> UIImage? {
+public func generateScaledImage(image: UIImage?, size: CGSize, opaque: Bool = true, scale: CGFloat? = nil) -> UIImage? {
     guard let image = image else {
         return nil
     }
     
     return generateImage(size, contextGenerator: { size, context in
+        if !opaque {
+            context.clear(CGRect(origin: CGPoint(), size: size))
+        }
         context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-    }, opaque: true, scale: scale)
+    }, opaque: opaque, scale: scale)
 }
 
 private func generateSingleColorImage(size: CGSize, color: UIColor) -> UIImage? {
