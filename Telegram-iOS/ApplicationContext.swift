@@ -210,8 +210,12 @@ final class AuthorizedApplicationContext {
                     if updatedState.isActive {
                         if strongSelf.passcodeController == nil {
                             let presentAnimated = previousState != nil && previousState!.isActive
-                            let controller = PasscodeEntryController(context: strongSelf.context, challengeData: updatedState.challengeData, enableBiometrics: updatedState.enableBiometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: presentAnimated, lockIconInitialFrame: {
-                                return CGRect()
+                            let controller = PasscodeEntryController(context: strongSelf.context, challengeData: updatedState.challengeData, enableBiometrics: updatedState.enableBiometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: presentAnimated, lockIconInitialFrame: { [weak self] in
+                                if let strongSelf = self, let lockViewFrame = strongSelf.rootController.chatListController?.lockViewFrame {
+                                    return lockViewFrame
+                                } else {
+                                    return CGRect()
+                                }
                             }))
                             strongSelf.passcodeController = controller
                             
