@@ -884,10 +884,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         
-        if self.isTracking {
-            offset = 0.0
-        }
-        
         if abs(offset) > CGFloat.ulpOfOne {
             for itemNode in self.itemNodes {
                 var frame = itemNode.frame
@@ -2334,7 +2330,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             
             for itemNode in self.itemNodes {
                 if let index = itemNode.index, index == scrollToItem.index {
-                    let insets = updateSizeAndInsets?.insets ?? self.insets
+                    let insets = self.insets// updateSizeAndInsets?.insets ?? self.insets
                     
                     let offset: CGFloat
                     switch scrollToItem.position {
