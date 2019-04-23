@@ -33,6 +33,9 @@ func adjustPercentCount(_ items: [PercentCounterItem], left: Int) -> [PercentCou
             }
             j += 1
         }
+        if items[i].remainder == 0 {
+            break
+        }
         let equal = j - i
         if equal <= left {
             left -= equal
