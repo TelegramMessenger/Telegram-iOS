@@ -178,7 +178,7 @@ open class ViewControllerPresentationArguments {
         if let navigationBar = self.navigationBar {
             var height = navigationBar.frame.maxY
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode {
-                height += contentNode.height
+                //height += contentNode.height
             }
             return height
         } else {
