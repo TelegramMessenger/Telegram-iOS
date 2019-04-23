@@ -276,8 +276,6 @@ final class ChatHistoryPreloadManager {
                     switch index.entity {
                         case let .peer(peerId):
                             key = .messageOfInterestHole(location: .peer(peerId), namespace: Namespaces.Message.Cloud, count: 60)
-                        /*case let .group(groupId):
-                            key = .messageOfInterestHole(location: .group(groupId), namespace: Namespaces.Message.Cloud, count: 60)*/
                     }
                     view.disposable.set((self.postbox.combinedView(keys: [key])
                     |> deliverOn(self.queue)).start(next: { [weak self] next in
