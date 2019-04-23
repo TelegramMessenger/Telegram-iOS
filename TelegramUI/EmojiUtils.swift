@@ -72,23 +72,13 @@ extension String {
     }
     
     var emojis: [String] {
-        var scalars: [[UnicodeScalar]] = []
-        var currentScalarSet: [UnicodeScalar] = []
-        var previousScalar: UnicodeScalar?
-        
-        for scalar in emojiScalars {
-            if let prev = previousScalar, !prev.isZeroWidthJoiner && !scalar.isZeroWidthJoiner {
-                scalars.append(currentScalarSet)
-                currentScalarSet = []
+        var emojis: [String] = []
+        self.enumerateSubstrings(in: self.startIndex ..< self.endIndex, options: .byComposedCharacterSequences) { substring, _, _, _ in
+            if let substring = substring {
+                emojis.append(substring)
             }
-            currentScalarSet.append(scalar)
-            
-            previousScalar = scalar
         }
-        
-        scalars.append(currentScalarSet)
-        
-        return scalars.map { $0.map{ String($0) } .reduce("", +) }
+        return emojis
     }
     
     fileprivate var emojiScalars: [UnicodeScalar] {

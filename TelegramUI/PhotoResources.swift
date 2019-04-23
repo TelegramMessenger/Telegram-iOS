@@ -2901,13 +2901,13 @@ private func openInAppIconData(postbox: Postbox, appIcon: MediaResource) -> Sign
             
             return appIcon
         }
-        } |> distinctUntilChanged(isEqual: { lhs, rhs in
-            if lhs == nil && rhs == nil {
-                return true
-            } else {
-                return false
-            }
-        })
+    } |> distinctUntilChanged(isEqual: { lhs, rhs in
+        if lhs == nil && rhs == nil {
+            return true
+        } else {
+            return false
+        }
+    })
     
     return signal
 }
@@ -2994,29 +2994,4 @@ func callDefaultBackground() -> Signal<(TransformImageArguments) -> DrawingConte
         }
         return context
     })
-}
-
-func largeEmoji(postbox: Postbox, emoji: String, fontSize: CGFloat) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let resource = LargeEmojiResource(emoji: emoji, fontSize: fontSize)
-    let representation = CachedLargeEmojiRepresentation()
-    return postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
-    |> map { data in
-        return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
-            
-            var sourceImage: UIImage?
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: []), let image = UIImage(data: data, scale: UIScreen.main.scale) {
-                sourceImage = image
-            }
-            
-            if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
-                let imageSize = sourceImage.size
-                context.withFlippedContext { c in
-                    c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingSize.width - imageSize.width) / 2.0), y: floor((arguments.drawingSize.height - imageSize.height) / 2.0)), size: imageSize))
-                }
-            }
-            
-            return context
-        }
-    }
 }

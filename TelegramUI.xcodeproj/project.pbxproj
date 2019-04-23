@@ -137,6 +137,8 @@
 		09DE2F2D2269E2870045E975 /* anim_archive.json in Resources */ = {isa = PBXBuildFile; fileRef = 09DE2F2B2269E2860045E975 /* anim_archive.json */; };
 		09DE2F302269EB030045E975 /* anim_hide.json in Resources */ = {isa = PBXBuildFile; fileRef = 09DE2F2E2269EB030045E975 /* anim_hide.json */; };
 		09DE2F312269EB030045E975 /* anim_unhide.json in Resources */ = {isa = PBXBuildFile; fileRef = 09DE2F2F2269EB030045E975 /* anim_unhide.json */; };
+		09E2D9EF226F1AFA00EA0AA4 /* Emoji.mapping in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */; };
+		09E2D9F1226F214000EA0AA4 /* EmojiResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E2D9F0226F214000EA0AA4 /* EmojiResources.swift */; };
 		09E4A801223AE1B30038140F /* PeerType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A800223AE1B30038140F /* PeerType.swift */; };
 		09E4A803223B833B0038140F /* ForwardPrivacyChatPreviewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A802223B833B0038140F /* ForwardPrivacyChatPreviewItem.swift */; };
 		09E4A805223D4A5A0038140F /* OpenSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A804223D4A5A0038140F /* OpenSettings.swift */; };
@@ -1319,6 +1321,8 @@
 		09DE2F2B2269E2860045E975 /* anim_archive.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_archive.json; sourceTree = "<group>"; };
 		09DE2F2E2269EB030045E975 /* anim_hide.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_hide.json; sourceTree = "<group>"; };
 		09DE2F2F2269EB030045E975 /* anim_unhide.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unhide.json; sourceTree = "<group>"; };
+		09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */ = {isa = PBXFileReference; lastKnownFileType = file; name = Emoji.mapping; path = TelegramUI/Resources/Emoji.mapping; sourceTree = "<group>"; };
+		09E2D9F0226F214000EA0AA4 /* EmojiResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiResources.swift; sourceTree = "<group>"; };
 		09E4A800223AE1B30038140F /* PeerType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerType.swift; sourceTree = "<group>"; };
 		09E4A802223B833B0038140F /* ForwardPrivacyChatPreviewItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForwardPrivacyChatPreviewItem.swift; sourceTree = "<group>"; };
 		09E4A804223D4A5A0038140F /* OpenSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenSettings.swift; sourceTree = "<group>"; };
@@ -3089,6 +3093,7 @@
 		D0471B521EFD8EBC0074D609 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */,
 				D0955FB32191278C00F89427 /* PresentationStrings.mapping */,
 				09310D13213BC5DE0020033A /* Animations */,
 				092F368B2154AAD6001A9F49 /* Fonts */,
@@ -4963,6 +4968,7 @@
 				0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */,
 				D0CCD61A222E8B4500EE1E08 /* TimeBasedVideoPreload.swift */,
 				09F21593225F20D300AEDF6D /* LargeEmojiResource.swift */,
+				09E2D9F0226F214000EA0AA4 /* EmojiResources.swift */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -5190,6 +5196,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -5225,6 +5232,7 @@
 				D0E9BAA21F056F4C00F079A4 /* stp_card_discover@3x.png in Resources */,
 				D0E9BAB01F056F4C00F079A4 /* stp_card_mastercard@3x.png in Resources */,
 				09310D32213ED5FC0020033A /* anim_ungroup.json in Resources */,
+				09E2D9EF226F1AFA00EA0AA4 /* Emoji.mapping in Resources */,
 				D0955FB521912B6000F89427 /* PresentationStrings.mapping in Resources */,
 				D0E9BAA31F056F4C00F079A4 /* stp_card_discover_template@2x.png in Resources */,
 				D0E9BAB51F056F4C00F079A4 /* stp_card_visa@2x.png in Resources */,
@@ -6283,6 +6291,7 @@
 				D0F0AAE41EC21AAA005EE2A5 /* CallControllerButtonsNode.swift in Sources */,
 				D0EC6E7A1EB9F58900EBF1C3 /* DebugController.swift in Sources */,
 				D07ABBAB202A1BD1003671DE /* LegacyWallpaperEditor.swift in Sources */,
+				09E2D9F1226F214000EA0AA4 /* EmojiResources.swift in Sources */,
 				D0EC6E7B1EB9F58900EBF1C3 /* DebugAccountsController.swift in Sources */,
 				D093D8262069A31700BC3599 /* FormControllerItem.swift in Sources */,
 				D0EC6E7C1EB9F58900EBF1C3 /* UsernameSetupController.swift in Sources */,
