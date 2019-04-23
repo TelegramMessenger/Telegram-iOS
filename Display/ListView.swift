@@ -884,6 +884,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         
+        if self.isTracking {
+            offset = 0.0
+        }
+        
         if abs(offset) > CGFloat.ulpOfOne {
             for itemNode in self.itemNodes {
                 var frame = itemNode.frame
@@ -2581,7 +2585,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         
-        self.updateAccessoryNodes(animated: animated, currentTimestamp: timestamp, leftInset: listInsets.left, rightInset: listInsets.right)
+        var accessoryNodesTransition: ContainedViewLayoutTransition = .immediate
+        if let scrollToItem = scrollToItem, scrollToItem.animated {
+            accessoryNodesTransition = .animated(duration: 0.3, curve: .easeInOut)
+        }
+        
+        self.updateAccessoryNodes(transition: accessoryNodesTransition, currentTimestamp: timestamp, leftInset: listInsets.left, rightInset: listInsets.right)
         
         if let highlightedItemNode = highlightedItemNode {
             if highlightedItemNode.index != self.highlightedItemIndex {
@@ -2918,6 +2927,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         switch curve {
                             case .spring:
                                 transition.0.animateOffsetAdditive(node: headerNode, offset: offset)
+                            case let .custom(p1, p2, p3, p4):
+                                headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(controlPoints: p1, p2, p3, p4))
                             case .easeInOut:
                                 if transition.1 {
                                     headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.33, 0.52, 0.25, 0.99))
@@ -3023,7 +3034,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    private func updateAccessoryNodes(animated: Bool, currentTimestamp: Double, leftInset: CGFloat, rightInset: CGFloat) {
+    private func updateAccessoryNodes(transition: ContainedViewLayoutTransition, currentTimestamp: Double, leftInset: CGFloat, rightInset: CGFloat) {
         var totalVisibleHeight: CGFloat = 0.0
         var index = -1
         let count = self.itemNodes.count
@@ -3235,13 +3246,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 if indicatorHeight >= visibleHeightWithoutIndicatorInsets {
                     verticalScrollIndicator.isHidden = true
-                    verticalScrollIndicator.frame = indicatorFrame
+                    transition.updateFrame(node: verticalScrollIndicator, frame: indicatorFrame)
                 } else {
                     if verticalScrollIndicator.isHidden {
                         verticalScrollIndicator.isHidden = false
-                        verticalScrollIndicator.frame = indicatorFrame
+                        transition.updateFrame(node: verticalScrollIndicator, frame: indicatorFrame)
                     } else {
-                        verticalScrollIndicator.frame = indicatorFrame
+                        transition.updateFrame(node: verticalScrollIndicator, frame: indicatorFrame)
                     }
                 }
             } else {

@@ -9,6 +9,7 @@ import Foundation
 public enum ContainedViewLayoutTransitionCurve {
     case easeInOut
     case spring
+    case custom(Float, Float, Float, Float)
 }
 
 public extension ContainedViewLayoutTransitionCurve {
@@ -18,6 +19,19 @@ public extension ContainedViewLayoutTransitionCurve {
                 return kCAMediaTimingFunctionEaseInEaseOut
             case .spring:
                 return kCAMediaTimingFunctionSpring
+            case .custom:
+                return kCAMediaTimingFunctionEaseInEaseOut
+        }
+    }
+    
+    var mediaTimingFunction: CAMediaTimingFunction? {
+        switch self {
+            case .easeInOut:
+                return nil
+            case .spring:
+                return nil
+            case let .custom(p1, p2, p3, p4):
+                return CAMediaTimingFunction(controlPoints: p1, p2, p3, p4)
         }
     }
     
@@ -28,6 +42,8 @@ public extension ContainedViewLayoutTransitionCurve {
                 return [.curveEaseInOut]
             case .spring:
                 return UIViewAnimationOptions(rawValue: 7 << 16)
+            case .custom:
+                return []
         }
     }
     #endif
@@ -52,19 +68,19 @@ public extension ContainedViewLayoutTransition {
             completion?(true)
         } else {
             switch self {
-            case .immediate:
-                node.frame = frame
-                if let completion = completion {
-                    completion(true)
-                }
-            case let .animated(duration, curve):
-                let previousFrame = node.frame
-                node.frame = frame
-                node.layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, force: force, completion: { result in
+                case .immediate:
+                    node.frame = frame
                     if let completion = completion {
-                        completion(result)
+                        completion(true)
                     }
-                })
+                case let .animated(duration, curve):
+                    let previousFrame = node.frame
+                    node.frame = frame
+                    node.layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, force: force, completion: { result in
+                        if let completion = completion {
+                            completion(result)
+                        }
+                    })
             }
         }
     }
@@ -82,7 +98,7 @@ public extension ContainedViewLayoutTransition {
             case let .animated(duration, curve):
                 let previousBounds = node.bounds
                 node.bounds = bounds
-                node.layer.animateBounds(from: previousBounds, to: bounds, duration: duration, timingFunction: curve.timingFunction, force: force, completion: { result in
+                node.layer.animateBounds(from: previousBounds, to: bounds, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, force: force, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -104,7 +120,7 @@ public extension ContainedViewLayoutTransition {
             case let .animated(duration, curve):
                 let previousBounds = layer.bounds
                 layer.bounds = bounds
-                layer.animateBounds(from: previousBounds, to: bounds, duration: duration, timingFunction: curve.timingFunction, force: force, completion: { result in
+                layer.animateBounds(from: previousBounds, to: bounds, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, force: force, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -126,7 +142,7 @@ public extension ContainedViewLayoutTransition {
             case let .animated(duration, curve):
                 let previousPosition = node.position
                 node.position = position
-                node.layer.animatePosition(from: previousPosition, to: position, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                node.layer.animatePosition(from: previousPosition, to: position, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -148,7 +164,7 @@ public extension ContainedViewLayoutTransition {
             case let .animated(duration, curve):
                 let previousPosition = layer.position
                 layer.position = position
-                layer.animatePosition(from: previousPosition, to: position, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                layer.animatePosition(from: previousPosition, to: position, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -164,7 +180,7 @@ public extension ContainedViewLayoutTransition {
                     completion(true)
                 }
             case let .animated(duration, curve):
-                node.layer.animatePosition(from: position, to: node.position, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                node.layer.animatePosition(from: position, to: node.position, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -182,7 +198,7 @@ public extension ContainedViewLayoutTransition {
                     completion(true)
                 }
             case let .animated(duration, curve):
-                node.layer.animatePosition(from: node.position, to: position, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: removeOnCompletion, completion: { result in
+                node.layer.animatePosition(from: node.position, to: position, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -198,7 +214,7 @@ public extension ContainedViewLayoutTransition {
                     completion(true)
                 }
             case let .animated(duration, curve):
-                node.layer.animateFrame(from: frame, to: toFrame ?? node.layer.frame, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: { result in
+                node.layer.animateFrame(from: frame, to: toFrame ?? node.layer.frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -208,32 +224,25 @@ public extension ContainedViewLayoutTransition {
     
     func animateBounds(layer: CALayer, from bounds: CGRect, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         switch self {
-        case .immediate:
-            if let completion = completion {
-                completion(true)
-            }
-        case let .animated(duration, curve):
-            layer.animateBounds(from: bounds, to: layer.bounds, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: removeOnCompletion, completion: { result in
+            case .immediate:
                 if let completion = completion {
-                    completion(result)
+                    completion(true)
                 }
-            })
+            case let .animated(duration, curve):
+                layer.animateBounds(from: bounds, to: layer.bounds, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
         }
     }
     
     func animateOffsetAdditive(node: ASDisplayNode, offset: CGFloat) {
         switch self {
-        case .immediate:
-            break
-        case let .animated(duration, curve):
-            let timingFunction: String
-            switch curve {
-            case .easeInOut:
-                timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-            case .spring:
-                timingFunction = kCAMediaTimingFunctionSpring
-            }
-            node.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, timingFunction: timingFunction)
+            case .immediate:
+                break
+            case let .animated(duration, curve):
+                node.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction)
         }
     }
     
@@ -242,32 +251,18 @@ public extension ContainedViewLayoutTransition {
             case .immediate:
                 break
             case let .animated(duration, curve):
-                let timingFunction: String
-                switch curve {
-                case .easeInOut:
-                    timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-                case .spring:
-                    timingFunction = kCAMediaTimingFunctionSpring
-                }
-                node.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: duration, timingFunction: timingFunction)
+                node.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction)
         }
     }
     
     func animateOffsetAdditive(layer: CALayer, offset: CGFloat, completion: (() -> Void)? = nil) {
         switch self {
-        case .immediate:
-            completion?()
-        case let .animated(duration, curve):
-            let timingFunction: String
-            switch curve {
-            case .easeInOut:
-                timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-            case .spring:
-                timingFunction = kCAMediaTimingFunctionSpring
-            }
-            layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, timingFunction: timingFunction, completion: { _ in
+            case .immediate:
                 completion?()
-            })
+            case let .animated(duration, curve):
+                layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { _ in
+                    completion?()
+                })
         }
     }
     
@@ -276,14 +271,7 @@ public extension ContainedViewLayoutTransition {
             case .immediate:
                 break
             case let .animated(duration, curve):
-                let timingFunction: String
-                switch curve {
-                    case .easeInOut:
-                        timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-                    case .spring:
-                        timingFunction = kCAMediaTimingFunctionSpring
-                }
-                node.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)
+                node.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)
         }
     }
     
@@ -292,32 +280,18 @@ public extension ContainedViewLayoutTransition {
             case .immediate:
                 break
             case let .animated(duration, curve):
-                let timingFunction: String
-                switch curve {
-                    case .easeInOut:
-                        timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-                    case .spring:
-                        timingFunction = kCAMediaTimingFunctionSpring
-                }
-                layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)
+                layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)
         }
     }
     
     func animatePositionAdditive(node: ASDisplayNode, offset: CGPoint, removeOnCompletion: Bool = true, completion: (() -> Void)? = nil) {
         switch self {
-        case .immediate:
-            break
-        case let .animated(duration, curve):
-            let timingFunction: String
-            switch curve {
-            case .easeInOut:
-                timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-            case .spring:
-                timingFunction = kCAMediaTimingFunctionSpring
-            }
-            node.layer.animatePosition(from: offset, to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { _ in
-                completion?()
-            })
+            case .immediate:
+                break
+            case let .animated(duration, curve):
+                node.layer.animatePosition(from: offset, to: CGPoint(), duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { _ in
+                    completion?()
+                })
         }
     }
     
@@ -326,14 +300,7 @@ public extension ContainedViewLayoutTransition {
             case .immediate:
                 break
             case let .animated(duration, curve):
-                let timingFunction: String
-                switch curve {
-                    case .easeInOut:
-                        timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-                    case .spring:
-                        timingFunction = kCAMediaTimingFunctionSpring
-                }
-                layer.animatePosition(from: offset, to: toOffset, duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { _ in
+                layer.animatePosition(from: offset, to: toOffset, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: { _ in
                     completion?()
                 })
         }
@@ -352,7 +319,7 @@ public extension ContainedViewLayoutTransition {
             case let .animated(duration, curve):
                 let previousFrame = view.frame
                 view.frame = frame
-                view.layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, force: force, completion: { result in
+                view.layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, force: force, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -374,7 +341,7 @@ public extension ContainedViewLayoutTransition {
             case let .animated(duration, curve):
                 let previousFrame = layer.frame
                 layer.frame = frame
-                layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -400,7 +367,7 @@ public extension ContainedViewLayoutTransition {
         case let .animated(duration, curve):
             let previousAlpha = node.alpha
             node.alpha = alpha
-            node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+            node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {
                     completion(result)
                 }
@@ -425,7 +392,7 @@ public extension ContainedViewLayoutTransition {
         case let .animated(duration, curve):
             let previousAlpha = layer.opacity
             layer.opacity = Float(alpha)
-            layer.animateAlpha(from: CGFloat(previousAlpha), to: alpha, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+            layer.animateAlpha(from: CGFloat(previousAlpha), to: alpha, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {
                     completion(result)
                 }
@@ -450,7 +417,7 @@ public extension ContainedViewLayoutTransition {
         case let .animated(duration, curve):
             if let nodeColor = node.backgroundColor {
                 node.backgroundColor = color
-                node.layer.animate(from: nodeColor.cgColor, to: color.cgColor, keyPath: "backgroundColor", timingFunction: curve.timingFunction, duration: duration, completion: { result in
+                node.layer.animate(from: nodeColor.cgColor, to: color.cgColor, keyPath: "backgroundColor", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -481,7 +448,7 @@ public extension ContainedViewLayoutTransition {
         case let .animated(duration, curve):
             let previousCornerRadius = node.cornerRadius
             node.cornerRadius = cornerRadius
-            node.layer.animate(from: NSNumber(value: Float(previousCornerRadius)), to: NSNumber(value: Float(cornerRadius)), keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, completion: { result in
+            node.layer.animate(from: NSNumber(value: Float(previousCornerRadius)), to: NSNumber(value: Float(cornerRadius)), keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {
                     completion(result)
                 }
@@ -505,7 +472,7 @@ public extension ContainedViewLayoutTransition {
                 completion(true)
             }
         case let .animated(duration, curve):
-            node.layer.animateScale(from: fromScale, to: currentScale, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+            node.layer.animateScale(from: fromScale, to: currentScale, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {
                     completion(result)
                 }
@@ -531,7 +498,7 @@ public extension ContainedViewLayoutTransition {
             }
         case let .animated(duration, curve):
             node.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
-            node.layer.animateScale(from: currentScale, to: scale, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+            node.layer.animateScale(from: currentScale, to: scale, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {
                     completion(result)
                 }
@@ -557,7 +524,7 @@ public extension ContainedViewLayoutTransition {
             }
         case let .animated(duration, curve):
             layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
-            layer.animateScale(from: currentScale, to: scale, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+            layer.animateScale(from: currentScale, to: scale, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {
                     completion(result)
                 }
@@ -587,7 +554,7 @@ public extension ContainedViewLayoutTransition {
             }
         case let .animated(duration, curve):
             node.layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0)
-            node.layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: node.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: false, completion: {
+            node.layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: node.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
                 result in
                 if let completion = completion {
                     completion(result)
@@ -615,19 +582,19 @@ public extension ContainedViewLayoutTransition {
         }
         
         switch self {
-        case .immediate:
-            node.layer.sublayerTransform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
-            if let completion = completion {
-                completion(true)
-            }
-        case let .animated(duration, curve):
-            node.layer.sublayerTransform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
-            node.layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: node.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: false, completion: {
-                result in
+            case .immediate:
+                node.layer.sublayerTransform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
                 if let completion = completion {
-                    completion(result)
+                    completion(true)
                 }
-            })
+            case let .animated(duration, curve):
+                node.layer.sublayerTransform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
+                node.layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: node.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
+                    result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
         }
     }
     
@@ -637,7 +604,7 @@ public extension ContainedViewLayoutTransition {
             return
         }
         let t = node.layer.transform
-        var currentScaleX = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+        let currentScaleX = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
         var currentScaleY = sqrt((t.m21 * t.m21) + (t.m22 * t.m22) + (t.m23 * t.m23))
         if t.m22 < 0.0 {
             currentScaleY = -currentScaleY
@@ -650,19 +617,19 @@ public extension ContainedViewLayoutTransition {
         }
         
         switch self {
-        case .immediate:
-            node.layer.transform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
-            if let completion = completion {
-                completion(true)
-            }
-        case let .animated(duration, curve):
-            node.layer.transform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
-            node.layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: node.layer.transform), keyPath: "transform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: false, completion: {
-                result in
+            case .immediate:
+                node.layer.transform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
                 if let completion = completion {
-                    completion(result)
+                    completion(true)
                 }
-            })
+            case let .animated(duration, curve):
+                node.layer.transform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
+                node.layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: node.layer.transform), keyPath: "transform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
+                    result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
         }
     }
     
@@ -684,7 +651,7 @@ public extension ContainedViewLayoutTransition {
             }
         case let .animated(duration, curve):
             layer.sublayerTransform = CATransform3DMakeTranslation(offset.x, offset.y, 0.0)
-            layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: false, completion: {
+            layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
                 result in
                 if let completion = completion {
                     completion(result)

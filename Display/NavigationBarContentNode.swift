@@ -13,6 +13,10 @@ open class NavigationBarContentNode: ASDisplayNode {
         return self.nominalHeight
     }
     
+    open var clippedHeight: CGFloat {
+        return self.nominalHeight
+    }
+    
     open var nominalHeight: CGFloat {
         return 44.0
     }
