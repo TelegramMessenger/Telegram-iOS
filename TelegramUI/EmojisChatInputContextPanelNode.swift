@@ -201,10 +201,10 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
         case let .animated(animationDuration, animationCurve):
             duration = animationDuration
             switch animationCurve {
-            case .easeInOut:
-                break
-            case .spring:
-                curve = 7
+                case .easeInOut, .custom:
+                    break
+                case .spring:
+                    curve = 7
             }
         }
         

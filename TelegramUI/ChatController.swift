@@ -4029,7 +4029,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             statusText = strongSelf.presentationData.strings.Undo_ChatCleared
                         }
                         
-                        strongSelf.present(UndoOverlayController(context: strongSelf.context, text: statusText, action: { shouldCommit in
+                        strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .removedChat(text: statusText), elevatedLayout: true, action: { shouldCommit in
                             if shouldCommit {
                                 let _ = clearHistoryInteractively(postbox: account.postbox, peerId: peerId, type: type).start(completed: {
                                     self?.chatDisplayNode.historyNode.historyAppearsCleared = false

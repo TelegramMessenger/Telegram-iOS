@@ -4,10 +4,11 @@ import Display
 import SwiftSignalKit
 
 final class UndoOverlayControllerNode: ViewControllerTracingNode {
+    private let elevatedLayout: Bool
     private let statusNode: RadialStatusNode
     private let timerTextNode: ImmediateTextNode
     private let iconNode: ASImageNode?
-    private let iconCheckNode: RadialStatusNode
+    private let iconCheckNode: RadialStatusNode?
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let buttonTextNode: ImmediateTextNode
@@ -24,22 +25,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(presentationData: PresentationData, isArchive: Bool, title: String?, text: String, action: @escaping (Bool) -> Void, dismiss: @escaping () -> Void) {
+    init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, action: @escaping (Bool) -> Void, dismiss: @escaping () -> Void) {
+        self.elevatedLayout = elevatedLayout
+        
         self.action = action
         self.dismiss = dismiss
-        
-        if isArchive {
-            self.iconNode = ASImageNode()
-            self.iconNode?.displayWithoutProcessing = true
-            self.iconNode?.displaysAsynchronously = false
-            self.iconNode?.image = UIImage(bundleImageName: "Chat List/ArchivedUndoIcon")
-        } else {
-            self.iconNode = nil
-        }
-        
-        self.iconCheckNode = RadialStatusNode(backgroundNodeColor: .clear)
-        
-        self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         
         self.timerTextNode = ImmediateTextNode()
         self.timerTextNode.displaysAsynchronously = false
@@ -48,15 +38,34 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 0
         
-        if let title = title {
-            self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(15.0), textColor: .white)
-        }
-        
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
         
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: .white)
+        switch content {
+            case let .removedChat(text):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: .white)
+            case let .archivedChat(title, text):
+                self.iconNode = ASImageNode()
+                self.iconNode?.displayWithoutProcessing = true
+                self.iconNode?.displaysAsynchronously = false
+                self.iconNode?.image = UIImage(bundleImageName: "Chat List/ArchivedUndoIcon")
+                self.iconCheckNode = RadialStatusNode(backgroundNodeColor: .clear)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(15.0), textColor: .white)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: .white)
+            case let .hidArchive(title, text):
+                self.iconNode = ASImageNode()
+                self.iconNode?.displayWithoutProcessing = true
+                self.iconNode?.displaysAsynchronously = false
+                self.iconNode?.image = UIImage(bundleImageName: "Chat List/HidArchiveUndoIcon")
+                self.iconCheckNode = nil
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(15.0), textColor: .white)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: .white)
+        }
+        
+        self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         
         self.buttonTextNode = ImmediateTextNode()
         self.buttonTextNode.displaysAsynchronously = false
@@ -75,12 +84,15 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         super.init()
         
-        if !isArchive {
-            self.panelWrapperNode.addSubnode(self.timerTextNode)
-            self.panelWrapperNode.addSubnode(self.statusNode)
+        switch content {
+            case .removedChat:
+                self.panelWrapperNode.addSubnode(self.timerTextNode)
+                self.panelWrapperNode.addSubnode(self.statusNode)
+            case .archivedChat, .hidArchive:
+                break
         }
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)
-        self.panelWrapperNode.addSubnode(self.iconCheckNode)
+        self.iconCheckNode.flatMap(self.panelWrapperNode.addSubnode)
         self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
         self.panelWrapperNode.addSubnode(self.buttonTextNode)
@@ -100,8 +112,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             }
         }
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
-        
-        self.checkTimer()
     }
     
     override func didLoad() {
@@ -144,6 +154,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         }
     }
     
+    func renewWithCurrentContent() {
+        self.timer?.invalidate()
+        self.timer = nil
+        self.remainingSeconds = 5
+        self.checkTimer()
+    }
+    
     func containerLayoutUpdated(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let firstLayout = self.validLayout == nil
         self.validLayout = layout
@@ -167,10 +184,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         contentHeight = max(49.0, contentHeight)
         
-        let insets = layout.insets(options: [.input])
+        var insets = layout.insets(options: [.input])
+        if self.elevatedLayout {
+            insets.bottom += 49.0
+        }
         
-        let panelFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin - 49.0), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
-        let panelWrapperFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin - 49.0), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
+        let panelFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
+        let panelWrapperFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
         transition.updateFrame(node: self.panelNode, frame: panelFrame)
         transition.updateFrame(node: self.panelWrapperNode, frame: panelWrapperFrame)
         self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight)
@@ -196,8 +216,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
             transition.updateFrame(node: iconNode, frame: iconFrame)
             
-            let statusSize: CGFloat = 24.0
-            transition.updateFrame(node: self.iconCheckNode, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floor((iconFrame.width - statusSize) / 2.0), y: iconFrame.minY + floor((iconFrame.height - statusSize) / 2.0) + 3.0), size: CGSize(width: statusSize, height: statusSize)))
+            if let iconCheckNode = self.iconCheckNode {
+                let statusSize: CGFloat = 24.0
+                transition.updateFrame(node: iconCheckNode, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floor((iconFrame.width - statusSize) / 2.0), y: iconFrame.minY + floor((iconFrame.height - statusSize) / 2.0) + 3.0), size: CGSize(width: statusSize, height: statusSize)))
+            }
         }
         
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
@@ -213,9 +235,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.panelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.panelWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
-        if self.iconNode != nil {
-            self.iconCheckNode.transitionToState(.check(.black), completion: {})
+        if let iconCheckNode = self.iconCheckNode, self.iconNode != nil {
+            iconCheckNode.transitionToState(.check(.black), completion: {})
         }
+        
+        self.checkTimer()
     }
     
     func animateOut(completion: @escaping () -> Void) {

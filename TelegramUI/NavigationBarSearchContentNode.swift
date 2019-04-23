@@ -76,7 +76,8 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         if abs(newProgress - self.expansionProgress) > 0.0001 {
             self.expansionProgress = newProgress
         
-            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate
+            let animationCurve: ContainedViewLayoutTransitionCurve = .custom(0.33, 0.52, 0.25, 0.99)
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: animationCurve) : .immediate
             if let validLayout = self.validLayout, animated {
                 self.updatePlaceholder(self.expansionProgress, size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: transition)
             }
@@ -149,6 +150,10 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
     
     override var height: CGFloat {
         return self.nominalHeight * self.expansionProgress
+    }
+    
+    override var clippedHeight: CGFloat {
+        return self.nominalHeight * min(1.0, self.expansionProgress)
     }
     
     override var nominalHeight: CGFloat {

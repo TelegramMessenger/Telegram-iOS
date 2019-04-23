@@ -13,10 +13,10 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
         let scrollToItem: ListViewScrollToItem
         let targetProgress: CGFloat
         if searchNode.expansionProgress < 0.6 {
-            scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+            scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: nil), directionHint: .Up)
             targetProgress = 0.0
         } else {
-            scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+            scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up)
             targetProgress = 1.0
         }
         searchNode.updateExpansionProgress(targetProgress, animated: true)
@@ -398,6 +398,54 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
+        self.chatListDisplayNode.chatListNode.toggleArchivedFolderHiddenByDefault = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Bool in
+                var updatedValue = false
+                updateChatArchiveSettings(transaction: transaction, { settings in
+                    var settings = settings
+                    settings.isHiddenByDefault = !settings.isHiddenByDefault
+                    updatedValue = settings.isHiddenByDefault
+                    return settings
+                })
+                return updatedValue
+            }
+            |> deliverOnMainQueue).start(next: { value in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.chatListDisplayNode.chatListNode.updateState { state in
+                    var state = state
+                    if value {
+                        state.archiveShouldBeTemporaryRevealed = false
+                    }
+                    state.peerIdWithRevealedOptions = nil
+                    return state
+                }
+                if value {
+                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText), elevatedLayout: strongSelf.groupId == nil, action: { [weak self] shouldCommit in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if !shouldCommit {
+                            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Bool in
+                                var updatedValue = false
+                                updateChatArchiveSettings(transaction: transaction, { settings in
+                                    var settings = settings
+                                    settings.isHiddenByDefault = false
+                                    updatedValue = settings.isHiddenByDefault
+                                    return settings
+                                })
+                                return updatedValue
+                            }).start()
+                        }
+                    }), in: .window(.root))
+                }
+            })
+        }
+        
         self.chatListDisplayNode.chatListNode.deletePeerChat = { [weak self] peerId in
             guard let strongSelf = self else {
                 return
@@ -482,7 +530,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                                     state.pendingClearHistoryPeerIds.insert(peer.peerId)
                                     return state
                                 })
-                                strongSelf.present(UndoOverlayController(context: strongSelf.context, text: strongSelf.presentationData.strings.Undo_ChatCleared, action: { shouldCommit in
+                                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: strongSelf.groupId == nil, action: { shouldCommit in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -1354,7 +1402,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
             strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
             
-            strongSelf.present(UndoOverlayController(context: strongSelf.context, isArchive: true, title: strongSelf.presentationData.strings.ChatList_UndoArchiveTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveText, action: { [weak self] shouldCommit in
+            let action: (Bool) -> Void = { shouldCommit in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1368,7 +1416,21 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
                     })
                 }
-            }), in: .window(.root))
+            }
+            
+            var foundExisting = false
+            strongSelf.window?.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    if case .archivedChat = controller.content {
+                        foundExisting = true
+                        controller.renewWithCurrentContent(action: action)
+                    }
+                }
+            })
+            
+            if !foundExisting {
+                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .archivedChat(title: strongSelf.presentationData.strings.ChatList_UndoArchiveTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveText), elevatedLayout: strongSelf.groupId == nil, action: action), in: .window(.root))
+            }
         })
     }
     
@@ -1420,7 +1482,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 statusText = self.presentationData.strings.Undo_ChatDeleted
             }
         }
-        self.present(UndoOverlayController(context: self.context, text: statusText, action: { [weak self] shouldCommit in
+        self.present(UndoOverlayController(context: self.context, content: .removedChat(text: statusText), elevatedLayout: self.groupId == nil, action: { [weak self] shouldCommit in
             guard let strongSelf = self else {
                 return
             }

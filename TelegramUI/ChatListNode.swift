@@ -312,6 +312,7 @@ final class ChatListNode: ListView {
     var deletePeerChat: ((PeerId) -> Void)?
     var updatePeerGrouping: ((PeerId, Bool) -> Void)?
     var presentAlert: ((String) -> Void)?
+    var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     
     private var theme: PresentationTheme
     
@@ -461,29 +462,7 @@ final class ChatListNode: ListView {
                 }
             })
         }, toggleArchivedFolderHiddenByDefault: { [weak self] in
-            let _ = (context.account.postbox.transaction { transaction -> Bool in
-                var updatedValue = false
-                updateChatArchiveSettings(transaction: transaction, { settings in
-                    var settings = settings
-                    settings.isHiddenByDefault = !settings.isHiddenByDefault
-                    updatedValue = settings.isHiddenByDefault
-                    return settings
-                })
-                return updatedValue
-            }
-            |> deliverOnMainQueue).start(next: { value in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.updateState { state in
-                    var state = state
-                    if !value {
-                        state.archiveShouldBeTemporaryRevealed = false
-                    }
-                    state.peerIdWithRevealedOptions = nil
-                    return state
-                }
-            })
+            self?.toggleArchivedFolderHiddenByDefault?()
         })
         
         let viewProcessingQueue = self.viewProcessingQueue
@@ -999,7 +978,7 @@ final class ChatListNode: ListView {
                 case let .known(value):
                     atTop = value <= 0.0
                     if startedScrollingAtUpperBound && strongSelf.isTracking {
-                        revealHiddenItems = value <= -76.0
+                        revealHiddenItems = value <= -60.0
                     }
             }
             strongSelf.scrolledAtTopValue = atTop
