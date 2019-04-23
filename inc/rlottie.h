@@ -51,6 +51,38 @@ struct LOTLayerNode;
 
 namespace rlottie {
 
+struct Color {
+    Color(){}
+    Color(float r, float g , float b):mr(r), mg(g), mb(b){}
+public:
+    float mr{0}, mg{0}, mb{0};
+};
+
+struct Size {
+    Size(float w, float h):mw(w), mh(h){}
+private:
+    float mw{0} , mh{0};
+};
+
+struct Point {
+    Point(float x, float y):mx(x), my(y){}
+private:
+    float mx{0} , my{0};
+};
+
+enum class Property {
+    FillColor,     /*!< Color property of Fill object , value type is rlottie::Color */
+    FillOpacity,   /*!< Opacity property of Fill object , value type is float [ 0 .. 100] */
+    StrokeColor,   /*!< Color property of Stroke object , value type is rlottie::Color */
+    StrokeOpacity, /*!< Opacity property of Stroke object , value type is float [ 0 .. 100] */
+    StrokeWidth,   /*!< stroke with property of Stroke object , value type is float */
+    TrAnchor,      /*!< Transform Anchor property of Layer and Group object , value type is rlottie::Point */
+    TrPosition,    /*!< Transform Position property of Layer and Group object , value type is rlottie::Point */
+    TrScale,       /*!< Transform Scale property of Layer and Group object , value type is rlottie::Size. range[0 ..100] */
+    TrRotation,    /*!< Transform Scale property of Layer and Group object , value type is float. range[0 .. 360] in degrees*/
+    TrOpacity      /*!< Transform Opacity property of Layer and Group object , value type is float [ 0 .. 100] */
+};
+
 class LOT_EXPORT Surface {
 public:
     /**
@@ -337,6 +369,29 @@ public:
     const LayerInfoList& layers() const;
 
     /**
+     *  @brief Sets property value for the specified {@link KeyPath}. This {@link KeyPath} can resolve
+     *  to multiple contents. In that case, the callback's value will apply to all of them.
+     *
+     *  Keypath should conatin object names separated by (.) and can handle globe(**) or wildchar(*).
+     *
+     *  @usage
+     *  To change fillcolor property of fill1 object in the layer1->group1->fill1 hirarchy to RED color
+     *
+     *     player->setValue<rlottie::Property::FillColor>("layer1.group1.fill1", rlottie::Color(1, 0, 0);
+     *
+     *  if all the color property inside group1 needs to be changed to GREEN color
+     *
+     *     player->setValue<rlottie::Property::FillColor>("**.group1.**", rlottie::Color(0, 1, 0);
+     *
+     *  @internal
+     */
+    template<Property prop, typename AnyValue>
+    void setValue(const std::string &keypath, AnyValue value)
+    {
+        setValue(std::integral_constant<ValueType, mapType(prop)>{}, prop, keypath, value);
+    }
+
+    /**
      *  @brief default destructor
      *
      *  @internal
@@ -344,6 +399,34 @@ public:
     ~Animation();
 
 private:
+    enum class ValueType {Color,Point,Size,Float};
+    static constexpr ValueType mapType(Property prop) {
+        switch (prop) {
+        case Property::FillColor:
+        case Property::StrokeColor:
+            return ValueType::Color;
+        case Property::FillOpacity:
+        case Property::StrokeOpacity:
+        case Property::StrokeWidth:
+        case Property::TrOpacity:
+        case Property::TrRotation:
+            return ValueType::Float;
+        case Property::TrAnchor:
+        case Property::TrPosition:
+            return ValueType::Point;
+        case Property::TrScale:
+            return ValueType::Size;
+        }
+    }
+
+    void setValue(std::integral_constant<ValueType, ValueType::Color>,
+                  Property, const std::string &, Color);
+    void setValue(std::integral_constant<ValueType, ValueType::Float>,
+                  Property, const std::string &, float);
+    void setValue(std::integral_constant<ValueType, ValueType::Size>,
+                  Property, const std::string &, Size);
+    void setValue(std::integral_constant<ValueType, ValueType::Point>,
+                  Property, const std::string &, Point);
     /**
      *  @brief default constructor
      *
@@ -353,6 +436,7 @@ private:
 
     std::unique_ptr<AnimationImpl> d;
 };
+
 
 }  // namespace lotplayer
 

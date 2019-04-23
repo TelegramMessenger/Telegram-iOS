@@ -31,6 +31,7 @@
 #include"rlottie.h"
 #include"vpainter.h"
 #include"vdrawable.h"
+#include"lottiekeypath.h"
 
 V_USE_NAMESPACE
 
@@ -46,7 +47,6 @@ class LOTLayerItem;
 class LOTMaskItem;
 class VDrawable;
 
-
 class LOTCompItem
 {
 public:
@@ -58,6 +58,7 @@ public:
    void buildRenderTree();
    const LOTLayerNode * renderTree()const;
    bool render(const rlottie::Surface &surface);
+   void setValue(const std::string &keypath, LOTVariant &value);
 private:
    VMatrix                                    mScaleMatrix;
    VSize                                      mViewSize;
@@ -86,11 +87,12 @@ public:
 };
 
 typedef vFlag<DirtyFlagBit> DirtyFlag;
+
 class LOTLayerItem
 {
 public:
+   virtual ~LOTLayerItem() = default;
    LOTLayerItem(LOTLayerData *layerData);
-   virtual ~LOTLayerItem()= default;
    int id() const {return mLayerData->id();}
    int parentId() const {return mLayerData->parentId();}
    void setParentLayer(LOTLayerItem *parent){mParentLayer = parent;}
@@ -105,6 +107,8 @@ public:
    bool visible() const;
    virtual void buildLayerNode();
    LOTLayerNode * layerNode() const {return mLayerCNode.get();}
+   const std::string & name() const {return mLayerData->name();}
+   virtual bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value);
 protected:
    virtual void updateContent() = 0;
    inline VMatrix combinedMatrix() const {return mCombinedMatrix;}
@@ -136,6 +140,7 @@ public:
    void updateStaticProperty() final;
    void render(VPainter *painter, const VRle &mask, const VRle &matteRle) final;
    void buildLayerNode() final;
+   bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value) override;
 protected:
    void updateContent() final;
 private:
@@ -169,6 +174,7 @@ public:
    static std::unique_ptr<LOTContentItem> createContentItem(LOTData *contentData);
    void renderList(std::vector<VDrawable *> &list)final;
    void buildLayerNode() final;
+   bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value) override;
 protected:
    void updateContent() final;
    std::vector<LOTNode *>               mCNodeList;
@@ -250,11 +256,12 @@ class LOTTrimItem;
 class LOTContentItem
 {
 public:
-   virtual ~LOTContentItem()= default;
+   virtual ~LOTContentItem() = default;
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) = 0;
    virtual void renderList(std::vector<VDrawable *> &){}
    void setParent(LOTContentItem *parent) {mParent = parent;}
    LOTContentItem *parent() const {return mParent;}
+   virtual bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value) {return false;}
 private:
    LOTContentItem *mParent{nullptr};
 };
@@ -265,12 +272,18 @@ public:
     LOTContentGroupItem(){}
    LOTContentGroupItem(LOTGroupData *data);
    void addChildren(LOTGroupData *data);
-   void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag);
+   void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) override;
    void applyTrim();
    void processTrimItems(std::vector<LOTPathDataItem *> &list);
    void processPaintItems(std::vector<LOTPathDataItem *> &list);
-   void renderList(std::vector<VDrawable *> &list);
+   void renderList(std::vector<VDrawable *> &list) override;
    const VMatrix & matrix() const { return mMatrix;}
+   const std::string & name() const
+   {
+       static const std::string TAG = "__";
+       return mData ? mData->name() : TAG;
+   }
+   bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value) override;
 protected:
    LOTGroupData                                  *mData{nullptr};
    std::vector<std::unique_ptr<LOTContentItem>>   mContents;
@@ -398,6 +411,7 @@ public:
 protected:
    void updateContent(int frameNo) final;
    void updateRenderNode() final;
+   bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value) final;
 private:
    LOTProxyModel<LOTFillData> mModel;
    VColor                     mColor;
@@ -424,6 +438,7 @@ public:
 protected:
    void updateContent(int frameNo) final;
    void updateRenderNode() final;
+   bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value) final;
 private:
    LOTProxyModel<LOTStrokeData> mModel;
    LOTStrokeData               *mData;

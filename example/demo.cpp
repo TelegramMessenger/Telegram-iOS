@@ -45,10 +45,13 @@ main(void)
    app->setup();
 
    std::string filePath = DEMO_DIR;
-   filePath +="3d.json";
+   filePath +="circuit.json";
 
    LottieView *view = new LottieView(app->evas());
    view->setFilePath(filePath.c_str());
+   if (view->player()) {
+       view->player()->setValue<rlottie::Property::FillColor>("**", rlottie::Color(0, 1, 0));
+   }
    view->setPos(0, 0);
    view->setSize(800, 800);
    view->show();

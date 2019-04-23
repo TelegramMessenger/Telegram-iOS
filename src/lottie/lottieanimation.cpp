@@ -51,6 +51,8 @@ public:
                  renderTree(size_t frameNo, const VSize &size);
 
     const LayerInfoList& layerInfoList() const { return mModel->layerInfoList();}
+    void setValue(const std::string &keypath, LOTVariant &&value);
+    void removeFilter(const std::string &keypath, Property prop);
 private:
     std::string                  mFilePath;
     std::shared_ptr<LOTModel>    mModel;
@@ -58,6 +60,12 @@ private:
     SharedRenderTask             mTask;
     std::atomic<bool>            mRenderInProgress;
 };
+
+void AnimationImpl::setValue(const std::string &keypath, LOTVariant &&value)
+{
+    if (keypath.empty()) return;
+    mCompItem->setValue(keypath, value);
+}
 
 const LOTLayerNode *AnimationImpl::renderTree(size_t frameNo, const VSize &size)
 {
@@ -304,6 +312,34 @@ void Animation::renderSync(size_t frameNo, Surface surface)
 const LayerInfoList& Animation::layers() const
 {
     return d->layerInfoList();
+}
+
+void Animation::setValue(std::integral_constant<ValueType, ValueType::Color>,Property prop,
+                         const std::string &keypath,
+                         Color value)
+{
+    d->setValue(keypath, LOTVariant(prop, value));
+}
+
+void Animation::setValue(std::integral_constant<ValueType, ValueType::Float>, Property prop,
+                         const std::string &keypath,
+                         float value)
+{
+    d->setValue(keypath, LOTVariant(prop, value));
+}
+
+void Animation::setValue(std::integral_constant<ValueType, ValueType::Size>,Property prop,
+                         const std::string &keypath,
+                         Size value)
+{
+    d->setValue(keypath, LOTVariant(prop, value));
+}
+
+void Animation::setValue(std::integral_constant<ValueType, ValueType::Point>, Property prop,
+                         const std::string &keypath,
+                         Point value)
+{
+    d->setValue(keypath, LOTVariant(prop, value));
 }
 
 Animation::Animation(): d(std::make_unique<AnimationImpl>()) {}

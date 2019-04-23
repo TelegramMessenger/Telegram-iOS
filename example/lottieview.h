@@ -43,6 +43,7 @@ public:
         evas_object_del(renderObject());
     }
     RenderStrategy(Evas_Object *obj):_renderObject(obj){}
+    virtual rlottie::Animation *player() {return nullptr;}
     virtual void loadFromFile(const char *filePath) = 0;
     virtual void loadFromData(const std::string &jsonData, const std::string &key, const std::string &resourcePath) = 0;
     virtual size_t totalFrame() = 0;
@@ -63,7 +64,7 @@ private:
 class CppApiBase : public RenderStrategy {
 public:
     CppApiBase(Evas_Object *renderObject): RenderStrategy(renderObject) {}
-
+    rlottie::Animation *player() {return mPlayer.get();}
     void loadFromFile(const char *filePath)
     {
         mPlayer = rlottie::Animation::loadFromFile(filePath);
@@ -283,6 +284,7 @@ public:
     };
     LottieView(Evas *evas, Strategy s = Strategy::renderCppAsync);
     ~LottieView();
+    rlottie::Animation *player(){return mRenderDelegate->player();}
     Evas_Object *getImage();
     void setSize(int w, int h);
     void setPos(int x, int y);

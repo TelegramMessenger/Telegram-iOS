@@ -748,6 +748,7 @@ void LottieParserImpl::parseLayers(LOTCompositionData *comp)
     comp->mRootLayer->mRoot = true;
     comp->mRootLayer->mLayerType = LayerType::Precomp;
     comp->mRootLayer->mTransform = std::make_shared<LOTTransformData>();
+    comp->mRootLayer->mName = std::string("__");
     bool staticFlag = true;
     RAPIDJSON_ASSERT(PeekType() == kArrayType);
     EnterArray();
@@ -857,7 +858,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
             layer->mLayerType = getLayerType();
         } else if (0 == strcmp(key, "nm")) { /*Layer name*/
             RAPIDJSON_ASSERT(PeekType() == kStringType);
-            layerName = GetString();
+            layer->mName = GetString();
         } else if (0 == strcmp(key, "ind")) { /*Layer index in AE. Used for
                                                  parenting and expressions.*/
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
@@ -939,7 +940,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
     layer->mCompRef = compRef;
 
     if (record) {
-        mLayerInfoList.push_back(LayerInfo(layerName, layer->mInFrame, layer->mOutFrame));
+        mLayerInfoList.push_back(LayerInfo(layer->mName, layer->mInFrame, layer->mOutFrame));
     }
     return sharedLayer;
 }
@@ -1070,7 +1071,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGroupObject()
 
     LOTShapeGroupData *group = sharedGroup.get();
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "it")) {
+        if (0 == strcmp(key, "nm")) {
+            group->mName = GetString();
+        } else if (0 == strcmp(key, "it")) {
             RAPIDJSON_ASSERT(PeekType() == kArrayType);
             EnterArray();
             while (NextArrayValue()) {
@@ -1105,7 +1108,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseRectObject()
     LOTRectData *                obj = sharedRect.get();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "p")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "p")) {
             parseProperty(obj->mPos);
         } else if (0 == strcmp(key, "s")) {
             parseProperty(obj->mSize);
@@ -1134,7 +1139,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseEllipseObject()
     LOTEllipseData *obj = sharedEllipse.get();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "p")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "p")) {
             parseProperty(obj->mPos);
         } else if (0 == strcmp(key, "s")) {
             parseProperty(obj->mSize);
@@ -1160,7 +1167,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseShapeObject()
     LOTShapeData *obj = sharedShape.get();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "ks")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "ks")) {
             parseShapeProperty(obj->mShape);
         } else if (0 == strcmp(key, "d")) {
             obj->mDirection = GetInt();
@@ -1188,7 +1197,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parsePolystarObject()
     LOTPolystarData *obj = sharedPolystar.get();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "p")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "p")) {
             parseProperty(obj->mPos);
         } else if (0 == strcmp(key, "pt")) {
             parseProperty(obj->mPointCount);
@@ -1251,7 +1262,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseTrimObject()
     LOTTrimData *                obj = sharedTrim.get();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "s")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "s")) {
             parseProperty(obj->mStart);
         } else if (0 == strcmp(key, "e")) {
             parseProperty(obj->mEnd);
@@ -1280,7 +1293,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
     LOTRepeaterData *obj = sharedRepeater.get();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "c")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "c")) {
             parseProperty(obj->mCopies);
             float maxCopy= 0.0;
             if (!obj->mCopies.isStatic()) {
@@ -1326,7 +1341,9 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(bool dd
     if (ddd) obj->m3D = std::make_unique<LOT3DData>();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "a")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "a")) {
             parseProperty(obj->mAnchor);
         } else if (0 == strcmp(key, "p")) {
             EnterObject();
@@ -1394,7 +1411,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseFillObject()
     LOTFillData *                obj = sharedFill.get();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "c")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "c")) {
             parseProperty(obj->mColor);
         } else if (0 == strcmp(key, "o")) {
             parseProperty(obj->mOpacity);
@@ -1480,7 +1499,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseStrokeObject()
     LOTStrokeData *obj = sharedStroke.get();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "c")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "c")) {
             parseProperty(obj->mColor);
         } else if (0 == strcmp(key, "o")) {
             parseProperty(obj->mOpacity);
@@ -1561,7 +1582,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGFillObject()
     LOTGFillData *obj = sharedGFill.get();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "r")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "r")) {
             obj->mFillRule = getFillRule();
         } else {
             parseGradientProperty(obj, key);
@@ -1607,7 +1630,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGStrokeObject()
     LOTGStrokeData *obj = sharedGStroke.get();
 
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "w")) {
+        if (0 == strcmp(key, "nm")) {
+            obj->mName = GetString();
+        } else if (0 == strcmp(key, "w")) {
             parseProperty(obj->mWidth);
         } else if (0 == strcmp(key, "lc")) {
             obj->mCapStyle = getLineCap();
@@ -2077,6 +2102,7 @@ public:
         vDebug << level
                << "{ "
                << layerType(obj->mLayerType)
+               << ", name: "<< obj->name()
                << ", id:" << obj->mId << " Pid:" << obj->mParentId
                << ", a:" << !obj->isStatic()
                << ", "<<matteType(obj->mMatteType)
@@ -2120,7 +2146,7 @@ public:
         switch (obj->mType) {
         case LOTData::Type::Repeater: {
             auto r = static_cast<LOTRepeaterData *>(obj);
-            vDebug << level << "{ Repeater: a:" << !obj->isStatic()
+            vDebug << level << "{ Repeater: name: "<<obj->name()<<" , a:" << !obj->isStatic()
                    << ", copies:" << r->maxCopies()
                    << ", offset:" << r->offset(0);
             visitChildren(static_cast<LOTGroupData *>(obj), level);
@@ -2128,7 +2154,7 @@ public:
             break;
         }
         case LOTData::Type::ShapeGroup: {
-            vDebug << level << "{ ShapeGroup: a:" << !obj->isStatic();
+            vDebug << level << "{ ShapeGroup: name: "<<obj->name()<<" , a:" << !obj->isStatic();
             visitChildren(static_cast<LOTGroupData *>(obj), level);
             vDebug << level << "} ShapeGroup";
             break;
@@ -2138,44 +2164,44 @@ public:
             break;
         }
         case LOTData::Type::Trim:{
-            vDebug << level << "{ Trim: a:" << !obj->isStatic() << " }";
+            vDebug << level << "{ Trim: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
             break;
         }
         case LOTData::Type::Rect:{
-            vDebug << level << "{ Rect: a:" << !obj->isStatic() << " }";
+            vDebug << level << "{ Rect: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
             break;
         }
         case LOTData::Type::Ellipse:{
-            vDebug << level << "{ Ellipse: a:" << !obj->isStatic() << " }";
+            vDebug << level << "{ Ellipse: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
             break;
         }
         case LOTData::Type::Shape:{
-            vDebug << level << "{ Shape: a:" << !obj->isStatic() << " }";
+            vDebug << level << "{ Shape: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
             break;
         }
         case LOTData::Type::Polystar:{
-            vDebug << level << "{ Polystar: a:" << !obj->isStatic() << " }";
+            vDebug << level << "{ Polystar: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
             break;
         }
         case LOTData::Type::Transform:{
-            vDebug << level << "{ Transform: a: " << !obj->isStatic() << " }";
+            vDebug << level << "{ Transform: name: "<<obj->name()<<" , a: " << !obj->isStatic() << " }";
             break;
         }
         case LOTData::Type::Stroke:{
-            vDebug << level << "{ Stroke: a:" << !obj->isStatic() << " }";
+            vDebug << level << "{ Stroke: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
             break;
         }
         case LOTData::Type::GStroke:{
-            vDebug << level << "{ GStroke: a:" << !obj->isStatic() << " }";
+            vDebug << level << "{ GStroke: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
             break;
         }
         case LOTData::Type::Fill:{
-            vDebug << level << "{ Fill: a:" << !obj->isStatic() << " }";
+            vDebug << level << "{ Fill: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
             break;
         }
         case LOTData::Type::GFill:{
             auto f = static_cast<LOTGFillData *>(obj);
-            vDebug << level << "{ GFill: a:" << !f->isStatic()
+            vDebug << level << "{ GFill: name: "<<obj->name()<<" , a:" << !f->isStatic()
                    << ", ty:" << f->mGradientType << ", s:" << f->mStartPoint.value(0)
                    << ", e:" << f->mEndPoint.value(0) << " }";
             break;

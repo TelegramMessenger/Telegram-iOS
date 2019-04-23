@@ -5,6 +5,7 @@ source_file += files('lottiemodel.cpp')
 source_file += files('lottieproxymodel.cpp')
 source_file += files('lottieanimation.cpp')
 source_file += files('lottieitem.cpp')
+source_file += files('lottiekeypath.cpp')
 
 
 lottie_dep = declare_dependency(

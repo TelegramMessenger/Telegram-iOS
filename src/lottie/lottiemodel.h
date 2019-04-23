@@ -295,7 +295,7 @@ class LOTDataVisitor;
 class LOTData
 {
 public:
-    enum class Type {
+    enum class Type :short {
         Composition = 1,
         Layer,
         ShapeGroup,
@@ -316,10 +316,12 @@ public:
     bool isStatic() const{return mStatic;}
     void setStatic(bool value) {mStatic = value;}
     bool hidden() const {return mHidden;}
+    const std::string& name() const{ return mName;}
 public:
-    bool                mStatic{true};
-    bool                mHidden{false};
-    LOTData::Type       mType;
+    std::string               mName;
+    bool                      mStatic{true};
+    bool                      mHidden{false};
+    LOTData::Type             mType;
 };
 
 class LOTGroupData: public LOTData

@@ -1,4 +1,4 @@
-/* 
+﻿/* 
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
  * 
  * This library is free software; you can redistribute it and/or
@@ -24,6 +24,7 @@
 #include "vdasher.h"
 #include "vpainter.h"
 #include "vraster.h"
+#include "lottiekeypath.h"
 
 /* Lottie Layer Rules
  * 1. time stretch is pre calculated and applied to all the properties of the
@@ -32,6 +33,45 @@
  * AE. which means (start frame > endFrame) 3.
  */
 
+static
+bool transformProp(rlottie::Property prop)
+{
+    switch (prop) {
+        case rlottie::Property::TrAnchor:
+        case rlottie::Property::TrScale:
+        case rlottie::Property::TrOpacity:
+        case rlottie::Property::TrPosition:
+        case rlottie::Property::TrRotation:
+            return true;
+        default:
+            return false;
+    }
+}
+static
+bool fillProp(rlottie::Property prop)
+{
+    switch (prop) {
+        case rlottie::Property::FillColor:
+        case rlottie::Property::FillOpacity:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static
+bool strokeProp(rlottie::Property prop)
+{
+    switch (prop) {
+        case rlottie::Property::StrokeColor:
+        case rlottie::Property::StrokeOpacity:
+        case rlottie::Property::StrokeWidth:
+            return true;
+        default:
+            return false;
+    }
+}
+
 LOTCompItem::LOTCompItem(LOTModel *model)
     : mRootModel(model), mUpdateViewBox(false), mCurFrameNo(-1)
 {
@@ -39,6 +79,12 @@ LOTCompItem::LOTCompItem(LOTModel *model)
     mRootLayer = createLayerItem(mCompData->mRootLayer.get());
     mRootLayer->updateStaticProperty();
     mViewSize = mCompData->size();
+}
+
+void LOTCompItem::setValue(const std::string &keypath, LOTVariant &value)
+{
+    LOTKeyPath key(keypath);
+    mRootLayer->resolveKeyPath(key, 0, value);
 }
 
 std::unique_ptr<LOTLayerItem>
@@ -367,6 +413,50 @@ LOTLayerItem::LOTLayerItem(LOTLayerData *layerData): mLayerData(layerData)
 {
     if (mLayerData->mHasMask)
         mLayerMask = std::make_unique<LOTLayerMaskItem>(mLayerData);
+}
+
+bool LOTLayerItem::resolveKeyPath(LOTKeyPath &keyPath, uint depth,
+                                  LOTVariant &value)
+{
+    if (!keyPath.matches(name(), depth)) {
+      return false;
+    }
+
+    if (!keyPath.skip(name())) {
+      if (keyPath.fullyResolvesTo(name(), depth) &&
+          transformProp(value.property())) {
+          //@TODO handle propery update.
+      }
+    }
+    return true;
+}
+
+bool LOTShapeLayerItem::resolveKeyPath(LOTKeyPath &keyPath, uint depth,
+                                       LOTVariant &value)
+{
+    if (LOTLayerItem::resolveKeyPath(keyPath, depth, value)){
+        if (keyPath.propagate(name(), depth)) {
+            uint newDepth = keyPath.nextDepth(name(), depth);
+            mRoot->resolveKeyPath(keyPath, newDepth, value);
+        }
+        return true;
+    }
+    return false;
+}
+
+bool LOTCompLayerItem::resolveKeyPath(LOTKeyPath &keyPath, uint depth,
+                                      LOTVariant &value)
+{
+    if (LOTLayerItem::resolveKeyPath(keyPath, depth, value)) {
+        if (keyPath.propagate(name(), depth)) {
+            uint newDepth = keyPath.nextDepth(name(), depth);
+            for (const auto &layer : mLayers) {
+                layer->resolveKeyPath( keyPath, newDepth, value);
+            }
+        }
+        return true;
+    }
+    return false;
 }
 
 void LOTLayerItem::updateStaticProperty()
@@ -860,6 +950,56 @@ void LOTShapeLayerItem::renderList(std::vector<VDrawable *> &list)
 {
     if (!visible()) return;
     mRoot->renderList(list);
+}
+
+bool LOTContentGroupItem::resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value)
+{
+    if (!keyPath.matches(name(), depth)) {
+      return false;
+    }
+
+    if (!keyPath.skip(name())) {
+      if (keyPath.fullyResolvesTo(name(), depth) &&
+          transformProp(value.property())) {
+          //@TODO handle property update
+      }
+    }
+
+    if (keyPath.propagate(name(), depth)) {
+        uint newDepth = keyPath.nextDepth(name(), depth);
+        for (auto &child : mContents) {
+            child->resolveKeyPath( keyPath, newDepth, value);
+        }
+    }
+    return true;
+}
+
+bool LOTFillItem::resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value)
+{
+    if (!keyPath.matches(mModel.name(), depth)) {
+      return false;
+    }
+
+    if (keyPath.fullyResolvesTo(mModel.name(), depth) &&
+        fillProp(value.property())) {
+        mModel.filter().addValue(value);
+        return true;
+    }
+    return false;
+}
+
+bool LOTStrokeItem::resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value)
+{
+    if (!keyPath.matches(mModel.name(), depth)) {
+      return false;
+    }
+
+    if (keyPath.fullyResolvesTo(mModel.name(), depth) &&
+        strokeProp(value.property())) {
+        mModel.filter().addValue(value);
+        return true;
+    }
+    return false;
 }
 
 LOTContentGroupItem::LOTContentGroupItem(LOTGroupData *data) : mData(data)
