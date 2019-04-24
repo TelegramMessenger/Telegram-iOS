@@ -19,6 +19,7 @@
 #ifndef LOTTIEKEYPATH_H
 #define LOTTIEKEYPATH_H
 
+#include "vglobal.h"
 #include <string>
 #include <vector>
 
