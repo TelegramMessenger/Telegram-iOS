@@ -1877,28 +1877,14 @@ VPointF LottieParserImpl::parseInperpolatorPoint()
 }
 
 template <typename T>
-bool LottieParserImpl::parseKeyFrameValue(const char *         key,
-                                          LOTKeyFrameValue<T> &value)
-{
-    if (0 == strcmp(key, "s")) {
-        getValue(value.mStartValue);
-    } else if (0 == strcmp(key, "e")) {
-        getValue(value.mEndValue);
-    } else {
-        return false;
-    }
-    return true;
-}
+bool LottieParserImpl::parseKeyFrameValue(const char *,
+                                          LOTKeyFrameValue<T> &){ return false;}
 
 template <>
-bool LottieParserImpl::parseKeyFrameValue(const char *               key,
+bool LottieParserImpl::parseKeyFrameValue(const char * key,
                                           LOTKeyFrameValue<VPointF> &value)
 {
-    if (0 == strcmp(key, "s")) {
-        getValue(value.mStartValue);
-    } else if (0 == strcmp(key, "e")) {
-        getValue(value.mEndValue);
-    } else if (0 == strcmp(key, "ti")) {
+   if (0 == strcmp(key, "ti")) {
         value.mPathKeyFrame = true;
         getValue(value.mInTangent);
     } else if (0 == strcmp(key, "to")) {
@@ -1916,15 +1902,25 @@ bool LottieParserImpl::parseKeyFrameValue(const char *               key,
 template <typename T>
 void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
 {
+struct ParsedField {
+    bool interpolator{false};
+    bool value{false};
+    bool hold{false};
+    bool time{false};
+    bool lastFrame{false};
+    bool hasEndValue{false};
+};
+
     EnterObject();
+    ParsedField    parsed;
     LOTKeyFrame<T> keyframe;
     VPointF        inTangent;
     VPointF        outTangent;
     const char *   interpolatorKey = nullptr;
-    bool           hold = false;
-    bool           lastFrame = true;
+
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "i")) {
+            parsed.interpolator = true;
             inTangent = parseInperpolatorPoint();
         } else if (0 == strcmp(key, "o")) {
             outTangent = parseInperpolatorPoint();
@@ -1947,11 +1943,19 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
             continue;
         } else if (0 == strcmp(key, "t")) {
             keyframe.mStartFrame = GetDouble();
+            parsed.time = true;
+        } else if (0 == strcmp(key, "s")) {
+            parsed.value = true;
+            getValue(keyframe.mValue.mStartValue);
+            continue;
+        }  else if (0 == strcmp(key, "e")) {
+            parsed.hasEndValue = true;
+            getValue(keyframe.mValue.mEndValue);
+            continue;
         } else if (parseKeyFrameValue(key, keyframe.mValue)) {
-            lastFrame = false;
             continue;
         } else if (0 == strcmp(key, "h")) {
-            hold = GetInt();
+            parsed.hold = GetInt();
             continue;
         } else {
 #ifdef DEBUG_PARSER
@@ -1961,12 +1965,22 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
         }
     }
 
+    // if both interpolator and hold are not present
+    // it is the last frame.
+    if (!parsed.hold && !parsed.interpolator) {
+        parsed.lastFrame = true;
+    }
+
     if (!obj.mKeyFrames.empty()) {
         // update the endFrame value of current keyframe
         obj.mKeyFrames.back().mEndFrame = keyframe.mStartFrame;
+        // if no end value provided copy it to previous frame
+        if (!parsed.hold && parsed.value && !parsed.hasEndValue) {
+            obj.mKeyFrames.back().mValue.mEndValue = keyframe.mValue.mStartValue;
+        }
     }
 
-    if (hold) {
+    if (parsed.hold) {
         interpolatorKey = "hold_interpolator";
         inTangent = VPointF();
         outTangent = VPointF();
@@ -1975,7 +1989,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
     }
 
     char charArray[20];
-    if (!(lastFrame || interpolatorKey)) {
+    if (!(parsed.lastFrame || interpolatorKey)) {
         snprintf(charArray, 20, "%.2f_%.2f_%.2f_%.2f",
                  inTangent.x(), inTangent.y(), outTangent.x(), outTangent.y());
         interpolatorKey = charArray;
