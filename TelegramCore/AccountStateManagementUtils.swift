@@ -1801,38 +1801,53 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                             channelState = ChannelState(pts: pts, invalidatedPts: nil)
                         }
                         updatedState.updateChannelState(peer.id, state: channelState)
-                    case let .channelDifferenceTooLong(_, pts, timeout, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, messages, chats, users):
+                    case let .channelDifferenceTooLong(_, timeout, dialog, messages, chats, users):
                         apiTimeout = timeout
                         
-                        let channelState = ChannelState(pts: pts, invalidatedPts: pts)
-                        updatedState.updateChannelState(peer.id, state: channelState)
+                        var parameters: (peer: Api.Peer, pts: Int32, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32)?
                         
-                        updatedState.mergeChats(chats)
-                        updatedState.mergeUsers(users)
-                        
-                        updatedState.setNeedsHoleFromPreviousState(peerId: peer.id, namespace: Namespaces.Message.Cloud)
-                    
-                        for apiMessage in messages {
-                            if let message = StoreMessage(apiMessage: apiMessage) {
-                                if let preCachedResources = apiMessage.preCachedResources {
-                                    for (resource, data) in preCachedResources {
-                                        updatedState.addPreCachedResource(resource, data: data)
-                                    }
+                        switch dialog {
+                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, notifySettings, pts, draft, folderId):
+                                if let pts = pts {
+                                    parameters = (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount)
                                 }
-                                
-                                let location: AddMessagesLocation
-                                if case let .Id(id) = message.id, id.id == topMessage {
-                                    location = .UpperHistoryBlock
-                                } else {
-                                    location = .Random
-                                }
-                                updatedState.addMessages([message], location: location)
-                            }
+                            case .dialogFolder:
+                                break
                         }
-                    
-                        updatedState.resetReadState(peer.id, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: nil)
-                    
-                        updatedState.resetMessageTagSummary(peer.id, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
+                        
+                        if let (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount) = parameters {
+                            let channelState = ChannelState(pts: pts, invalidatedPts: pts)
+                            updatedState.updateChannelState(peer.peerId, state: channelState)
+                            
+                            updatedState.mergeChats(chats)
+                            updatedState.mergeUsers(users)
+                            
+                            updatedState.setNeedsHoleFromPreviousState(peerId: peer.peerId, namespace: Namespaces.Message.Cloud)
+                        
+                            for apiMessage in messages {
+                                if let message = StoreMessage(apiMessage: apiMessage) {
+                                    if let preCachedResources = apiMessage.preCachedResources {
+                                        for (resource, data) in preCachedResources {
+                                            updatedState.addPreCachedResource(resource, data: data)
+                                        }
+                                    }
+                                    
+                                    let location: AddMessagesLocation
+                                    if case let .Id(id) = message.id, id.id == topMessage {
+                                        location = .UpperHistoryBlock
+                                    } else {
+                                        location = .Random
+                                    }
+                                    updatedState.addMessages([message], location: location)
+                                }
+                            }
+                        
+                            updatedState.resetReadState(peer.peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: nil)
+                        
+                            updatedState.resetMessageTagSummary(peer.peerId, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
+                        } else {
+                            assertionFailure()
+                        }
                 }
             }
             return (updatedState, difference != nil, apiTimeout)
