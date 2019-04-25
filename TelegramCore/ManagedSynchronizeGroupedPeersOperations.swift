@@ -119,7 +119,7 @@ private func synchronizeGroupedPeers(transaction: Transaction, postbox: Postbox,
     guard let inputPeer = transaction.getPeer(operation.peerId).flatMap(apiInputPeer) else {
         return .complete()
     }
-    let folderPeer: Api.InputFolderPeer = Api.InputFolderPeer.inputFolderPeer(peer: inputPeer, folderId: operation.groupId?.rawValue ?? 0)
+    let folderPeer: Api.InputFolderPeer = Api.InputFolderPeer.inputFolderPeer(peer: inputPeer, folderId: operation.groupId.rawValue)
     return network.request(Api.functions.folders.editPeerFolders(folderPeers: [folderPeer]))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.Updates?, NoError> in

@@ -61,7 +61,7 @@ func apiUpdatePtsRange(_ update: Api.Update) -> (Int32, Int32)? {
             return (pts, ptsCount)
         case let .updateNewMessage(_, pts, ptsCount):
             return (pts, ptsCount)
-        case let .updateReadHistoryInbox(_, _, pts, ptsCount):
+        case let .updateReadHistoryInbox(_, _, _, _, _, pts, ptsCount):
             return (pts, ptsCount)
         case let .updateReadHistoryOutbox(_, _, pts, ptsCount):
             return (pts, ptsCount)

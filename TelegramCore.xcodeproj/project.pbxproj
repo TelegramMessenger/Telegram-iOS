@@ -665,6 +665,8 @@
 		D0C50E351E93A86600F62E39 /* CallSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E331E93A86600F62E39 /* CallSessionManager.swift */; };
 		D0CA3F84207391560042D2B6 /* SecureIdPadding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */; };
 		D0CA3F85207391560042D2B6 /* SecureIdPadding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */; };
+		D0CA8E4B227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA8E4A227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift */; };
+		D0CA8E4C227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA8E4A227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift */; };
 		D0CAF2EA1D75EC600011F558 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */; };
 		D0D1026C2212FE52003ADA5E /* AccountSortOrderAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */; };
 		D0D1026D2212FE52003ADA5E /* AccountSortOrderAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */; };
@@ -1176,6 +1178,7 @@
 		D0C48F3B1E8142EF0075317D /* LoadedPeerFromMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoadedPeerFromMessage.swift; sourceTree = "<group>"; };
 		D0C50E331E93A86600F62E39 /* CallSessionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallSessionManager.swift; sourceTree = "<group>"; };
 		D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPadding.swift; sourceTree = "<group>"; };
+		D0CA8E4A227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeGroupMessageStats.swift; sourceTree = "<group>"; };
 		D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSortOrderAttribute.swift; sourceTree = "<group>"; };
 		D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPackInteractiveOperations.swift; sourceTree = "<group>"; };
@@ -1574,6 +1577,7 @@
 				09EDAD3922131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift */,
 				093857A72243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift */,
 				093857A62243D87800EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift */,
+				D0CA8E4A227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -2208,6 +2212,7 @@
 				D03229F41E6B39700000AF9C /* ImportAccount.swift in Sources */,
 				D021E0DF1DB539FC00C6B04F /* StickerPack.swift in Sources */,
 				D03B0D091D62255C00955575 /* EnqueueMessage.swift in Sources */,
+				D0CA8E4B227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift in Sources */,
 				D0DFD5DF1FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift in Sources */,
 				D093D7EE206413F600BC3599 /* SecureIdDataTypes.swift in Sources */,
 				D00D343C1E6EC9770057B307 /* TelegramMediaGame.swift in Sources */,
@@ -2944,6 +2949,7 @@
 				D02ABC7F1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift in Sources */,
 				D0528E611E65B94E00E2FEF5 /* SingleMessageView.swift in Sources */,
 				D0FC195C2020D1CA00FEDBB2 /* PeerGroupMessageStateVersionAttribute.swift in Sources */,
+				D0CA8E4C227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift in Sources */,
 				D08CAA851ED8164B0000FDA8 /* Localization.swift in Sources */,
 				D0528E5B1E658B3600E2FEF5 /* ManagedLocalInputActivities.swift in Sources */,
 				D0FA8BA51E1FA341001E855B /* SecretChatKeychain.swift in Sources */,

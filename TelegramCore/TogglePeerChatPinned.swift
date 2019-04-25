@@ -12,7 +12,7 @@ public enum TogglePeerChatPinnedResult {
     case limitExceeded
 }
 
-public func toggleItemPinned(postbox: Postbox, groupId: PeerGroupId?, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
+public func toggleItemPinned(postbox: Postbox, groupId: PeerGroupId, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
     return postbox.transaction { transaction -> TogglePeerChatPinnedResult in
         var itemIds = transaction.getPinnedItemIds(groupId: groupId)
         let sameKind = itemIds.filter { item in
@@ -20,12 +20,6 @@ public func toggleItemPinned(postbox: Postbox, groupId: PeerGroupId?, itemId: Pi
                 case let .peer(lhsPeerId):
                     if case let .peer(rhsPeerId) = item {
                         return (lhsPeerId.namespace == Namespaces.Peer.SecretChat) == (rhsPeerId.namespace == Namespaces.Peer.SecretChat) && lhsPeerId != rhsPeerId
-                    } else {
-                        return false
-                    }
-                case let .group(lhsGroupId):
-                    if case let .group(rhsGroupId) = item {
-                        return lhsGroupId != rhsGroupId
                     } else {
                         return false
                     }
@@ -63,7 +57,7 @@ public func toggleItemPinned(postbox: Postbox, groupId: PeerGroupId?, itemId: Pi
     }
 }
 
-public func reorderPinnedItemIds(transaction: Transaction, groupId: PeerGroupId?, itemIds: [PinnedItemId]) -> Bool {
+public func reorderPinnedItemIds(transaction: Transaction, groupId: PeerGroupId, itemIds: [PinnedItemId]) -> Bool {
     if transaction.getPinnedItemIds(groupId: groupId) != itemIds {
         transaction.setPinnedItemIds(groupId: groupId, itemIds: itemIds)
         addSynchronizePinnedChatsOperation(transaction: transaction, groupId: groupId)

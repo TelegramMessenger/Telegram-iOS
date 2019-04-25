@@ -96,8 +96,8 @@ public final class AccountStateManager {
         return self.isUpdatingValue.get()
     }
     
-    private let notificationMessagesPipe = ValuePipe<[([Message], PeerGroupId?, Bool)]>()
-    public var notificationMessages: Signal<[([Message], PeerGroupId?, Bool)], NoError> {
+    private let notificationMessagesPipe = ValuePipe<[([Message], PeerGroupId, Bool)]>()
+    public var notificationMessages: Signal<[([Message], PeerGroupId, Bool)], NoError> {
         return self.notificationMessagesPipe.signal()
     }
     
@@ -385,9 +385,11 @@ public final class AccountStateManager {
                         |> mapToSignal { difference -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                             switch difference {
                                 case .differenceTooLong:
-                                    return accountStateReset(postbox: postbox, network: network, accountPeerId: accountPeerId) |> mapToSignal { _ -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
+                                    preconditionFailure()
+                                    /*return accountStateReset(postbox: postbox, network: network, accountPeerId: accountPeerId) |> mapToSignal { _ -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                                         return .complete()
-                                    } |> then(.single((nil, nil)))
+                                    }
+                                    |> then(.single((nil, nil)))*/
                                 default:
                                     return initialStateWithDifference(postbox: postbox, difference: difference)
                                     |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
@@ -625,13 +627,12 @@ public final class AccountStateManager {
                     let _ = self.delayNotificatonsUntil.swap(events.delayNotificatonsUntil)
                 }
                 
-                let signal = self.postbox.transaction { transaction -> [([Message], PeerGroupId?, Bool)] in
-                    var messageList: [([Message], PeerGroupId?, Bool)] = []
+                let signal = self.postbox.transaction { transaction -> [([Message], PeerGroupId, Bool)] in
+                    var messageList: [([Message], PeerGroupId, Bool)] = []
                     for id in events.addedIncomingMessageIds {
                         let (messages, notify, _, _) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
                         if !messages.isEmpty {
-                            messageList.append((messages, nil, notify))
-                            //messageList.append((messages, transaction.getPeerGroupId(messages[0].id.peerId), notify))
+                            messageList.append((messages, .root, notify))
                         }
                     }
                     return messageList

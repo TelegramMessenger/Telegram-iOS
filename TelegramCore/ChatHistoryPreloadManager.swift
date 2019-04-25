@@ -189,7 +189,7 @@ final class ChatHistoryPreloadManager {
         self.accountPeerId = accountPeerId
         self.download.set(network.background())
         
-        self.automaticChatListDisposable = (postbox.tailChatListView(groupId: nil, count: 20, summaryComponents: ChatListEntrySummaryComponents())
+        self.automaticChatListDisposable = (postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents())
         |> deliverOnMainQueue).start(next: { [weak self] view in
             guard let strongSelf = self else {
                 return

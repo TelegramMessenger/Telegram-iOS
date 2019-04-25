@@ -123,14 +123,14 @@ private struct ResolvedChatListResetRange {
     let remote: FetchedChatList
 }
 
-func accountStateReset(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
+/*func accountStateReset(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     let pinnedChats: Signal<Api.messages.PeerDialogs, NoError> = network.request(Api.functions.messages.getPinnedDialogs(folderId: 0))
     |> retryRequest
     let state: Signal<Api.updates.State, NoError> = network.request(Api.functions.updates.getState())
     |> retryRequest
     
     return postbox.transaction { transaction -> [ChatListNamespaceEntry] in
-        return transaction.getChatListNamespaceEntries(groupId: nil, namespace: Namespaces.Message.Cloud, summaryTag: MessageTags.unseenPersonalMessage)
+        return transaction.getChatListNamespaceEntries(groupId: .root, namespace: Namespaces.Message.Cloud, summaryTag: MessageTags.unseenPersonalMessage)
     }
     |> mapToSignal { localChatListEntries -> Signal<Void, NoError> in
         let localRanges = localChatListEntryRanges(localChatListEntries, limit: 100)
@@ -292,4 +292,4 @@ func accountStateReset(postbox: Postbox, network: Network, accountPeerId: PeerId
             }
         }
     }
-}
+}*/
