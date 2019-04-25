@@ -509,7 +509,7 @@ final class MessageHistoryReadStateTable: Table {
                         sharedBuffer.write(&namespaceId, offset: 0, length: 4)
                         
                         switch state {
-                            case var .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
+                            case .idBased(var maxIncomingReadId, var maxOutgoingReadId, var maxKnownId, var count, let markedUnread):
                                 var kind: Int8 = 0
                                 sharedBuffer.write(&kind, offset: 0, length: 1)
                                 

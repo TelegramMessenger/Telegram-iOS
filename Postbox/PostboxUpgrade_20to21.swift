@@ -229,11 +229,9 @@ func postboxUpgrade_20to21(metadataTable: MetadataTable, valueBox: ValueBox, pro
                     value.read(&dataFlagsValue, offset: 0, length: 1)
                     let dataFlags = MessageDataFlags(rawValue: dataFlagsValue)
                     
-                    var globallyUniqueId: Int64?
                     if dataFlags.contains(.hasGloballyUniqueId) {
                         var globallyUniqueIdValue: Int64 = 0
                         value.read(&globallyUniqueIdValue, offset: 0, length: 8)
-                        globallyUniqueId = globallyUniqueIdValue
                     }
                     
                     var globalTags: GlobalMessageTags = []

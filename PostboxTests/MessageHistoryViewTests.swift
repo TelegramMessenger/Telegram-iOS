@@ -253,7 +253,7 @@ class MessageHistoryViewTests: XCTestCase {
                                 let attributesData = ReadBuffer(data: Data())
                                 
                                 addMessage(Int32(insertId), Int32(insertId))
-                                let _ = loadedState.add(entry: .IntermediateMessageEntry(IntermediateMessage(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: namespace, id: insertId), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: insertId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
+                                let _ = loadedState.add(entry: .IntermediateMessageEntry(IntermediateMessage(stableId: UInt32(insertId), stableVersion: 0, id: MessageId(peerId: peerId, namespace: namespace, id: insertId), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: insertId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
                                 
                                 let entries = loadedState.completeAndSample(postbox: self.postbox!).entries
                                 let ids = entries.map({ $0.message.id.id })
@@ -339,7 +339,7 @@ class MessageHistoryViewTests: XCTestCase {
                             if isAdd {
                                 addMessage(Int32(itemId), Int32(itemId))
                                 let attributesData = ReadBuffer(data: Data())
-                                let _ = loadedState.add(entry: .IntermediateMessageEntry(IntermediateMessage(stableId: 0, stableVersion: 0, id: messageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: itemId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
+                                let _ = loadedState.add(entry: .IntermediateMessageEntry(IntermediateMessage(stableId: UInt32(messageId.id), stableVersion: 0, id: messageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: itemId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
                             } else {
                                 removeMessage(itemId)
                                 let _ = loadedState.remove(postbox: self.postbox!, index: MessageIndex(id: messageId, timestamp: itemId))
@@ -380,15 +380,14 @@ class MessageHistoryViewTests: XCTestCase {
                 switch sampledResult {
                     case .ready:
                         XCTAssert(false)
-                    case let .loadHole(holePeerId, holeNamespace, holeTags, holeRange, holeAroundId):
+                    case let .loadHole(holePeerId, holeNamespace, holeTags, holeAroundId):
                         XCTAssert(holePeerId == peerId)
                         XCTAssert(holeNamespace == namespace)
                         XCTAssert(holeTags == nil)
-                        XCTAssert(holeRange == IndexSet(integersIn: 1 ... 1000))
                         XCTAssert(holeAroundId == 100)
                     
                         removeHole(20 ... 110, space: .everywhere)
-                        loadingState.removeHole(space: PeerIdAndNamespace(peerId: peerId, namespace: namespace), range: 20 ... 110)
+                        let _ = loadingState.removeHole(space: PeerIdAndNamespace(peerId: peerId, namespace: namespace), range: 20 ... 110)
                         state = .loading(loadingState)
                 }
         }

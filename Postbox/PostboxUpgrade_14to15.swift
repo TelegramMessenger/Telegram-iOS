@@ -43,10 +43,10 @@ private func makeKey(groupId: Int32?, index: ChatListIndex, type: Int8) -> Value
     return key
 }
 
-private func extractNewKey(_ key: ValueBoxKey) -> (groupId: PeerGroupId?, pinningIndex: UInt16?, index: MessageIndex, type: Int8) {
+private func extractNewKey(_ key: ValueBoxKey) -> (groupId: PeerGroupId, pinningIndex: UInt16?, index: MessageIndex, type: Int8) {
     let groupIdValue = key.getInt32(0)
     return (
-        groupId: groupIdValue == 0 ? nil : PeerGroupId(rawValue: groupIdValue),
+        groupId: PeerGroupId(rawValue: groupIdValue),
         pinningIndex: chatListPinningIndexFromKeyValue(key.getUInt16(4)),
         index: MessageIndex(
             id: MessageId(
@@ -69,7 +69,7 @@ func postboxUpgrade_14to15(metadataTable: MetadataTable, valueBox: ValueBox, pro
         let (pinningIndex, index, type) = extractPreviousKey(key)
         let updatedKey = makeKey(groupId: 0, index: ChatListIndex(pinningIndex: pinningIndex, messageIndex: index), type: type)
         let (xgroupId, xpinningIndex, xindex, xtype) = extractNewKey(updatedKey)
-        assert(xgroupId == nil)
+        assert(xgroupId == .root)
         assert(xpinningIndex == pinningIndex)
         assert(index == xindex)
         assert(type == xtype)

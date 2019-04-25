@@ -727,7 +727,7 @@ final class HistoryViewLoadedState {
                     self.orderedEntriesBySpace[space]!.bounds = postbox.messageHistoryTable.fetchBoundaries(peerId: space.peerId, namespace: space.namespace, tag: self.tag)
                 }
             } else {
-                assertionFailure("A non-empty entry list should have non-nil bounds")
+                //assertionFailure("A non-empty entry list should have non-nil bounds")
             }
             self.orderedEntriesBySpace[space]!.entries.remove(at: itemIndex)
             self.spacesWithRemovals.insert(space)

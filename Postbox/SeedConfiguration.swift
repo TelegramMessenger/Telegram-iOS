@@ -19,8 +19,9 @@ public final class SeedConfiguration {
     public let peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace]
     public let peerSummaryCounterTags: (Peer) -> PeerSummaryCounterTags
     public let additionalChatListIndexNamespace: MessageId.Namespace?
+    public let messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>
     
-    public init(globalMessageIdsPeerIdNamespaces: Set<GlobalMessageIdsNamespace>, initializeChatListWithHole: (topLevel: ChatListHole?, groups: ChatListHole?), messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]], existingMessageTags: MessageTags, messageTagsWithSummary: MessageTags, existingGlobalMessageTags: GlobalMessageTags, peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace], peerSummaryCounterTags: @escaping (Peer) -> PeerSummaryCounterTags, additionalChatListIndexNamespace: MessageId.Namespace?) {
+    public init(globalMessageIdsPeerIdNamespaces: Set<GlobalMessageIdsNamespace>, initializeChatListWithHole: (topLevel: ChatListHole?, groups: ChatListHole?), messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]], existingMessageTags: MessageTags, messageTagsWithSummary: MessageTags, existingGlobalMessageTags: GlobalMessageTags, peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace], peerSummaryCounterTags: @escaping (Peer) -> PeerSummaryCounterTags, additionalChatListIndexNamespace: MessageId.Namespace?, messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>) {
         self.globalMessageIdsPeerIdNamespaces = globalMessageIdsPeerIdNamespaces
         self.initializeChatListWithHole = initializeChatListWithHole
         self.messageHoles = messageHoles
@@ -29,5 +30,6 @@ public final class SeedConfiguration {
         self.peerNamespacesRequiringMessageTextIndex = peerNamespacesRequiringMessageTextIndex
         self.peerSummaryCounterTags = peerSummaryCounterTags
         self.additionalChatListIndexNamespace = additionalChatListIndexNamespace
+        self.messageNamespacesRequiringGroupStatsValidation = messageNamespacesRequiringGroupStatsValidation
     }
 }
