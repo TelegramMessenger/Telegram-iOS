@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-func updatePeerChatInclusionWithMinTimestamp(transaction: Transaction, id: PeerId, minTimestamp: Int32) {
+func updatePeerChatInclusionWithMinTimestamp(transaction: Transaction, id: PeerId, minTimestamp: Int32, forceRootGroupIfNotExists: Bool) {
     let currentInclusion = transaction.getPeerChatListInclusion(id)
     var updatedInclusion: PeerChatListInclusion?
     switch currentInclusion {
@@ -22,7 +22,9 @@ func updatePeerChatInclusionWithMinTimestamp(transaction: Transaction, id: PeerI
             }
             updatedInclusion = .ifHasMessagesOrOneOf(groupId: groupId, pinningIndex: pinningIndex, minTimestamp: updatedMinTimestamp)
         default:
-            break
+            if forceRootGroupIfNotExists {
+                updatedInclusion = .ifHasMessagesOrOneOf(groupId: .root, pinningIndex: nil, minTimestamp: minTimestamp)
+            }
     }
     if let updatedInclusion = updatedInclusion {
         transaction.updatePeerChatListInclusion(id, inclusion: updatedInclusion)
@@ -53,7 +55,7 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
                     } else {
                         switch group.membership {
                             case .Member:
-                                updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: group.creationDate)
+                                updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: group.creationDate, forceRootGroupIfNotExists: false)
                             default:
                                 transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
                         }
@@ -65,7 +67,7 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
                 if let channel = updated as? TelegramChannel {
                     switch channel.participationStatus {
                         case .member:
-                            updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: channel.creationDate)
+                            updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: channel.creationDate, forceRootGroupIfNotExists: false)
                         case .left:
                             transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
                         case .kicked where channel.creationDate == 0:
@@ -78,7 +80,7 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
                 }
             case Namespaces.Peer.SecretChat:
                 if let secretChat = updated as? TelegramSecretChat {
-                    updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: secretChat.creationDate)
+                    updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: secretChat.creationDate, forceRootGroupIfNotExists: true)
                 } else {
                     assertionFailure()
                 }

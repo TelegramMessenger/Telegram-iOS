@@ -2141,7 +2141,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids)
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {
-                    updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp)
+                    updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
                 }
                 transaction.deleteMessagesInRange(peerId: id.peerId, namespace: id.namespace, minId: 1, maxId: id.id)
             case let .UpdatePeerChatInclusion(peerId, groupId):
