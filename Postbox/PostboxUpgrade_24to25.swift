@@ -42,7 +42,7 @@ func postboxUpgrade_24to25(metadataTable: MetadataTable, valueBox: ValueBox, pro
     var peerIdToGroupId: [PeerId: Int32] = [:]
     valueBox.scan(chatListTable, keys: { key in
         let (groupId, _, index, type) = extractChatListKey(key)
-        if type == 1 && groupId != 0 {
+        if type == 1  {
             peerIdToGroupId[index.id.peerId] = groupId
         }
         return true
@@ -76,7 +76,7 @@ func postboxUpgrade_24to25(metadataTable: MetadataTable, valueBox: ValueBox, pro
         value.read(&inclusionId, offset: 0, length: 1)
         if inclusionId == 0 {
         } else {
-            if inclusionId == 1 {
+            if inclusionId == 1 || peerIdToGroupId[peerId] == nil {
                 inclusionId = 0
                 writeBuffer.write(&inclusionId, offset: 0, length: 1)
             } else if inclusionId == 2 {
