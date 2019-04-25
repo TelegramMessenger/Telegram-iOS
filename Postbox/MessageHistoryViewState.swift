@@ -247,10 +247,7 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                     }
                 }
         }
-        guard let items = orderedEntriesBySpace[space] else {
-            return ([MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound()], SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: Int32.max - 1, endId: 1))
-        }
-        if items.entries.isEmpty {
+        guard let items = orderedEntriesBySpace[space], !items.entries.isEmpty else {
             let holeBounds: (startId: MessageId.Id, endId: MessageId.Id)
             switch anchor {
                 case .lowerBound:
