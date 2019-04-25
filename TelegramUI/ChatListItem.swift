@@ -182,14 +182,22 @@ private enum RevealOptionKey: Int32 {
 
 private let itemHeight: CGFloat = 76.0
 
-private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool?, isMuted: Bool?, groupId: PeerGroupId, canDelete: Bool, isEditing: Bool) -> [ItemListRevealOption] {
+private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool, isMuted: Bool?, groupId: PeerGroupId?, canDelete: Bool, isEditing: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
-        if let isMuted = isMuted {
-            if isMuted {
-                options.append(ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: strings.ChatList_Unmute, icon: unmuteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+        if groupId != nil {
+            if isPinned {
+                options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
             } else {
-                options.append(ItemListRevealOption(key: RevealOptionKey.mute.rawValue, title: strings.ChatList_Mute, icon: muteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+                options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+            }
+        } else {
+            if let isMuted = isMuted {
+                if isMuted {
+                    options.append(ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: strings.ChatList_Unmute, icon: unmuteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+                } else {
+                    options.append(ItemListRevealOption(key: RevealOptionKey.mute.rawValue, title: strings.ChatList_Mute, icon: muteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+                }
             }
         }
     }
@@ -218,7 +226,10 @@ private func groupReferenceRevealOptions(strings: PresentationStrings, theme: Pr
     return options
 }
 
-private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, isSavedMessages: Bool) -> [ItemListRevealOption] {
+private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, isSavedMessages: Bool, groupId: PeerGroupId?) -> [ItemListRevealOption] {
+    if groupId != nil {
+        return []
+    }
     var options: [ItemListRevealOption] = []
     if !isSavedMessages {
         if isUnread {
@@ -905,7 +916,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if item.enableContextActions && !isAd {
                         peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, groupId: item.peerGroupId, canDelete: true, isEditing: item.editing)
-                        peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.account.peerId)
+                        peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.account.peerId, groupId: item.peerGroupId)
                     } else {
                         peerRevealOptions = []
                         peerLeftRevealOptions = []

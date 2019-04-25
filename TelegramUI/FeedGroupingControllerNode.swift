@@ -405,7 +405,7 @@ final class FeedGroupingControllerNode: ViewControllerTracingNode {
             case let .animated(animationDuration, animationCurve):
                 duration = animationDuration
                 switch animationCurve {
-                    case .easeInOut:
+                    case .easeInOut, .custom:
                         break
                     case .spring:
                         curve = 7

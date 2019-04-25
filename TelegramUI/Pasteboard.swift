@@ -3,7 +3,7 @@ import UIKit
 import MobileCoreServices
 
 public extension UIPasteboard {
-    public func set(attributedString: NSAttributedString?) {
+    func set(attributedString: NSAttributedString?) {
         guard let attributedString = attributedString else {
             return
         }

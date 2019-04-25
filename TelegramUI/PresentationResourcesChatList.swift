@@ -150,7 +150,7 @@ struct PresentationResourcesChatList {
                 }
                 
                 context.fillEllipse(in: bounds)
-                context.setFillColor(theme.chatList.secretIconColor.cgColor)
+                context.setFillColor(theme.chatList.onlineDotColor.cgColor)
                 context.fillEllipse(in: bounds.insetBy(dx: 2.0, dy: 2.0))
             })
         })

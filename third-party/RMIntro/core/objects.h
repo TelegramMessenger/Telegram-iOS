@@ -15,7 +15,7 @@ extern float scale_factor;
 extern int width, height;
 extern int y_offset_absolute;
 
-typedef enum {NORMAL, NORMAL_ONE, RED, BLUE, LIGHT_RED, LIGHT_BLUE, DARK, LIGHT} texture_program_type;
+typedef enum {NORMAL, NORMAL_ONE, RED, BLUE, LIGHT_RED, LIGHT_BLUE, DARK, LIGHT, DARK_BLUE} texture_program_type;
 
 typedef struct {
     float x;

@@ -597,7 +597,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     }
     
     func dequeueUpdateStickerPack() {
-        if let (layout, navigationBarHeight) = self.containerLayout, let _ = stickerPack, self.stickerPackUpdated {
+        if let (layout, navigationBarHeight) = self.containerLayout, let _ = self.stickerPack, self.stickerPackUpdated {
             self.stickerPackUpdated = false
             
             let transition: ContainedViewLayoutTransition

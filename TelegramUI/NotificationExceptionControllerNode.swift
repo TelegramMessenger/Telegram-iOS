@@ -739,7 +739,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             case let .animated(animationDuration, animationCurve):
                 duration = animationDuration
                 switch animationCurve {
-                    case .easeInOut:
+                    case .easeInOut, .custom:
                         break
                     case .spring:
                         curve = 7
@@ -1027,7 +1027,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
             case let .animated(animationDuration, animationCurve):
                 duration = animationDuration
                 switch animationCurve {
-                    case .easeInOut:
+                    case .easeInOut, .custom:
                         break
                     case .spring:
                         curve = 7

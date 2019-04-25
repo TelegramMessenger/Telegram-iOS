@@ -380,6 +380,12 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         }
     }
     
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        if scrollView.isDecelerating {
+            self.changeTrack()
+        }
+    }
+    
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         self.changeTrack()
     }
@@ -392,7 +398,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
     }
     
     private func changeTrack() {
-        guard let initialContentOffset = self.initialContentOffset else {
+        guard let initialContentOffset = self.initialContentOffset, abs(initialContentOffset - self.scrollNode.view.contentOffset.x) > self.bounds.width / 2.0 else {
             return
         }
         if self.scrollNode.view.contentOffset.x < initialContentOffset {

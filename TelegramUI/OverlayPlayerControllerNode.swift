@@ -246,7 +246,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
             case let .animated(animationDuration, animationCurve):
                 duration = animationDuration
                 switch animationCurve {
-                    case .easeInOut:
+                    case .easeInOut, .custom:
                         break
                     case .spring:
                         curve = 7

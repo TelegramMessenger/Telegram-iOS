@@ -32,6 +32,7 @@ static TextureProgram texture_program_blue;
 static TextureProgram texture_program_light_red;
 static TextureProgram texture_program_light_blue;
 static TextureProgram texture_program_black;
+static TextureProgram texture_program_dark_blue;
 
 static TextureProgram *texture_program_temp;
 
@@ -40,20 +41,13 @@ static GradientProgram gradient_program;
 
 static float y_offset;
 
-
-
 void set_y_offset_objects(float a)
 {
     y_offset = a;
-
-
-    
 }
 
 void setup_shaders()
 {
-    
-    
     char *vshader =
     "uniform mat4 u_MvpMatrix;"
     "attribute vec4 a_Position;"
@@ -67,7 +61,6 @@ void setup_shaders()
     "uniform float u_Alpha;"
     "void main() {"
     "   gl_FragColor = u_Color;"
-    //"   gl_FragColor = vec4(0,1,0,1);"
     "   gl_FragColor.w*=u_Alpha;"
     "}";
     
@@ -91,11 +84,9 @@ void setup_shaders()
     "void main() {"
     "   gl_FragColor = v_DestinationColor;"
     "   gl_FragColor.w*=u_Alpha;"
-    //"   gl_FragColor = vec4(0,1,0,1);"
     "}";
     
     gradient_program = get_gradient_program(build_program(vertex_gradient_shader, (GLint)strlen(vertex_gradient_shader), fragment_gradient_shader, (GLint)strlen(fragment_gradient_shader)));
-    
     
     
     char* vshader_texture  =
@@ -121,10 +112,6 @@ void setup_shaders()
     texture_program = get_texture_program(build_program(vshader_texture, (GLint)strlen(vshader_texture), fshader_texture, (GLint)strlen(fshader_texture)));
     
     
-    
-    
-    
-    
     char* vshader_texture_blue  =
     "uniform mat4 u_MvpMatrix;"
     "attribute vec4 a_Position;"
@@ -142,16 +129,11 @@ void setup_shaders()
     "uniform float u_Alpha;"
     "void main(){"
     "    gl_FragColor = texture2D(u_TextureUnit, v_TextureCoordinates);"
-    //"   float p = u_Alpha*gl_FragColor.w*0.4;"
-    //"   gl_FragColor = vec4(0,0.353,0.761,p);"
     "   float p = u_Alpha*gl_FragColor.w;"
     "   gl_FragColor = vec4(0,0.6,0.898,p);"
     "}";
     
     texture_program_blue = get_texture_program(build_program(vshader_texture_blue, (GLint)strlen(vshader_texture_blue), fshader_texture_blue, (GLint)strlen(fshader_texture_blue)));
-    
-    
-    
     
     
     char* vshader_texture_red  =
@@ -171,15 +153,11 @@ void setup_shaders()
     "uniform float u_Alpha;"
     "void main(){"
     "   gl_FragColor = texture2D(u_TextureUnit, v_TextureCoordinates);"
-    //"   float p = gl_FragColor.w*0.45*u_Alpha;"
-    //"   gl_FragColor = vec4(0.722,0.035,0,p);"
     "   float p = gl_FragColor.w*u_Alpha;"
     "   gl_FragColor = vec4(210./255.,57./255.,41./255.,p);"
     "}";
     
     texture_program_red = get_texture_program(build_program(vshader_texture_red, (GLint)strlen(vshader_texture_red), fshader_texture_red, (GLint)strlen(fshader_texture_red)));
-    
-    
     
     
     vshader  =
@@ -208,7 +186,6 @@ void setup_shaders()
     texture_program_light_red = get_texture_program(build_program(vshader, (GLint)strlen(vshader), fshader, (GLint)strlen(fshader)));
     
     
-    
     vshader  =
     "uniform mat4 u_MvpMatrix;"
     "attribute vec4 a_Position;"
@@ -234,12 +211,6 @@ void setup_shaders()
     texture_program_light_blue = get_texture_program(build_program(vshader, (GLint)strlen(vshader), fshader, (GLint)strlen(fshader)));
     
     
-    
-    
-    
-    
-    
-    
     vshader  =
     "uniform mat4 u_MvpMatrix;"
     "attribute vec4 a_Position;"
@@ -261,17 +232,9 @@ void setup_shaders()
     "}";
     
     texture_program_one = get_texture_program(build_program(vshader, (GLint)strlen(vshader), fshader, (GLint)strlen(fshader)));
-    
-    texture_program_one = get_texture_program(build_program(vshader, (GLint)strlen(vshader), fshader, (GLint)strlen(fshader)));
 
 
-
-
-
-
-
-
-    char* vshader_texture_black =
+    vshader =
         "uniform mat4 u_MvpMatrix;"
         "attribute vec4 a_Position;"
         "attribute vec2 a_TextureCoordinates;"
@@ -281,20 +244,31 @@ void setup_shaders()
         "    gl_Position = u_MvpMatrix * a_Position;"
         "}";
 
-    char* fshader_texture_black =
+    fshader =
         "precision lowp float;"
         "uniform sampler2D u_TextureUnit;"
         "varying vec2 v_TextureCoordinates;"
         "uniform float u_Alpha;"
         "void main(){"
         "    gl_FragColor = texture2D(u_TextureUnit, v_TextureCoordinates);"
-        //"   float p = u_Alpha*gl_FragColor.w*0.4;"
-        //"   gl_FragColor = vec4(0,0.353,0.761,p);"
         "   float p = u_Alpha*gl_FragColor.w;"
         "   gl_FragColor = vec4(0,0,0,p);"
         "}";
 
-    texture_program_black = get_texture_program(build_program(vshader_texture_black, (GLint)strlen(vshader_texture_black), fshader_texture_black, (GLint)strlen(fshader_texture_black)));
+    texture_program_black = get_texture_program(build_program(vshader, (GLint)strlen(vshader), fshader, (GLint)strlen(fshader)));
+    
+    fshader =
+        "precision lowp float;"
+        "uniform sampler2D u_TextureUnit;"
+        "varying vec2 v_TextureCoordinates;"
+        "uniform float u_Alpha;"
+        "void main(){"
+        "    gl_FragColor = texture2D(u_TextureUnit, v_TextureCoordinates);"
+        "   float p = u_Alpha*gl_FragColor.w;"
+        "   gl_FragColor = vec4(0.09,0.133,0.176,p);"
+        "}";
+    
+    texture_program_dark_blue = get_texture_program(build_program(vshader, (GLint)strlen(vshader), fshader, (GLint)strlen(fshader)));
 }
 
 
@@ -578,6 +552,10 @@ void draw_textured_shape(const TexturedShape* shape, mat4x4 view_projection_matr
         else if (program_type==DARK)
         {
             texture_program_temp=&texture_program_black;
+        }
+        else if (program_type==DARK_BLUE)
+        {
+            texture_program_temp=&texture_program_dark_blue;
         }
         else if (program_type==LIGHT)
         {

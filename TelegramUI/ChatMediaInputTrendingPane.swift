@@ -230,7 +230,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             case let .animated(animationDuration, animationCurve):
                 duration = animationDuration
                 switch animationCurve {
-                    case .easeInOut:
+                    case .easeInOut, .custom:
                         listViewCurve = .Default(duration: duration)
                     case .spring:
                         listViewCurve = .Spring(duration: duration)

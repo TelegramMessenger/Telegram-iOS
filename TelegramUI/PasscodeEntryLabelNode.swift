@@ -8,7 +8,7 @@ enum PasscodeEntryTitleAnimation {
     case crossFade
 }
 
-final class PasscodeEntryTitleNode: ASDisplayNode {
+final class PasscodeEntryLabelNode: ASDisplayNode {
     private let wrapperNode: ASDisplayNode
     private let textNode: ASTextNode
     
@@ -78,10 +78,10 @@ final class PasscodeEntryTitleNode: ASDisplayNode {
     func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGSize {
         self.validLayout = layout
         
-        let titleSize = self.textNode.measure(layout.size)
-        let titleFrame = CGRect(x: floor((layout.size.width - titleSize.width) / 2.0), y: 0.0, width: titleSize.width, height: titleSize.height)
-        transition.updateFrame(node: self.wrapperNode, frame: titleFrame)
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(), size: titleSize))
+        let textSize = self.textNode.measure(layout.size)
+        let textFrame = CGRect(x: floor((layout.size.width - textSize.width) / 2.0), y: 0.0, width: textSize.width, height: textSize.height)
+        transition.updateFrame(node: self.wrapperNode, frame: textFrame)
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(), size: textSize))
         
         return CGSize(width: layout.size.width, height: 25.0)
     }

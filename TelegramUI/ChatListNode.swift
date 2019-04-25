@@ -313,6 +313,7 @@ final class ChatListNode: ListView {
     var deletePeerChat: ((PeerId) -> Void)?
     var updatePeerGrouping: ((PeerId, Bool) -> Void)?
     var presentAlert: ((String) -> Void)?
+    var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     
     private var theme: PresentationTheme
     
@@ -463,29 +464,7 @@ final class ChatListNode: ListView {
                 }
             })
         }, toggleArchivedFolderHiddenByDefault: { [weak self] in
-            let _ = (context.account.postbox.transaction { transaction -> Bool in
-                var updatedValue = false
-                updateChatArchiveSettings(transaction: transaction, { settings in
-                    var settings = settings
-                    settings.isHiddenByDefault = !settings.isHiddenByDefault
-                    updatedValue = settings.isHiddenByDefault
-                    return settings
-                })
-                return updatedValue
-            }
-            |> deliverOnMainQueue).start(next: { value in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.updateState { state in
-                    var state = state
-                    if !value {
-                        state.archiveShouldBeTemporaryRevealed = false
-                    }
-                    state.peerIdWithRevealedOptions = nil
-                    return state
-                }
-            })
+            self?.toggleArchivedFolderHiddenByDefault?()
         })
         
         let viewProcessingQueue = self.viewProcessingQueue
@@ -1007,15 +986,17 @@ final class ChatListNode: ListView {
             strongSelf.scrolledAtTopValue = atTop
             strongSelf.contentOffsetChanged?(offset)
             if revealHiddenItems && !strongSelf.currentState.archiveShouldBeTemporaryRevealed {
-                var isArchiveVisible = false
+                var isHiddenArchiveVisible = false
                 strongSelf.forEachItemNode({ itemNode in
                     if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
-                        if case .groupReference = item.content {
-                            isArchiveVisible = true
+                        if case let .groupReference(groupReference) = item.content {
+                            if groupReference.hiddenByDefault {
+                                isHiddenArchiveVisible = true
+                            }
                         }
                     }
                 })
-                if isArchiveVisible {
+                if isHiddenArchiveVisible {
                     if strongSelf.hapticFeedback == nil {
                         strongSelf.hapticFeedback = HapticFeedback()
                     }

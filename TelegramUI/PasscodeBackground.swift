@@ -24,8 +24,10 @@ final class DefaultPasscodeBackground: PasscodeBackground {
             context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
         })!
         self.foregroundImage = generateImage(CGSize(width: 1.0, height: 1.0), contextGenerator: { size, context in
+            let bounds = CGRect(origin: CGPoint(), size: size)
+            context.clear(bounds)
             context.setFillColor(UIColor.white.withAlphaComponent(0.5).cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: size))
+            context.fill(bounds)
         })!
     }
 }

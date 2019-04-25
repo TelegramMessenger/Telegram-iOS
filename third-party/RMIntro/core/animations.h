@@ -31,9 +31,6 @@ void set_free_textures(int a_knot_up, int a_knot_down);
 void set_powerful_textures(int a_powerful_mask, int a_powerful_star, int a_powerful_infinity, int a_powerful_infinity_white);
 void set_private_textures(int a_private_door, int a_private_screw);
 
-void set_ui_textures(int a_pagination_dot);
-
-void set_need_pages(int a);
 void set_y_offset(float a);
 
 

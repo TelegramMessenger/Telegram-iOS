@@ -2,22 +2,26 @@ import Foundation
 import Display
 import TelegramCore
 
+enum UndoOverlayContent {
+    case removedChat(text: String)
+    case archivedChat(title: String, text: String)
+    case hidArchive(title: String, text: String)
+}
+
 final class UndoOverlayController: ViewController {
     private let context: AccountContext
     private let presentationData: PresentationData
-    private let isArchive: Bool
-    private let textTitle: String?
-    private let text: String
-    private let action: (Bool) -> Void
+    let content: UndoOverlayContent
+    private let elevatedLayout: Bool
+    private var action: (Bool) -> Void
     
     private var didPlayPresentationAnimation = false
     
-    init(context: AccountContext, isArchive: Bool = false, title: String? = nil, text: String, action: @escaping (Bool) -> Void) {
+    init(context: AccountContext, content: UndoOverlayContent, elevatedLayout: Bool, action: @escaping (Bool) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.isArchive = isArchive
-        self.textTitle = title
-        self.text = text
+        self.content = content
+        self.elevatedLayout = elevatedLayout
         self.action = action
         
         super.init(navigationBarPresentationData: nil)
@@ -30,7 +34,9 @@ final class UndoOverlayController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, isArchive: self.isArchive, title: self.textTitle, text: self.text, action: self.action, dismiss: { [weak self] in
+        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, content: self.content, elevatedLayout: self.elevatedLayout, action: { [weak self] value in
+            self?.action(value)
+        }, dismiss: { [weak self] in
             self?.dismiss()
         })
         self.displayNodeDidLoad()
@@ -39,6 +45,11 @@ final class UndoOverlayController: ViewController {
     func dismissWithCommitAction() {
         self.action(true)
         self.dismiss()
+    }
+    
+    func renewWithCurrentContent(action: @escaping (Bool) -> Void) {
+        self.action = action
+        (self.displayNode as! UndoOverlayControllerNode).renewWithCurrentContent()
     }
     
     override func viewDidAppear(_ animated: Bool) {

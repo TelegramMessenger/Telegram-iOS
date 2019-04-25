@@ -77,7 +77,7 @@ class SetupTwoStepVerificationController: ViewController {
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
             self.didPlayPresentationAnimation = true
             if case .modalSheet = presentationArguments.presentationAnimation {
-                self.controllerNode.animateIn()
+                self.controllerNode.animateIn(completion: presentationArguments.completion)
             }
         }
     }

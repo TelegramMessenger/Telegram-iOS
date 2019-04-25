@@ -29,6 +29,8 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
         return fetchSecureIdLocalImageResource(postbox: account.postbox, resource: resource)
     } else if let resource = resource as? OpenInAppIconResource {
         return fetchOpenInAppIconResource(resource: resource)
+    } else if let resource = resource as? EmojiSpriteResource {
+        return fetchEmojiSpriteResource(postbox: account.postbox, network: account.network, resource: resource)
     }
     return nil
 }, fetchResourceMediaReferenceHash: { resource in
