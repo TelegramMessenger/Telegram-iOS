@@ -50,7 +50,7 @@ func snapshotSecretChat(application: UIApplication, mainWindow: UIWindow, window
     
     let _ = (context.account.postbox.transaction { transaction -> Void in
         if let hole = context.account.postbox.seedConfiguration.initializeChatListWithHole.topLevel {
-            transaction.replaceChatListHole(groupId: nil, index: hole.index, hole: nil)
+            transaction.replaceChatListHole(groupId: .root, index: hole.index, hole: nil)
         }
         
         transaction.updatePeersInternal([accountPeer, userPeer, secretPeer], update: { _, updated in

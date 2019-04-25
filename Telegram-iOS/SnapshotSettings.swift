@@ -13,7 +13,7 @@ func snapshotSettings(application: UIApplication, mainWindow: UIWindow, window: 
     
     let _ = (context.account.postbox.transaction { transaction -> Void in
         if let hole = context.account.postbox.seedConfiguration.initializeChatListWithHole.topLevel {
-            transaction.replaceChatListHole(groupId: nil, index: hole.index, hole: nil)
+            transaction.replaceChatListHole(groupId: .root, index: hole.index, hole: nil)
         }
         
         let accountPeer = TelegramUser(id: context.account.peerId, accessHash: nil, firstName: "Alena", lastName: "Shy", username: "alenashy", phone: "44321456789", photo: snapshotAvatar(context.account.postbox, 1), botInfo: nil, restrictionInfo: nil, flags: [])

@@ -37,7 +37,7 @@ final class WatchChatListHandler: WatchRequestHandler {
                 |> take(1)
                 |> mapToSignal({ context -> Signal<(ChatListView, PresentationData), NoError> in
                     if let context = context {
-                        return context.account.viewTracker.tailChatListView(groupId: nil, count: limit)
+                        return context.account.viewTracker.tailChatListView(groupId: .root, count: limit)
                         |> map { chatListView, _ -> (ChatListView, PresentationData) in
                             return (chatListView, context.sharedContext.currentPresentationData.with { $0 })
                         }
