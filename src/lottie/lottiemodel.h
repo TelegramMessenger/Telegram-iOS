@@ -200,7 +200,7 @@ class LOTKeyFrame
 {
 public:
     float progress(int frameNo) const {
-        return mInterpolator->value((frameNo - mStartFrame) / (mEndFrame - mStartFrame));
+        return mInterpolator ? mInterpolator->value((frameNo - mStartFrame) / (mEndFrame - mStartFrame)) : 0;
     }
     T value(int frameNo) const {
         return mValue.value(progress(frameNo));
@@ -444,8 +444,6 @@ public:
     float                mFrameRate{60};
     LottieBlendMode      mBlendMode{LottieBlendMode::Normal};
     std::shared_ptr<LOTLayerData> mRootLayer;
-    std::unordered_map<std::string,
-                       std::shared_ptr<VInterpolator>> mInterpolatorCache;
     std::unordered_map<std::string,
                        std::shared_ptr<LOTAsset>>    mAssets;
 

@@ -19,9 +19,9 @@
 #include "lottieparser.h"
 
 
-//#define DEBUG_PARSER
+#define DEBUG_PARSER
 
-#define DEBUG_PRINT_TREE
+//#define DEBUG_PRINT_TREE
 
 // This parser implements JSON token-by-token parsing with an API that is
 // more direct; we don't have to create  handler object and
@@ -263,11 +263,15 @@ public:
     void parseArrayValue(std::vector<VPointF> &v);
     void parseDashProperty(LOTDashProperty &dash);
 
+    std::shared_ptr<VInterpolator> interpolator(VPointF inTangent, VPointF outTangent);
+
     LottieColor toColor(const char *str);
 
     void resolveLayerRefs();
 
 protected:
+    std::unordered_map<std::string,
+                       std::shared_ptr<VInterpolator>> mInterpolatorCache;
     std::shared_ptr<LOTCompositionData>        mComposition;
     LOTCompositionData *                       compRef{nullptr};
     LOTLayerData *                             curLayerRef{nullptr};
@@ -1896,27 +1900,43 @@ bool LottieParserImpl::parseKeyFrameValue(const char * key,
     return true;
 }
 
+std::shared_ptr<VInterpolator>
+LottieParserImpl::interpolator(VPointF inTangent, VPointF outTangent)
+{
+    std::array<char, 20> temp;
+    snprintf(temp.data(), temp.size(), "%.2f_%.2f_%.2f_%.2f",
+             inTangent.x(), inTangent.y(), outTangent.x(), outTangent.y());
+
+    std::string key(temp.data());
+
+    auto search = mInterpolatorCache.find(key);
+    if (search != mInterpolatorCache.end()) {
+        return search->second;
+    } else {
+        auto obj = std::make_shared<VInterpolator>(VInterpolator(outTangent, inTangent));
+        mInterpolatorCache[key] =  obj;
+        return obj;
+    }
+}
+
 /*
  * https://github.com/airbnb/lottie-web/blob/master/docs/json/properties/multiDimensionalKeyframed.json
  */
 template <typename T>
 void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
 {
-struct ParsedField {
-    bool interpolator{false};
-    bool value{false};
-    bool hold{false};
-    bool time{false};
-    bool lastFrame{false};
-    bool hasEndValue{false};
-};
+    struct ParsedField {
+        bool interpolator{false};
+        bool value{false};
+        bool hold{false};
+        bool noEndValue{true};
+    };
 
     EnterObject();
     ParsedField    parsed;
     LOTKeyFrame<T> keyframe;
     VPointF        inTangent;
     VPointF        outTangent;
-    const char *   interpolatorKey = nullptr;
 
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "i")) {
@@ -1924,32 +1944,14 @@ struct ParsedField {
             inTangent = parseInperpolatorPoint();
         } else if (0 == strcmp(key, "o")) {
             outTangent = parseInperpolatorPoint();
-        } else if (0 == strcmp(key, "n")) {
-            if (PeekType() == kStringType) {
-                interpolatorKey = GetString();
-            } else {
-                RAPIDJSON_ASSERT(PeekType() == kArrayType);
-                EnterArray();
-                while (NextArrayValue()) {
-                    RAPIDJSON_ASSERT(PeekType() == kStringType);
-                    if (!interpolatorKey) {
-                        interpolatorKey = GetString();
-                    } else {
-                        //skip rest of the string
-                        GetString();
-                    }
-                }
-            }
-            continue;
         } else if (0 == strcmp(key, "t")) {
             keyframe.mStartFrame = GetDouble();
-            parsed.time = true;
         } else if (0 == strcmp(key, "s")) {
             parsed.value = true;
             getValue(keyframe.mValue.mStartValue);
             continue;
         }  else if (0 == strcmp(key, "e")) {
-            parsed.hasEndValue = true;
+            parsed.noEndValue = false;
             getValue(keyframe.mValue.mEndValue);
             continue;
         } else if (parseKeyFrameValue(key, keyframe.mValue)) {
@@ -1965,48 +1967,25 @@ struct ParsedField {
         }
     }
 
-    // if both interpolator and hold are not present
-    // it is the last frame.
-    if (!parsed.hold && !parsed.interpolator) {
-        parsed.lastFrame = true;
-    }
-
     if (!obj.mKeyFrames.empty()) {
         // update the endFrame value of current keyframe
         obj.mKeyFrames.back().mEndFrame = keyframe.mStartFrame;
-        // if no end value provided copy it to previous frame
-        if (!parsed.hold && parsed.value && !parsed.hasEndValue) {
+        // if no end value provided, copy start value to previous frame
+        if (parsed.value &&
+            parsed.noEndValue) {
             obj.mKeyFrames.back().mValue.mEndValue = keyframe.mValue.mStartValue;
         }
     }
 
     if (parsed.hold) {
-        interpolatorKey = "hold_interpolator";
-        inTangent = VPointF();
-        outTangent = VPointF();
         keyframe.mValue.mEndValue = keyframe.mValue.mStartValue;
         keyframe.mEndFrame = keyframe.mStartFrame;
-    }
-
-    char charArray[20];
-    if (!(parsed.lastFrame || interpolatorKey)) {
-        snprintf(charArray, 20, "%.2f_%.2f_%.2f_%.2f",
-                 inTangent.x(), inTangent.y(), outTangent.x(), outTangent.y());
-        interpolatorKey = charArray;
-    }
-
-    // Try to find the interpolator from cache
-    if (interpolatorKey) {
-        auto search = compRef->mInterpolatorCache.find(interpolatorKey);
-        if (search != compRef->mInterpolatorCache.end()) {
-            keyframe.mInterpolator = search->second;
-        } else {
-            keyframe.mInterpolator = std::make_shared<VInterpolator>(
-                VInterpolator(outTangent, inTangent));
-            compRef->mInterpolatorCache[interpolatorKey] =
-                keyframe.mInterpolator;
-        }
         obj.mKeyFrames.push_back(keyframe);
+    } else if (parsed.interpolator) {
+        keyframe.mInterpolator = interpolator(inTangent, outTangent);
+        obj.mKeyFrames.push_back(keyframe);
+    } else {
+        //its the last frame discard.
     }
 }
 
