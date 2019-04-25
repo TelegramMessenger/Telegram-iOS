@@ -19,7 +19,7 @@
 #include "lottieparser.h"
 
 
-#define DEBUG_PARSER
+//#define DEBUG_PARSER
 
 //#define DEBUG_PRINT_TREE
 
@@ -238,17 +238,15 @@ public:
     void parseGradientProperty(LOTGradient *gradient, const char *key);
 
     VPointF parseInperpolatorPoint();
-    void    parseArrayValue(VPointF &pt);
-    void    parseArrayValue(LottieColor &pt);
-    void    parseArrayValue(float &val);
-    void    parseArrayValue(int &val);
-    void    parseArrayValue(LottieGradient &gradient);
-    void    getValue(VPointF &val);
-    void    getValue(float &val);
-    void    getValue(LottieColor &val);
-    void    getValue(int &val);
-    void    getValue(LottieShapeData &shape);
-    void    getValue(LottieGradient &gradient);
+
+    void getValue(VPointF &val);
+    void getValue(float &val);
+    void getValue(LottieColor &val);
+    void getValue(int &val);
+    void getValue(LottieShapeData &shape);
+    void getValue(LottieGradient &gradient);
+    void getValue(std::vector<VPointF> &v);
+
     template <typename T>
     bool parseKeyFrameValue(const char *key, LOTKeyFrameValue<T> &value);
     template <typename T>
@@ -260,7 +258,6 @@ public:
 
     void parseShapeKeyFrame(LOTAnimInfo<LottieShapeData> &obj);
     void parseShapeProperty(LOTAnimatable<LottieShapeData> &obj);
-    void parseArrayValue(std::vector<VPointF> &v);
     void parseDashProperty(LOTDashProperty &dash);
 
     std::shared_ptr<VInterpolator> interpolator(VPointF inTangent, VPointF outTangent);
@@ -1657,43 +1654,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGStrokeObject()
     return sharedGStroke;
 }
 
-void LottieParserImpl::parseArrayValue(LottieColor &color)
-{
-    float val[4];
-    int   i = 0;
-    while (NextArrayValue()) {
-        val[i++] = GetDouble();
-    }
-
-    color.r = val[0];
-    color.g = val[1];
-    color.b = val[2];
-}
-
-void LottieParserImpl::parseArrayValue(VPointF &pt)
-{
-    float val[4];
-    int   i = 0;
-    while (NextArrayValue()) {
-        val[i++] = GetDouble();
-    }
-    pt.setX(val[0]);
-    pt.setY(val[1]);
-}
-
-void LottieParserImpl::parseArrayValue(float &val)
-{
-    RAPIDJSON_ASSERT(0);
-    val = GetDouble();
-}
-
-void LottieParserImpl::parseArrayValue(int &val)
-{
-    RAPIDJSON_ASSERT(0);
-    val = GetInt();
-}
-
-void LottieParserImpl::parseArrayValue(std::vector<VPointF> &v)
+void LottieParserImpl::getValue(std::vector<VPointF> &v)
 {
     RAPIDJSON_ASSERT(PeekType() == kArrayType);
     EnterArray();
@@ -1701,7 +1662,7 @@ void LottieParserImpl::parseArrayValue(std::vector<VPointF> &v)
         RAPIDJSON_ASSERT(PeekType() == kArrayType);
         EnterArray();
         VPointF pt;
-        parseArrayValue(pt);
+        getValue(pt);
         v.push_back(pt);
     }
 }
@@ -1710,8 +1671,9 @@ void LottieParserImpl::getValue(VPointF &pt)
 {
     float val[4];
     int   i = 0;
-    RAPIDJSON_ASSERT(PeekType() == kArrayType);
-    EnterArray();
+
+    if (PeekType() == kArrayType) EnterArray();
+
     while (NextArrayValue()) {
         val[i++] = GetDouble();
     }
@@ -1737,8 +1699,8 @@ void LottieParserImpl::getValue(LottieColor &color)
 {
     float val[4];
     int   i = 0;
-    RAPIDJSON_ASSERT(PeekType() == kArrayType);
-    EnterArray();
+    if (PeekType() == kArrayType) EnterArray();
+
     while (NextArrayValue()) {
         val[i++] = GetDouble();
     }
@@ -1747,17 +1709,10 @@ void LottieParserImpl::getValue(LottieColor &color)
     color.b = val[2];
 }
 
-void LottieParserImpl::parseArrayValue(LottieGradient &grad)
-{
-    while (NextArrayValue()) {
-        grad.mGradient.push_back(GetDouble());
-    }
-}
-
 void LottieParserImpl::getValue(LottieGradient &grad)
 {
-    RAPIDJSON_ASSERT(PeekType() == kArrayType);
-    EnterArray();
+    if (PeekType() == kArrayType) EnterArray();
+
     while (NextArrayValue()) {
         grad.mGradient.push_back(GetDouble());
     }
@@ -1796,11 +1751,11 @@ void LottieParserImpl::getValue(LottieShapeData &obj)
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "i")) {
-            parseArrayValue(inPoint);
+            getValue(inPoint);
         } else if (0 == strcmp(key, "o")) {
-            parseArrayValue(outPoint);
+            getValue(outPoint);
         } else if (0 == strcmp(key, "v")) {
-            parseArrayValue(vertices);
+            getValue(vertices);
         } else if (0 == strcmp(key, "c")) {
             closed = GetBool();
         } else {
@@ -1855,26 +1810,10 @@ VPointF LottieParserImpl::parseInperpolatorPoint()
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "x")) {
-            if (PeekType() == kNumberType) {
-                cp.setX(GetDouble());
-            } else {
-                RAPIDJSON_ASSERT(PeekType() == kArrayType);
-                EnterArray();
-                while (NextArrayValue()) {
-                    cp.setX(GetDouble());
-                }
-            }
+            getValue(cp.rx());
         }
         if (0 == strcmp(key, "y")) {
-            if (PeekType() == kNumberType) {
-                cp.setY(GetDouble());
-            } else {
-                RAPIDJSON_ASSERT(PeekType() == kArrayType);
-                EnterArray();
-                while (NextArrayValue()) {
-                    cp.setY(GetDouble());
-                }
-            }
+            getValue(cp.ry());
         }
     }
     return cp;
@@ -2046,7 +1985,7 @@ void LottieParserImpl::parsePropertyHelper(LOTAnimatable<T> &obj)
                  */
                 RAPIDJSON_ASSERT(PeekType() == kNumberType);
                 /*multi value property with no animation*/
-                parseArrayValue(obj.mValue);
+                getValue(obj.mValue);
                 /*break here as we already reached end of array*/
                 break;
             }
