@@ -171,6 +171,28 @@ LOT_EXPORT const LOTLayerNode * lottie_animation_render_tree(Lottie_Animation *a
 LOT_EXPORT size_t lottie_animation_get_frame_at_pos(const Lottie_Animation *animation, float pos);
 
 /**
+ *  @brief Request to render the content of the frame @p frame_num to buffer @p buffer.
+ *
+ *  @param[in] animation Animation object.
+ *  @param[in] frame_num the frame number needs to be rendered.
+ *  @param[in] buffer surface buffer use for rendering.
+ *  @param[in] width width of the surface
+ *  @param[in] height height of the surface
+ *  @param[in] bytes_per_line stride of the surface in bytes.
+ *
+ *
+ *  @ingroup Lottie_Animation
+ *  @internal
+ */
+LOT_EXPORT void
+lottie_animation_render(Lottie_Animation *animation,
+                        size_t frame_num,
+                        uint32_t *buffer,
+                        size_t width,
+                        size_t height,
+                        size_t bytes_per_line);
+
+/**
  *  @brief Request to render the content of the frame @p frame_num to buffer @p buffer asynchronously.
  *
  *  @param[in] animation Animation object.

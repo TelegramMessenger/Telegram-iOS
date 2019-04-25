@@ -108,6 +108,20 @@ lottie_animation_get_frame_at_pos(const Lottie_Animation_S *animation, float pos
 }
 
 LOT_EXPORT void
+lottie_animation_render(Lottie_Animation_S *animation,
+                        size_t frame_number,
+                        uint32_t *buffer,
+                        size_t width,
+                        size_t height,
+                        size_t bytes_per_line)
+{
+    if (!animation) return;
+
+    rlottie::Surface surface(buffer, width, height, bytes_per_line);
+    animation->mAnimation->renderSync(frame_number, surface);
+}
+
+LOT_EXPORT void
 lottie_animation_render_async(Lottie_Animation_S *animation,
                               size_t frame_number,
                               uint32_t *buffer,
