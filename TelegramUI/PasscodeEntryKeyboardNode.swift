@@ -97,6 +97,8 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
     
     private let backgroundNode: ASImageNode
     
+    var action: (() -> Void)?
+    
     init(background: PasscodeBackground, title: String, subtitle: String) {
         self.background = background
         self.title = title
@@ -114,6 +116,11 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
                 strongSelf.updateState(highlighted: highlighted)
             }
         }
+        
+        self.addTarget(self, action: #selector(self.nop), forControlEvents: .touchUpInside)
+    }
+    
+    @objc private func nop() {
     }
     
     override var frame: CGRect {
@@ -157,6 +164,12 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         
         self.backgroundNode.frame = self.bounds
     }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        
+        self.action?()
+    }
 }
 
 private let buttonsData = [
@@ -189,7 +202,9 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
         } else {
             for (title, subtitle) in buttonsData {
                 let buttonNode = PasscodeEntryButtonNode(background: background, title: title, subtitle: subtitle)
-                buttonNode.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchDown)
+                buttonNode.action = { [weak self] in
+                    self?.charactedEntered?(title)
+                }
                 self.addSubnode(buttonNode)
             }
         }
@@ -289,7 +304,7 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
                     verticalThird = 200.0
                     verticalFourth = 300.0
                     size = CGSize(width: 315.0, height: 385.0)
-                    offset = 240.0
+                    offset = 329.0
                 case .iPad, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
                     buttonSize = 81.0
                     horizontalSecond = 106.0

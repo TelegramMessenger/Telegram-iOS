@@ -138,7 +138,7 @@ final public class PasscodeEntryController: ViewController {
                 serviceSoundManager.playLockSound()
             }
             
-            self.controllerNode.animateIn(completion: { [weak self] in
+            self.controllerNode.animateIn(iconFrame: self.arguments.lockIconInitialFrame(), completion: { [weak self] in
                 self?.presentationCompleted?()
             })
         } else {

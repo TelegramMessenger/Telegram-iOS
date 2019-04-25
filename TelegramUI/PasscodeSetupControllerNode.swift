@@ -156,7 +156,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
             if let snapshotView = self.wrapperNode.view.snapshotContentTree() {
                 snapshotView.frame = self.wrapperNode.frame
                 self.wrapperNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.wrapperNode.view)
-                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -self.wrapperNode.bounds.width, y: 0.0), duration: 0.25, additive: true, completion : { [weak snapshotView] _ in
+                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -self.wrapperNode.bounds.width, y: 0.0), duration: 0.25, removeOnCompletion: false, additive: true, completion : { [weak snapshotView] _ in
                     snapshotView?.removeFromSuperview()
                 })
                 self.wrapperNode.layer.animatePosition(from: CGPoint(x: self.wrapperNode.bounds.width, y: 0.0), to: CGPoint(), duration: 0.25, additive: true)

@@ -1,14 +1,22 @@
 import Foundation
-import UIKit
+import CoreText
 
 extension UnicodeScalar {
     var isEmoji: Bool {
         switch value {
-            case 0x3030, 0x00AE, 0x00A9, // Special Characters
-                0x1D000 ... 0x1F77F, // Emoticons
-                0x2100 ... 0x27BF, // Misc symbols and Dingbats
-                0xFE00 ... 0xFE0F, // Variation Selectors
-                0x1F900 ... 0x1F9FF: // Supplemental Symbols and Pictographs
+            case 0x1F600...0x1F64F, // Emoticons
+            0x1F300...0x1F5FF, // Misc Symbols and Pictographs
+            0x1F680...0x1F6FF, // Transport and Map
+            0x1F1E6...0x1F1FF, // Regional country flags
+            0x2600...0x26FF, // Misc symbols
+            0x2700...0x27BF, // Dingbats
+            0xE0020...0xE007F, // Tags
+            0xFE00...0xFE0F, // Variation Selectors
+            0x1F900...0x1F9FF, // Supplemental Symbols and Pictographs
+            127000...127600, // Various asian characters
+            65024...65039, // Variation selector
+            9100...9300, // Misc items
+            8400...8447: // Combining Diacritical Marks for Symbols
                 return true
             default:
                 return false
@@ -40,11 +48,13 @@ extension String {
     }
     
     var containsEmoji: Bool {
-        return !unicodeScalars.filter { $0.isEmoji }.isEmpty
+        return unicodeScalars.contains { $0.isEmoji }
     }
     
     var containsOnlyEmoji: Bool {
-        return unicodeScalars.first(where: { !$0.isEmoji && !$0.isZeroWidthJoiner }) == nil
+        return !isEmpty && !unicodeScalars.contains(where: {
+            !$0.isEmoji && !$0.isZeroWidthJoiner
+        })
     }
     
     // The next tricks are mostly to demonstrate how tricky it can be to determine emoji's
@@ -62,23 +72,13 @@ extension String {
     }
     
     var emojis: [String] {
-        var scalars: [[UnicodeScalar]] = []
-        var currentScalarSet: [UnicodeScalar] = []
-        var previousScalar: UnicodeScalar?
-        
-        for scalar in emojiScalars {
-            if let prev = previousScalar, !prev.isZeroWidthJoiner && !scalar.isZeroWidthJoiner {
-                scalars.append(currentScalarSet)
-                currentScalarSet = []
+        var emojis: [String] = []
+        self.enumerateSubstrings(in: self.startIndex ..< self.endIndex, options: .byComposedCharacterSequences) { substring, _, _, _ in
+            if let substring = substring {
+                emojis.append(substring)
             }
-            currentScalarSet.append(scalar)
-            
-            previousScalar = scalar
         }
-        
-        scalars.append(currentScalarSet)
-        
-        return scalars.map { $0.map{ String($0) } .reduce("", +) }
+        return emojis
     }
     
     fileprivate var emojiScalars: [UnicodeScalar] {

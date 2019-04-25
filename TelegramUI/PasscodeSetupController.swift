@@ -55,6 +55,7 @@ final class PasscodeSetupController: ViewController {
             
             let controller = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
             let dismissAction: () -> Void = { [weak controller] in
+                self?.controllerNode.activateInput()
                 controller?.dismissAnimated()
             }
             

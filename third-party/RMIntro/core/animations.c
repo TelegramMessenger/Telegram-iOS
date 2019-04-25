@@ -22,6 +22,7 @@
 
 static const vec4 black_color = {0,0,0, 1.0f};
 static const vec4 white_color = {1,1,1, 1.0f};
+
 /*
 static const vec4 red_color = {1,0,0, 1.0f};
 static const vec4 green_color = {0,1,0, 1.0f};
@@ -77,9 +78,6 @@ static mat4x4 ribbons_layer;
 
 static int test_texture[6];
 
-static void position_table_in_scene();
-static void position_object_in_scene(float x, float y, float z);
-
 static TexturedShape ic_bubble_dot, ic_bubble, ic_cam_lens, ic_cam, ic_pencil, ic_pin, ic_smile_eye, ic_smile, ic_videocam;
 static int ic_bubble_dot_texture, ic_bubble_texture, ic_cam_lens_texture, ic_cam_texture, ic_pencil_texture, ic_pin_texture, ic_smile_eye_texture, ic_smile_texture, ic_videocam_texture;
 
@@ -95,8 +93,6 @@ static Shape infinity;
 static int private_door_texture, private_screw_texture, private_keyhole_body_texture;
 static TexturedShape private_door, private_screw, private_keyhole_body;
 static Shape private_stroke;
-
-static Shape start_button;
 
 
 static const float r1 = 58.5;
@@ -121,9 +117,6 @@ static int direct;
 static int frame_width;
 
 
-static int need_pages = 0;
-
-
 static int i;
 
 static int current_page, prev_page;
@@ -139,20 +132,11 @@ static float time_local = 0;
 
 static int pagination_y, button_y;
 
-static int ui_pagination_dot_texture;
-static TexturedShape pagination_dot;
-
 
 static float knot_delays[4];
 
 
 static float offset_y;
-
-void set_need_pages(int a)
-{
-    need_pages=a;
-}
-
 
 
 void set_page(int page)
@@ -256,13 +240,6 @@ void set_private_textures(int a_private_door, int a_private_screw)
     private_door_texture = a_private_door;
     private_screw_texture = a_private_screw;
 }
-
-
-void set_ui_textures(int a_pagination_dot)
-{
-    ui_pagination_dot_texture = a_pagination_dot;
-}
-
 
 float t(float start_value, float end_value, float start_time, float duration, timing_type type)
 {
@@ -439,13 +416,7 @@ set_y_offset_objects(-100*k*0);
 
 
 void on_surface_created() {
-
     setup_shaders();
-
-    vec4 start_button_col = {44/255.,165/255.,224/255., 1.};
-    start_button = create_rounded_rectangle(CSizeMake(172, 44), 2, 3, start_button_col);
-    start_button.params.anchor.y = - 22;
-
 
     mask1 = create_rounded_rectangle(CSizeMake(60, 60), 0, 16, black_color);
 
@@ -577,17 +548,6 @@ void on_surface_created() {
 
     vec4 cloud_color = {42/255., 180/255., 247/255., 1};
     cloud_bg = create_rectangle(CSizeMake(160*2, 160*2), cloud_color);
-
-
-
-    if (need_pages == 1) {
-        for (i=0; i<6; i++) {
-            test[i] = create_textured_rectangle(CSizeMake(320, 114), test_texture[i]);
-            test[i].params.anchor.y = -114/2;
-        }
-        pagination_dot = create_textured_rectangle(CSizeMake(8, 8), ui_pagination_dot_texture);
-    }
-
 }
 
 
@@ -616,7 +576,7 @@ static inline void mat4x4_plain(mat4x4 M, int width, int height)
 
 static inline void mat4x4_stars(mat4x4 m, float y_fov_in_degrees, float aspect, float n, float f, int width, int height)
 {
-    int is_iOS = need_pages ? 0 : 1;
+    int is_iOS = 1;
     if (height >= width) {
         float k = (float)width/(float)height;
         
@@ -671,7 +631,6 @@ static inline void mat4x4_stars(mat4x4 m, float y_fov_in_degrees, float aspect, 
     }
 
     mat4x4_translate_independed(m, 0, - 2*y_offset_absolute/(float)height + 4*scale_factor/(float)height, 0);
-
 }
 
 
@@ -701,28 +660,9 @@ void on_surface_changed(int a_width_px, int a_height_px, float a_scale_factor, i
     set_y_offset_objects(offset_y);
 
     y_offset_absolute = a1;
-/*
-    char str[150];
-    sprintf(str, "offset_y = %d", offset_y);
-    DEBUG_LOG_WRITE_D("fps",str);
-*/
-
-//mat4x4_perspective(stars_matrix, 45, (float) width / (float) height, 1, 1000);
 
     mat4x4_stars(stars_matrix, 45, 1, -1000, 0, (int)((float)a_width_px/a_scale_factor), (int)((float)a_height_px/a_scale_factor));
-    //mat4x4_translate_independed(stars_matrix, 0, a1*main_matrix[1][1]/((float)a_height_px/a_scale_factor), 0);
-
-    if (need_pages) {
-        //mat4x4_translate_independed(stars_matrix, 0, 7./stars_matrix[3][3], 0);
-    }
-
-
 }
-
-
-
-
-
 
 void rglNormalDraw()
 {
@@ -750,18 +690,14 @@ void rglNormalDrawThroughMask()
     glDepthMask(0);
 }
 
-
-
 void mat4x4_scaled(mat4x4 matrix, float s)
 {
     mat4x4_identity(matrix);
     mat4x4_scale_aniso(matrix, matrix, s, s, s);
 }
 
-
 void mat4x4_layer(mat4x4 matrix, LayerParams params, float s, float r)
 {
-
     float a=main_matrix[1][1];
     tt++;
 
@@ -787,10 +723,6 @@ void mat4x4_layer(mat4x4 matrix, LayerParams params, float s, float r)
     mat4x4_dup(tmp, model_matrix);
 
     mat4x4_mul(model_matrix, scaled, tmp);
-
-
-
-
 
     mat4x4 rotate;
     mat4x4_dup(rotate, id);
@@ -845,21 +777,11 @@ float speedometer_sin()
     return sin(sin(time*1000*.15*0.08+speedometer)*M_PI)*5;
 }
 
-
-
-
-
-
 double ms0_anim, time_anim;
 int fps_anim;
 int count_anim_fps;
 
-
-
 static float speedometer_scroll_offset=0, free_scroll_offset=0, private_scroll_offset=0;
-
-
-
 
 double anim_pencil_stage_duration, anim_pencil_start_time, anim_pencil_start_all_time, anim_pencil_start_all_end_time;
 int anim_pencil_stage;
@@ -895,15 +817,12 @@ static int anim_pencil_period;
 
 float pin_sin(float a)
 {
-    //printf("bsin>%f\n", a);
-    //printf("pin_sin>%f\n", a);
     if (a > M_PI*2*anim_pin_start_period && a < M_PI*2*anim_pin_end_period) {
 
         return sin(a*.1);
     }
     if (a > M_PI*2*(anim_pin_end_period)) {
-        //printf("PIN\n");
-        int p = 1;//irand(10, 20)/5;
+        int p = 1;
         anim_pin_start_period = anim_pin_end_period + p;
         anim_pin_end_period = anim_pin_end_period + p + 1;
     }
@@ -945,9 +864,9 @@ static void reset_ic()
     anim_pencil_start_all_end_time = 0;
     anim_cam_next_time = time_local + 0;
     anim_smile_stage = 0;
-    anim_smile_blink_one = 0;//-21456;
+    anim_smile_blink_one = 0;
     anim_pencil_stage = 0;
-    anim_bubble_dots_end_period = 4;//duration_const*10;
+    anim_bubble_dots_end_period = 4;
     anim_pencil_period = 1;
 }
 
@@ -1589,7 +1508,7 @@ void on_draw_frame() {
 
     float private_back_k = .8;
 
-    glClearColor(backgroundColor[0], backgroundColor[0], backgroundColor[0], 1);
+    glClearColor(backgroundColor[0], backgroundColor[1], backgroundColor[2], 1);
     glClear(GL_COLOR_BUFFER_BIT);
 
     /*
@@ -2213,7 +2132,16 @@ void on_draw_frame() {
             float scale = t(1, 2, 0, duration_const, EaseIn);
             powerful_mask.params.scale = xyzMake(scale, scale, 1);
             
-            draw_textured_shape(&powerful_mask, main_matrix, backgroundColor[1] < 0.5 ? DARK : LIGHT);
+            texture_program_type shape_texture_type;
+            if (backgroundColor[1] < 0.01) {
+                shape_texture_type = DARK;
+            } else if (backgroundColor[1] > 0.99) {
+                shape_texture_type = LIGHT;
+            } else {
+                shape_texture_type = DARK_BLUE;
+            }
+            
+            draw_textured_shape(&powerful_mask, main_matrix, shape_texture_type);
 
             ribbonLayer.rotation = free_scroll_offset + t_reversed(360, 360+(45+30), 0, duration_const, EaseOut);
             ribbonLayer.position.y = t_reversed(0, -8, 0, duration_const*.8, EaseOut);
@@ -2326,9 +2254,18 @@ void on_draw_frame() {
             rglNormalDraw();
             glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
+            texture_program_type shape_texture_type;
+            if (backgroundColor[1] < 0.01) {
+                shape_texture_type = DARK;
+            } else if (backgroundColor[1] > 0.99) {
+                shape_texture_type = LIGHT;
+            } else {
+                shape_texture_type = DARK_BLUE;
+            }
+            
             float scale = t(2, 1, 0, duration_const, EaseOut);
             powerful_mask.params.scale = xyzMake(scale, scale, 1);
-            draw_textured_shape(&powerful_mask, main_matrix, backgroundColor[1] < 0.5 ? DARK : LIGHT);
+            draw_textured_shape(&powerful_mask, main_matrix, shape_texture_type);
 
 
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -2415,9 +2352,18 @@ void on_draw_frame() {
             rglNormalDraw();
             glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
+            texture_program_type shape_texture_type;
+            if (backgroundColor[1] < 0.01) {
+                shape_texture_type = DARK;
+            } else if (backgroundColor[1] > 0.99) {
+                shape_texture_type = LIGHT;
+            } else {
+                shape_texture_type = DARK_BLUE;
+            }
+            
             float scale = t(2, 1, 0, duration_const, EaseOut);
             powerful_mask.params.scale = xyzMake(scale, scale, 1);
-            draw_textured_shape(&powerful_mask, main_matrix, backgroundColor[1] < 0.5 ? DARK : LIGHT);
+            draw_textured_shape(&powerful_mask, main_matrix, shape_texture_type);
 
 
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -2562,7 +2508,16 @@ void on_draw_frame() {
 
             if (time < duration_const*.4) {
                 cloud_cover.params.position.y=t_reversed(118/2+50, 118/2, duration_const*.8*private_back_k, duration_const*private_back_k, EaseOut);
-                draw_colored_shape(&cloud_cover, main_matrix, backgroundColor[1] < 0.5 ? black_color : white_color);
+                if (backgroundColor[1] < 0.01) {
+                    vec4 color = {0.0,0.0,0.0,1.0};
+                    draw_colored_shape(&cloud_cover, main_matrix, color);
+                } else if (backgroundColor[1] > 0.99) {
+                    vec4 color = {1.0,1.0,1.0,1.0};
+                    draw_colored_shape(&cloud_cover, main_matrix, color);
+                } else {
+                    vec4 color = {0.09,0.133,0.176, 1.0f};
+                    draw_colored_shape(&cloud_cover, main_matrix, color);
+                }
             }
 
             draw_safe(0, t(0,1,duration_const*private_back_k*.0, duration_const*private_back_k, Linear), t(0, 1, 0, duration_const, Linear));
@@ -2602,49 +2557,17 @@ void on_draw_frame() {
 
 
         cloud_cover.params.position.y = t(118/2+50, 118/2, 0, duration_const, EaseOut);
-        draw_colored_shape(&cloud_cover, main_matrix, backgroundColor[1] < 0.5 ? black_color : white_color);
-    }
-
-
-
-
-
-    if (need_pages)
-    {
-        rglNormalDraw();
-
-        glDisable(GL_BLEND);
-        int q_pages_rendered=0;
-        int q = 6;
-        for (i=0; i<q; i++) {
-            test[i].params.position.x=touch_x-frame_width/2+frame_width*i;
-
-            if (!(test[i].params.position.x < -frame_width+1 || test[i].params.position.x > frame_width-1)) {
-                draw_textured_shape(&test[i], main_matrix, NORMAL);
-                q_pages_rendered++;
-            }
+        if (backgroundColor[1] < 0.01) {
+            vec4 color = {0.0,0.0,0.0,1.0};
+            draw_colored_shape(&cloud_cover, main_matrix, color);
+        } else if (backgroundColor[1] > 0.99) {
+            vec4 color = {1.0,1.0,1.0,1.0};
+            draw_colored_shape(&cloud_cover, main_matrix, color);
+        } else {
+            vec4 color = {0.09,0.133,0.176, 1.0f};
+            draw_colored_shape(&cloud_cover, main_matrix, color);
         }
-
-        glEnable(GL_BLEND);
-
-        int d = 16;
-        for (i=0; i<q; i++) {
-            pagination_dot.params.alpha = .35;
-
-            if (current_page == i) {
-                pagination_dot.params.alpha = .75;
-            }
-
-            pagination_dot.params.position.x = -q*d/2 + d/2 + i*d;
-            pagination_dot.params.position.y = pagination_y + d/2;
-
-            draw_textured_shape(&pagination_dot, main_matrix, NORMAL);
-        }
-
     }
-
-    //duration_const=1;
 
     prev_page = current_page;
-
 }

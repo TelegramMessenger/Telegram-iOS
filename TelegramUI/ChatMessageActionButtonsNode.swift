@@ -72,36 +72,8 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         let titleLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         
         return { context, theme, strings, message, button, constrainedWidth, position in
-            let sideInset: CGFloat = 8.0
-            let minimumSideInset: CGFloat = 4.0
-            
             let incoming = message.effectivelyIncoming(context.account.peerId)
-            
-            var title = button.title
-            if case .payment = button.action {
-                for media in message.media {
-                    if let invoice = media as? TelegramMediaInvoice {
-                        if invoice.receiptMessageId != nil {
-                            title = strings.Message_ReplyActionButtonShowReceipt
-                        }
-                    }
-                }
-            }
-            
-            let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: incoming ? bubbleVariableColor(variableColor: theme.theme.chat.bubble.actionButtonsIncomingTextColor, wallpaper: theme.wallpaper) : bubbleVariableColor(variableColor: theme.theme.chat.bubble.actionButtonsOutgoingTextColor, wallpaper: theme.wallpaper)), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
-            
             let graphics = PresentationResourcesChat.additionalGraphics(theme.theme, wallpaper: theme.wallpaper)
-            let backgroundImage: UIImage?
-            switch position {
-                case .middle:
-                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingMiddleImage : graphics.chatBubbleActionButtonOutgoingMiddleImage
-                case .bottomLeft:
-                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomLeftImage : graphics.chatBubbleActionButtonOutgoingBottomLeftImage
-                case .bottomRight:
-                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomRightImage : graphics.chatBubbleActionButtonOutgoingBottomRightImage
-                case .bottomSingle:
-                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomSingleImage : graphics.chatBubbleActionButtonOutgoingBottomSingleImage
-            }
             
             let iconImage: UIImage?
             switch button.action {
@@ -117,6 +89,34 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingShareIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
                 default:
                     iconImage = nil
+            }
+            
+            let sideInset: CGFloat = 8.0
+            let minimumSideInset: CGFloat = 4.0 + (iconImage?.size.width ?? 0.0)
+            
+            var title = button.title
+            if case .payment = button.action {
+                for media in message.media {
+                    if let invoice = media as? TelegramMediaInvoice {
+                        if invoice.receiptMessageId != nil {
+                            title = strings.Message_ReplyActionButtonShowReceipt
+                        }
+                    }
+                }
+            }
+            
+            let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: incoming ? bubbleVariableColor(variableColor: theme.theme.chat.bubble.actionButtonsIncomingTextColor, wallpaper: theme.wallpaper) : bubbleVariableColor(variableColor: theme.theme.chat.bubble.actionButtonsOutgoingTextColor, wallpaper: theme.wallpaper)), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            
+            let backgroundImage: UIImage?
+            switch position {
+                case .middle:
+                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingMiddleImage : graphics.chatBubbleActionButtonOutgoingMiddleImage
+                case .bottomLeft:
+                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomLeftImage : graphics.chatBubbleActionButtonOutgoingBottomLeftImage
+                case .bottomRight:
+                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomRightImage : graphics.chatBubbleActionButtonOutgoingBottomRightImage
+                case .bottomSingle:
+                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomSingleImage : graphics.chatBubbleActionButtonOutgoingBottomSingleImage
             }
             
             return (titleSize.size.width + sideInset + sideInset, { width in

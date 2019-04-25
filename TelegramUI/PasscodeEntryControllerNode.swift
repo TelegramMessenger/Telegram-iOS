@@ -5,6 +5,7 @@ import SwiftSignalKit
 import TelegramCore
 
 private let titleFont = Font.regular(20.0)
+private let buttonFont = Font.regular(17.0)
 
 final class PasscodeEntryControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -19,9 +20,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     
     private let backgroundNode: ASImageNode
     private let iconNode: PasscodeLockIconNode
-    private let titleNode: PasscodeEntryTitleNode
+    private let titleNode: PasscodeEntryLabelNode
     private let inputFieldNode: PasscodeEntryInputFieldNode
-    private let subtitleNode: ASTextNode
+    private let subtitleNode: PasscodeEntryLabelNode
     private let keyboardNode: PasscodeEntryKeyboardNode
     private let deleteButtonNode: HighlightableButtonNode
     private let biometricButtonNode: HighlightableButtonNode
@@ -45,9 +46,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         self.backgroundNode = ASImageNode()
         self.iconNode = PasscodeLockIconNode()
-        self.titleNode = PasscodeEntryTitleNode()
+        self.titleNode = PasscodeEntryLabelNode()
         self.inputFieldNode = PasscodeEntryInputFieldNode(color: .white, fieldType: passcodeType, keyboardAppearance: .dark, useCustomNumpad: true)
-        self.subtitleNode = ASTextNode()
+        self.subtitleNode = PasscodeEntryLabelNode()
         self.keyboardNode = PasscodeEntryKeyboardNode()
         self.deleteButtonNode = HighlightableButtonNode()
         self.biometricButtonNode = HighlightableButtonNode()
@@ -60,6 +61,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         })
         
         self.backgroundColor = .clear
+        self.iconNode.unlockedColor = theme.rootController.navigationBar.primaryTextColor
         
         self.keyboardNode.charactedEntered = { [weak self] character in
             self?.inputFieldNode.append(character)
@@ -68,7 +70,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             self?.checkPasscode?(passcode)
         }
         
-        self.deleteButtonNode.setImage(UIImage(bundleImageName: "Settings/PasscodeClearIcon"), for: .normal)
+        self.deleteButtonNode.setTitle(strings.Common_Delete, with: buttonFont, with: .white, for: .normal)
     
         if let biometricsType = self.biometricsType {
             switch biometricsType {
@@ -83,6 +85,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.inputFieldNode)
+        self.addSubnode(self.subtitleNode)
         self.addSubnode(self.keyboardNode)
         self.addSubnode(self.deleteButtonNode)
         self.addSubnode(self.biometricButtonNode)
@@ -113,6 +116,11 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.wallpaper = presentationData.chatWallpaper
+        
+        self.deleteButtonNode.setTitle(self.strings.Common_Delete, with: buttonFont, with: .white, for: .normal)
+        if let validLayout = self.validLayout {
+            self.containerLayoutUpdated(validLayout, navigationBarHeight: 0.0, transition: .immediate)
+        }
     }
     
     func updateBackground() {
@@ -146,7 +154,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         })
     }
     
-    func animateIn(completion: @escaping () -> Void = {}) {
+    func animateIn(iconFrame: CGRect, completion: @escaping () -> Void = {}) {
         let effect = self.theme.overallDarkAppearance ? UIBlurEffect(style: .dark) : UIBlurEffect(style: .light)
         UIView.animate(withDuration: 0.3, animations: {
             if #available(iOS 9.0, *) {
@@ -157,11 +165,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         })
         self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.iconNode.animateIn(fromScale: 0.416)
+        self.iconNode.layer.animatePosition(from: iconFrame.center.offsetBy(dx: 6.0, dy: 6.0), to: self.iconNode.layer.position, duration: 0.45)
         
         self.statusBar.layer.removeAnimation(forKey: "opacity")
         self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        
-        self.iconNode.layer.animatePosition(from: CGPoint(x: 222.0, y: 66.0), to: self.iconNode.layer.position, duration: 0.45)
         
         self.inputFieldNode.isHidden = true
         self.keyboardNode.isHidden = true
@@ -222,11 +229,11 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         let iconSize = CGSize(width: 35.0, height: 37.0)
         transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0) + 6.0, y: layout.insets(options: .statusBar).top + 15.0), size: iconSize))
         
-        let titleSize = self.titleNode.updateLayout(layout: layout, transition: transition)
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 162.0), size: titleSize))
-        
         let inputFieldFrame = self.inputFieldNode.updateLayout(layout: layout, transition: transition)
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        
+        let titleSize = self.titleNode.updateLayout(layout: layout, transition: transition)
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 162.0), size: titleSize))
         
         let (keyboardFrame, keyboardButtonSize) = self.keyboardNode.updateLayout(layout: layout, transition: transition)
         transition.updateFrame(node: self.keyboardNode, frame: CGRect(origin: CGPoint(), size: layout.size))
@@ -238,7 +245,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 self.keyboardNode.alpha = 0.0
         }
         
-        transition.updateFrame(node: self.deleteButtonNode, frame: CGRect(origin: CGPoint(x: keyboardFrame.maxX - keyboardButtonSize.width, y: keyboardFrame.maxY - keyboardButtonSize.height), size: keyboardButtonSize))
+        let deleteSize = self.deleteButtonNode.measure(layout.size)
+        transition.updateFrame(node: self.deleteButtonNode, frame: CGRect(origin: CGPoint(x: floor(keyboardFrame.maxX - keyboardButtonSize.width / 2.0 - deleteSize.width / 2.0), y: layout.size.height - layout.intrinsicInsets.bottom - deleteSize.height - 20.0), size: deleteSize))
         
         if let biometricIcon = self.biometricButtonNode.image(for: .normal) {
             var biometricY: CGFloat = 0.0
@@ -250,6 +258,5 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             }
             transition.updateFrame(node: self.biometricButtonNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - biometricIcon.size.width) / 2.0), y: biometricY), size: biometricIcon.size))
         }
-
     }
 }
