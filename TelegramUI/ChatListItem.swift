@@ -185,7 +185,7 @@ private let itemHeight: CGFloat = 76.0
 private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool, isMuted: Bool?, groupId: PeerGroupId, canDelete: Bool, isEditing: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
-        if groupId != nil {
+        if case .group = groupId {
             if isPinned {
                 options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
             } else {
@@ -227,7 +227,7 @@ private func groupReferenceRevealOptions(strings: PresentationStrings, theme: Pr
 }
 
 private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, isSavedMessages: Bool, groupId: PeerGroupId) -> [ItemListRevealOption] {
-    if groupId != nil {
+    if case .group = groupId {
         return []
     }
     var options: [ItemListRevealOption] = []
@@ -1283,7 +1283,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        if let item = self.item, let params = self.layoutParams?.5 {
+        if let _ = self.item, let params = self.layoutParams?.5 {
             let editingOffset: CGFloat
             if let selectableControlNode = self.selectableControlNode {
                 editingOffset = selectableControlNode.bounds.size.width
