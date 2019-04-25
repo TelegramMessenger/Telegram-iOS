@@ -8,7 +8,7 @@ import TelegramCore
 
 enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
-    case groupReference(groupId: PeerGroupId, peer: RenderedPeer, message: Message?, unreadState: ChatListTotalUnreadState, hiddenByDefault: Bool)
+    case groupReference(groupId: PeerGroupId, peer: RenderedPeer, message: Message?, unreadState: PeerGroupUnreadCountersCombinedSummary, hiddenByDefault: Bool)
     
     var chatLocation: ChatLocation? {
         switch self {
@@ -23,7 +23,7 @@ enum ChatListItemContent {
 class ChatListItem: ListViewItem {
     let presentationData: ChatListPresentationData
     let account: Account
-    let peerGroupId: PeerGroupId?
+    let peerGroupId: PeerGroupId
     let index: ChatListIndex
     let content: ChatListItemContent
     let editing: Bool
@@ -41,7 +41,7 @@ class ChatListItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(presentationData: ChatListPresentationData, account: Account, peerGroupId: PeerGroupId?, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
+    init(presentationData: ChatListPresentationData, account: Account, peerGroupId: PeerGroupId, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.peerGroupId = peerGroupId
         self.account = account
@@ -182,7 +182,7 @@ private enum RevealOptionKey: Int32 {
 
 private let itemHeight: CGFloat = 76.0
 
-private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool?, isMuted: Bool?, groupId: PeerGroupId?, canDelete: Bool, isEditing: Bool) -> [ItemListRevealOption] {
+private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool?, isMuted: Bool?, groupId: PeerGroupId, canDelete: Bool, isEditing: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
         if let isMuted = isMuted {
@@ -197,10 +197,10 @@ private func revealOptions(strings: PresentationStrings, theme: PresentationThem
         options.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: deleteIcon, color: theme.list.itemDisclosureActions.destructive.fillColor, textColor: theme.list.itemDisclosureActions.destructive.foregroundColor))
     }
     if !isEditing {
-        if groupId != nil {
-            options.append(ItemListRevealOption(key: RevealOptionKey.unarchive.rawValue, title: strings.ChatList_UnarchiveAction, icon: unarchiveIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
-        } else {
+        if case .root = groupId {
             options.append(ItemListRevealOption(key: RevealOptionKey.archive.rawValue, title: strings.ChatList_ArchiveAction, icon: archiveIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+        } else {
+            options.append(ItemListRevealOption(key: RevealOptionKey.unarchive.rawValue, title: strings.ChatList_UnarchiveAction, icon: unarchiveIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
         }
     }
     return options
@@ -581,9 +581,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     inputActivities = nil
                     isPeerGroup = true
                     groupHiddenByDefault = hiddenByDefault
-                    let unmutedCount = unreadState.count(for: .filtered, in: .chats, with: [.regularChatsAndPrivateGroups, .publicGroups, .channels])
-                    let mutedCount = unreadState.count(for: .raw, in: .chats, with: [.regularChatsAndPrivateGroups, .publicGroups, .channels])
-                    unreadCount = (unmutedCount, unmutedCount != 0 || mutedCount != 0, false, max(0, mutedCount - unmutedCount))
+                    let allCount = unreadState.count(countingCategory: .chats, mutedCategory: .all)
+                    unreadCount = (allCount, allCount != 0, true, nil)
                     peerPresence = nil
                     isAd = false
             }
@@ -737,10 +736,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if message.flags.isSending && !message.isSentOrAcknowledged {
                     statusState = .clock(PresentationResourcesChatList.clockFrameImage(item.presentationData.theme), PresentationResourcesChatList.clockMinImage(item.presentationData.theme))
                 } else if message.id.peerId != account.peerId {
-                    if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
-                        statusState = .read(item.presentationData.theme.chatList.checkmarkColor)
+                    if message.flags.contains(.Failed) {
+                        statusState = .none
                     } else {
-                        statusState = .delivered(item.presentationData.theme.chatList.checkmarkColor)
+                        if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
+                            statusState = .read(item.presentationData.theme.chatList.checkmarkColor)
+                        } else {
+                            statusState = .delivered(item.presentationData.theme.chatList.checkmarkColor)
+                        }
                     }
                 }
             }
@@ -839,10 +842,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 titleIconsWidth += currentVerificationIconImage.size.width
             }
             
-            var layoutOffset: CGFloat = 0.0
-            if item.hiddenOffset {
-                //layoutOffset = -itemHeight
-            }
+            let layoutOffset: CGFloat = 0.0
             
             let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
             
@@ -1057,7 +1057,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let _ = strongSelf.statusNode.transitionToState(statusState, animated: animateContent)
                     
                     if let _ = currentBadgeBackgroundImage {
-                        let previousBadgeFrame = strongSelf.badgeNode.frame
                         let badgeFrame = CGRect(x: contentRect.maxX - badgeLayout.width, y: contentRect.maxY - badgeLayout.height - 2.0, width: badgeLayout.width, height: badgeLayout.height)
                         
                         transition.updateFrame(node: strongSelf.badgeNode, frame: badgeFrame)
@@ -1284,10 +1283,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
-            var layoutOffset: CGFloat = 0.0
-            if item.hiddenOffset {
-                //layoutOffset = -itemHeight
-            }
+            let layoutOffset: CGFloat = 0.0
             
             if let reorderControlNode = self.reorderControlNode {
                 var reorderControlFrame = reorderControlNode.frame

@@ -30,17 +30,19 @@ struct ChatListNodeViewUpdate {
     let scrollPosition: ChatListNodeViewScrollPosition?
 }
 
-func chatListViewForLocation(groupId: PeerGroupId?, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
+func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
     switch location {
         case let .initial(count):
             let signal: Signal<(ChatListView, ViewUpdateType), NoError>
             signal = account.viewTracker.tailChatListView(groupId: groupId, count: count)
-            return signal |> map { view, updateType -> ChatListNodeViewUpdate in
+            return signal
+            |> map { view, updateType -> ChatListNodeViewUpdate in
                 return ChatListNodeViewUpdate(view: view, type: updateType, scrollPosition: nil)
             }
         case let .navigation(index):
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId, index: index, count: 80) |> map { view, updateType -> ChatListNodeViewUpdate in
+            return account.viewTracker.aroundChatListView(groupId: groupId, index: index, count: 80)
+            |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 if first {
                     first = false
@@ -54,7 +56,8 @@ func chatListViewForLocation(groupId: PeerGroupId?, location: ChatListNodeLocati
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
             let chatScrollPosition: ChatListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId, index: index, count: 80) |> map { view, updateType -> ChatListNodeViewUpdate in
+            return account.viewTracker.aroundChatListView(groupId: groupId, index: index, count: 80)
+            |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 let scrollPosition: ChatListNodeViewScrollPosition? = first ? chatScrollPosition : nil
                 if first {

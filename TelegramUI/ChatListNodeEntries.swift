@@ -45,7 +45,7 @@ enum ChatListNodeEntryId: Hashable {
 enum ChatListNodeEntry: Comparable, Identifiable {
     case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
-    case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, peer: RenderedPeer, message: Message?, editing: Bool, unreadState: ChatListTotalUnreadState, revealed: Bool, hiddenByDefault: Bool)
+    case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, peer: RenderedPeer, message: Message?, editing: Bool, unreadState: PeerGroupUnreadCountersCombinedSummary, revealed: Bool, hiddenByDefault: Bool)
     
     var index: ChatListIndex {
         switch self {

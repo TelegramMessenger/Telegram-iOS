@@ -74,7 +74,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
        
         
-        self.chatListNode = ChatListNode(context: context, groupId: nil, controlsHistoryPreload: false, mode: .peers(filter: filter), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
+        self.chatListNode = ChatListNode(context: context, groupId: .root, controlsHistoryPreload: false, mode: .peers(filter: filter), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         super.init()
         
@@ -216,7 +216,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if self.chatListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(context: self.context, filter: self.filter, groupId: nil, openPeer: { [weak self] peer, _ in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(context: self.context, filter: self.filter, groupId: .root, openPeer: { [weak self] peer, _ in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peer)
                 }

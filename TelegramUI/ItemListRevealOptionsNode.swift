@@ -367,7 +367,12 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         let basicNodeWidth = floor((size.width - abs(self.sideInset)) / CGFloat(self.optionNodes.count))
         let lastNodeWidth = size.width - basicNodeWidth * CGFloat(self.optionNodes.count - 1)
         let revealFactor = self.revealOffset / size.width
-        let boundaryRevealFactor: CGFloat = 1.0 + 16.0 / size.width
+        let boundaryRevealFactor: CGFloat
+        if self.optionNodes.count > 2 {
+            boundaryRevealFactor = 1.0 + 16.0 / size.width
+        } else {
+            boundaryRevealFactor = 1.0 + basicNodeWidth / size.width
+        }
         let startingOffset: CGFloat
         if self.isLeft {
             startingOffset = size.width + max(0.0, abs(revealFactor) - 1.0) * size.width

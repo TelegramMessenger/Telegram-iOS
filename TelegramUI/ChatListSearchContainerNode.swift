@@ -446,7 +446,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     interaction.peerSelected(peer.peer)
                 })
             case let .message(message, readState, presentationData):
-                return ChatListItem(presentationData: presentationData, account: context.account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true), editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                return ChatListItem(presentationData: presentationData, account: context.account, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true), editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
             case let .addContact(phoneNumber, theme, strings):
                 return ContactsAddItem(theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
                     interaction.addContact(phoneNumber)
@@ -568,7 +568,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     
     private let filter: ChatListNodePeersFilter
     
-    init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId?, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?) {
+    init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?) {
         self.context = context
         self.filter = filter
         self.dimNode = ASDisplayNode()
@@ -641,7 +641,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId)
             |> take(1)
             
-            let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
+            let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased())
             |> mapToSignal { local -> Signal<([PeerView], [RenderedPeer]), NoError> in
                 return combineLatest(local.map { context.account.postbox.peerView(id: $0.peerId) }) |> map { views in
                     return (views, local)

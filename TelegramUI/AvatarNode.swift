@@ -229,13 +229,13 @@ public final class AvatarNode: ASDisplayNode {
         let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? PeerId(namespace: 0, id: 0), peer?.displayLetters ?? [], representation)
         if updatedState != self.state || theme !== self.theme {
             self.state = updatedState
+            self.theme = theme
             
             let parameters: AvatarNodeParameters
             
-            self.displaySuspended = true
-            self.contents = nil
-            
             if let peer = peer, let signal = peerAvatarImage(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation, emptyColor: emptyColor, synchronousLoad: synchronousLoad) {
+                self.contents = nil
+                self.displaySuspended = true
                 self.imageReady.set(self.imageNode.ready)
                 self.imageNode.setSignal(signal)
                 

@@ -655,7 +655,12 @@ public final class ShareController: ViewController {
         self.currentAccount = account
         self.acountActiveDisposable.set(self.sharedContext.setAccountUserInterfaceInUse(account.id))
         
-        self.peers.set(combineLatest(self.currentAccount.postbox.loadedPeerWithId(self.currentAccount.peerId) |> take(1), self.currentAccount.viewTracker.tailChatListView(groupId: nil, count: 150) |> take(1))
+        self.peers.set(combineLatest(
+            self.currentAccount.postbox.loadedPeerWithId(self.currentAccount.peerId)
+            |> take(1),
+            self.currentAccount.viewTracker.tailChatListView(groupId: .root, count: 150)
+            |> take(1)
+        )
         |> map { accountPeer, view -> ([(RenderedPeer, PeerPresence?)], Peer) in
             var peers: [(RenderedPeer, PeerPresence?)] = []
             for entry in view.0.entries.reversed() {

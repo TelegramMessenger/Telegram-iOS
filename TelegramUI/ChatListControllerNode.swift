@@ -19,7 +19,7 @@ private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHo
 
 final class ChatListControllerNode: ASDisplayNode {
     private let context: AccountContext
-    private let groupId: PeerGroupId?
+    private let groupId: PeerGroupId
     private var presentationData: PresentationData
     
     private var chatListEmptyNode: ChatListEmptyNode?
@@ -43,7 +43,7 @@ final class ChatListControllerNode: ASDisplayNode {
     var requestAddContact: ((String) -> Void)?
     var dismissSelf: (() -> Void)?
     
-    init(context: AccountContext, groupId: PeerGroupId?, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
+    init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
         self.context = context
         self.groupId = groupId
         self.presentationData = presentationData

@@ -934,7 +934,7 @@ final class ContactListNode: ASDisplayNode {
                 |> mapToSignal { query in
                     let foundLocalContacts: Signal<([Peer], [PeerId : PeerPresence]), NoError>
                     if searchChatList {
-                        let foundChatListPeers = context.account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
+                        let foundChatListPeers = context.account.postbox.searchPeers(query: query.lowercased())
                         foundLocalContacts = foundChatListPeers
                         |> mapToSignal { peers -> Signal<([Peer], [PeerId : PeerPresence]), NoError> in
                             var resultPeers: [Peer] = []

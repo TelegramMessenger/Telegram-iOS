@@ -137,7 +137,7 @@ struct ChatListNodeState: Equatable {
     }
 }
 
-private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId?, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionInsertEntry]) -> [ListViewInsertItem] {
+private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionInsertEntry]) -> [ListViewInsertItem] {
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
             case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, presence, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd):
@@ -216,7 +216,7 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
     }
 }
 
-private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId?, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
+private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
             case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, presence, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd):
@@ -253,7 +253,7 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
     }
 }
 
-private func mappedChatListNodeViewListTransition(account: Account, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId?, mode: ChatListNodeMode, transition: ChatListNodeViewTransition) -> ChatListNodeListViewTransition {
+private func mappedChatListNodeViewListTransition(account: Account, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, transition: ChatListNodeViewTransition) -> ChatListNodeListViewTransition {
     return ChatListNodeListViewTransition(chatListView: transition.chatListView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(account: account, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange)
 }
 
@@ -297,6 +297,7 @@ enum ChatListNodeEmtpyState: Equatable {
 final class ChatListNode: ListView {
     private let controlsHistoryPreload: Bool
     private let context: AccountContext
+    private let groupId: PeerGroupId
     private let mode: ChatListNodeMode
     
     private let _ready = ValuePromise<Bool>()
@@ -369,8 +370,9 @@ final class ChatListNode: ListView {
     
     private var hapticFeedback: HapticFeedback?
     
-    init(context: AccountContext, groupId: PeerGroupId?, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
+        self.groupId = groupId
         self.controlsHistoryPreload = controlsHistoryPreload
         self.mode = mode
         
@@ -999,7 +1001,7 @@ final class ChatListNode: ListView {
                 case let .known(value):
                     atTop = value <= 0.0
                     if startedScrollingAtUpperBound && strongSelf.isTracking {
-                        revealHiddenItems = value <= -76.0
+                        revealHiddenItems = value <= -60.0
                     }
             }
             strongSelf.scrolledAtTopValue = atTop
@@ -1205,6 +1207,7 @@ final class ChatListNode: ListView {
     }
     
     private func relativeUnreadChatListIndex(position: ChatListRelativePosition) -> Signal<ChatListIndex?, NoError> {
+        let groupId = self.groupId
         let postbox = self.context.account.postbox
         return self.context.sharedContext.accountManager.transaction { transaction -> Signal<ChatListIndex?, NoError> in
             var filter = true
@@ -1217,7 +1220,7 @@ final class ChatListNode: ListView {
                 }
             }
             return postbox.transaction { transaction -> ChatListIndex? in
-                return transaction.getRelativeUnreadChatListIndex(filtered: filter, position: position)
+                return transaction.getRelativeUnreadChatListIndex(filtered: filter, position: position, groupId: groupId)
             }
         }
         |> switchToLatest
@@ -1334,7 +1337,7 @@ final class ChatListNode: ListView {
                 guard index < 10 else {
                     return
                 }
-                let _ = (chatListViewForLocation(groupId: nil, location: .initial(count: 10), account: self.context.account)
+                let _ = (chatListViewForLocation(groupId: self.groupId, location: .initial(count: 10), account: self.context.account)
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { update in
                     let entries = update.view.entries

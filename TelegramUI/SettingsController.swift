@@ -1363,7 +1363,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             })
             if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
                 let accountContext = AccountContext(sharedContext: sharedContext, account: selectedAccount, limitsConfiguration: LimitsConfiguration.defaultValue)
-                let chatListController = ChatListController(context: accountContext, groupId: nil, controlsHistoryPreload: false, hideNetworkActivityStatus: true)
+                let chatListController = ChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true)
                 return chatListController
                     
             }
