@@ -207,55 +207,6 @@ public struct MessageHistoryViewOrderStatistics: OptionSet {
     public static let locationWithinMonth = MessageHistoryViewOrderStatistics(rawValue: 1 << 1)
 }
 
-private struct MessageMonthIndex: Equatable {
-    let year: Int32
-    let month: Int32
-    
-    var timestamp: Int32 {
-        var timeinfo = tm()
-        timeinfo.tm_year = self.year
-        timeinfo.tm_mon = self.month
-        return Int32(timegm(&timeinfo))
-    }
-    
-    init(year: Int32, month: Int32) {
-        self.year = year
-        self.month = month
-    }
-    
-    init(timestamp: Int32) {
-        var t = Int(timestamp)
-        var timeinfo = tm()
-        gmtime_r(&t, &timeinfo)
-        self.year = timeinfo.tm_year
-        self.month = timeinfo.tm_mon
-    }
-    
-    static func ==(lhs: MessageMonthIndex, rhs: MessageMonthIndex) -> Bool {
-        return lhs.month == rhs.month && lhs.year == rhs.year
-    }
-    
-    var successor: MessageMonthIndex {
-        if self.month == 11 {
-            return MessageMonthIndex(year: self.year + 1, month: 0)
-        } else {
-            return MessageMonthIndex(year: self.year, month: self.month + 1)
-        }
-    }
-    
-    var predecessor: MessageMonthIndex {
-        if self.month == 0 {
-            return MessageMonthIndex(year: self.year - 1, month: 11)
-        } else {
-            return MessageMonthIndex(year: self.year, month: self.month - 1)
-        }
-    }
-}
-
-private func monthUpperBoundIndex(peerId: PeerId, index: MessageMonthIndex) -> MessageIndex {
-    return MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: index.successor.timestamp)
-}
-
 public enum MessageHistoryViewPeerIds: Equatable {
     case single(PeerId)
     case associated(PeerId, MessageId?)
