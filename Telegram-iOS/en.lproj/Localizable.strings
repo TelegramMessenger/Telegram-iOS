@@ -4253,3 +4253,5 @@ Unused sets are archived when you add more.";
 "PasscodeSettings.6DigitCode" = "6-Digit Numeric Code";
 
 "Conversation.ScamWarning" = "⚠️ Warning: Many users reported this account as a scam. Please be careful, especially if it asks you for money.";
+
+"Conversation.ClearChatConfirmation" = "Warning, this will delete your **entire chat history** with %@.";
