@@ -292,7 +292,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     private var peerPresenceManager: PeerPresenceStatusManager?
     
-    var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams)?
+    var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams, countersSize: CGFloat)?
     
     private var isHighlighted: Bool = false
     private var skipFadeout: Bool = false
@@ -887,6 +887,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     badgeSize += mentionBadgeLayout.width + 5.0
                 }
             }
+            let countersSize = badgeSize
             if let currentPinnedIconImage = currentPinnedIconImage {
                 if !badgeSize.isZero {
                     badgeSize += 4.0
@@ -954,7 +955,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
-                    strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params)
+                    strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params, countersSize)
                     if case .groupReference = item.content {
                         strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, layout.contentSize.height - itemHeight, 0.0)
                     }
@@ -1300,7 +1301,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        if let _ = self.item, let params = self.layoutParams?.5 {
+        if let _ = self.item, let params = self.layoutParams?.5, let countersSize = self.layoutParams?.6 {
             let editingOffset: CGFloat
             if let selectableControlNode = self.selectableControlNode {
                 editingOffset = selectableControlNode.bounds.size.width
@@ -1384,15 +1385,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let pinnedIconSize = self.pinnedIconNode.bounds.size
             if pinnedIconSize != CGSize.zero {
-                let mentionBadgeOffset: CGFloat
-                if updatedBadgeFrame.size.width.isZero {
-                    mentionBadgeOffset = contentRect.maxX - pinnedIconSize.width
+                let badgeOffset: CGFloat
+                if countersSize.isZero {
+                    badgeOffset = contentRect.maxX - pinnedIconSize.width
                 } else {
-                    mentionBadgeOffset = contentRect.maxX - updatedBadgeFrame.size.width - 6.0 - pinnedIconSize.width
+                    badgeOffset = contentRect.maxX - updatedBadgeFrame.size.width - 6.0 - pinnedIconSize.width
                 }
                 
                 let badgeBackgroundWidth = pinnedIconSize.width
-                let badgeBackgroundFrame = CGRect(x: mentionBadgeOffset, y: self.pinnedIconNode.frame.origin.y, width: badgeBackgroundWidth, height: pinnedIconSize.height)
+                let badgeBackgroundFrame = CGRect(x: badgeOffset, y: self.pinnedIconNode.frame.origin.y, width: badgeBackgroundWidth, height: pinnedIconSize.height)
                 transition.updateFrame(node: self.pinnedIconNode, frame: badgeBackgroundFrame)
             }
         }
@@ -1494,7 +1495,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         guard let item = self.item, case .groupReference = item.content else {
             return
         }
-        self.avatarNode.playAnimation("archiveAvatar", scale: 0.1653828)
+        self.avatarNode.playAnimation("archiveAvatar", keysToColor: ["box2.box2.Fill 1"], scale: 0.1653828)
     }
     
     override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {

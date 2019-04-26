@@ -204,7 +204,7 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    public func playAnimation(_ name: String, scale: CGFloat) {
+    public func playAnimation(_ name: String, keysToColor: [String]?, scale: CGFloat) {
         guard let theme = self.theme else {
             return
         }
@@ -214,7 +214,7 @@ public final class AvatarNode: ASDisplayNode {
         animationBackgroundNode.image = generateFilledCircleImage(diameter: self.imageNode.frame.width, color: theme.chatList.neutralAvatarColor)
         self.addSubnode(animationBackgroundNode)
         
-        let animationNode = AnimationNode(animation: name, keysToColor: [], color: .white, scale: scale)
+        let animationNode = AnimationNode(animation: name, keysToColor: keysToColor, color: theme.chatList.neutralAvatarColor, scale: scale)
         animationNode.completion = { [weak animationBackgroundNode, weak self] in
             self?.imageNode.isHidden = false
             animationBackgroundNode?.removeFromSupernode()
