@@ -905,16 +905,30 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     public func visibleContentOffset() -> ListViewVisibleContentOffset {
         var offset: ListViewVisibleContentOffset = .unknown
-        var topItemIndexAndFrame: (Int, CGRect) = (-1, CGRect())
+        var topItemIndexAndMinY: (Int, CGFloat) = (-1, 0.0)
+        
+        var currentMinY: CGFloat?
         for itemNode in self.itemNodes {
             if let index = itemNode.index {
-                topItemIndexAndFrame = (index, itemNode.apparentFrame)
+                let updatedMinY: CGFloat
+                if let currentMinY = currentMinY {
+                    if itemNode.apparentFrame.minY < currentMinY {
+                        updatedMinY = itemNode.apparentFrame.minY
+                    } else {
+                        updatedMinY = currentMinY
+                    }
+                } else {
+                    updatedMinY = itemNode.apparentFrame.minY
+                }
+                topItemIndexAndMinY = (index, updatedMinY)
                 break
+            } else if currentMinY == nil {
+                currentMinY = itemNode.apparentFrame.minY
             }
         }
-        if topItemIndexAndFrame.0 == 0 {
-            offset = .known(-(topItemIndexAndFrame.1.minY - self.insets.top))
-        } else if topItemIndexAndFrame.0 == -1 {
+        if topItemIndexAndMinY.0 == 0 {
+            offset = .known(-(topItemIndexAndMinY.1 - self.insets.top))
+        } else if topItemIndexAndMinY.0 == -1 {
             offset = .none
         }
         return offset
