@@ -75,7 +75,33 @@ func stringForMonth(strings: PresentationStrings, month: Int32) -> String {
 }
 
 func stringForMonth(strings: PresentationStrings, month: Int32, ofYear year: Int32) -> String {
-    return stringForMonth(strings: strings, month: month) + " \(1900 + year)"
+    let yearString = "\(1900 + year)"
+    switch month {
+        case 0:
+            return strings.Time_MonthOfYear_m1(yearString).0
+        case 1:
+            return strings.Time_MonthOfYear_m2(yearString).0
+        case 2:
+            return strings.Time_MonthOfYear_m3(yearString).0
+        case 3:
+            return strings.Time_MonthOfYear_m4(yearString).0
+        case 4:
+            return strings.Time_MonthOfYear_m5(yearString).0
+        case 5:
+            return strings.Time_MonthOfYear_m6(yearString).0
+        case 6:
+            return strings.Time_MonthOfYear_m7(yearString).0
+        case 7:
+            return strings.Time_MonthOfYear_m8(yearString).0
+        case 8:
+            return strings.Time_MonthOfYear_m9(yearString).0
+        case 9:
+            return strings.Time_MonthOfYear_m10(yearString).0
+        case 10:
+            return strings.Time_MonthOfYear_m11(yearString).0
+        default:
+            return strings.Time_MonthOfYear_m12(yearString).0
+    }
 }
 
 enum RelativeTimestampFormatDay {
