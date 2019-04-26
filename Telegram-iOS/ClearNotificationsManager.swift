@@ -63,6 +63,34 @@ final class ClearNotificationsManager {
         self.timer?.invalidate()
     }
     
+    func clearAll() {
+        self.getNotificationIds(ClearNotificationIdsCompletion { [weak self] result in
+            Queue.mainQueue().async {
+                var removeKeys: [String] = []
+                for (identifier, _) in result {
+                    removeKeys.append(identifier)
+                }
+                
+                if let strongSelf = self, !removeKeys.isEmpty {
+                    strongSelf.removeNotificationIds(removeKeys)
+                }
+            }
+        })
+        
+        self.getPendingNotificationIds(ClearNotificationIdsCompletion { [weak self] result in
+            Queue.mainQueue().async {
+                var removeKeys: [String] = []
+                for (identifier, _) in result {
+                    removeKeys.append(identifier)
+                }
+                
+                if let strongSelf = self, !removeKeys.isEmpty {
+                    strongSelf.removePendingNotificationIds(removeKeys)
+                }
+            }
+        })
+    }
+    
     func append(_ id: MessageId) {
         if let current = self.ids[id.peerId] {
             if current < id {

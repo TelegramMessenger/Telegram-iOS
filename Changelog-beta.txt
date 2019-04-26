@@ -1,2 +1,3 @@
-Logging into multiple accounts is now supported.
-Tap "Add Account" in Settings — Edit.
+Archive chats by swiping from right.
+
+Swipe down to reveal "Archived Chats".

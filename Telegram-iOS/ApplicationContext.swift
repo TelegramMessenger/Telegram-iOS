@@ -315,7 +315,7 @@ final class AuthorizedApplicationContext {
         self.loggedOutDisposable.set(context.account.loggedOut.start(next: { value in
             if value {
                 Logger.shared.log("ApplicationContext", "account logged out")
-                let _ = logoutFromAccount(id: accountId, accountManager: accountManager).start()
+                let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: false).start()
             }
         }))
         
@@ -630,7 +630,7 @@ final class AuthorizedApplicationContext {
                     if isDropAuth {
                         actions = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.LogoutOptions_LogOut, action: {
                             if let strongSelf = self {
-                                let _ = logoutFromAccount(id: strongSelf.context.account.id, accountManager: strongSelf.context.sharedContext.accountManager).start()
+                                let _ = logoutFromAccount(id: strongSelf.context.account.id, accountManager: strongSelf.context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start()
                             }
                         })]
                     } else {

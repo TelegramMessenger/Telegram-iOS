@@ -29,6 +29,7 @@ final class SharedNotificationManager {
     private var inForeground: Bool = false
     private var inForegroundDisposable: Disposable?
     
+    private var accountManager: AccountManager?
     private var accountsAndKeys: [(Account, Bool, MasterNotificationKey)]?
     private var accountsAndKeysDisposable: Disposable?
     
@@ -198,6 +199,7 @@ final class SharedNotificationManager {
             let aps = payload["aps"] as? [AnyHashable: Any]
             
             var readMessageId: MessageId?
+            var isForcedLogOut = false
             var isCall = false
             var isAnnouncement = false
             var isLocationPolling = false
@@ -223,7 +225,9 @@ final class SharedNotificationManager {
                     }
                 }
                 if let locKey = alert["loc-key"] as? String {
-                    if locKey == "PHONE_CALL_REQUEST" {
+                    if locKey == "SESSION_REVOKE" {
+                        isForcedLogOut = true
+                    } else if locKey == "PHONE_CALL_REQUEST" {
                         isCall = true
                     } else if locKey == "GEO_LIVE_PENDING" {
                         isLocationPolling = true
@@ -366,6 +370,15 @@ final class SharedNotificationManager {
                         }
                     }
                 }
+            }
+            
+            if isForcedLogOut {
+                self.clearNotificationsManager?.clearAll()
+                
+                if let accountManager = self.accountManager {
+                    let _ = logoutFromAccount(id: account.id, accountManager: accountManager, alreadyLoggedOutRemotely: true).start()
+                }
+                return
             }
             
             if notificationRequestId != nil || isMutePolling || isCall {
