@@ -20,7 +20,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     private let effectView: UIVisualEffectView
     
-    private var remainingSeconds = 5
+    private var originalRemainingSeconds: Int
+    private var remainingSeconds: Int
     private var timer: SwiftSignalKit.Timer?
     
     private var validLayout: ContainerViewLayout?
@@ -50,6 +51,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = true
+                self.originalRemainingSeconds = 5
             case let .archivedChat(title, text, undo):
                 self.iconNode = ASImageNode()
                 self.iconNode?.displayWithoutProcessing = true
@@ -64,6 +66,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: title.isEmpty ? Font.medium(17.0) : Font.regular(14.0), textColor: .white)
                 displayUndo = undo
+                self.originalRemainingSeconds = 5
             case let .hidArchive(title, text):
                 self.iconNode = ASImageNode()
                 self.iconNode?.displayWithoutProcessing = true
@@ -73,7 +76,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = true
+                self.originalRemainingSeconds = 3
         }
+        
+        self.remainingSeconds = self.originalRemainingSeconds
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         
@@ -169,7 +175,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     func renewWithCurrentContent() {
         self.timer?.invalidate()
         self.timer = nil
-        self.remainingSeconds = 5
+        self.remainingSeconds = self.originalRemainingSeconds
         self.checkTimer()
     }
     
