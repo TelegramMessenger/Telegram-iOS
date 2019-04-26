@@ -212,6 +212,8 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
             case let .GroupReferenceEntry(index, presentationData, groupId, peer, message, editing, unreadState, revealed, hiddenByDefault):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, peer: peer, message: message, unreadState: unreadState, hiddenByDefault: hiddenByDefault), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, hiddenOffset: hiddenByDefault && !revealed, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .ArchiveIntro(presentationData):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
         }
     }
 }
@@ -249,6 +251,8 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
             case let .GroupReferenceEntry(index, presentationData, groupId, peer, message, editing, unreadState, revealed, hiddenByDefault):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, peer: peer, message: message, unreadState: unreadState, hiddenByDefault: hiddenByDefault), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, hiddenOffset: hiddenByDefault && !revealed, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .ArchiveIntro(presentationData):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
         }
     }
 }
@@ -501,13 +505,29 @@ final class ChatListNode: ListView {
         }
         |> distinctUntilChanged
         
+        let displayArchiveIntro: Signal<Bool, NoError>
+        if Namespaces.PeerGroup.archive == groupId {
+            displayArchiveIntro = context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.archiveIntroDismissedKey())
+            |> map { entry -> Bool in
+                if let value = entry.value as? ApplicationSpecificVariantNotice {
+                    return !value.value
+                } else {
+                    return true
+                }
+            }
+            |> distinctUntilChanged
+        } else {
+            displayArchiveIntro = .single(false)
+        }
+        
         let currentPeerId: PeerId = context.account.peerId
         
-        let chatListNodeViewTransition = combineLatest(hideArchivedFolderByDefault, savedMessagesPeer, chatListViewUpdate, self.statePromise.get()) |> mapToQueue { (hideArchivedFolderByDefault, savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
+        let chatListNodeViewTransition = combineLatest(hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, chatListViewUpdate, self.statePromise.get())
+        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, hideArchivedFolderByDefault: hideArchivedFolderByDefault, mode: mode)
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, mode: mode)
             let entries = rawEntries.filter { entry in
                 switch entry {
                 case let .PeerEntry(_, _, _, _, _, _, peer, _, _, _, _, _, _, _):
@@ -858,7 +878,7 @@ final class ChatListNode: ListView {
                             break
                     }
                     
-                    if let _ = fromEntry.index.pinningIndex {
+                    if let _ = fromEntry.sortIndex.pinningIndex {
                         return strongSelf.context.account.postbox.transaction { transaction -> Bool in
                             var itemIds = transaction.getPinnedItemIds(groupId: groupId)
                             
@@ -1085,7 +1105,7 @@ final class ChatListNode: ListView {
                     if case .chatList = strongSelf.mode {
                         let entryCount = transition.chatListView.filteredEntries.count
                         if entryCount >= 1 {
-                            if transition.chatListView.filteredEntries[entryCount - 1].index.pinningIndex != nil {
+                            if transition.chatListView.filteredEntries[entryCount - 1].sortIndex.pinningIndex != nil {
                                 pinnedOverscroll = true
                             }
                         }

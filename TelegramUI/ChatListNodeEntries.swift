@@ -6,48 +6,16 @@ enum ChatListNodeEntryId: Hashable {
     case Hole(Int64)
     case PeerId(Int64)
     case GroupId(PeerGroupId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .Hole(peerId):
-                return peerId.hashValue
-            case let .PeerId(peerId):
-                return peerId.hashValue
-            case let .GroupId(groupId):
-                return groupId.hashValue
-        }
-    }
-    
-    static func ==(lhs: ChatListNodeEntryId, rhs: ChatListNodeEntryId) -> Bool {
-        switch lhs {
-            case let .Hole(id):
-                if case .Hole(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .PeerId(id):
-                if case .PeerId(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .GroupId(groupId):
-                if case .GroupId(groupId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
+    case ArchiveIntro
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {
     case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
     case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, peer: RenderedPeer, message: Message?, editing: Bool, unreadState: PeerGroupUnreadCountersCombinedSummary, revealed: Bool, hiddenByDefault: Bool)
+    case ArchiveIntro(presentationData: ChatListPresentationData)
     
-    var index: ChatListIndex {
+    var sortIndex: ChatListIndex {
         switch self {
             case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 return index
@@ -55,6 +23,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
             case let .GroupReferenceEntry(index, _, _, _, _, _, _, _, _):
                 return index
+            case .ArchiveIntro:
+                return ChatListIndex.absoluteUpperBound
         }
     }
     
@@ -66,11 +36,13 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return .Hole(Int64(hole.index.id.id))
             case let .GroupReferenceEntry(_, _, groupId, _, _, _, _, _, _):
                 return .GroupId(groupId)
+            case .ArchiveIntro:
+                return .ArchiveIntro
         }
     }
     
     static func <(lhs: ChatListNodeEntry, rhs: ChatListNodeEntry) -> Bool {
-        return lhs.index < rhs.index
+        return lhs.sortIndex < rhs.sortIndex
     }
     
     static func ==(lhs: ChatListNodeEntry, rhs: ChatListNodeEntry) -> Bool {
@@ -192,6 +164,15 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
+            case let .ArchiveIntro(lhsPresentationData):
+                if case let .ArchiveIntro(rhsPresentationData) = rhs {
+                    if lhsPresentationData !== rhsPresentationData {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -204,7 +185,7 @@ private func offsetPinnedIndex(_ index: ChatListIndex, offset: UInt16) -> ChatLi
     }
 }
 
-func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, savedMessagesPeer: Peer?, hideArchivedFolderByDefault: Bool, mode: ChatListNodeMode) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, savedMessagesPeer: Peer?, hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     var pinnedIndexOffset: UInt16 = 0
@@ -278,6 +259,10 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                 if pinningIndex != 0 {
                     pinningIndex -= 1
                 }
+            }
+            
+            if displayArchiveIntro {
+                result.append(.ArchiveIntro(presentationData: state.presentationData))
             }
         }
     }

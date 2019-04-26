@@ -127,6 +127,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case notificationsPermissionWarning = 8
     case volumeButtonToUnmuteTip = 9
     case archiveChatTips = 10
+    case archiveIntroDismissed = 11
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -150,6 +151,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func secretChatLinkPreviews() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.secretChatLinkPreviews.key)
+    }
+    
+    static func archiveIntroDismissed() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.archiveIntroDismissed.key)
     }
     
     static func chatMediaMediaRecordingTips() -> NoticeEntryKey {
@@ -303,6 +308,14 @@ public struct ApplicationSpecificNotice {
             
             return Int(previousValue)
         }
+    }
+    
+    public static func setArchiveIntroDismissed(transaction: AccountManagerModifier, value: Bool) {
+        transaction.setNotice(ApplicationSpecificNoticeKeys.archiveIntroDismissed(), ApplicationSpecificVariantNotice(value: value))
+    }
+    
+    static func archiveIntroDismissedKey() -> NoticeEntryKey {
+        return ApplicationSpecificNoticeKeys.archiveIntroDismissed()
     }
     
     static func getProfileCallTips(accountManager: AccountManager) -> Signal<Int32, NoError> {

@@ -1177,6 +1177,7 @@
 		D0FA08C8204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C7204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift */; };
 		D0FA08CA2049BEAC00DD23FC /* ChatEmptyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C92049BEAC00DD23FC /* ChatEmptyNode.swift */; };
 		D0FB87B21F7C4C19004DE005 /* FetchMediaUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FB87B11F7C4C19004DE005 /* FetchMediaUtils.swift */; };
+		D0FBE84F2273395C00B33B52 /* ChatListArchiveInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FBE84E2273395C00B33B52 /* ChatListArchiveInfoItem.swift */; };
 		D0FC194D201F82A000FEDBB2 /* OpenResolvedUrl.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FC194C201F82A000FEDBB2 /* OpenResolvedUrl.swift */; };
 		D0FC408E1D5B8E7500261D9D /* TelegramUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FC408D1D5B8E7500261D9D /* TelegramUITests.swift */; };
 		D0FC4FBB1F751E8900B7443F /* SelectablePeerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FC4FBA1F751E8900B7443F /* SelectablePeerNode.swift */; };
@@ -2443,6 +2444,7 @@
 		D0FA34FE1EA5834C00E56FFA /* ItemListControllerSegmentedTitleView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListControllerSegmentedTitleView.swift; sourceTree = "<group>"; };
 		D0FA35001EA6127000E56FFA /* StorageUsageController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StorageUsageController.swift; sourceTree = "<group>"; };
 		D0FB87B11F7C4C19004DE005 /* FetchMediaUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchMediaUtils.swift; sourceTree = "<group>"; };
+		D0FBE84E2273395C00B33B52 /* ChatListArchiveInfoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListArchiveInfoItem.swift; sourceTree = "<group>"; };
 		D0FC194C201F82A000FEDBB2 /* OpenResolvedUrl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenResolvedUrl.swift; sourceTree = "<group>"; };
 		D0FC40821D5B8E7400261D9D /* TelegramUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramUI.h; sourceTree = "<group>"; };
 		D0FC40831D5B8E7400261D9D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -3576,6 +3578,7 @@
 				D07CFF781DCA226F00761F81 /* ChatListNode.swift */,
 				D0F69DFB1D6B8A880046BCD6 /* ChatListHoleItem.swift */,
 				D0F69DFC1D6B8A880046BCD6 /* ChatListItem.swift */,
+				D0FBE84E2273395C00B33B52 /* ChatListArchiveInfoItem.swift */,
 				D0AA29AD1F72770D00C050AC /* ChatListItemStrings.swift */,
 				D0F69DFD1D6B8A880046BCD6 /* ChatListSearchItem.swift */,
 				D07CFF7A1DCA24BF00761F81 /* ChatListNodeEntries.swift */,
@@ -4590,7 +4593,6 @@
 				D0F69DE71D6B8A590046BCD6 /* Authorization */,
 				D05174C11EAE582A00A1BF36 /* Root */,
 				D0F69DF61D6B8A720046BCD6 /* Chat List */,
-				D017494F1E1067C00057C89A /* Hashtag Search */,
 				D0F69E0D1D6B8AB90046BCD6 /* Chat */,
 				D04281F2200E5A70009DDE36 /* Chat Recent Actions */,
 				D0AB262D21C3D3CE008F6685 /* Poll */,
@@ -4642,6 +4644,7 @@
 				D0575AEA1E9FD579006F2541 /* ChatListTitleLockView.swift */,
 				D07E413A208A432100FCA8F0 /* ChatListTitleProxyNode.swift */,
 				D06E4C302134910400088087 /* ChatListEmptyNode.swift */,
+				D017494F1E1067C00057C89A /* Hashtag Search */,
 				D0C683FB21AD797F00A6CAD5 /* ChatListSelection.swift */,
 				D0F69E051D6B8A8B0046BCD6 /* Search */,
 			);
@@ -5854,6 +5857,7 @@
 				D0EC6D9D1EB9F58900EBF1C3 /* ChatMessageTextBubbleContentNode.swift in Sources */,
 				D0E9BA2B1F0557A600F079A4 /* STPFormEncoder.m in Sources */,
 				D01BAA1C1ECC92F700295217 /* CallListViewTransition.swift in Sources */,
+				D0FBE84F2273395C00B33B52 /* ChatListArchiveInfoItem.swift in Sources */,
 				09F664D021EBCFB900AB7E26 /* WallpaperCropNode.swift in Sources */,
 				D097C26C20DD1EA5007BB4B8 /* OverlayStatusController.swift in Sources */,
 				D0EC6D9E1EB9F58900EBF1C3 /* ChatMessageWebpageBubbleContentNode.swift in Sources */,
