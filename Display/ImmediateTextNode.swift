@@ -18,6 +18,8 @@ public class ImmediateTextNode: TextNode {
     
     public var linkHighlightColor: UIColor?
     
+    public var trailingLineWidth: CGFloat?
+    
     public var highlightAttributeAction: (([NSAttributedStringKey: Any]) -> NSAttributedStringKey?)? {
         didSet {
             if self.isNodeLoaded {
@@ -33,6 +35,11 @@ public class ImmediateTextNode: TextNode {
         let makeLayout = TextNode.asyncLayout(self)
         let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: nil, insets: self.insets))
         let _ = apply()
+        if layout.numberOfLines > 1 {
+            self.trailingLineWidth = layout.trailingLineWidth
+        } else {
+            self.trailingLineWidth = nil
+        }
         return layout.size
     }
     
