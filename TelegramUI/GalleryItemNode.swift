@@ -49,6 +49,10 @@ open class GalleryItemNode: ASDisplayNode {
         return .single(nil)
     }
     
+    open func rightBarButtonItems() -> Signal<[UIBarButtonItem]?, NoError> {
+        return .single(nil)
+    }
+    
     open func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
         return .single(nil)
     }

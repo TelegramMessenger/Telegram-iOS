@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import PassKit
+import Lottie
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -125,6 +126,13 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     let ext = (fileName as NSString).pathExtension.lowercased()
                     if ext == "wav" || ext == "opus" {
                         return .audio(file)
+                    } else if ext == "json", let fileSize = file.size, fileSize < 1024 * 1024 {
+                        if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let _ = LOTComposition(filePath: path) {
+                            let gallery = GalleryController(context: context, source: .standaloneMessage(message), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                                navigationController?.replaceTopController(controller, animated: false, ready: ready)
+                                }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
+                            return .gallery(gallery)
+                        }
                     }
                     #if DEBUG
                     if ext == "mkv" {

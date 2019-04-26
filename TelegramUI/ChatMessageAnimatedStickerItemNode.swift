@@ -141,7 +141,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         for media in item.message.media {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile != telegramFile {
-                    let signal = chatMessageAnimatedStickerDatas(postbox: item.context.account.postbox, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: telegramFile), synchronousLoad: false)
+                    let signal = chatMessageAnimationData(postbox: item.context.account.postbox, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: telegramFile), synchronousLoad: false)
                     |> mapToSignal { data, completed -> Signal<Data, NoError> in
                         if completed, let data = data {
                             return .single(data)

@@ -166,7 +166,10 @@ func galleryItemForEntry(context: AccountContext, presentationData: Presentation
                 let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities)
                 return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions)
             } else {
-                if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
+                if let fileName = file.fileName, (fileName as NSString).pathExtension.lowercased() == "json" {
+                    return ChatAnimationGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
+                }
+                else if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
                     var pixelsCount: Int = 0
                     if let dimensions = file.dimensions {
                         pixelsCount = Int(dimensions.width) * Int(dimensions.height)
@@ -317,6 +320,7 @@ class GalleryController: ViewController {
     private let centralItemTitle = Promise<String>()
     private let centralItemTitleView = Promise<UIView?>()
     private let centralItemRightBarButtonItem = Promise<UIBarButtonItem?>()
+    private let centralItemRightBarButtonItems = Promise<[UIBarButtonItem]?>()
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
     private let centralItemFooterContentNode = Promise<GalleryFooterContentNode?>()
     private let centralItemAttributesDisposable = DisposableSet();
@@ -499,6 +503,10 @@ class GalleryController: ViewController {
         
         self.centralItemAttributesDisposable.add(self.centralItemRightBarButtonItem.get().start(next: { [weak self] rightBarButtonItem in
             self?.navigationItem.rightBarButtonItem = rightBarButtonItem
+        }))
+        
+        self.centralItemAttributesDisposable.add(self.centralItemRightBarButtonItems.get().start(next: { [weak self] rightBarButtonItems in
+            self?.navigationItem.rightBarButtonItems = rightBarButtonItems
         }))
         
         self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode in
@@ -869,6 +877,7 @@ class GalleryController: ViewController {
                         strongSelf.centralItemTitle.set(node.title())
                         strongSelf.centralItemTitleView.set(node.titleView())
                         strongSelf.centralItemRightBarButtonItem.set(node.rightBarButtonItem())
+                        strongSelf.centralItemRightBarButtonItems.set(node.rightBarButtonItems())
                         strongSelf.centralItemNavigationStyle.set(node.navigationStyle())
                         strongSelf.centralItemFooterContentNode.set(node.footerContent())
                     }
@@ -906,6 +915,7 @@ class GalleryController: ViewController {
             self.centralItemTitle.set(centralItemNode.title())
             self.centralItemTitleView.set(centralItemNode.titleView())
             self.centralItemRightBarButtonItem.set(centralItemNode.rightBarButtonItem())
+            self.centralItemRightBarButtonItems.set(centralItemNode.rightBarButtonItems())
             self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
             self.centralItemFooterContentNode.set(centralItemNode.footerContent())
             

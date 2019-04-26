@@ -4,17 +4,26 @@ import Lottie
 
 final class AnimationNode : ASDisplayNode {
     private let scale: CGFloat
+    var speed: CGFloat = 1.0 {
+        didSet {
+            if let animationView = animationView() {
+                animationView.animationSpeed = speed
+            }
+        }
+    }
+    
     var played = false
     var completion: (() -> Void)?
     
-    init(animation: String, keysToColor: [String]?, color: UIColor, scale: CGFloat) {
+    init(animation: String? = nil, keysToColor: [String]? = nil, color: UIColor = .black, scale: CGFloat = 1.0) {
         self.scale = scale
         
         super.init()
         
         self.setViewBlock({
-            if let url = frameworkBundle.url(forResource: animation, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
+            if let animation = animation, let url = frameworkBundle.url(forResource: animation, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
                 let view = LOTAnimationView(model: composition, in: frameworkBundle)
+                view.animationSpeed = self.speed
                 view.backgroundColor = .clear
                 view.isOpaque = false
                 
@@ -27,9 +36,19 @@ final class AnimationNode : ASDisplayNode {
                 
                 return view
             } else {
-                return UIView()
+                return LOTAnimationView()
             }
         })
+    }
+    
+    func setAnimation(name: String) {
+        if let url = frameworkBundle.url(forResource: name, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
+            self.animationView()?.sceneModel = composition
+        }
+    }
+    
+    func setAnimation(json: [AnyHashable: Any]) {
+        self.animationView()?.setAnimation(json: json)
     }
     
     func animationView() -> LOTAnimationView? {
@@ -42,6 +61,13 @@ final class AnimationNode : ASDisplayNode {
             animationView.play { [weak self] _ in
                 self?.completion?()
             }
+        }
+    }
+    
+    func loop() {
+        if let animationView = animationView() {
+            animationView.loopAnimation = true
+            animationView.play()
         }
     }
     

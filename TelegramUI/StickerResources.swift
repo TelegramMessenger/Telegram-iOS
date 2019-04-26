@@ -131,7 +131,7 @@ private func chatMessageStickerPackThumbnailData(postbox: Postbox, representatio
     }
 }
 
-func chatMessageAnimatedStickerDatas(postbox: Postbox, fileReference: FileMediaReference, synchronousLoad: Bool) -> Signal<(Data?, Bool), NoError> {
+func chatMessageAnimationData(postbox: Postbox, fileReference: FileMediaReference, synchronousLoad: Bool) -> Signal<(Data?, Bool), NoError> {
     let resource = fileReference.media.resource
     
     let maybeFetched = postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)

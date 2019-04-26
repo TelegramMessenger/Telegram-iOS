@@ -160,7 +160,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContext, presentationData: PresentationData,performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         
         self.imageNode = TransformImageNode()

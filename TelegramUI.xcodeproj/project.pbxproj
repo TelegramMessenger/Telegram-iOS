@@ -11,6 +11,7 @@
 		0900678F21ED8E0E00530762 /* HexColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0900678E21ED8E0E00530762 /* HexColor.swift */; };
 		0902838821931D960067EFBD /* LanguageSuggestionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0902838721931D960067EFBD /* LanguageSuggestionController.swift */; };
 		0902838D2194AEB90067EFBD /* ImageTransparency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0902838C2194AEB90067EFBD /* ImageTransparency.swift */; };
+		090A22172273713000694CB0 /* ChatAnimationGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090A22162273713000694CB0 /* ChatAnimationGalleryItem.swift */; };
 		090B48C82200BCA8005083FA /* WallpaperUploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */; };
 		090E63E62195880F00E3C035 /* ContactAddItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63E52195880F00E3C035 /* ContactAddItem.swift */; };
 		090E63EE2196FE3A00E3C035 /* OpenAddContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */; };
@@ -1193,6 +1194,7 @@
 		0900678E21ED8E0E00530762 /* HexColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HexColor.swift; sourceTree = "<group>"; };
 		0902838721931D960067EFBD /* LanguageSuggestionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageSuggestionController.swift; sourceTree = "<group>"; };
 		0902838C2194AEB90067EFBD /* ImageTransparency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTransparency.swift; sourceTree = "<group>"; };
+		090A22162273713000694CB0 /* ChatAnimationGalleryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAnimationGalleryItem.swift; sourceTree = "<group>"; };
 		090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperUploadManager.swift; sourceTree = "<group>"; };
 		090E63E52195880F00E3C035 /* ContactAddItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactAddItem.swift; sourceTree = "<group>"; };
 		090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAddContact.swift; sourceTree = "<group>"; };
@@ -4844,6 +4846,7 @@
 				D0104F2B1F471EEB004E4881 /* InstantPageGalleryFooterContentNode.swift */,
 				D0A8BBA01F61EE83000F03FD /* UniversalVideoGalleryItem.swift */,
 				09F79A0221C8225600820234 /* WebSearchVideoGalleryItem.swift */,
+				090A22162273713000694CB0 /* ChatAnimationGalleryItem.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -5556,6 +5559,7 @@
 				09CE95002232729A00A7D2C3 /* StickerPaneSearchContentNode.swift in Sources */,
 				D053DADC201AAAB100993D32 /* ChatTextInputMenu.swift in Sources */,
 				0962E66321B3513100245FD9 /* WebSearchControllerNode.swift in Sources */,
+				090A22172273713000694CB0 /* ChatAnimationGalleryItem.swift in Sources */,
 				D0EC6D1A1EB9F58800EBF1C3 /* FFMpegMediaFrameSourceContextHelpers.swift in Sources */,
 				D0EC6D1B1EB9F58800EBF1C3 /* FFMpegMediaVideoFrameDecoder.swift in Sources */,
 				D01C06AF1FBB461E001561AB /* JoinLinkPreviewController.swift in Sources */,
