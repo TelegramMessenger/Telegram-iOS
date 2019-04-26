@@ -1279,7 +1279,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
             
             if transition.flashIndicators {
-                self.flashHeaderItems()
+                //self.flashHeaderItems()
             }
         }
     }

@@ -433,10 +433,19 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         if case .ended = recognizer.state, let gesture = recognizer.lastRecognizedGestureAndLocation?.0, case .tap = gesture {
             let location = recognizer.location(in: self.view)
             var selectedOption: Int?
-            for i in 0 ..< self.optionNodes.count {
-                self.optionNodes[i].setHighlighted(false)
-                if self.optionNodes[i].frame.contains(location) {
-                    selectedOption = i
+            if self.isLeft {
+                for i in (0 ..< self.optionNodes.count).reversed() {
+                    self.optionNodes[i].setHighlighted(false)
+                    if self.optionNodes[i].frame.contains(location) {
+                        selectedOption = i
+                    }
+                }
+            } else {
+                for i in 0 ..< self.optionNodes.count {
+                    self.optionNodes[i].setHighlighted(false)
+                    if self.optionNodes[i].frame.contains(location) {
+                        selectedOption = i
+                    }
                 }
             }
             if let selectedOption = selectedOption {

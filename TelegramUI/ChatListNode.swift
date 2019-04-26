@@ -427,13 +427,19 @@ final class ChatListNode: ListView {
                 }
             }
         }, setItemPinned: { [weak self] itemId, _ in
-            let _ = (toggleItemPinned(postbox: context.account.postbox, groupId: groupId, itemId: itemId) |> deliverOnMainQueue).start(next: { result in
+            let _ = (toggleItemPinned(postbox: context.account.postbox, groupId: groupId, itemId: itemId)
+            |> deliverOnMainQueue).start(next: { result in
                 if let strongSelf = self {
                     switch result {
                         case .done:
                             break
-                        case .limitExceeded:
-                            strongSelf.presentAlert?(strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("5").0)
+                        case let .limitExceeded(maxCount):
+                            strongSelf.presentAlert?(strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").0)
+                    }
+                    strongSelf.updateState { state in
+                        var state = state
+                        state.peerIdWithRevealedOptions = nil
+                        return state
                     }
                 }
             })
