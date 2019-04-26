@@ -67,7 +67,8 @@ enum AccountStateMutationOperation {
     case UpdateMedia(MediaId, Media?)
     case ReadInbox(MessageId)
     case ReadOutbox(MessageId, Int32?)
-    case ResetReadState(PeerId, MessageId.Namespace, MessageId.Id, MessageId.Id, MessageId.Id, Int32, Bool?)
+    case ResetReadState(peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, maxOutgoingReadId: MessageId.Id, maxKnownId: MessageId.Id, count: Int32, markedUnread: Bool?)
+    case ResetIncomingReadState(groupId: PeerGroupId, peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, count: Int32, pts: Int32)
     case UpdatePeerChatUnreadMark(PeerId, MessageId.Namespace, Bool)
     case ResetMessageTagSummary(PeerId, MessageId.Namespace, Int32, MessageHistoryTagNamespaceCountValidityRange)
     case ReadGroupFeedInbox(PeerGroupId, MessageIndex)
@@ -94,7 +95,7 @@ enum AccountStateMutationOperation {
     case UpdateCall(Api.PhoneCall)
     case UpdateLangPack(String, Api.LangPackDifference?)
     case UpdateMinAvailableMessage(MessageId)
-    case UpdatePeerChatInclusion(PeerId, PeerGroupId)
+    case UpdatePeerChatInclusion(peerId: PeerId, groupId: PeerGroupId, changedGroup: Bool)
 }
 
 struct AccountMutableState {
@@ -221,7 +222,11 @@ struct AccountMutableState {
     }
     
     mutating func resetReadState(_ peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, maxOutgoingReadId: MessageId.Id, maxKnownId: MessageId.Id, count: Int32, markedUnread: Bool?) {
-        self.addOperation(.ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread))
+        self.addOperation(.ResetReadState(peerId: peerId, namespace: namespace, maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread))
+    }
+    
+    mutating func resetIncomingReadState(groupId: PeerGroupId, peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, count: Int32, pts: Int32) {
+        self.addOperation(.ResetIncomingReadState(groupId: groupId, peerId: peerId, namespace: namespace, maxIncomingReadId: maxIncomingReadId, count: count, pts: pts))
     }
     
     mutating func updatePeerChatUnreadMark(_ peerId: PeerId, namespace: MessageId.Namespace, value: Bool) {
@@ -282,8 +287,8 @@ struct AccountMutableState {
         self.addOperation(.UpdateMinAvailableMessage(id))
     }
     
-    mutating func updatePeerChatInclusion(peerId: PeerId, groupId: PeerGroupId) {
-        self.addOperation(.UpdatePeerChatInclusion(peerId, groupId))
+    mutating func updatePeerChatInclusion(peerId: PeerId, groupId: PeerGroupId, changedGroup: Bool) {
+        self.addOperation(.UpdatePeerChatInclusion(peerId: peerId, groupId: groupId, changedGroup: changedGroup))
     }
     
     mutating func mergeUsers(_ users: [Api.User]) {
@@ -421,6 +426,13 @@ struct AccountMutableState {
                     self.readInboxMaxIds[messageId.peerId] = messageId
                 }
             case let .ResetReadState(peerId, namespace, maxIncomingReadId, _, _, _, _):
+                let current = self.readInboxMaxIds[peerId]
+                if namespace == Namespaces.Message.Cloud {
+                    if current == nil || current!.id < maxIncomingReadId {
+                        self.readInboxMaxIds[peerId] = MessageId(peerId: peerId, namespace: namespace, id: maxIncomingReadId)
+                    }
+                }
+            case let .ResetIncomingReadState(_, peerId, namespace, maxIncomingReadId, _, _):
                 let current = self.readInboxMaxIds[peerId]
                 if namespace == Namespaces.Message.Cloud {
                     if current == nil || current!.id < maxIncomingReadId {

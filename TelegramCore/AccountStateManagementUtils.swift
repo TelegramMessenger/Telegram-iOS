@@ -960,11 +960,11 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     updatedState.addDisplayAlert(text, isDropAuth: type.hasPrefix("AUTH_KEY_DROP_"))
                 }
             case let .updateReadChannelInbox(_, folderId, channelId, maxId, stillUnreadCount, pts):
-                updatedState.readInbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId))
+                updatedState.resetIncomingReadState(groupId: PeerGroupId(rawValue: folderId ?? 0), peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, maxIncomingReadId: maxId, count: stillUnreadCount, pts: pts)
             case let .updateReadChannelOutbox(channelId, maxId):
                 updatedState.readOutbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId), timestamp: nil)
-            case let .updateReadHistoryInbox(_, folderId, peer, maxId, stillUnreadCount, _, _):
-                updatedState.readInbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
+            case let .updateReadHistoryInbox(_, folderId, peer, maxId, stillUnreadCount, pts, _):
+                updatedState.resetIncomingReadState(groupId: PeerGroupId(rawValue: folderId ?? 0), peerId: peer.peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: maxId, count: stillUnreadCount, pts: pts)
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId), timestamp: updatesDate)
             case let .updateDialogUnreadMark(flags, peer):
@@ -1272,7 +1272,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 for folderPeer in folderPeers {
                     switch folderPeer {
                         case let .folderPeer(peer, folderId):
-                            updatedState.updatePeerChatInclusion(peerId: peer.peerId, groupId: PeerGroupId(rawValue: folderId))
+                            updatedState.updatePeerChatInclusion(peerId: peer.peerId, groupId: PeerGroupId(rawValue: folderId), changedGroup: true)
                     }
                 }
             default:
@@ -1477,7 +1477,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                                 }
                                 
                                 if !isExcludedFromChatList {
-                                    updatedState.updatePeerChatInclusion(peerId: peerId, groupId: PeerGroupId(rawValue: folderId ?? 0))
+                                    updatedState.updatePeerChatInclusion(peerId: peerId, groupId: PeerGroupId(rawValue: folderId ?? 0), changedGroup: false)
                                 }
                                 
                                 let notificationSettings = TelegramPeerNotificationSettings(apiSettings: notifySettings)
@@ -1656,7 +1656,7 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
                         
                         notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
                         
-                        updatedState.updatePeerChatInclusion(peerId: peerId, groupId: groupId)
+                        updatedState.updatePeerChatInclusion(peerId: peerId, groupId: groupId, changedGroup: false)
                     }
                     
                     for message in messages {
@@ -1984,7 +1984,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2091,6 +2091,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         }
     }
     
+    var invalidateGroupStats = Set<PeerGroupId>()
+    
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
             case let .AddMessages(messages, location):
@@ -2176,7 +2178,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
                 }
                 transaction.deleteMessagesInRange(peerId: id.peerId, namespace: id.namespace, minId: 1, maxId: id.id)
-            case let .UpdatePeerChatInclusion(peerId, groupId):
+            case let .UpdatePeerChatInclusion(peerId, groupId, changedGroup):
                 let currentInclusion = transaction.getPeerChatListInclusion(peerId)
                 var currentPinningIndex: UInt16?
                 var currentMinTimestamp: Int32?
@@ -2188,6 +2190,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         break
                 }
                 transaction.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessagesOrOneOf(groupId: groupId, pinningIndex: currentPinningIndex, minTimestamp: currentMinTimestamp))
+                if changedGroup {
+                    invalidateGroupStats.insert(Namespaces.PeerGroup.archive)
+                }
             case let .EditMessage(id, message):
                 transaction.updateMessage(id, update: { previousMessage in
                     var updatedFlags = message.flags
@@ -2248,6 +2253,49 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     }
                 }
                 transaction.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnreadValue)]])
+            case let .ResetIncomingReadState(groupId, peerId, namespace, maxIncomingReadId, count, pts):
+                var ptsMatchesState = false
+                if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                    if let state = transaction.getState() as? AuthorizedAccountState {
+                        if state.state?.pts == pts {
+                            ptsMatchesState = true
+                        }
+                    }
+                } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                    if let state = transaction.getPeerChatState(peerId) as? ChannelState {
+                        if state.pts == pts {
+                            ptsMatchesState = true
+                        }
+                    }
+                }
+                
+                if ptsMatchesState {
+                    var updatedStates: [(MessageId.Namespace, PeerReadState)] = transaction.getPeerReadStates(peerId) ?? []
+                    var foundState = false
+                    for i in 0 ..< updatedStates.count {
+                        if updatedStates[i].0 == namespace {
+                            switch updatedStates[i].1 {
+                                case let .idBased(currentMaxIncomingReadId, maxOutgoingReadId, maxKnownId, _, markedUnread):
+                                    updatedStates[i].1 = .idBased(maxIncomingReadId: max(currentMaxIncomingReadId, maxIncomingReadId), maxOutgoingReadId: maxOutgoingReadId, maxKnownId: max(maxKnownId, maxIncomingReadId), count: count, markedUnread: markedUnread)
+                                    foundState = true
+                                case .indexBased:
+                                    assertionFailure()
+                                    break
+                            }
+                            break
+                        }
+                    }
+                    if !foundState {
+                        updatedStates.append((namespace, .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxIncomingReadId, maxKnownId: maxIncomingReadId, count: count, markedUnread: false)))
+                        invalidateGroupStats.insert(groupId)
+                    }
+                    let stateDict = Dictionary(updatedStates, uniquingKeysWith: { lhs, _ in lhs })
+                    transaction.resetIncomingReadStates([peerId: stateDict])
+                } else {
+                    transaction.applyIncomingReadMaxId(MessageId(peerId: peerId, namespace: namespace, id: maxIncomingReadId))
+                    transaction.setNeedsIncomingReadStateSynchronization(peerId)
+                    invalidateGroupStats.insert(groupId)
+                }
             case let .UpdatePeerChatUnreadMark(peerId, namespace, value):
                 transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: value, interactive: false)
             case let .ResetMessageTagSummary(peerId, namespace, count, range):
@@ -2605,6 +2653,10 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         for file in gifFiles {
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
         }
+    }
+    
+    for groupId in invalidateGroupStats {
+        transaction.setNeedsPeerGroupMessageStatsSynchronization(groupId: groupId, namespace: Namespaces.Message.Cloud)
     }
     
     for chatPeerId in updatedSecretChatTypingActivities {
