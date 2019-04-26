@@ -351,13 +351,23 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         }
     }
     
-    func updateRevealOffsetInternal(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateRevealOffsetInternal(offset: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
         self.revealOffset = offset
         guard let (size, leftInset, rightInset) = self.validLayout else {
             return
         }
         
+        var leftRevealCompleted = true
+        var rightRevealCompleted = true
+        let intermediateCompletion = {
+            if leftRevealCompleted && rightRevealCompleted {
+                completion?()
+            }
+        }
+        
         if let leftRevealNode = self.leftRevealNode {
+            leftRevealCompleted = false
+            
             let revealSize = leftRevealNode.bounds.size
             
             let revealFrame = CGRect(origin: CGPoint(x: min(self.revealOffset - revealSize.width, 0.0), y: 0.0), size: revealSize)
@@ -369,12 +379,20 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
                 self.leftRevealNode = nil
                 transition.updateFrame(node: leftRevealNode, frame: revealFrame, completion: { [weak leftRevealNode] _ in
                     leftRevealNode?.removeFromSupernode()
+                    
+                    leftRevealCompleted = true
+                    intermediateCompletion()
                 })
             } else {
-                transition.updateFrame(node: leftRevealNode, frame: revealFrame)
+                transition.updateFrame(node: leftRevealNode, frame: revealFrame, completion: { _ in
+                    leftRevealCompleted = true
+                    intermediateCompletion()
+                })
             }
         }
         if let rightRevealNode = self.rightRevealNode {
+            rightRevealCompleted = false
+            
             let revealSize = rightRevealNode.bounds.size
             
             let revealFrame = CGRect(origin: CGPoint(x: min(size.width, size.width + self.revealOffset), y: 0.0), size: revealSize)
@@ -385,9 +403,15 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
                 self.rightRevealNode = nil
                 transition.updateFrame(node: rightRevealNode, frame: revealFrame, completion: { [weak rightRevealNode] _ in
                     rightRevealNode?.removeFromSupernode()
+                    
+                    rightRevealCompleted = true
+                    intermediateCompletion()
                 })
             } else {
-                transition.updateFrame(node: rightRevealNode, frame: revealFrame)
+                transition.updateFrame(node: rightRevealNode, frame: revealFrame, completion: { _ in
+                    rightRevealCompleted = true
+                    intermediateCompletion()
+                })
             }
         }
         let allowAnyDirection = !self.revealOptions.left.isEmpty || !offset.isZero
@@ -435,6 +459,15 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
             } else if !self.revealOffset.isZero {
                 self.updateRevealOffsetInternal(offset: 0.0, transition: transition)
             }
+        }
+    }
+    
+    func animateRevealOptionsFill() {
+        if let validLayout = self.validLayout {
+            self.layer.allowsGroupOpacity = true
+            self.updateRevealOffsetInternal(offset: -validLayout.0.width - 74.0, transition: .animated(duration: 0.2, curve: .spring), completion: {
+                self.layer.allowsGroupOpacity = false
+            })
         }
     }
     

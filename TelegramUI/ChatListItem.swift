@@ -151,17 +151,17 @@ private let textFont = Font.regular(15.0)
 private let dateFont = Font.regular(14.0)
 private let badgeFont = Font.regular(14.0)
 
-private let pinIcon = ItemListRevealOptionIcon.animation(animation: "anim_pin", offset: 0.0, keysToColor: nil)
-private let unpinIcon = ItemListRevealOptionIcon.animation(animation: "anim_unpin", offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"])
-private let muteIcon = ItemListRevealOptionIcon.animation(animation: "anim_mute", offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"])
-private let unmuteIcon = ItemListRevealOptionIcon.animation(animation: "anim_unmute", offset: 0.0, keysToColor: nil)
-private let deleteIcon = ItemListRevealOptionIcon.animation(animation: "anim_delete", offset: 0.0, keysToColor: nil)
+private let pinIcon = ItemListRevealOptionIcon.animation(animation: "pin", offset: 0.0, keysToColor: nil)
+private let unpinIcon = ItemListRevealOptionIcon.animation(animation: "unpin", offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"])
+private let muteIcon = ItemListRevealOptionIcon.animation(animation: "mute", offset: 0.0, keysToColor: ["close.close.Stroke 2"])
+private let unmuteIcon = ItemListRevealOptionIcon.animation(animation: "unmute", offset: 0.0, keysToColor: nil)
+private let deleteIcon = ItemListRevealOptionIcon.animation(animation: "delete", offset: 0.0, keysToColor: ["BinTex1.BinTex1.Fill 1", "BinTex2.BinTex2.Fill 1", "BinTex3.BinTex3.Fill 1"])
 private let groupIcon = ItemListRevealOptionIcon.animation(animation: "anim_group", offset: 0.0, keysToColor: nil)
 private let ungroupIcon = ItemListRevealOptionIcon.animation(animation: "anim_ungroup", offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"])
-private let readIcon = ItemListRevealOptionIcon.animation(animation: "anim_read", offset: 0.0, keysToColor: nil)
-private let unreadIcon = ItemListRevealOptionIcon.animation(animation: "anim_unread", offset: 0.0, keysToColor: ["Oval.Oval.Stroke 1"])
-private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_archive", offset: 1.0, keysToColor: nil)
-private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_unarchive", offset: 1.0, keysToColor: nil)
+private let readIcon = ItemListRevealOptionIcon.animation(animation: "read", offset: 0.0, keysToColor: ["Oval.Oval.Stroke 1"])
+private let unreadIcon = ItemListRevealOptionIcon.animation(animation: "unread", offset: 0.0, keysToColor: ["Oval.Oval.Stroke 1"])
+private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "archive", offset: 1.0, keysToColor: ["box2.box2.Fill 1"])
+private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "unarchive", offset: 1.0, keysToColor: ["box2.box2.Fill 1"])
 private let hideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", offset: 0.0, keysToColor: nil)
 private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "anim_unhide", offset: 0.0, keysToColor: nil)
 
@@ -187,9 +187,9 @@ private func revealOptions(strings: PresentationStrings, theme: PresentationThem
     if !isEditing {
         if case .group = groupId {
             if isPinned {
-                options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+                options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
             } else {
-                options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+                options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
             }
         } else {
             if let isMuted = isMuted {
@@ -206,9 +206,9 @@ private func revealOptions(strings: PresentationStrings, theme: PresentationThem
     }
     if !isEditing {
         if case .root = groupId {
-            options.append(ItemListRevealOption(key: RevealOptionKey.archive.rawValue, title: strings.ChatList_ArchiveAction, icon: archiveIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+            options.append(ItemListRevealOption(key: RevealOptionKey.archive.rawValue, title: strings.ChatList_ArchiveAction, icon: archiveIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
         } else {
-            options.append(ItemListRevealOption(key: RevealOptionKey.unarchive.rawValue, title: strings.ChatList_UnarchiveAction, icon: unarchiveIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+            options.append(ItemListRevealOption(key: RevealOptionKey.unarchive.rawValue, title: strings.ChatList_UnarchiveAction, icon: unarchiveIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
         }
     }
     return options
@@ -240,9 +240,9 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
     }
     if !isEditing {
         if isPinned {
-            options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+            options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
         } else {
-            options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+            options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
         }
     }
     return options
@@ -283,6 +283,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams)?
     
     private var isHighlighted: Bool = false
+    private var skipFadeout: Bool = false
     
     override var canBeSelected: Bool {
         if self.selectableControlNode != nil || self.item?.editing == true {
@@ -1269,7 +1270,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.clipsToBounds = true
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        if self.skipFadeout {
+            self.skipFadeout = false
+        } else {
+            self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        }
     }
     
     override public func header() -> ListViewItemHeader? {
@@ -1432,6 +1437,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     item.interaction.deletePeer(item.index.messageIndex.id.peerId)
                 case RevealOptionKey.archive.rawValue:
                     item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, true)
+                    close = false
+                    self.skipFadeout = true
+                    self.animateRevealOptionsFill()
                 case RevealOptionKey.unarchive.rawValue:
                     item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, false)
                 case RevealOptionKey.toggleMarkedUnread.rawValue:
