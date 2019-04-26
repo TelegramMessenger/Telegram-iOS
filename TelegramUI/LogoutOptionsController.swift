@@ -188,7 +188,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
             TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
             }),
             TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                let _ = logoutFromAccount(id: context.account.id, accountManager: context.sharedContext.accountManager).start()
+                let _ = logoutFromAccount(id: context.account.id, accountManager: context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start()
                 dismissImpl?()
             })
         ])

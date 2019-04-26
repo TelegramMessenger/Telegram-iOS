@@ -856,7 +856,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             items.append(ActionSheetTextItem(title: presentationData.strings.Settings_LogoutConfirmationText.trimmingCharacters(in: .whitespacesAndNewlines)))
             items.append(ActionSheetButtonItem(title: presentationData.strings.Settings_Logout, color: .destructive, action: {
                 dismissAction()
-                let _ = logoutFromAccount(id: id, accountManager: context.sharedContext.accountManager).start()
+                let _ = logoutFromAccount(id: id, accountManager: context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start()
             }))
             controller.setItemGroups([
                 ActionSheetItemGroup(items: items),
