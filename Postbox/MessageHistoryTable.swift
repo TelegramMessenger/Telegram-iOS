@@ -1356,7 +1356,7 @@ final class MessageHistoryTable: Table {
             
             let updatedIndex = message.index
             
-            let updatedGroupInfo = self.updateMovingGroupInfoInNamespace(index: index, updatedIndex: updatedIndex, groupingKey: message.groupingKey, previousInfo: previousMessage.groupInfo, updatedGroupInfos: &updatedGroupInfos)
+            let updatedGroupInfo = self.updateMovingGroupInfoInNamespace(index: updatedIndex, updatedIndex: updatedIndex, groupingKey: message.groupingKey, previousInfo: previousMessage.groupInfo, updatedGroupInfos: &updatedGroupInfos)
             
             if previousMessage.tags != message.tags || index != updatedIndex {
                 if !previousMessage.tags.isEmpty {
@@ -1639,7 +1639,7 @@ final class MessageHistoryTable: Table {
         } else {
             self.maybeCombineGroupsInNamespace(at: index, updatedGroupInfos: &updatedGroupInfos)
             
-            let groupInfo = self.updateGroupingInfoAroundInsertionInNamespace(index: updatedIndex, groupingKey: groupingKey, updatedGroupInfos: &updatedGroupInfos)
+            let groupInfo = self.updateGroupingInfoAroundInsertionInNamespace(index: index, groupingKey: groupingKey, updatedGroupInfos: &updatedGroupInfos)
             
             return groupInfo
         }

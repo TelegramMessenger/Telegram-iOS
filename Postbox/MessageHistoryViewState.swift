@@ -760,7 +760,7 @@ final class HistoryViewLoadedState {
                     shouldBeAdded = true
                 }
             } else {
-                assert(self.orderedEntriesBySpace[space]!.entries.isEmpty, "A non-empty entry list should have non-nil bounds")
+                //assert(self.orderedEntriesBySpace[space]!.entries.isEmpty, "A non-empty entry list should have non-nil bounds")
                 shouldBeAdded = true
             }
         } else if insertionIndex == self.orderedEntriesBySpace[space]!.entries.count {
@@ -769,7 +769,7 @@ final class HistoryViewLoadedState {
                     shouldBeAdded = true
                 }
             } else {
-                assert(self.orderedEntriesBySpace[space]!.entries.isEmpty, "A non-empty entry list should have non-nil bounds")
+                //assert(self.orderedEntriesBySpace[space]!.entries.isEmpty, "A non-empty entry list should have non-nil bounds")
                 shouldBeAdded = true
             }
         } else {
