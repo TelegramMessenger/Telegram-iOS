@@ -9,7 +9,7 @@ import Foundation
 
 public enum TogglePeerChatPinnedResult {
     case done
-    case limitExceeded
+    case limitExceeded(Int)
 }
 
 public func toggleItemPinned(postbox: Postbox, groupId: PeerGroupId, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
@@ -36,14 +36,14 @@ public func toggleItemPinned(postbox: Postbox, groupId: PeerGroupId, itemId: Pin
         
         let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
         let limitCount: Int
-        if groupId != nil {
+        if case .root = groupId {
             limitCount = Int(limitsConfiguration.maxPinnedChatCount)
         } else {
             limitCount = Int(limitsConfiguration.maxArchivedPinnedChatCount)
         }
         
         if sameKind.count + additionalCount > limitCount {
-            return .limitExceeded
+            return .limitExceeded(limitCount)
         } else {
             if let index = itemIds.index(of: itemId) {
                 itemIds.remove(at: index)
