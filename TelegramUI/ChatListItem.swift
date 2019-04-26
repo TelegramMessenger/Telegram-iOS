@@ -182,7 +182,17 @@ private enum RevealOptionKey: Int32 {
 
 private let itemHeight: CGFloat = 76.0
 
-private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool, isMuted: Bool?, groupId: PeerGroupId, canDelete: Bool, isEditing: Bool) -> [ItemListRevealOption] {
+private func canArchivePeer(id: PeerId, accountPeerId: PeerId) -> Bool {
+    if id.namespace == Namespaces.Peer.CloudUser && id.id == 777000 {
+        return false
+    }
+    if id == accountPeerId {
+        return false
+    }
+    return true
+}
+
+private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool, isMuted: Bool?, groupId: PeerGroupId, peerId: PeerId, accountPeerId: PeerId, canDelete: Bool, isEditing: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
         if case .group = groupId {
@@ -206,7 +216,9 @@ private func revealOptions(strings: PresentationStrings, theme: PresentationThem
     }
     if !isEditing {
         if case .root = groupId {
-            options.append(ItemListRevealOption(key: RevealOptionKey.archive.rawValue, title: strings.ChatList_ArchiveAction, icon: archiveIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
+            if canArchivePeer(id: peerId, accountPeerId: accountPeerId) {
+                options.append(ItemListRevealOption(key: RevealOptionKey.archive.rawValue, title: strings.ChatList_ArchiveAction, icon: archiveIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
+            }
         } else {
             options.append(ItemListRevealOption(key: RevealOptionKey.unarchive.rawValue, title: strings.ChatList_UnarchiveAction, icon: unarchiveIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
         }
@@ -916,7 +928,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let isPinned = item.index.pinningIndex != nil
                     
                     if item.enableContextActions && !isAd {
-                        peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, groupId: item.peerGroupId, canDelete: true, isEditing: item.editing)
+                        peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, groupId: item.peerGroupId, peerId: renderedPeer.peerId, accountPeerId: item.account.peerId, canDelete: true, isEditing: item.editing)
                         peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.account.peerId, groupId: item.peerGroupId)
                     } else {
                         peerRevealOptions = []
