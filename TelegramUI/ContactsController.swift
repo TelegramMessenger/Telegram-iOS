@@ -10,7 +10,7 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
         let scrollToItem: ListViewScrollToItem
         let targetProgress: CGFloat
         if searchNode.expansionProgress < 0.6 {
-            scrollToItem = ListViewScrollToItem(index: 1, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+            scrollToItem = ListViewScrollToItem(index: 1, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: nil), directionHint: .Up)
             targetProgress = 0.0
         } else {
             scrollToItem = ListViewScrollToItem(index: 1, position: .top(0.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)

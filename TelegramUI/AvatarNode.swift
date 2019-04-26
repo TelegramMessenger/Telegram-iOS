@@ -149,6 +149,8 @@ public final class AvatarNode: ASDisplayNode {
     private var parameters: AvatarNodeParameters?
     private var theme: PresentationTheme?
     let imageNode: ImageNode
+    private var animationBackgroundNode: ImageNode?
+    private var animationNode: AnimationNode?
     var editOverlayNode: AvatarEditOverlayNode?
     
     private let imageReadyDisposable = MetaDisposable()
@@ -200,6 +202,35 @@ public final class AvatarNode: ASDisplayNode {
                 self.editOverlayNode?.setNeedsDisplay()
             }
         }
+    }
+    
+    public func playAnimation(_ name: String, scale: CGFloat) {
+        guard let theme = self.theme else {
+            return
+        }
+        
+        let animationBackgroundNode = ASImageNode()
+        animationBackgroundNode.frame = self.imageNode.frame
+        animationBackgroundNode.image = generateFilledCircleImage(diameter: self.imageNode.frame.width, color: theme.chatList.neutralAvatarColor)
+        self.addSubnode(animationBackgroundNode)
+        
+        let animationNode = AnimationNode(animation: name, keysToColor: [], color: .white, scale: scale)
+        animationNode.completion = { [weak animationBackgroundNode, weak self] in
+            self?.imageNode.isHidden = false
+            animationBackgroundNode?.removeFromSupernode()
+        }
+        animationBackgroundNode.addSubnode(animationNode)
+        
+        animationBackgroundNode.layer.animateScale(from: 1.0, to: 1.07, duration: 0.12, removeOnCompletion: false, completion: { [weak animationBackgroundNode] finished in
+            animationBackgroundNode?.layer.animateScale(from: 1.07, to: 1.0, duration: 0.12, removeOnCompletion: false)
+        })
+        
+        if var size = animationNode.preferredSize() {
+            size = CGSize(width: ceil(size.width), height: ceil(size.height))
+            animationNode.frame = CGRect(x: floor((self.bounds.width - size.width) / 2.0), y: floor((self.bounds.height - size.height) / 2.0) + 1.0, width: size.width, height: size.height)
+            animationNode.play()
+        }
+        self.imageNode.isHidden = true
     }
     
     public func setPeer(account: Account, theme: PresentationTheme, peer: Peer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, synchronousLoad: Bool = false) {

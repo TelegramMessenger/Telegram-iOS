@@ -264,6 +264,14 @@ final class ChatListControllerNode: ASDisplayNode {
         }
     }
     
+    func playArchiveAnimation() {
+        self.chatListNode.forEachVisibleItemNode { node in
+            if let node = node as? ChatListItemNode {
+                node.playArchiveAnimation()
+            }
+        }
+    }
+    
     func scrollToTop() {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.contentNode.scrollToTop()

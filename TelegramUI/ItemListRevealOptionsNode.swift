@@ -1,12 +1,11 @@
 import Foundation
 import AsyncDisplayKit
 import Display
-import Lottie
 
 enum ItemListRevealOptionIcon: Equatable {
     case none
     case image(image: UIImage)
-    case animation(animation: String, offset: CGFloat, keysToColor: [String]?)
+    case animation(animation: String, offset: CGFloat, keysToColor: [String]?, flip: Bool)
     
     public static func ==(lhs: ItemListRevealOptionIcon, rhs: ItemListRevealOptionIcon) -> Bool {
         switch lhs {
@@ -22,8 +21,8 @@ enum ItemListRevealOptionIcon: Equatable {
                 } else {
                     return false
                 }
-            case let .animation(lhsAnimation, lhsOffset, lhsKeysToColor):
-                if case let .animation(rhsAnimation, rhsOffset, rhsKeysToColor) = rhs, lhsAnimation == rhsAnimation, lhsOffset == rhsOffset, lhsKeysToColor == rhsKeysToColor {
+            case let .animation(lhsAnimation, lhsOffset, lhsKeysToColor, lhsFlip):
+                if case let .animation(rhsAnimation, rhsOffset, rhsKeysToColor, rhsFlip) = rhs, lhsAnimation == rhsAnimation, lhsOffset == rhsOffset, lhsKeysToColor == rhsKeysToColor, lhsFlip == rhsFlip {
                     return true
                 } else {
                     return false
@@ -59,59 +58,6 @@ struct ItemListRevealOption: Equatable {
     }
 }
 
-private final class ItemListRevealAnimationNode : ASDisplayNode {
-    var played = false
-    
-    init(animation: String, keysToColor: [String]?, color: UIColor) {
-        super.init()
-        
-        self.setViewBlock({
-            if let url = frameworkBundle.url(forResource: animation, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
-                let view = LOTAnimationView(model: composition, in: frameworkBundle)
-                view.backgroundColor = .clear
-                view.isOpaque = false
-                
-                if let keysToColor = keysToColor {
-                    for key in keysToColor {
-                        let colorCallback = LOTColorValueCallback(color: color.cgColor)
-                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
-                    }
-                }
-                
-                return view
-            } else {
-                return UIView()
-            }
-        })
-    }
-
-    func animationView() -> LOTAnimationView? {
-        return self.view as? LOTAnimationView
-    }
-    
-    func play() {
-        if let animationView = animationView(), !animationView.isAnimationPlaying, !self.played {
-            self.played = true
-            animationView.play()
-        }
-    }
-    
-    func reset() {
-        if self.played, let animationView = animationView() {
-            self.played = false
-            animationView.stop()
-        }
-    }
-    
-    func preferredSize() -> CGSize? {
-        if let animationView = animationView(), let sceneModel = animationView.sceneModel {
-            return CGSize(width: sceneModel.compBounds.width * 0.3333, height: sceneModel.compBounds.height * 0.3333)
-        } else {
-            return nil
-        }
-    }
-}
-
 private let titleFontWithIcon = Font.medium(13.0)
 private let titleFontWithoutIcon = Font.regular(17.0)
 
@@ -125,8 +71,9 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
     private let highlightNode: ASDisplayNode
     private let titleNode: ASTextNode
     private let iconNode: ASImageNode?
-    private let animationNode: ItemListRevealAnimationNode?
+    private let animationNode: AnimationNode?
     private var animationNodeOffset: CGFloat = 0.0
+    private var animationNodeFlip = false
     var alignment: ItemListRevealOptionAlignment?
     var isExpanded: Bool = false
     
@@ -144,10 +91,14 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
                 self.iconNode = iconNode
                 self.animationNode = nil
             
-            case let .animation(animation, offset, keysToColor):
+            case let .animation(animation, offset, keysToColor, flip):
                 self.iconNode = nil
-                self.animationNode = ItemListRevealAnimationNode(animation: animation, keysToColor: keysToColor, color: color)
+                self.animationNode = AnimationNode(animation: animation, keysToColor: keysToColor, color: color, scale: 0.16214)
+                if flip {
+                    self.animationNode!.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
+                }
                 self.animationNodeOffset = offset
+                self.animationNodeFlip = flip
                 break
             
             case .none:
@@ -177,6 +128,10 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             self.highlightNode.removeFromSupernode()
             self.highlightNode.alpha = 0.0
         }
+    }
+    
+    func resetAnimation() {
+        self.animationNode?.reset()
     }
     
     func updateLayout(isFirst: Bool, isLeft: Bool, baseSize: CGSize, alignment: ItemListRevealOptionAlignment, isExpanded: Bool, extendedWidth: CGFloat, sideInset: CGFloat, transition: ContainedViewLayoutTransition, additive: Bool, revealFactor: CGFloat) {
@@ -220,7 +175,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
         }
         
         if let animationNode = self.animationNode, let imageSize = animationNode.preferredSize() {
-            let iconOffset: CGFloat = -2.0 + self.animationNodeOffset
+            let iconOffset: CGFloat = -11.0 + self.animationNodeOffset
             let titleIconSpacing: CGFloat = 11.0
             let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - imageSize.width + sideInset) / 2.0), y: contentRect.midY - imageSize.height / 2.0 + iconOffset), size: imageSize)
             if animateAdditive {
@@ -240,7 +195,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             
             if (abs(revealFactor) >= 0.4) {
                 animationNode.play()
-            } else if abs(revealFactor) < CGFloat.ulpOfOne {
+            } else if abs(revealFactor) < CGFloat.ulpOfOne && !transition.isAnimated {
                 animationNode.reset()
             }
         } else if let iconNode = self.iconNode, let imageSize = iconNode.image?.size {
@@ -379,14 +334,25 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         } else {
             startingOffset = 0.0
         }
+        
+        let animated = transition.isAnimated
+        var completionCount = self.optionNodes.count
+        let intermediateCompletion = {
+            if completionCount == 0 && animated && abs(revealFactor) < CGFloat.ulpOfOne {
+                for node in self.optionNodes {
+                    node.resetAnimation()
+                }
+            }
+        }
+        
         var i = self.isLeft ? (self.optionNodes.count - 1) : 0
         while i >= 0 && i < self.optionNodes.count {
             let node = self.optionNodes[i]
             let nodeWidth = i == (self.optionNodes.count - 1) ? lastNodeWidth : basicNodeWidth
-            let defaultAlignment: ItemListRevealOptionAlignment = isLeft ? .right : .left
+            let defaultAlignment: ItemListRevealOptionAlignment = self.isLeft ? .right : .left
             var nodeTransition = transition
             var isExpanded = false
-            if (isLeft && i == 0) || (!isLeft && i == self.optionNodes.count - 1) {
+            if (self.isLeft && i == 0) || (!self.isLeft && i == self.optionNodes.count - 1) {
                 if abs(revealFactor) > boundaryRevealFactor {
                     isExpanded = true
                 }
@@ -418,7 +384,11 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
                 nodeLeftOffset = startingOffset + floorToScreenPixels(offset * abs(revealFactor))
             }
             
-            transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: nodeLeftOffset, y: 0.0), size: CGSize(width: extendedWidth, height: size.height)))
+            transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: nodeLeftOffset, y: 0.0), size: CGSize(width: extendedWidth, height: size.height)), completion: { _ in
+                completionCount -= 1
+                intermediateCompletion()
+
+            })
             node.updateLayout(isFirst: (self.isLeft && i == 0) || (!self.isLeft && i == self.optionNodes.count - 1), isLeft: self.isLeft, baseSize: CGSize(width: nodeWidth, height: size.height), alignment: defaultAlignment, isExpanded: isExpanded, extendedWidth: extendedWidth, sideInset: sideInset, transition: nodeTransition, additive: !transition.isAnimated, revealFactor: revealFactor)
             
             if self.isLeft {
@@ -433,19 +403,18 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         if case .ended = recognizer.state, let gesture = recognizer.lastRecognizedGestureAndLocation?.0, case .tap = gesture {
             let location = recognizer.location(in: self.view)
             var selectedOption: Int?
-            if self.isLeft {
-                for i in (0 ..< self.optionNodes.count).reversed() {
-                    self.optionNodes[i].setHighlighted(false)
-                    if self.optionNodes[i].frame.contains(location) {
-                        selectedOption = i
-                    }
+            
+            var i = self.isLeft ? 0 : (self.optionNodes.count - 1)
+            while i >= 0 && i < self.optionNodes.count {
+                self.optionNodes[i].setHighlighted(false)
+                if self.optionNodes[i].frame.contains(location) {
+                    selectedOption = i
+                    break
                 }
-            } else {
-                for i in 0 ..< self.optionNodes.count {
-                    self.optionNodes[i].setHighlighted(false)
-                    if self.optionNodes[i].frame.contains(location) {
-                        selectedOption = i
-                    }
+                if self.isLeft {
+                    i += 1
+                } else {
+                    i -= 1
                 }
             }
             if let selectedOption = selectedOption {

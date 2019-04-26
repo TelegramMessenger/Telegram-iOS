@@ -3,7 +3,7 @@ import UIKit
 
 private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroundColor: UIColor, day: Bool) -> PresentationTheme {
     let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
-    let constructiveColor: UIColor = UIColor(rgb: 0x4cd964)
+    let constructiveColor: UIColor = UIColor(rgb: 0x00d740)
     let secretColor: UIColor = UIColor(rgb: 0x00B12C)
     
     let rootStatusBar = PresentationThemeRootNavigationStatusBar(
