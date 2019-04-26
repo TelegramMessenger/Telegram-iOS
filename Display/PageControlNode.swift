@@ -4,16 +4,42 @@ import AsyncDisplayKit
 public final class PageControlNode: ASDisplayNode {
     private let dotSize: CGFloat
     private let dotSpacing: CGFloat
-    private let dotColor: UIColor
+    public var dotColor: UIColor {
+        didSet {
+            if !oldValue.isEqual(self.dotColor) {
+                self.normalDotImage = generateFilledCircleImage(diameter: dotSize, color: self.dotColor)!
+                for dotNode in self.dotNodes {
+                    if dotNode === oldValue {
+                        dotNode.image = self.normalDotImage
+                    }
+                }
+            }
+        }
+    }
+    public var inactiveDotColor: UIColor {
+        didSet {
+            if !oldValue.isEqual(self.inactiveDotColor) {
+                self.inactiveDotImage = generateFilledCircleImage(diameter: dotSize, color: self.inactiveDotColor)!
+                for dotNode in self.dotNodes {
+                    if dotNode === oldValue {
+                        dotNode.image = self.inactiveDotImage
+                    }
+                }
+            }
+        }
+    }
     private var dotNodes: [ASImageNode] = []
     
-    private let normalDotImage: UIImage
+    private var normalDotImage: UIImage
+    private var inactiveDotImage: UIImage
 
-    public init(dotSize: CGFloat = 7.0, dotSpacing: CGFloat = 9.0, dotColor: UIColor) {
+    public init(dotSize: CGFloat = 7.0, dotSpacing: CGFloat = 9.0, dotColor: UIColor, inactiveDotColor: UIColor) {
         self.dotSize = dotSize
         self.dotSpacing = dotSpacing
         self.dotColor = dotColor
+        self.inactiveDotColor = inactiveDotColor
         self.normalDotImage = generateFilledCircleImage(diameter: dotSize, color: dotColor)!
+        self.inactiveDotImage = generateFilledCircleImage(diameter: dotSize, color: inactiveDotColor)!
         
         super.init()
     }
@@ -39,22 +65,14 @@ public final class PageControlNode: ASDisplayNode {
     }
     
     public func setPage(_ pageValue: CGFloat) {
-        let page = max(0.0, min(CGFloat(self.pagesCount - 1), pageValue))
+        let page = Int(round(pageValue))
         
         for i in 0 ..< self.dotNodes.count {
-            var alpha: CGFloat = 0.0
-            let delta = abs(CGFloat(i) - page)
-            if delta >= 1.0 {
-                alpha = 0.5
+            if i != page {
+                self.dotNodes[i].image = self.inactiveDotImage
             } else {
-                alpha = 1.0 - delta
-                alpha *= alpha * alpha
+                self.dotNodes[i].image = self.normalDotImage
             }
-            if alpha < 0.5 {
-                alpha = 0.5
-            }
-            
-            self.dotNodes[i].alpha = alpha
         }
     }
     
