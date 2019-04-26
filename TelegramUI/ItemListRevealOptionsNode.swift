@@ -1,12 +1,11 @@
 import Foundation
 import AsyncDisplayKit
 import Display
-import Lottie
 
 enum ItemListRevealOptionIcon: Equatable {
     case none
     case image(image: UIImage)
-    case animation(animation: String, offset: CGFloat, keysToColor: [String]?)
+    case animation(animation: String, offset: CGFloat, keysToColor: [String]?, flip: Bool)
     
     public static func ==(lhs: ItemListRevealOptionIcon, rhs: ItemListRevealOptionIcon) -> Bool {
         switch lhs {
@@ -22,8 +21,8 @@ enum ItemListRevealOptionIcon: Equatable {
                 } else {
                     return false
                 }
-            case let .animation(lhsAnimation, lhsOffset, lhsKeysToColor):
-                if case let .animation(rhsAnimation, rhsOffset, rhsKeysToColor) = rhs, lhsAnimation == rhsAnimation, lhsOffset == rhsOffset, lhsKeysToColor == rhsKeysToColor {
+            case let .animation(lhsAnimation, lhsOffset, lhsKeysToColor, lhsFlip):
+                if case let .animation(rhsAnimation, rhsOffset, rhsKeysToColor, rhsFlip) = rhs, lhsAnimation == rhsAnimation, lhsOffset == rhsOffset, lhsKeysToColor == rhsKeysToColor, lhsFlip == rhsFlip {
                     return true
                 } else {
                     return false
@@ -59,59 +58,6 @@ struct ItemListRevealOption: Equatable {
     }
 }
 
-private final class ItemListRevealAnimationNode : ASDisplayNode {
-    var played = false
-    
-    init(animation: String, keysToColor: [String]?, color: UIColor) {
-        super.init()
-        
-        self.setViewBlock({
-            if let url = frameworkBundle.url(forResource: animation, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
-                let view = LOTAnimationView(model: composition, in: frameworkBundle)
-                view.backgroundColor = .clear
-                view.isOpaque = false
-                
-                let colorCallback = LOTColorValueCallback(color: color.cgColor)
-                if let keysToColor = keysToColor {
-                    for key in keysToColor {
-                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
-                    }
-                }
-                
-                return view
-            } else {
-                return UIView()
-            }
-        })
-    }
-
-    func animationView() -> LOTAnimationView? {
-        return self.view as? LOTAnimationView
-    }
-    
-    func play() {
-        if let animationView = animationView(), !animationView.isAnimationPlaying, !self.played {
-            self.played = true
-            animationView.play()
-        }
-    }
-    
-    func reset() {
-        if self.played, let animationView = animationView() {
-            self.played = false
-            animationView.stop()
-        }
-    }
-    
-    func preferredSize() -> CGSize? {
-        if let animationView = animationView(), let sceneModel = animationView.sceneModel {
-            return CGSize(width: sceneModel.compBounds.width * 0.16214, height: sceneModel.compBounds.height * 0.16214)
-        } else {
-            return nil
-        }
-    }
-}
-
 private let titleFontWithIcon = Font.medium(13.0)
 private let titleFontWithoutIcon = Font.regular(17.0)
 
@@ -125,8 +71,9 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
     private let highlightNode: ASDisplayNode
     private let titleNode: ASTextNode
     private let iconNode: ASImageNode?
-    private let animationNode: ItemListRevealAnimationNode?
+    private let animationNode: AnimationNode?
     private var animationNodeOffset: CGFloat = 0.0
+    private var animationNodeFlip = false
     var alignment: ItemListRevealOptionAlignment?
     var isExpanded: Bool = false
     
@@ -144,10 +91,14 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
                 self.iconNode = iconNode
                 self.animationNode = nil
             
-            case let .animation(animation, offset, keysToColor):
+            case let .animation(animation, offset, keysToColor, flip):
                 self.iconNode = nil
-                self.animationNode = ItemListRevealAnimationNode(animation: animation, keysToColor: keysToColor, color: color)
+                self.animationNode = AnimationNode(animation: animation, keysToColor: keysToColor, color: color, scale: 0.16214)
+                if flip {
+                    self.animationNode!.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
+                }
                 self.animationNodeOffset = offset
+                self.animationNodeFlip = flip
                 break
             
             case .none:
@@ -452,19 +403,18 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         if case .ended = recognizer.state, let gesture = recognizer.lastRecognizedGestureAndLocation?.0, case .tap = gesture {
             let location = recognizer.location(in: self.view)
             var selectedOption: Int?
-            if self.isLeft {
-                for i in (0 ..< self.optionNodes.count).reversed() {
-                    self.optionNodes[i].setHighlighted(false)
-                    if self.optionNodes[i].frame.contains(location) {
-                        selectedOption = i
-                    }
+            
+            var i = self.isLeft ? 0 : (self.optionNodes.count - 1)
+            while i >= 0 && i < self.optionNodes.count {
+                self.optionNodes[i].setHighlighted(false)
+                if self.optionNodes[i].frame.contains(location) {
+                    selectedOption = i
+                    break
                 }
-            } else {
-                for i in 0 ..< self.optionNodes.count {
-                    self.optionNodes[i].setHighlighted(false)
-                    if self.optionNodes[i].frame.contains(location) {
-                        selectedOption = i
-                    }
+                if self.isLeft {
+                    i += 1
+                } else {
+                    i -= 1
                 }
             }
             if let selectedOption = selectedOption {

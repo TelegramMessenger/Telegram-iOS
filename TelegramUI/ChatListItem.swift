@@ -151,19 +151,19 @@ private let textFont = Font.regular(15.0)
 private let dateFont = Font.regular(14.0)
 private let badgeFont = Font.regular(14.0)
 
-private let pinIcon = ItemListRevealOptionIcon.animation(animation: "pin", offset: 0.0, keysToColor: nil)
-private let unpinIcon = ItemListRevealOptionIcon.animation(animation: "unpin", offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"])
-private let muteIcon = ItemListRevealOptionIcon.animation(animation: "mute", offset: 0.0, keysToColor: ["close.close.Stroke 2"])
-private let unmuteIcon = ItemListRevealOptionIcon.animation(animation: "unmute", offset: 0.0, keysToColor: nil)
-private let deleteIcon = ItemListRevealOptionIcon.animation(animation: "delete", offset: 0.0, keysToColor: ["BinTex1.BinTex1.Fill 1", "BinTex2.BinTex2.Fill 1", "BinTex3.BinTex3.Fill 1"])
-private let groupIcon = ItemListRevealOptionIcon.animation(animation: "anim_group", offset: 0.0, keysToColor: nil)
-private let ungroupIcon = ItemListRevealOptionIcon.animation(animation: "anim_ungroup", offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"])
-private let readIcon = ItemListRevealOptionIcon.animation(animation: "read", offset: 0.0, keysToColor: ["Oval.Oval.Stroke 1"])
-private let unreadIcon = ItemListRevealOptionIcon.animation(animation: "unread", offset: 0.0, keysToColor: ["Oval.Oval.Stroke 1"])
-private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "archive", offset: 1.0, keysToColor: ["box2.box2.Fill 1"])
-private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "unarchive", offset: 1.0, keysToColor: ["box2.box2.Fill 1"])
-private let hideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", offset: 0.0, keysToColor: nil)
-private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "anim_unhide", offset: 0.0, keysToColor: nil)
+private let pinIcon = ItemListRevealOptionIcon.animation(animation: "pin", offset: 0.0, keysToColor: nil, flip: false)
+private let unpinIcon = ItemListRevealOptionIcon.animation(animation: "unpin", offset: 0.0, keysToColor: ["close.close.Stroke 2"], flip: false)
+private let muteIcon = ItemListRevealOptionIcon.animation(animation: "mute", offset: 0.0, keysToColor: ["close.close.Stroke 2"], flip: false)
+private let unmuteIcon = ItemListRevealOptionIcon.animation(animation: "unmute", offset: 0.0, keysToColor: ["close.close.Stroke 2"], flip: false)
+private let deleteIcon = ItemListRevealOptionIcon.animation(animation: "delete", offset: 0.0, keysToColor: ["BinTex1.BinTex1.Fill 1", "BinTex2.BinTex2.Fill 1", "BinTex3.BinTex3.Fill 1"], flip: false)
+private let groupIcon = ItemListRevealOptionIcon.animation(animation: "anim_group", offset: 0.0, keysToColor: nil, flip: false)
+private let ungroupIcon = ItemListRevealOptionIcon.animation(animation: "anim_ungroup", offset: 0.0, keysToColor: nil, flip: false)
+private let readIcon = ItemListRevealOptionIcon.animation(animation: "read", offset: 0.0, keysToColor: ["Oval.Oval.Stroke 1"], flip: false)
+private let unreadIcon = ItemListRevealOptionIcon.animation(animation: "unread", offset: 0.0, keysToColor: ["Oval.Oval.Stroke 1"], flip: false)
+private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "archive", offset: 1.0, keysToColor: ["box2.box2.Fill 1"], flip: false)
+private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "unarchive", offset: 1.0, keysToColor: ["box2.box2.Fill 1"], flip: false)
+private let hideIcon = ItemListRevealOptionIcon.animation(animation: "hide", offset: 0.0, keysToColor: ["Rectangle.Rectangle.Fill 1"], flip: false)
+private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "hide", offset: 0.0, keysToColor: ["Rectangle.Rectangle.Fill 1"], flip: true)
 
 private enum RevealOptionKey: Int32 {
     case pin
@@ -1439,7 +1439,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, true)
                     close = false
                     self.skipFadeout = true
-                    self.animateRevealOptionsFill()
+                    self.animateRevealOptionsFill {
+                        self.revealOptionsInteractivelyClosed()
+                    }
                 case RevealOptionKey.unarchive.rawValue:
                     item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, false)
                 case RevealOptionKey.toggleMarkedUnread.rawValue:
@@ -1474,6 +1476,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode.layer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseOut, duration: 0.3, delay: 0.7, completion: { [weak self] _ in
             self?.updateIsHighlighted(transition: .immediate)
         })
+    }
+    
+    func playArchiveAnimation() {
+        guard let item = self.item, case .groupReference = item.content else {
+            return
+        }
+        self.avatarNode.playAnimation("archiveAvatar", scale: 0.1653828)
     }
     
     override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {

@@ -1460,6 +1460,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     }
                     strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .archivedChat(title: title, text: text, undo: undo), elevatedLayout: strongSelf.groupId == .root, action: action), in: .window(.root))
                 }
+                
+                strongSelf.chatListDisplayNode.playArchiveAnimation()
             })
         })
     }
