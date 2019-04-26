@@ -425,7 +425,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     return state
                 }
                 if value {
-                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText), elevatedLayout: strongSelf.groupId == nil, action: { [weak self] shouldCommit in
+                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText), elevatedLayout: strongSelf.groupId == .root, action: { [weak self] shouldCommit in
                         guard let strongSelf = self else {
                             return
                         }
@@ -530,7 +530,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                                     state.pendingClearHistoryPeerIds.insert(peer.peerId)
                                     return state
                                 })
-                                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: strongSelf.groupId == nil, action: { shouldCommit in
+                                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: strongSelf.groupId == .root, action: { shouldCommit in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -1395,43 +1395,72 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     }
     
     private func archiveChat(peerId: PeerId) {
+        let postbox = self.context.account.postbox
         self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-        let _ = (updatePeerGroupIdInteractively(postbox: self.context.account.postbox, peerId: peerId, groupId: Namespaces.PeerGroup.archive)
-        |> deliverOnMainQueue).start(completed: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
-            
-            let action: (Bool) -> Void = { shouldCommit in
+        let _ = (ApplicationSpecificNotice.incrementArchiveChatTipsTips(accountManager: self.context.sharedContext.accountManager, count: 1)
+        |> deliverOnMainQueue).start(next: { [weak self] previousHintCount in
+            let _ = (updatePeerGroupIdInteractively(postbox: postbox, peerId: peerId, groupId: Namespaces.PeerGroup.archive)
+            |> deliverOnMainQueue).start(completed: {
                 guard let strongSelf = self else {
                     return
                 }
-                if !shouldCommit {
-                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-                    let _ = (updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: .root)
-                    |> deliverOnMainQueue).start(completed: {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
-                    })
-                }
-            }
-            
-            var foundExisting = false
-            strongSelf.window?.forEachController({ controller in
-                if let controller = controller as? UndoOverlayController {
-                    if case .archivedChat = controller.content {
-                        foundExisting = true
-                        controller.renewWithCurrentContent(action: action)
+                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+        
+                let action: (Bool) -> Void = { shouldCommit in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if !shouldCommit {
+                        strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                        let _ = (updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: .root)
+                        |> deliverOnMainQueue).start(completed: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                        })
                     }
                 }
+        
+                var foundExisting = false
+                strongSelf.window?.forEachController({ controller in
+                    if let controller = controller as? UndoOverlayController {
+                        if case .archivedChat = controller.content {
+                            foundExisting = true
+                            controller.renewWithCurrentContent(action: action)
+                        }
+                    }
+                })
+        
+                if !foundExisting {
+                    let title: String
+                    let text: String
+                    let undo: Bool
+                    switch previousHintCount {
+                        case 0:
+                            title = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
+                            text = strongSelf.presentationData.strings.ChatList_UndoArchiveText1
+                            undo = false
+                        case 1:
+                            title = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
+                            text = strongSelf.presentationData.strings.ChatList_UndoArchiveText2
+                            undo = false
+                        case 2:
+                            title = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
+                            text = strongSelf.presentationData.strings.ChatList_UndoArchiveText3
+                            undo = false
+                        case 3:
+                            title = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
+                            text = strongSelf.presentationData.strings.ChatList_UndoArchiveText4
+                            undo = false
+                        default:
+                            title = ""
+                            text = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
+                            undo = true
+                    }
+                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .archivedChat(title: title, text: text, undo: undo), elevatedLayout: strongSelf.groupId == .root, action: action), in: .window(.root))
+                }
             })
-            
-            if !foundExisting {
-                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .archivedChat(title: strongSelf.presentationData.strings.ChatList_UndoArchiveTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveText), elevatedLayout: strongSelf.groupId == nil, action: action), in: .window(.root))
-            }
         })
     }
     
@@ -1483,7 +1512,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 statusText = self.presentationData.strings.Undo_ChatDeleted
             }
         }
-        self.present(UndoOverlayController(context: self.context, content: .removedChat(text: statusText), elevatedLayout: self.groupId == nil, action: { [weak self] shouldCommit in
+        self.present(UndoOverlayController(context: self.context, content: .removedChat(text: statusText), elevatedLayout: self.groupId == .root, action: { [weak self] shouldCommit in
             guard let strongSelf = self else {
                 return
             }

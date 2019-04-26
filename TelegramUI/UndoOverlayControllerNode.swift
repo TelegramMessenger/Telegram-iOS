@@ -42,27 +42,37 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
         
+        var displayUndo = true
+        
         switch content {
             case let .removedChat(text):
                 self.iconNode = nil
                 self.iconCheckNode = nil
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: .white)
-            case let .archivedChat(title, text):
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+                displayUndo = true
+            case let .archivedChat(title, text, undo):
                 self.iconNode = ASImageNode()
                 self.iconNode?.displayWithoutProcessing = true
                 self.iconNode?.displaysAsynchronously = false
-                self.iconNode?.image = UIImage(bundleImageName: "Chat List/ArchivedUndoIcon")
-                self.iconCheckNode = RadialStatusNode(backgroundNodeColor: .clear)
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(15.0), textColor: .white)
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: .white)
+                if undo {
+                    self.iconCheckNode = RadialStatusNode(backgroundNodeColor: .clear)
+                    self.iconNode?.image = UIImage(bundleImageName: "Chat List/ArchivedUndoIcon")
+                } else {
+                    self.iconCheckNode = nil
+                    self.iconNode?.image = UIImage(bundleImageName: "Chat List/UndoInfoIcon")
+                }
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                self.textNode.attributedText = NSAttributedString(string: text, font: title.isEmpty ? Font.medium(17.0) : Font.regular(14.0), textColor: .white)
+                displayUndo = undo
             case let .hidArchive(title, text):
                 self.iconNode = ASImageNode()
                 self.iconNode?.displayWithoutProcessing = true
                 self.iconNode?.displaysAsynchronously = false
                 self.iconNode?.image = UIImage(bundleImageName: "Chat List/HidArchiveUndoIcon")
                 self.iconCheckNode = nil
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(15.0), textColor: .white)
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: .white)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+                displayUndo = true
         }
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
@@ -95,8 +105,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.iconCheckNode.flatMap(self.panelWrapperNode.addSubnode)
         self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
-        self.panelWrapperNode.addSubnode(self.buttonTextNode)
-        self.panelWrapperNode.addSubnode(self.buttonNode)
+        if displayUndo {
+            self.panelWrapperNode.addSubnode(self.buttonTextNode)
+            self.panelWrapperNode.addSubnode(self.buttonNode)
+        }
         self.addSubnode(self.panelNode)
         self.addSubnode(self.panelWrapperNode)
         
@@ -172,10 +184,15 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         let margin: CGFloat = 16.0
         
         let buttonTextSize = self.buttonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
-        let buttonMinX = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - margin * 2.0
+        let buttonMinX: CGFloat
+        if self.buttonNode.supernode != nil {
+            buttonMinX = layout.size.width - layout.safeInsets.left - rightInset - buttonTextSize.width - margin * 2.0
+        } else {
+            buttonMinX = layout.size.width - layout.safeInsets.left - rightInset
+        }
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - layout.safeInsets.right - margin, height: .greatestFiniteMagnitude))
-        let textSize = self.textNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - layout.safeInsets.right - margin, height: .greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - margin, height: .greatestFiniteMagnitude))
+        let textSize = self.textNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - margin, height: .greatestFiniteMagnitude))
         
         if !titleSize.width.isZero {
             contentHeight += titleSize.height + 1.0

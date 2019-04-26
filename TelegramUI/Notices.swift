@@ -126,6 +126,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case contactsPermissionWarning = 7
     case notificationsPermissionWarning = 8
     case volumeButtonToUnmuteTip = 9
+    case archiveChatTips = 10
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -153,6 +154,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func chatMediaMediaRecordingTips() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatMediaMediaRecordingTips.key)
+    }
+    
+    static func archiveChatTips() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.archiveChatTips.key)
     }
     
     static func profileCallTips() -> NoticeEntryKey {
@@ -272,6 +277,31 @@ public struct ApplicationSpecificNotice {
             currentValue += count
             
             transaction.setNotice(ApplicationSpecificNoticeKeys.chatMediaMediaRecordingTips(), ApplicationSpecificCounterNotice(value: currentValue))
+        }
+    }
+    
+    static func getArchiveChatTips(accountManager: AccountManager) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.archiveChatTips()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    static func incrementArchiveChatTipsTips(accountManager: AccountManager, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.archiveChatTips()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.archiveChatTips(), ApplicationSpecificCounterNotice(value: currentValue))
+            
+            return Int(previousValue)
         }
     }
     

@@ -4,7 +4,7 @@ import TelegramCore
 
 enum UndoOverlayContent {
     case removedChat(text: String)
-    case archivedChat(title: String, text: String)
+    case archivedChat(title: String, text: String, undo: Bool)
     case hidArchive(title: String, text: String)
 }
 

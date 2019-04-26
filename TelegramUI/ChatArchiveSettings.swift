@@ -6,7 +6,7 @@ struct ChatArchiveSettings: Equatable, PreferencesEntry {
     var isHiddenByDefault: Bool
     
     static var `default`: ChatArchiveSettings {
-        return ChatArchiveSettings(isHiddenByDefault: true)
+        return ChatArchiveSettings(isHiddenByDefault: false)
     }
     
     init(isHiddenByDefault: Bool) {

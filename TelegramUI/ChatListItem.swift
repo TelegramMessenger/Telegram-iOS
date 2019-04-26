@@ -942,7 +942,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params)
-                    if true || !animated {
+                    if case .groupReference = item.content {
                         strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, layout.contentSize.height - itemHeight, 0.0)
                     }
                     
@@ -1469,6 +1469,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
         super.animateFrameTransition(progress, currentValue)
         
-        self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue - itemHeight, 0.0)
+        if let item = self.item, case .groupReference = item.content {
+            self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue - itemHeight, 0.0)
+        }
     }
 }
