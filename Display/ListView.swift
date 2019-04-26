@@ -3256,13 +3256,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 if indicatorHeight >= visibleHeightWithoutIndicatorInsets {
                     verticalScrollIndicator.isHidden = true
-                    transition.updateFrame(node: verticalScrollIndicator, frame: indicatorFrame)
+                    verticalScrollIndicator.frame = indicatorFrame
                 } else {
                     if verticalScrollIndicator.isHidden {
                         verticalScrollIndicator.isHidden = false
-                        transition.updateFrame(node: verticalScrollIndicator, frame: indicatorFrame)
+                        verticalScrollIndicator.frame = indicatorFrame
                     } else {
-                        transition.updateFrame(node: verticalScrollIndicator, frame: indicatorFrame)
+                        verticalScrollIndicator.frame = indicatorFrame
                     }
                 }
             } else {
