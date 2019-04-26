@@ -4255,3 +4255,10 @@ Unused sets are archived when you add more.";
 "Conversation.ScamWarning" = "⚠️ Warning: Many users reported this account as a scam. Please be careful, especially if it asks you for money.";
 
 "Conversation.ClearChatConfirmation" = "Warning, this will delete your **entire chat history** with %@.";
+
+"ArchivedChats.IntroTitle1" = "This is your archive";
+"ArchivedChats.IntroText1" = "Chats with enabled notifications get unarchived when new notifications arrive.";
+"ArchivedChats.IntroTitle2" = "Muted Chats";
+"ArchivedChats.IntroText2" = "Muted chats stay archived when new messages arrive.";
+"ArchivedChats.IntroTitle3" = "Pinned Chats";
+"ArchivedChats.IntroText3" = "You can pin an unlimited number of archived chats to the top.";
