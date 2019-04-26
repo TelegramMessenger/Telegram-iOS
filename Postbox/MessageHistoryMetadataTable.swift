@@ -42,26 +42,8 @@ public enum ChatListTotalUnreadStateStats: Int32 {
     case chats = 1
 }
 
-private enum InitializedChatListKey: Hashable {
-    case global
-    case group(PeerGroupId)
-    
-    init(_ groupId: PeerGroupId?) {
-        if let groupId = groupId {
-            self = .group(groupId)
-        } else {
-            self = .global
-        }
-    }
-    
-    var rawValue: Int32 {
-        switch self {
-            case .global:
-                return 0
-            case let .group(groupId):
-                return groupId.rawValue
-        }
-    }
+private struct InitializedChatListKey: Hashable {
+    let groupId: PeerGroupId
 }
 
 final class MessageHistoryMetadataTable: Table {
@@ -107,7 +89,7 @@ final class MessageHistoryMetadataTable: Table {
     }
     
     private func chatListGroupInitializedKey(_ key: InitializedChatListKey) -> ValueBoxKey {
-        self.sharedChatListGroupHistoryInitializedKey.setInt32(0, value: key.rawValue)
+        self.sharedChatListGroupHistoryInitializedKey.setInt32(0, value: key.groupId.rawValue)
         self.sharedChatListGroupHistoryInitializedKey.setInt8(8, value: MetadataPrefix.ChatListGroupInitialized.rawValue)
         return self.sharedChatListGroupHistoryInitializedKey
     }
@@ -126,34 +108,36 @@ final class MessageHistoryMetadataTable: Table {
         return key
     }
     
-    func setInitializedChatList(groupId: PeerGroupId?) {
-        if groupId == nil {
-            self.valueBox.set(self.table, key: self.key(MetadataPrefix.ChatListInitialized), value: MemoryBuffer())
-        } else {
-            self.valueBox.set(self.table, key: self.chatListGroupInitializedKey(InitializedChatListKey(groupId)), value: MemoryBuffer())
+    func setInitializedChatList(groupId: PeerGroupId) {
+        switch groupId {
+            case .root:
+                self.valueBox.set(self.table, key: self.key(MetadataPrefix.ChatListInitialized), value: MemoryBuffer())
+            case .group:
+                self.valueBox.set(self.table, key: self.chatListGroupInitializedKey(InitializedChatListKey(groupId: groupId)), value: MemoryBuffer())
         }
-        self.initializedChatList.insert(InitializedChatListKey(groupId))
+        self.initializedChatList.insert(InitializedChatListKey(groupId: groupId))
     }
     
-    func isInitializedChatList(groupId: PeerGroupId?) -> Bool {
-        let key = InitializedChatListKey(groupId)
+    func isInitializedChatList(groupId: PeerGroupId) -> Bool {
+        let key = InitializedChatListKey(groupId: groupId)
         if self.initializedChatList.contains(key) {
             return true
         } else {
-            if groupId == nil {
-                if self.valueBox.exists(self.table, key: self.key(MetadataPrefix.ChatListInitialized)) {
-                    self.initializedChatList.insert(key)
-                    return true
-                } else {
-                    return false
-                }
-            } else {
-                if self.valueBox.exists(self.table, key: self.chatListGroupInitializedKey(key)) {
-                    self.initializedChatList.insert(key)
-                    return true
-                } else {
-                    return false
-                }
+            switch groupId {
+                case .root:
+                    if self.valueBox.exists(self.table, key: self.key(MetadataPrefix.ChatListInitialized)) {
+                        self.initializedChatList.insert(key)
+                        return true
+                    } else {
+                        return false
+                    }
+                case .group:
+                    if self.valueBox.exists(self.table, key: self.chatListGroupInitializedKey(key)) {
+                        self.initializedChatList.insert(key)
+                        return true
+                    } else {
+                        return false
+                    }
             }
         }
     }

@@ -32,9 +32,9 @@ final class MutableMessageView {
                         self.stableId = message.stableId
                         updated = true
                     }
-                case let .UpdateEmbeddedMedia(index, embeddedMedia):
+                case .UpdateEmbeddedMedia:
                     break
-                case let .UpdateTimestamp(index, timestamp):
+                case .UpdateTimestamp:
                     break
                 default:
                     break

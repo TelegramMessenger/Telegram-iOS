@@ -8,43 +8,21 @@ struct ChatListPeerInclusionIndex {
     let topMessageIndex: MessageIndex?
     let inclusion: PeerChatListInclusion
     
-    func includedIndex(peerId: PeerId) -> ChatListIndex? {
+    func includedIndex(peerId: PeerId) -> (PeerGroupId, ChatListIndex)? {
         switch inclusion {
-            case .notSpecified, .never:
+            case .notIncluded:
                 return nil
-            case .ifHasMessages:
-                if let topMessageIndex = self.topMessageIndex {
-                    return ChatListIndex(pinningIndex: nil, messageIndex: topMessageIndex)
-                } else {
-                    return nil
-                }
-            case let .ifHasMessagesOrOneOf(pinningIndex, minTimestamp):
+            case let .ifHasMessagesOrOneOf(groupId, pinningIndex, minTimestamp):
                 if let minTimestamp = minTimestamp {
                     if let topMessageIndex = self.topMessageIndex, topMessageIndex.timestamp >= minTimestamp {
-                        return ChatListIndex(pinningIndex: pinningIndex, messageIndex: topMessageIndex)
+                        return (groupId, ChatListIndex(pinningIndex: pinningIndex, messageIndex: topMessageIndex))
                     } else {
-                        return ChatListIndex(pinningIndex: pinningIndex, messageIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: minTimestamp))
+                        return (groupId, ChatListIndex(pinningIndex: pinningIndex, messageIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: minTimestamp)))
                     }
                 } else if let topMessageIndex = self.topMessageIndex {
-                    return ChatListIndex(pinningIndex: pinningIndex, messageIndex: topMessageIndex)
+                    return (groupId, ChatListIndex(pinningIndex: pinningIndex, messageIndex: topMessageIndex))
                 } else if let pinningIndex = pinningIndex {
-                    return ChatListIndex(pinningIndex: pinningIndex, messageIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: 0))
-                } else {
-                    return nil
-                }
-        }
-    }
-}
-
-struct ChatListGroupInclusionIndex {
-    let topMessageIndex: MessageIndex?
-    let inclusion: GroupChatListInclusion
-    
-    func includedIndex() -> ChatListIndex? {
-        switch self.inclusion {
-            case let .ifHasMessagesOrPinningIndex(pinningIndex):
-                if let topMessageIndex = self.topMessageIndex {
-                    return ChatListIndex(pinningIndex: pinningIndex, messageIndex: topMessageIndex)
+                    return (groupId, ChatListIndex(pinningIndex: pinningIndex, messageIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: 0)))
                 } else {
                     return nil
                 }
@@ -64,7 +42,7 @@ private struct ChatListIndexFlags: OptionSet {
 
 final class ChatListIndexTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: true)
     }
     
     private let peerNameIndexTable: PeerNameIndexTable
@@ -75,10 +53,8 @@ final class ChatListIndexTable: Table {
     private let sharedKey = ValueBoxKey(length: 8)
     
     private var cachedPeerIndices: [PeerId: ChatListPeerInclusionIndex] = [:]
-    private var cachedGroupIndices: [PeerGroupId: ChatListGroupInclusionIndex] = [:]
     
     private var updatedPreviousPeerCachedIndices: [PeerId: ChatListPeerInclusionIndex] = [:]
-    private var updatedPreviousGroupCachedIndices: [PeerGroupId: ChatListGroupInclusionIndex] = [:]
     
     init(valueBox: ValueBox, table: ValueBoxTable, peerNameIndexTable: PeerNameIndexTable, metadataTable: MessageHistoryMetadataTable, readStateTable: MessageHistoryReadStateTable, notificationSettingsTable: PeerNotificationSettingsTable) {
         self.peerNameIndexTable = peerNameIndexTable
@@ -122,26 +98,6 @@ final class ChatListIndexTable: Table {
         return updated
     }
     
-    func setTopMessageIndex(groupId: PeerGroupId, index: MessageIndex?) -> ChatListGroupInclusionIndex {
-        let current = self.get(groupId: groupId)
-        if self.updatedPreviousGroupCachedIndices[groupId] == nil {
-            self.updatedPreviousGroupCachedIndices[groupId] = current
-        }
-        let updated = ChatListGroupInclusionIndex(topMessageIndex: index, inclusion: current.inclusion)
-        self.cachedGroupIndices[groupId] = updated
-        return updated
-    }
-    
-    func setInclusion(groupId: PeerGroupId, inclusion: GroupChatListInclusion) -> ChatListGroupInclusionIndex {
-        let current = self.get(groupId: groupId)
-        if self.updatedPreviousGroupCachedIndices[groupId] == nil {
-            self.updatedPreviousGroupCachedIndices[groupId] = current
-        }
-        let updated = ChatListGroupInclusionIndex(topMessageIndex: current.topMessageIndex, inclusion: inclusion)
-        self.cachedGroupIndices[groupId] = updated
-        return updated
-    }
-    
     func get(peerId: PeerId) -> ChatListPeerInclusionIndex {
         if let cached = self.cachedPeerIndices[peerId] {
             return cached
@@ -170,12 +126,8 @@ final class ChatListIndexTable: Table {
                 var inclusionId: Int8 = 0
                 value.read(&inclusionId, offset: 0, length: 1)
                 if inclusionId == 0 {
-                    inclusion = .notSpecified
+                    inclusion = .notIncluded
                 } else if inclusionId == 1 {
-                    inclusion = .never
-                } else if inclusionId == 2 {
-                    inclusion = .ifHasMessages
-                } else if inclusionId == 3 {
                     var pinningIndexValue: UInt16 = 0
                     value.read(&pinningIndexValue, offset: 0, length: 2)
                     
@@ -189,7 +141,11 @@ final class ChatListIndexTable: Table {
                     } else {
                         minTimestamp = nil
                     }
-                    inclusion = .ifHasMessagesOrOneOf(pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue), minTimestamp: minTimestamp)
+                    
+                    var groupIdValue: Int32 = 0
+                    value.read(&groupIdValue, offset: 0, length: 4)
+                    
+                    inclusion = .ifHasMessagesOrOneOf(groupId: PeerGroupId(rawValue: groupIdValue), pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue), minTimestamp: minTimestamp)
                 } else {
                     preconditionFailure()
                 }
@@ -198,66 +154,19 @@ final class ChatListIndexTable: Table {
                 self.cachedPeerIndices[peerId] = inclusionIndex
                 return inclusionIndex
             } else {
-                return ChatListPeerInclusionIndex(topMessageIndex: nil, inclusion: .notSpecified)
-            }
-        }
-    }
-    
-    func get(groupId: PeerGroupId) -> ChatListGroupInclusionIndex {
-        if let cached = self.cachedGroupIndices[groupId] {
-            return cached
-        } else {
-            if let value = self.valueBox.get(self.table, key: self.key(groupId)) {
-                let topMessageIndex: MessageIndex?
-                
-                var flagsValue: Int8 = 0
-                value.read(&flagsValue, offset: 0, length: 1)
-                let flags = ChatListIndexFlags(rawValue: flagsValue)
-                
-                if flags.contains(.hasIndex) {
-                    var peerIdValue: Int64 = 0
-                    value.read(&peerIdValue, offset: 0, length: 8)
-                    
-                    var idNamespace: Int32 = 0
-                    var idId: Int32 = 0
-                    var idTimestamp: Int32 = 0
-                    value.read(&idNamespace, offset: 0, length: 4)
-                    value.read(&idId, offset: 0, length: 4)
-                    value.read(&idTimestamp, offset: 0, length: 4)
-                    topMessageIndex = MessageIndex(id: MessageId(peerId: PeerId(peerIdValue), namespace: idNamespace, id: idId), timestamp: idTimestamp)
-                } else {
-                    topMessageIndex = nil
-                }
-                
-                let inclusion: GroupChatListInclusion
-                
-                var inclusionId: Int8 = 0
-                value.read(&inclusionId, offset: 0, length: 1)
-                if inclusionId == 0 {
-                    var pinningIndexValue: UInt16 = 0
-                    value.read(&pinningIndexValue, offset: 0, length: 2)
-                    inclusion = .ifHasMessagesOrPinningIndex(pinningIndex: chatListPinningIndexFromKeyValue(pinningIndexValue))
-                } else {
-                    preconditionFailure()
-                }
-                
-                let inclusionIndex = ChatListGroupInclusionIndex(topMessageIndex: topMessageIndex, inclusion: inclusion)
-                self.cachedGroupIndices[groupId] = inclusionIndex
+                let inclusionIndex = ChatListPeerInclusionIndex(topMessageIndex: nil, inclusion: .notIncluded)
+                self.cachedPeerIndices[peerId] = inclusionIndex
                 return inclusionIndex
-            } else {
-                return ChatListGroupInclusionIndex(topMessageIndex: nil, inclusion: .ifHasMessagesOrPinningIndex(pinningIndex: nil))
             }
         }
     }
     
     override func clearMemoryCache() {
         self.cachedPeerIndices.removeAll()
-        self.cachedGroupIndices.removeAll()
         assert(self.updatedPreviousPeerCachedIndices.isEmpty)
-        assert(self.updatedPreviousGroupCachedIndices.isEmpty)
     }
     
-    func commitWithTransaction(postbox: Postbox, alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], updatedPeers: [(Peer?, Peer)], initialPeerGroupIdsBeforeUpdate: [PeerId: WrappedPeerGroupId], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), updatedTotalUnreadState: inout ChatListTotalUnreadState?, updatedGroupTotalUnreadStates: inout [WrappedPeerGroupId: ChatListTotalUnreadState]) {
+    func commitWithTransaction(postbox: Postbox, alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], updatedPeers: [(Peer?, Peer)], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), updatedRootUnreadState: inout ChatListTotalUnreadState?, updatedGroupTotalUnreadSummaries: inout [PeerGroupId: PeerGroupUnreadCountersCombinedSummary], currentUpdatedGroupSummarySynchronizeOperations: inout [PeerGroupAndNamespace: Bool]) {
         var updatedPeerTags: [PeerId: (previous: PeerSummaryCounterTags, updated: PeerSummaryCounterTags)] = [:]
         for (previous, updated) in updatedPeers {
             let previousTags: PeerSummaryCounterTags
@@ -273,17 +182,26 @@ final class ChatListIndexTable: Table {
         }
         
         if !self.updatedPreviousPeerCachedIndices.isEmpty || !alteredInitialPeerCombinedReadStates.isEmpty || !updatedPeerTags.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.added.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.removed.isEmpty {
-            var addedChatListPeerIds = Set<PeerId>()
-            var removedChatListPeerIds = Set<PeerId>()
+            var addedToGroupPeerIds: [PeerId: PeerGroupId] = [:]
+            var removedFromGroupPeerIds: [PeerId: PeerGroupId] = [:]
+            var addedToIndexPeerIds = Set<PeerId>()
+            var removedFromIndexPeerIds = Set<PeerId>()
             
             for (peerId, previousIndex) in self.updatedPreviousPeerCachedIndices {
                 let index = self.cachedPeerIndices[peerId]!
-                if index.includedIndex(peerId: peerId) != nil {
-                    if previousIndex.includedIndex(peerId: peerId) == nil {
-                        addedChatListPeerIds.insert(peerId)
+                if let (currentGroupId, _) = index.includedIndex(peerId: peerId) {
+                    let previousGroupId = previousIndex.includedIndex(peerId: peerId)?.0
+                    if previousGroupId != currentGroupId {
+                        addedToGroupPeerIds[peerId] = currentGroupId
+                        if let previousGroupId = previousGroupId {
+                            removedFromGroupPeerIds[peerId] = previousGroupId
+                        } else {
+                            addedToIndexPeerIds.insert(peerId)
+                        }
                     }
-                } else if previousIndex.includedIndex(peerId: peerId) != nil {
-                    removedChatListPeerIds.insert(peerId)
+                } else if let (previousGroupId, _) = previousIndex.includedIndex(peerId: peerId) {
+                    removedFromGroupPeerIds[peerId] = previousGroupId
+                    removedFromIndexPeerIds.insert(peerId)
                 }
                 
                 let writeBuffer = WriteBuffer()
@@ -307,17 +225,11 @@ final class ChatListIndexTable: Table {
                 }
                 
                 switch index.inclusion {
-                    case .notSpecified:
+                    case .notIncluded:
                         var key: Int8 = 0
                         writeBuffer.write(&key, offset: 0, length: 1)
-                    case .never:
+                    case let .ifHasMessagesOrOneOf(groupId, pinningIndex, minTimestamp):
                         var key: Int8 = 1
-                        writeBuffer.write(&key, offset: 0, length: 1)
-                    case .ifHasMessages:
-                        var key: Int8 = 2
-                        writeBuffer.write(&key, offset: 0, length: 1)
-                    case let .ifHasMessagesOrOneOf(pinningIndex, minTimestamp):
-                        var key: Int8 = 3
                         writeBuffer.write(&key, offset: 0, length: 1)
                     
                         var pinningIndexValue: UInt16 = keyValueForChatListPinningIndex(pinningIndex)
@@ -333,6 +245,9 @@ final class ChatListIndexTable: Table {
                             var hasMinTimestamp: Int8 = 0
                             writeBuffer.write(&hasMinTimestamp, offset: 0, length: 1)
                         }
+                    
+                        var groupIdValue = groupId.rawValue
+                        writeBuffer.write(&groupIdValue, offset: 0, length: 4)
                 }
                 
                 withExtendedLifetime(writeBuffer, {
@@ -341,11 +256,11 @@ final class ChatListIndexTable: Table {
             }
             self.updatedPreviousPeerCachedIndices.removeAll()
             
-            for peerId in addedChatListPeerIds {
+            for peerId in addedToIndexPeerIds {
                 self.peerNameIndexTable.setPeerCategoryState(peerId: peerId, category: [.chats], includes: true)
             }
             
-            for peerId in removedChatListPeerIds {
+            for peerId in removedFromIndexPeerIds {
                 self.peerNameIndexTable.setPeerCategoryState(peerId: peerId, category: [.chats], includes: false)
             }
             
@@ -353,19 +268,16 @@ final class ChatListIndexTable: Table {
             for (peerId, _) in alteredInitialPeerCombinedReadStates {
                 alteredPeerIds.insert(peerId)
             }
-            alteredPeerIds.formUnion(addedChatListPeerIds)
-            alteredPeerIds.formUnion(removedChatListPeerIds)
+            alteredPeerIds.formUnion(addedToGroupPeerIds.keys)
+            alteredPeerIds.formUnion(removedFromGroupPeerIds.keys)
             alteredPeerIds.formUnion(transactionParticipationInTotalUnreadCountUpdates.added)
             alteredPeerIds.formUnion(transactionParticipationInTotalUnreadCountUpdates.removed)
             
             for peerId in updatedPeerTags.keys {
                 alteredPeerIds.insert(peerId)
             }
-            for (peerId, _) in initialPeerGroupIdsBeforeUpdate {
-                alteredPeerIds.insert(peerId)
-            }
             
-            let alterTags: (inout ChatListTotalUnreadState, PeerId, PeerSummaryCounterTags, (ChatListTotalUnreadCounters, ChatListTotalUnreadCounters) -> (ChatListTotalUnreadCounters, ChatListTotalUnreadCounters)) -> Void = { totalUnreadState, peerId, tag, f in
+            func alterTags(_ totalUnreadState: inout ChatListTotalUnreadState, _ peerId: PeerId, _ tag: PeerSummaryCounterTags, _ f: (ChatListTotalUnreadCounters, ChatListTotalUnreadCounters) -> (ChatListTotalUnreadCounters, ChatListTotalUnreadCounters)) {
                 if totalUnreadState.absoluteCounters[tag] == nil {
                     totalUnreadState.absoluteCounters[tag] = ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0)
                 }
@@ -389,7 +301,25 @@ final class ChatListIndexTable: Table {
                 totalUnreadState.filteredCounters[tag] = updatedFilteredCounters
             }
             
-            var updatedTotalUnreadStates: [WrappedPeerGroupId: ChatListTotalUnreadState] = [:]
+            func alterNamespace(summary: inout PeerGroupUnreadCountersSummary, previousState: PeerReadState?, updatedState: PeerReadState?) {
+                let previousCount = previousState?.count ?? 0
+                let updatedCount = updatedState?.count ?? 0
+                if previousCount != updatedCount {
+                    if (previousCount != 0) != (updatedCount != 0) {
+                        if updatedCount != 0 {
+                            summary.all.chatCount += 1
+                        } else {
+                            summary.all.chatCount -= 1
+                            summary.all.chatCount = max(0, summary.all.chatCount)
+                        }
+                    }
+                    summary.all.messageCount += updatedCount - previousCount
+                    summary.all.messageCount = max(0, summary.all.messageCount)
+                }
+            }
+            
+            var updatedRootState: ChatListTotalUnreadState?
+            var updatedTotalUnreadSummaries: [PeerGroupId: PeerGroupUnreadCountersCombinedSummary] = [:]
             
             for peerId in alteredPeerIds {
                 guard let peer = postbox.peerTable.get(peerId) else {
@@ -399,267 +329,223 @@ final class ChatListIndexTable: Table {
                 let initialReadState = alteredInitialPeerCombinedReadStates[peerId] ?? postbox.readStateTable.getCombinedState(peerId)
                 let currentReadState = postbox.readStateTable.getCombinedState(peerId)
                 
-                let currentGroupId = WrappedPeerGroupId(groupId: postbox.groupAssociationTable.get(peerId: peerId))
-                
-                var groupIds: [WrappedPeerGroupId] = []
-                groupIds.append(currentGroupId)
-                if let previousGroupId = initialPeerGroupIdsBeforeUpdate[peerId] {
-                    groupIds.append(previousGroupId)
+                var groupIds: [PeerGroupId] = []
+                if let (groupId, _) = self.get(peerId: peerId).includedIndex(peerId: peerId) {
+                    groupIds.append(groupId)
                 }
-                if !groupIds.contains(WrappedPeerGroupId(groupId: nil)) {
-                    groupIds.append(WrappedPeerGroupId(groupId: nil))
+                if let groupId = addedToGroupPeerIds[peerId] {
+                    if !groupIds.contains(groupId) {
+                        groupIds.append(groupId)
+                    }
+                }
+                if let groupId = removedFromGroupPeerIds[peerId] {
+                    if !groupIds.contains(groupId) {
+                        groupIds.append(groupId)
+                    }
                 }
                 
                 for groupId in groupIds {
-                    let wasPreviouslyInGroup: Bool
-                    let isCurrentlyInGroup: Bool
-                    
-                    if groupId.groupId == nil {
-                        wasPreviouslyInGroup = true
-                        isCurrentlyInGroup = true
-                    } else {
-                        let previousGroupId = initialPeerGroupIdsBeforeUpdate[peerId] ?? currentGroupId
-                        wasPreviouslyInGroup = previousGroupId == groupId
-                        isCurrentlyInGroup = currentGroupId == groupId
-                    }
-                    
-                    let addedToGroup = !wasPreviouslyInGroup && isCurrentlyInGroup
-                    let removedFromGroup = wasPreviouslyInGroup && !isCurrentlyInGroup
-                    
-                    var totalUnreadState: ChatListTotalUnreadState
-                    if let current = updatedTotalUnreadStates[groupId] {
-                        totalUnreadState = current
-                    } else {
-                        if let _ = groupId.groupId {
-                            totalUnreadState = postbox.groupMessageStatsTable.get(groupId: groupId.groupId)
+                    var totalRootUnreadState: ChatListTotalUnreadState?
+                    var summary: PeerGroupUnreadCountersCombinedSummary
+                    if case .root = groupId {
+                        if let current = updatedRootState {
+                            totalRootUnreadState = current
                         } else {
-                            totalUnreadState = self.metadataTable.getChatListTotalUnreadState()
+                            totalRootUnreadState = postbox.messageHistoryMetadataTable.getChatListTotalUnreadState()
                         }
+                    }
+                    if let current = updatedTotalUnreadSummaries[groupId] {
+                        summary = current
+                    } else {
+                        summary = postbox.groupMessageStatsTable.get(groupId: groupId)
                     }
                     
                     var initialValue: (Int32, Bool, Bool) = (0, false, false)
                     var currentValue: (Int32, Bool, Bool) = (0, false, false)
-                    if addedChatListPeerIds.contains(peerId) {
+                    
+                    var initialStates: CombinedPeerReadState = CombinedPeerReadState(states: [])
+                    var currentStates: CombinedPeerReadState = CombinedPeerReadState(states: [])
+                    
+                    if addedToGroupPeerIds[peerId] == groupId {
                         if let currentReadState = currentReadState {
                             currentValue = (currentReadState.count, currentReadState.isUnread, currentReadState.markedUnread)
+                            currentStates = currentReadState
                         }
-                    } else if removedChatListPeerIds.contains(peerId) {
+                    } else if removedFromGroupPeerIds[peerId] == groupId {
                         if let initialReadState = initialReadState {
                             initialValue = (initialReadState.count, initialReadState.isUnread, initialReadState.markedUnread)
+                            initialStates = initialReadState
                         }
                     } else {
-                        if self.get(peerId: peerId).includedIndex(peerId: peerId) != nil {
+                        if self.get(peerId: peerId).includedIndex(peerId: peerId)?.0 == groupId {
                             if let initialReadState = initialReadState {
                                 initialValue = (initialReadState.count, initialReadState.isUnread, initialReadState.markedUnread)
+                                initialStates = initialReadState
                             }
                             if let currentReadState = currentReadState {
                                 currentValue = (currentReadState.count, currentReadState.isUnread, currentReadState.markedUnread)
+                                currentStates = currentReadState
                             }
                         }
-                    }
-                    
-                    if addedToGroup {
-                        initialValue = (0, false, false)
-                    } else if removedFromGroup {
-                        currentValue = (0, false, false)
                     }
                     
                     var initialFilteredValue: (Int32, Bool, Bool) = initialValue
                     var currentFilteredValue: (Int32, Bool, Bool) = currentValue
+                    
+                    var initialFilteredStates: CombinedPeerReadState = initialStates
+                    var currentFilteredStates: CombinedPeerReadState = currentStates
+                    
                     if transactionParticipationInTotalUnreadCountUpdates.added.contains(peerId) {
                         initialFilteredValue = (0, false, false)
+                        initialFilteredStates = CombinedPeerReadState(states: [])
                     } else if transactionParticipationInTotalUnreadCountUpdates.removed.contains(peerId) {
                         currentFilteredValue = (0, false, false)
+                        currentFilteredStates = CombinedPeerReadState(states: [])
                     } else {
                         if let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId), !notificationSettings.isRemovedFromTotalUnreadCount {
                         } else {
                             initialFilteredValue = (0, false, false)
                             currentFilteredValue = (0, false, false)
+                            initialFilteredStates = CombinedPeerReadState(states: [])
+                            currentFilteredStates = CombinedPeerReadState(states: [])
                         }
                     }
                     
-                    var keptTags: PeerSummaryCounterTags = postbox.seedConfiguration.peerSummaryCounterTags(peer)
-                    if let (removedTags, addedTags) = updatedPeerTags[peerId] {
-                        keptTags.remove(removedTags)
-                        keptTags.remove(addedTags)
+                    if var currentTotalRootUnreadState = totalRootUnreadState {
+                        var keptTags: PeerSummaryCounterTags = postbox.seedConfiguration.peerSummaryCounterTags(peer)
+                        if let (removedTags, addedTags) = updatedPeerTags[peerId] {
+                            keptTags.remove(removedTags)
+                            keptTags.remove(addedTags)
+                            
+                            for tag in removedTags {
+                                alterTags(&currentTotalRootUnreadState, peerId, tag, { absolute, filtered in
+                                    var absolute = absolute
+                                    var filtered = filtered
+                                    absolute.messageCount -= initialValue.0
+                                    if initialValue.1 {
+                                        absolute.chatCount -= 1
+                                    }
+                                    if initialValue.2 && initialValue.0 == 0 {
+                                        absolute.messageCount -= 1
+                                    }
+                                    filtered.messageCount -= initialFilteredValue.0
+                                    if initialFilteredValue.1 {
+                                        filtered.chatCount -= 1
+                                    }
+                                    if initialFilteredValue.2 && initialFilteredValue.0 == 0 {
+                                        filtered.messageCount -= 1
+                                    }
+                                    return (absolute, filtered)
+                                })
+                            }
+                            for tag in addedTags {
+                                alterTags(&currentTotalRootUnreadState, peerId, tag, { absolute, filtered in
+                                    var absolute = absolute
+                                    var filtered = filtered
+                                    absolute.messageCount += currentValue.0
+                                    if currentValue.2 && currentValue.0 == 0 {
+                                        absolute.messageCount += 1
+                                    }
+                                    if currentValue.1 {
+                                        absolute.chatCount += 1
+                                    }
+                                    filtered.messageCount += currentFilteredValue.0
+                                    if currentFilteredValue.1 {
+                                        filtered.chatCount += 1
+                                    }
+                                    if currentFilteredValue.2 && currentFilteredValue.0 == 0 {
+                                        filtered.messageCount += 1
+                                    }
+                                    return (absolute, filtered)
+                                })
+                            }
+                        }
                         
-                        for tag in removedTags {
-                            alterTags(&totalUnreadState, peerId, tag, { absolute, filtered in
+                        for tag in keptTags {
+                            alterTags(&currentTotalRootUnreadState, peerId, tag, { absolute, filtered in
                                 var absolute = absolute
                                 var filtered = filtered
-                                absolute.messageCount -= initialValue.0
-                                if initialValue.1 {
-                                    absolute.chatCount -= 1
+                                
+                                let chatDifference: Int32
+                                if initialValue.1 != currentValue.1 {
+                                    chatDifference = initialValue.1 ? -1 : 1
+                                } else {
+                                    chatDifference = 0
                                 }
-                                if initialValue.2 && initialValue.0 == 0 {
-                                    absolute.messageCount -= 1
+                                
+                                let currentUnreadMark: Int32 = currentValue.2 ? 1 : 0
+                                let initialUnreadMark: Int32 = initialValue.2 ? 1 : 0
+                                let messageDifference = max(currentValue.0, currentUnreadMark) - max(initialValue.0, initialUnreadMark)
+                                
+                                let chatFilteredDifference: Int32
+                                if initialFilteredValue.1 != currentFilteredValue.1 {
+                                    chatFilteredDifference = initialFilteredValue.1 ? -1 : 1
+                                } else {
+                                    chatFilteredDifference = 0
                                 }
-                                filtered.messageCount -= initialFilteredValue.0
-                                if initialFilteredValue.1 {
-                                    filtered.chatCount -= 1
-                                }
-                                if initialFilteredValue.2 && initialFilteredValue.0 == 0 {
-                                    filtered.messageCount -= 1
-                                }
+                                let currentFilteredUnreadMark: Int32 = currentFilteredValue.2 ? 1 : 0
+                                let initialFilteredUnreadMark: Int32 = initialFilteredValue.2 ? 1 : 0
+                                let messageFilteredDifference = max(currentFilteredValue.0, currentFilteredUnreadMark) - max(initialFilteredValue.0, initialFilteredUnreadMark)
+                                
+                                absolute.messageCount += messageDifference
+                                absolute.chatCount += chatDifference
+                                filtered.messageCount += messageFilteredDifference
+                                filtered.chatCount += chatFilteredDifference
+                                
                                 return (absolute, filtered)
                             })
                         }
-                        for tag in addedTags {
-                            alterTags(&totalUnreadState, peerId, tag, { absolute, filtered in
-                                var absolute = absolute
-                                var filtered = filtered
-                                absolute.messageCount += currentValue.0
-                                if currentValue.2 && currentValue.0 == 0 {
-                                    absolute.messageCount += 1
-                                }
-                                if currentValue.1 {
-                                    absolute.chatCount += 1
-                                }
-                                filtered.messageCount += currentFilteredValue.0
-                                if currentFilteredValue.1 {
-                                    filtered.chatCount += 1
-                                }
-                                if currentFilteredValue.2 && currentFilteredValue.0 == 0 {
-                                    filtered.messageCount += 1
-                                }
-                                return (absolute, filtered)
-                            })
+                        
+                        updatedRootState = currentTotalRootUnreadState
+                    }
+                    
+                    var namespaces: [MessageId.Namespace] = []
+                    for (namespace, _) in initialStates.states {
+                        namespaces.append(namespace)
+                    }
+                    for (namespace, _) in currentStates.states {
+                        if !namespaces.contains(namespace) {
+                            namespaces.append(namespace)
                         }
                     }
                     
-                    for tag in keptTags {
-                        alterTags(&totalUnreadState, peerId, tag, { absolute, filtered in
-                            var absolute = absolute
-                            var filtered = filtered
-                            
-                            let chatDifference: Int32
-                            if initialValue.1 != currentValue.1 {
-                                chatDifference = initialValue.1 ? -1 : 1
-                            } else {
-                                chatDifference = 0
-                            }
-                            
-                            let currentUnreadMark: Int32 = currentValue.2 ? 1 : 0
-                            let initialUnreadMark: Int32 = initialValue.2 ? 1 : 0
-                            let messageDifference = max(currentValue.0, currentUnreadMark) - max(initialValue.0, initialUnreadMark)
-                            
-                            let chatFilteredDifference: Int32
-                            if initialFilteredValue.1 != currentFilteredValue.1 {
-                                chatFilteredDifference = initialFilteredValue.1 ? -1 : 1
-                            } else {
-                                chatFilteredDifference = 0
-                            }
-                            let currentFilteredUnreadMark: Int32 = currentFilteredValue.2 ? 1 : 0
-                            let initialFilteredUnreadMark: Int32 = initialFilteredValue.2 ? 1 : 0
-                            let messageFilteredDifference = max(currentFilteredValue.0, currentFilteredUnreadMark) - max(initialFilteredValue.0, initialFilteredUnreadMark)
-                            
-                            absolute.messageCount += messageDifference
-                            absolute.chatCount += chatDifference
-                            filtered.messageCount += messageFilteredDifference
-                            filtered.chatCount += chatFilteredDifference
-                            
-                            return (absolute, filtered)
-                        })
+                    for namespace in namespaces {
+                        if postbox.seedConfiguration.messageNamespacesRequiringGroupStatsValidation.contains(namespace) && addedToGroupPeerIds[peerId] == groupId && removedFromGroupPeerIds[peerId] == nil {
+                            postbox.synchronizeGroupMessageStatsTable.set(groupId: groupId, namespace: namespace, needsValidation: true, operations: &currentUpdatedGroupSummarySynchronizeOperations)
+                        } else {
+                            var namespaceSummary = summary.namespaces[namespace] ?? PeerGroupUnreadCountersSummary(all: PeerGroupUnreadCounters(messageCount: 0, chatCount: 0))
+                            let previousState = initialStates.states.first(where: { $0.0 == namespace })?.1
+                            let updatedState = currentStates.states.first(where: { $0.0 == namespace })?.1
+                            alterNamespace(summary: &namespaceSummary, previousState: previousState, updatedState: updatedState)
+                            summary.namespaces[namespace] = namespaceSummary
+                        }
                     }
                     
-                    updatedTotalUnreadStates[groupId] = totalUnreadState
+                    updatedTotalUnreadSummaries[groupId] = summary
                 }
             }
             
-            for groupId in updatedTotalUnreadStates.keys {
-                var removeAbsoluteKeys = PeerSummaryCounterTags()
-                var removeFilteredKeys = PeerSummaryCounterTags()
-                for (tag, value) in updatedTotalUnreadStates[groupId]!.absoluteCounters {
-                    if value.chatCount == 0 && value.messageCount == 0 {
-                        removeAbsoluteKeys.insert(tag)
-                    }
-                }
-                for (tag, value) in updatedTotalUnreadStates[groupId]!.filteredCounters {
-                    if value.chatCount == 0 && value.messageCount == 0 {
-                        removeFilteredKeys.insert(tag)
-                    }
-                }
-                for tag in removeAbsoluteKeys {
-                    updatedTotalUnreadStates[groupId]!.absoluteCounters.removeValue(forKey: tag)
-                }
-                for tag in removeFilteredKeys {
-                    updatedTotalUnreadStates[groupId]!.filteredCounters.removeValue(forKey: tag)
-                }
-                
-                if groupId.groupId == nil {
-                    if self.metadataTable.getChatListTotalUnreadState() != updatedTotalUnreadStates[groupId]! {
-                        updatedGroupTotalUnreadStates[groupId] = updatedTotalUnreadStates[groupId]!
-                        metadataTable.setChatListTotalUnreadState(updatedTotalUnreadStates[groupId]!)
-                    }
-                } else {
-                    if postbox.groupMessageStatsTable.get(groupId: groupId.groupId) != updatedTotalUnreadStates[groupId]! {
-                        postbox.groupMessageStatsTable.set(groupId: groupId.groupId, state: updatedTotalUnreadStates[groupId]!)
-                        updatedGroupTotalUnreadStates[groupId] = updatedTotalUnreadStates[groupId]!
-                    }
+            if let updatedRootState = updatedRootState {
+                if postbox.messageHistoryMetadataTable.getChatListTotalUnreadState() != updatedRootState {
+                    postbox.messageHistoryMetadataTable.setChatListTotalUnreadState(updatedRootState)
+                    updatedRootUnreadState = updatedRootState
                 }
             }
             
-            /*#if DEBUG && targetEnvironment(simulator)
-            let reindexedCounts = self.debugReindexUnreadCounts(postbox: postbox)
-            
-            if reindexedCounts != totalUnreadState {
-                print("reindexedCounts \(reindexedCounts) != totalUnreadState \(totalUnreadState)")
-                totalUnreadState = reindexedCounts
+            for groupId in updatedTotalUnreadSummaries.keys {
+                if postbox.groupMessageStatsTable.get(groupId: groupId) != updatedTotalUnreadSummaries[groupId]! {
+                    postbox.groupMessageStatsTable.set(groupId: groupId, summary: updatedTotalUnreadSummaries[groupId]!)
+                    updatedGroupTotalUnreadSummaries[groupId] = updatedTotalUnreadSummaries[groupId]!
+                }
             }
-            #endif*/
-        }
-        
-        if !self.updatedPreviousGroupCachedIndices.isEmpty {
-            let writeBuffer = WriteBuffer()
-            for (groupId, _) in self.updatedPreviousGroupCachedIndices {
-                writeBuffer.reset()
-                
-                let index = self.cachedGroupIndices[groupId]!
-                
-                var flags: ChatListIndexFlags = []
-                
-                if index.topMessageIndex != nil {
-                    flags.insert(.hasIndex)
-                }
-                
-                var flagsValue = flags.rawValue
-                writeBuffer.write(&flagsValue, offset: 0, length: 1)
-                
-                if let topMessageIndex = index.topMessageIndex {
-                    var peerIdValue: Int64 = topMessageIndex.id.peerId.toInt64()
-                    writeBuffer.write(&peerIdValue, offset: 0, length: 8)
-                    var idNamespace: Int32 = topMessageIndex.id.namespace
-                    var idId: Int32 = topMessageIndex.id.id
-                    var idTimestamp: Int32 = topMessageIndex.timestamp
-                    writeBuffer.write(&idNamespace, offset: 0, length: 4)
-                    writeBuffer.write(&idId, offset: 0, length: 4)
-                    writeBuffer.write(&idTimestamp, offset: 0, length: 4)
-                }
-                
-                switch index.inclusion {
-                    case let .ifHasMessagesOrPinningIndex(pinningIndex):
-                        var key: Int8 = 0
-                        writeBuffer.write(&key, offset: 0, length: 1)
-                        
-                        var pinningIndexValue: UInt16 = keyValueForChatListPinningIndex(pinningIndex)
-                        writeBuffer.write(&pinningIndexValue, offset: 0, length: 2)
-                }
-                
-                withExtendedLifetime(writeBuffer, {
-                    self.valueBox.set(self.table, key: self.key(groupId), value: writeBuffer.readBufferNoCopy())
-                })
-            }
-            
-            self.updatedPreviousGroupCachedIndices.removeAll()
         }
     }
     
     override func beforeCommit() {
         assert(self.updatedPreviousPeerCachedIndices.isEmpty)
-        assert(self.updatedPreviousGroupCachedIndices.isEmpty)
     }
     
-    func debugReindexUnreadCounts(postbox: Postbox) -> [WrappedPeerGroupId: ChatListTotalUnreadState] {
+    func debugReindexUnreadCounts(postbox: Postbox) -> (ChatListTotalUnreadState, [PeerGroupId: PeerGroupUnreadCountersCombinedSummary]) {
         var peerIds: [PeerId] = []
         self.valueBox.scanInt64(self.table, values: { key, _ in
             let peerId = PeerId(key)
@@ -668,93 +554,77 @@ final class ChatListIndexTable: Table {
             }
             return true
         })
-        var states: [WrappedPeerGroupId: ChatListTotalUnreadState] = [:]
+        var rootState = ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:])
+        var summaries: [PeerGroupId: PeerGroupUnreadCountersCombinedSummary] = [:]
         for peerId in peerIds {
             guard let peer = postbox.peerTable.get(peerId) else {
+                continue
+            }
+            guard let combinedState = postbox.readStateTable.getCombinedState(peerId) else {
                 continue
             }
             let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
             let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId)
             let inclusion = self.get(peerId: peerId)
-            if inclusion.includedIndex(peerId: peerId) != nil {
-                if let combinedState = postbox.readStateTable.getCombinedState(peerId) {
+            if let (groupId, _) = inclusion.includedIndex(peerId: peerId) {
+                if case .root = groupId {
                     let peerMessageCount = combinedState.count
-                    let summaryTags = postbox.seedConfiguration.peerSummaryCounterTags(peer)
                     
-                    var peerGroupIds: [WrappedPeerGroupId] = []
-                    peerGroupIds.append(WrappedPeerGroupId(groupId: nil))
-                    if let groupId = postbox.groupAssociationTable.get(peerId: peerId) {
-                        peerGroupIds.append(WrappedPeerGroupId(groupId: groupId))
+                    let summaryTags = postbox.seedConfiguration.peerSummaryCounterTags(peer)
+                    for tag in summaryTags {
+                        if rootState.absoluteCounters[tag] == nil {
+                            rootState.absoluteCounters[tag] = ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0)
+                        }
+                        var messageCount = rootState.absoluteCounters[tag]!.messageCount
+                        messageCount = messageCount &+ peerMessageCount
+                        if messageCount < 0 {
+                            messageCount = 0
+                        }
+                        if combinedState.isUnread {
+                            rootState.absoluteCounters[tag]!.chatCount += 1
+                        }
+                        if combinedState.markedUnread {
+                            messageCount = max(1, messageCount)
+                        }
+                        rootState.absoluteCounters[tag]!.messageCount = messageCount
                     }
                     
-                    for groupId in peerGroupIds {
-                        var state = states[groupId] ?? ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:])
-                        
+                    if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
                         for tag in summaryTags {
-                            if state.absoluteCounters[tag] == nil {
-                                state.absoluteCounters[tag] = ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0)
+                            if rootState.filteredCounters[tag] == nil {
+                                rootState.filteredCounters[tag] = ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0)
                             }
-                            var messageCount = state.absoluteCounters[tag]!.messageCount
+                            var messageCount = rootState.filteredCounters[tag]!.messageCount
                             messageCount = messageCount &+ peerMessageCount
                             if messageCount < 0 {
                                 messageCount = 0
                             }
                             if combinedState.isUnread {
-                                state.absoluteCounters[tag]!.chatCount += 1
+                                rootState.filteredCounters[tag]!.chatCount += 1
                             }
                             if combinedState.markedUnread {
                                 messageCount = max(1, messageCount)
                             }
-                            state.absoluteCounters[tag]!.messageCount = messageCount
+                            rootState.filteredCounters[tag]!.messageCount = messageCount
                         }
-                        
-                        if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
-                            for tag in summaryTags {
-                                if state.filteredCounters[tag] == nil {
-                                    state.filteredCounters[tag] = ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0)
-                                }
-                                var messageCount = state.filteredCounters[tag]!.messageCount
-                                messageCount = messageCount &+ peerMessageCount
-                                if messageCount < 0 {
-                                    messageCount = 0
-                                }
-                                if combinedState.isUnread {
-                                    state.filteredCounters[tag]!.chatCount += 1
-                                }
-                                if combinedState.markedUnread {
-                                    messageCount = max(1, messageCount)
-                                }
-                                state.filteredCounters[tag]!.messageCount = messageCount
-                            }
-                        }
-                        
-                        states[groupId] = state
+                    }
+                }
+                
+                for (namespace, state) in combinedState.states {
+                    if summaries[groupId] == nil {
+                        summaries[groupId] = PeerGroupUnreadCountersCombinedSummary(namespaces: [:])
+                    }
+                    if summaries[groupId]!.namespaces[namespace] == nil {
+                        summaries[groupId]!.namespaces[namespace] = PeerGroupUnreadCountersSummary(all: PeerGroupUnreadCounters(messageCount: 0, chatCount: 0))
+                    }
+                    if state.count > 0 {
+                        summaries[groupId]!.namespaces[namespace]!.all.chatCount += 1
+                        summaries[groupId]!.namespaces[namespace]!.all.messageCount += state.count
                     }
                 }
             }
         }
         
-        for groupId in states.keys {
-            var removeAbsoluteKeys = PeerSummaryCounterTags()
-            var removeFilteredKeys = PeerSummaryCounterTags()
-            for (tag, value) in states[groupId]!.absoluteCounters {
-                if value.chatCount == 0 && value.messageCount == 0 {
-                    removeAbsoluteKeys.insert(tag)
-                }
-            }
-            for (tag, value) in states[groupId]!.filteredCounters {
-                if value.chatCount == 0 && value.messageCount == 0 {
-                    removeFilteredKeys.insert(tag)
-                }
-            }
-            for tag in removeAbsoluteKeys {
-                states[groupId]!.absoluteCounters.removeValue(forKey: tag)
-            }
-            for tag in removeFilteredKeys {
-                states[groupId]!.filteredCounters.removeValue(forKey: tag)
-            }
-        }
-        
-        return states
+        return (rootState, summaries)
     }
 }

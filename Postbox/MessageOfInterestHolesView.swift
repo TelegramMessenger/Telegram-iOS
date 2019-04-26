@@ -70,7 +70,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                 break
             case let .loaded(sample):
                 switch sample.anchor {
-                    case let .index(index):
+                    case .index:
                         let anchorIndex = binaryIndexOrLower(sample.entries, sample.anchor)
                         loop: for i in max(0, anchorIndex) ..< sample.entries.count {
                             let message = sample.entries[i].message

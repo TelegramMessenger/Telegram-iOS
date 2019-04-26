@@ -1695,53 +1695,6 @@ final class MessageHistoryTable: Table {
             
             let _ = self.justUpdate(index, message: InternalStoreMessage(id: previousMessage.id, timestamp: timestamp, globallyUniqueId: previousMessage.globallyUniqueId, groupingKey: previousMessage.groupingKey, flags: StoreMessageFlags(previousMessage.flags), tags: previousMessage.tags, globalTags: previousMessage.globalTags, localTags: previousMessage.localTags, forwardInfo: storeForwardInfo, authorId: previousMessage.authorId, text: previousMessage.text, attributes: parsedAttributes, media: parsedMedia), keepLocalTags: false, sharedKey: self.key(updatedIndex), sharedBuffer: WriteBuffer(), sharedEncoder: PostboxEncoder(), unsentMessageOperations: &unsentMessageOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, updatedGroupInfos: &updatedGroupInfos, localTagsOperations: &localTagsOperations, updatedMedia: &updatedMedia)
             return (previousMessage.tags, previousMessage.globalTags)
-            
-            
-            self.valueBox.remove(self.table, key: self.key(index), secure: false)
-            //TODO changed updatedIndex -> index
-            let updatedGroupInfo = self.updateMovingGroupInfoInNamespace(index: index, updatedIndex: index, groupingKey: previousMessage.groupingKey, previousInfo: previousMessage.groupInfo, updatedGroupInfos: &updatedGroupInfos)
-            if let updatedGroupInfo = updatedGroupInfo, previousMessage.groupInfo != updatedGroupInfo {
-                updatedGroupInfos[index.id] = updatedGroupInfo
-            }
-            
-            //for media in previousMessage.referencedMedia
-            
-            let updatedMessage = IntermediateMessage(stableId: previousMessage.stableId, stableVersion: previousMessage.stableVersion + 1, id: previousMessage.id, globallyUniqueId: previousMessage.globallyUniqueId, groupingKey: previousMessage.groupingKey, groupInfo: updatedGroupInfo, timestamp: timestamp, flags: previousMessage.flags, tags: previousMessage.tags, globalTags: previousMessage.globalTags, localTags: previousMessage.localTags, forwardInfo: previousMessage.forwardInfo, authorId: previousMessage.authorId, text: previousMessage.text, attributesData: previousMessage.attributesData, embeddedMediaData: previousMessage.embeddedMediaData, referencedMedia: previousMessage.referencedMedia)
-            self.storeIntermediateMessage(updatedMessage, sharedKey: self.key(updatedIndex))
-            
-            let tags = previousMessage.tags.rawValue
-            if tags != 0 {
-                for i in 0 ..< 32 {
-                    let currentTags = tags >> UInt32(i)
-                    if currentTags == 0 {
-                        break
-                    }
-                    
-                    if (currentTags & 1) != 0 {
-                        let tag = MessageTags(rawValue: 1 << UInt32(i))
-                        self.tagsTable.remove(tags: tag, index: index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
-                        self.tagsTable.add(tags: tag, index: updatedIndex, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
-                    }
-                }
-            }
-            
-            let globalTags = previousMessage.globalTags.rawValue
-            if globalTags != 0 {
-                for i in 0 ..< 32 {
-                    let currentTags = globalTags >> UInt32(i)
-                    if currentTags == 0 {
-                        break
-                    }
-                    
-                    if (currentTags & 1) != 0 {
-                        let tag = GlobalMessageTags(rawValue: 1 << UInt32(i))
-                        self.globalTagsTable.remove(tag, index: index)
-                        let _ = self.globalTagsTable.addMessage(tag, index: MessageIndex(id: index.id, timestamp: timestamp))
-                    }
-                }
-            }
-            
-            return (previousMessage.tags, previousMessage.globalTags)
         } else {
             return nil
         }
@@ -2446,10 +2399,8 @@ final class MessageHistoryTable: Table {
                 return true
             }, limit: 0)
             
-            if fromIndex.id.namespace == toIndex.id.namespace {
+            if fromIndex.id.namespace == namespace && toIndex.id.namespace == namespace {
                 holes = !self.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: fromIndex.id.namespace, space: .everywhere, range: fromIndex.id.id ... toIndex.id.id).isEmpty
-            } else {
-                assertionFailure()
             }
         }
         
@@ -2628,6 +2579,5 @@ final class MessageHistoryTable: Table {
 
     func debugList(tag: MessageTags?, peerId: PeerId, namespace: MessageId.Namespace, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {
         preconditionFailure()
-        return []
     }
 }

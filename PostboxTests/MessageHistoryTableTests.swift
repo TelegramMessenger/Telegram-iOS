@@ -282,7 +282,6 @@ class MessageHistoryTableTests: XCTestCase {
     var invalidatedMessageHistoryTagsSummaryTable: InvalidatedMessageHistoryTagsSummaryTable?
     var pendingMessageActionsTable: PendingMessageActionsTable?
     var pendingMessageActionsMetadataTable: PendingMessageActionsMetadataTable?
-    var groupAssociationTable: PeerGroupAssociationTable?
     var groupFeedIndexTable: GroupFeedIndexTable?
     
     override class func setUp() {
@@ -321,7 +320,6 @@ class MessageHistoryTableTests: XCTestCase {
         self.globalTagsTable = GlobalMessageHistoryTagsTable(valueBox: self.valueBox!, table: GlobalMessageHistoryTagsTable.tableSpec(13))
         self.localTagsTable = LocalMessageHistoryTagsTable(valueBox: self.valueBox!, table: GlobalMessageHistoryTagsTable.tableSpec(22))
         self.textIndexTable = MessageHistoryTextIndexTable(valueBox: self.valueBox!, table: MessageHistoryTextIndexTable.tableSpec(15))
-        self.groupAssociationTable = PeerGroupAssociationTable(valueBox: self.valueBox!, table: PeerGroupAssociationTable.tableSpec(20))
         self.groupFeedIndexTable = GroupFeedIndexTable(valueBox: self.valueBox!, table: GroupFeedIndexTable.tableSpec(21), metadataTable: self.historyMetadataTable!)
         self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, globalTagsTable: self.globalTagsTable!, localTagsTable: self.localTagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!, textIndexTable: self.textIndexTable!, summaryTable: self.messageHistoryTagsSummaryTable!, pendingActionsTable: self.pendingMessageActionsTable!, groupAssociationTable: self.groupAssociationTable!, groupFeedIndexTable: self.groupFeedIndexTable!)
         self.reverseAssociatedTable = ReverseAssociatedPeerTable(valueBox: self.valueBox!, table: ReverseAssociatedPeerTable.tableSpec(14))

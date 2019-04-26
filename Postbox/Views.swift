@@ -22,8 +22,8 @@ public enum PostboxViewKey: Hashable {
     case messages(Set<MessageId>)
     case additionalChatListItems
     case cachedItem(ItemCacheEntryId)
-    case orderedContacts
     case peerPresences(peerIds: Set<PeerId>)
+    case synchronizeGroupMessageStats
     
     public var hashValue: Int {
         switch self {
@@ -69,10 +69,10 @@ public enum PostboxViewKey: Hashable {
                 return 11
             case let .cachedItem(id):
                 return id.hashValue
-            case .orderedContacts:
-                return 12
             case .peerPresences:
                 return 13
+            case let .synchronizeGroupMessageStats:
+                return 14
         }
     }
     
@@ -204,14 +204,14 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
-            case .orderedContacts:
-                if case .orderedContacts = rhs {
+            case let .peerPresences(ids):
+                if case .peerPresences(ids) = rhs {
                     return true
                 } else {
                     return false
                 }
-            case let .peerPresences(ids):
-                if case .peerPresences(ids) = rhs {
+            case let .synchronizeGroupMessageStats:
+                if case .synchronizeGroupMessageStats = rhs {
                     return true
                 } else {
                     return false
@@ -264,9 +264,9 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutableAdditionalChatListItemsView(postbox: postbox)
         case let .cachedItem(id):
             return MutableCachedItemView(postbox: postbox, id: id)
-        case .orderedContacts:
-            return MutableOrderedContactsView(postbox: postbox)
         case let .peerPresences(ids):
             return MutablePeerPresencesView(postbox: postbox, ids: ids)
+        case let .synchronizeGroupMessageStats:
+            return MutableSynchronizeGroupMessageStatsView(postbox: postbox)
     }
 }

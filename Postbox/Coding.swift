@@ -1398,7 +1398,7 @@ public final class PostboxDecoder {
                 innerDecoder = PostboxDecoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(valueLength), freeWhenDone: false))
                 self.offset += 4 + Int(valueLength)
                 
-                let value = failed ? nil : (valueDecoder(innerDecoder) as? V)
+                let value = failed ? nil : (valueDecoder(innerDecoder) as V)
                 
                 if let key = key, let value = value {
                     dictionary[key] = value

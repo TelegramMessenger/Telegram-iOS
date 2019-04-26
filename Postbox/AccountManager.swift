@@ -306,16 +306,13 @@ final class AccountManagerImpl {
     fileprivate func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> {
         return self.transaction(ignoreDisabled: false, { transaction -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> in
             let current = transaction.getCurrent()
-            let record: (AccountRecordId, [AccountRecordAttribute])?
-            if let current = current {
-                record = current
+            if let _ = current {
             } else if allocateIfNotExists {
                 let id = generateAccountRecordId()
                 transaction.setCurrentId(id)
                 transaction.updateRecord(id, { _ in
                     return AccountRecord(id: id, attributes: [], temporarySessionId: nil)
                 })
-                record = (id, [])
             } else {
                 return .single(nil)
             }

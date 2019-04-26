@@ -29,9 +29,9 @@ private func parseMessageId(_ value: String) -> MessageId? {
     guard let bRange = value.range(of: "b") else {
         return nil
     }
-    let pString = value.substring(with: value.index(value.startIndex, offsetBy: 1) ..< aRange.lowerBound)
-    let nString = value.substring(with: aRange.upperBound ..< bRange.lowerBound)
-    let iString = value.substring(with: bRange.upperBound ..< value.endIndex)
+    let pString = value[value.index(value.startIndex, offsetBy: 1) ..< aRange.lowerBound]
+    let nString = value[aRange.upperBound ..< bRange.lowerBound]
+    let iString = value[bRange.upperBound ..< value.endIndex]
     
     guard let pValue = UInt64(pString) else {
         return nil

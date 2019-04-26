@@ -5,28 +5,9 @@ public enum PeerReadStateSynchronizationOperation: Equatable {
     case Validate
 }
 
-public func ==(lhs: PeerReadStateSynchronizationOperation, rhs: PeerReadStateSynchronizationOperation) -> Bool {
-    switch lhs {
-        case let .Push(lhsState, lhsThenSync):
-            switch rhs {
-                case let .Push(rhsState, rhsThenSync) where lhsState == rhsState && lhsThenSync == rhsThenSync:
-                    return true
-                default:
-                    return false
-            }
-        case .Validate:
-            switch rhs {
-                case .Validate:
-                    return true
-                default:
-                    return false
-            }
-    }
-}
-
 final class MessageHistorySynchronizeReadStateTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: true)
     }
     
     private let sharedKey = ValueBoxKey(length: 8)

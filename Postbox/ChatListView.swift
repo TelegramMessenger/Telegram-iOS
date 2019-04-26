@@ -48,7 +48,7 @@ public struct ChatListGroupReferenceEntry: Equatable {
     public let groupId: PeerGroupId
     public let renderedPeer: RenderedPeer
     public let message: Message?
-    public let unreadState: ChatListTotalUnreadState
+    public let unreadState: PeerGroupUnreadCountersCombinedSummary
     
     public static func ==(lhs: ChatListGroupReferenceEntry, rhs: ChatListGroupReferenceEntry) -> Bool {
         if lhs.groupId != rhs.groupId {
@@ -297,7 +297,7 @@ private func updatedRenderedPeer(_ renderedPeer: RenderedPeer, updatedPeers: [Pe
 }
 
 final class MutableChatListView {
-    let groupId: PeerGroupId?
+    let groupId: PeerGroupId
     private let summaryComponents: ChatListEntrySummaryComponents
     fileprivate var additionalItemIds: Set<PeerId>
     fileprivate var additionalItemEntries: [MutableChatListEntry]
@@ -307,7 +307,7 @@ final class MutableChatListView {
     fileprivate var groupEntries: [ChatListGroupReferenceEntry]
     private var count: Int
     
-    init(postbox: Postbox, groupId: PeerGroupId?, earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
+    init(postbox: Postbox, groupId: PeerGroupId, earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.groupId = groupId
         self.earlier = earlier
         self.entries = entries
@@ -315,7 +315,7 @@ final class MutableChatListView {
         self.count = count
         self.summaryComponents = summaryComponents
         self.additionalItemEntries = []
-        if groupId == nil {
+        if case .root = groupId {
             let itemIds = postbox.additionalChatListItemsTable.get()
             self.additionalItemIds = Set(itemIds)
             for peerId in itemIds {
@@ -404,7 +404,7 @@ final class MutableChatListView {
                 
                 if let message = foundMessage {
                     self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeer: renderedPeer, message: postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable), unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
-                } else if let (peerId, _) = foundPeerWithIndex {
+                } else if let (_, _) = foundPeerWithIndex {
                     self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeer: renderedPeer, message: nil, unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
                 }
             }
@@ -438,10 +438,10 @@ final class MutableChatListView {
         return updated
     }
     
-    func replay(postbox: Postbox, operations: [WrappedPeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
+    func replay(postbox: Postbox, operations: [PeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         
-        if let groupOperations = operations[WrappedPeerGroupId(groupId: self.groupId)] {
+        if let groupOperations = operations[self.groupId] {
             for operation in groupOperations {
                 switch operation {
                     case let .InsertEntry(index, message, combinedReadState, embeddedState):
@@ -452,8 +452,6 @@ final class MutableChatListView {
                         if self.add(.HoleEntry(index), postbox: postbox) {
                             hasChanges = true
                         }
-                    case let .InsertGroupReference(groupId, index):
-                        assertionFailure()
                     case let .RemoveEntry(indices):
                         if self.remove(Set(indices), type: .message, context: context) {
                             hasChanges = true
@@ -462,18 +460,14 @@ final class MutableChatListView {
                         if self.remove(Set(indices), type: .hole, context: context) {
                             hasChanges = true
                         }
-                    case let .RemoveGroupReferences(indices):
-                        if self.remove(Set(indices), type: .groupReference, context: context) {
-                            hasChanges = true
-                        }
                 }
             }
         }
         
-        if self.groupId == nil {
+        if case .root = self.groupId {
             var invalidatedGroups = false
-            for (wrappedGroupId, groupOperations) in operations {
-                if wrappedGroupId.groupId != nil && !groupOperations.isEmpty {
+            for (groupId, groupOperations) in operations {
+                if case .group = groupId, !groupOperations.isEmpty {
                     invalidatedGroups = true
                 }
             }
@@ -482,7 +476,7 @@ final class MutableChatListView {
                 hasChanges = true
             } else {
                 for i in 0 ..< self.groupEntries.count {
-                    if let updatedState = transaction.currentUpdatedTotalUnreadStates[WrappedPeerGroupId(groupId: self.groupEntries[i].groupId)] {
+                    if let updatedState = transaction.currentUpdatedTotalUnreadSummaries[self.groupEntries[i].groupId] {
                         self.groupEntries[i] = ChatListGroupReferenceEntry(groupId: self.groupEntries[i].groupId, renderedPeer: self.groupEntries[i].renderedPeer, message: self.groupEntries[i].message, unreadState: updatedState)
                         hasChanges = true
                     }
@@ -908,7 +902,7 @@ final class MutableChatListView {
 }
 
 public final class ChatListView {
-    public let groupId: PeerGroupId?
+    public let groupId: PeerGroupId
     public let additionalItemEntries: [ChatListEntry]
     public let entries: [ChatListEntry]
     public let groupEntries: [ChatListGroupReferenceEntry]

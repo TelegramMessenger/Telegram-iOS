@@ -247,10 +247,7 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                     }
                 }
         }
-        guard let items = orderedEntriesBySpace[space] else {
-            return ([MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound()], SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: Int32.max - 1, endId: 1))
-        }
-        if items.entries.isEmpty {
+        guard let items = orderedEntriesBySpace[space], !items.entries.isEmpty else {
             let holeBounds: (startId: MessageId.Id, endId: MessageId.Id)
             switch anchor {
                 case .lowerBound:
@@ -727,7 +724,7 @@ final class HistoryViewLoadedState {
                     self.orderedEntriesBySpace[space]!.bounds = postbox.messageHistoryTable.fetchBoundaries(peerId: space.peerId, namespace: space.namespace, tag: self.tag)
                 }
             } else {
-                assertionFailure("A non-empty entry list should have non-nil bounds")
+                //assertionFailure("A non-empty entry list should have non-nil bounds")
             }
             self.orderedEntriesBySpace[space]!.entries.remove(at: itemIndex)
             self.spacesWithRemovals.insert(space)
