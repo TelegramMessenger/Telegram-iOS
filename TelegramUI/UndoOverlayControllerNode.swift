@@ -236,7 +236,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.panelWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
         if let iconCheckNode = self.iconCheckNode, self.iconNode != nil {
-            iconCheckNode.transitionToState(.check(.black), completion: {})
+            Queue.mainQueue().after(0.2, { [weak iconCheckNode] in
+                iconCheckNode?.transitionToState(.check(.black), completion: {})
+            })
         }
         
         self.checkTimer()

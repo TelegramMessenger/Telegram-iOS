@@ -6,12 +6,12 @@
     },
     {
       "idiom" : "universal",
-      "filename" : "ArchiveAvatar@2x.png",
+      "filename" : "archiveavatar@2x.png",
       "scale" : "2x"
     },
     {
       "idiom" : "universal",
-      "filename" : "ArchiveAvatar@3x.png",
+      "filename" : "archiveavatar@3x.png",
       "scale" : "3x"
     }
   ],
