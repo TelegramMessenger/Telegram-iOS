@@ -2,16 +2,19 @@ import Foundation
 
 public enum UnreadMessageCountsItem: Equatable {
     case total(ValueBoxKey?)
+    case groupId(PeerGroupId)
     case peer(PeerId)
 }
 
 private enum MutableUnreadMessageCountsItemEntry {
     case total((ValueBoxKey, PreferencesEntry?)?, ChatListTotalUnreadState)
+    case groupId(PeerGroupId, ChatListTotalUnreadState)
     case peer(PeerId, CombinedPeerReadState?)
 }
 
 public enum UnreadMessageCountsItemEntry {
     case total(PreferencesEntry?, ChatListTotalUnreadState)
+     case groupId(PeerGroupId, ChatListTotalUnreadState)
     case peer(PeerId, CombinedPeerReadState?)
 }
 
@@ -25,6 +28,8 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                     return .total(preferencesKey.flatMap({ ($0, postbox.preferencesTable.get(key: $0)) }), postbox.messageHistoryMetadataTable.getChatListTotalUnreadState())
                 case let .peer(peerId):
                     return .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
+            case let .groupId(groupId):
+                return .groupId(groupId, postbox.groupMessageStatsTable.get(groupId: groupId))
             }
         }
     }
@@ -62,6 +67,13 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                             self.entries[i] = .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
                             updated = true
                         }
+                case let .groupId(groupId, state):
+                    if let updatedState = transaction.currentUpdatedTotalUnreadStates[WrappedPeerGroupId(groupId: groupId)] {
+                        if updatedState != state {
+                            self.entries[i] = .groupId(groupId, updatedState)
+                            updated = true
+                        }
+                    }
                 }
             }
         }
@@ -84,6 +96,8 @@ public final class UnreadMessageCountsView: PostboxView {
                     return .total(keyAndValue?.1, state)
                 case let .peer(peerId, count):
                     return .peer(peerId, count)
+            case let .groupId(groupId, state):
+                return .groupId(groupId, state)
             }
         }
     }
@@ -93,6 +107,8 @@ public final class UnreadMessageCountsView: PostboxView {
             switch entry {
                 case let .total(preferencesEntry, state):
                     return (preferencesEntry, state)
+                case let .groupId(_, state):
+                    return (nil, state)
                 default:
                     break
             }
@@ -104,6 +120,8 @@ public final class UnreadMessageCountsView: PostboxView {
         for entry in self.entries {
             switch entry {
                 case .total:
+                    break
+                case .groupId:
                     break
                 case let .peer(peerId, state):
                     if case .peer(peerId) = item {
