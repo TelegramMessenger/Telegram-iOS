@@ -4012,7 +4012,7 @@ Unused sets are archived when you add more.";
 "AutoDownloadSettings.TypeGroupChats" = "Groups";
 "AutoDownloadSettings.TypeChannels" = "Channels";
 "AutoDownloadSettings.UpToForAll" = "Up to %@ for all chats";
-"AutoDownloadSettings.UpToFor" = "Up to %@ for %@";
+"AutoDownloadSettings.UpToFor" = "Up to %1$@ for %2$@";
 "AutoDownloadSettings.OffForAll" = "Off for all chats";
 "AutoDownloadSettings.Delimeter" = ", ";
 "AutoDownloadSettings.LastDelimeter" = " and ";
