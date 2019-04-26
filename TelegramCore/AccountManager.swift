@@ -266,11 +266,13 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
     }
 }
 
-public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager) -> Signal<Void, NoError> {
+public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
     Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
     return accountManager.transaction { transaction -> Void in
         transaction.updateRecord(id, { current in
-            if let current = current {
+            if alreadyLoggedOutRemotely {
+                return nil
+            } else if let current = current {
                 var found = false
                 for attribute in current.attributes {
                     if attribute is LoggedOutAccountAttribute {
