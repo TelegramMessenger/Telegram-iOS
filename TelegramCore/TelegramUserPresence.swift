@@ -12,41 +12,6 @@ public enum UserPresenceStatus: Comparable, PostboxCoding {
     case lastWeek
     case lastMonth
     
-    public static func ==(lhs: UserPresenceStatus, rhs: UserPresenceStatus) -> Bool {
-        switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .present(until):
-                if case .present(until) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .recently:
-                if case .recently = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .lastWeek:
-                if case .lastWeek = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .lastMonth:
-                if case .lastMonth = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
     public static func <(lhs: UserPresenceStatus, rhs: UserPresenceStatus) -> Bool {
         switch lhs {
             case .none:

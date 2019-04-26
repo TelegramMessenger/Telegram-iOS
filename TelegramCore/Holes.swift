@@ -353,12 +353,13 @@ func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
     }
 }
 
-func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId, groupId: PeerGroupId?, hole: ChatListHole) -> Signal<Never, NoError> {
+func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId, groupId: PeerGroupId, hole: ChatListHole) -> Signal<Never, NoError> {
     let location: FetchChatListLocation
-    if let groupId = groupId {
-        location = .group(groupId)
-    } else {
-        location = .general
+    switch groupId {
+        case .root:
+            location = .general
+        case .group:
+            location = .group(groupId)
     }
     return fetchChatList(postbox: postbox, network: network, location: location, upperBound: hole.index, hash: 0, limit: 100)
     |> mapToSignal { fetchedChats -> Signal<Never, NoError> in
@@ -381,8 +382,20 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             
             transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: fetchedChats.lowerNonPinnedIndex.flatMap(ChatListHole.init))
             
-            for (peerId, groupId) in fetchedChats.peerGroupIds {
-                transaction.updatePeerGroupId(peerId, groupId: groupId)
+            for peerId in fetchedChats.chatPeerIds {
+                if let peer = transaction.getPeer(peerId) {
+                    transaction.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessagesOrOneOf(groupId: groupId, pinningIndex: nil, minTimestamp: minTimestampForPeerInclusion(peer)))
+                } else {
+                    assertionFailure()
+                }
+            }
+            
+            for (peerId, peerGroupId) in fetchedChats.peerGroupIds {
+                if let peer = transaction.getPeer(peerId) {
+                    transaction.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessagesOrOneOf(groupId: peerGroupId, pinningIndex: nil, minTimestamp: minTimestampForPeerInclusion(peer)))
+                } else {
+                    assertionFailure()
+                }
             }
             
             for (peerId, chatState) in fetchedChats.chatStates {
@@ -398,11 +411,15 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             }
             
             if let replacePinnedItemIds = fetchedChats.pinnedItemIds {
-                transaction.setPinnedItemIds(groupId: groupId, itemIds: replacePinnedItemIds)
+                transaction.setPinnedItemIds(groupId: groupId, itemIds: replacePinnedItemIds.map(PinnedItemId.peer))
             }
             
             for (peerId, summary) in fetchedChats.mentionTagSummaries {
                 transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
+            }
+            
+            for (groupId, summary) in fetchedChats.folderSummaries {
+                transaction.resetPeerGroupSummary(groupId: groupId, namespace: Namespaces.Message.Cloud, summary: summary)
             }
         })
     }

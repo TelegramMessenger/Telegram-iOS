@@ -15,7 +15,7 @@ enum FetchChatListLocation {
 }
 
 struct ParsedDialogs {
-    let itemIds: [PinnedItemId]
+    let itemIds: [PeerId]
     let peers: [Peer]
     let peerPresences: [PeerId: PeerPresence]
     
@@ -27,7 +27,7 @@ struct ParsedDialogs {
     let storeMessages: [StoreMessage]
     
     let lowerNonPinnedIndex: MessageIndex?
-    let referencedFolders: [PeerGroupId]
+    let referencedFolders: [PeerGroupId: PeerGroupUnreadCountersSummary]
 }
 
 private func extractDialogsData(dialogs: Api.messages.Dialogs) -> (apiDialogs: [Api.Dialog], apiMessages: [Api.Message], apiChats: [Api.Chat], apiUsers: [Api.User], apiIsAtLowestBoundary: Bool) {
@@ -59,8 +59,8 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
     var storeMessages: [StoreMessage] = []
     var nonPinnedDialogsTopMessageIds = Set<MessageId>()
     
-    var referencedFolders = Set<PeerGroupId>()
-    var itemIds: [PinnedItemId] = []
+    var referencedFolders: [PeerGroupId: PeerGroupUnreadCountersSummary] = [:]
+    var itemIds: [PeerId] = []
     
     for dialog in apiDialogs {
         let apiPeer: Api.Peer
@@ -74,7 +74,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         let apiNotificationSettings: Api.PeerNotifySettings
         switch dialog {
             case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _, _):
-                itemIds.append(.peer(peer.peerId))
+                itemIds.append(peer.peerId)
                 apiPeer = peer
                 apiTopMessage = topMessage
                 apiReadInboxMaxId = readInboxMaxId
@@ -113,13 +113,11 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
                 }
                 
                 notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
-            case let .dialogFolder(flags, folder, _, _, _, _, _, _):
-                switch folder {
-                    case let .folder(flags, id, title, photo):
-                        referencedFolders.insert(PeerGroupId(rawValue: id))
-                        break
+            case let .dialogFolder(dialogFolder):
+                switch dialogFolder.folder {
+                    case let .folder(folder):
+                        referencedFolders[PeerGroupId(rawValue: folder.id)] = PeerGroupUnreadCountersSummary(all: PeerGroupUnreadCounters(messageCount: dialogFolder.unreadMutedMessagesCount, chatCount: dialogFolder.unreadMutedPeersCount))
                 }
-                break
         }
     }
     
@@ -174,11 +172,12 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         storeMessages: storeMessages,
     
         lowerNonPinnedIndex: lowerNonPinnedIndex,
-        referencedFolders: Array(referencedFolders)
+        referencedFolders: referencedFolders
     )
 }
 
 struct FetchedChatList {
+    let chatPeerIds: [PeerId]
     let peers: [Peer]
     let peerPresences: [PeerId: PeerPresence]
     let notificationSettings: [PeerId: PeerNotificationSettings]
@@ -190,8 +189,8 @@ struct FetchedChatList {
     
     let lowerNonPinnedIndex: MessageIndex?
     
-    let pinnedItemIds: [PinnedItemId]?
-    let folders: [(PeerGroupId, MessageIndex?)]
+    let pinnedItemIds: [PeerId]?
+    let folderSummaries: [PeerGroupId: PeerGroupUnreadCountersSummary]
     let peerGroupIds: [PeerId: PeerGroupId]
 }
 
@@ -262,9 +261,9 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                 }
                 
                 var combinedReferencedFolders = Set<PeerGroupId>()
-                combinedReferencedFolders.formUnion(parsedRemoteChats.referencedFolders)
+                combinedReferencedFolders.formUnion(parsedRemoteChats.referencedFolders.keys)
                 if let parsedPinnedChats = parsedPinnedChats {
-                    combinedReferencedFolders.formUnion(parsedPinnedChats.referencedFolders)
+                    combinedReferencedFolders.formUnion(Set(parsedPinnedChats.referencedFolders.keys))
                 }
                 
                 var folderSignals: [Signal<(PeerGroupId, ParsedDialogs), NoError>] = []
@@ -316,24 +315,14 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     var peerGroupIds: [PeerId: PeerGroupId] = [:]
                     
                     if case let .group(groupId) = location {
-                        for itemId in parsedRemoteChats.itemIds {
-                            switch itemId {
-                                case let .peer(peerId):
-                                    peerGroupIds[peerId] = groupId
-                                case .group:
-                                    break
-                            }
+                        for peerId in parsedRemoteChats.itemIds {
+                            peerGroupIds[peerId] = groupId
                         }
                     }
                     
                     for (groupId, folderChats) in folders {
-                        for itemId in folderChats.itemIds {
-                            switch itemId {
-                                case let .peer(peerId):
-                                    peerGroupIds[peerId] = groupId
-                                case .group:
-                                    break
-                            }
+                        for peerId in folderChats.itemIds {
+                            peerGroupIds[peerId] = groupId
                         }
                         peers.append(contentsOf: folderChats.peers)
                         peerPresences.merge(folderChats.peerPresences, uniquingKeysWith: { _, updated in updated })
@@ -344,24 +333,30 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         storeMessages.append(contentsOf: folderChats.storeMessages)
                     }
                     
-                    var pinnedItemIds: [PinnedItemId]?
+                    var pinnedItemIds: [PeerId]?
                     if let parsedPinnedChats = parsedPinnedChats {
-                        var array: [PinnedItemId] = []
-                        for itemId in parsedPinnedChats.itemIds {
-                            switch itemId {
-                                case let .peer(peerId):
-                                    if case let .group(groupId) = location {
-                                        peerGroupIds[peerId] = groupId
-                                    }
-                                    array.append(itemId)
-                                case .group:
-                                    break
+                        var array: [PeerId] = []
+                        for peerId in parsedPinnedChats.itemIds {
+                            if case let .group(groupId) = location {
+                                peerGroupIds[peerId] = groupId
                             }
+                            array.append(peerId)
                         }
                         pinnedItemIds = array
                     }
                     
+                    var folderSummaries: [PeerGroupId: PeerGroupUnreadCountersSummary] = [:]
+                    for (groupId, summary) in parsedRemoteChats.referencedFolders {
+                        folderSummaries[groupId] = summary
+                    }
+                    if let parsedPinnedChats = parsedPinnedChats {
+                        for (groupId, summary) in parsedPinnedChats.referencedFolders {
+                            folderSummaries[groupId] = summary
+                        }
+                    }
+                    
                     return FetchedChatList(
+                        chatPeerIds: parsedRemoteChats.itemIds + (pinnedItemIds ?? []),
                         peers: peers,
                         peerPresences: peerPresences,
                         notificationSettings: notificationSettings,
@@ -374,7 +369,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         lowerNonPinnedIndex: parsedRemoteChats.lowerNonPinnedIndex,
                     
                         pinnedItemIds: pinnedItemIds,
-                        folders: folders.map { ($0.0, $0.1.lowerNonPinnedIndex) },
+                        folderSummaries: folderSummaries,
                         peerGroupIds: peerGroupIds
                     )
                 }

@@ -159,8 +159,8 @@ public func clearPeerUnseenPersonalMessagesInteractively(account: Account, peerI
     |> ignoreValues
 }
 
-public func markAllChatsAsReadInteractively(transaction: Transaction, viewTracker: AccountViewTracker) {
-    for peerId in transaction.getUnreadChatListPeerIds() {
+public func markAllChatsAsReadInteractively(transaction: Transaction, viewTracker: AccountViewTracker, groupId: PeerGroupId) {
+    for peerId in transaction.getUnreadChatListPeerIds(groupId: groupId) {
         togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: viewTracker, peerId: peerId, setToValue: false)
     }
 }

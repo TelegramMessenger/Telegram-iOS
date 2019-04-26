@@ -264,7 +264,7 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
         } else {
             return [.regularChatsAndPrivateGroups]
         }
-    }, additionalChatListIndexNamespace: Namespaces.Message.Cloud)
+    }, additionalChatListIndexNamespace: Namespaces.Message.Cloud, messageNamespacesRequiringGroupStatsValidation: [Namespaces.Message.Cloud])
 }()
 
 public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys: Set<ValueBoxKey>, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<(String, [ValueBoxKey: PreferencesEntry]), NoError> {
@@ -985,6 +985,7 @@ public class Account {
         self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), network: network)
         let _ = (postbox.transaction { transaction -> Void in
             transaction.updatePeerPresencesInternal(presences: [peerId: TelegramUserPresence(status: .present(until: Int32.max - 1), lastActivity: 0)], merge: { _, updated in return updated })
+            transaction.setNeedsPeerGroupMessageStatsSynchronization(groupId: Namespaces.PeerGroup.archive, namespace: Namespaces.Message.Cloud)
         }).start()
         self.notificationAutolockReportManager = NotificationAutolockReportManager(deadline: self.autolockReportDeadline.get(), network: network)
         self.autolockReportDeadline.set(
