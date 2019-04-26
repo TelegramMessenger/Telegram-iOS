@@ -19,9 +19,9 @@ Here is just a small sampling of the power of Lottie
 	- [Cmake Build](#cmake-build)
 	- [Test](#test)
 - [Previewing Lottie JSON Files](#previewing-lottie-json-files)
+- [Quick Start](#quick-start)
 - [Demo](#demo)
 - [Dynamic Property](#dynamic-property)
-- [Quick Start](#quick-start)
 - [Supported After Effects Features](#supported-after-effects-features)
 - [Issues or Feature Requests?](#issues-or-feature-requests)
 
@@ -93,6 +93,50 @@ Please visit [rlottie online viewer](http://rlottie.com)
 [rlottie online viewer](http://rlottie.com) uses rlottie wasm library to render the resource locally in your browser. To test your JSON resource drag and drop it to the browser window.
 
 #
+## Quick Start
+
+Lottie loads and renders animations and vectors exported in the bodymovin JSON format. Bodymovin JSON can be created and exported from After Effects with [bodymovin](https://github.com/bodymovin/bodymovin), Sketch with [Lottie Sketch Export](https://github.com/buba447/Lottie-Sketch-Export), and from [Haiku](https://www.haiku.ai). 
+ 
+You can quickly load a Lottie animation with:
+```cpp
+std::unique_ptr<rlottie::Animation> animation = 
+					rlottie::loadFromFile(std::string("absolute_path/test.json"));
+```
+You can load a lottie animation from raw data with:
+```cpp
+std::unique_ptr<rlottie::Animation> animation = rlottie::loadFromData(std::string(rawData),
+                                                                      std::string(cacheKey));
+```
+
+Properties like `frameRate` , `totalFrame` , `duration` can be queried with:
+```cpp
+# get the frame rate of the resource. 
+double frameRate = animation->frameRate();
+
+#get total frame that exists in the resource
+size_t totalFrame = animation->totalFrame();
+
+#get total animation duration in sec for the resource 
+double duration = animation->duration();
+```
+Render a particular frame in a surface buffer `immediately` with:
+```cpp
+rlottie::Surface surface(buffer, width , height , stride);
+animation->renderSync(frameNo, surface); 
+```
+Render a particular frame in a surface buffer `asyncronousely` with:
+```cpp
+rlottie::Surface surface(buffer, width , height , stride);
+# give a render request
+std::future<rlottie::Surface> handle = animation->render(frameNo, surface);
+...
+#when the render data is needed
+rlottie::Surface surface = handle.get();
+```
+
+[Back to contents](#contents)
+
+#
 ## Demo
 
 Update me
@@ -101,13 +145,6 @@ Update me
 ## Dynamic Property
 
 Update me.
-
-#
-## Quick Start
-
-Update me.
-
-[Back to contents](#contents)
 
 #
 ## Supported After Effects Features
