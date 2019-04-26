@@ -30,7 +30,7 @@ final class ChatListControllerNode: ASDisplayNode {
     
     var toolbar: Toolbar?
     private var toolbarNode: ToolbarNode?
-    var toolbarActionSelected: ((Bool) -> Void)?
+    var toolbarActionSelected: ((ToolbarActionOption) -> Void)?
     
     private(set) var searchDisplayController: SearchDisplayController?
     
@@ -155,9 +155,11 @@ final class ChatListControllerNode: ASDisplayNode {
                 toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right,  bottomInset: bottomInset, toolbar: toolbar, transition: transition)
             } else {
                 let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
-                    self?.toolbarActionSelected?(true)
-                    }, right: { [weak self] in
-                        self?.toolbarActionSelected?(false)
+                    self?.toolbarActionSelected?(.left)
+                }, right: { [weak self] in
+                    self?.toolbarActionSelected?(.right)
+                }, middle: { [weak self] in
+                    self?.toolbarActionSelected?(.middle)
                 })
                 toolbarNode.frame = tabBarFrame
                 toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: bottomInset, toolbar: toolbar, transition: .immediate)

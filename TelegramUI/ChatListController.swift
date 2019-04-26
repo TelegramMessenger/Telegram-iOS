@@ -666,7 +666,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 return
             }
             if group {
-                strongSelf.archiveChat(peerId: peerId)
+                strongSelf.archiveChats(peerIds: [peerId])
             } else {
                 strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
                 let _ = updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: group ? Namespaces.PeerGroup.archive : .root).start(completed: {
@@ -800,8 +800,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
-        self.chatListDisplayNode.toolbarActionSelected = { [weak self] left in
-            self?.toolbarActionSelected(left: left)
+        self.chatListDisplayNode.toolbarActionSelected = { [weak self] action in
+            self?.toolbarActionSelected(action: action)
         }
         
         let context = self.context
@@ -838,13 +838,13 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         case let .selective(enabled):
                             leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
                     }
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete))
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: ToolbarAction(title: presentationData.strings.ChatList_ArchiveAction, isEnabled: options.delete))
                 }
             } else {
                 if let (options, peerIds) = peerIdsAndOptions {
                     let leftAction: ToolbarAction
                     leftAction = ToolbarAction(title: presentationData.strings.ChatList_UnarchiveAction, isEnabled: !peerIds.isEmpty)
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete))
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: nil)
                 }
             }
             strongSelf.setToolbar(toolbar, transition: .animated(duration: 0.3, curve: .easeInOut))
@@ -1250,9 +1250,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         return inputShortcuts + chatShortcuts
     }
     
-    override public func toolbarActionSelected(left: Bool) {
+    override public func toolbarActionSelected(action: ToolbarActionOption) {
         let peerIds = self.chatListDisplayNode.chatListNode.currentState.selectedPeerIds
-        if left {
+        if case .left = action {
             if case .root = self.groupId {
                 let signal: Signal<Void, NoError>
                 let context = self.context
@@ -1287,7 +1287,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     strongSelf.donePressed()
                 })
             }
-        } else if !left && !peerIds.isEmpty {
+        } else if case .right = action, !peerIds.isEmpty {
             let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
             var items: [ActionSheetItem] = []
             items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteConfirmation(Int32(peerIds.count)), color: .destructive, action: { [weak self, weak actionSheet] in
@@ -1337,6 +1337,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 ])
             ])
             self.present(actionSheet, in: .window(.root))
+        } else if case .middle = action, !peerIds.isEmpty {
+            self.archiveChats(peerIds: Array(peerIds))
         }
     }
     
@@ -1394,12 +1396,19 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
     }
     
-    private func archiveChat(peerId: PeerId) {
+    private func archiveChats(peerIds: [PeerId]) {
+        guard !peerIds.isEmpty else {
+            return
+        }
         let postbox = self.context.account.postbox
-        self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+        self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds[0])
         let _ = (ApplicationSpecificNotice.incrementArchiveChatTipsTips(accountManager: self.context.sharedContext.accountManager, count: 1)
         |> deliverOnMainQueue).start(next: { [weak self] previousHintCount in
-            let _ = (updatePeerGroupIdInteractively(postbox: postbox, peerId: peerId, groupId: Namespaces.PeerGroup.archive)
+            let _ = (postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: Namespaces.PeerGroup.archive)
+                }
+            }
             |> deliverOnMainQueue).start(completed: {
                 guard let strongSelf = self else {
                     return
@@ -1411,8 +1420,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         return
                     }
                     if !shouldCommit {
-                        strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-                        let _ = (updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: .root)
+                        strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds[0])
+                        let _ = (postbox.transaction { transaction -> Void in
+                            for peerId in peerIds {
+                                updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
+                            }
+                        }
                         |> deliverOnMainQueue).start(completed: {
                             guard let strongSelf = self else {
                                 return

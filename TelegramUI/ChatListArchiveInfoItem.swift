@@ -59,6 +59,8 @@ private final class InfoPageNode: ASDisplayNode {
     private let titleNode: TextNode
     private let textNode: TextNode
     
+    private var theme: PresentationTheme?
+    
     override init() {
         self.iconNodeBase = ASImageNode()
         self.iconNodeBase.displaysAsynchronously = false
@@ -112,11 +114,12 @@ private final class InfoPageNode: ASDisplayNode {
                     return
                 }
                 
-                if strongSelf.iconNodeBase.image == nil {
+                if strongSelf.theme !== theme {
+                    strongSelf.theme = theme
                     if index == 0 {
-                        strongSelf.iconNodeBase.image = UIImage(bundleImageName: "Chat List/Archive/Intro1Base")
+                        strongSelf.iconNodeBase.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Archive/Intro1Base"), color: theme.list.itemPrimaryTextColor)
                     } else {
-                        strongSelf.iconNodeBase.image = UIImage(bundleImageName: "Chat List/Archive/Intro2Base")
+                        strongSelf.iconNodeBase.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Archive/Intro2Base"), color: theme.list.itemPrimaryTextColor)
                     }
                     if index == 0 {
                         strongSelf.iconNodeContent.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Archive/Intro1Content"), color: theme.chatList.unreadBadgeActiveBackgroundColor)
@@ -216,8 +219,12 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, UIScrollViewDelegate {
                         strongSelf.pageControlNode.inactiveDotColor = item.theme.chatList.unreadBadgeInactiveBackgroundColor
                     }
                     
+                    let resetOffset = !strongSelf.scrollNode.frame.width.isEqual(to: baseWidth)
                     strongSelf.scrollNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: baseWidth, height: layout.contentSize.height))
                     strongSelf.scrollNode.view.contentSize = CGSize(width: baseWidth * CGFloat(infoPageLayoutsAndApply.count), height: layout.contentSize.height)
+                    if resetOffset {
+                        strongSelf.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: 0.0)
+                    }
                     for i in 0 ..< infoPageLayoutsAndApply.count {
                         strongSelf.infoPageNodes[i].frame = CGRect(origin: CGPoint(x: baseWidth * CGFloat(i), y: 0.0), size: CGSize(width: baseWidth, height: layout.contentSize.height))
                         infoPageLayoutsAndApply[i].1()
@@ -234,6 +241,9 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, UIScrollViewDelegate {
                     }
                     
                     if let headerNode = strongSelf.headerNode {
+                        if themeUpdated {
+                            headerNode.updateTheme(theme: item.theme)
+                        }
                         headerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.contentSize.height - 28.0), size: CGSize(width: params.width, height: 28.0))
                         headerNode.updateLayout(size: CGSize(width: params.width, height: 28.0), leftInset: params.leftInset, rightInset: params.rightInset)
                     }

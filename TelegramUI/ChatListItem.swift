@@ -642,7 +642,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
                 editingOffset = sizeAndApply.0
                 
-                if item.index.pinningIndex != nil && !isAd {
+                if item.index.pinningIndex != nil && !isAd && !isPeerGroup {
                     let sizeAndApply = reorderControlLayout(itemHeight, item.presentationData.theme)
                     reorderControlSizeAndApply = sizeAndApply
                     reorderInset = sizeAndApply.0.width
