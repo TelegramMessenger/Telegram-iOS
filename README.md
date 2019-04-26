@@ -1,5 +1,7 @@
 
-# rlottie [![Build Status](https://travis-ci.org/Samsung/rlottie.svg?branch=master)](https://travis-ci.org/Samsung/rlottie)
+# rlottie
+
+[![Build Status](https://travis-ci.org/Samsung/rlottie.svg?branch=master)](https://travis-ci.org/Samsung/rlottie)
 
 rlottie is a platform independent standalone c++ library for rendering vector based animations and art in realtime.
 
@@ -9,17 +11,14 @@ For the first time, designers can create and ship beautiful animations without a
 
 Here is just a small sampling of the power of Lottie
 
-For resource test, please visit rlottie online viewer:
-http://www.rlottie.com
-
-Query about rlottie or request troubleshooting online, please visit Gitter:
-https://gitter.im/rLottie-dev/community#
+![Example1](https://github.com/airbnb/lottie-ios/blob/master/_Gifs/Examples1.gif)
 
 ## Contents
 - [Building Lottie](#building-lottie)
 	- [Meson Build](#meson-build)
 	- [Cmake Build](#cmake-build)
 	- [Test](#test)
+- [Previewing Lottie JSON Files](#previewing-lottie-json-files)
 - [Demo](#demo)
 - [Dynamic Property](#dynamic-property)
 - [Quick Start](#quick-start)
@@ -86,6 +85,12 @@ Run test suit
 ninja test
 ```
 [Back to contents](#contents)
+
+#
+## Previewing Lottie JSON Files
+Please visit [rlottie online viewer](http://rlottie.com)
+
+[rlottie online viewer](http://rlottie.com) uses rlottie wasm library to render the resource locally in your browser. To test your JSON resource drag and drop it to the browser window.
 
 #
 ## Demo
