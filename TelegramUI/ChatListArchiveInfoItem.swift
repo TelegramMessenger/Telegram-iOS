@@ -86,13 +86,23 @@ private final class InfoPageNode: ASDisplayNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         return { [weak self] theme, strings, width, index in
-            let title = "This is your archive"
-            let text = "Chats with enabled notifications get unarchived when new messages arrive"
+            let title: String
+            let text: String
+            if index == 0 {
+                title = strings.ArchivedChats_IntroTitle1
+                text = strings.ArchivedChats_IntroText1
+            } else if index == 1 {
+                title = strings.ArchivedChats_IntroTitle2
+                text = strings.ArchivedChats_IntroText2
+            } else {
+                title = strings.ArchivedChats_IntroTitle3
+                text = strings.ArchivedChats_IntroText3
+            }
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: nil), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: min(300.0, width - 16.0), height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: textFont, textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: nil), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: min(300.0, width - 16.0), height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
-            let topContentInset: CGFloat = 90.0
-            let bottomContentInset: CGFloat = 64.0
+            let topContentInset: CGFloat = 98.0
+            let bottomContentInset: CGFloat = 64.0 + 28.0
             let textSpacing: CGFloat = 6.0
             
             let contentHeight = topContentInset + titleLayout.size.height + textSpacing + textLayout.size.height + bottomContentInset
@@ -117,7 +127,7 @@ private final class InfoPageNode: ASDisplayNode {
                     }
                 }
                 
-                let topIconInset: CGFloat = 115.0
+                let topIconInset: CGFloat = 110.0
                 
                 if let baseImage = strongSelf.iconNodeBase.image, let contentImage = strongSelf.iconNodeContent.image {
                     strongSelf.iconNodeBase.frame = CGRect(origin: CGPoint(x: floor((width - baseImage.size.width) / 2.0), y: floor((topIconInset - baseImage.size.height) / 2.0)), size: baseImage.size)
@@ -146,7 +156,7 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, UIScrollViewDelegate {
     required init() {
         self.scrollNode = ASScrollNode()
         
-        self.pageControlNode = PageControlNode(dotSize: 7.0, dotSpacing: 9.0, dotColor: .blue)
+        self.pageControlNode = PageControlNode(dotSize: 7.0, dotSpacing: 9.0, dotColor: .blue, inactiveDotColor: .gray)
         
         self.infoPageNodes = (0 ..< 3).map({ _ in InfoPageNode() })
         self.pageControlNode.pagesCount = self.infoPageNodes.count
@@ -167,6 +177,7 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, UIScrollViewDelegate {
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.isPagingEnabled = true
         self.scrollNode.view.delegate = self
+        self.pageControlNode.setPage(0.0)
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -182,7 +193,7 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, UIScrollViewDelegate {
         
         return { item, params, last in
             let baseWidth = params.width - params.leftInset - params.rightInset
-            let bottomInset: CGFloat = 22.0
+            let bottomInset: CGFloat = 22.0 + 28.0
             
             let themeUpdated = previousItem?.theme !== item.theme
             
@@ -201,7 +212,8 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, UIScrollViewDelegate {
                     strongSelf.item = item
                     
                     if themeUpdated {
-                        strongSelf.pageControlNode.dotColor = item.theme.list.itemAccentColor
+                        strongSelf.pageControlNode.dotColor = item.theme.chatList.unreadBadgeActiveBackgroundColor
+                        strongSelf.pageControlNode.inactiveDotColor = item.theme.chatList.unreadBadgeInactiveBackgroundColor
                     }
                     
                     strongSelf.scrollNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: baseWidth, height: layout.contentSize.height))
@@ -216,12 +228,14 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, UIScrollViewDelegate {
                     
                     if strongSelf.headerNode == nil {
                         let headerNode = ListSectionHeaderNode(theme: item.theme)
+                        headerNode.title = item.strings.ChatList_ArchivedChatsTitle.uppercased()
                         strongSelf.addSubnode(headerNode)
                         strongSelf.headerNode = headerNode
                     }
                     
                     if let headerNode = strongSelf.headerNode {
-                        headerNode.frame = CGRect(origin: CGPoint(), size: CGSize())
+                        headerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.contentSize.height - 28.0), size: CGSize(width: params.width, height: 28.0))
+                        headerNode.updateLayout(size: CGSize(width: params.width, height: 28.0), leftInset: params.leftInset, rightInset: params.rightInset)
                     }
                     
                     strongSelf.contentSize = layout.contentSize

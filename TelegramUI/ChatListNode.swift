@@ -515,7 +515,16 @@ final class ChatListNode: ListView {
                     return true
                 }
             }
-            |> distinctUntilChanged
+            |> take(1)
+            |> afterNext { value in
+                Queue.mainQueue().async {
+                    if value {
+                        let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
+                            ApplicationSpecificNotice.setArchiveIntroDismissed(transaction: transaction, value: true)
+                        }).start()
+                    }
+                }
+            }
         } else {
             displayArchiveIntro = .single(false)
         }

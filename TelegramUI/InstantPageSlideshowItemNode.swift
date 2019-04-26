@@ -381,7 +381,7 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
         self.pagerNode = InstantPageSlideshowPagerNode(context: context, theme: theme, webPage: webPage, openMedia: openMedia, longPressMedia: longPressMedia)
         self.pagerNode.replaceItems(medias, centralItemIndex: nil)
         
-        self.pageControlNode = PageControlNode(dotColor: .white)
+        self.pageControlNode = PageControlNode(dotColor: .white, inactiveDotColor: UIColor(white: 1.0, alpha: 0.5))
         self.pageControlNode.isUserInteractionEnabled = false
         
         super.init()
