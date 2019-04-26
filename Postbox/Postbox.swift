@@ -113,6 +113,11 @@ public final class Transaction {
         self.postbox?.resetIncomingReadStates(states)
     }
     
+    public func setNeedsIncomingReadStateSynchronization(_ peerId: PeerId) {
+        assert(!self.disposed)
+        self.postbox?.setNeedsIncomingReadStateSynchronization(peerId)
+    }
+    
     public func confirmSynchronizedIncomingReadState(_ peerId: PeerId) {
         assert(!self.disposed)
         self.postbox?.confirmSynchronizedIncomingReadState(peerId)
@@ -1525,6 +1530,9 @@ public final class Postbox {
         self.messageHistoryTable.resetIncomingReadStates(states, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
+    fileprivate func setNeedsIncomingReadStateSynchronization(_ peerId: PeerId) {
+        self.synchronizeReadStateTable.set(peerId, operation: .Validate, operations: &self.currentUpdatedSynchronizeReadStateOperations)
+    }
     
     fileprivate func confirmSynchronizedIncomingReadState(_ peerId: PeerId) {
         self.synchronizeReadStateTable.set(peerId, operation: nil, operations: &self.currentUpdatedSynchronizeReadStateOperations)
