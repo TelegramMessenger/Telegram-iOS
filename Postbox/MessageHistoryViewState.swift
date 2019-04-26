@@ -413,15 +413,17 @@ struct HistoryViewLoadedSample {
 final class HistoryViewLoadedState {
     let anchor: HistoryViewAnchor
     let tag: MessageTags?
+    let statistics: MessageHistoryViewOrderStatistics
     let limit: Int
     var orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries]
     var holes: HistoryViewHoles
     var spacesWithRemovals = Set<PeerIdAndNamespace>()
     
-    init(anchor: HistoryViewAnchor, tag: MessageTags?, limit: Int, locations: MessageHistoryViewPeerIds, postbox: Postbox, holes: HistoryViewHoles) {
+    init(anchor: HistoryViewAnchor, tag: MessageTags?, statistics: MessageHistoryViewOrderStatistics, limit: Int, locations: MessageHistoryViewPeerIds, postbox: Postbox, holes: HistoryViewHoles) {
         precondition(limit >= 3)
         self.anchor = anchor
         self.tag = tag
+        self.statistics = statistics
         self.limit = limit
         self.orderedEntriesBySpace = [:]
         self.holes = holes
@@ -510,6 +512,32 @@ final class HistoryViewLoadedState {
         assert(messages.count <= self.limit)
         
         let bounds = postbox.messageHistoryTable.fetchBoundaries(peerId: space.peerId, namespace: space.namespace, tag: self.tag)
+        
+        if let tag = self.tag, self.statistics.contains(.combinedLocation) {
+            if let first = messages.first {
+                var initialLocation: MessageHistoryEntryLocation?
+                switch first {
+                    case let .IntermediateMessageEntry(message, _, _):
+                        let previousCount = postbox.messageHistoryTagsTable.getMessageCountInRange(tag: tag, peerId: space.peerId, namespace: space.namespace, lowerBound: MessageIndex.lowerBound(peerId: space.peerId, namespace: space.namespace), upperBound: message.index)
+                        let nextCount = postbox.messageHistoryTagsTable.getMessageCountInRange(tag: tag, peerId: space.peerId, namespace: space.namespace, lowerBound: message.index, upperBound: MessageIndex.upperBound(peerId: space.peerId, namespace: space.namespace))
+                        initialLocation = MessageHistoryEntryLocation(index: previousCount - 1, count: previousCount + nextCount - 1)
+                    case let .MessageEntry(entry):
+                        break
+                }
+                if let initialLocation = initialLocation {
+                    var nextLocation = initialLocation
+                    for i in 0 ..< messages.count {
+                        switch messages[i] {
+                            case let .IntermediateMessageEntry(message, _, _):
+                                messages[i] = .IntermediateMessageEntry(message, nextLocation, nil)
+                            case let .MessageEntry(entry):
+                                break
+                        }
+                        nextLocation = nextLocation.successor
+                    }
+                }
+            }
+        }
         
         self.orderedEntriesBySpace[space] = OrderedHistoryViewEntries(entries: messages, bounds: bounds)
     }
@@ -618,7 +646,7 @@ final class HistoryViewLoadedState {
                             self.orderedEntriesBySpace[space]!.entries[i] = .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes))
                             hasChanges = true
                         }
-                    case let .IntermediateMessageEntry(message, location, monthLocation):
+                    case let .IntermediateMessageEntry(message, _, _):
                         var rebuild = false
                         for mediaId in message.referencedMedia {
                             if let media = updatedMedia[mediaId] , media?.id != mediaId {
@@ -870,14 +898,14 @@ enum HistoryViewState {
     case loaded(HistoryViewLoadedState)
     case loading(HistoryViewLoadingState)
     
-    init(postbox: Postbox, inputAnchor: HistoryViewInputAnchor, tag: MessageTags?, limit: Int, locations: MessageHistoryViewPeerIds) {
+    init(postbox: Postbox, inputAnchor: HistoryViewInputAnchor, tag: MessageTags?, statistics: MessageHistoryViewOrderStatistics, limit: Int, locations: MessageHistoryViewPeerIds) {
         switch inputAnchor {
             case let .index(index):
-                self = .loaded(HistoryViewLoadedState(anchor: .index(index), tag: tag, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
+                self = .loaded(HistoryViewLoadedState(anchor: .index(index), tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
             case .lowerBound:
-                self = .loaded(HistoryViewLoadedState(anchor: .lowerBound, tag: tag, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
+                self = .loaded(HistoryViewLoadedState(anchor: .lowerBound, tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
             case .upperBound:
-                self = .loaded(HistoryViewLoadedState(anchor: .upperBound, tag: tag, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
+                self = .loaded(HistoryViewLoadedState(anchor: .upperBound, tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
             case .unread:
                 let anchorPeerId: PeerId
                 switch locations {
@@ -914,12 +942,12 @@ enum HistoryViewState {
                         let sampledState = loadingState.checkAndSample(postbox: postbox)
                         switch sampledState {
                             case let .ready(anchor, holes):
-                                self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, limit: limit, locations: locations, postbox: postbox, holes: holes))
+                                self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: holes))
                             case .loadHole:
                                 self = .loading(loadingState)
                         }
                     } else {
-                        self = .loaded(HistoryViewLoadedState(anchor: anchor ?? .upperBound, tag: tag, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
+                        self = .loaded(HistoryViewLoadedState(anchor: anchor ?? .upperBound, tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
                     }
                 } else {
                     preconditionFailure()
@@ -929,7 +957,7 @@ enum HistoryViewState {
                 let sampledState = loadingState.checkAndSample(postbox: postbox)
                 switch sampledState {
                     case let .ready(anchor, holes):
-                        self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, limit: limit, locations: locations, postbox: postbox, holes: holes))
+                        self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: holes))
                     case .loadHole:
                         self = .loading(loadingState)
                 }

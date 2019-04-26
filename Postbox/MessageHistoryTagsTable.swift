@@ -118,15 +118,18 @@ class MessageHistoryTagsTable: Table {
         return indices
     }
     
-    func getMessageCountInRange(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int32 {
+    func getMessageCountInRange(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
         precondition(lowerBound.id.namespace == namespace)
         precondition(upperBound.id.namespace == namespace)
-        var count: Int32 = 0
-        self.valueBox.range(self.table, start: self.key(tag: tag, index: lowerBound).predecessor, end: self.key(tag: tag, index: upperBound.successor()), keys: { _ in
-            count += 1
-            return true
-        }, limit: 0)
-        return count
+        var lowerBoundKey = self.key(tag: tag, index: lowerBound)
+        if lowerBound.timestamp > 1 {
+            lowerBoundKey = lowerBoundKey.predecessor
+        }
+        var upperBoundKey = self.key(tag: tag, index: upperBound)
+        if upperBound.timestamp < Int32.max - 1 {
+            upperBoundKey = upperBoundKey.successor
+        }
+        return Int(self.valueBox.count(self.table, start: lowerBoundKey, end: upperBoundKey))
     }
     
     func findRandomIndex(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, ignoreIds: ([MessageId], Set<MessageId>), isMessage: (MessageIndex) -> Bool) -> MessageIndex? {

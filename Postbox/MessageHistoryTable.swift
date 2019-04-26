@@ -2440,7 +2440,7 @@ final class MessageHistoryTable: Table {
         return indices
     }
     
-    func getMessageCountInRange(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int32 {
+    func getMessageCountInRange(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
         return self.tagsTable.getMessageCountInRange(tag: tag, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
     }
     
