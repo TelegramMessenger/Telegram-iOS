@@ -43,6 +43,10 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "app
 			echo "TELEGRAM_BUILD_APPSTORE_PASSWORD is not set"
 			exit 1
 		fi
+		if [ -z "$TELEGRAM_BUILD_APPSTORE_TEAM_NAME" ]; then
+			echo "TELEGRAM_BUILD_APPSTORE_TEAM_NAME is not set"
+			exit 1
+		fi
 	fi
 fi
 
@@ -83,7 +87,7 @@ else
 fi
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
-ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=$TELEGRAM_BUILD_APPSTORE_PASSWORD; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION"
+ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION"
 
 if [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	VERIFY_IPA="Telegram-Verify-Build.ipa"
