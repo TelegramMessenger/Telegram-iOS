@@ -67,7 +67,7 @@ final class ChatListControllerNode: ASDisplayNode {
             }
             switch isEmptyState {
                 case .empty(false):
-                    if case .root = strongSelf.groupId' {
+                    if case .root = strongSelf.groupId {
                         strongSelf.dismissSelf?()
                     } else if strongSelf.chatListEmptyNode == nil {
                         let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings)
