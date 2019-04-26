@@ -1444,16 +1444,48 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                     for dialog in dialogs {
                         switch dialog {
                             case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, notifySettings, pts, draft, folderId):
-                                updatedState.setNeedsHoleFromPreviousState(peerId: peer.peerId, namespace: Namespaces.Message.Cloud)
+                                let peerId = peer.peerId
+                                
+                                updatedState.setNeedsHoleFromPreviousState(peerId: peerId, namespace: Namespaces.Message.Cloud)
                                 
                                 if topMessage != 0 {
-                                    topMessageIds.insert(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: topMessage))
+                                    topMessageIds.insert(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: topMessage))
                                 }
                                 
-                                updatedState.updatePeerChatInclusion(peerId: peer.peerId, groupId: PeerGroupId(rawValue: folderId ?? 0))
-                                updatedState.updateNotificationSettings(.peer(peer.peerId), notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings))
+                                var isExcludedFromChatList = false
+                                for chat in chats {
+                                    if chat.peerId == peerId {
+                                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                            if let group = groupOrChannel as? TelegramGroup {
+                                                switch group.membership {
+                                                    case .Member:
+                                                        break
+                                                    default:
+                                                        isExcludedFromChatList = true
+                                                }
+                                            } else if let channel = groupOrChannel as? TelegramChannel {
+                                                switch channel.participationStatus {
+                                                    case .member:
+                                                        break
+                                                    default:
+                                                        isExcludedFromChatList = true
+                                                }
+                                            }
+                                        }
+                                        break
+                                    }
+                                }
+                                
+                                if !isExcludedFromChatList {
+                                    updatedState.updatePeerChatInclusion(peerId: peerId, groupId: PeerGroupId(rawValue: folderId ?? 0))
+                                }
+                                
+                                let notificationSettings = TelegramPeerNotificationSettings(apiSettings: notifySettings)
+                                updatedState.updateNotificationSettings(.peer(peer.peerId), notificationSettings: notificationSettings)
+                                
                                 updatedState.resetReadState(peer.peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: nil)
                                 updatedState.resetMessageTagSummary(peer.peerId, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
+                                updatedState.peerChatInfos[peer.peerId] = PeerChatInfo(notificationSettings: notificationSettings)
                                 if let pts = pts {
                                     channelStates[peer.peerId] = ChannelState(pts: pts, invalidatedPts: pts)
                                 }
