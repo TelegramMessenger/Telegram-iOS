@@ -13,9 +13,11 @@ public struct ToolbarAction: Equatable {
 public struct Toolbar: Equatable {
     public let leftAction: ToolbarAction?
     public let rightAction: ToolbarAction?
+    public let middleAction: ToolbarAction?
     
-    public init(leftAction: ToolbarAction?, rightAction: ToolbarAction?) {
+    public init(leftAction: ToolbarAction?, rightAction: ToolbarAction?, middleAction: ToolbarAction?) {
         self.leftAction = leftAction
         self.rightAction = rightAction
+        self.middleAction = middleAction
     }
 }

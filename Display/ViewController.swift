@@ -490,7 +490,7 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    open func toolbarActionSelected(left: Bool) {
+    open func toolbarActionSelected(action: ToolbarActionOption) {
     }
 }
 

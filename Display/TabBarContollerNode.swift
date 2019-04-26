@@ -1,12 +1,18 @@
 import Foundation
 import AsyncDisplayKit
 
+public enum ToolbarActionOption {
+    case left
+    case right
+    case middle
+}
+
 final class TabBarControllerNode: ASDisplayNode {
     private var theme: TabBarControllerTheme
     let tabBarNode: TabBarNode
     private let navigationBar: NavigationBar?
     private var toolbarNode: ToolbarNode?
-    private let toolbarActionSelected: (Bool) -> Void
+    private let toolbarActionSelected: (ToolbarActionOption) -> Void
 
     var currentControllerNode: ASDisplayNode? {
         didSet {
@@ -18,21 +24,7 @@ final class TabBarControllerNode: ASDisplayNode {
         }
     }
     
-    /*override var accessibilityElements: [Any]? {
-        get {
-            var accessibilityElements: [Any] = []
-            if let navigationBar = self.navigationBar {
-                addAccessibilityChildren(of: navigationBar, container: self, to: &accessibilityElements)
-            }
-            if let currentControllerNode = self.currentControllerNode {
-                addAccessibilityChildren(of: currentControllerNode, container: self, to: &accessibilityElements)
-            }
-            return accessibilityElements
-        } set(value) {
-        }
-    }*/
-    
-    init(theme: TabBarControllerTheme, navigationBar: NavigationBar?, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, toolbarActionSelected: @escaping (Bool) -> Void) {
+    init(theme: TabBarControllerTheme, navigationBar: NavigationBar?, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void) {
         self.theme = theme
         self.navigationBar = navigationBar
         self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected)
@@ -81,9 +73,11 @@ final class TabBarControllerNode: ASDisplayNode {
                 toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right,  bottomInset: bottomInset, toolbar: toolbar, transition: transition)
             } else {
                 let toolbarNode = ToolbarNode(theme: self.theme, left: { [weak self] in
-                    self?.toolbarActionSelected(true)
+                    self?.toolbarActionSelected(.left)
                 }, right: { [weak self] in
-                    self?.toolbarActionSelected(false)
+                    self?.toolbarActionSelected(.right)
+                }, middle: { [weak self] in
+                    self?.toolbarActionSelected(.middle)
                 })
                 toolbarNode.frame = tabBarFrame
                 toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: bottomInset, toolbar: toolbar, transition: .immediate)

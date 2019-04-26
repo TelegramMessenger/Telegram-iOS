@@ -180,8 +180,8 @@ open class TabBarController: ViewController {
                     }
                 }))
             }
-        }, toolbarActionSelected: { [weak self] left in
-            self?.currentController?.toolbarActionSelected(left: left)
+        }, toolbarActionSelected: { [weak self] action in
+            self?.currentController?.toolbarActionSelected(action: action)
         })
         
         self.updateSelectedIndex()
