@@ -57,6 +57,7 @@ enum RecentStatusOnlineIconState {
     case regular
     case highlighted
     case pinned
+    case panel
 }
 
 struct PresentationResourcesChatList {
@@ -135,6 +136,8 @@ struct PresentationResourcesChatList {
                 key = PresentationResourceKey.chatListRecentStatusOnlineHighlightedIcon
             case .pinned:
                 key = PresentationResourceKey.chatListRecentStatusOnlinePinnedIcon
+            case .panel:
+                key = PresentationResourceKey.chatListRecentStatusOnlinePanelIcon
         }
         return theme.image(key.rawValue, { theme in
             return generateImage(CGSize(width: 14.0, height: 14.0), rotatedContext: { size, context in
@@ -147,6 +150,8 @@ struct PresentationResourcesChatList {
                         context.setFillColor(theme.chatList.itemHighlightedBackgroundColor.cgColor)
                     case .pinned:
                         context.setFillColor(theme.chatList.pinnedItemBackgroundColor.cgColor)
+                    case .panel:
+                        context.setFillColor(theme.actionSheet.itemBackgroundColor.withAlphaComponent(1.0).cgColor)
                 }
                 
                 context.fillEllipse(in: bounds)

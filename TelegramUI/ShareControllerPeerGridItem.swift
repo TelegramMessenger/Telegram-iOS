@@ -126,13 +126,12 @@ final class ShareControllerPeerGridItem: GridItem {
 final class ShareControllerPeerGridItemNode: GridItemNode {
     private var currentState: (Account, RenderedPeer, Bool)?
     private let peerNode: SelectablePeerNode
-    private let onlineNode: ChatListOnlineNode
+
     
     var controllerInteraction: ShareControllerInteraction?
     
     override init() {
         self.peerNode = SelectablePeerNode()
-        self.onlineNode = ChatListOnlineNode()
         
         super.init()
         
@@ -146,13 +145,11 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             }
         }
         self.addSubnode(self.peerNode)
-        self.addSubnode(self.onlineNode)
     }
     
     func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, presence: PeerPresence?, search: Bool, synchronousLoad: Bool) {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != peer {
             let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: theme.chatList.secretTitleColor, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.checkContentColor, avatarPlaceholderColor: theme.list.mediaPlaceholderColor)
-            
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             var online = false
@@ -163,15 +160,8 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
                 }
             }
             
-            let onlineLayout = self.onlineNode.asyncLayout()
-            let (onlineSize, onlineApply) = onlineLayout(online)
-            let _ = onlineApply(false)
-            
-            self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(theme, state: .regular))
-            self.onlineNode.frame = CGRect(origin: CGPoint(), size: onlineSize)
-            
             self.peerNode.theme = itemTheme
-            self.peerNode.setup(account: account, theme: theme, strings: strings, peer: peer, synchronousLoad: synchronousLoad)
+            self.peerNode.setup(account: account, theme: theme, strings: strings, peer: peer, online: online, synchronousLoad: synchronousLoad)
             self.currentState = (account, peer, search)
             self.setNeedsLayout()
         }
@@ -192,6 +182,5 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         
         let bounds = self.bounds
         self.peerNode.frame = bounds
-        self.onlineNode.frame = CGRect(origin: CGPoint(x: self.peerNode.frame.width - self.onlineNode.frame.width - 13.0, y: self.peerNode.frame.height - self.onlineNode.frame.height - 45.0), size: self.onlineNode.frame.size)
     }
 }

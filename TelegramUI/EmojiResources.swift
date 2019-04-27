@@ -140,9 +140,22 @@ private func matchingEmojiEntry(_ emoji: String) -> (UInt8, UInt8, UInt8)? {
     if let entry = emojiMapping[emoji] {
         return entry
     }
-    if emoji.unicodeScalars.count > 1 {
-        let trimmedEmoji = String(emoji.unicodeScalars.prefix(emoji.unicodeScalars.count - 1))
-        if let entry = emojiMapping[trimmedEmoji] {
+    var trimmedEmoji: String?
+    if emoji.unicodeScalars.count > 0 {
+        if emoji.unicodeScalars.count > 1 {
+            if emoji.unicodeScalars[emoji.unicodeScalars.index(after: emoji.unicodeScalars.startIndex)] == "\u{fe0f}" {
+                var scalars = emoji.unicodeScalars
+                scalars.remove(at: emoji.unicodeScalars.index(after: emoji.unicodeScalars.startIndex))
+                if let entry = emojiMapping[String(scalars)] {
+                    return entry
+                }
+            }
+            trimmedEmoji = String(emoji.unicodeScalars.prefix(emoji.unicodeScalars.count - 1))
+            if let trimmedEmoji = trimmedEmoji, let entry = emojiMapping[trimmedEmoji] {
+                return entry
+            }
+        }
+        if let entry = emojiMapping["\(emoji)\u{fe0f}"] {
             return entry
         }
     }
@@ -157,9 +170,23 @@ private func matchingEmojiEntry(_ emoji: String) -> (UInt8, UInt8, UInt8)? {
     if let special = special, let entry = emojiMapping[special] {
         return entry
     }
-    //let manEmoji = "\(emoji)\u{200D}\u{2642}\u{fe0f}"
-    let womanEmoji = "\(emoji)\u{200D}\u{2640}\u{fe0f}"
-    if let entry = emojiMapping[womanEmoji] {
+    
+    let manSuffix = "\u{200d}\u{2642}\u{fe0f}"
+    let womanSuffix = "\u{200d}\u{2640}\u{fe0f}"
+    var preferredSuffix = womanSuffix
+    
+    let defaultMaleEmojis = ["\u{01f46e}", "\u{01f473}", "\u{1f477}", "\u{1f482}", "\u{01f575}", "\u{01f471}", "\u{01f647}", "\u{01f6b6}", "\u{01f3c3}", "\u{01f3cc}", "\u{01f3c4}", "\u{01f3ca}", "\u{26f9}", "\u{01f3cb}", "\u{01f6b4}", "\u{01f6b5}"]
+    if defaultMaleEmojis.contains(emoji) {
+        preferredSuffix = manSuffix
+    }
+    if let trimmedEmoji = trimmedEmoji, defaultMaleEmojis.contains(trimmedEmoji) {
+        preferredSuffix = manSuffix
+    }
+    
+    if let entry = emojiMapping["\(emoji)\(preferredSuffix)"] {
+        return entry
+    }
+    if let trimmedEmoji = trimmedEmoji, let entry = emojiMapping["\(trimmedEmoji)\(preferredSuffix)"] {
         return entry
     }
     return nil

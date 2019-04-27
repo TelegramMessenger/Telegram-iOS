@@ -62,6 +62,7 @@ final class SelectablePeerNode: ASDisplayNode {
     private let avatarSelectionNode: ASImageNode
     private let avatarNodeContainer: ASDisplayNode
     private let avatarNode: AvatarNode
+    private let onlineNode: ChatListOnlineNode
     private var checkView: TGCheckButtonView?
     private let textNode: ASTextNode
 
@@ -100,16 +101,18 @@ final class SelectablePeerNode: ASDisplayNode {
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = true
         
+        self.onlineNode = ChatListOnlineNode()
+        
         super.init()
         
         self.avatarNodeContainer.addSubnode(self.avatarSelectionNode)
         self.avatarNodeContainer.addSubnode(self.avatarNode)
         self.addSubnode(self.avatarNodeContainer)
         self.addSubnode(self.textNode)
-        
+        self.addSubnode(self.onlineNode)
     }
     
-    func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, numberOfLines: Int = 2, synchronousLoad: Bool) {
+    func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
         self.peer = peer
         guard let mainPeer = peer.chatMainPeer else {
             return
@@ -128,6 +131,14 @@ final class SelectablePeerNode: ASDisplayNode {
         self.textNode.maximumNumberOfLines = UInt(numberOfLines)
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
         self.avatarNode.setPeer(account: account, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, synchronousLoad: synchronousLoad)
+        
+        let onlineLayout = self.onlineNode.asyncLayout()
+        let (onlineSize, onlineApply) = onlineLayout(online)
+        let _ = onlineApply(false)
+        
+        self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(theme, state: .panel))
+        self.onlineNode.frame = CGRect(origin: CGPoint(), size: onlineSize)
+        
         self.setNeedsLayout()
     }
     
@@ -217,10 +228,12 @@ final class SelectablePeerNode: ASDisplayNode {
         let bounds = self.bounds
         
         self.avatarNodeContainer.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - 60.0) / 2.0), y: 4.0), size: CGSize(width: 60.0, height: 60.0))
-        
         self.textNode.frame = CGRect(origin: CGPoint(x: 2.0, y: 4.0 + 60.0 + 4.0), size: CGSize(width: bounds.size.width - 4.0, height: 34.0))
         
         let avatarFrame = self.avatarNode.frame
+        
+        self.onlineNode.frame = CGRect(origin: CGPoint(x: avatarFrame.width - self.onlineNode.frame.width + 2.0, y: avatarFrame.height - self.onlineNode.frame.height + 2.0), size: self.onlineNode.frame.size)
+        
         if let checkView = self.checkView {
             let checkSize = checkView.bounds.size
             checkView.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX - 14.0, y: avatarFrame.maxY - 22.0), size: checkSize)

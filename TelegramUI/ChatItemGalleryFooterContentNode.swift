@@ -119,10 +119,17 @@ class CaptionScrollWrapperNode: ASDisplayNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let result = super.hitTest(point, with: event)
         if result == self.view, let subnode = self.subnodes?.first {
-            return subnode.hitTest(self.view.convert(point, to: subnode.view), with: event)
-        } else {
-            return result
+            let convertedPoint = self.view.convert(point, to: subnode.view)
+            if let subnodes = subnode.subnodes {
+                for node in subnodes {
+                    if node.frame.contains(convertedPoint) {
+                        return node.view
+                    }
+                }
+            }
+            return nil
         }
+        return result
     }
 }
 

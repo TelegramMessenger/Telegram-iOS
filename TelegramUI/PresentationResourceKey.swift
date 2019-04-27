@@ -71,6 +71,7 @@ enum PresentationResourceKey: Int32 {
     case chatListRecentStatusOnlineIcon
     case chatListRecentStatusOnlineHighlightedIcon
     case chatListRecentStatusOnlinePinnedIcon
+    case chatListRecentStatusOnlinePanelIcon
 
     case chatTitleLockIcon
     case chatTitleMuteIcon
