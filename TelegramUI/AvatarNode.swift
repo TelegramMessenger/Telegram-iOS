@@ -74,18 +74,18 @@ private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
     }
 }
 
-enum AvatarNodeIcon {
+private enum AvatarNodeIcon: Equatable {
     case none
     case savedMessagesIcon
-    case archivedChatsIcon
+    case archivedChatsIcon(hiddenByDefault: Bool)
     case editAvatarIcon
 }
 
-public enum AvatarNodeImageOverride {
+public enum AvatarNodeImageOverride: Equatable {
     case none
     case image(TelegramMediaImageRepresentation)
     case savedMessagesIcon
-    case archivedChatsIcon
+    case archivedChatsIcon(hiddenByDefault: Bool)
     case editAvatarIcon
 }
 
@@ -148,6 +148,7 @@ public final class AvatarNode: ASDisplayNode {
     }
     private var parameters: AvatarNodeParameters?
     private var theme: PresentationTheme?
+    private var overrideImage: AvatarNodeImageOverride?
     let imageNode: ImageNode
     private var animationBackgroundNode: ImageNode?
     private var animationNode: AnimationNode?
@@ -247,9 +248,9 @@ public final class AvatarNode: ASDisplayNode {
                 case .savedMessagesIcon:
                     representation = nil
                     icon = .savedMessagesIcon
-                case .archivedChatsIcon:
+                case let .archivedChatsIcon(hiddenByDefault):
                     representation = nil
-                    icon = .archivedChatsIcon
+                    icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
                 case .editAvatarIcon:
                     representation = peer?.smallProfileImage
                     icon = .editAvatarIcon
@@ -258,8 +259,9 @@ public final class AvatarNode: ASDisplayNode {
             representation = peer?.smallProfileImage
         }
         let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? PeerId(namespace: 0, id: 0), peer?.displayLetters ?? [], representation)
-        if updatedState != self.state || theme !== self.theme {
+        if updatedState != self.state || overrideImage != self.overrideImage || theme !== self.theme {
             self.state = updatedState
+            self.overrideImage = overrideImage
             self.theme = theme
             
             let parameters: AvatarNodeParameters
@@ -375,9 +377,13 @@ public final class AvatarNode: ASDisplayNode {
                 colorsArray = savedMessagesColors
             } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme {
                 colorsArray = [theme.list.blocksBackgroundColor.cgColor, theme.list.blocksBackgroundColor.cgColor]
-            } else if case .archivedChatsIcon = parameters.icon, let theme = parameters.theme {
-                let color = theme.chatList.neutralAvatarColor
-                colorsArray = [color.cgColor, color.cgColor]
+            } else if case let .archivedChatsIcon(hiddenByDefault) = parameters.icon, let theme = parameters.theme {
+                if hiddenByDefault {
+                    let color = theme.chatList.neutralAvatarColor
+                    colorsArray = [color.cgColor, color.cgColor]
+                } else {
+                    colorsArray = gradientColors[5]
+                }
             } else {
                 colorsArray = grayscaleColors
             }

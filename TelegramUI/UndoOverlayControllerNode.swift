@@ -67,15 +67,15 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
                 self.originalRemainingSeconds = 5
-            case let .hidArchive(title, text):
+            case let .hidArchive(title, text, undo):
                 self.iconNode = ASImageNode()
                 self.iconNode?.displayWithoutProcessing = true
                 self.iconNode?.displaysAsynchronously = false
-                self.iconNode?.image = UIImage(bundleImageName: "Chat List/HidArchiveUndoIcon")
+                self.iconNode?.image = UIImage(bundleImageName: undo ? "Chat List/HidArchiveUndoIcon" : "Chat List/UndoInfoIcon")
                 self.iconCheckNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
-                displayUndo = true
+                displayUndo = undo
                 self.originalRemainingSeconds = 3
         }
         

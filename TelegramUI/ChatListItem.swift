@@ -451,14 +451,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     }
     
     func setupItem(item: ChatListItem, synchronousLoads: Bool) {
+        let previousItem = self.item
         self.item = item
         
         var peer: Peer?
         switch item.content {
             case let .peer(_, peerValue, _, _, _, _, _, _, _, _):
                 peer = peerValue.chatMainPeer
-            case .groupReference:
-                self.avatarNode.setPeer(account: item.account, theme: item.presentationData.theme, peer: peer, overrideImage: .archivedChatsIcon, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+            case let .groupReference(groupReference):
+                if let previousItem = previousItem, case let .groupReference(previousGroupReference) = previousItem.content, groupReference.hiddenByDefault != previousGroupReference.hiddenByDefault {
+                    UIView.transition(with: self.avatarNode.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
+                    }, completion: nil)
+                }
+                self.avatarNode.setPeer(account: item.account, theme: item.presentationData.theme, peer: peer, overrideImage: .archivedChatsIcon(hiddenByDefault: groupReference.hiddenByDefault), emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
         }
         
         if let peer = peer {

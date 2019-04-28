@@ -425,7 +425,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     return state
                 }
                 if value {
-                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText), elevatedLayout: strongSelf.groupId == .root, action: { [weak self] shouldCommit in
+                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: true), elevatedLayout: strongSelf.groupId == .root, action: { [weak self] shouldCommit in
                         guard let strongSelf = self else {
                             return
                         }
@@ -441,6 +441,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                                 return updatedValue
                             }).start()
                         }
+                    }), in: .window(.root))
+                } else {
+                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedText, undo: false), elevatedLayout: strongSelf.groupId == .root, action: { _ in
                     }), in: .window(.root))
                 }
             })
