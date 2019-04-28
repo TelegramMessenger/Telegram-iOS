@@ -721,6 +721,9 @@ public final class MessageHistoryView {
                 }
                 self.holeEarlier = state.holesToLower
                 self.holeLater = state.holesToHigher
+                if state.entries.isEmpty && state.hole != nil {
+                    isLoading = true
+                }
                 entries = []
                 if let transientReadStates = mutableView.transientReadStates, case let .peer(states) = transientReadStates {
                     for entry in state.entries {

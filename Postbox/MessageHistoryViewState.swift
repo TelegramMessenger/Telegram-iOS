@@ -597,7 +597,7 @@ final class HistoryViewLoadedState {
                         case let .MessageEntry(entry):
                             messages[i] = .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: entry.location, monthLocation: MessageHistoryEntryMonthLocation(indexInMonth: Int32(nextLocation.1)), attributes: entry.attributes))
                     }
-                    nextLocation.1 += 1
+                    nextLocation.1 = max(0, nextLocation.1 - 1)
                 }
             }
         }
