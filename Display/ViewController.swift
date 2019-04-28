@@ -296,8 +296,12 @@ open class ViewControllerPresentationArguments {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
                 navigationBarFrame.origin.y += contentNode.height + statusBarHeight
             }
-            transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
             navigationBar.updateLayout(size: navigationBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+            if !transition.isAnimated {
+                navigationBar.layer.cancelAnimationsRecursive(key: "bounds")
+                navigationBar.layer.cancelAnimationsRecursive(key: "position")
+            }
+            transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
             navigationBar.setHidden(!self.displayNavigationBar, animated: transition.isAnimated)
         }
         
