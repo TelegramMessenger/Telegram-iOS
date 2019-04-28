@@ -28,6 +28,7 @@ final public class PasscodeEntryController: ViewController {
     private let arguments: PasscodeEntryControllerPresentationArguments
     
     public var presentationCompleted: (() -> Void)?
+    public var completed: (() -> Void)?
     
     private let biometricsDisposable = MetaDisposable()
     
@@ -102,18 +103,22 @@ final public class PasscodeEntryController: ViewController {
             }
             
             if succeed {
-                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                    var data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
-                    switch data {
-                        case .none:
-                            break
-                        case let .numericalPassword(value, timeout, _):
-                            data = .numericalPassword(value: value, timeout: timeout, attempts: nil)
-                        case let .plaintextPassword(value, timeout, _):
-                            data = .plaintextPassword(value: value, timeout: timeout, attempts: nil)
-                    }
-                    transaction.setAccessChallengeData(data)
-                }).start()
+                if let completed = strongSelf.completed {
+                    completed()
+                } else {
+                    let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
+                        var data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
+                        switch data {
+                            case .none:
+                                break
+                            case let .numericalPassword(value, timeout, _):
+                                data = .numericalPassword(value: value, timeout: timeout, attempts: nil)
+                            case let .plaintextPassword(value, timeout, _):
+                                data = .plaintextPassword(value: value, timeout: timeout, attempts: nil)
+                        }
+                        transaction.setAccessChallengeData(data)
+                    }).start()
+                }
             } else {
                 let _ = (strongSelf.context.sharedContext.accountManager.transaction({ transaction -> AccessChallengeAttempts in
                     var data = transaction.getAccessChallengeData()
@@ -160,11 +165,14 @@ final public class PasscodeEntryController: ViewController {
         
         self.controllerNode.activateInput()
         if self.arguments.animated {
-            Queue.mainQueue().after(0.5) {
-                serviceSoundManager.playLockSound()
+            let iconFrame = self.arguments.lockIconInitialFrame()
+            if !iconFrame.isEmpty {
+                Queue.mainQueue().after(0.5) {
+                    serviceSoundManager.playLockSound()
+                }
             }
             
-            self.controllerNode.animateIn(iconFrame: self.arguments.lockIconInitialFrame(), completion: { [weak self] in
+            self.controllerNode.animateIn(iconFrame: iconFrame, completion: { [weak self] in
                 self?.presentationCompleted?()
             })
         } else {

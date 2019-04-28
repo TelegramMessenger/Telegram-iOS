@@ -7,20 +7,16 @@ import LegacyComponents
 import LocalAuthentication
 
 private final class PasscodeOptionsControllerArguments {
-    let turnPasscodeOn: () -> Void
     let turnPasscodeOff: () -> Void
     let changePasscode: () -> Void
     let changePasscodeTimeout: () -> Void
     let changeTouchId: (Bool) -> Void
-    let toggleSimplePasscode: (Bool) -> Void
     
-    init(turnPasscodeOn: @escaping () -> Void, turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void, toggleSimplePasscode: @escaping (Bool) -> Void) {
-        self.turnPasscodeOn = turnPasscodeOn
+    init(turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void) {
         self.turnPasscodeOff = turnPasscodeOff
         self.changePasscode = changePasscode
         self.changePasscodeTimeout = changePasscodeTimeout
         self.changeTouchId = changeTouchId
-        self.toggleSimplePasscode = toggleSimplePasscode
     }
 }
 
@@ -36,13 +32,12 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
     
     case autoLock(PresentationTheme, String, String)
     case touchId(PresentationTheme, String, Bool)
-    case simplePasscode(PresentationTheme, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
             case .togglePasscode, .changePasscode, .settingInfo:
                 return PasscodeOptionsSection.setting.rawValue
-            case .autoLock, .touchId, .simplePasscode:
+            case .autoLock, .touchId:
                 return PasscodeOptionsSection.options.rawValue
         }
     }
@@ -59,8 +54,6 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return 3
             case .touchId:
                 return 4
-            case .simplePasscode:
-                return 5
         }
     }
     
@@ -96,12 +89,6 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .simplePasscode(lhsTheme, lhsText, lhsValue):
-                if case let .simplePasscode(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
         }
     }
     
@@ -115,8 +102,6 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     if value {
                         arguments.turnPasscodeOff()
-                    } else {
-                        arguments.turnPasscodeOn()
                     }
                 })
             case let .changePasscode(theme, title):
@@ -132,10 +117,6 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
             case let .touchId(theme, title, value):
                 return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.changeTouchId(value)
-                })
-            case let .simplePasscode(theme, title, value):
-                return ItemListSwitchItem(theme: theme, title: title, value: value, enableInteractiveChanges: false, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleSimplePasscode(value)
                 })
         }
     }
@@ -225,6 +206,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var popControllerImpl: (() -> Void)?
     var replaceTopControllerImpl: ((ViewController, Bool) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -238,40 +220,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: passcodeSettings)
     })
     
-    let arguments = PasscodeOptionsControllerArguments(turnPasscodeOn: {
-        var dismissImpl: (() -> Void)?
-        
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        
-        let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
-        let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
-            if let result = result {
-                let challenge = PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil)
-                let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
-                    transaction.setAccessChallengeData(challenge)
-                    updatePresentationPasscodeSettingsInternal(transaction: transaction, { current in
-                        return current.withUpdatedAutolockTimeout(1 * 60 * 60)
-                    })
-                }).start()
-                
-                let _ = (passcodeOptionsDataPromise.get()
-                |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-                    passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge).withUpdatedPresentationSettings(data.presentationSettings.withUpdatedAutolockTimeout(1 * 60 * 60))))
-                })
-                
-                dismissImpl?()
-            } else {
-                dismissImpl?()
-            }
-        })!
-        legacyController.bind(controller: controller)
-        legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
-        legacyController.statusBar.statusBarStyle = .White
-        presentControllerImpl?(legacyController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        dismissImpl = { [weak legacyController] in
-            legacyController?.dismiss()
-        }
-    }, turnPasscodeOff: {
+    let arguments = PasscodeOptionsControllerArguments(turnPasscodeOff: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -289,7 +238,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 
                 var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
                 let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
-                    let setupController = PasscodeSetupController(context: context, mode: .setup(.digits6))
+                    let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, .digits6))
                     setupController.complete = { passcode, numerical in
                         let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                             var data = transaction.getAccessChallengeData()
@@ -299,6 +248,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                                 data = PostboxAccessChallengeData.plaintextPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
                             }
                             transaction.setAccessChallengeData(data)
+                            
+                            updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60) })
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
                         }, completed: {
@@ -331,35 +282,23 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             }
         })
         |> deliverOnMainQueue).start(next: { isSimple in
-            var dismissImpl: (() -> Void)?
-            
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            
-            let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
-            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: isSimple ? TGPasscodeEntryControllerModeSetupSimple : TGPasscodeEntryControllerModeSetupComplex, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
-                if let result = result {
-                    let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
-                        var data = transaction.getAccessChallengeData()
-                        data = PostboxAccessChallengeData.numericalPassword(value: result, timeout: data.autolockDeadline, attempts: nil)
-                        transaction.setAccessChallengeData(data)
-                    }).start()
-                    
-                    let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-                        passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil))))
-                    })
-                    
-                    dismissImpl?()
-                } else {
-                    dismissImpl?()
-                }
-            })!
-            legacyController.bind(controller: controller)
-            legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
-            legacyController.statusBar.statusBarStyle = .White
-            presentControllerImpl?(legacyController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-            dismissImpl = { [weak legacyController] in
-                legacyController?.dismiss()
+            let setupController = PasscodeSetupController(context: context, mode: .setup(change: true, .digits6))
+            setupController.complete = { passcode, numerical in
+                let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
+                    var data = transaction.getAccessChallengeData()
+                    if numerical {
+                        data = PostboxAccessChallengeData.numericalPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                    } else {
+                        data = PostboxAccessChallengeData.plaintextPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                    }
+                    transaction.setAccessChallengeData(data)
+                }) |> deliverOnMainQueue).start(next: { _ in
+                }, error: { _ in
+                }, completed: {
+                    popControllerImpl?()
+                })
             }
+            pushControllerImpl?(setupController)
         })
     }, changePasscodeTimeout: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -408,38 +347,6 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 return current.withUpdatedEnableBiometrics(value)
             }).start()
         })
-    }, toggleSimplePasscode: { value in
-        var dismissImpl: (() -> Void)?
-        
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        
-        let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
-        let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: value ? TGPasscodeEntryControllerModeSetupSimple : TGPasscodeEntryControllerModeSetupComplex, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
-            if let result = result {
-                let challenge = value ? PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil) : PostboxAccessChallengeData.plaintextPassword(value: result, timeout: nil, attempts: nil)
-                let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
-                    transaction.setAccessChallengeData(challenge)
-                    updatePresentationPasscodeSettingsInternal(transaction: transaction, { current in
-                        return current.withUpdatedAutolockTimeout(1 * 60 * 60)
-                    })
-                }).start()
-                
-                let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-                    passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge).withUpdatedPresentationSettings(data.presentationSettings.withUpdatedAutolockTimeout(1 * 60 * 60))))
-                })
-                
-                dismissImpl?()
-            } else {
-                dismissImpl?()
-            }
-        })!
-        legacyController.bind(controller: controller)
-        legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
-        legacyController.statusBar.statusBarStyle = .White
-        presentControllerImpl?(legacyController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        dismissImpl = { [weak legacyController] in
-            legacyController?.dismiss()
-        }
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
@@ -462,6 +369,9 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }
+    popControllerImpl = { [weak controller] in
+        let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
+    }
     replaceTopControllerImpl = { [weak controller] c, animated in
         (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
     }
@@ -477,7 +387,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
     |> map { challenge -> ViewController? in
         if case .none = challenge {
             let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
-                let setupController = PasscodeSetupController(context: context, mode: .setup(.digits6))
+                let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, .digits6))
                 setupController.complete = { passcode, numerical in
                     let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                         var data = transaction.getAccessChallengeData()
@@ -487,6 +397,8 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                             data = PostboxAccessChallengeData.plaintextPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
                         }
                         transaction.setAccessChallengeData(data)
+                        
+                        updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60) })
                     }) |> deliverOnMainQueue).start(next: { _ in
                     }, error: { _ in
                     }, completed: {
@@ -534,76 +446,17 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             completion(true)
             return nil
         } else {
-            var attemptData: TGPasscodeEntryAttemptData?
-            if let attempts = challenge.attempts {
-                attemptData = TGPasscodeEntryAttemptData(numberOfInvalidAttempts: Int(attempts.count), dateOfLastInvalidAttempt: Double(attempts.timestamp))
+            let controller = PasscodeEntryController(context: context, challengeData: challenge, enableBiometrics: passcodeSettings?.enableBiometrics ?? false, arguments: PasscodeEntryControllerPresentationArguments(animated: animateIn, lockIconInitialFrame: {
+                    return CGRect()
+            }))
+            controller.presentationCompleted = { [weak controller] in
+                controller?.requestBiometrics()
             }
-            var dismissImpl: (() -> Void)?
-            
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            
-            let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
-            let mode: TGPasscodeEntryControllerMode
-            switch challenge {
-                case .none, .numericalPassword:
-                    mode = TGPasscodeEntryControllerModeVerifySimple
-                case .plaintextPassword:
-                    mode = TGPasscodeEntryControllerModeVerifyComplex
+            controller.completed = { [weak controller] in
+                controller?.dismiss(completion: nil)
+                completion(true)
             }
-            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: mode, cancelEnabled: true, allowTouchId: passcodeSettings?.enableBiometrics ?? false, attemptData: attemptData, completion: { value in
-                completion(value != nil)
-                dismissImpl?()
-            })!
-            if passcodeSettings?.enableBiometrics ?? false {
-                controller.touchIdCompletion = {
-                    completion(true)
-                    dismissImpl?()
-                }
-            }
-            controller.checkCurrentPasscode = { value in
-                if let value = value {
-                    switch challenge {
-                        case .none:
-                            return true
-                        case let .numericalPassword(code, _, _):
-                            return value == code
-                        case let .plaintextPassword(code, _, _):
-                            return value == code
-                    }
-                } else {
-                    return false
-                }
-            }
-            controller.updateAttemptData = { attemptData in
-                let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
-                    var attempts: AccessChallengeAttempts?
-                    if let attemptData = attemptData {
-                        attempts = AccessChallengeAttempts(count: Int32(attemptData.numberOfInvalidAttempts), timestamp: Int32(attemptData.dateOfLastInvalidAttempt))
-                    }
-                    var data = transaction.getAccessChallengeData()
-                    switch data {
-                        case .none:
-                            break
-                        case let .numericalPassword(value, timeout, _):
-                            data = .numericalPassword(value: value, timeout: timeout, attempts: attempts)
-                        case let .plaintextPassword(value, timeout, _):
-                            data = .plaintextPassword(value: value, timeout: timeout, attempts: attempts)
-                    }
-                    transaction.setAccessChallengeData(data)
-                }).start()
-            }
-            legacyController.presentationCompleted = { [weak controller] in
-                if passcodeSettings?.enableBiometrics ?? false {
-                    controller?.refreshTouchId()
-                }
-            }
-            legacyController.bind(controller: controller)
-            legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
-            legacyController.statusBar.statusBarStyle = .White
-            dismissImpl = { [weak legacyController] in
-                legacyController?.dismiss()
-            }
-            return legacyController
+            return controller
         }
     }
 }

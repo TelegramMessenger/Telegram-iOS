@@ -10,6 +10,7 @@ struct PasscodeKeyboardLayout {
     let verticalFourth: CGFloat
     let size: CGSize
     let topOffset: CGFloat
+    let biometricsOffset: CGFloat
     
     fileprivate init(metrics: DeviceMetrics?) {
         if let metrics = metrics {
@@ -23,6 +24,7 @@ struct PasscodeKeyboardLayout {
                     self.verticalFourth = 264.0
                     self.size = CGSize(width: 265.0, height: 339.0)
                     self.topOffset = 0.0
+                    self.biometricsOffset = 0.0
                 case .iPhone5:
                     self.buttonSize = 75.0
                     self.horizontalSecond = 95.0
@@ -31,7 +33,8 @@ struct PasscodeKeyboardLayout {
                     self.verticalThird = 176.0
                     self.verticalFourth = 264.0
                     self.size = CGSize(width: 265.0, height: 339.0)
-                    self.topOffset = 0.0
+                    self.topOffset = 155.0
+                    self.biometricsOffset = 23.0
                 case .iPhone6:
                     self.buttonSize = 75.0
                     self.horizontalSecond = 103.0
@@ -40,7 +43,8 @@ struct PasscodeKeyboardLayout {
                     self.verticalThird = 180.0
                     self.verticalFourth = 270.0
                     self.size = CGSize(width: 281.0, height: 348.0)
-                    self.topOffset = 0.0
+                    self.topOffset = 221.0
+                    self.biometricsOffset = 30.0
                 case .iPhone6Plus:
                     self.buttonSize = 85.0
                     self.horizontalSecond = 115.0
@@ -50,6 +54,7 @@ struct PasscodeKeyboardLayout {
                     self.verticalFourth = 300.0
                     self.size = CGSize(width: 315.0, height: 385.0)
                     self.topOffset = 226.0
+                    self.biometricsOffset = 30.0
                 case .iPhoneX:
                     self.buttonSize = 75.0
                     self.horizontalSecond = 103.0
@@ -59,6 +64,7 @@ struct PasscodeKeyboardLayout {
                     self.verticalFourth = 273.0
                     self.size = CGSize(width: 281.0, height: 348.0)
                     self.topOffset = 294.0
+                    self.biometricsOffset = 30.0
                 case .iPhoneXSMax:
                     self.buttonSize = 85.0
                     self.horizontalSecond = 115.0
@@ -68,6 +74,7 @@ struct PasscodeKeyboardLayout {
                     self.verticalFourth = 300.0
                     self.size = CGSize(width: 315.0, height: 385.0)
                     self.topOffset = 329.0
+                    self.biometricsOffset = 30.0
                 case .iPad, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
                     self.buttonSize = 81.0
                     self.horizontalSecond = 106.0
@@ -77,6 +84,7 @@ struct PasscodeKeyboardLayout {
                     self.verticalFourth = 303.0
                     self.size = CGSize(width: 293.0, height: 384.0)
                     self.topOffset = 0.0
+                    self.biometricsOffset = 30.0
             }
         } else {
             self.buttonSize = 75.0
@@ -87,6 +95,7 @@ struct PasscodeKeyboardLayout {
             self.verticalFourth = 264.0
             self.size = CGSize(width: 265.0, height: 339.0)
             self.topOffset = 0.0
+            self.biometricsOffset = 30.0
         }
     }
 }
@@ -106,17 +115,17 @@ struct PasscodeLayout {
         if let metrics = metrics {
             switch metrics {
                 case .iPhone4:
-                    self.titleOffset = 0.0
+                    self.titleOffset = 30.0
                     self.subtitleOffset = 0.0
-                    self.inputFieldOffset = 0.0
+                    self.inputFieldOffset = 70.0
                 case .iPhone5:
-                    self.titleOffset = 0.0
-                    self.subtitleOffset = 0.0
-                    self.inputFieldOffset = 0.0
+                    self.titleOffset = 50.0
+                    self.subtitleOffset = -7.0
+                    self.inputFieldOffset = 90.0
                 case .iPhone6:
-                    self.titleOffset = 0.0
-                    self.subtitleOffset = 0.0
-                    self.inputFieldOffset = 0.0
+                    self.titleOffset = 100.0
+                    self.subtitleOffset = -3.0
+                    self.inputFieldOffset = 144.0
                 case .iPhone6Plus:
                     self.titleOffset = 112.0
                     self.subtitleOffset = -6.0

@@ -73,7 +73,7 @@ private var serviceBackgroundColorForWallpaper: (TelegramWallpaper, UIColor)?
 
 func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: MediaBox, composed: Bool = true) -> UIImage? {
     var backgroundImage: UIImage?
-    if wallpaper == backgroundImageForWallpaper?.0, (wallpaper.settings?.blur ?? false) == backgroundImageForWallpaper?.1 {
+    if composed && wallpaper == backgroundImageForWallpaper?.0, (wallpaper.settings?.blur ?? false) == backgroundImageForWallpaper?.1 {
         backgroundImage = backgroundImageForWallpaper?.2
     } else {
         switch wallpaper {
@@ -125,7 +125,7 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: Media
                     }
                 }
         }
-        if let backgroundImage = backgroundImage {
+        if let backgroundImage = backgroundImage, composed {
             backgroundImageForWallpaper = (wallpaper, (wallpaper.settings?.blur ?? false), backgroundImage)
         }
     }

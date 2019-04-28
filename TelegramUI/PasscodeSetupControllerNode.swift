@@ -49,8 +49,9 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     
     private let hapticFeedback = HapticFeedback()
     
-    private var validLayout: ContainerViewLayout?
-
+    private var validLayout: (ContainerViewLayout, CGFloat)?
+    private var maxBottomInset: CGFloat?
+    
     init(presentationData: PresentationData, mode: PasscodeSetupControllerMode) {
         self.presentationData = presentationData
         self.mode = mode
@@ -103,8 +104,12 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
             case .entry:
                 self.modeButtonNode.isHidden = true
                 text = self.presentationData.strings.EnterPasscode_EnterPasscode
-            case .setup:
-                text = self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew
+            case let .setup(change, _):
+                if change {
+                    text = self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange
+                } else {
+                    text = self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew
+                }
         }
         self.titleNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
         
@@ -116,13 +121,22 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.validLayout = layout
+        self.validLayout = (layout, navigationBarHeight)
         
-        let insets = layout.insets(options: [.statusBar, .input])
+        var insets = layout.insets(options: [.statusBar, .input])
+        if let maxBottomInset = self.maxBottomInset {
+            if maxBottomInset > insets.bottom {
+                insets.bottom = maxBottomInset
+            } else {
+                self.maxBottomInset = insets.bottom
+            }
+        } else {
+            self.maxBottomInset = insets.bottom
+        }
         
         self.wrapperNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         
-        let passcodeLayout = PasscodeLayout(layout: layout, titleOffset: 0.0, subtitleOffset: 0.0, inputFieldOffset: floor(insets.top + navigationBarHeight + (layout.size.height - navigationBarHeight - insets.top - insets.bottom - 38.0) / 2.0))
+        let passcodeLayout = PasscodeLayout(layout: layout, titleOffset: 0.0, subtitleOffset: 0.0, inputFieldOffset: floor(insets.top + navigationBarHeight + (layout.size.height - navigationBarHeight - insets.top - insets.bottom - 24.0) / 2.0))
         let inputFieldFrame = self.inputFieldNode.updateLayout(layout: passcodeLayout, transition: transition)
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
@@ -138,7 +152,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         self.mode = mode
         self.inputFieldNode.reset()
         
-        if case let .setup(type) = mode {
+        if case let .setup(_, type) = mode {
             self.inputFieldNode.updateFieldType(type, animated: true)
             
             let fieldBackgroundAlpha: CGFloat
@@ -170,7 +184,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                 if let previousPasscode = self.previousPasscode {
                     if self.currentPasscode == previousPasscode {
                         var numerical = false
-                        if case let .setup(type) = mode {
+                        if case let .setup(_, type) = mode {
                             if case .alphanumeric = type {
                             } else {
                                 numerical = true
@@ -196,7 +210,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                         self.modeButtonNode.isHidden = true
                         
                         if let validLayout = self.validLayout {
-                            self.containerLayoutUpdated(validLayout, navigationBarHeight: 0.0, transition: .immediate)
+                            self.containerLayoutUpdated(validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
                         }
                     }
                 }
