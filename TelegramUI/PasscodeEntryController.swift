@@ -64,11 +64,7 @@ final public class PasscodeEntryController: ViewController {
         let passcodeType: PasscodeEntryFieldType
         switch self.challengeData {
             case let .numericalPassword(value, _, _):
-                if value.count == 6 {
-                    passcodeType = .digits6
-                } else {
-                    passcodeType = .digits4
-                }
+                passcodeType = value.count == 6 ? .digits6 : .digits4
             default:
                 passcodeType = .alphanumeric
         }
@@ -80,6 +76,15 @@ final public class PasscodeEntryController: ViewController {
         }
         self.displayNode = PasscodeEntryControllerNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, passcodeType: passcodeType, biometricsType: biometricsType, statusBar: self.statusBar)
         self.displayNodeDidLoad()
+        
+        let _ = (self.context.sharedContext.accountManager.transaction({ transaction -> AccessChallengeAttempts? in
+            return transaction.getAccessChallengeData().attempts
+        }) |> deliverOnMainQueue).start(next: { [weak self] attempts in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.controllerNode.updateInvalidAttempts(attempts)
+        })
         
         self.controllerNode.checkPasscode = { [weak self] passcode in
             guard let strongSelf = self else {
@@ -98,26 +103,47 @@ final public class PasscodeEntryController: ViewController {
             
             if succeed {
                 let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                    let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
+                    var data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
+                    switch data {
+                        case .none:
+                            break
+                        case let .numericalPassword(value, timeout, _):
+                            data = .numericalPassword(value: value, timeout: timeout, attempts: nil)
+                        case let .plaintextPassword(value, timeout, _):
+                            data = .plaintextPassword(value: value, timeout: timeout, attempts: nil)
+                    }
                     transaction.setAccessChallengeData(data)
                 }).start()
             } else {
-//                let _ = strongSelf.context.sharedContext.accountManager.transaction({ transaction -> Void in
-//                    var attempts: AccessChallengeAttempts?
-//                    if let attemptData = attemptData {
-//                        attempts = AccessChallengeAttempts(count: Int32(attemptData.numberOfInvalidAttempts), timestamp: Int32(attemptData.dateOfLastInvalidAttempt))
-//                    }
-//                    var data = transaction.getAccessChallengeData()
-//                    switch data {
-//                        case .none:
-//                            break
-//                        case let .numericalPassword(value, timeout, _):
-//                            data = .numericalPassword(value: value, timeout: timeout, attempts: attempts)
-//                        case let .plaintextPassword(value, timeout, _):
-//                            data = .plaintextPassword(value: value, timeout: timeout, attempts: attempts)
-//                    }
-//                    transaction.setAccessChallengeData(data)
-//                }).start()
+                let _ = (strongSelf.context.sharedContext.accountManager.transaction({ transaction -> AccessChallengeAttempts in
+                    var data = transaction.getAccessChallengeData()
+                    let updatedAttempts: AccessChallengeAttempts
+                    if let attempts = data.attempts {
+                        var count = attempts.count + 1
+                        if count > 6 {
+                            count = 1
+                        }
+                        updatedAttempts = AccessChallengeAttempts(count: count, timestamp: Int32(CFAbsoluteTimeGetCurrent()))
+                    } else {
+                        updatedAttempts = AccessChallengeAttempts(count: 1, timestamp: Int32(CFAbsoluteTimeGetCurrent()))
+                    }
+                    switch data {
+                        case .none:
+                            break
+                        case let .numericalPassword(value, timeout, _):
+                            data = .numericalPassword(value: value, timeout: timeout, attempts: updatedAttempts)
+                        case let .plaintextPassword(value, timeout, _):
+                            data = .plaintextPassword(value: value, timeout: timeout, attempts: updatedAttempts)
+                    }
+                    transaction.setAccessChallengeData(data)
+                    
+                    return updatedAttempts
+                })
+                |> deliverOnMainQueue).start(next: { [weak self] attempts in
+                    if let strongSelf = self {
+                        strongSelf.controllerNode.updateInvalidAttempts(attempts, animated: true)
+                    }
+                })
                 
                 strongSelf.controllerNode.animateError()
             }

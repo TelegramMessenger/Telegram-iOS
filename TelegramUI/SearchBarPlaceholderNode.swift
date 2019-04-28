@@ -155,6 +155,12 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                     
                     let outerAlpha = min(0.3, expansionProgress) / 0.3
                     let cornerRadius = min(strongSelf.fieldStyle.cornerDiameter / 2.0, height / 2.0)
+                    if !transition.isAnimated {
+                        strongSelf.backgroundNode.layer.removeAnimation(forKey: "cornerRadius")
+                        strongSelf.backgroundNode.layer.removeAnimation(forKey: "position")
+                        strongSelf.backgroundNode.layer.removeAnimation(forKey: "bounds")
+                        strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
+                    }
                     transition.updateCornerRadius(node: strongSelf.backgroundNode, cornerRadius: cornerRadius)
                     transition.updateAlpha(node: strongSelf.backgroundNode, alpha: outerAlpha)
                     transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: height)))
