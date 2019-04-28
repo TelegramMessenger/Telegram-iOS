@@ -4207,7 +4207,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, editMediaOptions: editMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText.string, openGallery: {
                 self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals in
                     if !inputText.string.isEmpty {
-                        strongSelf.clearInputText()
+                        //strongSelf.clearInputText()
                     }
                     if editMediaOptions != nil {
                         self?.editMessageMediaWithLegacySignals(signals)
@@ -4225,7 +4225,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 strongSelf.enqueueMediaMessages(signals: signals)
                             }
                             if !inputText.string.isEmpty {
-                                strongSelf.clearInputText()
+                                //strongSelf.clearInputText()
                             }
                         }
                     }, recognizedQRCode: { [weak self] code in
@@ -4246,7 +4246,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 self?.presentPollCreation()
             }, sendMessagesWithSignals: { [weak self] signals in
                 if !inputText.string.isEmpty {
-                    strongSelf.clearInputText()
+                    //strongSelf.clearInputText()
                 }
                 if editMediaOptions != nil {
                     self?.editMessageMediaWithLegacySignals(signals!)
@@ -4399,7 +4399,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     controller.completionBlock = { [weak legacyController, weak self] signals in
                         if let strongSelf = self {
                             if !inputText.string.isEmpty {
-                                strongSelf.clearInputText()
+                                //strongSelf.clearInputText()
                             }
                         }
                         

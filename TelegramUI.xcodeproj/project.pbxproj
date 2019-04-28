@@ -33,6 +33,17 @@
 		0941A9A0210B057200EBE194 /* OpenInActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */; };
 		0941A9A4210B0E2E00EBE194 /* OpenInAppIconResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */; };
 		0941A9A6210B822D00EBE194 /* OpenInOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A5210B822D00EBE194 /* OpenInOptions.swift */; };
+		094735032275B62B00EA2312 /* PasscodeLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094735022275B62B00EA2312 /* PasscodeLayout.swift */; };
+		0947350E2275D72100EA2312 /* anim_hide.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735042275D71F00EA2312 /* anim_hide.json */; };
+		0947350F2275D72100EA2312 /* anim_unread.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735052275D72000EA2312 /* anim_unread.json */; };
+		094735102275D72100EA2312 /* anim_read.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735062275D72000EA2312 /* anim_read.json */; };
+		094735112275D72100EA2312 /* anim_archive.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735072275D72000EA2312 /* anim_archive.json */; };
+		094735122275D72100EA2312 /* anim_mute.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735082275D72000EA2312 /* anim_mute.json */; };
+		094735132275D72100EA2312 /* anim_delete.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735092275D72000EA2312 /* anim_delete.json */; };
+		094735142275D72100EA2312 /* anim_unarchive.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350A2275D72000EA2312 /* anim_unarchive.json */; };
+		094735152275D72100EA2312 /* anim_unpin.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350B2275D72000EA2312 /* anim_unpin.json */; };
+		094735162275D72100EA2312 /* anim_unmute.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350C2275D72100EA2312 /* anim_unmute.json */; };
+		094735172275D72100EA2312 /* anim_pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350D2275D72100EA2312 /* anim_pin.json */; };
 		0947FCAE224043450086741C /* SettingsSearchRecentItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0947FCAD224043450086741C /* SettingsSearchRecentItem.swift */; };
 		0947FCB0224055990086741C /* StringHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0947FCAF224055990086741C /* StringHash.swift */; };
 		0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */; };
@@ -129,16 +140,6 @@
 		09DE2F292269D5E30045E975 /* PrivacyIntroControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DE2F282269D5E30045E975 /* PrivacyIntroControllerNode.swift */; };
 		09E2D9EF226F1AFA00EA0AA4 /* Emoji.mapping in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */; };
 		09E2D9F1226F214000EA0AA4 /* EmojiResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E2D9F0226F214000EA0AA4 /* EmojiResources.swift */; };
-		09E2DA0422720C4400EA0AA4 /* archive.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9FA22720A6000EA0AA4 /* archive.json */; };
-		09E2DA0522720C4400EA0AA4 /* delete.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9F522720A5F00EA0AA4 /* delete.json */; };
-		09E2DA0622720C4400EA0AA4 /* mute.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9F922720A6000EA0AA4 /* mute.json */; };
-		09E2DA0722720C4400EA0AA4 /* pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9F822720A5F00EA0AA4 /* pin.json */; };
-		09E2DA0822720C4400EA0AA4 /* read.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9F722720A5F00EA0AA4 /* read.json */; };
-		09E2DA0922720C4400EA0AA4 /* unarchive.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9F422720A5F00EA0AA4 /* unarchive.json */; };
-		09E2DA0A22720C4400EA0AA4 /* unmute.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9F622720A5F00EA0AA4 /* unmute.json */; };
-		09E2DA0B22720C4400EA0AA4 /* unpin.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9F222720A5E00EA0AA4 /* unpin.json */; };
-		09E2DA0C22720C4400EA0AA4 /* unread.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9F322720A5E00EA0AA4 /* unread.json */; };
-		09E2DA0F2273258700EA0AA4 /* hide.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2DA0D2273245300EA0AA4 /* hide.json */; };
 		09E2DA112273340E00EA0AA4 /* AnimationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E2DA102273340E00EA0AA4 /* AnimationNode.swift */; };
 		09E2DA132273367900EA0AA4 /* archiveAvatar.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2DA122273367900EA0AA4 /* archiveAvatar.json */; };
 		09E4A801223AE1B30038140F /* PeerType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A800223AE1B30038140F /* PeerType.swift */; };
@@ -1215,6 +1216,17 @@
 		0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInActionSheetController.swift; sourceTree = "<group>"; };
 		0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInAppIconResources.swift; sourceTree = "<group>"; };
 		0941A9A5210B822D00EBE194 /* OpenInOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInOptions.swift; sourceTree = "<group>"; };
+		094735022275B62B00EA2312 /* PasscodeLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasscodeLayout.swift; sourceTree = "<group>"; };
+		094735042275D71F00EA2312 /* anim_hide.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_hide.json; sourceTree = "<group>"; };
+		094735052275D72000EA2312 /* anim_unread.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unread.json; sourceTree = "<group>"; };
+		094735062275D72000EA2312 /* anim_read.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_read.json; sourceTree = "<group>"; };
+		094735072275D72000EA2312 /* anim_archive.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_archive.json; sourceTree = "<group>"; };
+		094735082275D72000EA2312 /* anim_mute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_mute.json; sourceTree = "<group>"; };
+		094735092275D72000EA2312 /* anim_delete.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_delete.json; sourceTree = "<group>"; };
+		0947350A2275D72000EA2312 /* anim_unarchive.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unarchive.json; sourceTree = "<group>"; };
+		0947350B2275D72000EA2312 /* anim_unpin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unpin.json; sourceTree = "<group>"; };
+		0947350C2275D72100EA2312 /* anim_unmute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unmute.json; sourceTree = "<group>"; };
+		0947350D2275D72100EA2312 /* anim_pin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_pin.json; sourceTree = "<group>"; };
 		0947FCAD224043450086741C /* SettingsSearchRecentItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSearchRecentItem.swift; sourceTree = "<group>"; };
 		0947FCAF224055990086741C /* StringHash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringHash.swift; sourceTree = "<group>"; };
 		0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationMuteSettingsController.swift; sourceTree = "<group>"; };
@@ -1315,16 +1327,6 @@
 		09DE2F282269D5E30045E975 /* PrivacyIntroControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyIntroControllerNode.swift; sourceTree = "<group>"; };
 		09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */ = {isa = PBXFileReference; lastKnownFileType = file; name = Emoji.mapping; path = TelegramUI/Resources/Emoji.mapping; sourceTree = "<group>"; };
 		09E2D9F0226F214000EA0AA4 /* EmojiResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiResources.swift; sourceTree = "<group>"; };
-		09E2D9F222720A5E00EA0AA4 /* unpin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = unpin.json; sourceTree = "<group>"; };
-		09E2D9F322720A5E00EA0AA4 /* unread.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = unread.json; sourceTree = "<group>"; };
-		09E2D9F422720A5F00EA0AA4 /* unarchive.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = unarchive.json; sourceTree = "<group>"; };
-		09E2D9F522720A5F00EA0AA4 /* delete.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = delete.json; sourceTree = "<group>"; };
-		09E2D9F622720A5F00EA0AA4 /* unmute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = unmute.json; sourceTree = "<group>"; };
-		09E2D9F722720A5F00EA0AA4 /* read.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = read.json; sourceTree = "<group>"; };
-		09E2D9F822720A5F00EA0AA4 /* pin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = pin.json; sourceTree = "<group>"; };
-		09E2D9F922720A6000EA0AA4 /* mute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = mute.json; sourceTree = "<group>"; };
-		09E2D9FA22720A6000EA0AA4 /* archive.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = archive.json; sourceTree = "<group>"; };
-		09E2DA0D2273245300EA0AA4 /* hide.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = hide.json; sourceTree = "<group>"; };
 		09E2DA102273340E00EA0AA4 /* AnimationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimationNode.swift; sourceTree = "<group>"; };
 		09E2DA122273367900EA0AA4 /* archiveAvatar.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = archiveAvatar.json; sourceTree = "<group>"; };
 		09E4A800223AE1B30038140F /* PeerType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerType.swift; sourceTree = "<group>"; };
@@ -2522,17 +2524,17 @@
 		09310D13213BC5DE0020033A /* Animations */ = {
 			isa = PBXGroup;
 			children = (
+				094735072275D72000EA2312 /* anim_archive.json */,
+				094735092275D72000EA2312 /* anim_delete.json */,
+				094735042275D71F00EA2312 /* anim_hide.json */,
+				094735082275D72000EA2312 /* anim_mute.json */,
+				0947350D2275D72100EA2312 /* anim_pin.json */,
+				094735062275D72000EA2312 /* anim_read.json */,
+				0947350A2275D72000EA2312 /* anim_unarchive.json */,
+				0947350C2275D72100EA2312 /* anim_unmute.json */,
+				0947350B2275D72000EA2312 /* anim_unpin.json */,
+				094735052275D72000EA2312 /* anim_unread.json */,
 				09E2DA122273367900EA0AA4 /* archiveAvatar.json */,
-				09E2D9FA22720A6000EA0AA4 /* archive.json */,
-				09E2D9F522720A5F00EA0AA4 /* delete.json */,
-				09E2DA0D2273245300EA0AA4 /* hide.json */,
-				09E2D9F922720A6000EA0AA4 /* mute.json */,
-				09E2D9F822720A5F00EA0AA4 /* pin.json */,
-				09E2D9F722720A5F00EA0AA4 /* read.json */,
-				09E2D9F422720A5F00EA0AA4 /* unarchive.json */,
-				09E2D9F622720A5F00EA0AA4 /* unmute.json */,
-				09E2D9F222720A5E00EA0AA4 /* unpin.json */,
-				09E2D9F322720A5E00EA0AA4 /* unread.json */,
 				09310D1A213BC5DE0020033A /* anim_ungroup.json */,
 				09310D1B213BC5DE0020033A /* anim_group.json */,
 			);
@@ -2743,6 +2745,7 @@
 				09F215A522649C3000AEDF6D /* PasscodeLockIconNode.swift */,
 				09F215AC2264DC4500AEDF6D /* PasscodeSetupController.swift */,
 				09DE2F242269B7E80045E975 /* PasscodeSetupControllerNode.swift */,
+				094735022275B62B00EA2312 /* PasscodeLayout.swift */,
 			);
 			name = Passcode;
 			sourceTree = "<group>";
@@ -5223,28 +5226,32 @@
 			buildActionMask = 2147483647;
 			files = (
 				09874E4F21078FA100E190B8 /* Generic.html in Resources */,
-				09E2DA0822720C4400EA0AA4 /* read.json in Resources */,
 				09874E5021078FA100E190B8 /* GenericUserScript.js in Resources */,
 				09874E5121078FA100E190B8 /* Instagram.html in Resources */,
 				09874E5221078FA100E190B8 /* Twitch.html in Resources */,
 				09874E5321078FA100E190B8 /* TwitchUserScript.js in Resources */,
+				094735122275D72100EA2312 /* anim_mute.json in Resources */,
 				09874E5421078FA100E190B8 /* Vimeo.html in Resources */,
 				09874E5521078FA100E190B8 /* VimeoUserScript.js in Resources */,
-				09E2DA0422720C4400EA0AA4 /* archive.json in Resources */,
 				09874E5621078FA100E190B8 /* Youtube.html in Resources */,
 				09874E5721078FA100E190B8 /* YoutubeUserScript.js in Resources */,
+				094735172275D72100EA2312 /* anim_pin.json in Resources */,
+				094735112275D72100EA2312 /* anim_archive.json in Resources */,
 				D0EB42051F3143AB00838FE6 /* LegacyComponentsResources.bundle in Resources */,
 				D0E9BAA21F056F4C00F079A4 /* stp_card_discover@3x.png in Resources */,
 				D0E9BAB01F056F4C00F079A4 /* stp_card_mastercard@3x.png in Resources */,
 				09310D32213ED5FC0020033A /* anim_ungroup.json in Resources */,
 				09E2D9EF226F1AFA00EA0AA4 /* Emoji.mapping in Resources */,
 				D0955FB521912B6000F89427 /* PresentationStrings.mapping in Resources */,
+				0947350F2275D72100EA2312 /* anim_unread.json in Resources */,
 				D0E9BAA31F056F4C00F079A4 /* stp_card_discover_template@2x.png in Resources */,
 				D0E9BAB51F056F4C00F079A4 /* stp_card_visa@2x.png in Resources */,
 				D0E9BA941F056F4C00F079A4 /* stp_card_amex_template@3x.png in Resources */,
 				D0E9BA961F056F4C00F079A4 /* stp_card_applepay@3x.png in Resources */,
 				D0F9720F1FFE4BD5002595C8 /* notification.caf in Resources */,
 				09310D33213ED5FC0020033A /* anim_group.json in Resources */,
+				094735162275D72100EA2312 /* anim_unmute.json in Resources */,
+				094735102275D72100EA2312 /* anim_read.json in Resources */,
 				D0E9BA9A1F056F4C00F079A4 /* stp_card_cvc@3x.png in Resources */,
 				D0E9BA921F056F4C00F079A4 /* stp_card_amex@3x.png in Resources */,
 				D0E9BA9F1F056F4C00F079A4 /* stp_card_diners_template@2x.png in Resources */,
@@ -5255,30 +5262,25 @@
 				D0E9BAB71F056F4C00F079A4 /* stp_card_visa_template@2x.png in Resources */,
 				D0E9BA951F056F4C00F079A4 /* stp_card_applepay@2x.png in Resources */,
 				D0E9BAA01F056F4C00F079A4 /* stp_card_diners_template@3x.png in Resources */,
+				094735132275D72100EA2312 /* anim_delete.json in Resources */,
+				094735142275D72100EA2312 /* anim_unarchive.json in Resources */,
 				D0E9BAAA1F056F4C00F079A4 /* stp_card_form_front@3x.png in Resources */,
 				D0E9BA971F056F4C00F079A4 /* stp_card_applepay_template@2x.png in Resources */,
 				D0E9BAB41F056F4C00F079A4 /* stp_card_placeholder_template@3x.png in Resources */,
-				09E2DA0B22720C4400EA0AA4 /* unpin.json in Resources */,
 				D0E9BAA71F056F4C00F079A4 /* stp_card_form_back@2x.png in Resources */,
 				D0E9BAB11F056F4C00F079A4 /* stp_card_mastercard_template@2x.png in Resources */,
-				09E2DA0522720C4400EA0AA4 /* delete.json in Resources */,
-				09E2DA0C22720C4400EA0AA4 /* unread.json in Resources */,
-				09E2DA0622720C4400EA0AA4 /* mute.json in Resources */,
 				D0E9BA9D1F056F4C00F079A4 /* stp_card_diners@2x.png in Resources */,
 				D0E9BAAF1F056F4C00F079A4 /* stp_card_mastercard@2x.png in Resources */,
-				09E2DA0922720C4400EA0AA4 /* unarchive.json in Resources */,
 				D0C12A1D1F33A85600B3F66D /* ChatWallpaperBuiltin0.jpg in Resources */,
 				D0E9BAAC1F056F4C00F079A4 /* stp_card_jcb@3x.png in Resources */,
 				D0E9BA911F056F4C00F079A4 /* stp_card_amex@2x.png in Resources */,
-				09E2DA0A22720C4400EA0AA4 /* unmute.json in Resources */,
 				D0E9BA931F056F4C00F079A4 /* stp_card_amex_template@2x.png in Resources */,
 				D0E9BAA91F056F4C00F079A4 /* stp_card_form_front@2x.png in Resources */,
-				09E2DA0722720C4400EA0AA4 /* pin.json in Resources */,
 				D0E9BAA41F056F4C00F079A4 /* stp_card_discover_template@3x.png in Resources */,
 				D0E9BAA81F056F4C00F079A4 /* stp_card_form_back@3x.png in Resources */,
 				D0E9BAA11F056F4C00F079A4 /* stp_card_discover@2x.png in Resources */,
-				09E2DA0F2273258700EA0AA4 /* hide.json in Resources */,
 				D0E9B9EA1F00853C00F079A4 /* PhoneCountries.txt in Resources */,
+				094735152275D72100EA2312 /* anim_unpin.json in Resources */,
 				D0E9BAB31F056F4C00F079A4 /* stp_card_placeholder_template@2x.png in Resources */,
 				D0E9BAAE1F056F4C00F079A4 /* stp_card_jcb_template@3x.png in Resources */,
 				D0E9BAAB1F056F4C00F079A4 /* stp_card_jcb@2x.png in Resources */,
@@ -5286,6 +5288,7 @@
 				D0E9BA9C1F056F4C00F079A4 /* stp_card_cvc_amex@3x.png in Resources */,
 				D0E9BA991F056F4C00F079A4 /* stp_card_cvc@2x.png in Resources */,
 				D0471B541EFD8ECA0074D609 /* currencies.json in Resources */,
+				0947350E2275D72100EA2312 /* anim_hide.json in Resources */,
 				D0E9BAB21F056F4C00F079A4 /* stp_card_mastercard_template@3x.png in Resources */,
 				D0E9BA981F056F4C00F079A4 /* stp_card_applepay_template@3x.png in Resources */,
 				D0E9BAA51F056F4C00F079A4 /* stp_card_form_applepay@2x.png in Resources */,
@@ -5978,6 +5981,7 @@
 				D00701A22029F6D0006B9E34 /* TGMimeTypeMap.m in Sources */,
 				D0BE30412061B80100FBE6D8 /* SecureIdAuthController.swift in Sources */,
 				D0EC6DD31EB9F58900EBF1C3 /* MentionChatInputPanelItem.swift in Sources */,
+				094735032275B62B00EA2312 /* PasscodeLayout.swift in Sources */,
 				D0EC6DD41EB9F58900EBF1C3 /* CommandChatInputContextPanelNode.swift in Sources */,
 				D0EC6DD51EB9F58900EBF1C3 /* CommandChatInputPanelItem.swift in Sources */,
 				D0EC6DD61EB9F58900EBF1C3 /* VerticalListContextResultsChatInputContextPanelNode.swift in Sources */,

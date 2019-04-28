@@ -2,9 +2,11 @@ import Foundation
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import Postbox
 import TelegramCore
 
 private let titleFont = Font.regular(20.0)
+private let subtitleFont = Font.regular(17.0)
 private let buttonFont = Font.regular(17.0)
 
 final class PasscodeEntryControllerNode: ASDisplayNode {
@@ -27,6 +29,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     private let deleteButtonNode: HighlightableButtonNode
     private let biometricButtonNode: HighlightableButtonNode
     private let effectView: UIVisualEffectView
+    
+    private var invalidAttempts: AccessChallengeAttempts?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -67,7 +71,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             self?.inputFieldNode.append(character)
         }
         self.inputFieldNode.complete = { [weak self] passcode in
-            self?.checkPasscode?(passcode)
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.shouldWaitBeforeNextAttempt() {
+                strongSelf.animateError()
+            } else {
+                strongSelf.checkPasscode?(passcode)
+            }
         }
         
         self.deleteButtonNode.setTitle(strings.Common_Delete, with: buttonFont, with: .white, for: .normal)
@@ -146,6 +157,43 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         }
     }
     
+    private func shouldWaitBeforeNextAttempt() -> Bool {
+        if let attempts = self.invalidAttempts {
+            let waitInterval: Int32 = 60
+            if attempts.count >= 6 {
+                if Int32(CFAbsoluteTimeGetCurrent()) - attempts.timestamp < waitInterval {
+                    return true
+                } else {
+                    return false
+                }
+            } else {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+    
+    func updateInvalidAttempts(_ attempts: AccessChallengeAttempts?, animated: Bool = false) {
+        self.invalidAttempts = attempts
+        if let attempts = attempts {
+            let text: NSAttributedString
+            if attempts.count >= 6 {
+                if self.shouldWaitBeforeNextAttempt() {
+                    text = NSAttributedString(string: self.strings.PasscodeSettings_TryAgainIn1Minute, font: subtitleFont, textColor: .white)
+                } else {
+                    text = NSAttributedString(string: "")
+                }
+            } else {
+                text = NSAttributedString(string: self.strings.PasscodeSettings_FailedAttempts(attempts.count), font: subtitleFont, textColor: .white)
+            }
+            
+            self.subtitleNode.setAttributedText(text, animation: animated ? .crossFade : .none, completion: {})
+        } else {
+            self.subtitleNode.setAttributedText(NSAttributedString(string: ""), animation: animated ? .crossFade : .none, completion: {})
+        }
+    }
+    
     func initialAppearance() {
         self.titleNode.setAttributedText(NSAttributedString(string: self.strings.Passcode_AppLockedAlert.replacingOccurrences(of: "\n", with: " "), font: titleFont, textColor: .white), animation: .none, completion: {
             Queue.mainQueue().after(2.0, {
@@ -170,16 +218,20 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.statusBar.layer.removeAnimation(forKey: "opacity")
         self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
+        self.subtitleNode.isHidden = true
         self.inputFieldNode.isHidden = true
         self.keyboardNode.isHidden = true
         self.deleteButtonNode.isHidden = true
         self.biometricButtonNode.isHidden = true
         
         self.titleNode.setAttributedText(NSAttributedString(string: self.strings.Passcode_AppLockedAlert.replacingOccurrences(of: "\n", with: " "), font: titleFont, textColor: .white), animation: .slideIn, completion: {
+            self.subtitleNode.isHidden = false
             self.inputFieldNode.isHidden = false
             self.keyboardNode.isHidden = false
             self.deleteButtonNode.isHidden = false
             self.biometricButtonNode.isHidden = false
+            
+            self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
             
             self.inputFieldNode.animateIn()
             self.keyboardNode.animateIn()
@@ -229,13 +281,18 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         let iconSize = CGSize(width: 35.0, height: 37.0)
         transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0) + 6.0, y: layout.insets(options: .statusBar).top + 15.0), size: iconSize))
         
-        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: layout, transition: transition)
+        let passcodeLayout = PasscodeLayout(layout: layout)
+        
+        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: passcodeLayout, transition: transition)
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let titleSize = self.titleNode.updateLayout(layout: layout, transition: transition)
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 162.0), size: titleSize))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: passcodeLayout.titleOffset), size: titleSize))
         
-        let (keyboardFrame, keyboardButtonSize) = self.keyboardNode.updateLayout(layout: layout, transition: transition)
+        let subtitleSize = self.subtitleNode.updateLayout(layout: layout, transition: transition)
+        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: inputFieldFrame.maxY + passcodeLayout.subtitleOffset), size: subtitleSize))
+        
+        let (keyboardFrame, keyboardButtonSize) = self.keyboardNode.updateLayout(layout: passcodeLayout, transition: transition)
         transition.updateFrame(node: self.keyboardNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         switch self.passcodeType {

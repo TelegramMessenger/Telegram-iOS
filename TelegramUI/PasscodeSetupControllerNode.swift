@@ -43,6 +43,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     }
     
     var selectPasscodeMode: (() -> Void)?
+    var checkPasscode: ((String) -> Bool)?
     var complete: ((String, Bool) -> Void)?
     var updateNextAction: ((Bool) -> Void)?
     
@@ -59,11 +60,23 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
         
-        self.inputFieldNode = PasscodeEntryInputFieldNode(color: self.presentationData.theme.list.itemPrimaryTextColor, fieldType: .digits6, keyboardAppearance: self.presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance)
+        let passcodeType: PasscodeEntryFieldType
+        switch self.mode {
+            case let .entry(challenge):
+                switch challenge {
+                    case let .numericalPassword(value, _, _):
+                        passcodeType = value.count == 6 ? .digits6 : .digits4
+                    default:
+                        passcodeType = .alphanumeric
+                }
+            case .setup:
+                passcodeType = .digits6
+        }
+        
+        self.inputFieldNode = PasscodeEntryInputFieldNode(color: self.presentationData.theme.list.itemPrimaryTextColor, fieldType: passcodeType, keyboardAppearance: self.presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance)
         self.inputFieldBackgroundNode = ASImageNode()
-        self.inputFieldBackgroundNode.alpha = 0.0
+        self.inputFieldBackgroundNode.alpha = passcodeType == .alphanumeric ? 1.0 : 0.0
         self.inputFieldBackgroundNode.contentMode = .scaleToFill
         self.inputFieldBackgroundNode.image = generateFieldBackground(backgroundColor: self.presentationData.theme.list.itemBlocksBackgroundColor, borderColor: self.presentationData.theme.list.itemBlocksSeparatorColor)
         
@@ -85,6 +98,16 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         self.wrapperNode.addSubnode(self.inputFieldNode)
         self.wrapperNode.addSubnode(self.modeButtonNode)
         
+        let text: String
+        switch self.mode {
+            case .entry:
+                self.modeButtonNode.isHidden = true
+                text = self.presentationData.strings.EnterPasscode_EnterPasscode
+            case .setup:
+                text = self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew
+        }
+        self.titleNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+        
         self.inputFieldNode.complete = { [weak self] passcode in
             self?.activateNext()
         }
@@ -99,7 +122,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         
         self.wrapperNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         
-        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: layout, transition: transition)
+        let passcodeLayout = PasscodeLayout(layout: layout, titleOffset: 0.0, subtitleOffset: 0.0, inputFieldOffset: floor(insets.top + navigationBarHeight + (layout.size.height - navigationBarHeight - insets.top - insets.bottom - 38.0) / 2.0))
+        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: passcodeLayout, transition: transition)
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         transition.updateFrame(node: self.inputFieldBackgroundNode, frame: CGRect(x: 0.0, y: inputFieldFrame.minY - 6.0, width: layout.size.width, height: 48.0))
@@ -137,38 +161,45 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
             return
         }
         
-        if let previousPasscode = self.previousPasscode {
-            if self.currentPasscode == previousPasscode {
-                var numerical = false
-                if case let .setup(type) = mode {
-                    if case .alphanumeric = type {
+        switch self.mode {
+            case .entry:
+                if !(self.checkPasscode?(self.currentPasscode) ?? false) {
+                    self.animateError()
+                }
+            case .setup:
+                if let previousPasscode = self.previousPasscode {
+                    if self.currentPasscode == previousPasscode {
+                        var numerical = false
+                        if case let .setup(type) = mode {
+                            if case .alphanumeric = type {
+                            } else {
+                                numerical = true
+                            }
+                        }
+                        self.complete?(self.currentPasscode, numerical)
                     } else {
-                        numerical = true
+                        self.animateError()
+                    }
+                } else {
+                    self.previousPasscode = self.currentPasscode
+                    
+                    if let snapshotView = self.wrapperNode.view.snapshotContentTree() {
+                        snapshotView.frame = self.wrapperNode.frame
+                        self.wrapperNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.wrapperNode.view)
+                        snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -self.wrapperNode.bounds.width, y: 0.0), duration: 0.25, removeOnCompletion: false, additive: true, completion : { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                        self.wrapperNode.layer.animatePosition(from: CGPoint(x: self.wrapperNode.bounds.width, y: 0.0), to: CGPoint(), duration: 0.25, additive: true)
+                        
+                        self.inputFieldNode.reset(animated: false)
+                        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_RepeatNewPasscode, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+                        self.modeButtonNode.isHidden = true
+                        
+                        if let validLayout = self.validLayout {
+                            self.containerLayoutUpdated(validLayout, navigationBarHeight: 0.0, transition: .immediate)
+                        }
                     }
                 }
-                self.complete?(self.currentPasscode, numerical)
-            } else {
-                self.animateError()
-            }
-        } else {
-            self.previousPasscode = self.currentPasscode
-            
-            if let snapshotView = self.wrapperNode.view.snapshotContentTree() {
-                snapshotView.frame = self.wrapperNode.frame
-                self.wrapperNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.wrapperNode.view)
-                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -self.wrapperNode.bounds.width, y: 0.0), duration: 0.25, removeOnCompletion: false, additive: true, completion : { [weak snapshotView] _ in
-                    snapshotView?.removeFromSuperview()
-                })
-                self.wrapperNode.layer.animatePosition(from: CGPoint(x: self.wrapperNode.bounds.width, y: 0.0), to: CGPoint(), duration: 0.25, additive: true)
-
-                self.inputFieldNode.reset(animated: false)
-                self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_RepeatNewPasscode, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-                self.modeButtonNode.isHidden = true
-                
-                if let validLayout = self.validLayout {
-                    self.containerLayoutUpdated(validLayout, navigationBarHeight: 0.0, transition: .immediate)
-                }
-            }
         }
     }
     

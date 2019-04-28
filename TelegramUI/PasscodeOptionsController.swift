@@ -497,72 +497,23 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
             })
             return controller
         } else {
-            completion(true)
-            return nil
-//            let controller = PasscodeSetupController(context: context, mode: .entry(challenge))
-//            return controller
-
-            var attemptData: TGPasscodeEntryAttemptData?
-            if let attempts = challenge.attempts {
-                attemptData = TGPasscodeEntryAttemptData(numberOfInvalidAttempts: Int(attempts.count), dateOfLastInvalidAttempt: Double(attempts.timestamp))
-            }
-            var dismissImpl: (() -> Void)?
-
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-
-            let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
-            let mode: TGPasscodeEntryControllerMode
-            switch challenge {
-            case .none, .numericalPassword:
-                mode = TGPasscodeEntryControllerModeVerifySimple
-            case .plaintextPassword:
-                mode = TGPasscodeEntryControllerModeVerifyComplex
-            }
-            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: mode, cancelEnabled: true, allowTouchId: false, attemptData: attemptData, completion: { value in
-                if value != nil {
-                    completion(false)
-                }
-                dismissImpl?()
-            })!
-            controller.checkCurrentPasscode = { value in
-                if let value = value {
-                    switch challenge {
+            let controller = PasscodeSetupController(context: context, mode: .entry(challenge))
+            controller.check = { passcode in
+                var succeed = false
+                switch challenge {
                     case .none:
-                        return true
+                        succeed = true
                     case let .numericalPassword(code, _, _):
-                        return value == code
+                        succeed = passcode == code
                     case let .plaintextPassword(code, _, _):
-                        return value == code
-                    }
-                } else {
-                    return false
+                        succeed = passcode == code
                 }
+                if succeed {
+                    completion(true)
+                }
+                return succeed
             }
-            controller.updateAttemptData = { attemptData in
-                let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
-                    var attempts: AccessChallengeAttempts?
-                    if let attemptData = attemptData {
-                        attempts = AccessChallengeAttempts(count: Int32(attemptData.numberOfInvalidAttempts), timestamp: Int32(attemptData.dateOfLastInvalidAttempt))
-                    }
-                    var data = transaction.getAccessChallengeData()
-                    switch data {
-                    case .none:
-                        break
-                    case let .numericalPassword(value, timeout, _):
-                        data = .numericalPassword(value: value, timeout: timeout, attempts: attempts)
-                    case let .plaintextPassword(value, timeout, _):
-                        data = .plaintextPassword(value: value, timeout: timeout, attempts: attempts)
-                    }
-                    transaction.setAccessChallengeData(data)
-                }).start()
-            }
-            legacyController.bind(controller: controller)
-            legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
-            legacyController.statusBar.statusBarStyle = .White
-            dismissImpl = { [weak legacyController] in
-                legacyController?.dismiss()
-            }
-            return legacyController
+            return controller
         }
     }
 }

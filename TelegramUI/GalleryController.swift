@@ -320,7 +320,7 @@ class GalleryController: ViewController {
     private let centralItemTitle = Promise<String>()
     private let centralItemTitleView = Promise<UIView?>()
     private let centralItemRightBarButtonItem = Promise<UIBarButtonItem?>()
-    private let centralItemRightBarButtonItems = Promise<[UIBarButtonItem]?>()
+    private let centralItemRightBarButtonItems = Promise<[UIBarButtonItem]?>(nil)
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
     private let centralItemFooterContentNode = Promise<GalleryFooterContentNode?>()
     private let centralItemAttributesDisposable = DisposableSet();
@@ -501,12 +501,15 @@ class GalleryController: ViewController {
             self?.navigationItem.titleView = titleView
         }))
         
-        self.centralItemAttributesDisposable.add(self.centralItemRightBarButtonItem.get().start(next: { [weak self] rightBarButtonItem in
-            self?.navigationItem.rightBarButtonItem = rightBarButtonItem
-        }))
-        
-        self.centralItemAttributesDisposable.add(self.centralItemRightBarButtonItems.get().start(next: { [weak self] rightBarButtonItems in
-            self?.navigationItem.rightBarButtonItems = rightBarButtonItems
+        self.centralItemAttributesDisposable.add(combineLatest(self.centralItemRightBarButtonItem.get(), self.centralItemRightBarButtonItems.get()).start(next: { [weak self] rightBarButtonItem, rightBarButtonItems in
+            if let rightBarButtonItem = rightBarButtonItem {
+                self?.navigationItem.rightBarButtonItem = rightBarButtonItem
+            } else if let rightBarButtonItems = rightBarButtonItems {
+                self?.navigationItem.rightBarButtonItems = rightBarButtonItems
+            } else {
+                self?.navigationItem.rightBarButtonItem = nil
+                self?.navigationItem.rightBarButtonItems = nil
+            }
         }))
         
         self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode in

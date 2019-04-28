@@ -238,124 +238,37 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> (CGRect, CGSize) {
-        let buttonSize: CGFloat
-        let horizontalSecond: CGFloat
-        let horizontalThird: CGFloat
-        let verticalSecond: CGFloat
-        let verticalThird: CGFloat
-        let verticalFourth: CGFloat
-        let size: CGSize
-        let offset: CGFloat
-        
-        let metrics = DeviceMetrics.forScreenSize(layout.size)
-        if let metrics = metrics {
-            switch metrics {
-                case .iPhone4:
-                    buttonSize = 75.0
-                    horizontalSecond = 95.0
-                    horizontalThird = 190.0
-                    verticalSecond = 88.0
-                    verticalThird = 176.0
-                    verticalFourth = 264.0
-                    size = CGSize(width: 265.0, height: 339.0)
-                    offset = 0.0
-                case .iPhone5:
-                    buttonSize = 75.0
-                    horizontalSecond = 95.0
-                    horizontalThird = 190.0
-                    verticalSecond = 88.0
-                    verticalThird = 176.0
-                    verticalFourth = 264.0
-                    size = CGSize(width: 265.0, height: 339.0)
-                    offset = 0.0
-                case .iPhone6:
-                    buttonSize = 75.0
-                    horizontalSecond = 103.0
-                    horizontalThird = 206.0
-                    verticalSecond = 90.0
-                    verticalThird = 180.0
-                    verticalFourth = 270.0
-                    size = CGSize(width: 281.0, height: 345.0)
-                    offset = 0.0
-                case .iPhone6Plus:
-                    buttonSize = 75.0
-                    horizontalSecond = 103.0
-                    horizontalThird = 206.0
-                    verticalSecond = 90.0
-                    verticalThird = 180.0
-                    verticalFourth = 270.0
-                    size = CGSize(width: 281.0, height: 345.0)
-                    offset = 0.0
-                case .iPhoneX:
-                    buttonSize = 75.0
-                    horizontalSecond = 103.0
-                    horizontalThird = 206.0
-                    verticalSecond = 91.0
-                    verticalThird = 182.0
-                    verticalFourth = 273.0
-                    size = CGSize(width: 281.0, height: 348.0)
-                    offset = 294.0
-                case .iPhoneXSMax:
-                    buttonSize = 85.0
-                    horizontalSecond = 115.0
-                    horizontalThird = 230.0
-                    verticalSecond = 100.0
-                    verticalThird = 200.0
-                    verticalFourth = 300.0
-                    size = CGSize(width: 315.0, height: 385.0)
-                    offset = 329.0
-                case .iPad, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
-                    buttonSize = 81.0
-                    horizontalSecond = 106.0
-                    horizontalThird = 212.0
-                    verticalSecond = 101.0
-                    verticalThird = 202.0
-                    verticalFourth = 303.0
-                    size = CGSize(width: 293.0, height: 384.0)
-                    offset = 0.0
-            }
-        } else {
-            buttonSize = 75.0
-            horizontalSecond = 95.0
-            horizontalThird = 190.0
-            verticalSecond = 88.0
-            verticalThird = 176.0
-            verticalFourth = 264.0
-            size = CGSize(width: 265.0, height: 339.0)
-            offset = 0.0
-        }
-        
-        let origin = CGPoint(x: floor((layout.size.width - size.width) / 2.0), y: offset)
+    func updateLayout(layout: PasscodeLayout, transition: ContainedViewLayoutTransition) -> (CGRect, CGSize) {
+        let origin = CGPoint(x: floor((layout.layout.size.width - layout.keyboard.size.width) / 2.0), y: layout.keyboard.topOffset)
         if let subnodes = self.subnodes {
             for i in 0 ..< subnodes.count {
                 var origin = origin
                 if i % 3 == 0 {
                     origin.x += 0.0
                 } else if (i % 3 == 1) {
-                    origin.x += horizontalSecond
+                    origin.x += layout.keyboard.horizontalSecond
                 }
                 else {
-                    origin.x += horizontalThird
+                    origin.x += layout.keyboard.horizontalThird
                 }
                 
                 if i / 3 == 0 {
                     origin.y += 0.0
                 }
                 else if i / 3 == 1 {
-                    origin.y += verticalSecond
+                    origin.y += layout.keyboard.verticalSecond
                 }
                 else if i / 3 == 2 {
-                    origin.y += verticalThird
+                    origin.y += layout.keyboard.verticalThird
                 }
                 else if i / 3 == 3 {
-                    origin.x += horizontalSecond
-                    origin.y += verticalFourth
+                    origin.x += layout.keyboard.horizontalSecond
+                    origin.y += layout.keyboard.verticalFourth
                 }
-                transition.updateFrame(node: subnodes[i], frame: CGRect(origin: origin, size: CGSize(width: buttonSize, height: buttonSize)))
+                transition.updateFrame(node: subnodes[i], frame: CGRect(origin: origin, size: CGSize(width: layout.keyboard.buttonSize, height: layout.keyboard.buttonSize)))
             }
         }
-        return (CGRect(origin: origin, size: size), CGSize(width: buttonSize, height: buttonSize))
+        return (CGRect(origin: origin, size: layout.keyboard.size), CGSize(width: layout.keyboard.buttonSize, height: layout.keyboard.buttonSize))
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

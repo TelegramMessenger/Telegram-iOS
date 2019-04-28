@@ -423,14 +423,20 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanelHidden = size != layout.metrics.widthClass
         }
         
-        if let (item, previousItem, nextItem, _, type, _) = self.playlistStateAndType, !mediaAccessoryPanelHidden {
+        if let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType, !mediaAccessoryPanelHidden {
             let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {
                 transition.updateFrame(layer: mediaAccessoryPanel.layer, frame: panelFrame)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
-                mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
-               
+                switch order {
+                    case .regular:
+                        mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
+                    case .reversed:
+                        mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, nextItem, previousItem)
+                    case .random:
+                        mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, nil, nil)
+                }
                 let delayedStatus = self.context.sharedContext.mediaManager.globalMediaPlayerState
                 |> mapToSignal { value -> Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> in
                     guard let value = value else {
@@ -596,7 +602,14 @@ public class TelegramController: ViewController {
                 }
                 self.mediaAccessoryPanel = (mediaAccessoryPanel, type)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
-                mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
+                switch order {
+                    case .regular:
+                        mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
+                    case .reversed:
+                        mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, nextItem, previousItem)
+                    case .random:
+                        mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, nil, nil)
+                }
                 mediaAccessoryPanel.containerNode.headerNode.playbackStatus = self.context.sharedContext.mediaManager.globalMediaPlayerState
                 |> map { state -> MediaPlayerStatus in
                     if let stateOrLoading = state?.1, case let .state(state) = stateOrLoading {

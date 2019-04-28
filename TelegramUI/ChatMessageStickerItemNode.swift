@@ -137,7 +137,6 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             var isEmoji = false
             if !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
-                //imageSize = CGSize(width: CGFloat(item.message.text.emojis) * 52.0 + CGFloat(item.message.text.emojis - 1) * 12.0)
                 let attributedText = NSAttributedString(string: item.message.text, font: item.presentationData.messageEmojiFont1, textColor: .black)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 180.0, height: 90.0), alignment: .natural))
                 
@@ -372,6 +371,19 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     transition.updateFrame(node: strongSelf.imageNode, frame: updatedImageFrame)
                     imageApply()
                     
+                    dateAndStatusApply(false)
+                    
+                    var dateOffset = CGPoint(x: dateAndStatusSize.width + 4.0, y: dateAndStatusSize.height + 16.0)
+                    if isEmoji {
+                        if incoming {
+                            dateOffset.x = 12.0
+                        } else {
+                            dateOffset.y = 12.0
+                        }
+                    }
+                    let dateAndStatusFrame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateOffset.x), y: updatedImageFrame.maxY - dateOffset.y), size: dateAndStatusSize)
+                    transition.updateFrame(node: strongSelf.dateAndStatusNode, frame: dateAndStatusFrame)
+                    
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {
                             if let shareButtonNode = strongSelf.shareButtonNode {
@@ -390,19 +402,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let shareButtonNode = strongSelf.shareButtonNode {
-                        transition.updateFrame(node: shareButtonNode, frame: CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - 30.0 - 10.0), size: CGSize(width: 29.0, height: 29.0)))
-                    }
-                    
-                    dateAndStatusApply(false)
-                    var dateOffset: CGPoint = CGPoint(x: dateAndStatusSize.width + 4.0, y: dateAndStatusSize.height + 16.0)
-                    if isEmoji {
-                        if incoming {
-                            dateOffset.x = 12.0
-                        } else {
-                            dateOffset.y = 12.0
+                        var shareButtonFrame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - 30.0 - 10.0), size: CGSize(width: 29.0, height: 29.0))
+                        if isEmoji && incoming {
+                            shareButtonFrame.origin.x = dateAndStatusFrame.maxX + 8.0
                         }
+                        transition.updateFrame(node: shareButtonNode, frame: shareButtonFrame)
                     }
-                    transition.updateFrame(node: strongSelf.dateAndStatusNode, frame: CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateOffset.x), y: updatedImageFrame.maxY - dateOffset.y), size: dateAndStatusSize))
                     
                     if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
                         if strongSelf.replyBackgroundNode == nil {

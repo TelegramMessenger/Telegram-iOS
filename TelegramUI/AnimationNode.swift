@@ -12,6 +12,8 @@ final class AnimationNode : ASDisplayNode {
         }
     }
     
+    private var colorCallbacks: [LOTColorValueCallback] = []
+    
     var played = false
     var completion: (() -> Void)?
     
@@ -27,7 +29,10 @@ final class AnimationNode : ASDisplayNode {
                 view.backgroundColor = .clear
                 view.isOpaque = false
                 
+                view.logHierarchyKeypaths()
+                
                 let colorCallback = LOTColorValueCallback(color: color.cgColor)
+                self.colorCallbacks.append(colorCallback)
                 if let keysToColor = keysToColor {
                     for key in keysToColor {
                         view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))

@@ -108,6 +108,9 @@ func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAtt
                             remainingRange = NSMakeRange(range.location + 1, remainingRange.length - 1)
                         }
                     } else {
+                        if result.string.hasSuffix("\\") {
+                            result.deleteCharacters(in: NSMakeRange(result.string.count - 1, 1))
+                        }
                         result.append(NSAttributedString(string: nsString.substring(with: NSMakeRange(remainingRange.location, 1)), attributes: bodyAttributes))
                         remainingRange = NSMakeRange(range.location + 1, remainingRange.length - 1)
                     }
