@@ -309,7 +309,10 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
             transition.updateFrame(node: node, frame: dotFrame)
         }
         
-        let inset: CGFloat = 50.0
+        var inset: CGFloat = 50.0
+        if !self.useCustomNumpad {
+            inset = 16.0
+        }
         let fieldFrame = CGRect(x: inset, y: origin.y, width: layout.layout.size.width - inset * 2.0, height: fieldHeight)
         transition.updateFrame(node: self.borderNode, frame: fieldFrame)
         transition.updateFrame(node: self.textFieldNode, frame: fieldFrame.insetBy(dx: 13.0, dy: 0.0))

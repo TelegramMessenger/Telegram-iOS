@@ -162,8 +162,8 @@ private let readIcon = ItemListRevealOptionIcon.animation(animation: "anim_read"
 private let unreadIcon = ItemListRevealOptionIcon.animation(animation: "anim_unread", scale: 0.33333, offset: 0.0, keysToColor: ["Oval.Oval.Stroke 1"], flip: false)
 private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_archive", scale: 0.33333, offset: 2.0, keysToColor: ["box2.box2.Fill 1"], flip: false)
 private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_unarchive", scale: 0.16214, offset: -9.0, keysToColor: ["box2.box2.Fill 1"], flip: false)
-private let hideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 0.33333, offset: 0.0, keysToColor: ["Path 2.Path 2.Fill 1"], flip: false)
-private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 0.33333, offset: 0.0, keysToColor: ["Path 2.Path 2.Fill 1"], flip: true)
+private let hideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 0.33333, offset: 2.0, keysToColor: ["Path 2.Path 2.Fill 1"], flip: false)
+private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 0.33333, offset: -20.0, keysToColor: ["Path 2.Path 2.Fill 1"], flip: true)
 
 private enum RevealOptionKey: Int32 {
     case pin

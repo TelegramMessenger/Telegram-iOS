@@ -6,7 +6,7 @@ import Postbox
 import TelegramCore
 
 private let titleFont = Font.regular(20.0)
-private let subtitleFont = Font.regular(17.0)
+private let subtitleFont = Font.regular(15.0)
 private let buttonFont = Font.regular(17.0)
 
 final class PasscodeEntryControllerNode: ASDisplayNode {
@@ -177,15 +177,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     func updateInvalidAttempts(_ attempts: AccessChallengeAttempts?, animated: Bool = false) {
         self.invalidAttempts = attempts
         if let attempts = attempts {
-            let text: NSAttributedString
-            if attempts.count >= 6 {
-                if self.shouldWaitBeforeNextAttempt() {
-                    text = NSAttributedString(string: self.strings.PasscodeSettings_TryAgainIn1Minute, font: subtitleFont, textColor: .white)
-                } else {
-                    text = NSAttributedString(string: "")
-                }
-            } else {
-                text = NSAttributedString(string: self.strings.PasscodeSettings_FailedAttempts(attempts.count), font: subtitleFont, textColor: .white)
+            var text = NSAttributedString(string: "")
+            if attempts.count >= 6 && self.shouldWaitBeforeNextAttempt() {
+                text = NSAttributedString(string: self.strings.PasscodeSettings_TryAgainIn1Minute, font: subtitleFont, textColor: .white)
             }
             
             self.subtitleNode.setAttributedText(text, animation: animated ? .crossFade : .none, completion: {})
@@ -212,8 +206,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             }
         })
         self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.iconNode.animateIn(fromScale: 0.416)
-        self.iconNode.layer.animatePosition(from: iconFrame.center.offsetBy(dx: 6.0, dy: 6.0), to: self.iconNode.layer.position, duration: 0.45)
+        if !iconFrame.isEmpty {
+            self.iconNode.animateIn(fromScale: 0.416)
+            self.iconNode.layer.animatePosition(from: iconFrame.center.offsetBy(dx: 6.0, dy: 6.0), to: self.iconNode.layer.position, duration: 0.45)
+        }
         
         self.statusBar.layer.removeAnimation(forKey: "opacity")
         self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
@@ -274,6 +270,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             self.updateBackground()
         }
         
+        if layout.size.width == 320.0 {
+            self.iconNode.alpha = 0.0
+        }
+        
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
         transition.updateFrame(node: self.backgroundNode, frame: bounds)
         transition.updateFrame(view: self.effectView, frame: bounds)
@@ -289,8 +289,12 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         let titleSize = self.titleNode.updateLayout(layout: layout, transition: transition)
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: passcodeLayout.titleOffset), size: titleSize))
         
+        var subtitleOffset = passcodeLayout.subtitleOffset
+        if case .alphanumeric = self.passcodeType {
+            subtitleOffset = 16.0
+        }
         let subtitleSize = self.subtitleNode.updateLayout(layout: layout, transition: transition)
-        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: inputFieldFrame.maxY + passcodeLayout.subtitleOffset), size: subtitleSize))
+        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: inputFieldFrame.maxY + subtitleOffset), size: subtitleSize))
         
         let (keyboardFrame, keyboardButtonSize) = self.keyboardNode.updateLayout(layout: passcodeLayout, transition: transition)
         transition.updateFrame(node: self.keyboardNode, frame: CGRect(origin: CGPoint(), size: layout.size))
@@ -311,7 +315,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             if bottomInset > 0 && self.keyboardNode.alpha < 1.0 {
                 biometricY = inputFieldFrame.maxY + floor((layout.size.height - bottomInset - inputFieldFrame.maxY - biometricIcon.size.height) / 2.0)
             } else {
-                biometricY = keyboardFrame.maxY + 30.0
+                biometricY = keyboardFrame.maxY + passcodeLayout.keyboard.biometricsOffset
             }
             transition.updateFrame(node: self.biometricButtonNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - biometricIcon.size.width) / 2.0), y: biometricY), size: biometricIcon.size))
         }

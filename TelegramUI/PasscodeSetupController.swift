@@ -6,7 +6,7 @@ import SwiftSignalKit
 import Postbox
 
 enum PasscodeSetupControllerMode {
-    case setup(PasscodeEntryFieldType)
+    case setup(change: Bool, PasscodeEntryFieldType)
     case entry(PostboxAccessChallengeData)
 }
 
@@ -34,6 +34,7 @@ final class PasscodeSetupController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         self.nextAction = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
@@ -50,7 +51,7 @@ final class PasscodeSetupController: ViewController {
         self.displayNodeDidLoad()
         
         self.controllerNode.selectPasscodeMode = { [weak self] in
-            guard let strongSelf = self, case let .setup(type) = strongSelf.mode else {
+            guard let strongSelf = self, case let .setup(change, type) = strongSelf.mode else {
                 return
             }
             
@@ -65,7 +66,7 @@ final class PasscodeSetupController: ViewController {
             } else {
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.PasscodeSettings_6DigitCode, action: { [weak self] in
                     if let strongSelf = self {
-                        strongSelf.mode = .setup(.digits6)
+                        strongSelf.mode = .setup(change: change, .digits6)
                         strongSelf.controllerNode.updateMode(strongSelf.mode)
                     }
                     dismissAction()
@@ -75,7 +76,7 @@ final class PasscodeSetupController: ViewController {
             } else {
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.PasscodeSettings_4DigitCode, action: {
                     if let strongSelf = self {
-                        strongSelf.mode = .setup(.digits4)
+                        strongSelf.mode = .setup(change: change, .digits4)
                         strongSelf.controllerNode.updateMode(strongSelf.mode)
                     }
                     dismissAction()
@@ -85,7 +86,7 @@ final class PasscodeSetupController: ViewController {
             } else {
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.PasscodeSettings_AlphanumericCode, action: {
                     if let strongSelf = self {
-                        strongSelf.mode = .setup(.alphanumeric)
+                        strongSelf.mode = .setup(change: change, .alphanumeric)
                         strongSelf.controllerNode.updateMode(strongSelf.mode)
                     }
                     dismissAction()
@@ -130,6 +131,7 @@ final class PasscodeSetupController: ViewController {
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
         
         self.controllerNode.activateInput()
     }
@@ -137,7 +139,7 @@ final class PasscodeSetupController: ViewController {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: 0.0, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
     @objc func nextPressed() {
