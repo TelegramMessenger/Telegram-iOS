@@ -830,7 +830,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
             var toolbar: Toolbar?
             if case .root = strongSelf.groupId {
-                if let (options, _) = peerIdsAndOptions {
+                if let (options, peerIds) = peerIdsAndOptions {
                     let leftAction: ToolbarAction
                     switch options.read {
                         case let .all(enabled):
@@ -838,7 +838,19 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         case let .selective(enabled):
                             leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
                     }
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: ToolbarAction(title: presentationData.strings.ChatList_ArchiveAction, isEnabled: options.delete))
+                    var archiveEnabled = options.delete
+                    if archiveEnabled {
+                        for peerId in peerIds {
+                            if peerId == PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000) {
+                                archiveEnabled = false
+                                break
+                            } else if peerId == strongSelf.context.account.peerId {
+                                archiveEnabled = false
+                                break
+                            }
+                        }
+                    }
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: ToolbarAction(title: presentationData.strings.ChatList_ArchiveAction, isEnabled: archiveEnabled))
                 }
             } else {
                 if let (options, peerIds) = peerIdsAndOptions {
@@ -1338,6 +1350,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             ])
             self.present(actionSheet, in: .window(.root))
         } else if case .middle = action, !peerIds.isEmpty {
+            self.donePressed()
             self.archiveChats(peerIds: Array(peerIds))
         }
     }
