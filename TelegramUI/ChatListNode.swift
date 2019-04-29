@@ -293,7 +293,7 @@ enum ChatListNodeScrollPosition {
     case top
 }
 
-enum ChatListNodeEmtpyState: Equatable {
+enum ChatListNodeEmptyState: Equatable {
     case notEmpty(containsChats: Bool)
     case empty(isLoading: Bool)
 }
@@ -365,8 +365,8 @@ final class ChatListNode: ListView {
         }
     }
     
-    var isEmptyUpdated: ((ChatListNodeEmtpyState) -> Void)?
-    private var currentIsEmptyState: ChatListNodeEmtpyState?
+    var isEmptyUpdated: ((ChatListNodeEmptyState) -> Void)?
+    private var currentIsEmptyState: ChatListNodeEmptyState?
     
     var addedVisibleChatsWithPeerIds: (([PeerId]) -> Void)?
     
@@ -1141,7 +1141,7 @@ final class ChatListNode: ListView {
                         strongSelf._ready.set(true)
                     }
                 
-                    let isEmptyState: ChatListNodeEmtpyState
+                    let isEmptyState: ChatListNodeEmptyState
                     if transition.chatListView.isLoading {
                         isEmptyState = .empty(isLoading: true)
                     } else if transition.chatListView.filteredEntries.isEmpty {

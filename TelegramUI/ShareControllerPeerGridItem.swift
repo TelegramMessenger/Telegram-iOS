@@ -126,7 +126,6 @@ final class ShareControllerPeerGridItem: GridItem {
 final class ShareControllerPeerGridItemNode: GridItemNode {
     private var currentState: (Account, RenderedPeer, Bool)?
     private let peerNode: SelectablePeerNode
-
     
     var controllerInteraction: ShareControllerInteraction?
     

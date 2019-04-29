@@ -232,7 +232,7 @@ final class SelectablePeerNode: ASDisplayNode {
         
         let avatarFrame = self.avatarNode.frame
         
-        self.onlineNode.frame = CGRect(origin: CGPoint(x: avatarFrame.width - self.onlineNode.frame.width + 2.0, y: avatarFrame.height - self.onlineNode.frame.height + 2.0), size: self.onlineNode.frame.size)
+        self.onlineNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX - self.onlineNode.frame.width + 9.0, y: avatarFrame.maxY - self.onlineNode.frame.height + 2.0), size: self.onlineNode.frame.size)
         
         if let checkView = self.checkView {
             let checkSize = checkView.bounds.size

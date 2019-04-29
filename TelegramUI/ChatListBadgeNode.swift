@@ -42,6 +42,8 @@ final class ChatListBadgeNode: ASDisplayNode {
     private var text: String?
     private var content: ChatListBadgeContent?
     
+    private var isHiddenInternal = false
+    
     override init() {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
@@ -114,6 +116,7 @@ final class ChatListBadgeNode: ASDisplayNode {
                         }
                         
                         if currentIsEmpty && !nextIsEmpty {
+                            strongSelf.isHiddenInternal = false
                             strongSelf.layer.animateScale(from: 0.0001, to: 1.2, duration: 0.2, removeOnCompletion: false, completion: { [weak self] finished in
                                 if let strongSelf = self {
                                     strongSelf.layer.animateScale(from: 1.15, to: 1.0, duration: 0.12, removeOnCompletion: false)
@@ -121,6 +124,7 @@ final class ChatListBadgeNode: ASDisplayNode {
                             })
                         } else if !currentIsEmpty && !nextIsEmpty && currentContent?.text != content.text {
                             var animateScale = true
+                            strongSelf.isHiddenInternal = false
                             if let currentText = currentContent?.text, let currentValue = Int(currentText), let text = content.text, let value = Int(text) {
                                 if value < currentValue {
                                     animateScale = false
@@ -148,7 +152,8 @@ final class ChatListBadgeNode: ASDisplayNode {
                                 snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: (badgeWidth - previousBadgeWidth) / 2.0, y: -8.0), duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true)
                             }
                             animateTextNode = true
-                        } else if !currentIsEmpty && nextIsEmpty {
+                        } else if !currentIsEmpty && nextIsEmpty && !strongSelf.isHiddenInternal {
+                            strongSelf.isHiddenInternal = true
                             strongSelf.layer.animateScale(from: 1.0, to: 0.0001, duration: 0.12, removeOnCompletion: true, completion: { [weak self] finished in
                                 if let strongSelf = self {
                                     strongSelf.isHidden = true
@@ -158,8 +163,10 @@ final class ChatListBadgeNode: ASDisplayNode {
                     } else {
                         if case .none = content {
                             strongSelf.isHidden = true
+                            strongSelf.isHiddenInternal = true
                         } else {
                             strongSelf.isHidden = false
+                            strongSelf.isHiddenInternal = false
                         }
                         if case .text = content {
                             strongSelf.textNode.alpha = 1.0

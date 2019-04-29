@@ -785,6 +785,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             }
         }
         
+        var game: TelegramMediaGame?
         var webpage: TelegramMediaWebpage?
         var invoice: TelegramMediaInvoice?
         for media in message.media {
@@ -792,6 +793,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 webpage = media
             } else if let media = media as? TelegramMediaInvoice {
                 invoice = media
+            } else if let media = media as? TelegramMediaGame {
+                game = media
             }
         }
         
@@ -904,6 +907,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 fetchStatus = actualFetchStatus
             }
             
+            let gifTitle = game != nil ? strings.Message_Game.uppercased() : strings.Message_Animation.uppercased()
+            
             switch fetchStatus {
                 case let .Fetching(_, progress):
                     let adjustedProgress = max(progress, 0.027)
@@ -922,10 +927,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             if let size = file.size {
                                  let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: decimalSeparator)) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: decimalSeparator))"
                                 if file.isAnimated && (!automaticDownload || !automaticPlayback) {
-                                    badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: "GIF " + sizeString, size: nil, muted: false, active: false)
+                                    badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: "\(gifTitle) " + sizeString, size: nil, muted: false, active: false)
                                 }
                                 else if let duration = file.duration, !message.flags.contains(.Unsent) {
-                                    let durationString = file.isAnimated ? "GIF" : stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
+                                    let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                                     if isMediaStreamable(message: message, media: file) {
                                         badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
                                         mediaDownloadState = .fetching(progress: automaticPlayback ? nil : adjustedProgress)
@@ -1019,17 +1024,17 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         }
                     }
                     if let file = media as? TelegramMediaFile, let duration = file.duration {
-                        let durationString = file.isAnimated ? "GIF" : stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
+                        let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                         badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
                     }
                 case .Remote:
                     state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
                     if let file = self.media as? TelegramMediaFile {
                         if file.isAnimated && (!automaticDownload || !automaticPlayback) {
-                            let string = "GIF " + dataSizeString(file.size ?? 0, decimalSeparator: decimalSeparator)
+                            let string = "\(gifTitle) " + dataSizeString(file.size ?? 0, decimalSeparator: decimalSeparator)
                             badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: string, size: nil, muted: false, active: false)
                         } else {
-                            let durationString = file.isAnimated ? "GIF" : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration ?? 0), position: playerPosition)
+                            let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration ?? 0), position: playerPosition)
                             if wideLayout {
                                 if isMediaStreamable(message: message, media: file) {
                                     state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
