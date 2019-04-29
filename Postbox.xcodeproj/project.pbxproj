@@ -117,6 +117,12 @@
 		D0633D0B225BAD66003DD95F /* MessageHistoryAnchorIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0633D09225BAD66003DD95F /* MessageHistoryAnchorIndex.swift */; };
 		D0633D0D225BC9EF003DD95F /* MessageHistoryViewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0633D0C225BC9EF003DD95F /* MessageHistoryViewState.swift */; };
 		D0633D0E225BC9EF003DD95F /* MessageHistoryViewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0633D0C225BC9EF003DD95F /* MessageHistoryViewState.swift */; };
+		D06CA12C227715E70094E707 /* PeerNotificationSettingsBehaviorTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CA12B227715E70094E707 /* PeerNotificationSettingsBehaviorTable.swift */; };
+		D06CA12D227715E70094E707 /* PeerNotificationSettingsBehaviorTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CA12B227715E70094E707 /* PeerNotificationSettingsBehaviorTable.swift */; };
+		D06CA12F227720910094E707 /* PeerNotificationSettingsBehaviorIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CA12E227720910094E707 /* PeerNotificationSettingsBehaviorIndexTable.swift */; };
+		D06CA130227720910094E707 /* PeerNotificationSettingsBehaviorIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CA12E227720910094E707 /* PeerNotificationSettingsBehaviorIndexTable.swift */; };
+		D06CA13222772DE40094E707 /* PeerNotificationSettingsBehaviorTimestampView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CA13122772DE40094E707 /* PeerNotificationSettingsBehaviorTimestampView.swift */; };
+		D06CA13322772DE40094E707 /* PeerNotificationSettingsBehaviorTimestampView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CA13122772DE40094E707 /* PeerNotificationSettingsBehaviorTimestampView.swift */; };
 		D06ECFC520B796DC00C576C2 /* NoticeEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */; };
 		D06ECFC620B796DC00C576C2 /* NoticeEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */; };
 		D07047A01F3CE16500F6A8D4 /* MessageHistoryTagsSummaryTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D070479F1F3CE16500F6A8D4 /* MessageHistoryTagsSummaryTable.swift */; };
@@ -460,6 +466,9 @@
 		D0633D06225B98FC003DD95F /* MessageHistoryViewEntryAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageHistoryViewEntryAttributes.swift; sourceTree = "<group>"; };
 		D0633D09225BAD66003DD95F /* MessageHistoryAnchorIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageHistoryAnchorIndex.swift; sourceTree = "<group>"; };
 		D0633D0C225BC9EF003DD95F /* MessageHistoryViewState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageHistoryViewState.swift; sourceTree = "<group>"; };
+		D06CA12B227715E70094E707 /* PeerNotificationSettingsBehaviorTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerNotificationSettingsBehaviorTable.swift; sourceTree = "<group>"; };
+		D06CA12E227720910094E707 /* PeerNotificationSettingsBehaviorIndexTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerNotificationSettingsBehaviorIndexTable.swift; sourceTree = "<group>"; };
+		D06CA13122772DE40094E707 /* PeerNotificationSettingsBehaviorTimestampView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerNotificationSettingsBehaviorTimestampView.swift; sourceTree = "<group>"; };
 		D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoticeEntryView.swift; sourceTree = "<group>"; };
 		D070479F1F3CE16500F6A8D4 /* MessageHistoryTagsSummaryTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTagsSummaryTable.swift; sourceTree = "<group>"; };
 		D07047A11F3CE58200F6A8D4 /* PendingMessageActionsTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PendingMessageActionsTable.swift; sourceTree = "<group>"; };
@@ -773,6 +782,8 @@
 				D0F9E86E1C5A0E7600037222 /* KeychainTable.swift */,
 				D0F9E8701C5A0E9B00037222 /* PeerTable.swift */,
 				D03120FF1DA579A0006A2A60 /* PeerNotificationSettingsTable.swift */,
+				D06CA12B227715E70094E707 /* PeerNotificationSettingsBehaviorTable.swift */,
+				D06CA12E227720910094E707 /* PeerNotificationSettingsBehaviorIndexTable.swift */,
 				D0CE8CF51F703B1E00AA2DB0 /* PendingPeerNotificationSettingsIndexTable.swift */,
 				D03120FD1DA562E9006A2A60 /* CachedPeerDataTable.swift */,
 				D03120F71DA53FF4006A2A60 /* PeerPresenceTable.swift */,
@@ -909,6 +920,7 @@
 				D037178A20D923CA004773C8 /* CachedItemView.swift */,
 				D039FB1A21714D9800BD1BAD /* PeerPresencesView.swift */,
 				D0CA8E47227208FE008A74C3 /* SynchronizeGroupMessageStatsView.swift */,
+				D06CA13122772DE40094E707 /* PeerNotificationSettingsBehaviorTimestampView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1201,6 +1213,7 @@
 				D0CCD6202231CE5400EE1E08 /* PeerGroup.swift in Sources */,
 				D0BEAF681E54B33900BD963D /* AccountRecord.swift in Sources */,
 				D05D8B35218F1EBB0064586F /* AccountManagerSharedDataTable.swift in Sources */,
+				D06CA13322772DE40094E707 /* PeerNotificationSettingsBehaviorTimestampView.swift in Sources */,
 				D0F7B1C61E045C6A007EB8A5 /* MessageHistoryIndexTable.swift in Sources */,
 				D0F7B1CD1E045C6A007EB8A5 /* MessageMediaTable.swift in Sources */,
 				D0B844071DAB91B5005F29E1 /* MediaResource.swift in Sources */,
@@ -1217,6 +1230,7 @@
 				D07E7B46224E227100BB053B /* PostboxUpgrade_20to21.swift in Sources */,
 				D073CE791DCBF3B4007511FD /* ChatListHole.swift in Sources */,
 				D0F53BF41E794C6700117362 /* PeerChatStateView.swift in Sources */,
+				D06CA130227720910094E707 /* PeerNotificationSettingsBehaviorIndexTable.swift in Sources */,
 				D0B4181C1D7DFDF1004562A4 /* SQLite-Bridging.m in Sources */,
 				D0F82D0D1E439FCC007E499C /* OrderedItemListEntry.swift in Sources */,
 				D0B418591D7DFE29004562A4 /* PostboxTransaction.swift in Sources */,
@@ -1274,6 +1288,7 @@
 				D0B4185A1D7DFE29004562A4 /* ViewTracker.swift in Sources */,
 				D0F7B1E21E045C6A007EB8A5 /* PeerNameIndexTable.swift in Sources */,
 				D0E1D30D1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift in Sources */,
+				D06CA12D227715E70094E707 /* PeerNotificationSettingsBehaviorTable.swift in Sources */,
 				D073CE7C1DCBF3B4007511FD /* CachedPeerData.swift in Sources */,
 				D0F7B1DA1E045C6A007EB8A5 /* RatingTable.swift in Sources */,
 				D0BEAF711E54BC1E00BD963D /* AccountRecordsView.swift in Sources */,
@@ -1384,6 +1399,7 @@
 				D0CCD61F2231CE5100EE1E08 /* PeerGroup.swift in Sources */,
 				D044CA2A1C617D39002160FF /* SeedConfiguration.swift in Sources */,
 				D07CFF811DCA765D00761F81 /* PeerChatInterfaceState.swift in Sources */,
+				D06CA13222772DE40094E707 /* PeerNotificationSettingsBehaviorTimestampView.swift in Sources */,
 				D05D8B34218F1EBB0064586F /* AccountManagerSharedDataTable.swift in Sources */,
 				D00C7CE31E37861C0080C3D5 /* MessageView.swift in Sources */,
 				D0ECCB8F1FE9EB5500609802 /* PostboxLogging.swift in Sources */,
@@ -1400,6 +1416,7 @@
 				D049EAF01E44D9B900A2CD3A /* PostboxStateView.swift in Sources */,
 				D07E7B45224E227100BB053B /* PostboxUpgrade_20to21.swift in Sources */,
 				D018BE55218B9AA900C02DDC /* TimeBasedCleanup.swift in Sources */,
+				D06CA12F227720910094E707 /* PeerNotificationSettingsBehaviorIndexTable.swift in Sources */,
 				D0079F631D5A242500A27A2C /* ContactPeerIdsView.swift in Sources */,
 				D0E23DE21E808A9400B9B6D2 /* ItemCollectionIdsView.swift in Sources */,
 				D0AD23291E196B6400A7089A /* PeerOperationLogMetadataTable.swift in Sources */,
@@ -1457,6 +1474,7 @@
 				D0F9E8711C5A0E9B00037222 /* PeerTable.swift in Sources */,
 				D0BC386C1E3FCEE50044D6FE /* MultiplePeersView.swift in Sources */,
 				D0C26D7E1FE3FA4E004ABF18 /* PinnedItemId.swift in Sources */,
+				D06CA12C227715E70094E707 /* PeerNotificationSettingsBehaviorTable.swift in Sources */,
 				D0BEAF701E54BC1E00BD963D /* AccountRecordsView.swift in Sources */,
 				D07CFF851DCA99C400761F81 /* InitialMessageHistoryData.swift in Sources */,
 				D0A352F51F5488E9001423DC /* InvalidatedMessageHistoryTagsSummaryTable.swift in Sources */,
