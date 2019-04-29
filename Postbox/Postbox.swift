@@ -921,7 +921,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
-            debugRestoreState(basePath: basePath, name: "previous1")
+            //debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -2304,7 +2304,7 @@ public final class Postbox {
         
         let mutableView = MutableMessageHistoryView(postbox: self, orderStatistics: orderStatistics, peerIds: peerIds, anchor: anchor, combinedReadStates: readStates, transientReadStates: transientReadStates, tag: tagMask, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, getMessageCountInRange: { lowerBound, upperBound in
             if let tagMask = tagMask {
-                return self.messageHistoryTable.getMessageCountInRange(peerId: lowerBound.id.peerId, namespace: lowerBound.id.namespace, tag: tagMask, lowerBound: lowerBound, upperBound: upperBound)
+                return Int32(self.messageHistoryTable.getMessageCountInRange(peerId: lowerBound.id.peerId, namespace: lowerBound.id.namespace, tag: tagMask, lowerBound: lowerBound, upperBound: upperBound))
             } else {
                 return 0
             }

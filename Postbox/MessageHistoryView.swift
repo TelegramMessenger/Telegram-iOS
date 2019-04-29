@@ -207,55 +207,6 @@ public struct MessageHistoryViewOrderStatistics: OptionSet {
     public static let locationWithinMonth = MessageHistoryViewOrderStatistics(rawValue: 1 << 1)
 }
 
-private struct MessageMonthIndex: Equatable {
-    let year: Int32
-    let month: Int32
-    
-    var timestamp: Int32 {
-        var timeinfo = tm()
-        timeinfo.tm_year = self.year
-        timeinfo.tm_mon = self.month
-        return Int32(timegm(&timeinfo))
-    }
-    
-    init(year: Int32, month: Int32) {
-        self.year = year
-        self.month = month
-    }
-    
-    init(timestamp: Int32) {
-        var t = Int(timestamp)
-        var timeinfo = tm()
-        gmtime_r(&t, &timeinfo)
-        self.year = timeinfo.tm_year
-        self.month = timeinfo.tm_mon
-    }
-    
-    static func ==(lhs: MessageMonthIndex, rhs: MessageMonthIndex) -> Bool {
-        return lhs.month == rhs.month && lhs.year == rhs.year
-    }
-    
-    var successor: MessageMonthIndex {
-        if self.month == 11 {
-            return MessageMonthIndex(year: self.year + 1, month: 0)
-        } else {
-            return MessageMonthIndex(year: self.year, month: self.month + 1)
-        }
-    }
-    
-    var predecessor: MessageMonthIndex {
-        if self.month == 0 {
-            return MessageMonthIndex(year: self.year - 1, month: 11)
-        } else {
-            return MessageMonthIndex(year: self.year, month: self.month - 1)
-        }
-    }
-}
-
-private func monthUpperBoundIndex(peerId: PeerId, index: MessageMonthIndex) -> MessageIndex {
-    return MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: index.successor.timestamp)
-}
-
 public enum MessageHistoryViewPeerIds: Equatable {
     case single(PeerId)
     case associated(PeerId, MessageId?)
@@ -302,12 +253,12 @@ final class MutableMessageHistoryView {
         self.topTaggedMessages = topTaggedMessages
         self.additionalDatas = additionalDatas
         
-        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, limit: count + 2, locations: peerIds)
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, statistics: self.orderStatistics, limit: count + 2, locations: peerIds)
         if case let .loading(loadingState) = self.state {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, limit: count + 2, locations: peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, statistics: self.orderStatistics, limit: count + 2, locations: peerIds, postbox: postbox, holes: holes))
                     self.sampledState = self.state.sample(postbox: postbox)
                 case .loadHole:
                     break
@@ -319,12 +270,12 @@ final class MutableMessageHistoryView {
     }
     
     private func reset(postbox: Postbox) {
-        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, limit: self.fillCount + 2, locations: self.peerIds)
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, statistics: self.orderStatistics, limit: self.fillCount + 2, locations: self.peerIds)
         if case let .loading(loadingState) = self.state {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, limit: self.fillCount + 2, locations: self.peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, limit: self.fillCount + 2, locations: self.peerIds, postbox: postbox, holes: holes))
                 case .loadHole:
                     break
             }
@@ -333,7 +284,7 @@ final class MutableMessageHistoryView {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, limit: self.fillCount + 2, locations: self.peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, limit: self.fillCount + 2, locations: self.peerIds, postbox: postbox, holes: holes))
                 case .loadHole:
                     break
             }
@@ -504,7 +455,7 @@ final class MutableMessageHistoryView {
                 let sampledState = loadingState.checkAndSample(postbox: postbox)
                 switch sampledState {
                     case let .ready(anchor, holes):
-                        self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, limit: self.fillCount + 2, locations: self.peerIds, postbox: postbox, holes: holes))
+                        self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, limit: self.fillCount + 2, locations: self.peerIds, postbox: postbox, holes: holes))
                     case .loadHole:
                         break
                 }
@@ -770,6 +721,9 @@ public final class MessageHistoryView {
                 }
                 self.holeEarlier = state.holesToLower
                 self.holeLater = state.holesToHigher
+                if state.entries.isEmpty && state.hole != nil {
+                    isLoading = true
+                }
                 entries = []
                 if let transientReadStates = mutableView.transientReadStates, case let .peer(states) = transientReadStates {
                     for entry in state.entries {
