@@ -65,6 +65,10 @@ private func generateGradientFilledCircleImage(diameter: CGFloat, colors: NSArra
 private let grayscaleColors: NSArray = [
     UIColor(rgb: 0xb1b1b1).cgColor, UIColor(rgb: 0xcdcdcd).cgColor
 ]
+
+private let inactiveArchiveColors: NSArray = [
+    UIColor(rgb: 0xC5C6CC).cgColor, UIColor(rgb: 0xDEDEE5).cgColor
+]
     
 private let savedMessagesColors: NSArray = [
     UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor
@@ -230,10 +234,12 @@ public final class AvatarNode: ASDisplayNode {
         animationBackgroundNode.frame = self.imageNode.frame
         if let overrideImage = self.overrideImage, case let .archivedChatsIcon(hiddenByDefault) = overrideImage {
             if hiddenByDefault {
-                animationBackgroundNode.image = generateFilledCircleImage(diameter: self.imageNode.frame.width, color: theme.chatList.neutralAvatarColor)
+                backgroundColor = UIColor(cgColor: inactiveArchiveColors[0] as! CGColor).mixedWith(UIColor(cgColor: inactiveArchiveColors[1] as! CGColor), alpha: 0.5)
+                animationBackgroundNode.image = generateGradientFilledCircleImage(diameter: self.imageNode.frame.width, colors: inactiveArchiveColors)
             } else {
-                backgroundColor = UIColor(rgb: 0x4fbaf7)
-                animationBackgroundNode.image = generateGradientFilledCircleImage(diameter: self.imageNode.frame.width, colors: gradientColors[5])
+                let colors = gradientColors[5]
+                backgroundColor = UIColor(cgColor: colors[0] as! CGColor).mixedWith(UIColor(cgColor: colors[1] as! CGColor), alpha: 0.5)
+                animationBackgroundNode.image = generateGradientFilledCircleImage(diameter: self.imageNode.frame.width, colors: colors)
             }
         }
         
@@ -401,10 +407,9 @@ public final class AvatarNode: ASDisplayNode {
                 colorsArray = savedMessagesColors
             } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme {
                 colorsArray = [theme.list.blocksBackgroundColor.cgColor, theme.list.blocksBackgroundColor.cgColor]
-            } else if case let .archivedChatsIcon(hiddenByDefault) = parameters.icon, let theme = parameters.theme {
+            } else if case let .archivedChatsIcon(hiddenByDefault) = parameters.icon {
                 if hiddenByDefault {
-                    let color = theme.chatList.neutralAvatarColor
-                    colorsArray = [color.cgColor, color.cgColor]
+                    colorsArray = inactiveArchiveColors
                 } else {
                     colorsArray = gradientColors[5]
                 }

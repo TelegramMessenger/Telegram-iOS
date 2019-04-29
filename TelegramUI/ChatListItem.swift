@@ -1243,8 +1243,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let separatorInset: CGFloat
-                    if (!nextIsPinned && item.index.pinningIndex != nil) || last {
+                    if case let .groupReference(groupReference) = item.content, groupReference.hiddenByDefault {
                         separatorInset = 0.0
+                    } else if (!nextIsPinned && item.index.pinningIndex != nil) || last {
+                            separatorInset = 0.0
                     } else {
                         separatorInset = editingOffset + leftInset + rawContentRect.origin.x
                     }
@@ -1252,12 +1254,22 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: layoutOffset + itemHeight - separatorHeight), size: CGSize(width: params.width - separatorInset, height: separatorHeight)))
                     
                     transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: itemHeight)))
+                    let backgroundColor: UIColor
                     if item.selected {
-                        strongSelf.backgroundNode.backgroundColor = theme.itemSelectedBackgroundColor
+                        backgroundColor = theme.itemSelectedBackgroundColor
                     } else if item.index.pinningIndex != nil {
-                        strongSelf.backgroundNode.backgroundColor = theme.pinnedItemBackgroundColor
+                        if case let .groupReference(groupReference) = item.content, groupReference.hiddenByDefault {
+                            backgroundColor = theme.itemBackgroundColor
+                        } else {
+                            backgroundColor = theme.pinnedItemBackgroundColor
+                        }
                     } else {
-                        strongSelf.backgroundNode.backgroundColor = theme.itemBackgroundColor
+                        backgroundColor = theme.itemBackgroundColor
+                    }
+                    if animated {
+                        transition.updateBackgroundColor(node: strongSelf.backgroundNode, color: backgroundColor)
+                    } else {
+                        strongSelf.backgroundNode.backgroundColor = backgroundColor
                     }
                     let topNegativeInset: CGFloat = 0.0
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
