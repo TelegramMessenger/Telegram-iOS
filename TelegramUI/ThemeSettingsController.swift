@@ -352,8 +352,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     
     let previousTheme = Atomic<PresentationTheme?>(value: nil)
     
-    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]))
-    |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]) |> deliverOnMainQueue)
     |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
         let theme: PresentationTheme
         let fontSize: PresentationFontSize
@@ -387,7 +386,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         if previousTheme.swap(theme)?.name != theme.name {
-            presentControllerImpl?(ThemeSettingsCrossfadeController())
+            //presentControllerImpl?(ThemeSettingsCrossfadeController())
         }
         
         return (controllerState, (listState, arguments))
