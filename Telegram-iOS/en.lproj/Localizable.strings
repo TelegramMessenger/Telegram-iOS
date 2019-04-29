@@ -4236,9 +4236,6 @@ Unused sets are archived when you add more.";
 
 "ChatList.UndoArchiveTitle" = "Chat archived";
 "ChatList.UndoArchiveText1" = "Hide the archive by swiping left on it.";
-"ChatList.UndoArchiveText2" = "Unmuted chats will get unarchived if new messages arrive.";
-"ChatList.UndoArchiveText3" = "Muted chats will stay archived after new messages arrive.";
-"ChatList.UndoArchiveText4" = "You can pin unlimited number or archived chats to the top.";
 "ChatList.UndoArchiveHiddenTitle" = "Archive unpinned";
 "ChatList.UndoArchiveHiddenText" = "Swipe down to see archive.";
 "ChatList.UndoArchiveRevealedTitle" = "Archive pinned";

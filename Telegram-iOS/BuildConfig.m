@@ -622,7 +622,7 @@ API_AVAILABLE(ios(10))
         [resultData writeToFile:filePath atomically:false];
     }
     
-    if (@available(iOS 10, *)) {
+    if (@available(iOS 11, *)) {
         NSData *currentEncryptedData = [NSData dataWithContentsOfFile:encryptedPath];
         
         LocalPrivateKey *localPrivateKey = [self getLocalPrivateKey:baseAppBundleId];
@@ -638,7 +638,7 @@ API_AVAILABLE(ios(10))
                 if (![resultData isEqualToData:decryptedData]) {
                     NSData *encryptedData = [localPrivateKey encrypt:resultData];
                     [encryptedData writeToFile:encryptedPath atomically:false];
-                    assert(false);
+                    //assert(false);
                 }
             } else {
                 NSData *encryptedData = [localPrivateKey encrypt:resultData];
