@@ -51,10 +51,11 @@ private struct PeerNotificationSettingsTableEntryFlags: OptionSet {
 
 final class PeerNotificationSettingsTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: true)
     }
     
     private let pendingIndexTable: PendingPeerNotificationSettingsIndexTable
+    private let behaviorTable: PeerNotificationSettingsBehaviorTable
     
     private let sharedEncoder = PostboxEncoder()
     private let sharedKey = ValueBoxKey(length: 8)
@@ -62,8 +63,9 @@ final class PeerNotificationSettingsTable: Table {
     private var cachedSettings: [PeerId: PeerNotificationSettingsTableEntry] = [:]
     private var updatedInitialSettings: [PeerId: PeerNotificationSettingsTableEntry] = [:]
     
-    init(valueBox: ValueBox, table: ValueBoxTable, pendingIndexTable: PendingPeerNotificationSettingsIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, pendingIndexTable: PendingPeerNotificationSettingsIndexTable, behaviorTable: PeerNotificationSettingsBehaviorTable) {
         self.pendingIndexTable = pendingIndexTable
+        self.behaviorTable = behaviorTable
         
         super.init(valueBox: valueBox, table: table)
     }
@@ -110,7 +112,7 @@ final class PeerNotificationSettingsTable: Table {
         }
     }
     
-    func setCurrent(id: PeerId, settings: PeerNotificationSettings?) -> PeerNotificationSettings? {
+    func setCurrent(id: PeerId, settings: PeerNotificationSettings?, updatedTimestamps: inout [PeerId: PeerNotificationSettingsBehaviorTimestamp]) -> PeerNotificationSettings? {
         let currentEntry = self.getEntry(id)
         var updated = false
         if let current = currentEntry.current, let settings = settings {
@@ -119,6 +121,16 @@ final class PeerNotificationSettingsTable: Table {
             updated = true
         }
         if updated {
+            var behaviorTimestamp: Int32?
+            if let settings = settings {
+                switch settings.behavior {
+                    case .none:
+                        break
+                    case let .reset(atTimestamp, _):
+                        behaviorTimestamp = atTimestamp
+                }
+            }
+            self.behaviorTable.set(peerId: id, timestamp: behaviorTimestamp, updatedTimestamps: &updatedTimestamps)
             if self.updatedInitialSettings[id] == nil {
                self.updatedInitialSettings[id] = currentEntry
             }
@@ -152,6 +164,10 @@ final class PeerNotificationSettingsTable: Table {
         }
     }
     
+    func getCurrent(_ id: PeerId) -> PeerNotificationSettings? {
+        return self.getEntry(id).current
+    }
+    
     func getEffective(_ id: PeerId) -> PeerNotificationSettings? {
         return self.getEntry(id).effective
     }
@@ -160,8 +176,8 @@ final class PeerNotificationSettingsTable: Table {
         return self.getEntry(id).pending
     }
     
-    func getAll() -> [PeerId : PeerNotificationSettings] {
-        var allSettings: [PeerId : PeerNotificationSettings] = [:]
+    func getAll() -> [PeerId: PeerNotificationSettings] {
+        var allSettings: [PeerId: PeerNotificationSettings] = [:]
         valueBox.scanInt64(self.table, values: { key, value in
             let peerId = PeerId(key)
             let entry = self.getEntry(peerId, value)
@@ -209,7 +225,7 @@ final class PeerNotificationSettingsTable: Table {
         return (added, removed)
     }
     
-    func resetAll(to settings: PeerNotificationSettings, updatedSettings: inout Set<PeerId>) -> [PeerId] {
+    func resetAll(to settings: PeerNotificationSettings, updatedSettings: inout Set<PeerId>, updatedTimestamps: inout [PeerId: PeerNotificationSettingsBehaviorTimestamp]) -> [PeerId] {
         let lowerBound = ValueBoxKey(length: 8)
         lowerBound.setInt64(0, value: 0)
         let upperBound = ValueBoxKey(length: 8)
@@ -224,7 +240,7 @@ final class PeerNotificationSettingsTable: Table {
         for peerId in peerIds {
             let entry = self.getEntry(peerId)
             if let current = entry.current, !current.isEqual(to: settings) || entry.pending != nil {
-                let _ = self.setCurrent(id: peerId, settings: settings)
+                let _ = self.setCurrent(id: peerId, settings: settings, updatedTimestamps: &updatedTimestamps)
                 let _ = self.setPending(id: peerId, settings: nil, updatedSettings: &updatedSettings)
                 updatedPeerIds.append(peerId)
             }

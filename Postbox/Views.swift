@@ -24,6 +24,7 @@ public enum PostboxViewKey: Hashable {
     case cachedItem(ItemCacheEntryId)
     case peerPresences(peerIds: Set<PeerId>)
     case synchronizeGroupMessageStats
+    case peerNotificationSettingsBehaviorTimestampView
     
     public var hashValue: Int {
         switch self {
@@ -71,8 +72,10 @@ public enum PostboxViewKey: Hashable {
                 return id.hashValue
             case .peerPresences:
                 return 13
-            case let .synchronizeGroupMessageStats:
+            case .synchronizeGroupMessageStats:
                 return 14
+            case .peerNotificationSettingsBehaviorTimestampView:
+                return 15
         }
     }
     
@@ -210,8 +213,14 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
-            case let .synchronizeGroupMessageStats:
+            case .synchronizeGroupMessageStats:
                 if case .synchronizeGroupMessageStats = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .peerNotificationSettingsBehaviorTimestampView:
+                if case .peerNotificationSettingsBehaviorTimestampView = rhs {
                     return true
                 } else {
                     return false
@@ -266,7 +275,9 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutableCachedItemView(postbox: postbox, id: id)
         case let .peerPresences(ids):
             return MutablePeerPresencesView(postbox: postbox, ids: ids)
-        case let .synchronizeGroupMessageStats:
+        case .synchronizeGroupMessageStats:
             return MutableSynchronizeGroupMessageStatsView(postbox: postbox)
+        case .peerNotificationSettingsBehaviorTimestampView:
+            return MutablePeerNotificationSettingsBehaviorTimestampView(postbox: postbox)
     }
 }
