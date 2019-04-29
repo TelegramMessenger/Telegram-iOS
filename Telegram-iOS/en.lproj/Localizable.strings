@@ -4231,11 +4231,7 @@ Unused sets are archived when you add more.";
 
 "ChatList.ArchiveAction" = "Archive";
 "ChatList.UnarchiveAction" = "Unarchive";
-<<<<<<< HEAD
 "ChatList.HideAction" = "Unpin";
-=======
-"ChatList.HideAction" = "Hide";
->>>>>>> e8f89f29928527555050923b6bdeaa73b78d02d0
 "ChatList.UnhideAction" = "Pin";
 
 "ChatList.UndoArchiveTitle" = "Chat archived";
