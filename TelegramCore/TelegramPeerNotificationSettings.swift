@@ -129,6 +129,14 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
         }
     }
     
+    public var behavior: PeerNotificationSettingsBehavior {
+        if case let .muted(untilTimestamp) = self.muteState, untilTimestamp < Int32.max {
+            return .reset(atTimestamp: untilTimestamp, toValue: self.withUpdatedMuteState(.unmuted))
+        } else {
+            return .none
+        }
+    }
+    
     public init(muteState: PeerMuteState, messageSound: PeerMessageSound) {
         self.muteState = muteState
         self.messageSound = messageSound

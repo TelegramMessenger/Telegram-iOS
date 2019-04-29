@@ -2680,6 +2680,14 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             if processSecretChatIncomingEncryptedOperations(transaction: transaction, peerId: peerId) {
                 let processResult = processSecretChatIncomingDecryptedOperations(mediaBox: mediaBox, transaction: transaction, peerId: peerId)
                 if !processResult.addedMessages.isEmpty {
+                    let currentInclusion = transaction.getPeerChatListInclusion(peerId)
+                    if let groupId = currentInclusion.groupId, groupId == Namespaces.PeerGroup.archive {
+                        if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
+                            if let notificationSettings = transaction.getPeerNotificationSettings(peer.regularPeerId) as? TelegramPeerNotificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
+                                transaction.updatePeerChatListInclusion(peerId, inclusion: currentInclusion.withGroupId(groupId: .root))
+                            }
+                        }
+                    }
                     for message in processResult.addedMessages {
                         if case let .Id(id) = message.id {
                             addedSecretMessageIds.append(id)
