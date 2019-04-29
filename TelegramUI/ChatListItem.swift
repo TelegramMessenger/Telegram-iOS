@@ -1500,7 +1500,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         guard let item = self.item, case .groupReference = item.content else {
             return
         }
-        self.avatarNode.playAnimation("archiveAvatar", keysToColor: ["box2.box2.Fill 1"], scale: 0.1653828)
+        self.avatarNode.playAnimation("anim_archiveAvatar", keysToColor: ["box2.box2.Fill 1"], scale: 0.1653828)
     }
     
     override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {

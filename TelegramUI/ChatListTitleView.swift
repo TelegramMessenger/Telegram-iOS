@@ -230,7 +230,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
     }
     
     var lockViewFrame: CGRect? {
-        if !self.lockView.isHidden {
+        if !self.lockView.isHidden && !self.lockView.frame.isEmpty {
             return self.lockView.frame
         } else {
             return nil

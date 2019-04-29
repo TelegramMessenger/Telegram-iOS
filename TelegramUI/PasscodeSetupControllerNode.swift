@@ -80,7 +80,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                 passcodeType = .digits6
         }
         
-        self.inputFieldNode = PasscodeEntryInputFieldNode(color: self.presentationData.theme.list.itemPrimaryTextColor, fieldType: passcodeType, keyboardAppearance: self.presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance)
+        self.inputFieldNode = PasscodeEntryInputFieldNode(color: self.presentationData.theme.list.itemPrimaryTextColor, accentColor: self.presentationData.theme.list.itemAccentColor, fieldType: passcodeType, keyboardAppearance: self.presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance)
         self.inputFieldBackgroundNode = ASImageNode()
         self.inputFieldBackgroundNode.alpha = passcodeType == .alphanumeric ? 1.0 : 0.0
         self.inputFieldBackgroundNode.contentMode = .scaleToFill

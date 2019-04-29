@@ -31,6 +31,7 @@ final public class PasscodeEntryController: ViewController {
     public var completed: (() -> Void)?
     
     private let biometricsDisposable = MetaDisposable()
+    private var skipNextBiometricsRequest = false
     
     public init(context: AccountContext, challengeData: PostboxAccessChallengeData, enableBiometrics: Bool, arguments: PasscodeEntryControllerPresentationArguments) {
         self.context = context
@@ -155,7 +156,7 @@ final public class PasscodeEntryController: ViewController {
         }
         self.controllerNode.requestBiometrics = { [weak self] in
             if let strongSelf = self {
-                strongSelf.requestBiometrics()
+                strongSelf.requestBiometrics(force: true)
             }
         }
     }
@@ -183,19 +184,31 @@ final public class PasscodeEntryController: ViewController {
         }
     }
     
-    public func requestBiometrics() {
+    public func requestBiometrics(force: Bool = false) {
         guard self.enableBiometrics, let _ = LocalAuth.biometricAuthentication else {
             return
         }
-        self.biometricsDisposable.set(LocalAuth.auth(reason: self.presentationData.strings.EnterPasscode_TouchId).start(next: { [weak self] result in
+        
+        if self.skipNextBiometricsRequest {
+            self.skipNextBiometricsRequest = false
+            if !force {
+                return
+            }
+        }
+        
+        self.biometricsDisposable.set((LocalAuth.auth(reason: self.presentationData.strings.EnterPasscode_TouchId) |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let strongSelf = self else {
                 return
             }
             if result {
+                strongSelf.controllerNode.animateSuccess()
+                
                 let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
                     let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
                     transaction.setAccessChallengeData(data)
                 }).start()
+            } else {
+                strongSelf.skipNextBiometricsRequest = true
             }
         }))
     }

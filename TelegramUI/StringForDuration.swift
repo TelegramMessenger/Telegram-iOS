@@ -3,7 +3,7 @@ import Foundation
 func stringForDuration(_ duration: Int32, position: Int32? = nil) -> String {
     var duration = duration
     if let position = position {
-        duration = duration - position
+        duration = max(0, duration - position)
     }
     let hours = duration / 3600
     let minutes = duration / 60 % 60

@@ -51,7 +51,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.backgroundNode = ASImageNode()
         self.iconNode = PasscodeLockIconNode()
         self.titleNode = PasscodeEntryLabelNode()
-        self.inputFieldNode = PasscodeEntryInputFieldNode(color: .white, fieldType: passcodeType, keyboardAppearance: .dark, useCustomNumpad: true)
+        self.inputFieldNode = PasscodeEntryInputFieldNode(color: .white, accentColor: .white, fieldType: passcodeType, keyboardAppearance: .dark, useCustomNumpad: true)
         self.subtitleNode = PasscodeEntryLabelNode()
         self.keyboardNode = PasscodeEntryKeyboardNode()
         self.deleteButtonNode = HighlightableButtonNode()
@@ -252,6 +252,11 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -self.bounds.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
             completion()
         })
+    }
+    
+    func animateSuccess() {
+        //self.iconNode.animateUnlock()
+        self.inputFieldNode.animateSuccess()
     }
     
     func animateError() {

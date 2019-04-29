@@ -1338,9 +1338,15 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             context.sharedContext.switchToAccount(id: id)
         })
     }
-    controller.didAppear = { _ in
+    var didAppear = false
+    controller.didAppear = { [weak controller] _ in
         updatePassport()
         updateNotifyExceptions()
+        
+        if !didAppear {
+            (controller?.displayNode as? ItemListControllerNode<SettingsEntry>)?.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            didAppear = true
+        }
     }
     controller.previewItemWithTag = { tag in
         if let tag = tag as? SettingsEntryTag, case let .account(id) = tag {

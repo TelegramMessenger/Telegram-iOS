@@ -8,13 +8,14 @@ private final class PasscodeLockIconNodeParameters: NSObject {
     let lockedColor: UIColor
     let progress: CGFloat
     let fromScale: CGFloat
+    let keepLockedColor: Bool
     
-    init(unlockedColor: UIColor, lockedColor: UIColor, progress: CGFloat, fromScale: CGFloat) {
+    init(unlockedColor: UIColor, lockedColor: UIColor, progress: CGFloat, fromScale: CGFloat, keepLockedColor: Bool) {
         self.unlockedColor = unlockedColor
         self.lockedColor = lockedColor
         self.progress = progress
         self.fromScale = fromScale
-        
+        self.keepLockedColor = keepLockedColor
         super.init()
     }
 }
@@ -33,6 +34,8 @@ final class PasscodeLockIconNode: ASDisplayNode {
     }
     
     private var fromScale: CGFloat = 1.0
+    
+    private var keepLockedColor = false
     
     override init() {
         super.init()
@@ -63,8 +66,30 @@ final class PasscodeLockIconNode: ASDisplayNode {
         self.pop_add(animation, forKey: "progress")
     }
     
+    func animateUnlock() {
+        self.fromScale = 1.0
+        self.keepLockedColor = true
+        self.pop_removeAllAnimations()
+        
+        let animation = POPBasicAnimation()
+        animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
+            property?.readBlock = { node, values in
+                values?.pointee = (node as! PasscodeLockIconNode).effectiveProgress
+            }
+            property?.writeBlock = { node, values in
+                (node as! PasscodeLockIconNode).effectiveProgress = values!.pointee
+            }
+            property?.threshold = 0.01
+        }) as! POPAnimatableProperty)
+        animation.fromValue = 1.0 as NSNumber
+        animation.toValue = 0.0 as NSNumber
+        animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        animation.duration = 0.55
+        self.pop_add(animation, forKey: "progress")
+    }
+    
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return PasscodeLockIconNodeParameters(unlockedColor: self.unlockedColor, lockedColor: .white, progress: self.effectiveProgress, fromScale: self.fromScale)
+        return PasscodeLockIconNodeParameters(unlockedColor: self.unlockedColor, lockedColor: .white, progress: self.effectiveProgress, fromScale: self.fromScale, keepLockedColor: self.keepLockedColor)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -88,7 +113,7 @@ final class PasscodeLockIconNode: ASDisplayNode {
         context.scaleBy(x: fromScale + (1.0 - fromScale) * lockProgress, y: fromScale + (1.0 - fromScale) * lockProgress)
         context.translateBy(x: -bounds.width / 2.0, y: -bounds.height / 2.0)
         
-        let color = parameters.unlockedColor.mixedWith(parameters.lockedColor, alpha: progress)
+        let color = parameters.keepLockedColor ? parameters.lockedColor : parameters.unlockedColor.mixedWith(parameters.lockedColor, alpha: progress)
         
         context.setStrokeColor(color.cgColor)
         
@@ -108,10 +133,12 @@ final class PasscodeLockIconNode: ASDisplayNode {
         }
         if progress > 0.85 {
             let innerProgress = (progress - 0.85) / 0.15
-            if innerProgress < 0.6 {
-                offset = 2.0 * min(1.0, innerProgress / 0.6)
-            } else {
-                offset = 2.0 * min(1.0, max(0.0, (1.0 - innerProgress) / 0.4))
+            if !parameters.keepLockedColor {
+                if innerProgress < 0.6 {
+                    offset = 2.0 * min(1.0, innerProgress / 0.6)
+                } else {
+                    offset = 2.0 * min(1.0, max(0.0, (1.0 - innerProgress) / 0.4))
+                }
             }
             
             topRect.origin.y += 4.0 * min(1.0, max(0.0, innerProgress / 0.6)) + offset
@@ -132,7 +159,6 @@ final class PasscodeLockIconNode: ASDisplayNode {
         context.setBlendMode(.normal)
         
         context.setFillColor(color.cgColor)
-        
         
         let basePath = UIBezierPath(roundedRect: CGRect(x: 0.0, y: bounds.height - 21.0 + offset, width: 24.0, height: 19.0), cornerRadius: 3.5)
         context.addPath(basePath.cgPath)

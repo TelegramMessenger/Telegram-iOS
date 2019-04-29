@@ -106,8 +106,11 @@ private class PasscodeEntryDotNode: ASImageNode {
             let currentContents = self.layer.contents
             self.layer.removeAnimation(forKey: "contents")
             if let currentContents = currentContents, animated {
-                self.image = image
-                self.layer.animate(from: currentContents as AnyObject, to: image.cgImage!, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseOut, duration: image === self.regularImage ? 0.25 : 0.05, delay: delay)
+                self.layer.animate(from: currentContents as AnyObject, to: image.cgImage!, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseOut, duration: image === self.regularImage ? 0.25 : 0.05, delay: delay, removeOnCompletion: false, completion: { finished in
+                    if finished {
+                        self.image = image
+                    }
+                })
             } else {
                 self.image = image
             }
@@ -119,6 +122,7 @@ private class PasscodeEntryDotNode: ASImageNode {
 final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var background: PasscodeBackground?
     private var color: UIColor
+    private var accentColor: UIColor
     private var fieldType: PasscodeEntryFieldType
     private let useCustomNumpad: Bool
     
@@ -140,8 +144,9 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    init(color: UIColor, fieldType: PasscodeEntryFieldType, keyboardAppearance: UIKeyboardAppearance, useCustomNumpad: Bool = false) {
+    init(color: UIColor, accentColor: UIColor, fieldType: PasscodeEntryFieldType, keyboardAppearance: UIKeyboardAppearance, useCustomNumpad: Bool = false) {
         self.color = color
+        self.accentColor = accentColor
         self.fieldType = fieldType
         self.keyboardAppearance = keyboardAppearance
         self.useCustomNumpad = useCustomNumpad
@@ -168,7 +173,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.textColor = self.color
         self.textFieldNode.textField.delegate = self
         self.textFieldNode.textField.returnKeyType = .done
-        self.textFieldNode.textField.tintColor = self.color
+        self.textFieldNode.textField.tintColor = self.accentColor
         self.textFieldNode.textField.keyboardAppearance = self.keyboardAppearance
         self.textFieldNode.textField.keyboardType = self.fieldType.keyboardType
         
@@ -212,6 +217,21 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
             case .alphanumeric:
                 self.textFieldNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseOut)
                 self.borderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseOut)
+        }
+    }
+    
+    func animateSuccess() {
+        switch self.fieldType {
+            case .digits6, .digits4:
+                var delay: Double = 0.0
+                for node in self.dotNodes {
+                    node.updateState(filled: true, animated: true, delay: delay)
+                    delay += 0.01
+                }
+            case .alphanumeric:
+                if (self.textFieldNode.textField.text ?? "").isEmpty {
+                    self.textFieldNode.textField.text = "passwordpassword"
+                }
         }
     }
     

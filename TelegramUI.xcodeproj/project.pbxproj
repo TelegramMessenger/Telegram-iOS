@@ -44,6 +44,7 @@
 		094735152275D72100EA2312 /* anim_unpin.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350B2275D72000EA2312 /* anim_unpin.json */; };
 		094735162275D72100EA2312 /* anim_unmute.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350C2275D72100EA2312 /* anim_unmute.json */; };
 		094735172275D72100EA2312 /* anim_pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350D2275D72100EA2312 /* anim_pin.json */; };
+		094735192277483C00EA2312 /* anim_infotip.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735182277483B00EA2312 /* anim_infotip.json */; };
 		0947FCAE224043450086741C /* SettingsSearchRecentItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0947FCAD224043450086741C /* SettingsSearchRecentItem.swift */; };
 		0947FCB0224055990086741C /* StringHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0947FCAF224055990086741C /* StringHash.swift */; };
 		0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */; };
@@ -141,7 +142,7 @@
 		09E2D9EF226F1AFA00EA0AA4 /* Emoji.mapping in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */; };
 		09E2D9F1226F214000EA0AA4 /* EmojiResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E2D9F0226F214000EA0AA4 /* EmojiResources.swift */; };
 		09E2DA112273340E00EA0AA4 /* AnimationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E2DA102273340E00EA0AA4 /* AnimationNode.swift */; };
-		09E2DA132273367900EA0AA4 /* archiveAvatar.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2DA122273367900EA0AA4 /* archiveAvatar.json */; };
+		09E2DA132273367900EA0AA4 /* anim_archiveAvatar.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2DA122273367900EA0AA4 /* anim_archiveAvatar.json */; };
 		09E4A801223AE1B30038140F /* PeerType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A800223AE1B30038140F /* PeerType.swift */; };
 		09E4A803223B833B0038140F /* ForwardPrivacyChatPreviewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A802223B833B0038140F /* ForwardPrivacyChatPreviewItem.swift */; };
 		09E4A805223D4A5A0038140F /* OpenSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A804223D4A5A0038140F /* OpenSettings.swift */; };
@@ -1227,6 +1228,7 @@
 		0947350B2275D72000EA2312 /* anim_unpin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unpin.json; sourceTree = "<group>"; };
 		0947350C2275D72100EA2312 /* anim_unmute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unmute.json; sourceTree = "<group>"; };
 		0947350D2275D72100EA2312 /* anim_pin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_pin.json; sourceTree = "<group>"; };
+		094735182277483B00EA2312 /* anim_infotip.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_infotip.json; sourceTree = "<group>"; };
 		0947FCAD224043450086741C /* SettingsSearchRecentItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSearchRecentItem.swift; sourceTree = "<group>"; };
 		0947FCAF224055990086741C /* StringHash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringHash.swift; sourceTree = "<group>"; };
 		0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationMuteSettingsController.swift; sourceTree = "<group>"; };
@@ -1328,7 +1330,7 @@
 		09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */ = {isa = PBXFileReference; lastKnownFileType = file; name = Emoji.mapping; path = TelegramUI/Resources/Emoji.mapping; sourceTree = "<group>"; };
 		09E2D9F0226F214000EA0AA4 /* EmojiResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiResources.swift; sourceTree = "<group>"; };
 		09E2DA102273340E00EA0AA4 /* AnimationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimationNode.swift; sourceTree = "<group>"; };
-		09E2DA122273367900EA0AA4 /* archiveAvatar.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = archiveAvatar.json; sourceTree = "<group>"; };
+		09E2DA122273367900EA0AA4 /* anim_archiveAvatar.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_archiveAvatar.json; sourceTree = "<group>"; };
 		09E4A800223AE1B30038140F /* PeerType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerType.swift; sourceTree = "<group>"; };
 		09E4A802223B833B0038140F /* ForwardPrivacyChatPreviewItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForwardPrivacyChatPreviewItem.swift; sourceTree = "<group>"; };
 		09E4A804223D4A5A0038140F /* OpenSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenSettings.swift; sourceTree = "<group>"; };
@@ -2524,6 +2526,7 @@
 		09310D13213BC5DE0020033A /* Animations */ = {
 			isa = PBXGroup;
 			children = (
+				094735182277483B00EA2312 /* anim_infotip.json */,
 				094735072275D72000EA2312 /* anim_archive.json */,
 				094735092275D72000EA2312 /* anim_delete.json */,
 				094735042275D71F00EA2312 /* anim_hide.json */,
@@ -2534,7 +2537,7 @@
 				0947350C2275D72100EA2312 /* anim_unmute.json */,
 				0947350B2275D72000EA2312 /* anim_unpin.json */,
 				094735052275D72000EA2312 /* anim_unread.json */,
-				09E2DA122273367900EA0AA4 /* archiveAvatar.json */,
+				09E2DA122273367900EA0AA4 /* anim_archiveAvatar.json */,
 				09310D1A213BC5DE0020033A /* anim_ungroup.json */,
 				09310D1B213BC5DE0020033A /* anim_group.json */,
 			);
@@ -5263,6 +5266,7 @@
 				D0E9BA951F056F4C00F079A4 /* stp_card_applepay@2x.png in Resources */,
 				D0E9BAA01F056F4C00F079A4 /* stp_card_diners_template@3x.png in Resources */,
 				094735132275D72100EA2312 /* anim_delete.json in Resources */,
+				094735192277483C00EA2312 /* anim_infotip.json in Resources */,
 				094735142275D72100EA2312 /* anim_unarchive.json in Resources */,
 				D0E9BAAA1F056F4C00F079A4 /* stp_card_form_front@3x.png in Resources */,
 				D0E9BA971F056F4C00F079A4 /* stp_card_applepay_template@2x.png in Resources */,
@@ -5284,7 +5288,7 @@
 				D0E9BAB31F056F4C00F079A4 /* stp_card_placeholder_template@2x.png in Resources */,
 				D0E9BAAE1F056F4C00F079A4 /* stp_card_jcb_template@3x.png in Resources */,
 				D0E9BAAB1F056F4C00F079A4 /* stp_card_jcb@2x.png in Resources */,
-				09E2DA132273367900EA0AA4 /* archiveAvatar.json in Resources */,
+				09E2DA132273367900EA0AA4 /* anim_archiveAvatar.json in Resources */,
 				D0E9BA9C1F056F4C00F079A4 /* stp_card_cvc_amex@3x.png in Resources */,
 				D0E9BA991F056F4C00F079A4 /* stp_card_cvc@2x.png in Resources */,
 				D0471B541EFD8ECA0074D609 /* currencies.json in Resources */,
