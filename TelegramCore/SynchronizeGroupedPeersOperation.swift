@@ -39,8 +39,15 @@ public func updatePeerGroupIdInteractively(transaction: Transaction, peerId: Pee
     switch initialInclusion {
         case .notIncluded:
             break
-        case let .ifHasMessagesOrOneOf(_, pinningIndex, minTimestamp):
-            updatedInclusion = .ifHasMessagesOrOneOf(groupId: groupId, pinningIndex: pinningIndex, minTimestamp: minTimestamp)
+        case let .ifHasMessagesOrOneOf(currentGroupId, pinningIndex, minTimestamp):
+            if currentGroupId == groupId {
+                return
+            }
+            if pinningIndex != nil {
+                let updatedPinnedItems = transaction.getPinnedItemIds(groupId: currentGroupId).filter({ $0 != .peer(peerId) })
+                transaction.setPinnedItemIds(groupId: currentGroupId, itemIds: updatedPinnedItems)
+            }
+            updatedInclusion = .ifHasMessagesOrOneOf(groupId: groupId, pinningIndex: nil, minTimestamp: minTimestamp)
     }
     if initialInclusion != updatedInclusion {
         transaction.updatePeerChatListInclusion(peerId, inclusion: updatedInclusion)

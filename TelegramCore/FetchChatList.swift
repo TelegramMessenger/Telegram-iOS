@@ -62,6 +62,21 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
     var referencedFolders: [PeerGroupId: PeerGroupUnreadCountersSummary] = [:]
     var itemIds: [PeerId] = []
     
+    var peers: [PeerId: Peer] = [:]
+    var peerPresences: [PeerId: PeerPresence] = [:]
+    for chat in apiChats {
+        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+            peers[groupOrChannel.id] = groupOrChannel
+        }
+    }
+    for user in apiUsers {
+        let telegramUser = TelegramUser(user: user)
+        peers[telegramUser.id] = telegramUser
+        if let presence = TelegramUserPresence(apiUser: user) {
+            peerPresences[telegramUser.id] = presence
+        }
+    }
+    
     for dialog in apiDialogs {
         let apiPeer: Api.Peer
         let apiReadInboxMaxId: Int32
@@ -74,7 +89,17 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         let apiNotificationSettings: Api.PeerNotifySettings
         switch dialog {
             case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _, _):
-                itemIds.append(peer.peerId)
+                if let peer = peers[peer.peerId] {
+                    var isExluded = false
+                    if let group = peer as? TelegramGroup {
+                        if group.flags.contains(.deactivated) {
+                            isExluded = true
+                        }
+                    }
+                    if !isExluded {
+                        itemIds.append(peer.id)
+                    }
+                }
                 apiPeer = peer
                 apiTopMessage = topMessage
                 apiReadInboxMaxId = readInboxMaxId
@@ -144,24 +169,9 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         }
     }
     
-    var peers: [Peer] = []
-    var peerPresences: [PeerId: PeerPresence] = [:]
-    for chat in apiChats {
-        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-            peers.append(groupOrChannel)
-        }
-    }
-    for user in apiUsers {
-        let telegramUser = TelegramUser(user: user)
-        peers.append(telegramUser)
-        if let presence = TelegramUserPresence(apiUser: user) {
-            peerPresences[telegramUser.id] = presence
-        }
-    }
-    
     return ParsedDialogs(
         itemIds: itemIds,
-        peers: peers,
+        peers: Array(peers.values),
         peerPresences: peerPresences,
     
         notificationSettings: notificationSettings,

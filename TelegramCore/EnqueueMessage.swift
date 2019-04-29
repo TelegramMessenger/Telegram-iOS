@@ -496,6 +496,12 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
             for globallyUniqueId in globallyUniqueIds {
                 messageIds.append(globallyUniqueIdToMessageId[globallyUniqueId])
             }
+            
+            if peerId.namespace == Namespaces.Peer.CloudUser {
+                if case .notIncluded = transaction.getPeerChatListInclusion(peerId) {
+                    transaction.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessagesOrOneOf(groupId: .root, pinningIndex: nil, minTimestamp: nil))
+                }
+            }
         }
         for hashtag in addedHashtags {
             addRecentlyUsedHashtag(transaction: transaction, string: hashtag)

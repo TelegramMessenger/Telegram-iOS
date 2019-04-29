@@ -205,9 +205,19 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         var sentGifs: [TelegramMediaFile] = []
         
         var updatedGroupingKey: Int64?
+        for (_, _, updatedMessage) in mapping {
+            if let updatedGroupingKey = updatedGroupingKey {
+                assert(updatedGroupingKey == updatedMessage.groupingKey)
+            }
+            updatedGroupingKey = updatedMessage.groupingKey
+        }
         
         if let latestPreviousId = latestPreviousId, let latestIndex = mapping.last?.1 {
             transaction.offsetPendingMessagesTimestamps(lowerBound: latestPreviousId, excludeIds: Set(mapping.map { $0.0.id }), timestamp: latestIndex.timestamp)
+        }
+        
+        if let updatedGroupingKey = updatedGroupingKey {
+            transaction.updateMessageGroupingKeysAtomically(mapping.map { $0.0.id }, groupingKey: updatedGroupingKey)
         }
         
         for (message, _, updatedMessage) in mapping {
@@ -258,17 +268,8 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 
                 let (tags, globalTags) = tagsForStoreMessage(incoming: currentMessage.flags.contains(.Incoming), attributes: attributes, media: media, textEntities: entitiesAttribute?.entities)
                 
-                if let updatedGroupingKey = updatedGroupingKey {
-                    assert(updatedGroupingKey == updatedMessage.groupingKey)
-                }
-                updatedGroupingKey = updatedMessage.groupingKey
-                
                 return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, timestamp: updatedMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
             })
-        }
-        
-        if let updatedGroupingKey = updatedGroupingKey {
-            transaction.updateMessageGroupingKeysAtomically(mapping.map { $0.1.id }, groupingKey: updatedGroupingKey)
         }
         
         for file in sentStickers {
