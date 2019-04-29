@@ -33,6 +33,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     private let wrapperNode: ASDisplayNode
     
     private let titleNode: ASTextNode
+    private let subtitleNode: ASTextNode
     private let inputFieldNode: PasscodeEntryInputFieldNode
     private let inputFieldBackgroundNode: ASImageNode
     private let modeButtonNode: HighlightableButtonNode
@@ -61,6 +62,10 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
+        
+        self.subtitleNode = ASTextNode()
+        self.subtitleNode.isUserInteractionEnabled = false
+        self.subtitleNode.displaysAsynchronously = false
         
         let passcodeType: PasscodeEntryFieldType
         switch self.mode {
@@ -95,6 +100,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         self.addSubnode(self.wrapperNode)
         
         self.wrapperNode.addSubnode(self.titleNode)
+        self.wrapperNode.addSubnode(self.subtitleNode)
         self.wrapperNode.addSubnode(self.inputFieldBackgroundNode)
         self.wrapperNode.addSubnode(self.inputFieldNode)
         self.wrapperNode.addSubnode(self.modeButtonNode)

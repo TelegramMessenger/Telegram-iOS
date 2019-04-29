@@ -163,6 +163,8 @@ final public class PasscodeEntryController: ViewController {
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
+        
         self.controllerNode.activateInput()
         if self.arguments.animated {
             let iconFrame = self.arguments.lockIconInitialFrame()

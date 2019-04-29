@@ -302,12 +302,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         switch self.passcodeType {
             case .digits6, .digits4:
                 self.keyboardNode.alpha = 1.0
+                self.deleteButtonNode.alpha = 1.0
             case .alphanumeric:
                 self.keyboardNode.alpha = 0.0
+                self.deleteButtonNode.alpha = 0.0
         }
         
         let deleteSize = self.deleteButtonNode.measure(layout.size)
-        transition.updateFrame(node: self.deleteButtonNode, frame: CGRect(origin: CGPoint(x: floor(keyboardFrame.maxX - keyboardButtonSize.width / 2.0 - deleteSize.width / 2.0), y: layout.size.height - layout.intrinsicInsets.bottom - deleteSize.height - 20.0), size: deleteSize))
+        transition.updateFrame(node: self.deleteButtonNode, frame: CGRect(origin: CGPoint(x: floor(keyboardFrame.maxX - keyboardButtonSize.width / 2.0 - deleteSize.width / 2.0), y: layout.size.height - layout.intrinsicInsets.bottom - deleteSize.height - passcodeLayout.keyboard.deleteOffset), size: deleteSize))
         
         if let biometricIcon = self.biometricButtonNode.image(for: .normal) {
             var biometricY: CGFloat = 0.0
