@@ -425,6 +425,8 @@
 		D067066D1D512ADB00DED3E3 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706681D512ADB00DED3E3 /* SwiftSignalKit.framework */; };
 		D06AFE8920BF66BF00EA5124 /* DeserializeFunctionResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06AFE8820BF66BF00EA5124 /* DeserializeFunctionResponse.swift */; };
 		D06AFE8A20BF66BF00EA5124 /* DeserializeFunctionResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06AFE8820BF66BF00EA5124 /* DeserializeFunctionResponse.swift */; };
+		D06CA13522772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CA13422772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift */; };
+		D06CA13622772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CA13422772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift */; };
 		D06ECFC820B810D300C576C2 /* TermsOfService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06ECFC720B810D300C576C2 /* TermsOfService.swift */; };
 		D06ECFC920B810D300C576C2 /* TermsOfService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06ECFC720B810D300C576C2 /* TermsOfService.swift */; };
 		D07047B41F3DF1FE00F6A8D4 /* ConsumablePersonalMentionMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07047B31F3DF1FE00F6A8D4 /* ConsumablePersonalMentionMessageAttribute.swift */; };
@@ -1046,6 +1048,7 @@
 		D06706681D512ADB00DED3E3 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D067066E1D512AEB00DED3E3 /* MtProtoKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = MtProtoKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06AFE8820BF66BF00EA5124 /* DeserializeFunctionResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeserializeFunctionResponse.swift; sourceTree = "<group>"; };
+		D06CA13422772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedNotificationSettingsBehaviors.swift; sourceTree = "<group>"; };
 		D06ECFC720B810D300C576C2 /* TermsOfService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfService.swift; sourceTree = "<group>"; };
 		D07047B31F3DF1FE00F6A8D4 /* ConsumablePersonalMentionMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConsumablePersonalMentionMessageAttribute.swift; sourceTree = "<group>"; };
 		D07047B61F3DF2CD00F6A8D4 /* ManagedConsumePersonalMessagesActions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedConsumePersonalMessagesActions.swift; sourceTree = "<group>"; };
@@ -1581,6 +1584,7 @@
 				093857A72243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift */,
 				093857A62243D87800EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift */,
 				D0CA8E4A227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift */,
+				D06CA13422772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -2505,6 +2509,7 @@
 				D0C27B421F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */,
 				D054648B2073854A002ECC1E /* SecureIdPersonalDetailsValue.swift in Sources */,
 				D01749591E1092BC0057C89A /* RequestStartBot.swift in Sources */,
+				D06CA13522772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift in Sources */,
 				D03DC9101F82E344001D584C /* AccountStateReset.swift in Sources */,
 				D01B27A21E394D8B0022A4C0 /* PrivacySettings.swift in Sources */,
 				D0223A9B1EA5654D00211D94 /* TelegramMediaResource.swift in Sources */,
@@ -2744,6 +2749,7 @@
 				D0B8442B1DAB91E0005F29E1 /* NBMetadataCore.m in Sources */,
 				D093D7EF206413F600BC3599 /* SecureIdDataTypes.swift in Sources */,
 				D03DC9141F82F89D001D584C /* RegularChatState.swift in Sources */,
+				D06CA13622772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift in Sources */,
 				D0C44B621FC616E200227BE0 /* SearchGroupMembers.swift in Sources */,
 				D0F3A8A61E82C94C00B4C64C /* SynchronizeableChatInputState.swift in Sources */,
 				D00BDA1A1EE593D600C64C5E /* TelegramChannelAdminRights.swift in Sources */,
