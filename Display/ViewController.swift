@@ -398,9 +398,16 @@ open class ViewControllerPresentationArguments {
         switch context {
             case .current:
                 self.presentationContext.present(controller, on: PresentationSurfaceLevel(rawValue: 0), completion: completion)
-                completion()
             case let .window(level):
                 self.window?.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
+        }
+    }
+    
+    public func forEachController(_ f: (ContainableController) -> Bool) {
+        for (controller, _) in self.presentationContext.controllers {
+            if !f(controller) {
+                break
+            }
         }
     }
     
