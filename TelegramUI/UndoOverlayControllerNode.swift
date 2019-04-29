@@ -266,9 +266,15 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         }
     }
     
-    func animateIn() {
-        self.panelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.panelWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+    func animateIn(asReplacement: Bool) {
+        if asReplacement {
+            let offset = self.bounds.width
+            self.panelWrapperNode.layer.animatePosition(from: CGPoint(x: offset, y: 0.0), to: CGPoint(), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: nil)
+            self.panelNode.layer.animatePosition(from: CGPoint(x: offset, y: 0.0), to: CGPoint(), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: nil)
+        } else {
+            self.panelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.panelWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        }
         
         if let iconCheckNode = self.iconCheckNode, self.iconNode != nil {
             Queue.mainQueue().after(0.2, { [weak iconCheckNode] in
@@ -290,6 +296,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.panelWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: kCAMediaTimingFunctionEaseOut, removeOnCompletion: false) { _ in
             completion()
         }
+    }
+    
+    func animateOutWithReplacement(completion: @escaping () -> Void) {
+        let offset = -self.bounds.width
+        self.panelWrapperNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: offset, y: 0.0), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
+            completion()
+        })
+        self.panelNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: offset, y: 0.0), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: nil)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

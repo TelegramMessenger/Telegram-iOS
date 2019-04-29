@@ -95,7 +95,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                     }
                 }
             
-                if let minTimestamp = minTimestamp, let maxTimestamp = maxTimestamp, abs(maxTimestamp - minTimestamp) > 60 * 60 {
+                if false, let minTimestamp = minTimestamp, let maxTimestamp = maxTimestamp, abs(maxTimestamp - minTimestamp) > 60 * 60 {
                     let _ = options.insert(.AnimateCrossfade)
                 } else {
                     let _ = options.insert(.AnimateAlpha)

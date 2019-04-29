@@ -13,15 +13,17 @@ final class UndoOverlayController: ViewController {
     private let presentationData: PresentationData
     let content: UndoOverlayContent
     private let elevatedLayout: Bool
+    private let animateInAsReplacement: Bool
     private var action: (Bool) -> Void
     
     private var didPlayPresentationAnimation = false
     
-    init(context: AccountContext, content: UndoOverlayContent, elevatedLayout: Bool, action: @escaping (Bool) -> Void) {
+    init(context: AccountContext, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (Bool) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.content = content
         self.elevatedLayout = elevatedLayout
+        self.animateInAsReplacement = animateInAsReplacement
         self.action = action
         
         super.init(navigationBarPresentationData: nil)
@@ -47,9 +49,10 @@ final class UndoOverlayController: ViewController {
         self.dismiss()
     }
     
-    func renewWithCurrentContent(action: @escaping (Bool) -> Void) {
-        self.action = action
-        (self.displayNode as! UndoOverlayControllerNode).renewWithCurrentContent()
+    func dismissWithReplacementAnimation() {
+        (self.displayNode as! UndoOverlayControllerNode).animateOutWithReplacement(completion: { [weak self] in
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+        })
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -57,7 +60,7 @@ final class UndoOverlayController: ViewController {
         
         if !self.didPlayPresentationAnimation {
             self.didPlayPresentationAnimation = true
-            (self.displayNode as! UndoOverlayControllerNode).animateIn()
+            (self.displayNode as! UndoOverlayControllerNode).animateIn(asReplacement: self.animateInAsReplacement)
         }
     }
     
