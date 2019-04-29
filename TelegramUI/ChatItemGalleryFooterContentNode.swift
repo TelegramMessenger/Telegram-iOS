@@ -503,7 +503,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         if !bottomInset.isZero && bottomInset < 30.0 {
             bottomInset -= 7.0
         }
-        var panelHeight: CGFloat = 44.0 + bottomInset
+        var panelHeight = 44.0 + bottomInset
         panelHeight += contentInset
         
         let isLandscape = size.width > size.height
@@ -572,7 +572,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
         
         if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
-            panelHeight += 8.0 + 2.0
+            panelHeight += 10.0
             if isLandscape {
                 panelHeight += 14.0
             } else {
@@ -584,6 +584,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 panelHeight += 8.0
             } else {
                 scrubberY = panelHeight - bottomInset - 44.0 - 41.0
+                if contentInset > 0.0 {
+                    scrubberY -= contentInset + 3.0
+                }
             }
             
             let scrubberFrame = CGRect(origin: CGPoint(x: leftInset, y: scrubberY), size: CGSize(width: width - leftInset - rightInset, height: 34.0))

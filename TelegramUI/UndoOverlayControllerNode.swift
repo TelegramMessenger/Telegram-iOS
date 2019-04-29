@@ -9,6 +9,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let timerTextNode: ImmediateTextNode
     private let iconNode: ASImageNode?
     private let iconCheckNode: RadialStatusNode?
+    private let animationNode: AnimationNode?
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let buttonTextNode: ImmediateTextNode
@@ -49,19 +50,23 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             case let .removedChat(text):
                 self.iconNode = nil
                 self.iconCheckNode = nil
+                self.animationNode = nil
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = true
                 self.originalRemainingSeconds = 5
             case let .archivedChat(_, title, text, undo):
-                self.iconNode = ASImageNode()
-                self.iconNode?.displayWithoutProcessing = true
-                self.iconNode?.displaysAsynchronously = false
                 if undo {
-                    self.iconCheckNode = RadialStatusNode(backgroundNodeColor: .clear)
+                    self.iconNode = ASImageNode()
+                    self.iconNode?.displayWithoutProcessing = true
+                    self.iconNode?.displaysAsynchronously = false
                     self.iconNode?.image = UIImage(bundleImageName: "Chat List/ArchivedUndoIcon")
+                    self.iconCheckNode = RadialStatusNode(backgroundNodeColor: .clear)
+                    self.animationNode = nil
                 } else {
+                    self.iconNode = nil
                     self.iconCheckNode = nil
                     self.iconNode?.image = UIImage(bundleImageName: "Chat List/UndoInfoIcon")
+                    self.animationNode = AnimationNode(animation: "anim_infotip", keysToColor: ["info1.info1.stroke", "info2.info2.Fill"], color: UIColor(rgb: 0x474747), scale: 1.0)
                 }
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
@@ -73,6 +78,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconNode?.displaysAsynchronously = false
                 self.iconNode?.image = UIImage(bundleImageName: undo ? "Chat List/HidArchiveUndoIcon" : "Chat List/UndoInfoIcon")
                 self.iconCheckNode = nil
+                self.animationNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
@@ -109,6 +115,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         }
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)
         self.iconCheckNode.flatMap(self.panelWrapperNode.addSubnode)
+        self.animationNode.flatMap(self.panelWrapperNode.addSubnode)
         self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
         if displayUndo {
@@ -245,6 +252,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             }
         }
         
+        if let animationNode = self.animationNode, let iconSize = animationNode.preferredSize() {
+            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
+            transition.updateFrame(node: animationNode, frame: iconFrame)
+        }
+        
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((leftInset - timerTextSize.width) / 2.0), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
         let statusSize: CGFloat = 30.0
@@ -267,6 +279,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         if let iconCheckNode = self.iconCheckNode, self.iconNode != nil {
             Queue.mainQueue().after(0.2, { [weak iconCheckNode] in
                 iconCheckNode?.transitionToState(.check(.black), completion: {})
+            })
+        }
+        
+        if let animationNode = self.animationNode {
+            Queue.mainQueue().after(0.2, { [weak animationNode] in
+                animationNode?.play()
             })
         }
         

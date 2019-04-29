@@ -2801,6 +2801,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             guard let strongSelf = self, let layout = strongSelf.validLayout, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }
+            
+            if let location = location, location.y < strongSelf.navigationHeight {
+                return
+            }
+            
             let icon: UIImage?
             switch DeviceMetrics.forScreenSize(layout.size) {
                 case .iPhoneX?, .iPhoneXSMax?:
