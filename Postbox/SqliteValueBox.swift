@@ -1613,8 +1613,11 @@ final class SqliteValueBox: ValueBox {
     }
     
     func renameTable(_ table: ValueBoxTable, to toTable: ValueBoxTable) {
+        self.checkTable(table)
         let resultCode = database.execute("ALTER TABLE t\(table.id) RENAME TO t\(toTable.id)")
         assert(resultCode)
+        self.tables[toTable.id] = table
+        self.tables.removeValue(forKey: table.id)
     }
     
     public func fullTextMatch(_ table: ValueBoxFullTextTable, collectionId: String?, query: String, tags: String?, values: (String, String) -> Bool) {
@@ -1860,6 +1863,7 @@ final class SqliteValueBox: ValueBox {
     
     public func removeTable(_ table: ValueBoxTable) {
         let _ = self.database.execute("DROP TABLE t\(table.id)")
+        self.tables.removeValue(forKey: table.id)
     }
     
     public func drop() {
