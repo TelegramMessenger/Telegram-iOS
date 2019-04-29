@@ -294,7 +294,7 @@ enum ChatListNodeScrollPosition {
 }
 
 enum ChatListNodeEmtpyState: Equatable {
-    case notEmpty
+    case notEmpty(containsChats: Bool)
     case empty(isLoading: Bool)
 }
 
@@ -367,6 +367,8 @@ final class ChatListNode: ListView {
     
     var isEmptyUpdated: ((ChatListNodeEmtpyState) -> Void)?
     private var currentIsEmptyState: ChatListNodeEmtpyState?
+    
+    var addedVisibleChatsWithPeerIds: (([PeerId]) -> Void)?
     
     private let currentRemovingPeerId = Atomic<PeerId?>(value: nil)
     func setCurrentRemovingPeerId(_ peerId: PeerId?) {
@@ -1145,11 +1147,36 @@ final class ChatListNode: ListView {
                     } else if transition.chatListView.filteredEntries.isEmpty {
                         isEmptyState = .empty(isLoading: false)
                     } else {
-                        isEmptyState = .notEmpty
+                        var containsChats = false
+                        loop: for entry in transition.chatListView.filteredEntries {
+                            switch entry {
+                                case .GroupReferenceEntry, .HoleEntry, .PeerEntry:
+                                    containsChats = true
+                                    break loop
+                                case .ArchiveIntro:
+                                    break
+                            }
+                        }
+                        isEmptyState = .notEmpty(containsChats: containsChats)
                     }
                     if strongSelf.currentIsEmptyState != isEmptyState {
                         strongSelf.currentIsEmptyState = isEmptyState
                         strongSelf.isEmptyUpdated?(isEmptyState)
+                    }
+                    
+                    var insertedPeerIds: [PeerId] = []
+                    for item in transition.insertItems {
+                        if let item = item.item as? ChatListItem {
+                            switch item.content {
+                                case let .peer(peer):
+                                    insertedPeerIds.append(peer.peer.peerId)
+                                case .groupReference:
+                                    break
+                            }
+                        }
+                    }
+                    if !insertedPeerIds.isEmpty {
+                        strongSelf.addedVisibleChatsWithPeerIds?(insertedPeerIds)
                     }
                     
                     completion()

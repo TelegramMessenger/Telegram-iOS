@@ -1506,8 +1506,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
         super.animateFrameTransition(progress, currentValue)
         
-        if let item = self.item, case .groupReference = item.content {
-            self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue - itemHeight, 0.0)
+        if let item = self.item {
+            if case .groupReference = item.content {
+                self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue - itemHeight, 0.0)
+            } else {
+                var separatorFrame = self.separatorNode.frame
+                separatorFrame.origin.y = currentValue - UIScreenPixel
+                self.separatorNode.frame = separatorFrame
+            }
         }
     }
 }

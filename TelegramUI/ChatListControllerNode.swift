@@ -77,6 +77,10 @@ final class ChatListControllerNode: ASDisplayNode {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, transition: .immediate)
                         }
                     }
+                case .notEmpty(false):
+                    if case .group = strongSelf.groupId {
+                        strongSelf.dismissSelf?()
+                    }
                 default:
                     if let chatListEmptyNode = strongSelf.chatListEmptyNode {
                         strongSelf.chatListEmptyNode = nil

@@ -18,7 +18,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let action: (Bool) -> Void
     private let dismiss: () -> Void
     
-    private let effectView: UIVisualEffectView
+    private let effectView: UIView
     
     private var originalRemainingSeconds: Int
     private var remainingSeconds: Int
@@ -52,7 +52,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = true
                 self.originalRemainingSeconds = 5
-            case let .archivedChat(title, text, undo):
+            case let .archivedChat(_, title, text, undo):
                 self.iconNode = ASImageNode()
                 self.iconNode?.displayWithoutProcessing = true
                 self.iconNode?.displaysAsynchronously = false
@@ -256,9 +256,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     func animateIn(asReplacement: Bool) {
         if asReplacement {
-            let offset = self.bounds.width
-            self.panelWrapperNode.layer.animatePosition(from: CGPoint(x: offset, y: 0.0), to: CGPoint(), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: nil)
-            self.panelNode.layer.animatePosition(from: CGPoint(x: offset, y: 0.0), to: CGPoint(), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: nil)
+            let offset = self.bounds.height - self.panelWrapperNode.frame.minY
+            self.panelWrapperNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: nil)
+            self.panelNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: nil)
         } else {
             self.panelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             self.panelWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
@@ -281,11 +281,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     func animateOutWithReplacement(completion: @escaping () -> Void) {
-        let offset = -self.bounds.width
-        self.panelWrapperNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: offset, y: 0.0), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
+        self.panelWrapperNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, removeOnCompletion: false, completion: { _ in
             completion()
         })
-        self.panelNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: offset, y: 0.0), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: nil)
+        self.panelWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.panelNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, removeOnCompletion: false, completion: { _ in
+            completion()
+        })
+        self.panelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

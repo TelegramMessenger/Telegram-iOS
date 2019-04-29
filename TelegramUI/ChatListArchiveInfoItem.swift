@@ -19,11 +19,17 @@ class ChatListArchiveInfoItem: ListViewItem {
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatListArchiveInfoItemNode()
-            node.insets = ChatListItemNode.insets(first: false, last: false, firstWithHeader: false)
-            node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
+            
+            let (nodeLayout, apply) = node.asyncLayout()(self, params, false)
+            
+            node.insets = nodeLayout.insets
+            node.contentSize = nodeLayout.contentSize
+            
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { _ in })
+                    return (nil, { _ in
+                        apply()
+                    })
                 })
             }
         }

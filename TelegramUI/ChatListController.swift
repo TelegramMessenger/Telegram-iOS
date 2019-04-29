@@ -424,16 +424,15 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     state.peerIdWithRevealedOptions = nil
                     return state
                 }
-                var hadCurrent = false
-                strongSelf.window?.forEachController({ controller in
+                strongSelf.forEachController({ controller in
                     if let controller = controller as? UndoOverlayController {
-                        hadCurrent = true
                         controller.dismissWithReplacementAnimation()
                     }
+                    return true
                 })
                 
                 if value {
-                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: true), elevatedLayout: strongSelf.groupId == .root, animateInAsReplacement: hadCurrent, action: { [weak self] shouldCommit in
+                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: true), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
                         guard let strongSelf = self else {
                             return
                         }
@@ -449,10 +448,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                                 return updatedValue
                             }).start()
                         }
-                    }), in: .window(.root))
+                    }), in: .current)
                 } else {
-                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedText, undo: false), elevatedLayout: strongSelf.groupId == .root, animateInAsReplacement: hadCurrent, action: { _ in
-                    }), in: .window(.root))
+                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                    }), in: .current)
                 }
             })
         }
@@ -541,16 +540,14 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                                     state.pendingClearHistoryPeerIds.insert(peer.peerId)
                                     return state
                                 })
-                                
-                                var hadCurrent = false
-                                strongSelf.window?.forEachController({ controller in
+                                strongSelf.forEachController({ controller in
                                     if let controller = controller as? UndoOverlayController {
-                                        hadCurrent = true
                                         controller.dismissWithReplacementAnimation()
                                     }
+                                    return true
                                 })
                                 
-                                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: strongSelf.groupId == .root, animateInAsReplacement: hadCurrent, action: { shouldCommit in
+                                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { shouldCommit in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -572,7 +569,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                                             return state
                                         })
                                     }
-                                }), in: .window(.root))
+                                }), in: .current)
                             }
                             
                             if canRemoveGlobally {
@@ -1003,15 +1000,36 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 }
             }))
         }
+        
+        self.chatListDisplayNode.chatListNode.addedVisibleChatsWithPeerIds = { [weak self] peerIds in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    switch controller.content {
+                        case let .archivedChat(archivedChat):
+                            if peerIds.contains(archivedChat.peerId) {
+                                controller.dismiss()
+                            }
+                        default:
+                            break
+                    }
+                }
+                return true
+            })
+        }
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
-        self.window?.forEachController({ controller in
+        self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()
             }
+            return true
         })
     }
     
@@ -1468,12 +1486,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     }
                 }
         
-                var hadCurrent = false
-                strongSelf.window?.forEachController({ controller in
+                strongSelf.forEachController({ controller in
                     if let controller = controller as? UndoOverlayController {
-                        hadCurrent = true
                         controller.dismissWithReplacementAnimation()
                     }
+                    return true
                 })
         
                 let title: String
@@ -1484,24 +1501,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         title = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
                         text = strongSelf.presentationData.strings.ChatList_UndoArchiveText1
                         undo = false
-                    case 1:
-                        title = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
-                        text = strongSelf.presentationData.strings.ChatList_UndoArchiveText2
-                        undo = false
-                    case 2:
-                        title = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
-                        text = strongSelf.presentationData.strings.ChatList_UndoArchiveText3
-                        undo = false
-                    case 3:
-                        title = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
-                        text = strongSelf.presentationData.strings.ChatList_UndoArchiveText4
-                        undo = false
                     default:
                         title = ""
                         text = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
                         undo = true
                 }
-                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .archivedChat(title: title, text: text, undo: undo), elevatedLayout: strongSelf.groupId == .root, animateInAsReplacement: hadCurrent, action: action), in: .window(.root))
+                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .archivedChat(peerId: peerIds[0], title: title, text: text, undo: undo), elevatedLayout: false, animateInAsReplacement: true, action: action), in: .current)
                 
                 strongSelf.chatListDisplayNode.playArchiveAnimation()
             })
@@ -1557,15 +1562,14 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
-        var hadCurrent = false
-        self.window?.forEachController({ controller in
+        self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
-                hadCurrent = true
                 controller.dismissWithReplacementAnimation()
             }
+            return true
         })
         
-        self.present(UndoOverlayController(context: self.context, content: .removedChat(text: statusText), elevatedLayout: self.groupId == .root, animateInAsReplacement: hadCurrent, action: { [weak self] shouldCommit in
+        self.present(UndoOverlayController(context: self.context, content: .removedChat(text: statusText), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
             guard let strongSelf = self else {
                 return
             }
@@ -1592,7 +1596,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 })
                 self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
             }
-        }), in: .window(.root))
+        }), in: .current)
     }
     
     override public func setToolbar(_ toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
