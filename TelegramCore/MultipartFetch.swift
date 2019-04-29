@@ -64,8 +64,14 @@ private enum MultipartFetchDownloadError {
     case hashesMissing
 }
 
+private enum MultipartFetchGenericLocationResult {
+    case none
+    case location(Api.InputFileLocation)
+    case revalidate
+}
+
 private enum MultipartFetchMasterLocation {
-    case generic(Int32, (TelegramMediaResource, Data?) -> Api.InputFileLocation?)
+    case generic(Int32, (TelegramMediaResource, MediaResourceReference?, Data?) -> MultipartFetchGenericLocationResult)
     case web(Int32, Api.InputWebFileLocation)
     
     var datacenterId: Int32 {
@@ -272,7 +278,7 @@ private enum MultipartFetchSource {
     case master(location: MultipartFetchMasterLocation, download: DownloadWrapper)
     case cdn(masterDatacenterId: Int32, fileToken: Data, key: Data, iv: Data, download: DownloadWrapper, masterDownload: DownloadWrapper, hashSource: MultipartCdnHashSource)
     
-    func request(offset: Int32, limit: Int32, tag: MediaResourceFetchTag?, resource: TelegramMediaResource, fileReference: Data?, continueInBackground: Bool) -> Signal<Data, MultipartFetchDownloadError> {
+    func request(offset: Int32, limit: Int32, tag: MediaResourceFetchTag?, resource: TelegramMediaResource, resourceReference: MediaResourceReference?, fileReference: Data?, continueInBackground: Bool) -> Signal<Data, MultipartFetchDownloadError> {
         switch self {
             case .none:
                 return .never()
@@ -284,36 +290,39 @@ private enum MultipartFetchSource {
                 
                 switch location {
                     case let .generic(_, location):
-                        if let parsedLocation = location(resource, fileReference) {
-                            return download.request(Api.functions.upload.getFile(location: parsedLocation, offset: offset, limit: Int32(updatedLength)), tag: tag, continueInBackground: continueInBackground)
-                            |> mapError { error -> MultipartFetchDownloadError in
-                                if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {
-                                    return .revalidateMediaReference
+                        switch location(resource, resourceReference, fileReference) {
+                            case .none:
+                                return .fail(.revalidateMediaReference)
+                            case .revalidate:
+                                return .fail(.revalidateMediaReference)
+                            case let .location(parsedLocation):
+                                return download.request(Api.functions.upload.getFile(location: parsedLocation, offset: offset, limit: Int32(updatedLength)), tag: tag, continueInBackground: continueInBackground)
+                                |> mapError { error -> MultipartFetchDownloadError in
+                                    if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {
+                                        return .revalidateMediaReference
+                                    }
+                                    return .generic
                                 }
-                                return .generic
-                            }
-                            |> mapToSignal { result -> Signal<Data, MultipartFetchDownloadError> in
-                                switch result {
-                                    case let .file(_, _, bytes):
-                                        var resultData = bytes.makeData()
-                                        if resultData.count > Int(limit) {
-                                            resultData.count = Int(limit)
-                                        }
-                                        return .single(resultData)
-                                    case let .fileCdnRedirect(dcId, fileToken, encryptionKey, encryptionIv, partHashes):
-                                        var parsedPartHashes: [Int32: Data] = [:]
-                                        for part in partHashes {
-                                            switch part {
-                                                case let .fileHash(offset, limit, bytes):
-                                                    assert(limit == 128 * 1024)
-                                                    parsedPartHashes[offset] = bytes.makeData()
+                                |> mapToSignal { result -> Signal<Data, MultipartFetchDownloadError> in
+                                    switch result {
+                                        case let .file(_, _, bytes):
+                                            var resultData = bytes.makeData()
+                                            if resultData.count > Int(limit) {
+                                                resultData.count = Int(limit)
                                             }
-                                        }
-                                        return .fail(.switchToCdn(id: dcId, token: fileToken.makeData(), key: encryptionKey.makeData(), iv: encryptionIv.makeData(), partHashes: parsedPartHashes))
+                                            return .single(resultData)
+                                        case let .fileCdnRedirect(dcId, fileToken, encryptionKey, encryptionIv, partHashes):
+                                            var parsedPartHashes: [Int32: Data] = [:]
+                                            for part in partHashes {
+                                                switch part {
+                                                    case let .fileHash(offset, limit, bytes):
+                                                        assert(limit == 128 * 1024)
+                                                        parsedPartHashes[offset] = bytes.makeData()
+                                                }
+                                            }
+                                            return .fail(.switchToCdn(id: dcId, token: fileToken.makeData(), key: encryptionKey.makeData(), iv: encryptionIv.makeData(), partHashes: parsedPartHashes))
+                                    }
                                 }
-                            }
-                        } else {
-                            return .fail(.revalidateMediaReference)
                         }
                     case let .web(_, location):
                         return download.request(Api.functions.upload.getWebFile(location: location, offset: offset, limit: Int32(updatedLength)), tag: tag, continueInBackground: continueInBackground)
@@ -388,6 +397,7 @@ private final class MultipartFetchManager {
     let partAlignment = 128 * 1024
     
     var resource: TelegramMediaResource
+    var resourceReference: MediaResourceReference?
     var fileReference: Data?
     let parameters: MediaResourceFetchParameters?
     let consumerId: Int64
@@ -440,8 +450,10 @@ private final class MultipartFetchManager {
         if let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo {
             self.fileReference = info.reference.apiFileReference
             self.continueInBackground = info.continueInBackground
+            self.resourceReference = info.reference
         } else {
             self.continueInBackground = false
+            self.resourceReference = nil
         }
         
         self.state = MultipartDownloadState(encryptionKey: encryptionKey, decryptedSize: decryptedSize)
@@ -592,7 +604,7 @@ private final class MultipartFetchManager {
                 requestLimit = (requestLimit / self.partAlignment + 1) * self.partAlignment
             }
             
-            let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(requestLimit), tag: self.parameters?.tag, resource: self.resource, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
+            let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(requestLimit), tag: self.parameters?.tag, resource: self.resource, resourceReference: self.resourceReference, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
             |> deliverOn(self.queue)
             let partDisposable = MetaDisposable()
             self.fetchingParts[downloadRange.lowerBound] = (downloadRange.count, partDisposable)
@@ -621,19 +633,18 @@ private final class MultipartFetchManager {
                             strongSelf.revalidatingMediaReference = true
                             if let info = strongSelf.parameters?.info as? TelegramCloudMediaResourceFetchInfo {
                                 strongSelf.revalidateMediaReferenceDisposable.set((revalidateMediaResourceReference(postbox: strongSelf.postbox, network: strongSelf.network, revalidationContext: strongSelf.revalidationContext, info: info, resource: strongSelf.resource)
-                                |> deliverOn(strongSelf.queue)).start(next: { validatedResource in
+                                |> deliverOn(strongSelf.queue)).start(next: { validationResult in
                                     if let strongSelf = self {
                                         strongSelf.revalidatingMediaReference = false
                                         strongSelf.revalidatedMediaReference = true
-                                        if let validatedResource = validatedResource as? TelegramCloudMediaResourceWithFileReference, let reference = validatedResource.fileReference {
+                                        if let validatedResource = validationResult.updatedResource as? TelegramCloudMediaResourceWithFileReference, let reference = validatedResource.fileReference {
                                             strongSelf.fileReference = reference
                                         }
-                                        strongSelf.resource = validatedResource
+                                        strongSelf.resource = validationResult.updatedResource
+                                        strongSelf.resourceReference = validationResult.updatedReference
                                         strongSelf.checkState()
                                     }
                                 }, error: { _ in
-                                    if let strongSelf = self {
-                                    }
                                 }))
                             } else {
                                 Logger.shared.log("MultipartFetch", "reference invalidation requested, but no valid reference given")
@@ -680,34 +691,46 @@ func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidati
         if let resource = resource as? WebFileReferenceMediaResource {
             location = .web(Int32(datacenterId), resource.apiInputLocation)
         } else {
-            location = .generic(Int32(datacenterId), { resource, fileReference in
+            location = .generic(Int32(datacenterId), { resource, resourceReference, fileReference in
                 if let resource = resource as? TelegramCloudMediaResource {
-                    return resource.apiInputLocation(fileReference: fileReference)
+                    if let location = resource.apiInputLocation(fileReference: fileReference){
+                        return .location(location)
+                    } else {
+                        return .none
+                    }
                 } else if let resource = resource as? CloudPeerPhotoSizeMediaResource {
                     guard let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo else {
-                        return nil
+                        return .none
                     }
-                    switch info.reference {
+                    switch resourceReference ?? info.reference {
                         case let .avatar(peer, _):
-                            return resource.apiInputLocation(peerReference: peer)
-                        case let .messageAuthorAvatar(message, resource):
+                            if let location = resource.apiInputLocation(peerReference: peer) {
+                                return .location(location)
+                            } else {
+                                return .none
+                            }
+                        case .messageAuthorAvatar:
                             
-                            return nil
+                            return .revalidate
                         default:
-                            return nil
+                            return .none
                     }
                 } else if let resource = resource as? CloudStickerPackThumbnailMediaResource {
                     guard let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo else {
-                        return nil
+                        return .none
                     }
                     switch info.reference {
                         case let .stickerPackThumbnail(stickerPack, _):
-                            return resource.apiInputLocation(packReference: stickerPack)
+                            if let location = resource.apiInputLocation(packReference: stickerPack) {
+                                return .location(location)
+                            } else {
+                                return .none
+                            }
                         default:
-                            return nil
+                            return .none
                     }
                 } else {
-                    return nil
+                    return .none
                 }
             })
         }
