@@ -47,6 +47,21 @@ private let gradientColors: [NSArray] = [
     [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
 ]
 
+private func generateGradientFilledCircleImage(diameter: CGFloat, colors: NSArray) -> UIImage? {
+    return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        context.addEllipse(in: bounds)
+        context.clip()
+        
+        var locations: [CGFloat] = [0.0, 1.0]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
+        
+        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())
+    })
+}
+
 private let grayscaleColors: NSArray = [
     UIColor(rgb: 0xb1b1b1).cgColor, UIColor(rgb: 0xcdcdcd).cgColor
 ]
@@ -210,12 +225,21 @@ public final class AvatarNode: ASDisplayNode {
             return
         }
         
+        var backgroundColor = theme.chatList.neutralAvatarColor
         let animationBackgroundNode = ASImageNode()
         animationBackgroundNode.frame = self.imageNode.frame
-        animationBackgroundNode.image = generateFilledCircleImage(diameter: self.imageNode.frame.width, color: theme.chatList.neutralAvatarColor)
+        if let overrideImage = self.overrideImage, case let .archivedChatsIcon(hiddenByDefault) = overrideImage {
+            if hiddenByDefault {
+                animationBackgroundNode.image = generateFilledCircleImage(diameter: self.imageNode.frame.width, color: theme.chatList.neutralAvatarColor)
+            } else {
+                backgroundColor = UIColor(rgb: 0x4fbaf7)
+                animationBackgroundNode.image = generateGradientFilledCircleImage(diameter: self.imageNode.frame.width, colors: gradientColors[5])
+            }
+        }
+        
         self.addSubnode(animationBackgroundNode)
         
-        let animationNode = AnimationNode(animation: name, keysToColor: keysToColor, color: theme.chatList.neutralAvatarColor, scale: scale)
+        let animationNode = AnimationNode(animation: name, keysToColor: keysToColor, color: backgroundColor, scale: scale)
         animationNode.completion = { [weak animationBackgroundNode, weak self] in
             self?.imageNode.isHidden = false
             animationBackgroundNode?.removeFromSupernode()
