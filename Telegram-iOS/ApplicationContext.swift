@@ -238,7 +238,7 @@ final class AuthorizedApplicationContext {
                     } else {
                         strongSelf.unlockedStatePromise.set(.single(false))
                         strongSelf.updateCoveringViewSnaphot(true)
-                        strongSelf.mainWindow.coveringView = strongSelf.lockedCoveringView
+                        strongSelf.mainWindow.coveringView = strongSelf.passcodeController == nil ? strongSelf.lockedCoveringView : nil
                         strongSelf.rootController.view.isHidden = true
                         strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
                         strongSelf.notificationController.view.isHidden = true
@@ -246,7 +246,7 @@ final class AuthorizedApplicationContext {
                 } else {
                     if !updatedState.isActive && updatedState.autolockTimeout != nil && isLockable {
                         strongSelf.updateCoveringViewSnaphot(true)
-                        strongSelf.mainWindow.coveringView = strongSelf.lockedCoveringView
+                        strongSelf.mainWindow.coveringView = strongSelf.passcodeController == nil ? strongSelf.lockedCoveringView : nil
                         strongSelf.rootController.view.isHidden = true
                         strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
                         strongSelf.notificationController.view.isHidden = true
