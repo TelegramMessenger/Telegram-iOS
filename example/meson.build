@@ -5,6 +5,11 @@ common_source += files('lottieview.cpp')
 demo_sources = files('demo.cpp')
 demo_sources += common_source
 
+executable('rlottie',
+           'rlottietest.cpp',
+           include_directories : inc,
+           link_with : rlottie_lib)
+
 executable('vectorTest',
            'vectortest.cpp',
            include_directories : inc,
