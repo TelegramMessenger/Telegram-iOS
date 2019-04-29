@@ -65,7 +65,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     self.iconNode = nil
                     self.iconCheckNode = nil
-                    self.iconNode?.image = UIImage(bundleImageName: "Chat List/UndoInfoIcon")
                     self.animationNode = AnimationNode(animation: "anim_infotip", keysToColor: ["info1.info1.stroke", "info2.info2.Fill"], color: UIColor(rgb: 0x474747), scale: 1.0)
                 }
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
@@ -73,12 +72,17 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 displayUndo = undo
                 self.originalRemainingSeconds = 5
             case let .hidArchive(title, text, undo):
-                self.iconNode = ASImageNode()
-                self.iconNode?.displayWithoutProcessing = true
-                self.iconNode?.displaysAsynchronously = false
-                self.iconNode?.image = UIImage(bundleImageName: undo ? "Chat List/HidArchiveUndoIcon" : "Chat List/UndoInfoIcon")
+                if undo {
+                    self.iconNode = ASImageNode()
+                    self.iconNode?.displayWithoutProcessing = true
+                    self.iconNode?.displaysAsynchronously = false
+                    self.iconNode?.image = UIImage(bundleImageName: "Chat List/HidArchiveUndoIcon")
+                    self.animationNode = nil
+                } else {
+                    self.iconNode = nil
+                    self.animationNode = AnimationNode(animation: "anim_infotip", keysToColor: ["info1.info1.stroke", "info2.info2.Fill"], color: UIColor(rgb: 0x474747), scale: 1.0)
+                }
                 self.iconCheckNode = nil
-                self.animationNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
