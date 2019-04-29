@@ -1613,6 +1613,7 @@ final class SqliteValueBox: ValueBox {
     }
     
     func renameTable(_ table: ValueBoxTable, to toTable: ValueBoxTable) {
+        self.checkTable(table)
         let resultCode = database.execute("ALTER TABLE t\(table.id) RENAME TO t\(toTable.id)")
         assert(resultCode)
     }

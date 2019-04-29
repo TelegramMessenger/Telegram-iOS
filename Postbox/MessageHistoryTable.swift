@@ -1405,7 +1405,7 @@ final class MessageHistoryTable: Table {
             }
             
             if !message.globalTags.isEmpty || !previousMessage.globalTags.isEmpty {
-                assertionFailure("implement global tags")
+                //assertionFailure("implement global tags")
                 if index != message.index {
                     
                 } else if message.globalTags != previousMessage.globalTags {
