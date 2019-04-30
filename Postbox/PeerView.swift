@@ -10,8 +10,9 @@ public struct PeerViewComponents: OptionSet {
     public static let cachedData = PeerViewComponents(rawValue: 1 << 0)
     public static let subPeers = PeerViewComponents(rawValue: 1 << 1)
     public static let messages = PeerViewComponents(rawValue: 1 << 2)
+    public static let groupId = PeerViewComponents(rawValue: 1 << 3)
     
-    public static let all: PeerViewComponents = [.cachedData, .subPeers, .messages]
+    public static let all: PeerViewComponents = [.cachedData, .subPeers, .messages, .groupId]
 }
 
 final class MutablePeerView: MutablePostboxView {
@@ -23,6 +24,7 @@ final class MutablePeerView: MutablePostboxView {
     var peerPresences: [PeerId: PeerPresence] = [:]
     var messages: [MessageId: Message] = [:]
     var peerIsContact: Bool
+    var groupId: PeerGroupId?
     
     init(postbox: Postbox, peerId: PeerId, components: PeerViewComponents) {
         self.components = components
@@ -40,6 +42,7 @@ final class MutablePeerView: MutablePostboxView {
         self.peerId = peerId
         self.cachedData = cachedData
         self.peerIsContact = peerIsContact
+        self.groupId = postbox.chatListIndexTable.get(peerId: peerId).inclusion.groupId
         var peerIds = Set<PeerId>()
         var messageIds = Set<MessageId>()
         peerIds.insert(peerId)
@@ -236,6 +239,14 @@ final class MutablePeerView: MutablePostboxView {
             }
         }
         
+        if transaction.currentUpdatedChatListInclusions[self.peerId] != nil {
+            let groupId = postbox.chatListIndexTable.get(peerId: peerId).inclusion.groupId
+            if self.groupId != groupId {
+                self.groupId = groupId
+                updated = true
+            }
+        }
+        
         return updated
     }
     
@@ -252,6 +263,7 @@ public final class PeerView: PostboxView {
     public let peerPresences: [PeerId: PeerPresence]
     public let messages: [MessageId: Message]
     public let peerIsContact: Bool
+    public let groupId: PeerGroupId?
     
     init(_ mutableView: MutablePeerView) {
         self.peerId = mutableView.peerId
@@ -261,5 +273,6 @@ public final class PeerView: PostboxView {
         self.peerPresences = mutableView.peerPresences
         self.messages = mutableView.messages
         self.peerIsContact = mutableView.peerIsContact
+        self.groupId = mutableView.groupId
     }
 }
