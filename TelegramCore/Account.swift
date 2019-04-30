@@ -267,56 +267,71 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
     }, additionalChatListIndexNamespace: Namespaces.Message.Cloud, messageNamespacesRequiringGroupStatsValidation: [Namespaces.Message.Cloud])
 }()
 
-public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys: Set<ValueBoxKey>, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<(String, [ValueBoxKey: PreferencesEntry]), NoError> {
+public enum AccountPreferenceEntriesResult {
+    case progress(Float)
+    case result(String, [ValueBoxKey: PreferencesEntry])
+}
+
+public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys: Set<ValueBoxKey>, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountPreferenceEntriesResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters)
     return postbox
-    |> mapToSignal { value -> Signal<(String, [ValueBoxKey: PreferencesEntry]), NoError> in
+    |> mapToSignal { value -> Signal<AccountPreferenceEntriesResult, NoError> in
         switch value {
+            case let .upgrading(progress):
+                return .single(.progress(progress))
             case let .postbox(postbox):
-                return postbox.transaction { transaction -> (String, [ValueBoxKey: PreferencesEntry]) in
+                return postbox.transaction { transaction -> AccountPreferenceEntriesResult in
                     var result: [ValueBoxKey: PreferencesEntry] = [:]
                     for key in keys {
                         if let value = transaction.getPreferencesEntry(key: key) {
                             result[key] = value
                         }
                     }
-                    return (path, result)
+                    return .result(path, result)
                 }
-            default:
-                return .complete()
         }
     }
 }
 
-public func accountNoticeEntries(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<(String, [ValueBoxKey: NoticeEntry]), NoError> {
+public enum AccountNoticeEntriesResult {
+    case progress(Float)
+    case result(String, [ValueBoxKey: NoticeEntry])
+}
+
+public func accountNoticeEntries(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountNoticeEntriesResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters)
     return postbox
-    |> mapToSignal { value -> Signal<(String, [ValueBoxKey: NoticeEntry]), NoError> in
+    |> mapToSignal { value -> Signal<AccountNoticeEntriesResult, NoError> in
         switch value {
+            case let .upgrading(progress):
+                return .single(.progress(progress))
             case let .postbox(postbox):
-                return postbox.transaction { transaction -> (String, [ValueBoxKey: NoticeEntry]) in
-                    return (path, transaction.getAllNoticeEntries())
+                return postbox.transaction { transaction -> AccountNoticeEntriesResult in
+                    return .result(path, transaction.getAllNoticeEntries())
                 }
-            default:
-                return .complete()
         }
     }
 }
 
-public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<PostboxAccessChallengeData, NoError> {
+public enum LegacyAccessChallengeDataResult {
+    case progress(Float)
+    case result(PostboxAccessChallengeData)
+}
+
+public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<LegacyAccessChallengeDataResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters)
     return postbox
-    |> mapToSignal { value -> Signal<PostboxAccessChallengeData, NoError> in
+    |> mapToSignal { value -> Signal<LegacyAccessChallengeDataResult, NoError> in
         switch value {
+            case let .upgrading(progress):
+                return .single(.progress(progress))
             case let .postbox(postbox):
-                return postbox.transaction { transaction -> PostboxAccessChallengeData in
-                    return transaction.legacyGetAccessChallengeData()
+                return postbox.transaction { transaction -> LegacyAccessChallengeDataResult in
+                    return .result(transaction.legacyGetAccessChallengeData())
                 }
-            default:
-                return .complete()
         }
     }
 }
