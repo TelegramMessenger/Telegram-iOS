@@ -134,7 +134,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             rightBarButtonItem.accessibilityLabel = "Compose"
             self.navigationItem.rightBarButtonItem = rightBarButtonItem
         } else {
-            self.navigationItem.title = "Archived Chats"
+            self.navigationItem.title = self.presentationData.strings.ChatList_ArchivedChatsTitle
             let rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
             rightBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
             self.navigationItem.rightBarButtonItem = rightBarButtonItem
