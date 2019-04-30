@@ -1009,6 +1009,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         })
                     }
                     
+                    var animateBadges = animateContent
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
                         let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: layoutOffset), size: reorderControlSizeAndApply.0)
                         if strongSelf.reorderControlNode == nil {
@@ -1029,6 +1030,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             transition.updateFrame(node: reorderControlNode, frame: reorderControlFrame)
                         }
                     } else if let reorderControlNode = strongSelf.reorderControlNode {
+                        animateBadges = false
                         strongSelf.reorderControlNode = nil
                         transition.updateAlpha(node: reorderControlNode, alpha: 0.0, completion: { [weak reorderControlNode] _ in
                             reorderControlNode?.removeFromSupernode()
@@ -1076,8 +1078,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let _ = textApply()
                     let _ = authorApply()
                     let _ = titleApply()
-                    let _ = badgeApply(animateContent, !isMuted)
-                    let _ = mentionBadgeApply(animateContent, true)
+                    let _ = badgeApply(animateBadges, !isMuted)
+                    let _ = mentionBadgeApply(animateBadges, true)
                     let _ = onlineApply(animateContent)
                     
                     let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + revealOffset, dy: 0.0)

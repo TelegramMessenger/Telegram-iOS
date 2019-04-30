@@ -154,9 +154,10 @@ final class ChatListBadgeNode: ASDisplayNode {
                             animateTextNode = true
                         } else if !currentIsEmpty && nextIsEmpty && !strongSelf.isHiddenInternal {
                             strongSelf.isHiddenInternal = true
-                            strongSelf.layer.animateScale(from: 1.0, to: 0.0001, duration: 0.12, removeOnCompletion: true, completion: { [weak self] finished in
+                            strongSelf.layer.animateScale(from: 1.0, to: 0.0001, duration: 0.12, removeOnCompletion: false, completion: { [weak self] finished in
                                 if let strongSelf = self {
                                     strongSelf.isHidden = true
+                                    strongSelf.layer.removeAnimation(forKey: "transform.scale")
                                 }
                             })
                         }
