@@ -78,6 +78,8 @@ func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureIdLocalIm
                     }
                 case .resourceSizeUpdated:
                     break
+                case .progressUpdated:
+                    break
                 case let .moveLocalFile(path):
                     if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
                         let _ = buffer.with { buffer in

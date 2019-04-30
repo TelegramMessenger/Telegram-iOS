@@ -871,9 +871,15 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 }
             } else {
                 if let (options, peerIds) = peerIdsAndOptions {
+                    let middleAction = ToolbarAction(title: presentationData.strings.ChatList_UnarchiveAction, isEnabled: !peerIds.isEmpty)
                     let leftAction: ToolbarAction
-                    leftAction = ToolbarAction(title: presentationData.strings.ChatList_UnarchiveAction, isEnabled: !peerIds.isEmpty)
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: nil)
+                    switch options.read {
+                        case .all:
+                            leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: false)
+                        case let .selective(enabled):
+                            leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
+                    }
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: middleAction)
                 }
             }
             strongSelf.setToolbar(toolbar, transition: .animated(duration: 0.3, curve: .easeInOut))
@@ -1307,40 +1313,24 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     override public func toolbarActionSelected(action: ToolbarActionOption) {
         let peerIds = self.chatListDisplayNode.chatListNode.currentState.selectedPeerIds
         if case .left = action {
-            if case .root = self.groupId {
-                let signal: Signal<Void, NoError>
-                let context = self.context
-                if !peerIds.isEmpty {
-                    signal = self.context.account.postbox.transaction { transaction -> Void in
-                        for peerId in peerIds {
-                            togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: context.account.viewTracker, peerId: peerId, setToValue: false)
-                        }
-                    }
-                } else {
-                    let groupId = self.groupId
-                    signal = self.context.account.postbox.transaction { transaction -> Void in
-                        markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: groupId)
-                    }
-                }
-                let _ = (signal
-                |> deliverOnMainQueue).start(completed: { [weak self] in
-                    self?.donePressed()
-                })
-            } else if !peerIds.isEmpty {
-                self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds.first!)
-                let _ = (self.context.account.postbox.transaction { transaction -> Void in
+            let signal: Signal<Void, NoError>
+            let context = self.context
+            if !peerIds.isEmpty {
+                signal = self.context.account.postbox.transaction { transaction -> Void in
                     for peerId in peerIds {
-                        updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
+                        togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: context.account.viewTracker, peerId: peerId, setToValue: false)
                     }
                 }
-                |> deliverOnMainQueue).start(completed: { [weak self] in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
-                    strongSelf.donePressed()
-                })
+            } else {
+                let groupId = self.groupId
+                signal = self.context.account.postbox.transaction { transaction -> Void in
+                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: groupId)
+                }
             }
+            let _ = (signal
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                self?.donePressed()
+            })
         } else if case .right = action, !peerIds.isEmpty {
             let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
             var items: [ActionSheetItem] = []
@@ -1392,8 +1382,26 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             ])
             self.present(actionSheet, in: .window(.root))
         } else if case .middle = action, !peerIds.isEmpty {
-            self.donePressed()
-            self.archiveChats(peerIds: Array(peerIds))
+            if case .root = self.groupId {
+                self.donePressed()
+                self.archiveChats(peerIds: Array(peerIds))
+            } else {
+                if !peerIds.isEmpty {
+                    self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds.first!)
+                    let _ = (self.context.account.postbox.transaction { transaction -> Void in
+                        for peerId in peerIds {
+                            updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
+                        }
+                    }
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                        strongSelf.donePressed()
+                    })
+                }
+            }
         }
     }
     
