@@ -591,7 +591,7 @@ final class SharedApplicationContext {
                     }
                     self.mainWindow.coveringView = self.dataImportSplash
                 }
-                self.dataImportSplash?.progress = (type, value)
+                self.dataImportSplash?.progress = (.generic, progress)
             }, completed: {
                 if let dataImportSplash = self.dataImportSplash {
                     self.dataImportSplash = nil
@@ -599,7 +599,6 @@ final class SharedApplicationContext {
                         self.mainWindow.coveringView = nil
                     }
                 }
-                
                 subscriber.putNext(accountManager)
                 subscriber.putCompletion()
             })
