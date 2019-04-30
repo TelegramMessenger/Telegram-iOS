@@ -107,103 +107,121 @@ private func upgradedSharedDataValue(_ value: PreferencesEntry?) -> PreferencesE
     }
 }
 
-public func upgradedAccounts(accountManager: AccountManager, rootPath: String, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Never, NoError> {
+public func upgradedAccounts(accountManager: AccountManager, rootPath: String, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Float, NoError> {
     return accountManager.transaction { transaction -> (Int32, AccountRecordId?) in
         return (transaction.getVersion(), transaction.getCurrent()?.0)
     }
-    |> mapToSignal { version, currentId -> Signal<Never, NoError> in
-        var signal: Signal<Never, NoError> = .complete()
+    |> mapToSignal { version, currentId -> Signal<Float, NoError> in
+        var signal: Signal<Float, NoError> = .complete()
         if version < 1 {
             if let currentId = currentId {
                 let upgradePreferences = accountPreferenceEntries(rootPath: rootPath, id: currentId, keys: Set(preferencesKeyMapping.keys.map({ $0.key }) + applicationSpecificPreferencesKeyMapping.keys.map({ $0.key })), encryptionParameters: encryptionParameters)
-                |> mapToSignal { path, values -> Signal<Void, NoError> in
-                    return accountManager.transaction { transaction -> Void in
-                        for (key, value) in values {
-                            var upgradedKey: ValueBoxKey?
-                            for (k, v) in preferencesKeyMapping {
-                                if k.key == key {
-                                    upgradedKey = v.key
-                                    break
-                                }
-                            }
-                            for (k, v) in applicationSpecificPreferencesKeyMapping {
-                                if k.key == key {
-                                    upgradedKey = v.key
-                                    break
-                                }
-                            }
-                            if let upgradedKey = upgradedKey {
-                                transaction.updateSharedData(upgradedKey, { _ in
-                                    return upgradedSharedDataValue(value)
-                                })
-                            }
-                        }
-                        
-                        if let value = values[LegacyApplicationSpecificPreferencesKeyValues.presentationThemeSettings.key] as? PresentationThemeSettings {
-                            let mediaBox = MediaBox(basePath: path + "/postbox/media")
-                            let wallpapers = [value.chatWallpaper] + Array(value.themeSpecificChatWallpapers.values)
-                            for wallpaper in wallpapers {
-                                switch wallpaper {
-                                    case let .file(file):
-                                        if let path = mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
-                                            accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
-                                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
-                                            if file.isPattern {
-                                                if let color = file.settings.color, let intensity = file.settings.intensity {
-                                                    let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true).start()
-                                                }
-                                            } else {
-                                                if file.settings.blur {
-                                                    let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start()
-                                                }
-                                            }
+                |> mapToSignal { result -> Signal<Float, NoError> in
+                    switch result {
+                        case let .progress(progress):
+                            return .single(progress)
+                        case let .result(path, values):
+                            return accountManager.transaction { transaction -> Void in
+                                for (key, value) in values {
+                                    var upgradedKey: ValueBoxKey?
+                                    for (k, v) in preferencesKeyMapping {
+                                        if k.key == key {
+                                            upgradedKey = v.key
+                                            break
                                         }
-                                    case let .image(representations, _):
-                                        for representation in representations {
-                                            let resource = representation.resource
-                                            if let path = mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
-                                                accountManager.mediaBox.storeResourceData(resource.id, data: data)
-                                                let _ = mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
-                                            }
+                                    }
+                                    for (k, v) in applicationSpecificPreferencesKeyMapping {
+                                        if k.key == key {
+                                            upgradedKey = v.key
+                                            break
                                         }
-                                    default:
-                                        break
+                                    }
+                                    if let upgradedKey = upgradedKey {
+                                        transaction.updateSharedData(upgradedKey, { _ in
+                                            return upgradedSharedDataValue(value)
+                                        })
+                                    }
                                 }
+                                
+                                if let value = values[LegacyApplicationSpecificPreferencesKeyValues.presentationThemeSettings.key] as? PresentationThemeSettings {
+                                    let mediaBox = MediaBox(basePath: path + "/postbox/media")
+                                    let wallpapers = [value.chatWallpaper] + Array(value.themeSpecificChatWallpapers.values)
+                                    for wallpaper in wallpapers {
+                                        switch wallpaper {
+                                            case let .file(file):
+                                                if let path = mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                    accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
+                                                    let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                                                    if file.isPattern {
+                                                        if let color = file.settings.color, let intensity = file.settings.intensity {
+                                                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true).start()
+                                                        }
+                                                    } else {
+                                                        if file.settings.blur {
+                                                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start()
+                                                        }
+                                                    }
+                                                }
+                                            case let .image(representations, _):
+                                                for representation in representations {
+                                                    let resource = representation.resource
+                                                    if let path = mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                        accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                                                        let _ = mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                                                    }
+                                                }
+                                            default:
+                                                break
+                                        }
+                                    }
+                                }
+                                
+                                transaction.setVersion(1)
                             }
-                        }
-                        
-                        transaction.setVersion(1)
+                            |> mapToSignal { _ -> Signal<Float, NoError> in
+                                return .complete()
+                            }
                     }
                 }
-                |> ignoreValues
                 signal = signal |> then(upgradePreferences)
             } else {
                 let upgradePreferences = accountManager.transaction { transaction -> Void in
                     transaction.setVersion(1)
                 }
-                |> ignoreValues
+                |> mapToSignal { _ -> Signal<Float, NoError> in
+                    return .complete()
+                }
                 signal = signal |> then(upgradePreferences)
             }
         }
         if version < 2 {
             if let currentId = currentId {
                 let upgradeNotices = accountNoticeEntries(rootPath: rootPath, id: currentId, encryptionParameters: encryptionParameters)
-                |> mapToSignal { path, values -> Signal<Void, NoError> in
-                    return accountManager.transaction { transaction -> Void in
-                        for (key, value) in values {
-                            transaction.setNotice(NoticeEntryKey(namespace: ValueBoxKey(length: 0), key: key), value)
-                        }
-                        
-                        transaction.setVersion(2)
+                |> mapToSignal { result -> Signal<Float, NoError> in
+                    switch result {
+                        case let .progress(progress):
+                            return .single(progress)
+                        case let .result(_, values):
+                            return accountManager.transaction { transaction -> Void in
+                                for (key, value) in values {
+                                    transaction.setNotice(NoticeEntryKey(namespace: ValueBoxKey(length: 0), key: key), value)
+                                }
+                                
+                                transaction.setVersion(2)
+                            }
+                            |> mapToSignal { _ -> Signal<Float, NoError> in
+                                return .complete()
+                            }
                     }
                 }
-                |> ignoreValues
                 signal = signal |> then(upgradeNotices)
             } else {
                 let upgradeNotices = accountManager.transaction { transaction -> Void in
                     transaction.setVersion(2)
                 }
-                |> ignoreValues
+                |> mapToSignal { _ -> Signal<Float, NoError> in
+                    return .complete()
+                }
                 signal = signal |> then(upgradeNotices)
             }
             
@@ -216,28 +234,39 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
                     index += 1
                 }
             }
-            |> ignoreValues
+            |> mapToSignal { _ -> Signal<Float, NoError> in
+                return .complete()
+            }
             signal = signal |> then(upgradeSortOrder)
         }
         if version < 3 {
             if let currentId = currentId {
                 let upgradeAccessChallengeData = accountLegacyAccessChallengeData(rootPath: rootPath, id: currentId, encryptionParameters: encryptionParameters)
-                |> mapToSignal { accessChallengeData -> Signal<Void, NoError> in
-                    return accountManager.transaction { transaction -> Void in
-                        if case .none = transaction.getAccessChallengeData() {
-                            transaction.setAccessChallengeData(accessChallengeData)
-                        }
-                        
-                        transaction.setVersion(3)
+                |> mapToSignal { result -> Signal<Float, NoError> in
+                    switch result {
+                        case let .progress(progress):
+                            return .single(progress)
+                        case let .result(accessChallengeData):
+                            return accountManager.transaction { transaction -> Void in
+                                if case .none = transaction.getAccessChallengeData() {
+                                    transaction.setAccessChallengeData(accessChallengeData)
+                                }
+                                
+                                transaction.setVersion(3)
+                            }
+                            |> mapToSignal { _ -> Signal<Float, NoError> in
+                                return .complete()
+                            }
                     }
                 }
-                |> ignoreValues
                 signal = signal |> then(upgradeAccessChallengeData)
             } else {
                 let upgradeAccessChallengeData = accountManager.transaction { transaction -> Void in
                     transaction.setVersion(3)
                 }
-                |> ignoreValues
+                |> mapToSignal { _ -> Signal<Float, NoError> in
+                    return .complete()
+                }
                 signal = signal |> then(upgradeAccessChallengeData)
             }
         }
@@ -266,10 +295,12 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
             }
             |> ignoreValues
             signal = signal |> then(
-                updatedContactSynchronizationSettings
+                (updatedContactSynchronizationSettings
                 |> then(
                     applyVersion
-                )
+                )) |> mapToSignal { _ -> Signal<Float, NoError> in
+                        return .complete()
+                }
             )
         }
         return signal
