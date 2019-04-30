@@ -109,11 +109,18 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
-        if case .root = groupId {
+        let title: String
+        if case .root = self.groupId {
+            title = self.presentationData.strings.DialogList_Title
             self.navigationBar?.item = nil
+        } else {
+            title = self.presentationData.strings.ChatList_ArchivedChatsTitle
+        }
         
-            self.titleView.title = NetworkStatusTitle(text: self.presentationData.strings.DialogList_Title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
-            self.navigationItem.titleView = self.titleView
+        self.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
+        self.navigationItem.titleView = self.titleView
+        
+        if case .root = groupId {
             self.tabBarItem.title = self.presentationData.strings.DialogList_Title
             
             let icon: UIImage?
@@ -133,16 +140,17 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
             rightBarButtonItem.accessibilityLabel = "Compose"
             self.navigationItem.rightBarButtonItem = rightBarButtonItem
+            let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+            backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
+            self.navigationItem.backBarButtonItem = backBarButtonItem
         } else {
-            self.navigationItem.title = self.presentationData.strings.ChatList_ArchivedChatsTitle
             let rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
             rightBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
             self.navigationItem.rightBarButtonItem = rightBarButtonItem
+            let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+            backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
+            self.navigationItem.backBarButtonItem = backBarButtonItem
         }
-        
-        let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
-        backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
-        self.navigationItem.backBarButtonItem = backBarButtonItem
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -201,15 +209,23 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         if !self.hideNetworkActivityStatus {
             self.titleDisposable = combineLatest(queue: .mainQueue(), context.account.networkState, hasProxy, passcode, self.chatListDisplayNode.chatListNode.state).start(next: { [weak self] networkState, proxy, passcode, state in
                 if let strongSelf = self {
+                    let defaultTitle: String
+                    if case .root = strongSelf.groupId {
+                        defaultTitle = strongSelf.presentationData.strings.DialogList_Title
+                    } else {
+                        defaultTitle = strongSelf.presentationData.strings.ChatList_ArchivedChatsTitle
+                    }
                     if state.editing {
                         if case .root = strongSelf.groupId {
                             strongSelf.navigationItem.rightBarButtonItem = nil
                         }
                         
-                        let title = !state.selectedPeerIds.isEmpty ? strongSelf.presentationData.strings.ChatList_SelectedChats(Int32(state.selectedPeerIds.count)) : strongSelf.presentationData.strings.DialogList_Title
+                        let title = !state.selectedPeerIds.isEmpty ? strongSelf.presentationData.strings.ChatList_SelectedChats(Int32(state.selectedPeerIds.count)) : defaultTitle
                         strongSelf.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
                     } else {
+                        var isRoot = false
                         if case .root = strongSelf.groupId {
+                            isRoot = true
                             let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
                             rightBarButtonItem.accessibilityLabel = "Compose"
                             strongSelf.navigationItem.rightBarButtonItem = rightBarButtonItem
@@ -220,7 +236,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         var checkProxy = false
                         switch networkState {
                             case .waitingForNetwork:
-                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked)
                             case let .connecting(proxy):
                                 var text = strongSelf.presentationData.strings.State_Connecting
                                 if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
@@ -229,13 +245,13 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                                 if let proxy = proxy, proxy.hasConnectionIssues {
                                     checkProxy = true
                                 }
-                                strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                                strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked)
                             case .updating:
-                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked)
                             case .online:
-                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.DialogList_Title, activity: false, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                                strongSelf.titleView.title = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked)
                         }
-                        if checkProxy {
+                        if case .root = groupId, checkProxy {
                             if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil {
                                 strongSelf.didShowProxyUnavailableTooltipController = true
                                 let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.Proxy_TooltipUnavailable), timeout: 60.0, dismissByTapOutside: true)
@@ -340,11 +356,16 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     }
     
     private func updateThemeAndStrings() {
-        self.tabBarItem.title = self.presentationData.strings.DialogList_Title
-        
-        let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
-        backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
-        self.navigationItem.backBarButtonItem = backBarButtonItem
+        if case .root = self.groupId {
+            self.tabBarItem.title = self.presentationData.strings.DialogList_Title
+            let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+            backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
+            self.navigationItem.backBarButtonItem = backBarButtonItem
+        } else {
+            let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+            backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
+            self.navigationItem.backBarButtonItem = backBarButtonItem
+        }
         
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel)
         var editing = false
@@ -432,7 +453,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 })
                 
                 if value {
-                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: true), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
+                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
                         guard let strongSelf = self else {
                             return
                         }

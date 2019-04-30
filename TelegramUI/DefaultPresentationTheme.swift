@@ -110,7 +110,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
             controlColor: UIColor(rgb: 0x96979d)
         ),
         mediaPlaceholderColor: UIColor(rgb: 0xe4e4e4),
-        scrollIndicatorColor: UIColor(white: 0.0, alpha: 0.3)
+        scrollIndicatorColor: UIColor(white: 0.0, alpha: 0.3),
+        pageIndicatorInactiveColor: UIColor(rgb: 0xe3e3e7)
     )
     
     let chatList = PresentationThemeChatList(

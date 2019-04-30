@@ -222,7 +222,7 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, UIScrollViewDelegate {
                     
                     if themeUpdated {
                         strongSelf.pageControlNode.dotColor = item.theme.chatList.unreadBadgeActiveBackgroundColor
-                        strongSelf.pageControlNode.inactiveDotColor = item.theme.chatList.unreadBadgeInactiveBackgroundColor
+                        strongSelf.pageControlNode.inactiveDotColor = item.theme.list.pageIndicatorInactiveColor
                     }
                     
                     let resetOffset = !strongSelf.scrollNode.frame.width.isEqual(to: baseWidth)
