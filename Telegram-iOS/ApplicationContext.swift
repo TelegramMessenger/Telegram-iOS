@@ -306,6 +306,7 @@ final class AuthorizedApplicationContext {
                             }
                         }
                     }
+                    
                     strongSelf.unlockedStatePromise.set(.single(true))
                 }
             }
