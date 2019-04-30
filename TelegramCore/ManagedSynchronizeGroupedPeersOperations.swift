@@ -16,18 +16,14 @@ private final class ManagedSynchronizeGroupedPeersOperationsHelper {
         var disposeOperations: [Disposable] = []
         var beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)] = []
         
-        var hasRunningOperationForPeerId = Set<PeerId>()
         var validMergedIndices = Set<Int32>()
         for entry in entries {
-            if !hasRunningOperationForPeerId.contains(entry.peerId) {
-                hasRunningOperationForPeerId.insert(entry.peerId)
-                validMergedIndices.insert(entry.mergedIndex)
-                
-                if self.operationDisposables[entry.mergedIndex] == nil {
-                    let disposable = MetaDisposable()
-                    beginOperations.append((entry, disposable))
-                    self.operationDisposables[entry.mergedIndex] = disposable
-                }
+            validMergedIndices.insert(entry.mergedIndex)
+            
+            if self.operationDisposables[entry.mergedIndex] == nil {
+                let disposable = MetaDisposable()
+                beginOperations.append((entry, disposable))
+                self.operationDisposables[entry.mergedIndex] = disposable
             }
         }
         
@@ -53,20 +49,23 @@ private final class ManagedSynchronizeGroupedPeersOperationsHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+private func withTakenOperations(postbox: Postbox, peerId: PeerId, tag: PeerOperationLogTag, tagLocalIndices: [Int32], _ f: @escaping (Transaction, [PeerMergedOperationLogEntry]) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
-        var result: PeerMergedOperationLogEntry?
-        transaction.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
-            if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeGroupedPeersOperation  {
-                result = entry.mergedEntry!
-                return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
-            } else {
-                return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
-            }
-        })
+        var result: [PeerMergedOperationLogEntry] = []
+        for tagLocalIndex in tagLocalIndices {
+            transaction.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
+                if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeGroupedPeersOperation  {
+                    result.append(entry.mergedEntry!)
+                    return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
+                } else {
+                    return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
+                }
+            })
+        }
         
         return f(transaction, result)
-        } |> switchToLatest
+    }
+    |> switchToLatest
 }
 
 func managedSynchronizeGroupedPeersOperations(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
@@ -75,8 +74,8 @@ func managedSynchronizeGroupedPeersOperations(postbox: Postbox, network: Network
         
         let helper = Atomic<ManagedSynchronizeGroupedPeersOperationsHelper>(value: ManagedSynchronizeGroupedPeersOperationsHelper())
         
-        let disposable = postbox.mergedOperationLogView(tag: tag, limit: 10).start(next: { view in
-            let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) in
+        let disposable = postbox.mergedOperationLogView(tag: tag, limit: 100).start(next: { view in
+            let (disposeOperations, sharedBeginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) in
                 return helper.update(view.entries)
             }
             
@@ -84,22 +83,39 @@ func managedSynchronizeGroupedPeersOperations(postbox: Postbox, network: Network
                 disposable.dispose()
             }
             
-            for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
-                    if let entry = entry {
-                        if let operation = entry.contents as? SynchronizeGroupedPeersOperation {
-                            return synchronizeGroupedPeers(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, operation: operation)
-                        } else {
-                            assertionFailure()
-                        }
+            var beginOperationsByPeerId: [PeerId: [(PeerMergedOperationLogEntry, MetaDisposable)]] = [:]
+            for (entry, disposable) in sharedBeginOperations {
+                if beginOperationsByPeerId[entry.peerId] == nil {
+                    beginOperationsByPeerId[entry.peerId] = []
+                }
+                beginOperationsByPeerId[entry.peerId]?.append((entry, disposable))
+            }
+            
+            if !beginOperationsByPeerId.isEmpty {
+                for (peerId, peerOperations) in beginOperationsByPeerId {
+                    let localIndices = Array(peerOperations.map({ $0.0.tagLocalIndex }))
+                    let sharedDisposable = MetaDisposable()
+                    for (_, disposable) in peerOperations {
+                        disposable.set(sharedDisposable)
                     }
-                    return .complete()
-                })
-                    |> then(postbox.transaction { transaction -> Void in
-                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                    
+                    let signal = withTakenOperations(postbox: postbox, peerId: peerId, tag: tag, tagLocalIndices: localIndices, { transaction, entries -> Signal<Void, NoError> in
+                        if !entries.isEmpty {
+                            let operations = entries.compactMap({ $0.contents as? SynchronizeGroupedPeersOperation })
+                            if !operations.isEmpty {
+                                return synchronizeGroupedPeers(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, operations: operations)
+                            }
+                        }
+                        return .complete()
                     })
-                
-                disposable.set(signal.start())
+                    |> then(postbox.transaction { transaction -> Void in
+                        for tagLocalIndex in localIndices {
+                            let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex)
+                        }
+                    })
+                    
+                    sharedDisposable.set(signal.start())
+                }
             }
         })
         
@@ -115,12 +131,21 @@ func managedSynchronizeGroupedPeersOperations(postbox: Postbox, network: Network
     }
 }
 
-private func synchronizeGroupedPeers(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, operation: SynchronizeGroupedPeersOperation) -> Signal<Void, NoError> {
-    guard let inputPeer = transaction.getPeer(operation.peerId).flatMap(apiInputPeer) else {
+private func synchronizeGroupedPeers(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, operations: [SynchronizeGroupedPeersOperation]) -> Signal<Void, NoError> {
+    if operations.isEmpty {
         return .complete()
     }
-    let folderPeer: Api.InputFolderPeer = Api.InputFolderPeer.inputFolderPeer(peer: inputPeer, folderId: operation.groupId.rawValue)
-    return network.request(Api.functions.folders.editPeerFolders(folderPeers: [folderPeer]))
+    var folderPeers: [Api.InputFolderPeer] = []
+    for operation in operations {
+        if let inputPeer = transaction.getPeer(operation.peerId).flatMap(apiInputPeer) {
+            folderPeers.append(.inputFolderPeer(peer: inputPeer, folderId: operation.groupId.rawValue))
+        }
+    }
+    if folderPeers.isEmpty {
+        return .complete()
+    }
+    
+    return network.request(Api.functions.folders.editPeerFolders(folderPeers: folderPeers))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.Updates?, NoError> in
         return .single(nil)
