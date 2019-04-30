@@ -4260,4 +4260,4 @@ Unused sets are archived when you add more.";
 "ArchivedChats.IntroTitle2" = "Muted Chats";
 "ArchivedChats.IntroText2" = "Muted chats stay archived when new messages arrive.";
 "ArchivedChats.IntroTitle3" = "Pinned Chats";
-"ArchivedChats.IntroText3" = "You can pin an unlimited number of archived chats to the top.";
+"ArchivedChats.IntroText3" = "You can pin up to 100 archived chats to the top.";
