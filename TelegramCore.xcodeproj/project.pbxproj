@@ -651,8 +651,6 @@
 		D0C26D6A1FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D681FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift */; };
 		D0C26D6C1FE286C3004ABF18 /* FetchChatList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D6B1FE286C3004ABF18 /* FetchChatList.swift */; };
 		D0C26D6D1FE286C3004ABF18 /* FetchChatList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D6B1FE286C3004ABF18 /* FetchChatList.swift */; };
-		D0C26D7B1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D7A1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift */; };
-		D0C26D7C1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D7A1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift */; };
 		D0C27B3F1F4B51D000A4E170 /* CachedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */; };
 		D0C27B401F4B51D000A4E170 /* CachedStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */; };
 		D0C27B421F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */; };
@@ -1173,7 +1171,6 @@
 		D0C26D651FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynchronizeGroupedPeersOperation.swift; sourceTree = "<group>"; };
 		D0C26D681FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeGroupedPeersOperations.swift; sourceTree = "<group>"; };
 		D0C26D6B1FE286C3004ABF18 /* FetchChatList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchChatList.swift; sourceTree = "<group>"; };
-		D0C26D7A1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedGroupFeedReadStateSyncOperations.swift; sourceTree = "<group>"; };
 		D0C27B3E1F4B51D000A4E170 /* CachedStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedStickerPack.swift; sourceTree = "<group>"; };
 		D0C27B411F4B58C000A4E170 /* PeerSpecificStickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerSpecificStickerPack.swift; sourceTree = "<group>"; };
 		D0C44B601FC616E200227BE0 /* SearchGroupMembers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchGroupMembers.swift; sourceTree = "<group>"; };
@@ -1564,7 +1561,6 @@
 				D0C26D651FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift */,
 				D0C26D681FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift */,
 				D0AF32211FAC95C20097362B /* StandaloneUploadedMedia.swift */,
-				D0C26D7A1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift */,
 				D0380DB9204EF306000414AB /* MessageMediaPreuploadManager.swift */,
 				D048B4AB20A5DA4300C79D31 /* ManagedProxyInfoUpdates.swift */,
 				D0467D0A20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift */,
@@ -2483,7 +2479,6 @@
 				D0FA35051EA6135D00E56FFA /* CacheStorageSettings.swift in Sources */,
 				D03B0D0C1D62255C00955575 /* AccountStateManagementUtils.swift in Sources */,
 				D0633CD22253A528003DD95F /* ChatOnlineMembers.swift in Sources */,
-				D0C26D7B1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift in Sources */,
 				D073CE5D1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift in Sources */,
 				D0FA8B9E1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift in Sources */,
 				D0561DEA1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */,
@@ -2699,7 +2694,6 @@
 				C2E064691ECEEF0B00387BB8 /* TelegramMediaInvoice.swift in Sources */,
 				D001F3EE1E128A1C007A8C60 /* AccountStateManager.swift in Sources */,
 				D0B844351DAB91E0005F29E1 /* NBPhoneNumberDesc.m in Sources */,
-				D0C26D7C1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift in Sources */,
 				C205FEA91EB3B75900455808 /* ExportMessageLink.swift in Sources */,
 				D0448CA31E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */,
 				D0B8442F1DAB91E0005F29E1 /* NBMetadataHelper.m in Sources */,
