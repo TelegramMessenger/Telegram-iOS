@@ -924,6 +924,7 @@ final class SharedApplicationContext {
         
         let contextReadyDisposable = MetaDisposable()
         
+        let startTime = CFAbsoluteTimeGetCurrent()
         self.contextDisposable.set((self.context.get()
         |> deliverOnMainQueue).start(next: { context in
             var network: Network?
@@ -947,6 +948,10 @@ final class SharedApplicationContext {
                 |> filter { $0 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
+                    let readyTime = CFAbsoluteTimeGetCurrent() - startTime
+                    if readyTime > 0.5 {
+                        print("Application: context took \(readyTime) to become ready")
+                    }
                     self.mainWindow.viewController = context.rootController
                     if firstTime {
                         let layer = context.rootController.view.layer
