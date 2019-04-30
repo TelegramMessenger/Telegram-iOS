@@ -562,10 +562,14 @@ final class SqliteValueBox: ValueBox {
             precondition(currentTable.keyType == table.keyType)
         } else {
             self.createTable(database: self.database, table: table)
-            self.tables[table.id] = table
-            let resultCode = self.database.execute("INSERT INTO __meta_tables(name, keyType, isCompact) VALUES (\(table.id), \(table.keyType.rawValue), \(table.compactValuesOnCreation ? 1 : 0))")
-            assert(resultCode)
+            self.insertTableAfterCreated(table)
         }
+    }
+    
+    private func insertTableAfterCreated(_ table: ValueBoxTable) {
+        self.tables[table.id] = table
+        let resultCode = self.database.execute("INSERT INTO __meta_tables(name, keyType, isCompact) VALUES (\(table.id), \(table.keyType.rawValue), \(table.compactValuesOnCreation ? 1 : 0))")
+        assert(resultCode)
     }
     
     private func createTable(database: Database, table: ValueBoxTable) {
@@ -1641,6 +1645,8 @@ final class SqliteValueBox: ValueBox {
         assert(resultCode)
         self.tables[toTable.id] = table
         self.tables.removeValue(forKey: table.id)
+        let _ = self.database.execute("DELETE FROM __meta_tables WHERE name=\(table.id)")
+        self.insertTableAfterCreated(toTable)
     }
     
     public func fullTextMatch(_ table: ValueBoxFullTextTable, collectionId: String?, query: String, tags: String?, values: (String, String) -> Bool) {
