@@ -11,8 +11,7 @@ private enum ChatInfoTitleButton {
     case unmute
     case call
     case report
-    case grouping
-    case channels
+    case unarchive
     
     func title(_ strings: PresentationStrings) -> String {
         switch self {
@@ -28,10 +27,8 @@ private enum ChatInfoTitleButton {
                 return strings.Conversation_Call
             case .report:
                 return strings.ReportPeer_Report
-            case .grouping:
-                return "Grouping"
-            case .channels:
-                return "Channels"
+            case .unarchive:
+                return strings.ChatList_UnarchiveAction
         }
     }
     
@@ -39,7 +36,7 @@ private enum ChatInfoTitleButton {
         switch self {
             case .search:
                 return PresentationResourcesChat.chatTitlePanelSearchImage(theme)
-            case .info, .channels:
+            case .info:
                 return PresentationResourcesChat.chatTitlePanelInfoImage(theme)
             case .mute:
                 return PresentationResourcesChat.chatTitlePanelMuteImage(theme)
@@ -49,8 +46,8 @@ private enum ChatInfoTitleButton {
                 return PresentationResourcesChat.chatTitlePanelCallImage(theme)
             case .report:
                 return PresentationResourcesChat.chatTitlePanelReportImage(theme)
-            case .grouping:
-                return PresentationResourcesChat.chatTitlePanelGroupingImage(theme)
+            case .unarchive:
+                return PresentationResourcesChat.chatTitlePanelUnarchiveImage(theme)
         }
     }
 }
@@ -63,13 +60,20 @@ private func peerButtons(_ peer: Peer, interfaceState: ChatPresentationInterface
         muteAction = .mute
     }
     
+    let infoButton: ChatInfoTitleButton
+    if interfaceState.isArchived {
+        infoButton = .unarchive
+    } else {
+        infoButton = .info
+    }
+    
     if let peer = peer as? TelegramUser {
         var buttons: [ChatInfoTitleButton] = [.search, muteAction]
         if peer.botInfo == nil && interfaceState.callsAvailable {
             buttons.append(.call)
         }
         
-        buttons.append(.info)
+        buttons.append(infoButton)
         return buttons
     } else if let _ = peer as? TelegramSecretChat {
         var buttons: [ChatInfoTitleButton] = [.search, muteAction]
@@ -78,23 +82,19 @@ private func peerButtons(_ peer: Peer, interfaceState: ChatPresentationInterface
         return buttons
     } else if let channel = peer as? TelegramChannel {
         if channel.flags.contains(.isCreator) || channel.username == nil {
-            return [.search, muteAction, .info]
+            return [.search, muteAction, infoButton]
         } else {
-            return [.search, .report, muteAction, .info]
+            return [.search, .report, muteAction, infoButton]
         }
     } else if let group = peer as? TelegramGroup {
         if case .creator = group.role {
-            return [.search, muteAction, .info]
+            return [.search, muteAction, infoButton]
         } else {
-            return [.search, muteAction, .info]
+            return [.search, muteAction, infoButton]
         }
     } else {
-        return [.search, muteAction, .info]
+        return [.search, muteAction, infoButton]
     }
-}
-
-private func groupButtons() -> [ChatInfoTitleButton] {
-    return [.search, .grouping, .channels]
 }
 
 private let buttonFont = Font.regular(10.0)
@@ -206,7 +206,7 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         for (button, buttonNode) in self.buttons {
             if buttonNode === node {
                 switch button {
-                    case .info, .channels:
+                    case .info:
                         self.interfaceInteraction?.openPeerInfo()
                     case .mute:
                         self.interfaceInteraction?.togglePeerNotifications()
@@ -218,9 +218,8 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
                         self.interfaceInteraction?.beginCall()
                     case .report:
                         self.interfaceInteraction?.reportPeer()
-                    case .grouping:
-                        self.interfaceInteraction?.openGrouping()
-                        break
+                    case .unarchive:
+                        self.interfaceInteraction?.unarchiveChat()
                 }
                 break
             }

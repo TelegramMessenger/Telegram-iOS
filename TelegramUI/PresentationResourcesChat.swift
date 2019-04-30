@@ -680,6 +680,12 @@ struct PresentationResourcesChat {
         })
     }
     
+    static func chatTitlePanelUnarchiveImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatTitlePanelUnarchiveImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/UnarchiveIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
     static func chatTitlePanelMuteImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatTitlePanelMuteImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/RevealActionMuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)

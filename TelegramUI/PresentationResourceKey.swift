@@ -164,6 +164,7 @@ enum PresentationResourceKey: Int32 {
     
     case chatTitlePanelInfoImage
     case chatTitlePanelSearchImage
+    case chatTitlePanelUnarchiveImage
     case chatTitlePanelMuteImage
     case chatTitlePanelUnmuteImage
     case chatTitlePanelCallImage

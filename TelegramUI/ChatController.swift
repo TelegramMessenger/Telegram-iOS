@@ -1407,6 +1407,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 }
                             }
                             
+                            let isArchived: Bool = peerView.groupId == Namespaces.PeerGroup.archive
+                            
                             var explicitelyCanPinMessages: Bool = false
                             if let cachedUserData = peerView.cachedData as? CachedUserData {
                                 explicitelyCanPinMessages = cachedUserData.canPinMessages
@@ -1420,7 +1422,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             }
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                                 return $0.updatedPeer { _ in return renderedPeer
-                                }.updatedIsNotAccessible(isNotAccessible).updatedIsContact(isContact).updatedHasBots(hasBots).updatedPeerIsMuted(peerIsMuted).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
+                                }.updatedIsNotAccessible(isNotAccessible).updatedIsContact(isContact).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
                             })
                             if !strongSelf.didSetChatLocationInfoReady {
                                 strongSelf.didSetChatLocationInfoReady = true
@@ -3185,6 +3187,25 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     return $0.updatedInterfaceState({ $0.withUpdatedInputLanguage(f($0.inputLanguage)) })
                 })
             }
+        }, unarchiveChat: { [weak self] in
+            guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
+                return
+            }
+            strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
+                return state.updatedTitlePanelContext({
+                    $0.filter({ item in
+                        if case .chatInfo = item {
+                            return false
+                        } else {
+                            return true
+                        }
+                    })
+                })
+            })
+            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Void in
+                updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
+            }
+            |> deliverOnMainQueue).start()
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
         switch self.chatLocation {

@@ -365,7 +365,9 @@ public class PeerMediaCollectionController: TelegramController {
         }, toggleSilentPost: {
         }, requestUnvoteInMessage: { _ in
         }, requestStopPollInMessage: { _ in
-        }, updateInputLanguage: { _ in }, statuses: nil)
+        }, updateInputLanguage: { _ in
+        }, unarchiveChat: {
+        }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })
         
