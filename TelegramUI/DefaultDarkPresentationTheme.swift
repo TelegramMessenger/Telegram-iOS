@@ -3,7 +3,7 @@ import UIKit
 
 private let accentColor: UIColor = UIColor(rgb: 0xffffff)
 private let destructiveColor: UIColor = UIColor(rgb: 0xFF736B)
-private let constructiveColor: UIColor = UIColor(rgb: 0x4cd964)
+private let constructiveColor: UIColor = UIColor(rgb: 0x08a723)
 private let secretColor: UIColor = UIColor(rgb: 0x00B12C)
 
 private let rootStatusBar = PresentationThemeRootNavigationStatusBar(
@@ -90,11 +90,11 @@ private let list = PresentationThemeList(
     itemSwitchColors: switchColors,
     itemDisclosureActions: PresentationThemeItemDisclosureActions(
         neutral1: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x666666), foregroundColor: .white),
-        neutral2: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x414141), foregroundColor: .white),
-        destructive: PresentationThemeItemDisclosureAction(fillColor: destructiveColor, foregroundColor: .white),
+        neutral2: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xcd7800), foregroundColor: .white),
+        destructive: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xc70c0c), foregroundColor: .white),
         constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white),
         accent: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x666666), foregroundColor: .white),
-        warning: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x414141), foregroundColor: .white),
+        warning: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xcd7800), foregroundColor: .white),
         inactive: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x666666), foregroundColor: .white)
     ),
     itemCheckColors: PresentationThemeCheck(
@@ -142,7 +142,8 @@ private let chatList = PresentationThemeChatList(
     verifiedIconFillColor: accentColor,
     verifiedIconForegroundColor: .white,
     secretIconColor: secretColor,
-    neutralAvatarColor: UIColor(rgb: 0x666666),
+    pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: (UIColor(rgb: 0x72d5fd), UIColor(rgb: 0x2a9ef1)), foregroundColor: .white),
+    unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: (UIColor(rgb: 0x666666), UIColor(rgb: 0x666666)), foregroundColor: .black),
     onlineDotColor: UIColor(rgb: 0x4cc91f)
 )
 

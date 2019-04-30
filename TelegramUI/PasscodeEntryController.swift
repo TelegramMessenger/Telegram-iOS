@@ -31,6 +31,7 @@ final public class PasscodeEntryController: ViewController {
     public var completed: (() -> Void)?
     
     private let biometricsDisposable = MetaDisposable()
+    private var hasOngoingBiometricsRequest = false
     private var skipNextBiometricsRequest = false
     
     public init(context: AccountContext, challengeData: PostboxAccessChallengeData, enableBiometrics: Bool, arguments: PasscodeEntryControllerPresentationArguments) {
@@ -196,6 +197,14 @@ final public class PasscodeEntryController: ViewController {
             }
         }
         
+        if self.hasOngoingBiometricsRequest {
+            if !force {
+                return
+            }
+        }
+        
+        self.hasOngoingBiometricsRequest = true
+        
         self.biometricsDisposable.set((LocalAuth.auth(reason: self.presentationData.strings.EnterPasscode_TouchId) |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let strongSelf = self else {
                 return
@@ -203,11 +212,21 @@ final public class PasscodeEntryController: ViewController {
             if result {
                 strongSelf.controllerNode.animateSuccess()
                 
-                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                    let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
-                    transaction.setAccessChallengeData(data)
-                }).start()
+                if let completed = strongSelf.completed {
+                    completed()
+                    strongSelf.hasOngoingBiometricsRequest = false
+                } else {
+                    let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
+                        let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
+                        transaction.setAccessChallengeData(data)
+                    }).start(completed: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.hasOngoingBiometricsRequest = false
+                        }
+                    })
+                }
             } else {
+                strongSelf.hasOngoingBiometricsRequest = false
                 strongSelf.skipNextBiometricsRequest = true
             }
         }))

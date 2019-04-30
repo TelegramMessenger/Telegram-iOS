@@ -38,7 +38,6 @@ func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageT
     return string
 }
 
-
 func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, fixedFont: UIFont, underlineLinks: Bool = true) -> NSAttributedString {
     var nsString: NSString?
     let string = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.font: baseFont, NSAttributedStringKey.foregroundColor: baseColor])

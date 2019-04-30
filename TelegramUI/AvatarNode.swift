@@ -66,10 +66,6 @@ private let grayscaleColors: NSArray = [
     UIColor(rgb: 0xb1b1b1).cgColor, UIColor(rgb: 0xcdcdcd).cgColor
 ]
 
-private let inactiveArchiveColors: NSArray = [
-    UIColor(rgb: 0xC5C6CC).cgColor, UIColor(rgb: 0xDEDEE5).cgColor
-]
-    
 private let savedMessagesColors: NSArray = [
     UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor
 ]
@@ -224,28 +220,32 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    public func playAnimation(_ name: String, keysToColor: [String]?, scale: CGFloat) {
+    public func playArchiveAnimation() {
         guard let theme = self.theme else {
             return
         }
         
-        var backgroundColor = theme.chatList.neutralAvatarColor
+        var iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
+        var backgroundColor = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.0
         let animationBackgroundNode = ASImageNode()
         animationBackgroundNode.frame = self.imageNode.frame
         if let overrideImage = self.overrideImage, case let .archivedChatsIcon(hiddenByDefault) = overrideImage {
+            let backgroundColors: (UIColor, UIColor)
             if hiddenByDefault {
-                backgroundColor = UIColor(cgColor: inactiveArchiveColors[0] as! CGColor).mixedWith(UIColor(cgColor: inactiveArchiveColors[1] as! CGColor), alpha: 0.5)
-                animationBackgroundNode.image = generateGradientFilledCircleImage(diameter: self.imageNode.frame.width, colors: inactiveArchiveColors)
+                backgroundColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors
+                iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
             } else {
-                let colors = gradientColors[5]
-                backgroundColor = UIColor(cgColor: colors[0] as! CGColor).mixedWith(UIColor(cgColor: colors[1] as! CGColor), alpha: 0.5)
-                animationBackgroundNode.image = generateGradientFilledCircleImage(diameter: self.imageNode.frame.width, colors: colors)
+                backgroundColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors
+                iconColor = theme.chatList.pinnedArchiveAvatarColor.foregroundColor
             }
+            let colors: NSArray = [backgroundColors.1.cgColor, backgroundColors.0.cgColor]
+            backgroundColor = backgroundColors.1.mixedWith(backgroundColors.0, alpha: 0.5)
+            animationBackgroundNode.image = generateGradientFilledCircleImage(diameter: self.imageNode.frame.width, colors: colors)
         }
         
         self.addSubnode(animationBackgroundNode)
         
-        let animationNode = AnimationNode(animation: name, keysToColor: keysToColor, color: backgroundColor, scale: scale)
+        let animationNode = AnimationNode(animation: "anim_archiveAvatar", colors: ["box1.box1.Fill 1": iconColor, "box3.box3.Fill 1": iconColor, "box2.box2.Fill 1": backgroundColor], scale: 0.1653828)
         animationNode.completion = { [weak animationBackgroundNode, weak self] in
             self?.imageNode.isHidden = false
             animationBackgroundNode?.removeFromSupernode()
@@ -402,17 +402,22 @@ public final class AvatarNode: ASDisplayNode {
         }
         
         let colorsArray: NSArray
+        var iconColor = UIColor.white
         if let parameters = parameters as? AvatarNodeParameters, parameters.icon != .none {
             if case .savedMessagesIcon = parameters.icon {
                 colorsArray = savedMessagesColors
             } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme {
                 colorsArray = [theme.list.blocksBackgroundColor.cgColor, theme.list.blocksBackgroundColor.cgColor]
-            } else if case let .archivedChatsIcon(hiddenByDefault) = parameters.icon {
+            } else if case let .archivedChatsIcon(hiddenByDefault) = parameters.icon, let theme = parameters.theme {
+                let backgroundColors: (UIColor, UIColor)
                 if hiddenByDefault {
-                    colorsArray = inactiveArchiveColors
+                    iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
+                    backgroundColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors
                 } else {
-                    colorsArray = gradientColors[5]
+                    iconColor = theme.chatList.pinnedArchiveAvatarColor.foregroundColor
+                    backgroundColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors
                 }
+                colorsArray = [backgroundColors.1.cgColor, backgroundColors.0.cgColor]
             } else {
                 colorsArray = grayscaleColors
             }
@@ -455,7 +460,7 @@ public final class AvatarNode: ASDisplayNode {
                 context.scaleBy(x: factor, y: -factor)
                 context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
                 
-                if let archivedChatsIcon = archivedChatsIcon {
+                if let archivedChatsIcon = generateTintedImage(image: archivedChatsIcon, color: iconColor) {
                     context.draw(archivedChatsIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - archivedChatsIcon.size.width) / 2.0), y: floor((bounds.size.height - archivedChatsIcon.size.height) / 2.0)), size: archivedChatsIcon.size))
                 }
             } else {

@@ -21,6 +21,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     private let effectView: UIView
     
+    private let animationBackgroundColor: UIColor
+    
     private var originalRemainingSeconds: Int
     private var remainingSeconds: Int
     private var timer: SwiftSignalKit.Timer?
@@ -46,6 +48,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         var displayUndo = true
         
+        if presentationData.theme.overallDarkAppearance {
+            self.animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+        } else {
+            self.animationBackgroundColor = UIColor(rgb: 0x474747)
+        }
+        
         switch content {
             case let .removedChat(text):
                 self.iconNode = nil
@@ -65,7 +73,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     self.iconNode = nil
                     self.iconCheckNode = nil
-                    self.animationNode = AnimationNode(animation: "anim_infotip", keysToColor: ["info1.info1.stroke", "info2.info2.Fill"], color: UIColor(rgb: 0x474747), scale: 1.0)
+                    self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 }
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
@@ -80,7 +88,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     self.animationNode = nil
                 } else {
                     self.iconNode = nil
-                    self.animationNode = AnimationNode(animation: "anim_infotip", keysToColor: ["info1.info1.stroke", "info2.info2.Fill"], color: UIColor(rgb: 0x474747), scale: 1.0)
+                    self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 }
                 self.iconCheckNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
@@ -100,7 +108,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.buttonNode = HighlightTrackingButtonNode()
         
         self.panelNode = ASDisplayNode()
-        self.panelNode.backgroundColor = .clear
+        if presentationData.theme.overallDarkAppearance {
+            self.panelNode.backgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+        } else {
+            self.panelNode.backgroundColor = .clear
+        }
         self.panelNode.clipsToBounds = true
         self.panelNode.cornerRadius = 9.0
         
@@ -145,7 +157,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     override func didLoad() {
         super.didLoad()
-        self.panelNode.view.addSubview(self.effectView)
+        if self.panelNode.backgroundColor == .clear {
+            self.panelNode.view.addSubview(self.effectView)
+        }
     }
     
     @objc private func buttonPressed() {
@@ -282,7 +296,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         if let iconCheckNode = self.iconCheckNode, self.iconNode != nil {
             Queue.mainQueue().after(0.2, { [weak iconCheckNode] in
-                iconCheckNode?.transitionToState(.check(.black), completion: {})
+                iconCheckNode?.transitionToState(.check(self.animationBackgroundColor), completion: {})
             })
         }
         

@@ -31,6 +31,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     private let effectView: UIVisualEffectView
     
     private var invalidAttempts: AccessChallengeAttempts?
+    private var timer: SwiftSignalKit.Timer?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -157,9 +158,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         }
     }
     
+    private let waitInterval: Int32 = 60
     private func shouldWaitBeforeNextAttempt() -> Bool {
         if let attempts = self.invalidAttempts {
-            let waitInterval: Int32 = 60
             if attempts.count >= 6 {
                 if Int32(CFAbsoluteTimeGetCurrent()) - attempts.timestamp < waitInterval {
                     return true
@@ -180,8 +181,17 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             var text = NSAttributedString(string: "")
             if attempts.count >= 6 && self.shouldWaitBeforeNextAttempt() {
                 text = NSAttributedString(string: self.strings.PasscodeSettings_TryAgainIn1Minute, font: subtitleFont, textColor: .white)
+                
+                self.timer?.invalidate()
+                let timer = SwiftSignalKit.Timer(timeout: Double(attempts.timestamp + waitInterval - Int32(CFAbsoluteTimeGetCurrent())), repeat: false, completion: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.timer = nil
+                        strongSelf.updateInvalidAttempts(strongSelf.invalidAttempts, animated: true)
+                    }
+                }, queue: Queue.mainQueue())
+                self.timer = timer
+                timer.start()
             }
-            
             self.subtitleNode.setAttributedText(text, animation: animated ? .crossFade : .none, completion: {})
         } else {
             self.subtitleNode.setAttributedText(NSAttributedString(string: ""), animation: animated ? .crossFade : .none, completion: {})

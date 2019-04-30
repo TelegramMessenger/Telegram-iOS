@@ -241,7 +241,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var inputTextState: ChatTextInputState {
         if let textInputNode = self.textInputNode {
             let selectionRange: Range<Int> = textInputNode.selectedRange.location ..< (textInputNode.selectedRange.location + textInputNode.selectedRange.length)
-            textInputNode.textInputMode.primaryLanguage
             return ChatTextInputState(inputText: stateAttributedStringForText(textInputNode.attributedText ?? NSAttributedString()), selectionRange: selectionRange)
         } else {
             return ChatTextInputState()

@@ -142,7 +142,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         verifiedIconFillColor: accentColor,
         verifiedIconForegroundColor: .white,
         secretIconColor: secretColor,
-        neutralAvatarColor: UIColor(rgb: 0xb6b6ba),
+        pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: (UIColor(rgb: 0x72d5fd), UIColor(rgb: 0x2a9ef1)), foregroundColor: .white),
+        unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: (UIColor(rgb: 0xDEDEE5), UIColor(rgb: 0xC5C6CC)), foregroundColor: .white),
         onlineDotColor: UIColor(rgb: 0x4cc91f)
     )
     
@@ -175,7 +176,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         verifiedIconFillColor: accentColor,
         verifiedIconForegroundColor: .white,
         secretIconColor: secretColor,
-        neutralAvatarColor: UIColor(rgb: 0xb6b6ba),
+        pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: (UIColor(rgb: 0x72d5fd), UIColor(rgb: 0x2a9ef1)), foregroundColor: .white),
+        unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: (UIColor(rgb: 0xDEDEE5), UIColor(rgb: 0xC5C6CC)), foregroundColor: .white),
         onlineDotColor: UIColor(rgb: 0x4cc91f)
     )
     

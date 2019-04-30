@@ -69,6 +69,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
                 }
+                
+                if let item = strongSelf.item, !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
+                    if strongSelf.imageNode.frame.contains(point) {
+                        return .waitForDoubleTap
+                    }
+                }
             }
             return .waitForSingleTap
         }
@@ -247,12 +253,11 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            let edited = false
-            let sentViaBot = false
+            var edited = false
             var viewCount: Int? = nil
             for attribute in item.message.attributes {
-                if let _ = attribute as? EditedMessageAttribute {
-                    // edited = true
+                if let _ = attribute as? EditedMessageAttribute, isEmoji {
+                    edited = true
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
                 }
@@ -594,7 +599,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     }
                                 }
                             }
-                        
+                            
                             if let item = self.item, self.imageNode.frame.contains(location) {
                                 let _ = item.controllerInteraction.openMessage(item.message, .default)
                                 return

@@ -93,7 +93,13 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             
             case let .animation(animation, scale, offset, keysToColor, flip):
                 self.iconNode = nil
-                self.animationNode = AnimationNode(animation: animation, keysToColor: keysToColor, color: color, scale: scale)
+                var colors: [String: UIColor] = [:]
+                if let keysToColor = keysToColor {
+                    for key in keysToColor {
+                        colors[key] = color
+                    }
+                }
+                self.animationNode = AnimationNode(animation: animation, colors: colors, scale: scale)
                 if flip {
                     self.animationNode!.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
                 }

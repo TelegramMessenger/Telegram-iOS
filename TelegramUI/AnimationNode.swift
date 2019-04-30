@@ -17,7 +17,7 @@ final class AnimationNode : ASDisplayNode {
     var played = false
     var completion: (() -> Void)?
     
-    init(animation: String? = nil, keysToColor: [String]? = nil, color: UIColor = .black, scale: CGFloat = 1.0) {
+    init(animation: String? = nil, colors: [String: UIColor]? = nil, scale: CGFloat = 1.0) {
         self.scale = scale
         
         super.init()
@@ -31,10 +31,10 @@ final class AnimationNode : ASDisplayNode {
                 
                 view.logHierarchyKeypaths()
                 
-                let colorCallback = LOTColorValueCallback(color: color.cgColor)
-                self.colorCallbacks.append(colorCallback)
-                if let keysToColor = keysToColor {
-                    for key in keysToColor {
+                if let colors = colors {
+                    for (key, value) in colors {
+                        let colorCallback = LOTColorValueCallback(color: value.cgColor)
+                        self.colorCallbacks.append(colorCallback)
                         view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
                     }
                 }

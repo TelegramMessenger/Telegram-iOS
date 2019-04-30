@@ -452,7 +452,7 @@ public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equata
         if self.composeInputState.inputText.length == 0 {
             return nil
         } else {
-            return SynchronizeableChatInputState(replyToMessageId: self.replyMessageId, text: self.composeInputState.inputText.string, timestamp: self.timestamp)
+            return SynchronizeableChatInputState(replyToMessageId: self.replyMessageId, text: self.composeInputState.inputText.string, entities: generateChatInputTextEntities(self.composeInputState.inputText), timestamp: self.timestamp)
         }
     }
     
@@ -461,7 +461,7 @@ public final class ChatInterfaceState: SynchronizeableChatInterfaceState, Equata
     }
     
     public func withUpdatedSynchronizeableInputState(_ state: SynchronizeableChatInputState?) -> SynchronizeableChatInterfaceState {
-        var result = self.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: state?.text ?? ""))).withUpdatedReplyMessageId(state?.replyToMessageId)
+        var result = self.withUpdatedComposeInputState(ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(state?.text ?? "", entities: state?.entities ?? []))).withUpdatedReplyMessageId(state?.replyToMessageId)
         if let timestamp = state?.timestamp {
             result = result.withUpdatedTimestamp(timestamp)
         }
