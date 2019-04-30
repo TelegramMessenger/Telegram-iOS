@@ -1302,7 +1302,7 @@ public final class Postbox {
         print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         
         let _ = self.transaction({ transaction -> Void in
-            if self.messageHistoryMetadataTable.shouldReindexUnreadCounts() || true {
+            if self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
                 self.groupMessageStatsTable.removeAll()
                 let startTime = CFAbsoluteTimeGetCurrent()
                 let (rootState, summaries) = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self)
