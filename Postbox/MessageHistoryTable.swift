@@ -2399,7 +2399,7 @@ final class MessageHistoryTable: Table {
                 return true
             }, limit: 0)
             
-            if fromIndex.id.namespace == namespace && toIndex.id.namespace == namespace {
+            if fromIndex.id.namespace == namespace && toIndex.id.namespace == namespace && fromIndex.id.id <= toIndex.id.id {
                 holes = !self.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: fromIndex.id.namespace, space: .everywhere, range: fromIndex.id.id ... toIndex.id.id).isEmpty
             }
         }
