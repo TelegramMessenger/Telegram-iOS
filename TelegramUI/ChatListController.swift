@@ -447,7 +447,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 }
                 strongSelf.forEachController({ controller in
                     if let controller = controller as? UndoOverlayController {
-                        controller.dismissWithReplacementAnimation()
+                        controller.dismissWithCommitActionAndReplacementAnimation()
                     }
                     return true
                 })
@@ -563,7 +563,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                                 })
                                 strongSelf.forEachController({ controller in
                                     if let controller = controller as? UndoOverlayController {
-                                        controller.dismissWithReplacementAnimation()
+                                        controller.dismissWithCommitActionAndReplacementAnimation()
                                     }
                                     return true
                                 })
@@ -1521,7 +1521,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
                 strongSelf.forEachController({ controller in
                     if let controller = controller as? UndoOverlayController {
-                        controller.dismissWithReplacementAnimation()
+                        controller.dismissWithCommitActionAndReplacementAnimation()
                     }
                     return true
                 })
@@ -1597,7 +1597,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
-                controller.dismissWithReplacementAnimation()
+                controller.dismissWithCommitActionAndReplacementAnimation()
             }
             return true
         })

@@ -81,4 +81,8 @@ public final class NotificationContainerController: ViewController {
     public func enqueue(_ item: NotificationItem) {
         self.controllerNode.enqueue(item)
     }
+    
+    public func removeItems(_ f: (NotificationItem) -> Bool) {
+        self.controllerNode.removeItems(f)
+    }
 }

@@ -65,6 +65,24 @@ public func navigateToChatController(navigationController: NavigationController,
             }
         }
     }
+    
+    navigationController.currentWindow?.forEachController { controller in
+        if let controller = controller as? NotificationContainerController {
+            controller.removeItems { item in
+                if let item = item as? ChatMessageNotificationItem {
+                    for message in item.messages {
+                        switch chatLocation {
+                            case let .peer(peerId):
+                                if message.id.peerId == peerId {
+                                    return true
+                                }
+                        }
+                    }
+                }
+                return false
+            }
+        }
+    }
 }
 
 private func findOpaqueLayer(rootLayer: CALayer, layer: CALayer) -> Bool {

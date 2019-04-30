@@ -114,7 +114,7 @@ final class NotificationContainerControllerNode: ASDisplayNode {
         }
         containerNode.cancelTimeout = { [weak self] item in
             if let strongSelf = self {
-                if let (topItem, topItemNode) = strongSelf.topItemAndNode, topItem.groupingKey != nil && topItem.groupingKey == item.groupingKey {
+                if let (topItem, _) = strongSelf.topItemAndNode, topItem.groupingKey != nil && topItem.groupingKey == item.groupingKey {
                     strongSelf.timeoutTimer?.invalidate()
                     strongSelf.timeoutTimer = nil
                 }
@@ -141,6 +141,21 @@ final class NotificationContainerControllerNode: ASDisplayNode {
         }
         
         self.resetTimeoutTimer()
+    }
+    
+    func removeItems(_ f: (NotificationItem) -> Bool) {
+        if let (topItem, topItemNode) = self.topItemAndNode {
+            if f(topItem) {
+                self.topItemAndNode = nil
+                topItemNode.animateOut(completion: { [weak self, weak topItemNode] in
+                    topItemNode?.removeFromSupernode()
+                    
+                    if let strongSelf = self, strongSelf.topItemAndNode == nil {
+                        strongSelf.displayingItemsUpdated?(false)
+                    }
+                })
+            }
+        }
     }
     
     private func resetTimeoutTimer() {
