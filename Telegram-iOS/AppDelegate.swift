@@ -1154,6 +1154,27 @@ final class SharedApplicationContext {
         self.isActiveValue = false
         self.isActivePromise.set(false)
         self.clearNotificationsManager?.commitNow()
+        
+        if let navigationController = self.mainWindow.viewController as? NavigationController {
+            for controller in navigationController.viewControllers {
+                if let controller = controller as? TabBarController {
+                    for subController in controller.controllers {
+                        subController.forEachController { controller in
+                            if let controller = controller as? UndoOverlayController {
+                                controller.dismissWithCommitAction()
+                            }
+                            return true
+                        }
+                    }
+                }
+            }
+        }
+        self.mainWindow.forEachViewController { controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        }
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
