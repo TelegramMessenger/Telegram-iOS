@@ -163,9 +163,15 @@ open class TabBarController: ViewController {
                 if let validLayout = strongSelf.validLayout {
                     strongSelf.controllers[index].containerLayoutUpdated(validLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
                 }
+                let startTime = CFAbsoluteTimeGetCurrent()
                 strongSelf.pendingControllerDisposable.set((strongSelf.controllers[index].ready.get()
                 |> deliverOnMainQueue).start(next: { _ in
                     if let strongSelf = self {
+                        let readyTime = CFAbsoluteTimeGetCurrent() - startTime
+                        if readyTime > 0.5 {
+                            print("TabBarController: controller took \(readyTime) to become ready")
+                        }
+                        
                         if strongSelf.selectedIndex == index {
                             if let controller = strongSelf.currentController {
                                 if longTap {
