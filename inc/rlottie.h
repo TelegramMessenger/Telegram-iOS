@@ -83,6 +83,12 @@ enum class Property {
     TrOpacity      /*!< Transform Opacity property of Layer and Group object , value type is float [ 0 .. 100] */
 };
 
+struct Color_Type{};
+struct Point_Type{};
+struct Size_Type{};
+struct Float_Type{};
+template <typename T> struct MapType;
+
 class LOT_EXPORT Surface {
 public:
     /**
@@ -388,7 +394,7 @@ public:
     template<Property prop, typename AnyValue>
     void setValue(const std::string &keypath, AnyValue value)
     {
-        setValue(std::integral_constant<ValueType, mapType(prop)>{}, prop, keypath, value);
+        setValue(MapType<std::integral_constant<Property, prop>>{}, prop, keypath, value);
     }
 
     /**
@@ -399,34 +405,10 @@ public:
     ~Animation();
 
 private:
-    enum class ValueType {Color,Point,Size,Float};
-    static constexpr ValueType mapType(Property prop) {
-        switch (prop) {
-        case Property::FillColor:
-        case Property::StrokeColor:
-            return ValueType::Color;
-        case Property::FillOpacity:
-        case Property::StrokeOpacity:
-        case Property::StrokeWidth:
-        case Property::TrOpacity:
-        case Property::TrRotation:
-            return ValueType::Float;
-        case Property::TrAnchor:
-        case Property::TrPosition:
-            return ValueType::Point;
-        case Property::TrScale:
-            return ValueType::Size;
-        }
-    }
-
-    void setValue(std::integral_constant<ValueType, ValueType::Color>,
-                  Property, const std::string &, Color);
-    void setValue(std::integral_constant<ValueType, ValueType::Float>,
-                  Property, const std::string &, float);
-    void setValue(std::integral_constant<ValueType, ValueType::Size>,
-                  Property, const std::string &, Size);
-    void setValue(std::integral_constant<ValueType, ValueType::Point>,
-                  Property, const std::string &, Point);
+    void setValue(Color_Type, Property, const std::string &, Color);
+    void setValue(Float_Type, Property, const std::string &, float);
+    void setValue(Size_Type, Property, const std::string &, Size);
+    void setValue(Point_Type, Property, const std::string &, Point);
     /**
      *  @brief default constructor
      *
@@ -436,6 +418,18 @@ private:
 
     std::unique_ptr<AnimationImpl> d;
 };
+
+//Map Property to Value type
+template<> struct MapType<std::integral_constant<Property, Property::FillColor>>: Color_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::StrokeColor>>: Color_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::FillOpacity>>: Float_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::StrokeOpacity>>: Float_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::StrokeWidth>>: Float_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::TrRotation>>: Float_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::TrOpacity>>: Float_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::TrAnchor>>: Point_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::TrPosition>>: Point_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::TrScale>>: Size_Type{};
 
 
 }  // namespace lotplayer

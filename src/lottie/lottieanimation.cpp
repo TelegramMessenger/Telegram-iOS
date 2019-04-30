@@ -314,28 +314,28 @@ const LayerInfoList& Animation::layers() const
     return d->layerInfoList();
 }
 
-void Animation::setValue(std::integral_constant<ValueType, ValueType::Color>,Property prop,
+void Animation::setValue(Color_Type,Property prop,
                          const std::string &keypath,
                          Color value)
 {
     d->setValue(keypath, LOTVariant(prop, value));
 }
 
-void Animation::setValue(std::integral_constant<ValueType, ValueType::Float>, Property prop,
+void Animation::setValue(Float_Type, Property prop,
                          const std::string &keypath,
                          float value)
 {
     d->setValue(keypath, LOTVariant(prop, value));
 }
 
-void Animation::setValue(std::integral_constant<ValueType, ValueType::Size>,Property prop,
+void Animation::setValue(Size_Type,Property prop,
                          const std::string &keypath,
                          Size value)
 {
     d->setValue(keypath, LOTVariant(prop, value));
 }
 
-void Animation::setValue(std::integral_constant<ValueType, ValueType::Point>, Property prop,
+void Animation::setValue(Point_Type, Property prop,
                          const std::string &keypath,
                          Point value)
 {
