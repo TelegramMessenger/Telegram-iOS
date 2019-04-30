@@ -217,9 +217,9 @@ final class SqliteValueBox: ValueBox {
             database = result
         } else {
             postboxLog("Couldn't open DB")
+            let _ = try? FileManager.default.removeItem(atPath: path)
+            database = Database(path)!
             preconditionFailure("Couldn't open database")
-            //let _ = try? FileManager.default.removeItem(atPath: path)
-            //database = Database(path)!
         }
         
         var resultCode: Bool = true
@@ -372,12 +372,6 @@ final class SqliteValueBox: ValueBox {
         self.beginInternal(database: database)
         
         let result = self.getUserVersion(database)
-        if result < 2 {
-            resultCode = database.execute("DROP TABLE IF EXISTS __meta_tables")
-            assert(resultCode)
-            resultCode = database.execute("CREATE TABLE __meta_tables (name INTEGER, keyType INTEGER)")
-            assert(resultCode)
-        }
         
         if result < 3 {
             resultCode = database.execute("CREATE TABLE __meta_fulltext_tables (name INTEGER)")
@@ -385,9 +379,6 @@ final class SqliteValueBox: ValueBox {
         }
         
         if result < 4 {
-            resultCode = database.execute("ALTER TABLE __meta_tables ADD COLUMN isCompact INTEGER DEFAULT 0")
-            assert(resultCode)
-            
             for table in self.listTables(database) {
                 resultCode = database.execute("ALTER TABLE t\(table.id) RENAME TO t\(table.id)_backup")
                 assert(resultCode)
@@ -502,42 +493,43 @@ final class SqliteValueBox: ValueBox {
     private func listTables(_ database: Database) -> [ValueBoxTable] {
         assert(self.queue.isCurrent())
         var statement: OpaquePointer? = nil
-        let status = sqlite3_prepare_v2(database.handle, "SELECT name, keyType, isCompact FROM __meta_tables", -1, &statement, nil)
+        let status = sqlite3_prepare_v2(database.handle, "SELECT name, type, sql FROM sqlite_master", -1, &statement, nil)
         assert(status == SQLITE_OK)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [ValueBoxTable] = []
         
         while preparedStatement.step(handle: database.handle, true, path: self.databasePath) {
-            let value = preparedStatement.int64At(0)
-            let keyType = preparedStatement.int64At(1)
-            let isCompact = preparedStatement.int64At(2)
-            tables.append(ValueBoxTable(id: Int32(value), keyType: ValueBoxKeyType(rawValue: Int32(keyType))!, compactValuesOnCreation: isCompact != 0))
+            guard let name = preparedStatement.stringAt(0) else {
+                assertionFailure()
+                continue
+            }
+            guard let type = preparedStatement.stringAt(1), type == "table" else {
+                continue
+            }
+            guard let sql = preparedStatement.stringAt(2) else {
+                assertionFailure()
+                continue
+            }
+            
+            if name.hasPrefix("t") {
+                if let intName = Int(String(name[name.index(after: name.startIndex)...])) {
+                    let keyType: ValueBoxKeyType
+                    if sql.range(of: "(key INTEGER") != nil {
+                        keyType = .int64
+                    } else if sql.range(of: "(key BLOB") != nil {
+                        keyType = .binary
+                    } else {
+                        assertionFailure()
+                        continue
+                    }
+                    let isCompact = sql.range(of: "WITHOUT ROWID") != nil
+                    tables.append(ValueBoxTable(id: Int32(intName), keyType: keyType, compactValuesOnCreation: isCompact))
+                }
+            }
         }
         preparedStatement.destroy()
-        
-        for table in tables {
-            self.createTableIfNotExists(database: database, table: table)
-        }
         
         return tables
-    }
-    
-    private func createTableIfNotExists(database: Database, table: ValueBoxTable) {
-        assert(self.queue.isCurrent())
-        var statement: OpaquePointer? = nil
-        let status = sqlite3_prepare_v2(database.handle, "SELECT name FROM sqlite_master WHERE type='table' AND name='t\(table.id)'", -1, &statement, nil)
-        assert(status == SQLITE_OK)
-        let preparedStatement = SqlitePreparedStatement(statement: statement)
-        
-        var exists = false
-        while preparedStatement.step(handle: database.handle, true, path: self.databasePath) {
-            exists = true
-        }
-        preparedStatement.destroy()
-        
-        if !exists {
-            self.createTable(database: database, table: table)
-        }
     }
     
     private func listFullTextTables(_ database: Database) -> [ValueBoxFullTextTable] {
@@ -562,14 +554,8 @@ final class SqliteValueBox: ValueBox {
             precondition(currentTable.keyType == table.keyType)
         } else {
             self.createTable(database: self.database, table: table)
-            self.insertTableAfterCreated(table)
+            self.tables[table.id] = table
         }
-    }
-    
-    private func insertTableAfterCreated(_ table: ValueBoxTable) {
-        self.tables[table.id] = table
-        let resultCode = self.database.execute("INSERT INTO __meta_tables(name, keyType, isCompact) VALUES (\(table.id), \(table.keyType.rawValue), \(table.compactValuesOnCreation ? 1 : 0))")
-        assert(resultCode)
     }
     
     private func createTable(database: Database, table: ValueBoxTable) {
@@ -1645,8 +1631,6 @@ final class SqliteValueBox: ValueBox {
         assert(resultCode)
         self.tables[toTable.id] = table
         self.tables.removeValue(forKey: table.id)
-        let _ = self.database.execute("DELETE FROM __meta_tables WHERE name=\(table.id)")
-        self.insertTableAfterCreated(toTable)
     }
     
     public func fullTextMatch(_ table: ValueBoxFullTextTable, collectionId: String?, query: String, tags: String?, values: (String, String) -> Bool) {
@@ -1893,7 +1877,6 @@ final class SqliteValueBox: ValueBox {
     public func removeTable(_ table: ValueBoxTable) {
         let _ = self.database.execute("DROP TABLE t\(table.id)")
         self.tables.removeValue(forKey: table.id)
-        let _ = self.database.execute("DELETE FROM __meta_tables WHERE name=\(table.id)")
     }
     
     public func drop() {
