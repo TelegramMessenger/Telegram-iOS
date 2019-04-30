@@ -43,6 +43,8 @@ private struct PasscodeState: Equatable {
     let challengeData: PostboxAccessChallengeData
     let autolockTimeout: Int32?
     let enableBiometrics: Bool
+    let biometricsDomainState: Data?
+    let disableBiometricsAuth: Bool
 }
 
 final class AuthorizedApplicationContext {
@@ -160,7 +162,7 @@ final class AuthorizedApplicationContext {
             return (accessChallengeData, passcodeSettings, isActive)
         }
         |> map { accessChallengeData, passcodeSettings, isActive -> PasscodeState in
-            return PasscodeState(isActive: isActive, challengeData: accessChallengeData, autolockTimeout: passcodeSettings?.autolockTimeout, enableBiometrics: passcodeSettings?.enableBiometrics ?? false)
+            return PasscodeState(isActive: isActive, challengeData: accessChallengeData, autolockTimeout: passcodeSettings?.autolockTimeout, enableBiometrics: passcodeSettings?.enableBiometrics ?? false, biometricsDomainState: passcodeSettings?.biometricsDomainState, disableBiometricsAuth: passcodeSettings?.disableBiometricsAuth ?? true)
         }).start(next: { [weak self] updatedState in
             guard let strongSelf = self else {
                 return
@@ -210,7 +212,15 @@ final class AuthorizedApplicationContext {
                     if updatedState.isActive {
                         if strongSelf.passcodeController == nil {
                             let presentAnimated = previousState != nil && previousState!.isActive
-                            let controller = PasscodeEntryController(context: strongSelf.context, challengeData: updatedState.challengeData, enableBiometrics: updatedState.enableBiometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: presentAnimated, lockIconInitialFrame: { [weak self] in
+                            
+                            let biometrics: PasscodeEntryControllerBiometricsMode
+                            if updatedState.enableBiometrics && !updatedState.disableBiometricsAuth {
+                                biometrics = .enabled(updatedState.biometricsDomainState)
+                            } else {
+                                biometrics = .none
+                            }
+                            
+                            let controller = PasscodeEntryController(context: strongSelf.context, challengeData: updatedState.challengeData, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: presentAnimated, lockIconInitialFrame: { [weak self] in
                                 if let strongSelf = self, let lockViewFrame = strongSelf.rootController.chatListController?.lockViewFrame {
                                     return lockViewFrame
                                 } else {
@@ -244,7 +254,7 @@ final class AuthorizedApplicationContext {
                         strongSelf.notificationController.view.isHidden = true
                     }
                 } else {
-                    if !updatedState.isActive && updatedState.autolockTimeout != nil && isLockable {
+                    if !updatedState.isActive && isLockable {
                         strongSelf.updateCoveringViewSnaphot(true)
                         strongSelf.mainWindow.coveringView = strongSelf.passcodeController == nil ? strongSelf.lockedCoveringView : nil
                         strongSelf.rootController.view.isHidden = true
