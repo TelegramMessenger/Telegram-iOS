@@ -16,6 +16,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     private var wallpaper: TelegramWallpaper
     private let passcodeType: PasscodeEntryFieldType
     private let biometricsType: LocalAuthBiometricAuthentication?
+    private let arguments: PasscodeEntryControllerPresentationArguments
     private var background: PasscodeBackground?
     
     private let statusBar: StatusBar
@@ -26,6 +27,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     private let inputFieldNode: PasscodeEntryInputFieldNode
     private let subtitleNode: PasscodeEntryLabelNode
     private let keyboardNode: PasscodeEntryKeyboardNode
+    private let cancelButtonNode: HighlightableButtonNode
     private let deleteButtonNode: HighlightableButtonNode
     private let biometricButtonNode: HighlightableButtonNode
     private let effectView: UIVisualEffectView
@@ -40,13 +42,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     var checkPasscode: ((String) -> Void)?
     var requestBiometrics: (() -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, statusBar: StatusBar) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, statusBar: StatusBar) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.wallpaper = wallpaper
         self.passcodeType = passcodeType
         self.biometricsType = biometricsType
+        self.arguments = arguments
         self.statusBar = statusBar
         
         self.backgroundNode = ASImageNode()
@@ -55,6 +58,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.inputFieldNode = PasscodeEntryInputFieldNode(color: .white, accentColor: .white, fieldType: passcodeType, keyboardAppearance: .dark, useCustomNumpad: true)
         self.subtitleNode = PasscodeEntryLabelNode()
         self.keyboardNode = PasscodeEntryKeyboardNode()
+        self.cancelButtonNode = HighlightableButtonNode()
         self.deleteButtonNode = HighlightableButtonNode()
         self.biometricButtonNode = HighlightableButtonNode()
         self.effectView = UIVisualEffectView(effect: nil)
@@ -82,6 +86,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             }
         }
         
+        self.cancelButtonNode.setTitle(strings.Common_Cancel, with: buttonFont, with: .white, for: .normal)
         self.deleteButtonNode.setTitle(strings.Common_Delete, with: buttonFont, with: .white, for: .normal)
     
         if let biometricsType = self.biometricsType {
@@ -101,6 +106,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.addSubnode(self.keyboardNode)
         self.addSubnode(self.deleteButtonNode)
         self.addSubnode(self.biometricButtonNode)
+        
+        if self.arguments.cancel != nil {
+            self.addSubnode(self.cancelButtonNode)
+        }
     }
     
     override func didLoad() {
@@ -108,8 +117,16 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         self.view.insertSubview(self.effectView, at: 0)
         
+        if self.arguments.cancel != nil {
+            self.cancelButtonNode.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
+        }
         self.deleteButtonNode.addTarget(self, action: #selector(self.deletePressed), forControlEvents: .touchUpInside)
         self.biometricButtonNode.addTarget(self, action: #selector(self.biometricsPressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc private func cancelPressed() {
+        self.animateOut(down: true)
+        self.arguments.cancel?()
     }
     
     @objc private func deletePressed() {
@@ -198,6 +215,13 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         }
     }
     
+    func hideBiometrics() {
+        self.biometricButtonNode.layer.animateScale(from: 1.0, to: 0.00001, duration: 0.25, delay: 0.0, timingFunction: kCAMediaTimingFunctionEaseOut, completion: { [weak self] _ in
+            self?.biometricButtonNode.isHidden = true
+        })
+        self.animateError()
+    }
+    
     func initialAppearance() {
         self.titleNode.setAttributedText(NSAttributedString(string: self.strings.Passcode_AppLockedAlert.replacingOccurrences(of: "\n", with: " "), font: titleFont, textColor: .white), animation: .none, completion: {
             Queue.mainQueue().after(2.0, {
@@ -227,6 +251,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.subtitleNode.isHidden = true
         self.inputFieldNode.isHidden = true
         self.keyboardNode.isHidden = true
+        self.cancelButtonNode.isHidden = true
         self.deleteButtonNode.isHidden = true
         self.biometricButtonNode.isHidden = true
         
@@ -234,6 +259,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             self.subtitleNode.isHidden = false
             self.inputFieldNode.isHidden = false
             self.keyboardNode.isHidden = false
+            self.cancelButtonNode.isHidden = false
             self.deleteButtonNode.isHidden = false
             self.biometricButtonNode.isHidden = false
             
@@ -245,6 +271,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             if case .alphanumeric = self.passcodeType {
                 biometricDelay = 0.0
             } else {
+                self.cancelButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: 0.15, timingFunction: kCAMediaTimingFunctionEaseOut)
                 self.deleteButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: 0.15, timingFunction: kCAMediaTimingFunctionEaseOut)
             }
             self.biometricButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: biometricDelay, timingFunction: kCAMediaTimingFunctionEaseOut)
@@ -257,9 +284,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         })
     }
     
-    func animateOut(completion: @escaping () -> Void = {}) {
+    func animateOut(down: Bool = false, completion: @escaping () -> Void = {}) {
         self.statusBar.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -self.bounds.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
+        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: down ? self.bounds.size.height : -self.bounds.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
             completion()
         })
     }
@@ -322,6 +349,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 self.keyboardNode.alpha = 0.0
                 self.deleteButtonNode.alpha = 0.0
         }
+        
+        let cancelSize = self.cancelButtonNode.measure(layout.size)
+        transition.updateFrame(node: self.cancelButtonNode, frame: CGRect(origin: CGPoint(x: floor(keyboardFrame.minX + keyboardButtonSize.width / 2.0 - cancelSize.width / 2.0), y: layout.size.height - layout.intrinsicInsets.bottom - cancelSize.height - passcodeLayout.keyboard.deleteOffset), size: cancelSize))
         
         let deleteSize = self.deleteButtonNode.measure(layout.size)
         transition.updateFrame(node: self.deleteButtonNode, frame: CGRect(origin: CGPoint(x: floor(keyboardFrame.maxX - keyboardButtonSize.width / 2.0 - deleteSize.width / 2.0), y: layout.size.height - layout.intrinsicInsets.bottom - deleteSize.height - passcodeLayout.keyboard.deleteOffset), size: deleteSize))

@@ -62,7 +62,7 @@ final class ChatListBadgeNode: ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func asyncLayout() -> (CGSize, UIImage?, ChatListBadgeContent) -> (CGSize, (Bool) -> Void) {
+    func asyncLayout() -> (CGSize, UIImage?, ChatListBadgeContent) -> (CGSize, (Bool, Bool) -> Void) {
         let textLayout = TextNode.asyncLayout(self.textNode)
         let measureTextLayout = TextNode.asyncLayout(self.measureTextNode)
         
@@ -85,7 +85,7 @@ final class ChatListBadgeNode: ASDisplayNode {
                     badgeWidth = 0.0
             }
             
-            return (CGSize(width: badgeWidth, height: 20.0), { animated in
+            return (CGSize(width: badgeWidth, height: 20.0), { animated, bounce in
                 if let strongSelf = self {
                     strongSelf.content = content
                     
@@ -123,7 +123,7 @@ final class ChatListBadgeNode: ASDisplayNode {
                                 }
                             })
                         } else if !currentIsEmpty && !nextIsEmpty && currentContent?.text != content.text {
-                            var animateScale = true
+                            var animateScale = bounce
                             strongSelf.isHiddenInternal = false
                             if let currentText = currentContent?.text, let currentValue = Int(currentText), let text = content.text, let value = Int(text) {
                                 if value < currentValue {

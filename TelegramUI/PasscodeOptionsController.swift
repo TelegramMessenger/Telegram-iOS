@@ -446,11 +446,21 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             completion(true)
             return nil
         } else {
-            let controller = PasscodeEntryController(context: context, challengeData: challenge, enableBiometrics: passcodeSettings?.enableBiometrics ?? false, arguments: PasscodeEntryControllerPresentationArguments(animated: animateIn, lockIconInitialFrame: {
+            let biometrics: PasscodeEntryControllerBiometricsMode
+            if let passcodeSettings = passcodeSettings, passcodeSettings.enableBiometrics && !passcodeSettings.disableBiometricsAuth {
+                biometrics = .enabled(passcodeSettings.biometricsDomainState)
+            } else {
+                biometrics = .none
+            }
+            let controller = PasscodeEntryController(context: context, challengeData: challenge, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: animateIn, lockIconInitialFrame: {
                     return CGRect()
+            }, cancel: {
+                completion(false)
             }))
             controller.presentationCompleted = { [weak controller] in
-                controller?.requestBiometrics()
+                Queue.mainQueue().after(0.5, { [weak controller] in
+                    controller?.requestBiometrics()
+                })
             }
             controller.completed = { [weak controller] in
                 controller?.dismiss(completion: nil)

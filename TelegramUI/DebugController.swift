@@ -45,6 +45,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case clearTips(PresentationTheme)
     case reimport(PresentationTheme)
     case resetData(PresentationTheme)
+    case resetBiometricsData(PresentationTheme)
     case animatedStickers(PresentationTheme)
     case versionInfo(PresentationTheme)
     
@@ -58,7 +59,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .animatedStickers:
+            case .clearTips, .reimport, .resetData, .resetBiometricsData, .animatedStickers:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -97,10 +98,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 13
             case .resetData:
                 return 14
-            case .animatedStickers:
+            case .resetBiometricsData:
                 return 15
-            case .versionInfo:
+            case .animatedStickers:
                 return 16
+            case .versionInfo:
+                return 17
         }
     }
     
@@ -378,6 +381,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     ])])
                     arguments.presentController(actionSheet, nil)
                 })
+            case let .resetBiometricsData(theme):
+                return ItemListActionItem(theme: theme, title: "Reset Biometrics Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    let _ = updatePresentationPasscodeSettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
+                        return settings.withUpdatedBiometricsDomainState(nil).withUpdatedDisableBiometricsAuth(false)
+                    }).start()
+                })
             case let .animatedStickers(theme):
                 return ItemListSwitchItem(theme: theme, title: "AJSON", value: GlobalExperimentalSettings.animatedStickers, sectionId: self.section, style: .blocks, updated: { value in
                     GlobalExperimentalSettings.animatedStickers = value
@@ -416,7 +425,6 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
         entries.append(.reimport(presentationData.theme))
     }
     entries.append(.resetData(presentationData.theme))
-    entries.append(.animatedStickers(presentationData.theme))
     entries.append(.versionInfo(presentationData.theme))
     
     return entries

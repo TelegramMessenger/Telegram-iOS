@@ -819,8 +819,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
+            var isMuted = false
             if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
                 if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                    isMuted = true
                     currentMutedIconImage = PresentationResourcesChatList.mutedIcon(item.presentationData.theme)
                 }
             }
@@ -1074,8 +1076,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let _ = textApply()
                     let _ = authorApply()
                     let _ = titleApply()
-                    let _ = badgeApply(animateContent)
-                    let _ = mentionBadgeApply(animateContent)
+                    let _ = badgeApply(animateContent, !isMuted)
+                    let _ = mentionBadgeApply(animateContent, true)
                     let _ = onlineApply(animateContent)
                     
                     let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + revealOffset, dy: 0.0)

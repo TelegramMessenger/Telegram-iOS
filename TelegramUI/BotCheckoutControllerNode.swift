@@ -764,7 +764,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                                                 } else {
                                                     reasonText = strongSelf.presentationData.strings.Checkout_PayWithTouchId
                                                 }
-                                                let _ = (LocalAuth.auth(reason: reasonText) |> deliverOnMainQueue).start(next: { value in
+                                                let _ = (LocalAuth.auth(reason: reasonText) |> deliverOnMainQueue).start(next: { value, _ in
                                                     if let strongSelf = self {
                                                         if value {
                                                             strongSelf.pay(savedCredentialsToken: token)

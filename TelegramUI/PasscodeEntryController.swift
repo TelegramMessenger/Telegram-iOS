@@ -7,11 +7,18 @@ import Postbox
 final public class PasscodeEntryControllerPresentationArguments {
     let animated: Bool
     let lockIconInitialFrame: () -> CGRect
+    let cancel: (() -> Void)?
     
-    public init(animated: Bool = true, lockIconInitialFrame: @escaping () -> CGRect) {
+    public init(animated: Bool = true, lockIconInitialFrame: @escaping () -> CGRect, cancel: (() -> Void)? = nil) {
         self.animated = animated
         self.lockIconInitialFrame = lockIconInitialFrame
+        self.cancel = cancel
     }
+}
+
+public enum PasscodeEntryControllerBiometricsMode {
+    case none
+    case enabled(Data?)
 }
 
 final public class PasscodeEntryController: ViewController {
@@ -24,7 +31,7 @@ final public class PasscodeEntryController: ViewController {
     private var presentationDataDisposable: Disposable?
         
     private let challengeData: PostboxAccessChallengeData
-    private let enableBiometrics: Bool
+    private let biometrics: PasscodeEntryControllerBiometricsMode
     private let arguments: PasscodeEntryControllerPresentationArguments
     
     public var presentationCompleted: (() -> Void)?
@@ -34,11 +41,11 @@ final public class PasscodeEntryController: ViewController {
     private var hasOngoingBiometricsRequest = false
     private var skipNextBiometricsRequest = false
     
-    public init(context: AccountContext, challengeData: PostboxAccessChallengeData, enableBiometrics: Bool, arguments: PasscodeEntryControllerPresentationArguments) {
+    public init(context: AccountContext, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.challengeData = challengeData
-        self.enableBiometrics = enableBiometrics
+        self.biometrics = biometrics
         self.arguments = arguments
         
         super.init(navigationBarPresentationData: nil)
@@ -72,12 +79,20 @@ final public class PasscodeEntryController: ViewController {
                 passcodeType = .alphanumeric
         }
         let biometricsType: LocalAuthBiometricAuthentication?
-        if self.enableBiometrics {
-            biometricsType = LocalAuth.biometricAuthentication
+        if case let .enabled(data) = self.biometrics {
+            if #available(iOSApplicationExtension 9.0, *) {
+                if data != nil {
+                    biometricsType = LocalAuth.biometricAuthentication
+                } else {
+                    biometricsType = nil
+                }
+            } else {
+                biometricsType = LocalAuth.biometricAuthentication
+            }
         } else {
             biometricsType = nil
         }
-        self.displayNode = PasscodeEntryControllerNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, passcodeType: passcodeType, biometricsType: biometricsType, statusBar: self.statusBar)
+        self.displayNode = PasscodeEntryControllerNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, passcodeType: passcodeType, biometricsType: biometricsType, arguments: self.arguments, statusBar: self.statusBar)
         self.displayNodeDidLoad()
         
         let _ = (self.context.sharedContext.accountManager.transaction({ transaction -> AccessChallengeAttempts? in
@@ -121,6 +136,10 @@ final public class PasscodeEntryController: ViewController {
                         transaction.setAccessChallengeData(data)
                     }).start()
                 }
+                
+                let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { settings in
+                    return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState).withUpdatedDisableBiometricsAuth(false)
+                }).start()
             } else {
                 let _ = (strongSelf.context.sharedContext.accountManager.transaction({ transaction -> AccessChallengeAttempts in
                     var data = transaction.getAccessChallengeData()
@@ -186,8 +205,14 @@ final public class PasscodeEntryController: ViewController {
     }
     
     public func requestBiometrics(force: Bool = false) {
-        guard self.enableBiometrics, let _ = LocalAuth.biometricAuthentication else {
+        guard case let .enabled(data) = self.biometrics, let _ = LocalAuth.biometricAuthentication else {
             return
+        }
+        
+        if #available(iOSApplicationExtension 9.0, *) {
+            if data == nil {
+                return
+            }
         }
         
         if self.skipNextBiometricsRequest {
@@ -205,10 +230,24 @@ final public class PasscodeEntryController: ViewController {
         
         self.hasOngoingBiometricsRequest = true
         
-        self.biometricsDisposable.set((LocalAuth.auth(reason: self.presentationData.strings.EnterPasscode_TouchId) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.biometricsDisposable.set((LocalAuth.auth(reason: self.presentationData.strings.EnterPasscode_TouchId) |> deliverOnMainQueue).start(next: { [weak self] result, evaluatedPolicyDomainState in
             guard let strongSelf = self else {
                 return
             }
+            
+            if #available(iOSApplicationExtension 9.0, *) {
+                if case let .enabled(storedDomainState) = strongSelf.biometrics {
+                    if storedDomainState != evaluatedPolicyDomainState {
+                        let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { settings in
+                            return settings.withUpdatedBiometricsDomainState(evaluatedPolicyDomainState).withUpdatedDisableBiometricsAuth(true)
+                        }).start()
+                        
+                        strongSelf.controllerNode.hideBiometrics()
+                        return
+                    }
+                }
+            }
+            
             if result {
                 strongSelf.controllerNode.animateSuccess()
                 

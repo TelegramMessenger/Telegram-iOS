@@ -28,17 +28,35 @@ struct LocalAuth {
         }
     }()
     
-    static func auth(reason: String) -> Signal<Bool, NoError> {
+    static let evaluatedPolicyDomainState: Data? = {
+        let context = LAContext()
+        if context.canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
+            if #available(iOSApplicationExtension 9.0, *) {
+                return context.evaluatedPolicyDomainState
+            } else {
+                return Data()
+            }
+        }
+        return nil
+    }()
+    
+    static func auth(reason: String) -> Signal<(Bool, Data?), NoError> {
         return Signal { subscriber in
             let context = LAContext()
             
             if LAContext().canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
                 context.evaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, localizedReason: reason, reply: { result, _ in
-                    subscriber.putNext(result)
+                    let evaluatedPolicyDomainState: Data?
+                    if #available(iOSApplicationExtension 9.0, *) {
+                        evaluatedPolicyDomainState = context.evaluatedPolicyDomainState
+                    } else {
+                        evaluatedPolicyDomainState = Data()
+                    }
+                    subscriber.putNext((result, evaluatedPolicyDomainState))
                     subscriber.putCompletion()
                 })
             } else {
-                subscriber.putNext(false)
+                subscriber.putNext((false, nil))
                 subscriber.putCompletion()
             }
             
