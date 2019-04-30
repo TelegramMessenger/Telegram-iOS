@@ -1252,7 +1252,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         if let replyToMsgId = replyToMsgId {
                             replyToMessageId = MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
                         }
-                        inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, timestamp: date)
+                        inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date)
                 }
                 updatedState.addUpdateChatInputState(peerId: peer.peerId, state: inputState)
             case let .updatePhoneCall(phoneCall):
