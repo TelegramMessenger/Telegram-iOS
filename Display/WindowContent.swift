@@ -1068,5 +1068,10 @@ public class Window1 {
                 break
             }
         }
+        for controller in self.topLevelOverlayControllers {
+            if !f(controller) {
+                break
+            }
+        }
     }
 }
