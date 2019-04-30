@@ -582,7 +582,24 @@ final class SharedApplicationContext {
         
         let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
             let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
-            return upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters).start(completed: {
+            return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
+            |> deliverOnMainQueue).start(next: { progress in
+                if self.dataImportSplash == nil {
+                    self.dataImportSplash = LegacyDataImportSplash(theme: nil, strings: nil)
+                    self.dataImportSplash?.serviceAction = {
+                        self.debugPressed()
+                    }
+                    self.mainWindow.coveringView = self.dataImportSplash
+                }
+                self.dataImportSplash?.progress = (type, value)
+            }, completed: {
+                if let dataImportSplash = self.dataImportSplash {
+                    self.dataImportSplash = nil
+                    if self.mainWindow.coveringView === dataImportSplash {
+                        self.mainWindow.coveringView = nil
+                    }
+                }
+                
                 subscriber.putNext(accountManager)
                 subscriber.putCompletion()
             })

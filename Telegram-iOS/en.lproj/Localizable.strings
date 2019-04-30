@@ -4231,12 +4231,12 @@ Unused sets are archived when you add more.";
 
 "ChatList.ArchiveAction" = "Archive";
 "ChatList.UnarchiveAction" = "Unarchive";
-"ChatList.HideAction" = "Unpin";
+"ChatList.HideAction" = "Hide";
 "ChatList.UnhideAction" = "Pin";
 
 "ChatList.UndoArchiveTitle" = "Chat archived";
 "ChatList.UndoArchiveText1" = "Hide the archive by swiping left on it.";
-"ChatList.UndoArchiveHiddenTitle" = "Archive unpinned";
+"ChatList.UndoArchiveHiddenTitle" = "Archive hidden";
 "ChatList.UndoArchiveHiddenText" = "Swipe down to see archive.";
 "ChatList.UndoArchiveRevealedTitle" = "Archive pinned";
 "ChatList.UndoArchiveRevealedText" = "Swipe left on the archive to hide it.";
