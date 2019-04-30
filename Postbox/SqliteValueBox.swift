@@ -514,7 +514,30 @@ final class SqliteValueBox: ValueBox {
             tables.append(ValueBoxTable(id: Int32(value), keyType: ValueBoxKeyType(rawValue: Int32(keyType))!, compactValuesOnCreation: isCompact != 0))
         }
         preparedStatement.destroy()
+        
+        for table in tables {
+            self.createTableIfNotExists(database: database, table: table)
+        }
+        
         return tables
+    }
+    
+    private func createTableIfNotExists(database: Database, table: ValueBoxTable) {
+        assert(self.queue.isCurrent())
+        var statement: OpaquePointer? = nil
+        let status = sqlite3_prepare_v2(database.handle, "SELECT name FROM sqlite_master WHERE type='table' AND name='t\(table.id)'", -1, &statement, nil)
+        assert(status == SQLITE_OK)
+        let preparedStatement = SqlitePreparedStatement(statement: statement)
+        
+        var exists = false
+        while preparedStatement.step(handle: database.handle, true, path: self.databasePath) {
+            exists = true
+        }
+        preparedStatement.destroy()
+        
+        if !exists {
+            self.createTable(database: database, table: table)
+        }
     }
     
     private func listFullTextTables(_ database: Database) -> [ValueBoxFullTextTable] {
@@ -1616,6 +1639,8 @@ final class SqliteValueBox: ValueBox {
         self.checkTable(table)
         let resultCode = database.execute("ALTER TABLE t\(table.id) RENAME TO t\(toTable.id)")
         assert(resultCode)
+        self.tables[toTable.id] = table
+        self.tables.removeValue(forKey: table.id)
     }
     
     public func fullTextMatch(_ table: ValueBoxFullTextTable, collectionId: String?, query: String, tags: String?, values: (String, String) -> Bool) {
@@ -1861,6 +1886,8 @@ final class SqliteValueBox: ValueBox {
     
     public func removeTable(_ table: ValueBoxTable) {
         let _ = self.database.execute("DROP TABLE t\(table.id)")
+        self.tables.removeValue(forKey: table.id)
+        let _ = self.database.execute("DELETE FROM __meta_tables WHERE name=\(table.id)")
     }
     
     public func drop() {
