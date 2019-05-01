@@ -379,10 +379,12 @@ final class SqliteValueBox: ValueBox {
         }
         
         if result < 4 {
-            upgradeProgress(0.0)
-            
             let currentTables = self.listTables(database)
             for i in 0 ..< currentTables.count {
+                if i == 0 {
+                    upgradeProgress(0.0)
+                }
+                
                 let table = currentTables[i]
                 
                 resultCode = database.execute("ALTER TABLE t\(table.id) RENAME TO t\(table.id)_backup")
