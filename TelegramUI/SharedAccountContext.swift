@@ -284,6 +284,8 @@ public final class SharedAccountContext {
         let differenceDisposable = MetaDisposable()
         let _ = (accountManager.accountRecords()
         |> map { view -> (AccountRecordId?, [AccountRecordId: AccountAttributes], (AccountRecordId, Bool)?) in
+            print("SharedAccountContext: records appeared in \(CFAbsoluteTimeGetCurrent() - startTime)")
+            
             var result: [AccountRecordId: AccountAttributes] = [:]
             for record in view.records {
                 let isLoggedOut = record.attributes.contains(where: { attribute in
@@ -395,8 +397,7 @@ public final class SharedAccountContext {
             
             differenceDisposable.set((combineLatest(queue: .mainQueue(), mappedAddedAccounts, addedAuthSignal)
             |> deliverOnMainQueue).start(next: { mappedAddedAccounts, authAccount in
-                let endTime = CFAbsoluteTimeGetCurrent()
-                print("SharedAccountManager: accounts processed in \(endTime - startTime)")
+                print("SharedAccountContext: accounts processed in \(CFAbsoluteTimeGetCurrent() - startTime)")
                 
                 var addedAccounts: [(AccountRecordId, Account?, Int32)] = []
                 switch mappedAddedAccounts {
