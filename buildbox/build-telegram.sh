@@ -87,9 +87,22 @@ else
 fi
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
-ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION"
+ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
 
-if [ "$BUILD_CONFIGURATION" == "verify" ]; then
+if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
+	ARCHIVE_PATH="$HOME/telegram-builds-archive"
+	DATE_PATH=$(date +%Y-%m-%d_%H-%M-%S)
+	ARCHIVE_BUILD_PATH="$ARCHIVE_PATH/$DATE_PATH"
+	mkdir -p "$ARCHIVE_PATH"
+	mkdir -p "$ARCHIVE_BUILD_PATH"
+	APPSTORE_IPA="Telegram-iOS-AppStoreLLC.ipa"
+	APPSTORE_DSYM_ZIP="Telegram-iOS-AppStoreLLC.app.dSYM.zip"
+	APPSTORE_TARGET_IPA="$ARCHIVE_BUILD_PATH/Telegram-iOS-AppStoreLLC.ipa"
+	APPSTORE_TARGET_DSYM_ZIP="$ARCHIVE_BUILD_PATH/Telegram-iOS-AppStoreLLC.app.dSYM.zip"
+
+	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/$APPSTORE_IPA" "$APPSTORE_TARGET_IPA"
+	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/$APPSTORE_DSYM_ZIP" "$APPSTORE_TARGET_DSYM_ZIP"
+elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	VERIFY_IPA="Telegram-Verify-Build.ipa"
 	rm -f "$VERIFY_IPA"
 	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":telegram-ios/Telegram-iOS-AppStoreLLC.ipa "./$VERIFY_IPA"
