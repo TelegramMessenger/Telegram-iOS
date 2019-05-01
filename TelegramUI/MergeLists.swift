@@ -186,7 +186,7 @@ public func mergeListsStableWithUpdatesReversed<T>(leftList: [T], rightList: [T]
     var insertItems: [(Int, T, Int?)] = []
     var updatedIndices: [(Int, T, Int)] = []
     
-    #if (arch(i386) || arch(x86_64)) && os(iOS)
+    #if targetEnvironment(simulator)
         var existingStableIds: [T.T: T] = [:]
         for item in leftList {
             if let _ = existingStableIds[item.stableId] {
