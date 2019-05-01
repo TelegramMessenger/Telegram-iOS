@@ -202,6 +202,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                         }
                         self.complete?(self.currentPasscode, numerical)
                     } else {
+                        self.previousPasscode = nil
+                        
                         if let snapshotView = self.wrapperNode.view.snapshotContentTree() {
                             snapshotView.frame = self.wrapperNode.frame
                             self.wrapperNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.wrapperNode.view)
@@ -211,7 +213,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                             self.wrapperNode.layer.animatePosition(from: CGPoint(x: -self.wrapperNode.bounds.width, y: 0.0), to: CGPoint(), duration: 0.25, additive: true)
                             
                             self.inputFieldNode.reset(animated: false)
-                            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_RepeatNewPasscode, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+                            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
                             self.subtitleNode.isHidden = false
                             self.subtitleNode.attributedText = NSAttributedString(string: "Passcodes don't match. Please try again.", font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
                             self.modeButtonNode.isHidden = false
