@@ -363,12 +363,14 @@ public final class SharedAccountContext {
             }
             if let authRecord = authRecord, authRecord.0 != self.activeAccountsValue?.currentAuth?.id {
                 addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, auxiliaryMethods: telegramAccountAuxiliaryMethods)
-                |> map { result -> UnauthorizedAccount? in
+                |> mapToSignal { result -> Signal<UnauthorizedAccount?, NoError> in
                     switch result {
                         case let .unauthorized(account):
-                            return account
+                            return .single(account)
+                        case .upgrading:
+                            return .complete()
                         default:
-                            return nil
+                            return .single(nil)
                     }
                 }
             }
