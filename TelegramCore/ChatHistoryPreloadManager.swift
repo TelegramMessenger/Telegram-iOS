@@ -171,7 +171,7 @@ final class ChatHistoryPreloadManager {
     private var canPreloadHistoryDisposable: Disposable?
     private var canPreloadHistoryValue = false
     
-    private var automaticChatListDisposable: Disposable?
+    private let automaticChatListDisposable = MetaDisposable()
     
     private var views: [ChatHistoryPreloadEntity: HistoryPreloadViewContext] = [:]
     
@@ -188,31 +188,6 @@ final class ChatHistoryPreloadManager {
         self.network = network
         self.accountPeerId = accountPeerId
         self.download.set(network.background())
-        
-        self.automaticChatListDisposable = (postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents())
-        |> deliverOnMainQueue).start(next: { [weak self] view in
-            guard let strongSelf = self else {
-                return
-            }
-            var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
-            for entry in view.0.entries {
-                if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _) = entry {
-                    var hasUnread = false
-                    if let readState = readState {
-                        hasUnread = readState.count != 0
-                    }
-                    var isMuted = false
-                    if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
-                        if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-                            isMuted = true
-                        }
-                    }
-                    indices.append((ChatHistoryPreloadIndex(index: index, entity: .peer(index.messageIndex.id.peerId)), hasUnread, isMuted))
-                }
-            }
-            
-            strongSelf.update(indices: indices)
-        })
         
         self.canPreloadHistoryDisposable = (networkState
         |> map { state -> Bool in
@@ -239,6 +214,34 @@ final class ChatHistoryPreloadManager {
     
     deinit {
         self.canPreloadHistoryDisposable?.dispose()
+    }
+    
+    func start() {
+        self.automaticChatListDisposable.set((postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents())
+        |> delay(1.0, queue: .mainQueue())
+        |> deliverOnMainQueue).start(next: { [weak self] view in
+            guard let strongSelf = self else {
+                return
+            }
+            var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
+            for entry in view.0.entries {
+                if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _) = entry {
+                    var hasUnread = false
+                    if let readState = readState {
+                        hasUnread = readState.count != 0
+                    }
+                    var isMuted = false
+                    if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
+                        if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                            isMuted = true
+                        }
+                    }
+                    indices.append((ChatHistoryPreloadIndex(index: index, entity: .peer(index.messageIndex.id.peerId)), hasUnread, isMuted))
+                }
+            }
+            
+            strongSelf.update(indices: indices)
+        }))
     }
     
     private func update(indices: [(ChatHistoryPreloadIndex, Bool, Bool)]) {
