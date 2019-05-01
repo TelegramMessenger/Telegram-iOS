@@ -828,7 +828,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 case let .Spring(duration):
                     transition = .animated(duration: duration, curve: .spring)
                 case let .Default(duration):
-                    transition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
+                    if let duration = duration, duration.isZero {
+                        transition = .immediate
+                    } else {
+                        transition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
+                    }
             }
         }
         
@@ -854,7 +858,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             } else {
                 let areaHeight = min(completeHeight, visibleAreaHeight)
                 if bottomItemEdge < effectiveInsets.top + areaHeight - overscroll {
-                    offset = effectiveInsets.top + areaHeight - overscroll - bottomItemEdge
+                    if snapTopItem && topItemEdge < effectiveInsets.top {
+                        offset = (effectiveInsets.top - overscroll) - topItemEdge
+                    } else {
+                        offset = effectiveInsets.top + areaHeight - overscroll - bottomItemEdge
+                    }
                 } else if topItemEdge > effectiveInsets.top - overscroll && /*snapTopItem*/ true {
                     offset = (effectiveInsets.top - overscroll) - topItemEdge
                 }
@@ -3235,7 +3243,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 let minIndicatorHeight: CGFloat = 6.0
                 
                 let visibleHeightWithoutIndicatorInsets = self.visibleSize.height - self.scrollIndicatorInsets.top - self.scrollIndicatorInsets.bottom - indicatorTopInset - indicatorBottomInset
-                let indicatorHeight: CGFloat = max(minIndicatorContentHeight, floor(visibleHeightWithoutIndicatorInsets * (self.visibleSize.height - self.insets.top - self.insets.bottom) / approximateContentHeight))
+                let indicatorHeight: CGFloat
+                if approximateContentHeight <= 0 {
+                    indicatorHeight = 0.0
+                } else {
+                    indicatorHeight = max(minIndicatorContentHeight, floor(visibleHeightWithoutIndicatorInsets * (self.visibleSize.height - self.insets.top - self.insets.bottom) / approximateContentHeight))
+                }
                 
                 let upperBound = self.scrollIndicatorInsets.top + indicatorTopInset
                 let lowerBound = self.visibleSize.height - self.scrollIndicatorInsets.bottom - indicatorTopInset - indicatorBottomInset - indicatorHeight
