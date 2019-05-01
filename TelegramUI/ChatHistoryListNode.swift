@@ -475,6 +475,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         additionalData.append(.totalUnreadState)
         
+        let currentViewVersion = Atomic<Int?>(value: nil)
+        
         let historyViewUpdate = self.chatHistoryLocationPromise.get()
         |> distinctUntilChanged
         |> mapToSignal { location in
@@ -487,6 +489,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         break
                 }
             }
+        }
+        |> map { view -> (ChatHistoryViewUpdate, Int) in
+            let version = currentViewVersion.modify({ value in
+                if let value = value {
+                    return value + 1
+                } else {
+                    return 0
+                }
+            })!
+            return (view, version)
         }
         
         let previousView = Atomic<ChatHistoryView?>(value: nil)
@@ -503,7 +515,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)
         
-        let historyViewTransition = combineLatest(historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get())
+        let historyViewTransition = combineLatest(queue: messageViewQueue, historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get())
         |> introduceError(Void.self)
         |> mapToQueue { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared -> Signal<ChatHistoryListViewTransition, Void> in
             func applyHole() {
@@ -527,7 +539,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
             
             let initialData: ChatHistoryCombinedInitialData?
-            switch update {
+            switch update.0 {
                 case let .Loading(combinedInitialData, type):
                     if case .Generic(.FillHole) = type {
                         applyHole()
@@ -633,7 +645,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         |> deliverOnMainQueue
         |> mapToQueue { [weak self] transition -> Signal<Void, Void> in
             if let strongSelf = self {
-                    return strongSelf.enqueueHistoryViewTransition(transition)
+                return strongSelf.enqueueHistoryViewTransition(transition)
                 |> introduceError(Void.self)
             }
             return .complete()

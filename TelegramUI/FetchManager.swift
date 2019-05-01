@@ -102,8 +102,12 @@ private final class FetchManagerLocationEntry {
     
     var combinedRanges: IndexSet {
         var result = IndexSet()
-        for range in self.ranges.copyItems() {
-            result.formUnion(range)
+        if self.userInitiated {
+            result.insert(integersIn: 0 ..< Int(Int32.max))
+        } else {
+            for range in self.ranges.copyItems() {
+                result.formUnion(range)
+            }
         }
         return result
     }

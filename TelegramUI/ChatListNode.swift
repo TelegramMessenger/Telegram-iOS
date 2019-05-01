@@ -407,7 +407,9 @@ final class ChatListNode: ListView {
                 if state.selectedPeerIds.contains(peerId) {
                     state.selectedPeerIds.remove(peerId)
                 } else {
-                    state.selectedPeerIds.insert(peerId)
+                    if state.selectedPeerIds.count < 100 {
+                        state.selectedPeerIds.insert(peerId)
+                    }
                 }
                 return state
             }
@@ -441,11 +443,6 @@ final class ChatListNode: ListView {
                             break
                         case let .limitExceeded(maxCount):
                             strongSelf.presentAlert?(strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").0)
-                    }
-                    strongSelf.updateState { state in
-                        var state = state
-                        state.peerIdWithRevealedOptions = nil
-                        return state
                     }
                 }
             })
@@ -533,7 +530,7 @@ final class ChatListNode: ListView {
         
         let currentPeerId: PeerId = context.account.peerId
         
-        let chatListNodeViewTransition = combineLatest(hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, chatListViewUpdate, self.statePromise.get())
+        let chatListNodeViewTransition = combineLatest(queue: viewProcessingQueue, hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, chatListViewUpdate, self.statePromise.get())
         |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)

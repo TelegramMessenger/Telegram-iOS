@@ -1448,7 +1448,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         case .peer:
                             let itemId: PinnedItemId = .peer(item.index.messageIndex.id.peerId)
                             item.interaction.setItemPinned(itemId, true)
-                            close = false
                         case .groupReference:
                             break
                     }
@@ -1457,7 +1456,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         case .peer:
                             let itemId: PinnedItemId = .peer(item.index.messageIndex.id.peerId)
                             item.interaction.setItemPinned(itemId, false)
-                            close = false
                         case .groupReference:
                             break
                     }
