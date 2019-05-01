@@ -100,8 +100,8 @@ if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	APPSTORE_TARGET_IPA="$ARCHIVE_BUILD_PATH/Telegram-iOS-AppStoreLLC.ipa"
 	APPSTORE_TARGET_DSYM_ZIP="$ARCHIVE_BUILD_PATH/Telegram-iOS-AppStoreLLC.app.dSYM.zip"
 
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/$APPSTORE_IPA" "$APPSTORE_TARGET_IPA"
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/$APPSTORE_DSYM_ZIP" "$APPSTORE_TARGET_DSYM_ZIP"
+	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/*.ipa" "$ARCHIVE_BUILD_PATH/"
+	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/*.zip" "$ARCHIVE_BUILD_PATH/"
 elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	VERIFY_IPA="Telegram-Verify-Build.ipa"
 	rm -f "$VERIFY_IPA"
