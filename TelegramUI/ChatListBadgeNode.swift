@@ -117,11 +117,15 @@ final class ChatListBadgeNode: ASDisplayNode {
                         
                         if currentIsEmpty && !nextIsEmpty {
                             strongSelf.isHiddenInternal = false
-                            strongSelf.layer.animateScale(from: 0.0001, to: 1.2, duration: 0.2, removeOnCompletion: false, completion: { [weak self] finished in
-                                if let strongSelf = self {
-                                    strongSelf.layer.animateScale(from: 1.15, to: 1.0, duration: 0.12, removeOnCompletion: false)
-                                }
-                            })
+                            if bounce {
+                                strongSelf.layer.animateScale(from: 0.0001, to: 1.2, duration: 0.2, removeOnCompletion: false, completion: { [weak self] finished in
+                                    if let strongSelf = self {
+                                        strongSelf.layer.animateScale(from: 1.15, to: 1.0, duration: 0.12, removeOnCompletion: false)
+                                    }
+                                })
+                            } else {
+                                strongSelf.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.2, removeOnCompletion: false)
+                            }
                         } else if !currentIsEmpty && !nextIsEmpty && currentContent?.text != content.text {
                             var animateScale = bounce
                             strongSelf.isHiddenInternal = false
@@ -154,9 +158,10 @@ final class ChatListBadgeNode: ASDisplayNode {
                             animateTextNode = true
                         } else if !currentIsEmpty && nextIsEmpty && !strongSelf.isHiddenInternal {
                             strongSelf.isHiddenInternal = true
-                            strongSelf.layer.animateScale(from: 1.0, to: 0.0001, duration: 0.12, removeOnCompletion: true, completion: { [weak self] finished in
+                            strongSelf.layer.animateScale(from: 1.0, to: 0.0001, duration: 0.12, removeOnCompletion: false, completion: { [weak self] finished in
                                 if let strongSelf = self {
                                     strongSelf.isHidden = true
+                                    strongSelf.layer.removeAnimation(forKey: "transform.scale")
                                 }
                             })
                         }

@@ -39,8 +39,8 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     private let playbackCompletedListeners = Bag<() -> Void>()
     
     private var initializedStatus = false
-    private var statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true)
-    private var isBuffering = false
+    private var statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: false), soundEnabled: true)
+    private var isBuffering = true
     private let _status = ValuePromise<MediaPlayerStatus>()
     var status: Signal<MediaPlayerStatus, NoError> {
         return self._status.get()
@@ -69,7 +69,10 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     private var loadProgressDisposable: Disposable?
     private var statusDisposable: Disposable?
     
+    private var didBeginPlaying = false
+    
     private var didPlayToEndTimeObserver: NSObjectProtocol?
+    private var timeObserver: Any?
     
     init(postbox: Postbox, audioSessionManager: ManagedAudioSession, url: String, imageReference: ImageMediaReference, intrinsicDimensions: CGSize, approximateDuration: Int32) {
         self.audioSessionManager = audioSessionManager
@@ -117,9 +120,21 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.playerItem.addObserver(self, forKeyPath: "playbackBufferFull", options: .new, context: nil)
         
         self._bufferingStatus.set(.single(nil))
+        self._status.set(self.statusValue)
+        
+        self.timeObserver = self.player.addPeriodicTimeObserver(forInterval: CMTimeMake(1, 10), queue: DispatchQueue.main) { [weak self] time in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: strongSelf.statusValue.duration, dimensions: CGSize(), timestamp: CMTimeGetSeconds(time), baseRate: 1.0, seekId: 0, status: strongSelf.statusValue.status, soundEnabled: true)
+            strongSelf._status.set(strongSelf.statusValue)
+        }
     }
     
     deinit {
+        if let timeObserver = self.timeObserver {
+            self.player.removeTimeObserver(timeObserver)
+        }
         self.player.removeObserver(self, forKeyPath: "rate")
         self.playerItem.removeObserver(self, forKeyPath: "playbackBufferEmpty")
         self.playerItem.removeObserver(self, forKeyPath: "playbackLikelyToKeepUp")
@@ -136,6 +151,13 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     }
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+        let duration: Double
+        if let currentItem = self.player.currentItem {
+            duration = CMTimeGetSeconds(currentItem.duration)
+        } else {
+            duration = Double(self.approximateDuration)
+        }
+        
         if keyPath == "rate" {
             let isPlaying = !self.player.rate.isZero
             let status: MediaPlayerPlaybackStatus
@@ -144,7 +166,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
             } else {
                 status = isPlaying ? .playing : .paused
             }
-            self.statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: status, soundEnabled: true)
+            self.statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: duration, dimensions: CGSize(), timestamp: self.statusValue.timestamp, baseRate: 1.0, seekId: 0, status: status, soundEnabled: true)
             self._status.set(self.statusValue)
         } else if keyPath == "playbackBufferEmpty" {
             let isPlaying = !self.player.rate.isZero
@@ -155,7 +177,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
             } else {
                 status = isPlaying ? .playing : .paused
             }
-            self.statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: status, soundEnabled: true)
+            self.statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: duration, dimensions: CGSize(), timestamp: self.statusValue.timestamp, baseRate: 1.0, seekId: 0, status: status, soundEnabled: true)
             self._status.set(self.statusValue)
         } else if keyPath == "playbackLikelyToKeepUp" || keyPath == "playbackBufferFull" {
             let isPlaying = !self.player.rate.isZero
@@ -166,8 +188,13 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
             } else {
                 status = isPlaying ? .playing : .paused
             }
-            self.statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: status, soundEnabled: true)
+            self.statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: duration, dimensions: CGSize(), timestamp: self.statusValue.timestamp, baseRate: 1.0, seekId: 0, status: status, soundEnabled: true)
             self._status.set(self.statusValue)
+            
+            if !self.didBeginPlaying {
+                self.didBeginPlaying = true
+                self.play()
+            }
         }
     }
     
@@ -224,7 +251,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     func seek(_ timestamp: Double) {
         assert(Queue.mainQueue().isCurrent())
-        //self.playerView.seek(toPosition: timestamp)
+        self.playerItem.seek(to: CMTimeMake(Int64(timestamp) * 1000, 1000))
     }
     
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {

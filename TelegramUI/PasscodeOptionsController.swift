@@ -249,7 +249,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                             }
                             transaction.setAccessChallengeData(data)
                             
-                            updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60) })
+                            updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
                         }, completed: {
@@ -398,7 +398,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                         }
                         transaction.setAccessChallengeData(data)
                         
-                        updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60) })
+                        updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
                     }) |> deliverOnMainQueue).start(next: { _ in
                     }, error: { _ in
                     }, completed: {

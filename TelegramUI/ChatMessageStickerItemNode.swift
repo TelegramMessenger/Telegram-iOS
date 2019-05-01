@@ -70,7 +70,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     return .fail
                 }
                 
-                if let item = strongSelf.item, !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
+                if let item = strongSelf.item, item.presentationData.largeEmoji && item.message.elligibleForLargeEmoji {
                     if strongSelf.imageNode.frame.contains(point) {
                         return .waitForDoubleTap
                     }
@@ -109,7 +109,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
         }
         
-        if self.telegramFile == nil && !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
+        if self.telegramFile == nil && item.presentationData.largeEmoji && item.message.elligibleForLargeEmoji {
             self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text))
         }
     }
@@ -142,7 +142,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             var isEmoji = false
-            if !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
+            if item.presentationData.largeEmoji && item.message.elligibleForLargeEmoji {
                 let attributedText = NSAttributedString(string: item.message.text, font: item.presentationData.messageEmojiFont1, textColor: .black)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 180.0, height: 90.0), alignment: .natural))
                 
