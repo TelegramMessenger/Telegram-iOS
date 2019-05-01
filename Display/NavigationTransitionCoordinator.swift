@@ -94,8 +94,8 @@ class NavigationTransitionCoordinator {
         }
         
         var dimInset: CGFloat = 0.0
-        if let topNavigationBar = self.topNavigationBar , self.inlineNavigationBarTransition {
-            dimInset = topNavigationBar.frame.maxY
+        if let bottomNavigationBar = self.bottomNavigationBar , self.inlineNavigationBarTransition {
+            dimInset = bottomNavigationBar.frame.maxY
         }
         
         let containerSize = self.container.bounds.size
