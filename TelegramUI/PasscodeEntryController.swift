@@ -81,7 +81,7 @@ final public class PasscodeEntryController: ViewController {
         let biometricsType: LocalAuthBiometricAuthentication?
         if case let .enabled(data) = self.biometrics {
             if #available(iOSApplicationExtension 9.0, *) {
-                if data != nil {
+                if data == LocalAuth.evaluatedPolicyDomainState {
                     biometricsType = LocalAuth.biometricAuthentication
                 } else {
                     biometricsType = nil
@@ -236,7 +236,7 @@ final public class PasscodeEntryController: ViewController {
             }
             
             if #available(iOSApplicationExtension 9.0, *) {
-                if case let .enabled(storedDomainState) = strongSelf.biometrics {
+                if case let .enabled(storedDomainState) = strongSelf.biometrics, evaluatedPolicyDomainState != nil {
                     if storedDomainState != evaluatedPolicyDomainState {
                         let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { settings in
                             return settings.withUpdatedBiometricsDomainState(evaluatedPolicyDomainState).withUpdatedDisableBiometricsAuth(true)

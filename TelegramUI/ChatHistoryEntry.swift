@@ -37,16 +37,20 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     
     var stableId: UInt64 {
         switch self {
-            case let .MessageEntry(message, _, _, _, _, _):
-                return UInt64(message.stableId) | ((UInt64(2) << 40))
+            case let .MessageEntry(message, presentationData, _, _, _, _):
+                var type = 2
+                if presentationData.largeEmoji && message.elligibleForLargeEmoji {
+                    type = 3
+                }
+                return UInt64(message.stableId) | ((UInt64(type) << 40))
             case let .MessageGroupEntry(groupInfo, _, _):
                 return UInt64(groupInfo.stableId) | ((UInt64(2) << 40))
             case .UnreadEntry:
-                return UInt64(3) << 40
-            case .ChatInfoEntry:
                 return UInt64(4) << 40
-            case .SearchEntry:
+            case .ChatInfoEntry:
                 return UInt64(5) << 40
+            case .SearchEntry:
+                return UInt64(6) << 40
         }
     }
     

@@ -1478,6 +1478,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                 case RevealOptionKey.unarchive.rawValue:
                     item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, false)
+                    close = false
+                    self.skipFadeout = true
+                    self.animateRevealOptionsFill {
+                        self.revealOptionsInteractivelyClosed()
+                    }
                 case RevealOptionKey.toggleMarkedUnread.rawValue:
                     item.interaction.togglePeerMarkedUnread(item.index.messageIndex.id.peerId, animated)
                     close = false

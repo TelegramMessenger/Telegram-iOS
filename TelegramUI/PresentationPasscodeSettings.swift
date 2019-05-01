@@ -9,7 +9,7 @@ public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
     public var disableBiometricsAuth: Bool
     
     public static var defaultSettings: PresentationPasscodeSettings {
-        return PresentationPasscodeSettings(enableBiometrics: false, autolockTimeout: nil, biometricsDomainState: nil, disableBiometricsAuth: true)
+        return PresentationPasscodeSettings(enableBiometrics: false, autolockTimeout: nil, biometricsDomainState: nil, disableBiometricsAuth: false)
     }
     
     init(enableBiometrics: Bool, autolockTimeout: Int32?, biometricsDomainState: Data?, disableBiometricsAuth: Bool) {

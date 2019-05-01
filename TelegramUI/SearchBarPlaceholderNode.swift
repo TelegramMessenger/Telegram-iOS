@@ -133,7 +133,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                     if let iconImage = strongSelf.iconNode.image {
                         iconSize = iconImage.size
                         totalWidth += iconSize.width + spacing
-                         transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: floor((constrainedSize.width - totalWidth) / 2.0), y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize))
+                        transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: floor((constrainedSize.width - totalWidth) / 2.0), y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize))
                     }
                     var textOffset: CGFloat = 0.0
                     if constrainedSize.height >= 36.0 {
@@ -147,6 +147,10 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                         innerAlpha = 1.0
                     } else if innerAlpha < 0.0001 {
                         innerAlpha = 0.0
+                    }
+                    if !transition.isAnimated {
+                        strongSelf.labelNode.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
                     }
                     if strongSelf.labelNode.alpha != innerAlpha {
                         transition.updateAlpha(node: strongSelf.labelNode, alpha: innerAlpha)

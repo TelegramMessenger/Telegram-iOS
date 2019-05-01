@@ -151,6 +151,9 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: inputFieldFrame.minY - titleSize.height - 20.0), size: titleSize))
         
+        let subtitleSize = self.subtitleNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - subtitleSize.width) / 2.0), y: inputFieldFrame.maxY + 20.0), size: subtitleSize))
+        
         transition.updateFrame(node: self.modeButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - 53.0), size: CGSize(width: layout.size.width, height: 44.0)))
     }
     
@@ -172,6 +175,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
             let previousAlpha = self.inputFieldBackgroundNode.alpha
             self.inputFieldBackgroundNode.alpha = fieldBackgroundAlpha
             self.inputFieldBackgroundNode.layer.animateAlpha(from: previousAlpha, to: fieldBackgroundAlpha, duration: 0.25)
+            self.subtitleNode.isHidden = true
         }
     }
     
@@ -198,7 +202,24 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                         }
                         self.complete?(self.currentPasscode, numerical)
                     } else {
-                        self.animateError()
+                        if let snapshotView = self.wrapperNode.view.snapshotContentTree() {
+                            snapshotView.frame = self.wrapperNode.frame
+                            self.wrapperNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.wrapperNode.view)
+                            snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.wrapperNode.bounds.width, y: 0.0), duration: 0.25, removeOnCompletion: false, additive: true, completion : { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                            self.wrapperNode.layer.animatePosition(from: CGPoint(x: -self.wrapperNode.bounds.width, y: 0.0), to: CGPoint(), duration: 0.25, additive: true)
+                            
+                            self.inputFieldNode.reset(animated: false)
+                            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_RepeatNewPasscode, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+                            self.subtitleNode.isHidden = false
+                            self.subtitleNode.attributedText = NSAttributedString(string: "Passcodes don't match. Please try again.", font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+                            self.modeButtonNode.isHidden = false
+                            
+                            if let validLayout = self.validLayout {
+                                self.containerLayoutUpdated(validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
+                            }
+                        }
                     }
                 } else {
                     self.previousPasscode = self.currentPasscode
@@ -213,6 +234,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                         
                         self.inputFieldNode.reset(animated: false)
                         self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_RepeatNewPasscode, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+                        self.subtitleNode.isHidden = true
                         self.modeButtonNode.isHidden = true
                         
                         if let validLayout = self.validLayout {
