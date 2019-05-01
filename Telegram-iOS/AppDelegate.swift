@@ -927,6 +927,8 @@ final class SharedApplicationContext {
         let startTime = CFAbsoluteTimeGetCurrent()
         self.contextDisposable.set((self.context.get()
         |> deliverOnMainQueue).start(next: { context in
+            print("Application: context took \(CFAbsoluteTimeGetCurrent() - startTime) to become available")
+            
             var network: Network?
             if let context = context {
                 network = context.context.account.network
