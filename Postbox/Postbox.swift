@@ -941,7 +941,9 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             let startTime = CFAbsoluteTimeGetCurrent()
             
             loop: while true {
-                let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters)
+                let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                    subscriber.putNext(.upgrading(progress))
+                })
                 
                 let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
                 

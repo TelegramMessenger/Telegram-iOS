@@ -190,12 +190,12 @@ final class SqliteValueBox: ValueBox {
     
     private let queue: Queue
     
-    public init(basePath: String, queue: Queue, encryptionParameters: ValueBoxEncryptionParameters?) {
+    public init(basePath: String, queue: Queue, encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void) {
         self.basePath = basePath
         self.encryptionParameters = encryptionParameters
         self.databasePath = basePath + "/db_sqlite"
         self.queue = queue
-        self.database = self.openDatabase(encryptionParameters: encryptionParameters)
+        self.database = self.openDatabase(encryptionParameters: encryptionParameters, upgradeProgress: upgradeProgress)
     }
     
     deinit {
@@ -204,7 +204,7 @@ final class SqliteValueBox: ValueBox {
         checkpoints.dispose()
     }
     
-    private func openDatabase(encryptionParameters: ValueBoxEncryptionParameters?) -> Database {
+    private func openDatabase(encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void) -> Database {
         assert(self.queue.isCurrent())
         
         checkpoints.set(nil)
@@ -379,7 +379,12 @@ final class SqliteValueBox: ValueBox {
         }
         
         if result < 4 {
-            for table in self.listTables(database) {
+            upgradeProgress(0.0)
+            
+            let currentTables = self.listTables(database)
+            for i in 0 ..< currentTables.count {
+                let table = currentTables[i]
+                
                 resultCode = database.execute("ALTER TABLE t\(table.id) RENAME TO t\(table.id)_backup")
                 assert(resultCode)
                 self.createTable(database: database, table: table)
@@ -387,6 +392,8 @@ final class SqliteValueBox: ValueBox {
                 assert(resultCode)
                 resultCode = database.execute("DROP TABLE t\(table.id)_backup")
                 assert(resultCode)
+                
+                upgradeProgress(Float(i) / Float(currentTables.count - 1))
             }
             
             resultCode = database.execute("PRAGMA user_version=4")
@@ -1893,7 +1900,7 @@ final class SqliteValueBox: ValueBox {
             let _ = try? FileManager.default.removeItem(atPath: self.basePath + "/\(fileName)")
         }
         
-        self.database = self.openDatabase(encryptionParameters: self.encryptionParameters)
+        self.database = self.openDatabase(encryptionParameters: self.encryptionParameters, upgradeProgress: { _ in })
         
         tables.removeAll()
     }
