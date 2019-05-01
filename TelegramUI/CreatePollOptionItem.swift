@@ -124,6 +124,8 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
+        self.clipsToBounds = true
+        
         self.textClippingNode.addSubnode(self.textNode)
         self.addSubnode(self.textClippingNode)
         
@@ -392,15 +394,19 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
     }
     
     override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        self.layer.allowsGroupOpacity = true
+        self.updateRevealOffsetInternal(offset: -self.bounds.width - 74.0, transition: .animated(duration: 0.2, curve: .spring), completion: { [weak self] in
+            self?.layer.allowsGroupOpacity = false
+        })
         self.item?.delete(self.textNode.isFirstResponder())
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+        //self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+        //self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
     func focus() {
@@ -412,5 +418,13 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
             return true
         }
         return false
+    }
+    
+    override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
+        super.animateFrameTransition(progress, currentValue)
+        
+        var separatorFrame = self.bottomStripeNode.frame
+        separatorFrame.origin.y = currentValue - UIScreenPixel
+        self.bottomStripeNode.frame = separatorFrame
     }
 }

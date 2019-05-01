@@ -1140,11 +1140,22 @@ final class ChatListNode: ListView {
                         strongSelf.didSetReady = true
                         strongSelf._ready.set(true)
                     }
+                    
+                    var isEmpty = false
+                    if transition.chatListView.filteredEntries.isEmpty {
+                        isEmpty = true
+                    } else {
+                        if transition.chatListView.filteredEntries.count == 1 {
+                            if case .GroupReferenceEntry = transition.chatListView.filteredEntries[0] {
+                                isEmpty = true
+                            }
+                        }
+                    }
                 
                     let isEmptyState: ChatListNodeEmptyState
                     if transition.chatListView.isLoading {
                         isEmptyState = .empty(isLoading: true)
-                    } else if transition.chatListView.filteredEntries.isEmpty {
+                    } else if isEmpty {
                         isEmptyState = .empty(isLoading: false)
                     } else {
                         var containsChats = false

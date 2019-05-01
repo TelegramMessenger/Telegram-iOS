@@ -544,10 +544,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                                         if itemTag.isEqual(to: ensureVisibleItemTag) {
                                             if let itemNode = itemNode as? ListViewItemNode {
                                                 strongSelf.listNode.ensureItemNodeVisible(itemNode)
-                                                itemNode.setHighlighted(true, at: CGPoint(), animated: false)
+                                                /*itemNode.setHighlighted(true, at: CGPoint(), animated: false)
                                                 Queue.mainQueue().after(1.0, {
                                                     itemNode.setHighlighted(false, at: CGPoint(), animated: true)
-                                                })
+                                                })*/
                                                 applied = true
                                             }
                                         }
