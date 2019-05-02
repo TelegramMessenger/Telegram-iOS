@@ -40,10 +40,12 @@ public struct ValueBoxEncryptionParameters {
         }
     }
     
+    public let forceEncryptionIfNoSet: Bool
     public let key: Key
     public let salt: Salt
     
-    public init(key: Key, salt: Salt) {
+    public init(forceEncryptionIfNoSet: Bool, key: Key, salt: Salt) {
+        self.forceEncryptionIfNoSet = forceEncryptionIfNoSet
         self.key = key
         self.salt = salt
     }

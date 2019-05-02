@@ -286,7 +286,7 @@ final class SqliteValueBox: ValueBox {
                 resultCode = database.execute("PRAGMA cipher_default_plaintext_header_size=32")
                 assert(resultCode)
             }
-        } else if let encryptionParameters = encryptionParameters {
+        } else if let encryptionParameters = encryptionParameters, encryptionParameters.forceEncryptionIfNoSet {
             let hexKey = hexString(encryptionParameters.key.data + encryptionParameters.salt.data)
             
             if FileManager.default.fileExists(atPath: path) {

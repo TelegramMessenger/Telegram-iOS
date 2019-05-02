@@ -940,11 +940,10 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             
             let startTime = CFAbsoluteTimeGetCurrent()
             
+            var valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                subscriber.putNext(.upgrading(progress))
+            })
             loop: while true {
-                let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
-                    subscriber.putNext(.upgrading(progress))
-                })
-                
                 let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
                 
                 let userVersion: Int32? = metadataTable.userVersion()
@@ -956,6 +955,9 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                             postboxLog("Version \(userVersion) is newer than supported")
                             assertionFailure("Version \(userVersion) is newer than supported")
                             valueBox.drop()
+                            valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                subscriber.putNext(.upgrading(progress))
+                            })
                         } else {
                             if let operation = registeredUpgrades()[userVersion] {
                                 switch operation {
@@ -969,14 +971,22 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                         let updatedPath = f(queue, basePath, valueBox, encryptionParameters, { progress in
                                             subscriber.putNext(.upgrading(progress))
                                         })
-                                        let _ = try? FileManager.default.removeItem(atPath: basePath + "/db")
-                                        let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: basePath + "/db")
+                                        if let updatedPath = updatedPath {
+                                            let _ = try? FileManager.default.removeItem(atPath: basePath + "/db")
+                                            let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: basePath + "/db")
+                                            valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                                subscriber.putNext(.upgrading(progress))
+                                            })
+                                        }
                                 }
                                 continue loop
                             } else {
                                 assertionFailure("Couldn't find any upgrade for \(userVersion)")
                                 postboxLog("Couldn't find any upgrade for \(userVersion)")
                                 valueBox.drop()
+                                valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                    subscriber.putNext(.upgrading(progress))
+                                })
                             }
                         }
                     }
