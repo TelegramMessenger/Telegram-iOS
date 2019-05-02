@@ -7,6 +7,7 @@ public enum UndoOverlayContent {
     case removedChat(text: String)
     case archivedChat(peerId: PeerId, title: String, text: String, undo: Bool)
     case hidArchive(title: String, text: String, undo: Bool)
+    case revealedArchive(title: String, text: String, undo: Bool)
 }
 
 public final class UndoOverlayController: ViewController {
