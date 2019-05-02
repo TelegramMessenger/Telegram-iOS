@@ -385,7 +385,7 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
                                     |> mapToSignal { phoneNumber in
                                         return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
                                         |> map { network -> AccountResult in
-                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
+                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary))
                                         }
                                     }
                                 case _:
@@ -915,6 +915,7 @@ public class Account {
     public let id: AccountRecordId
     public let basePath: String
     public let testingEnvironment: Bool
+    public let supplementary: Bool
     public let postbox: Postbox
     public let network: Network
     public let networkArguments: NetworkInitializationArguments
@@ -977,7 +978,7 @@ public class Account {
     private var lastSmallLogPostTimestamp: Double?
     private let smallLogPostDisposable = MetaDisposable()
     
-    public init(accountManager: AccountManager, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods) {
+    public init(accountManager: AccountManager, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool) {
         self.id = id
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
@@ -987,6 +988,7 @@ public class Account {
         self.peerId = peerId
         
         self.auxiliaryMethods = auxiliaryMethods
+        self.supplementary = supplementary
         
         self.peerInputActivityManager = PeerInputActivityManager()
         self.callSessionManager = CallSessionManager(postbox: postbox, network: network, maxLayer: networkArguments.voipMaxLayer, addUpdates: { [weak self] updates in
@@ -1279,6 +1281,9 @@ public class Account {
         self.stateManager.reset()
         self.restartContactManagement()
         self.managedStickerPacksDisposable.set(manageStickerPacks(network: self.network, postbox: self.postbox).start())
+        if !self.supplementary {
+            self.viewTracker.chatHistoryPreloadManager.start()
+        }
     }
     
     public func restartContactManagement() {

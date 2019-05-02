@@ -693,7 +693,7 @@ func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidati
         } else {
             location = .generic(Int32(datacenterId), { resource, resourceReference, fileReference in
                 if let resource = resource as? TelegramCloudMediaResource {
-                    if let location = resource.apiInputLocation(fileReference: fileReference){
+                    if let location = resource.apiInputLocation(fileReference: fileReference) {
                         return .location(location)
                     } else {
                         return .none

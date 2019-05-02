@@ -301,10 +301,10 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         let _ = transaction.addMessages(storeMessages, location: .Random)
                         let _ = transaction.addMessages(additionalMessages, location: .Random)
                         let filledRange: ClosedRange<MessageId.Id>
-                        if messages.count == 0 || implicitelyFillHole {
+                        let ids = messages.compactMap({ $0.id?.id })
+                        if ids.count == 0 || implicitelyFillHole {
                             filledRange = 1 ... (Int32.max - 1)
                         } else {
-                            let ids = messages.map({ $0.id!.id })
                             let messageRange = ids.min()! ... ids.max()!
                             switch direction {
                                 case let .aroundId(aroundId):
