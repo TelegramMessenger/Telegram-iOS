@@ -333,79 +333,81 @@ final class MutableChatListView {
     
     private func reloadGroups(postbox: Postbox) {
         self.groupEntries.removeAll()
-        for groupId in postbox.chatListTable.existingGroups() {
-            var upperBound: (ChatListIndex, Bool)?
-            var foundMessage: IntermediateMessage?
-            var foundPeerWithIndex: (PeerId, MessageIndex)?
-            inner: while true {
-                if let entry = postbox.chatListTable.earlierEntries(groupId: groupId, index: upperBound, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1).first {
-                    var currentTopIndex: MessageIndex?
-                    if let (_, foundIndex) = foundPeerWithIndex {
-                        currentTopIndex = foundIndex
-                    }
-                    if let foundMessageValue = foundMessage {
-                        if let currentTopIndexValue = currentTopIndex {
-                            if foundMessageValue.index > currentTopIndexValue {
+        if case .root = self.groupId {
+            for groupId in postbox.chatListTable.existingGroups() {
+                var upperBound: (ChatListIndex, Bool)?
+                var foundMessage: IntermediateMessage?
+                var foundPeerWithIndex: (PeerId, MessageIndex)?
+                inner: while true {
+                    if let entry = postbox.chatListTable.earlierEntries(groupId: groupId, index: upperBound, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1).first {
+                        var currentTopIndex: MessageIndex?
+                        if let (_, foundIndex) = foundPeerWithIndex {
+                            currentTopIndex = foundIndex
+                        }
+                        if let foundMessageValue = foundMessage {
+                            if let currentTopIndexValue = currentTopIndex {
+                                if foundMessageValue.index > currentTopIndexValue {
+                                    currentTopIndex = foundMessageValue.index
+                                }
+                            } else {
                                 currentTopIndex = foundMessageValue.index
                             }
-                        } else {
-                            currentTopIndex = foundMessageValue.index
                         }
-                    }
-                    
-                    if case let .message(index, maybeMessage, _) = entry {
-                        if let message = maybeMessage {
-                            if let currentTopIndex = currentTopIndex {
-                                if message.index > currentTopIndex {
+                        
+                        if case let .message(index, maybeMessage, _) = entry {
+                            if let message = maybeMessage {
+                                if let currentTopIndex = currentTopIndex {
+                                    if message.index > currentTopIndex {
+                                        foundMessage = message
+                                        foundPeerWithIndex = nil
+                                    }
+                                } else {
                                     foundMessage = message
                                     foundPeerWithIndex = nil
                                 }
+                                if index.pinningIndex == nil {
+                                    break inner
+                                }
+                                upperBound = (entry.index, true)
                             } else {
-                                foundMessage = message
-                                foundPeerWithIndex = nil
-                            }
-                            if index.pinningIndex == nil {
-                                break inner
-                            }
-                            upperBound = (entry.index, true)
-                        } else {
-                            if let currentTopIndex = currentTopIndex {
-                                if index.messageIndex > currentTopIndex {
+                                if let currentTopIndex = currentTopIndex {
+                                    if index.messageIndex > currentTopIndex {
+                                        foundMessage = nil
+                                        foundPeerWithIndex = (index.messageIndex.id.peerId, index.messageIndex)
+                                    }
+                                } else {
                                     foundMessage = nil
                                     foundPeerWithIndex = (index.messageIndex.id.peerId, index.messageIndex)
                                 }
-                            } else {
-                                foundMessage = nil
-                                foundPeerWithIndex = (index.messageIndex.id.peerId, index.messageIndex)
+                                if index.pinningIndex == nil {
+                                    break inner
+                                }
+                                upperBound = (entry.index.predecessor, true)
                             }
-                            if index.pinningIndex == nil {
-                                break inner
-                            }
-                            upperBound = (entry.index.predecessor, true)
+                        } else {
+                            upperBound = (entry.index, false)
                         }
                     } else {
-                        upperBound = (entry.index, false)
-                    }
-                } else {
-                    break inner
-                }
-            }
-            
-            if let peerId = foundMessage?.id.peerId ?? foundPeerWithIndex?.0, let peer = postbox.peerTable.get(peerId) {
-                var peers = SimpleDictionary<PeerId, Peer>()
-                peers[peer.id] = peer
-                if let associatedPeerId = peer.associatedPeerId {
-                    if let associatedPeer = postbox.peerTable.get(associatedPeerId) {
-                        peers[associatedPeer.id] = associatedPeer
+                        break inner
                     }
                 }
                 
-                let renderedPeer = RenderedPeer(peerId: peerId, peers: peers)
-                
-                if let message = foundMessage {
-                    self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeer: renderedPeer, message: postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable), unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
-                } else if let (_, _) = foundPeerWithIndex {
-                    self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeer: renderedPeer, message: nil, unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
+                if let peerId = foundMessage?.id.peerId ?? foundPeerWithIndex?.0, let peer = postbox.peerTable.get(peerId) {
+                    var peers = SimpleDictionary<PeerId, Peer>()
+                    peers[peer.id] = peer
+                    if let associatedPeerId = peer.associatedPeerId {
+                        if let associatedPeer = postbox.peerTable.get(associatedPeerId) {
+                            peers[associatedPeer.id] = associatedPeer
+                        }
+                    }
+                    
+                    let renderedPeer = RenderedPeer(peerId: peerId, peers: peers)
+                    
+                    if let message = foundMessage {
+                        self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeer: renderedPeer, message: postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable), unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
+                    } else if let (_, _) = foundPeerWithIndex {
+                        self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeer: renderedPeer, message: nil, unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
+                    }
                 }
             }
         }
