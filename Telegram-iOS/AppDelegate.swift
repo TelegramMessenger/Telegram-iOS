@@ -379,7 +379,7 @@ final class SharedApplicationContext {
         performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
-        let encryptionParameters = ValueBoxEncryptionParameters(key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+        let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         
         TempBox.initializeShared(basePath: rootPath, processType: "app", launchSpecificId: arc4random64())
         

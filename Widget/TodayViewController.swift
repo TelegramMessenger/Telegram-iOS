@@ -81,7 +81,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
-        let encryptionParameters = ValueBoxEncryptionParameters(key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+        let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         
         account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, appData: BuildConfig.shared().bundleData), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods, encryptionParameters: encryptionParameters)
         |> mapToSignal { account -> Signal<Account, NoError> in
