@@ -1054,7 +1054,10 @@ final class SqliteValueBox: ValueBox {
         } else {
             var statement: OpaquePointer? = nil
             let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.id) (key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", -1, &statement, nil)
-            assert(status == SQLITE_OK)
+            if status != SQLITE_OK {
+                let errorText = self.database.currentError() ?? "Unknown error"
+                preconditionFailure(errorText)
+            }
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.insertOrReplaceStatements[table.id] = preparedStatement
             resultStatement = preparedStatement

@@ -46,8 +46,7 @@ public struct ChatListMessageTagSummaryInfo: Equatable {
 
 public struct ChatListGroupReferenceEntry: Equatable {
     public let groupId: PeerGroupId
-    public let renderedPeer: RenderedPeer
-    public let message: Message?
+    public let renderedPeers: [RenderedPeer]
     public let unreadState: PeerGroupUnreadCountersCombinedSummary
     
     public static func ==(lhs: ChatListGroupReferenceEntry, rhs: ChatListGroupReferenceEntry) -> Bool {
@@ -57,10 +56,7 @@ public struct ChatListGroupReferenceEntry: Equatable {
         if lhs.unreadState != rhs.unreadState {
             return false
         }
-        if lhs.renderedPeer != rhs.renderedPeer {
-            return false
-        }
-        if lhs.message?.stableVersion != rhs.message?.stableVersion {
+        if lhs.renderedPeers != rhs.renderedPeers {
             return false
         }
         return true
@@ -77,8 +73,6 @@ public enum ChatListEntry: Comparable {
                 return index
             case let .HoleEntry(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
-            /*case let .GroupReferenceEntry(_, index, _, _, _):
-                return index*/
         }
     }
 
@@ -162,8 +156,6 @@ enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(ChatListIndex, IntermediateMessage?, CombinedPeerReadState?, PeerChatListEmbeddedInterfaceState?)
     case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, PeerPresence?, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
-    /*case IntermediateGroupReferenceEntry(PeerGroupId, ChatListIndex, ChatListGroupReferenceUnreadCounters?)
-    case GroupReferenceEntry(PeerGroupId, ChatListIndex, Message?, ChatListGroupReferenceTopPeers, ChatListGroupReferenceUnreadCounters)*/
     
     init(_ intermediateEntry: ChatListIntermediateEntry, cachedDataTable: CachedPeerDataTable, readStateTable: MessageHistoryReadStateTable, messageHistoryTable: MessageHistoryTable) {
         switch intermediateEntry {
@@ -171,8 +163,6 @@ enum MutableChatListEntry: Equatable {
                 self = processedChatListEntry(.IntermediateMessageEntry(index, message, readStateTable.getCombinedState(index.messageIndex.id.peerId), embeddedState), cachedDataTable: cachedDataTable, readStateTable: readStateTable, messageHistoryTable: messageHistoryTable)
             case let .hole(hole):
                 self = .HoleEntry(hole)
-            /*case let .groupReference(groupId, index):
-                self = .IntermediateGroupReferenceEntry(groupId, index, nil)*/
         }
     }
     
@@ -184,10 +174,6 @@ enum MutableChatListEntry: Equatable {
                 return index
             case let .HoleEntry(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
-            /*case let .IntermediateGroupReferenceEntry(_, index, _):
-                return index
-            case let .GroupReferenceEntry(_, index, _, _, _):
-                return index*/
         }
     }
 
@@ -218,20 +204,6 @@ enum MutableChatListEntry: Equatable {
                     default:
                         return false
                 }
-            /*case .IntermediateGroupReferenceEntry:
-                switch rhs {
-                    case .IntermediateGroupReferenceEntry:
-                        return true
-                    default:
-                        return false
-                }
-            case .GroupReferenceEntry:
-                switch rhs {
-                    case .GroupReferenceEntry:
-                        return true
-                    default:
-                        return false
-                }*/
         }
     }
 }
@@ -335,53 +307,26 @@ final class MutableChatListView {
         self.groupEntries.removeAll()
         if case .root = self.groupId {
             for groupId in postbox.chatListTable.existingGroups() {
+                var foundIndices: [ChatListIndex] = []
+                var unpinnedCount = 0
+                let maxCount = 8
+                
                 var upperBound: (ChatListIndex, Bool)?
-                var foundMessage: IntermediateMessage?
-                var foundPeerWithIndex: (PeerId, MessageIndex)?
                 inner: while true {
                     if let entry = postbox.chatListTable.earlierEntries(groupId: groupId, index: upperBound, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1).first {
-                        var currentTopIndex: MessageIndex?
-                        if let (_, foundIndex) = foundPeerWithIndex {
-                            currentTopIndex = foundIndex
-                        }
-                        if let foundMessageValue = foundMessage {
-                            if let currentTopIndexValue = currentTopIndex {
-                                if foundMessageValue.index > currentTopIndexValue {
-                                    currentTopIndex = foundMessageValue.index
-                                }
-                            } else {
-                                currentTopIndex = foundMessageValue.index
-                            }
-                        }
-                        
                         if case let .message(index, maybeMessage, _) = entry {
-                            if let message = maybeMessage {
-                                if let currentTopIndex = currentTopIndex {
-                                    if message.index > currentTopIndex {
-                                        foundMessage = message
-                                        foundPeerWithIndex = nil
-                                    }
-                                } else {
-                                    foundMessage = message
-                                    foundPeerWithIndex = nil
-                                }
-                                if index.pinningIndex == nil {
-                                    break inner
-                                }
+                            foundIndices.append(index)
+                            if index.pinningIndex == nil {
+                                unpinnedCount += 1
+                            }
+                            
+                            if unpinnedCount >= maxCount {
+                                break inner
+                            }
+                            
+                            if let _ = maybeMessage {
                                 upperBound = (entry.index, true)
                             } else {
-                                if let currentTopIndex = currentTopIndex {
-                                    if index.messageIndex > currentTopIndex {
-                                        foundMessage = nil
-                                        foundPeerWithIndex = (index.messageIndex.id.peerId, index.messageIndex)
-                                    }
-                                } else {
-                                    foundMessage = nil
-                                    foundPeerWithIndex = (index.messageIndex.id.peerId, index.messageIndex)
-                                }
-                                if index.pinningIndex == nil {
-                                    break inner
-                                }
                                 upperBound = (entry.index.predecessor, true)
                             }
                         } else {
@@ -392,23 +337,28 @@ final class MutableChatListView {
                     }
                 }
                 
-                if let peerId = foundMessage?.id.peerId ?? foundPeerWithIndex?.0, let peer = postbox.peerTable.get(peerId) {
-                    var peers = SimpleDictionary<PeerId, Peer>()
-                    peers[peer.id] = peer
-                    if let associatedPeerId = peer.associatedPeerId {
-                        if let associatedPeer = postbox.peerTable.get(associatedPeerId) {
-                            peers[associatedPeer.id] = associatedPeer
+                foundIndices.sort(by: { $0.messageIndex > $1.messageIndex })
+                if foundIndices.count > maxCount {
+                    foundIndices.removeSubrange(maxCount...)
+                }
+                
+                var renderedPeers: [RenderedPeer] = []
+                for index in foundIndices {
+                    if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
+                        var peers = SimpleDictionary<PeerId, Peer>()
+                        peers[peer.id] = peer
+                        if let associatedPeerId = peer.associatedPeerId {
+                            if let associatedPeer = postbox.peerTable.get(associatedPeerId) {
+                                peers[associatedPeer.id] = associatedPeer
+                            }
                         }
-                    }
-                    
-                    let renderedPeer = RenderedPeer(peerId: peerId, peers: peers)
-                    
-                    if let message = foundMessage {
-                        self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeer: renderedPeer, message: postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable), unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
-                    } else if let (_, _) = foundPeerWithIndex {
-                        self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeer: renderedPeer, message: nil, unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
+                        
+                        let renderedPeer = RenderedPeer(peerId: peer.id, peers: peers)
+                        renderedPeers.append(renderedPeer)
                     }
                 }
+                
+                self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeers: renderedPeers, unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
             }
         }
     }
@@ -479,36 +429,12 @@ final class MutableChatListView {
             } else {
                 for i in 0 ..< self.groupEntries.count {
                     if let updatedState = transaction.currentUpdatedTotalUnreadSummaries[self.groupEntries[i].groupId] {
-                        self.groupEntries[i] = ChatListGroupReferenceEntry(groupId: self.groupEntries[i].groupId, renderedPeer: self.groupEntries[i].renderedPeer, message: self.groupEntries[i].message, unreadState: updatedState)
+                        self.groupEntries[i] = ChatListGroupReferenceEntry(groupId: self.groupEntries[i].groupId, renderedPeers: self.groupEntries[i].renderedPeers, unreadState: updatedState)
                         hasChanges = true
                     }
                 }
             }
         }
-        
-        /*for i in 0 ..< self.entries.count {
-            switch self.entries[i] {
-                case let .GroupReferenceEntry(groupId, _, _, topPeers, counters):
-                    if topPeers.replay(postbox: postbox, transaction: transaction) {
-                        hasChanges = true
-                    }
-                    if cachedGroupCounters[groupId] != nil {
-                        if counters.replay(postbox: postbox, transaction: transaction) {
-                            hasChanges = true
-                        }
-                    }
-                case let .IntermediateGroupReferenceEntry(groupId, _, counters):
-                    if let counters = counters {
-                        if cachedGroupCounters[groupId] != nil {
-                            if counters.replay(postbox: postbox, transaction: transaction) {
-                                hasChanges = true
-                            }
-                        }
-                    }
-                default:
-                    break
-            }
-        }*/
         
         if !updatedPeerNotificationSettings.isEmpty {
             for i in 0 ..< self.entries.count {
