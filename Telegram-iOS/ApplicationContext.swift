@@ -44,7 +44,6 @@ private struct PasscodeState: Equatable {
     let autolockTimeout: Int32?
     let enableBiometrics: Bool
     let biometricsDomainState: Data?
-    let disableBiometricsAuth: Bool
 }
 
 final class AuthorizedApplicationContext {
@@ -162,7 +161,7 @@ final class AuthorizedApplicationContext {
             return (accessChallengeData, passcodeSettings, isActive)
         }
         |> map { accessChallengeData, passcodeSettings, isActive -> PasscodeState in
-            return PasscodeState(isActive: isActive, challengeData: accessChallengeData, autolockTimeout: passcodeSettings?.autolockTimeout, enableBiometrics: passcodeSettings?.enableBiometrics ?? false, biometricsDomainState: passcodeSettings?.biometricsDomainState, disableBiometricsAuth: passcodeSettings?.disableBiometricsAuth ?? true)
+            return PasscodeState(isActive: isActive, challengeData: accessChallengeData, autolockTimeout: passcodeSettings?.autolockTimeout, enableBiometrics: passcodeSettings?.enableBiometrics ?? false, biometricsDomainState: passcodeSettings?.biometricsDomainState)
         }).start(next: { [weak self] updatedState in
             guard let strongSelf = self else {
                 return
@@ -214,7 +213,7 @@ final class AuthorizedApplicationContext {
                             let presentAnimated = previousState != nil && previousState!.isActive
                             
                             let biometrics: PasscodeEntryControllerBiometricsMode
-                            if updatedState.enableBiometrics && !updatedState.disableBiometricsAuth {
+                            if updatedState.enableBiometrics {
                                 biometrics = .enabled(updatedState.biometricsDomainState)
                             } else {
                                 biometrics = .none
