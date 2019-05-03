@@ -19,7 +19,9 @@ final class ChatTextInputMenu {
                     case .inactive:
                         UIMenuController.shared.menuItems = []
                     case .general:
-                        UIMenuController.shared.menuItems = []
+                        UIMenuController.shared.menuItems = [UIMenuItem(title: "Link", action: Selector(("formatAttributesLink:")))]
+                        UIMenuController.shared.isMenuVisible = true
+                        UIMenuController.shared.update()
                     case .format:
                         UIMenuController.shared.menuItems = [
                             UIMenuItem(title: self.stringBold, action: Selector(("formatAttributesBold:"))),

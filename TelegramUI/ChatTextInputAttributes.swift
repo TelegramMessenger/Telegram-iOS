@@ -419,3 +419,70 @@ func breakChatInputText(_ text: NSAttributedString) -> [NSAttributedString] {
         return result
     }
 }
+
+private let markdownRegexFormat = "(^|\\s|\\n)(````?)([\\s\\S]+?)(````?)([\\s\\n\\.,:?!;]|$)|(^|\\s)(`|\\*\\*|__)([^\\n]+?)\\7([\\s\\.,:?!;]|$)|@(\\d+)\\s*\\((.+?)\\)"
+private let markdownRegex = try? NSRegularExpression(pattern: markdownRegexFormat, options: [.caseInsensitive, .anchorsMatchLines])
+
+func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttributedString {
+    var string = text.string as NSString
+    
+    var offsetRanges:[(NSRange, Int)] = []
+    if let regex = markdownRegex {
+        var stringOffset = 0
+        let result = NSMutableAttributedString()
+        
+        while let match = regex.firstMatch(in: string as String, range: NSMakeRange(0, string.length)) {
+            let matchIndex = stringOffset + match.range.location
+            
+            result.append(text.attributedSubstring(from: NSMakeRange(0, match.range.location)))
+            
+            var pre = match.range(at: 3)
+            if pre.location != NSNotFound {
+                let text = string.substring(with: pre)
+                
+                stringOffset -= match.range(at: 2).length + match.range(at: 4).length
+                
+                let substring = string.substring(with: match.range(at: 1)) + text + string.substring(with: match.range(at: 5))
+                result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.monospace: true as NSNumber]))
+                //newText.append()
+                //attributes.append(.pre(matchIndex + match.range(at: 1).length ..< matchIndex + match.range(at: 1).length + text.length))
+                offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 1).length, text.count), 6))
+            }
+            
+            pre = match.range(at: 8)
+            if pre.location != NSNotFound {
+                let text = string.substring(with: pre)
+                
+                let entity = string.substring(with: match.range(at: 7))
+                let substring = string.substring(with: match.range(at: 6)) + text + string.substring(with: match.range(at: 9))
+                
+                switch entity {
+                    case "`":
+                        result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.monospace: true as NSNumber]))
+                        offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
+                    case "**":
+                        result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.bold: true as NSNumber]))
+                        offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
+                    case "__":
+                        result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.italic: true as NSNumber]))
+                        offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
+                    default:
+                        break
+                }
+                
+                stringOffset -= match.range(at: 7).length * 2
+            }
+            
+            string = string.substring(from: match.range.location + match.range(at: 0).length) as NSString
+            stringOffset += match.range.location + match.range(at: 0).length
+        }
+        
+        if string.length > 0 {
+            result.append(text.attributedSubstring(from: NSMakeRange(stringOffset, string.length - stringOffset)))
+        }
+            
+        return result
+    }
+    
+    return text
+}

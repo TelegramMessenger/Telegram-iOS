@@ -1639,7 +1639,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 case RevealOptionKey.toggleMarkedUnread.rawValue:
                     item.interaction.togglePeerMarkedUnread(item.index.messageIndex.id.peerId, animated)
                     close = false
-                case RevealOptionKey.hide.rawValue, RevealOptionKey.unhide.rawValue:
+                case RevealOptionKey.hide.rawValue:
+                    item.interaction.toggleArchivedFolderHiddenByDefault()
+                    close = false
+                    self.skipFadeout = true
+                     self.animateRevealOptionsFill {
+                        self.revealOptionsInteractivelyClosed()
+                    }
+                case RevealOptionKey.unhide.rawValue:
                     item.interaction.toggleArchivedFolderHiddenByDefault()
                     close = false
                 default:

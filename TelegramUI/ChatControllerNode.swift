@@ -299,7 +299,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     var messages: [EnqueueMessage] = []
                     
-                    for text in breakChatInputText(trimChatInputText(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)) {
+                    let inputText = convertMarkdownToAttributes(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
+                    
+                    for text in breakChatInputText(trimChatInputText(inputText)) {
                         if text.length != 0 {
                             var attributes: [MessageAttribute] = []
                             let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))

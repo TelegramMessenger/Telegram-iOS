@@ -1329,7 +1329,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
-        if action == Selector(("_showTextStyleOptions:")) {
+        if action == Selector(("_lookup:")) || action == Selector(("_share:")) {
+            return ASEditableTextNodeTargetForAction(target: nil)
+        }
+        else if action == Selector(("_showTextStyleOptions:")) {
             if case .general = self.inputMenu.state {
                 if let textInputNode = self.textInputNode, textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 {
                     return ASEditableTextNodeTargetForAction(target: nil)
@@ -1353,6 +1356,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func _showTextStyleOptions(_ sender: Any) {
         self.inputMenu.format()
+    }
+    
+    @objc func formatAttributesLink(_ sender: Any) {
+        
     }
     
     @objc func formatAttributesBold(_ sender: Any) {
@@ -1409,8 +1416,35 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         return true
     }
     
+    @objc func editableTextNodeShouldCopy(_ editableTextNode: ASEditableTextNode) -> Bool {
+        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+            storeInputTextInPasteboard(current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)))
+            return (current, inputMode)
+        }
+        return false
+    }
+    
     @objc func editableTextNodeShouldPaste(_ editableTextNode: ASEditableTextNode) -> Bool {
         let pasteboard = UIPasteboard.general
+        
+        var attributedString: NSAttributedString?
+        if let data = pasteboard.data(forPasteboardType: kUTTypeRTF as String) {
+            attributedString = chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtf)
+        } else if let data = pasteboard.data(forPasteboardType: "com.apple.flat-rtfd") {
+            attributedString = chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtfd)
+        }
+        
+        if let attributedString = attributedString {
+            self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                if let inputText = current.inputText.mutableCopy() as? NSMutableAttributedString {
+                    inputText.replaceCharacters(in: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count), with: attributedString)
+                    return (ChatTextInputState(inputText: inputText), inputMode)
+                } else {
+                    return (ChatTextInputState(inputText: attributedString), inputMode)
+                }
+            }
+            return false
+        }
         
         var images: [UIImage] = []
         if let data = pasteboard.data(forPasteboardType: "com.compuserve.gif") {
