@@ -2315,6 +2315,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }, reportMessages: { [weak self] messages in
             if let strongSelf = self, !messages.isEmpty {
+                strongSelf.chatDisplayNode.dismissInput()
                 strongSelf.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(messages.map({ $0.id }).sorted()), present: { c, a in
                     self?.present(c, in: .window(.root), with: a)
                 }), in: .window(.root))

@@ -759,11 +759,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             if let replyInfoNode = self.replyInfoNode, isEmoji && !incoming {
                 let alpha: CGFloat = 0.0
+                let previousAlpha = replyInfoNode.alpha
                 replyInfoNode.alpha = alpha
                 self.replyBackgroundNode?.alpha = alpha
                 if animated {
-                    replyInfoNode.layer.animateAlpha(from: 1.0 - alpha, to: alpha, duration: 0.3)
-                    self.replyBackgroundNode?.layer.animateAlpha(from: 1.0 - alpha, to: alpha, duration: 0.3)
+                    replyInfoNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.3)
+                    self.replyBackgroundNode?.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.3)
                 }
             }
         } else {
@@ -787,11 +788,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             if let replyInfoNode = self.replyInfoNode, isEmoji && !incoming {
                 let alpha: CGFloat = 1.0
+                let previousAlpha = replyInfoNode.alpha
                 replyInfoNode.alpha = alpha
                 self.replyBackgroundNode?.alpha = alpha
                 if animated {
-                    replyInfoNode.layer.animateAlpha(from: 1.0 - alpha, to: alpha, duration: 0.3)
-                    self.replyBackgroundNode?.layer.animateAlpha(from: 1.0 - alpha, to: alpha, duration: 0.3)
+                    replyInfoNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.3)
+                    self.replyBackgroundNode?.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.3)
                 }
             }
         }

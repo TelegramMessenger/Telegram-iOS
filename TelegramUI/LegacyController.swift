@@ -273,6 +273,9 @@ final class LegacyControllerContext: NSObject, LegacyComponentsContext {
             if safeInsets.top.isEqual(to: 44.0) {
                 safeInsets.bottom = 34.0
             }
+            if validLayout.intrinsicInsets.bottom.isEqual(to: 21.0) {
+                safeInsets.bottom = 21.0
+            }
             return safeInsets
         }
         return UIEdgeInsets()
