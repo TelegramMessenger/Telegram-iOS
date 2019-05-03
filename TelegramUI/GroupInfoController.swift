@@ -423,7 +423,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case let .aboutHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .about(theme, text):
-                return ItemListMultilineTextItem(theme: theme, text: text, enabledEntitiyTypes: [.url, .mention, .hashtag], sectionId: self.section, style: .blocks, longTapAction: {
+                return ItemListMultilineTextItem(theme: theme, text: foldMultipleLineBreaks(text), enabledEntitiyTypes: [.url, .mention, .hashtag], sectionId: self.section, style: .blocks, longTapAction: {
                     arguments.displayAboutContextMenu(text)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)

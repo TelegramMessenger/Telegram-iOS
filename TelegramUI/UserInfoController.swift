@@ -376,7 +376,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 if let peer = peer as? TelegramUser, let _ = peer.botInfo {
                     enabledEntitiyTypes = [.url, .mention, .hashtag]
                 }
-                return ItemListTextWithLabelItem(theme: theme, label: text, text: value, enabledEntitiyTypes: enabledEntitiyTypes, multiline: true, sectionId: self.section, action: nil, longTapAction: {
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: foldMultipleLineBreaks(value), enabledEntitiyTypes: enabledEntitiyTypes, multiline: true, sectionId: self.section, action: nil, longTapAction: {
                     arguments.displayAboutContextMenu(value)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)

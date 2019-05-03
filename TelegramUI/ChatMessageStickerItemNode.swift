@@ -274,8 +274,11 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var replyMarkup: ReplyMarkupMessageAttribute?
             
             var availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
-            if incoming {
-                availableWidth -= dateAndStatusSize.width
+            if isEmoji {
+                availableWidth -= 10.0
+                if incoming {
+                    availableWidth -= dateAndStatusSize.width
+                }
             }
             
             for attribute in item.message.attributes {

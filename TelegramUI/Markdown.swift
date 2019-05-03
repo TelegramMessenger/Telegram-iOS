@@ -161,3 +161,7 @@ private func parseBold(string: NSString, remainingRange: inout NSRange) -> Strin
     }
     return nil
 }
+
+func foldMultipleLineBreaks(_ string: String) -> String {
+    return string.replacingOccurrences(of: "(([\n\r]\\s*){2,})+", with: "\n\n", options: .regularExpression, range: nil)
+}
