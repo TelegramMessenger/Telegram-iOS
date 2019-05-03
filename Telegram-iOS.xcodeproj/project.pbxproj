@@ -913,7 +913,7 @@
 		D001D5A91F878DA300DF975A /* PhoneCountries.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PhoneCountries.txt; path = "Telegram-iOS/Resources/PhoneCountries.txt"; sourceTree = "<group>"; };
 		D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ModernProto.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D006CFA121A8D12600FDCD32 /* ModernProto.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ModernProto.framework; path = "../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-ffbqcdyqpehxdvcwhyaorlehrrdc/Build/Products/Debug Hockeyapp-iphoneos/ModernProto.framework"; sourceTree = "<group>"; };
-		D008599C1B28189D00EAF753 /* Telegram X.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Telegram X.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D008599C1B28189D00EAF753 /* Telegram.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Telegram.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00859A01B28189D00EAF753 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D00859A11B28189D00EAF753 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D00859A81B28189D00EAF753 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
@@ -1939,7 +1939,7 @@
 		D008599D1B28189D00EAF753 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D008599C1B28189D00EAF753 /* Telegram X.app */,
+				D008599C1B28189D00EAF753 /* Telegram.app */,
 				D03B0E781D63484500955575 /* Share.appex */,
 				D0D268761D79A70A00C422DA /* SiriIntents.appex */,
 				D0ECCB7C1FE9C38500609802 /* Telegram-iOS UITests.xctest */,
@@ -2616,7 +2616,7 @@
 			);
 			name = "Telegram-iOS";
 			productName = "Telegram-iOS";
-			productReference = D008599C1B28189D00EAF753 /* Telegram X.app */;
+			productReference = D008599C1B28189D00EAF753 /* Telegram.app */;
 			productType = "com.apple.product-type.application";
 		};
 		D02CF5FB215D9ABE00E0F56A /* NotificationContent */ = {
@@ -5231,7 +5231,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "-D DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}";
-				PRODUCT_NAME = "Telegram X";
+				PRODUCT_NAME = Telegram;
 				PROVISIONING_PROFILE = "1e62fceb-1fb5-4804-ad0f-9b9b974393b8";
 				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.Telegram-iOS";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
@@ -5274,7 +5274,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}";
-				PRODUCT_NAME = "Telegram X";
+				PRODUCT_NAME = Telegram;
 				PROVISIONING_PROFILE = "df24dc18-3fdc-447c-b347-5a110cecd77d";
 				PROVISIONING_PROFILE_SPECIFIER = "match AppStore org.telegram.TelegramHD";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
@@ -5370,7 +5370,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "-D DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}";
-				PRODUCT_NAME = "Telegram X";
+				PRODUCT_NAME = Telegram;
 				PROVISIONING_PROFILE = "1e62fceb-1fb5-4804-ad0f-9b9b974393b8";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
@@ -6392,7 +6392,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "-D DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}";
-				PRODUCT_NAME = "Telegram X";
+				PRODUCT_NAME = Telegram;
 				PROVISIONING_PROFILE = "954189c1-ae38-447b-a473-7c9b7198aa47";
 				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.TelegramHD";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
@@ -6541,7 +6541,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}";
-				PRODUCT_NAME = "Telegram X";
+				PRODUCT_NAME = Telegram;
 				PROVISIONING_PROFILE = "a453791e-7153-42a4-8b61-d00a130e59d2";
 				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
@@ -6697,7 +6697,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "-D DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}";
-				PRODUCT_NAME = "Telegram X";
+				PRODUCT_NAME = Telegram;
 				PROVISIONING_PROFILE = "954189c1-ae38-447b-a473-7c9b7198aa47";
 				PROVISIONING_PROFILE_SPECIFIER = "match Development ph.telegra.Telegraph";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
@@ -7264,7 +7264,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}";
-				PRODUCT_NAME = "Telegram X";
+				PRODUCT_NAME = Telegram;
 				PROVISIONING_PROFILE = "485ab6ec-94f8-4f05-909c-9e4877e9ce18";
 				PROVISIONING_PROFILE_SPECIFIER = "match AppStore ph.telegra.Telegraph";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
