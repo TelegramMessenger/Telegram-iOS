@@ -269,10 +269,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1158290442] = { return Api.messages.FoundGifs.parse_foundGifs($0) }
     dict[-1132476723] = { return Api.FileLocation.parse_fileLocationToBeDeprecated($0) }
     dict[-716006138] = { return Api.Poll.parse_poll($0) }
+    dict[-1195615476] = { return Api.InputNotifyPeer.parse_inputNotifyPeer($0) }
     dict[423314455] = { return Api.InputNotifyPeer.parse_inputNotifyUsers($0) }
     dict[1251338318] = { return Api.InputNotifyPeer.parse_inputNotifyChats($0) }
     dict[-1311015810] = { return Api.InputNotifyPeer.parse_inputNotifyBroadcasts($0) }
-    dict[-1195615476] = { return Api.InputNotifyPeer.parse_inputNotifyPeer($0) }
     dict[-317144808] = { return Api.EncryptedMessage.parse_encryptedMessage($0) }
     dict[594758406] = { return Api.EncryptedMessage.parse_encryptedMessageService($0) }
     dict[-566281095] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsRecent($0) }
@@ -1315,7 +1315,7 @@ struct Api {
 }
 extension Api {
 struct messages {
-    enum StickerSet: TypeConstructorDescription {
+    indirect enum StickerSet: TypeConstructorDescription {
         case stickerSet(set: Api.StickerSet, packs: [Api.StickerPack], documents: [Api.Document])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1371,7 +1371,7 @@ struct messages {
         }
     
     }
-    enum ArchivedStickers: TypeConstructorDescription {
+    indirect enum ArchivedStickers: TypeConstructorDescription {
         case archivedStickers(count: Int32, sets: [Api.StickerSetCovered])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1415,7 +1415,7 @@ struct messages {
         }
     
     }
-    enum SentEncryptedMessage: TypeConstructorDescription {
+    indirect enum SentEncryptedMessage: TypeConstructorDescription {
         case sentEncryptedMessage(date: Int32)
         case sentEncryptedFile(date: Int32, file: Api.EncryptedFile)
     
@@ -1475,7 +1475,7 @@ struct messages {
         }
     
     }
-    enum Stickers: TypeConstructorDescription {
+    indirect enum Stickers: TypeConstructorDescription {
         case stickersNotModified
         case stickers(hash: Int32, stickers: [Api.Document])
     
@@ -1531,7 +1531,7 @@ struct messages {
         }
     
     }
-    enum FoundStickerSets: TypeConstructorDescription {
+    indirect enum FoundStickerSets: TypeConstructorDescription {
         case foundStickerSetsNotModified
         case foundStickerSets(hash: Int32, sets: [Api.StickerSetCovered])
     
@@ -1587,7 +1587,7 @@ struct messages {
         }
     
     }
-    enum FoundGifs: TypeConstructorDescription {
+    indirect enum FoundGifs: TypeConstructorDescription {
         case foundGifs(nextOffset: Int32, results: [Api.FoundGif])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1631,7 +1631,7 @@ struct messages {
         }
     
     }
-    enum BotResults: TypeConstructorDescription {
+    indirect enum BotResults: TypeConstructorDescription {
         case botResults(flags: Int32, queryId: Int64, nextOffset: String?, switchPm: Api.InlineBotSwitchPM?, results: [Api.BotInlineResult], cacheTime: Int32, users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1703,7 +1703,7 @@ struct messages {
         }
     
     }
-    enum BotCallbackAnswer: TypeConstructorDescription {
+    indirect enum BotCallbackAnswer: TypeConstructorDescription {
         case botCallbackAnswer(flags: Int32, message: String?, url: String?, cacheTime: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1749,7 +1749,7 @@ struct messages {
         }
     
     }
-    enum Chats: TypeConstructorDescription {
+    indirect enum Chats: TypeConstructorDescription {
         case chats(chats: [Api.Chat])
         case chatsSlice(count: Int32, chats: [Api.Chat])
     
@@ -1819,7 +1819,7 @@ struct messages {
         }
     
     }
-    enum DhConfig: TypeConstructorDescription {
+    indirect enum DhConfig: TypeConstructorDescription {
         case dhConfigNotModified(random: Buffer)
         case dhConfig(g: Int32, p: Buffer, version: Int32, random: Buffer)
     
@@ -1885,7 +1885,7 @@ struct messages {
         }
     
     }
-    enum AffectedHistory: TypeConstructorDescription {
+    indirect enum AffectedHistory: TypeConstructorDescription {
         case affectedHistory(pts: Int32, ptsCount: Int32, offset: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1927,7 +1927,7 @@ struct messages {
         }
     
     }
-    enum MessageEditData: TypeConstructorDescription {
+    indirect enum MessageEditData: TypeConstructorDescription {
         case messageEditData(flags: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1961,7 +1961,7 @@ struct messages {
         }
     
     }
-    enum ChatFull: TypeConstructorDescription {
+    indirect enum ChatFull: TypeConstructorDescription {
         case chatFull(fullChat: Api.ChatFull, chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2017,7 +2017,7 @@ struct messages {
         }
     
     }
-    enum StickerSetInstallResult: TypeConstructorDescription {
+    indirect enum StickerSetInstallResult: TypeConstructorDescription {
         case stickerSetInstallResultSuccess
         case stickerSetInstallResultArchive(sets: [Api.StickerSetCovered])
     
@@ -2069,7 +2069,7 @@ struct messages {
         }
     
     }
-    enum AffectedMessages: TypeConstructorDescription {
+    indirect enum AffectedMessages: TypeConstructorDescription {
         case affectedMessages(pts: Int32, ptsCount: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2107,7 +2107,7 @@ struct messages {
         }
     
     }
-    enum SavedGifs: TypeConstructorDescription {
+    indirect enum SavedGifs: TypeConstructorDescription {
         case savedGifsNotModified
         case savedGifs(hash: Int32, gifs: [Api.Document])
     
@@ -2163,7 +2163,7 @@ struct messages {
         }
     
     }
-    enum Messages: TypeConstructorDescription {
+    indirect enum Messages: TypeConstructorDescription {
         case messages(messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case messagesNotModified(count: Int32)
         case messagesSlice(flags: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
@@ -2355,7 +2355,7 @@ struct messages {
         }
     
     }
-    enum PeerDialogs: TypeConstructorDescription {
+    indirect enum PeerDialogs: TypeConstructorDescription {
         case peerDialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2431,7 +2431,7 @@ struct messages {
         }
     
     }
-    enum RecentStickers: TypeConstructorDescription {
+    indirect enum RecentStickers: TypeConstructorDescription {
         case recentStickersNotModified
         case recentStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document], dates: [Int32])
     
@@ -2507,7 +2507,7 @@ struct messages {
         }
     
     }
-    enum FeaturedStickers: TypeConstructorDescription {
+    indirect enum FeaturedStickers: TypeConstructorDescription {
         case featuredStickersNotModified
         case featuredStickers(hash: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
     
@@ -2573,7 +2573,7 @@ struct messages {
         }
     
     }
-    enum Dialogs: TypeConstructorDescription {
+    indirect enum Dialogs: TypeConstructorDescription {
         case dialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case dialogsSlice(count: Int32, dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case dialogsNotModified(count: Int32)
@@ -2723,7 +2723,7 @@ struct messages {
         }
     
     }
-    enum FavedStickers: TypeConstructorDescription {
+    indirect enum FavedStickers: TypeConstructorDescription {
         case favedStickersNotModified
         case favedStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document])
     
@@ -2789,7 +2789,7 @@ struct messages {
         }
     
     }
-    enum AllStickers: TypeConstructorDescription {
+    indirect enum AllStickers: TypeConstructorDescription {
         case allStickersNotModified
         case allStickers(hash: Int32, sets: [Api.StickerSet])
     
@@ -2845,7 +2845,7 @@ struct messages {
         }
     
     }
-    enum HighScores: TypeConstructorDescription {
+    indirect enum HighScores: TypeConstructorDescription {
         case highScores(scores: [Api.HighScore], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
