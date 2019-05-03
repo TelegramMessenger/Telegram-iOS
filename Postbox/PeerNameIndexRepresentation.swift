@@ -1,6 +1,6 @@
 import Foundation
 
-public indirect enum PeerIndexNameRepresentation: Equatable {
+public enum PeerIndexNameRepresentation: Equatable {
     case title(title: String, addressName: String?)
     case personName(first: String, last: String, addressName: String?, phoneNumber: String?)
     

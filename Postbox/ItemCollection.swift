@@ -100,7 +100,7 @@ public protocol ItemCollectionItem: PostboxCoding {
     var indexKeys: [MemoryBuffer] { get }
 }
 
-public indirect enum ItemCollectionSearchQuery {
+public enum ItemCollectionSearchQuery {
     case exact(ValueBoxKey)
     case matching([ValueBoxKey])
 }

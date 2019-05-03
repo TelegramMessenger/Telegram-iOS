@@ -44,9 +44,30 @@ public struct ChatListMessageTagSummaryInfo: Equatable {
     }
 }
 
+public final class ChatListGroupReferencePeer: Equatable {
+    public let peer: RenderedPeer
+    public let isUnread: Bool
+    
+    init(peer: RenderedPeer, isUnread: Bool) {
+        self.peer = peer
+        self.isUnread = isUnread
+    }
+    
+    public static func ==(lhs: ChatListGroupReferencePeer, rhs: ChatListGroupReferencePeer) -> Bool {
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.isUnread != rhs.isUnread {
+            return false
+        }
+        return true
+    }
+}
+
 public struct ChatListGroupReferenceEntry: Equatable {
     public let groupId: PeerGroupId
-    public let renderedPeers: [RenderedPeer]
+    public let message: Message?
+    public let renderedPeers: [ChatListGroupReferencePeer]
     public let unreadState: PeerGroupUnreadCountersCombinedSummary
     
     public static func ==(lhs: ChatListGroupReferenceEntry, rhs: ChatListGroupReferenceEntry) -> Bool {
@@ -56,6 +77,9 @@ public struct ChatListGroupReferenceEntry: Equatable {
         if lhs.unreadState != rhs.unreadState {
             return false
         }
+        if lhs.message?.stableVersion != rhs.message?.stableVersion {
+            return false
+        }
         if lhs.renderedPeers != rhs.renderedPeers {
             return false
         }
@@ -63,7 +87,7 @@ public struct ChatListGroupReferenceEntry: Equatable {
     }
 }
 
-public indirect enum ChatListEntry: Comparable {
+public enum ChatListEntry: Comparable {
     case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, PeerPresence?, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
     
@@ -152,7 +176,7 @@ private func processedChatListEntry(_ entry: MutableChatListEntry, cachedDataTab
     }
 }
 
-indirect enum MutableChatListEntry: Equatable {
+enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(ChatListIndex, IntermediateMessage?, CombinedPeerReadState?, PeerChatListEmbeddedInterfaceState?)
     case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, PeerPresence?, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
@@ -307,43 +331,45 @@ final class MutableChatListView {
         self.groupEntries.removeAll()
         if case .root = self.groupId {
             for groupId in postbox.chatListTable.existingGroups() {
-                var foundIndices: [ChatListIndex] = []
+                var foundIndices: [(ChatListIndex, MessageIndex)] = []
                 var unpinnedCount = 0
                 let maxCount = 8
                 
                 var upperBound: (ChatListIndex, Bool)?
                 inner: while true {
-                    if let entry = postbox.chatListTable.earlierEntries(groupId: groupId, index: upperBound, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1).first {
-                        if case let .message(index, maybeMessage, _) = entry {
-                            foundIndices.append(index)
-                            if index.pinningIndex == nil {
-                                unpinnedCount += 1
-                            }
-                            
-                            if unpinnedCount >= maxCount {
-                                break inner
-                            }
-                            
-                            if let _ = maybeMessage {
-                                upperBound = (entry.index, true)
-                            } else {
-                                upperBound = (entry.index.predecessor, true)
-                            }
-                        } else {
-                            upperBound = (entry.index, false)
+                    if let entry = postbox.chatListTable.earlierEntryInfos(groupId: groupId, index: upperBound, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1).first {
+                        switch entry {
+                            case let .message(index, messageIndex):
+                                if let messageIndex = messageIndex {
+                                    foundIndices.append((index, messageIndex))
+                                    if index.pinningIndex == nil {
+                                        unpinnedCount += 1
+                                    }
+                                    
+                                    if unpinnedCount >= maxCount {
+                                        break inner
+                                    }
+                                    
+                                    upperBound = (entry.index, true)
+                                } else {
+                                    upperBound = (entry.index.predecessor, true)
+                                }
+                            case .hole:
+                                upperBound = (entry.index, false)
                         }
                     } else {
                         break inner
                     }
                 }
                 
-                foundIndices.sort(by: { $0.messageIndex > $1.messageIndex })
+                foundIndices.sort(by: { $0.1 > $1.1 })
                 if foundIndices.count > maxCount {
                     foundIndices.removeSubrange(maxCount...)
                 }
                 
-                var renderedPeers: [RenderedPeer] = []
-                for index in foundIndices {
+                var message: Message?
+                var renderedPeers: [ChatListGroupReferencePeer] = []
+                for (index, messageIndex) in foundIndices {
                     if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
                         var peers = SimpleDictionary<PeerId, Peer>()
                         peers[peer.id] = peer
@@ -354,11 +380,16 @@ final class MutableChatListView {
                         }
                         
                         let renderedPeer = RenderedPeer(peerId: peer.id, peers: peers)
-                        renderedPeers.append(renderedPeer)
+                        let isUnread = postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false
+                        renderedPeers.append(ChatListGroupReferencePeer(peer: renderedPeer, isUnread: isUnread))
+                        
+                        if foundIndices.count == 1 && message == nil {
+                            message = postbox.messageHistoryTable.getMessage(messageIndex).flatMap({ postbox.messageHistoryTable.renderMessage($0, peerTable: postbox.peerTable) })
+                        }
                     }
                 }
                 
-                self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, renderedPeers: renderedPeers, unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
+                self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, message: message, renderedPeers: renderedPeers, unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
             }
         }
     }
@@ -423,14 +454,30 @@ final class MutableChatListView {
                     invalidatedGroups = true
                 }
             }
+            
             if invalidatedGroups {
                 self.reloadGroups(postbox: postbox)
                 hasChanges = true
             } else {
                 for i in 0 ..< self.groupEntries.count {
                     if let updatedState = transaction.currentUpdatedTotalUnreadSummaries[self.groupEntries[i].groupId] {
-                        self.groupEntries[i] = ChatListGroupReferenceEntry(groupId: self.groupEntries[i].groupId, renderedPeers: self.groupEntries[i].renderedPeers, unreadState: updatedState)
+                        self.groupEntries[i] = ChatListGroupReferenceEntry(groupId: self.groupEntries[i].groupId, message: self.groupEntries[i].message, renderedPeers: self.groupEntries[i].renderedPeers, unreadState: updatedState)
                         hasChanges = true
+                    }
+                }
+                
+                if !transaction.alteredInitialPeerCombinedReadStates.isEmpty {
+                    for i in 0 ..< self.groupEntries.count {
+                        for j in 0 ..< groupEntries[i].renderedPeers.count {
+                            if transaction.alteredInitialPeerCombinedReadStates[groupEntries[i].renderedPeers[j].peer.peerId] != nil {
+                                let isUnread = postbox.readStateTable.getCombinedState(groupEntries[i].renderedPeers[j].peer.peerId)?.isUnread ?? false
+                                if isUnread != groupEntries[i].renderedPeers[j].isUnread {
+                                    var renderedPeers = self.groupEntries[i].renderedPeers
+                                    renderedPeers[j] = ChatListGroupReferencePeer(peer: groupEntries[i].renderedPeers[j].peer, isUnread: isUnread)
+                                    self.groupEntries[i] = ChatListGroupReferenceEntry(groupId: self.groupEntries[i].groupId, message: self.groupEntries[i].message, renderedPeers: renderedPeers, unreadState: self.groupEntries[i].unreadState)
+                                }
+                            }
+                        }
                     }
                 }
             }

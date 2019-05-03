@@ -10,7 +10,6 @@ enum ChatListOperation {
 enum ChatListEntryInfo {
     case message(ChatListIndex, MessageIndex?)
     case hole(ChatListHole)
-    case groupReference(PeerGroupId, ChatListIndex)
     
     var index: ChatListIndex {
         switch self {
@@ -18,8 +17,6 @@ enum ChatListEntryInfo {
                 return index
             case let .hole(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
-            case let .groupReference(_, index):
-                return index
         }
     }
 }
@@ -27,7 +24,6 @@ enum ChatListEntryInfo {
 enum ChatListIntermediateEntry {
     case message(ChatListIndex, IntermediateMessage?, PeerChatListEmbeddedInterfaceState?)
     case hole(ChatListHole)
-    //case groupReference(PeerGroupId, ChatListIndex)
     
     var index: ChatListIndex {
         switch self {
@@ -35,8 +31,6 @@ enum ChatListIntermediateEntry {
                 return index
             case let .hole(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
-            /*case let .groupReference(_, index):
-                return index*/
         }
     }
 }
@@ -533,6 +527,42 @@ final class ChatListTable: Table {
         
         self.valueBox.range(self.table, start: key, end: self.lowerBound(groupId: groupId), values: { key, value in
             entries.append(readEntry(groupId: groupId, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, key: key, value: value))
+            return true
+        }, limit: count)
+        return entries
+    }
+    
+    func earlierEntryInfos(groupId: PeerGroupId, index: (ChatListIndex, Bool)?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> [ChatListEntryInfo] {
+        self.ensureInitialized(groupId: groupId)
+        
+        var entries: [ChatListEntryInfo] = []
+        let key: ValueBoxKey
+        if let (index, message) = index {
+            key = self.key(groupId: groupId, index: index, type: message ? .message : .hole)
+        } else {
+            key = self.upperBound(groupId: groupId)
+        }
+        
+        self.valueBox.range(self.table, start: key, end: self.lowerBound(groupId: groupId), values: { key, value in
+            let (keyGroupId, pinningIndex, messageIndex, type) = extractKey(key)
+            assert(groupId == keyGroupId)
+            
+            let index = ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex)
+            if type == ChatListEntryType.message.rawValue {
+                var messageIndex: MessageIndex?
+                if value.length != 0 {
+                    var idNamespace: Int32 = 0
+                    value.read(&idNamespace, offset: 0, length: 4)
+                    var idId: Int32 = 0
+                    value.read(&idId, offset: 0, length: 4)
+                    var indexTimestamp: Int32 = 0
+                    value.read(&indexTimestamp, offset: 0, length: 4)
+                    messageIndex = MessageIndex(id: MessageId(peerId: index.messageIndex.id.peerId, namespace: idNamespace, id: idId), timestamp: indexTimestamp)
+                }
+                entries.append(.message(index, messageIndex))
+            } else if type == ChatListEntryType.hole.rawValue {
+                entries.append(.hole(ChatListHole(index: index.messageIndex)))
+            }
             return true
         }, limit: count)
         return entries

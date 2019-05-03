@@ -5,7 +5,7 @@ import SwiftSignalKitMac
 import SwiftSignalKit
 #endif
 
-indirect enum PostboxUpgradeOperation {
+enum PostboxUpgradeOperation {
     case inplace((MetadataTable, ValueBox, (Float) -> Void) -> Void)
     case standalone((Queue, String, ValueBox, ValueBoxEncryptionParameters, (Float) -> Void) -> String?)
 }

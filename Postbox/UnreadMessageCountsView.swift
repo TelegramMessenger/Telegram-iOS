@@ -10,7 +10,7 @@ private enum MutableUnreadMessageCountsItemEntry {
     case peer(PeerId, CombinedPeerReadState?)
 }
 
-public indirect enum UnreadMessageCountsItemEntry {
+public enum UnreadMessageCountsItemEntry {
     case total(PreferencesEntry?, ChatListTotalUnreadState)
     case peer(PeerId, CombinedPeerReadState?)
 }
