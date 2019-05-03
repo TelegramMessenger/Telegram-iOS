@@ -15,11 +15,14 @@ public final class ListViewTransactionQueue {
     }
     
     public func addTransaction(_ transaction: @escaping ListViewTransaction) {
+        assert(Thread.isMainThread)
         let beginTransaction = self.transactions.count == 0
         self.transactions.append(transaction)
         
         if beginTransaction {
             transaction({ [weak self] in
+                assert(Thread.isMainThread)
+                
                 if Thread.isMainThread {
                     if let strongSelf = self {
                         strongSelf.endTransaction()
@@ -36,6 +39,7 @@ public final class ListViewTransactionQueue {
     }
     
     private func endTransaction() {
+        assert(Thread.isMainThread)
         Queue.mainQueue().async {
             self.transactionCompleted()
             if !self.transactions.isEmpty {
@@ -44,6 +48,8 @@ public final class ListViewTransactionQueue {
             
             if let nextTransaction = self.transactions.first {
                 nextTransaction({ [weak self] in
+                    assert(Thread.isMainThread)
+                    
                     if Thread.isMainThread {
                         if let strongSelf = self {
                             strongSelf.endTransaction()

@@ -1386,6 +1386,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         var previousNodes: [Int: QueueLocalObject<ListViewItemNode>] = [:]
         for insertedItem in sortedIndicesAndItems {
+            if insertedItem.index < 0 || insertedItem.index > self.items.count {
+                fatalError("insertedItem.index \(insertedItem.index) is out of bounds 0 ... \(self.items.count)")
+            }
             self.items.insert(insertedItem.item, at: insertedItem.index)
             if let previousIndex = insertedItem.previousIndex {
                 for itemNode in self.itemNodes {
