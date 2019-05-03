@@ -210,8 +210,8 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                 }
             case let .HoleEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
-            case let .GroupReferenceEntry(index, presentationData, groupId, peer, message, editing, unreadState, revealed, hiddenByDefault):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, peer: peer, message: message, unreadState: unreadState, hiddenByDefault: hiddenByDefault), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, hiddenOffset: hiddenByDefault && !revealed, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .GroupReferenceEntry(index, presentationData, groupId, peers, editing, unreadState, revealed, hiddenByDefault):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, peers: peers, unreadState: unreadState, hiddenByDefault: hiddenByDefault), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, hiddenOffset: hiddenByDefault && !revealed, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .ArchiveIntro(presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
         }
@@ -249,8 +249,8 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
                 }
             case let .HoleEntry(_, theme):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
-            case let .GroupReferenceEntry(index, presentationData, groupId, peer, message, editing, unreadState, revealed, hiddenByDefault):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, peer: peer, message: message, unreadState: unreadState, hiddenByDefault: hiddenByDefault), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, hiddenOffset: hiddenByDefault && !revealed, interaction: nodeInteraction), directionHint: entry.directionHint)
+            case let .GroupReferenceEntry(index, presentationData, groupId, peers, editing, unreadState, revealed, hiddenByDefault):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, peers: peers, unreadState: unreadState, hiddenByDefault: hiddenByDefault), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, hiddenOffset: hiddenByDefault && !revealed, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .ArchiveIntro(presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
         }

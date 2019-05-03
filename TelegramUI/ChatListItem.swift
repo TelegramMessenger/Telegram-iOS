@@ -8,7 +8,7 @@ import TelegramCore
 
 enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
-    case groupReference(groupId: PeerGroupId, peer: RenderedPeer, message: Message?, unreadState: PeerGroupUnreadCountersCombinedSummary, hiddenByDefault: Bool)
+    case groupReference(groupId: PeerGroupId, peers: [RenderedPeer], unreadState: PeerGroupUnreadCountersCombinedSummary, hiddenByDefault: Bool)
     
     var chatLocation: ChatLocation? {
         switch self {
@@ -113,7 +113,7 @@ class ChatListItem: ListViewItem {
                 } else if let peer = peer.peers[peer.peerId] {
                     self.interaction.peerSelected(peer)
                 }
-            case let .groupReference(groupId, _, _, _, _):
+            case let .groupReference(groupId, _, _, _):
                 self.interaction.groupSelected(groupId)
         }
     }
@@ -566,7 +566,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         return { item, params, first, last, firstWithHeader, nextIsPinned in
             let account = item.account
             var message: Message?
-            let itemPeer: RenderedPeer
+            enum ContentPeer {
+                case chat(RenderedPeer)
+                case group([RenderedPeer])
+            }
+            let contentPeer: ContentPeer
             let combinedReadState: CombinedPeerReadState?
             let unreadCount: (count: Int32, unread: Bool, muted: Bool, mutedCount: Int32?)
             let notificationSettings: PeerNotificationSettings?
@@ -582,7 +586,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
                 case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, peerPresenceValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue, ignoreUnreadBadge):
                     message = messageValue
-                    itemPeer = peerValue
+                    contentPeer = .chat(peerValue)
                     combinedReadState = combinedReadStateValue
                     if let combinedReadState = combinedReadState, !isAdValue && !ignoreUnreadBadge {
                         unreadCount = (combinedReadState.count, combinedReadState.isUnread, notificationSettingsValue?.isRemovedFromTotalUnreadCount ?? false, nil)
@@ -600,9 +604,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     inputActivities = inputActivitiesValue
                     isPeerGroup = false
                     isAd = isAdValue
-                case let .groupReference(_, peer, messageValue, unreadState, hiddenByDefault):
-                    itemPeer = peer
-                    message = messageValue
+                case let .groupReference(_, peers, unreadState, hiddenByDefault):
+                    contentPeer = .group(peers)
+                    message = nil
                     combinedReadState = nil
                     notificationSettings = nil
                     embeddedState = nil
@@ -670,10 +674,22 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let leftInset: CGFloat = params.leftInset + 78.0
             
-            let (peer, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: message, chatPeer: itemPeer, accountPeerId: item.account.peerId)
-            var hideAuthor = initialHideAuthor
-            if isPeerGroup {
-                hideAuthor = false
+            enum ContentData {
+                case chat(itemPeer: RenderedPeer, peer: Peer?, hideAuthor: Bool, messageText: String)
+                case group(peers: [RenderedPeer])
+            }
+            
+            let contentData: ContentData
+            
+            var hideAuthor = false
+            switch contentPeer {
+                case let .chat(itemPeer):
+                    let (peer, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: message, chatPeer: itemPeer, accountPeerId: item.account.peerId)
+                    contentData = .chat(itemPeer: itemPeer, peer: peer, hideAuthor: hideAuthor, messageText: messageText)
+                    hideAuthor = initialHideAuthor
+                case let .group(groupPeers):
+                    contentData = .group(peers: groupPeers)
+                    hideAuthor = true
             }
             
             let attributedText: NSAttributedString
@@ -690,59 +706,76 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            if inlineAuthorPrefix == nil, let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
-                hasDraft = true
-                authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
-                
-                attributedText = NSAttributedString(string: embeddedState.text.string, font: textFont, textColor: theme.messageTextColor)
-            } else if let message = message {
-                if let inlineAuthorPrefix = inlineAuthorPrefix {
-                    let composedString = NSMutableAttributedString()
-                    composedString.append(NSAttributedString(string: "\(inlineAuthorPrefix): ", font: textFont, textColor: theme.titleColor))
-                    composedString.append(NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor))
-                    attributedText = composedString
-                } else {
-                    attributedText = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
-                }
-                
-                var peerText: String?
-                if case .groupReference = item.content {
-                    if let messagePeer = itemPeer.chatMainPeer {
-                        peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                    }
-                } else if let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
-                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+            switch contentData {
+                case let .chat(itemPeer, peer, _, messageText):
+                    if inlineAuthorPrefix == nil, let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
+                        hasDraft = true
+                        authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
+                        
+                        attributedText = NSAttributedString(string: embeddedState.text.string, font: textFont, textColor: theme.messageTextColor)
+                    } else if let message = message {
+                        if let inlineAuthorPrefix = inlineAuthorPrefix {
+                            let composedString = NSMutableAttributedString()
+                            composedString.append(NSAttributedString(string: "\(inlineAuthorPrefix): ", font: textFont, textColor: theme.titleColor))
+                            composedString.append(NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor))
+                            attributedText = composedString
+                        } else {
+                            attributedText = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
+                        }
+                        
+                        var peerText: String?
+                        if case .groupReference = item.content {
+                            if let messagePeer = itemPeer.chatMainPeer {
+                                peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            }
+                        } else if let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
+                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            } else {
+                                peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            }
+                        }
+                        
+                        if let peerText = peerText {
+                            authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
+                        }
                     } else {
-                        peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                        attributedText = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
+                        
+                        var peerText: String?
+                        if case .groupReference = item.content {
+                            if let messagePeer = itemPeer.chatMainPeer {
+                                peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            }
+                        }
+                        
+                        if let peerText = peerText {
+                            authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
+                        }
                     }
-                }
-                
-                if let peerText = peerText {
-                    authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
-                }
-            } else {
-                attributedText = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
-                
-                var peerText: String?
-                if case .groupReference = item.content {
-                    if let messagePeer = itemPeer.chatMainPeer {
-                        peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                case let .group(peers):
+                    var textString = ""
+                    for peer in peers {
+                        if let peer = peer.chatMainPeer {
+                            let peerTitle = peer.compactDisplayTitle
+                            if !peerTitle.isEmpty {
+                                if !textString.isEmpty {
+                                    textString.append(", ")
+                                }
+                                textString.append(peerTitle)
+                            }
+                        }
                     }
-                }
-                
-                if let peerText = peerText {
-                    authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
-                }
+                    attributedText = NSAttributedString(string: textString, font: textFont, textColor: theme.messageTextColor)
             }
             
-            switch item.content {
-                case .peer:
+            switch contentData {
+                case let .chat(_, peer, _, _):
                     if peer?.id == item.account.peerId {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
                     } else if let displayTitle = peer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
-                case .groupReference:
+                case .group:
                     titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_ArchivedChatsTitle, font: titleFont, textColor: theme.titleColor)
             }
             
@@ -755,7 +788,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             let dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: item.index.messageIndex.timestamp, relativeTo: timestamp, dateTimeFormat: item.presentationData.dateTimeFormat)
             
-            if isAd {
+            if isPeerGroup {
+                dateAttributedString = NSAttributedString(string: "", font: dateFont, textColor: theme.dateTextColor)
+            } else if isAd {
                 dateAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_AdLabel, font: dateFont, textColor: theme.dateTextColor)
             } else {
                 dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: theme.dateTextColor)
@@ -845,7 +880,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var isVerified = false
             let isSecret = !isPeerGroup && item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat
             
-            if case .peer = item.content {
+            if case let .chat(itemPeer) = contentPeer {
                 if let peer = itemPeer.chatMainPeer {
                     if let peer = peer as? TelegramUser {
                         isVerified = peer.flags.contains(.isVerified)
@@ -937,7 +972,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if item.enableContextActions && !isAd {
                         peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, groupId: item.peerGroupId, peerId: renderedPeer.peerId, accountPeerId: item.account.peerId, canDelete: true, isEditing: item.editing)
-                        peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.account.peerId, groupId: item.peerGroupId)
+                        if case let .chat(itemPeer) = contentPeer {
+                            peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.account.peerId, groupId: item.peerGroupId)
+                        } else {
+                            peerLeftRevealOptions = []
+                        }
                     } else {
                         peerRevealOptions = []
                         peerLeftRevealOptions = []

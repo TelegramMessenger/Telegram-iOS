@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SwiftSignalKit
 
 private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHostView {
     var previewingDelegate: PreviewingHostViewDelegate? {
@@ -15,6 +16,22 @@ private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHo
     }
     
     weak var controller: ChatListController?
+}
+
+private struct TestItem: Comparable, Identifiable {
+    var value: Int
+    var version: Int
+    
+    var stableId: Int {
+        return self.value
+    }
+    
+    static func <(lhs: TestItem, rhs: TestItem) -> Bool {
+        if lhs.version != rhs.version {
+            return lhs.version < rhs.version
+        }
+        return lhs.value < rhs.value
+    }
 }
 
 final class ChatListControllerNode: ASDisplayNode {
@@ -42,6 +59,8 @@ final class ChatListControllerNode: ASDisplayNode {
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     var requestAddContact: ((String) -> Void)?
     var dismissSelf: (() -> Void)?
+    
+    let debugListView = ListView()
     
     init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
         self.context = context
@@ -106,6 +125,8 @@ final class ChatListControllerNode: ASDisplayNode {
                     }
             }
         }
+        
+        self.addSubnode(self.debugListView)
     }
     
     override func didLoad() {
