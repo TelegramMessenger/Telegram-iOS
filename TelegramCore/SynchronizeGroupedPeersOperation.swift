@@ -44,8 +44,8 @@ public func updatePeerGroupIdInteractively(transaction: Transaction, peerId: Pee
                 return
             }
             if pinningIndex != nil {
-                let updatedPinnedItems = transaction.getPinnedItemIds(groupId: currentGroupId).filter({ $0 != .peer(peerId) })
-                transaction.setPinnedItemIds(groupId: currentGroupId, itemIds: updatedPinnedItems)
+                /*let updatedPinnedItems = transaction.getPinnedItemIds(groupId: currentGroupId).filter({ $0 != .peer(peerId) })
+                transaction.setPinnedItemIds(groupId: currentGroupId, itemIds: updatedPinnedItems)*/
             }
             updatedInclusion = .ifHasMessagesOrOneOf(groupId: groupId, pinningIndex: nil, minTimestamp: minTimestamp)
     }

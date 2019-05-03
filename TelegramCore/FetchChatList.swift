@@ -280,7 +280,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                 if case .general = location {
                     for groupId in combinedReferencedFolders {
                         let flags: Int32 = 1 << 1
-                        let requestFeed = network.request(Api.functions.messages.getDialogs(flags: flags, folderId: groupId.rawValue, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 1, hash: 0))
+                        let requestFeed = network.request(Api.functions.messages.getDialogs(flags: flags, folderId: groupId.rawValue, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 32, hash: 0))
                         |> retryRequest
                         |> map { result -> (PeerGroupId, ParsedDialogs) in
                             let extractedData = extractDialogsData(dialogs: result)
