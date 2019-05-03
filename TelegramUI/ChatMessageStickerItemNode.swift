@@ -459,6 +459,11 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         }
                         replyInfoNode.frame = replyInfoFrame
                         strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: replyInfoFrame.minX - 4.0, y: replyInfoFrame.minY - viaBotSize.height - 2.0), size: CGSize(width: max(replyInfoFrame.size.width, viaBotSize.width) + 8.0, height: replyInfoFrame.size.height + viaBotSize.height + 5.0))
+                        
+                        if let selectionState = item.controllerInteraction.selectionState, isEmoji {
+                            replyInfoNode.alpha = 0.0
+                            strongSelf.replyBackgroundNode?.alpha = 0.0
+                        }
                     } else if let replyInfoNode = strongSelf.replyInfoNode {
                         replyInfoNode.removeFromSupernode()
                         strongSelf.replyInfoNode = nil
@@ -710,13 +715,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             return
         }
         
+        let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+        var isEmoji = false
+        if let item = self.item, item.presentationData.largeEmoji && item.message.elligibleForLargeEmoji {
+            isEmoji = true
+        }
+        
         if let selectionState = item.controllerInteraction.selectionState {
-            var selected = false
-            var incoming = true
-            
-            selected = selectionState.selectedIds.contains(item.message.id)
-            incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-            
+            let selected = selectionState.selectedIds.contains(item.message.id)
+
             let offset: CGFloat = incoming ? 42.0 : 0.0
             
             if let selectionNode = self.selectionNode {
@@ -746,6 +753,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
             }
+            
+            if let replyInfoNode = self.replyInfoNode, isEmoji && !incoming {
+                let alpha: CGFloat = 0.0
+                replyInfoNode.alpha = alpha
+                self.replyBackgroundNode?.alpha = alpha
+                if animated {
+                    replyInfoNode.layer.animateAlpha(from: 1.0 - alpha, to: alpha, duration: 0.3)
+                    self.replyBackgroundNode?.layer.animateAlpha(from: 1.0 - alpha, to: alpha, duration: 0.3)
+                }
+            }
         } else {
             if let selectionNode = self.selectionNode {
                 self.selectionNode = nil
@@ -762,6 +779,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 } else {
                     selectionNode.removeFromSupernode()
+                }
+            }
+            
+            if let replyInfoNode = self.replyInfoNode, isEmoji && !incoming {
+                let alpha: CGFloat = 1.0
+                replyInfoNode.alpha = alpha
+                self.replyBackgroundNode?.alpha = alpha
+                if animated {
+                    replyInfoNode.layer.animateAlpha(from: 1.0 - alpha, to: alpha, duration: 0.3)
+                    self.replyBackgroundNode?.layer.animateAlpha(from: 1.0 - alpha, to: alpha, duration: 0.3)
                 }
             }
         }
