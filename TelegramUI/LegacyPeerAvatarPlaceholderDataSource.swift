@@ -49,7 +49,7 @@ final class LegacyPeerAvatarPlaceholderDataSource: TGImageDataSource {
         if let account = self.account() {
             let signal: Signal<Never, NoError> = Signal { subscriber in
                 let args: [AnyHashable : Any]
-                let argumentsString = String(uri[uri.index(uri.startIndex, offsetBy: "placeholder://?".characters.count)...])
+                let argumentsString = String(uri[uri.index(uri.startIndex, offsetBy: "placeholder://?".count)...])
                 args = TGStringUtils.argumentDictionary(inUrlString: argumentsString)!
                 
                 guard let width = Int((args["w"] as! String)), width > 1 else {
