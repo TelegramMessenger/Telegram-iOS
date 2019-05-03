@@ -155,15 +155,14 @@ final class AuthorizedApplicationContext {
         
         let previousPasscodeState = Atomic<PasscodeState?>(value: nil)
         
-        self.passcodeStatusDisposable.set((combineLatest(queue: Queue.mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData(), context.sharedContext.applicationBindings.applicationIsActive)
-        |> map { sharedData, accessChallengeDataView, isActive -> (PostboxAccessChallengeData, PresentationPasscodeSettings?, Bool) in
+        let passcodeStatusData = combineLatest(queue: Queue.mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData(), context.sharedContext.applicationBindings.applicationIsActive)
+        let passcodeState = passcodeStatusData
+        |> map { sharedData, accessChallengeDataView, isActive -> PasscodeState in
             let accessChallengeData = accessChallengeDataView.data
             let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings
-            return (accessChallengeData, passcodeSettings, isActive)
-        }
-        |> map { accessChallengeData, passcodeSettings, isActive -> PasscodeState in
             return PasscodeState(isActive: isActive, challengeData: accessChallengeData, autolockTimeout: passcodeSettings?.autolockTimeout, enableBiometrics: passcodeSettings?.enableBiometrics ?? false, biometricsDomainState: passcodeSettings?.biometricsDomainState, disableBiometricsAuth: passcodeSettings?.disableBiometricsAuth ?? true)
-        }).start(next: { [weak self] updatedState in
+        }
+        self.passcodeStatusDisposable.set(passcodeState.start(next: { [weak self] updatedState in
             guard let strongSelf = self else {
                 return
             }
