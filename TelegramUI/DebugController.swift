@@ -384,7 +384,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             case let .resetBiometricsData(theme):
                 return ItemListActionItem(theme: theme, title: "Reset Biometrics Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     let _ = updatePresentationPasscodeSettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
-                        return settings.withUpdatedBiometricsDomainState(nil).withUpdatedDisableBiometricsAuth(false)
+                        return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
                     }).start()
                 })
             case let .animatedStickers(theme):

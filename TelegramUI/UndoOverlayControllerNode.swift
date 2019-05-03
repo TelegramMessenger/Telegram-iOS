@@ -80,16 +80,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 displayUndo = undo
                 self.originalRemainingSeconds = 5
             case let .hidArchive(title, text, undo):
-                if undo {
-                    self.iconNode = ASImageNode()
-                    self.iconNode?.displayWithoutProcessing = true
-                    self.iconNode?.displaysAsynchronously = false
-                    self.iconNode?.image = UIImage(bundleImageName: "Chat List/HidArchiveUndoIcon")
-                    self.animationNode = nil
-                } else {
-                    self.iconNode = nil
-                    self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
-                }
+                self.iconNode = nil
+                self.animationNode = AnimationNode(animation: "anim_archiveswipe", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.iconCheckNode = nil
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+                displayUndo = undo
+                self.originalRemainingSeconds = 3
+            case let .revealedArchive(title, text, undo):
+                self.iconNode = nil
+                self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.iconCheckNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
@@ -126,7 +126,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             case .removedChat:
                 self.panelWrapperNode.addSubnode(self.timerTextNode)
                 self.panelWrapperNode.addSubnode(self.statusNode)
-            case .archivedChat, .hidArchive:
+            case .archivedChat, .hidArchive, .revealedArchive:
                 break
         }
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)
