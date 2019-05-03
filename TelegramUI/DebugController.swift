@@ -47,6 +47,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetData(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
     case animatedStickers(PresentationTheme)
+    case photoPreview(PresentationTheme, Bool)
     case versionInfo(PresentationTheme)
     
     var section: ItemListSectionId {
@@ -59,7 +60,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .resetBiometricsData, .animatedStickers:
+            case .clearTips, .reimport, .resetData, .resetBiometricsData, .animatedStickers, .photoPreview:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -102,8 +103,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 15
             case .animatedStickers:
                 return 16
-            case .versionInfo:
+            case .photoPreview:
                 return 17
+            case .versionInfo:
+                return 18
         }
     }
     
@@ -391,6 +394,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(theme: theme, title: "AJSON", value: GlobalExperimentalSettings.animatedStickers, sectionId: self.section, style: .blocks, updated: { value in
                     GlobalExperimentalSettings.animatedStickers = value
                 })
+            case let .photoPreview(theme, value):
+                return ItemListSwitchItem(theme: theme, title: "Photo Preview", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                            var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                            settings.chatListPhotos = value
+                            return settings
+                        })
+                    }).start()
+                })
             case let .versionInfo(theme):
                 let bundle = Bundle.main
                 let bundleId = bundle.bundleIdentifier ?? ""
@@ -425,6 +438,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
         entries.append(.reimport(presentationData.theme))
     }
     entries.append(.resetData(presentationData.theme))
+    entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.versionInfo(presentationData.theme))
     
     return entries

@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 
-public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message?, chatPeer: RenderedPeer, accountPeerId: PeerId) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
+public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message?, chatPeer: RenderedPeer, accountPeerId: PeerId, enableMediaEmoji: Bool = true) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
     let peer: Peer?
     
     var hideAuthor = false
@@ -22,7 +22,9 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     if message.text.isEmpty {
                         messageText = strings.Message_Photo
                     } else if #available(iOSApplicationExtension 9.0, *) {
-                        messageText = "🖼 \(messageText)"
+                        if enableMediaEmoji {
+                            messageText = "🖼 \(messageText)"
+                        }
                     }
                 case let fileMedia as TelegramMediaFile:
                     if message.text.isEmpty {
@@ -75,7 +77,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                     if message.text.isEmpty {
                                         isVideo = true
                                     } else if #available(iOSApplicationExtension 9.0, *) {
-                                        if !fileMedia.isAnimated {
+                                        if !fileMedia.isAnimated && enableMediaEmoji {
                                             messageText = "📹 \(messageText)"
                                         }
                                         break inner

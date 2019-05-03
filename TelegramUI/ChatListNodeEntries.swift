@@ -12,7 +12,7 @@ enum ChatListNodeEntryId: Hashable {
 enum ChatListNodeEntry: Comparable, Identifiable {
     case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
-    case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, peers: [RenderedPeer], editing: Bool, unreadState: PeerGroupUnreadCountersCombinedSummary, revealed: Bool, hiddenByDefault: Bool)
+    case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, peers: [ChatListGroupReferencePeer], message: Message?, editing: Bool, unreadState: PeerGroupUnreadCountersCombinedSummary, revealed: Bool, hiddenByDefault: Bool)
     case ArchiveIntro(presentationData: ChatListPresentationData)
     
     var sortIndex: ChatListIndex {
@@ -21,7 +21,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return index
             case let .HoleEntry(hole, _):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
-            case let .GroupReferenceEntry(index, _, _, _, _, _, _, _):
+            case let .GroupReferenceEntry(index, _, _, _, _, _, _, _, _):
                 return index
             case .ArchiveIntro:
                 return ChatListIndex.absoluteUpperBound
@@ -34,7 +34,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return .PeerId(index.messageIndex.id.peerId.toInt64())
             case let .HoleEntry(hole, _):
                 return .Hole(Int64(hole.index.id.id))
-            case let .GroupReferenceEntry(_, _, groupId, _, _, _, _, _):
+            case let .GroupReferenceEntry(_, _, groupId, _, _, _, _, _, _):
                 return .GroupId(groupId)
             case .ArchiveIntro:
                 return .ArchiveIntro
@@ -128,8 +128,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                     default:
                         return false
                 }
-            case let .GroupReferenceEntry(lhsIndex, lhsPresentationData, lhsGroupId, lhsPeers, lhsEditing, lhsUnreadState, lhsRevealed, lhsHiddenByDefault):
-                if case let .GroupReferenceEntry(rhsIndex, rhsPresentationData, rhsGroupId, rhsPeers, rhsEditing, rhsUnreadState, rhsRevealed, rhsHiddenByDefault) = rhs {
+            case let .GroupReferenceEntry(lhsIndex, lhsPresentationData, lhsGroupId, lhsPeers, lhsMessage, lhsEditing, lhsUnreadState, lhsRevealed, lhsHiddenByDefault):
+                if case let .GroupReferenceEntry(rhsIndex, rhsPresentationData, rhsGroupId, rhsPeers, rhsMessage, rhsEditing, rhsUnreadState, rhsRevealed, rhsHiddenByDefault) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -140,6 +140,9 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                         return false
                     }
                     if lhsPeers != rhsPeers {
+                        return false
+                    }
+                    if lhsMessage?.stableId != rhsMessage?.stableId {
                         return false
                     }
                     if lhsEditing != rhsEditing {
@@ -242,7 +245,7 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
         if view.laterIndex == nil, case .chatList = mode {
             for groupReference in view.groupEntries {
                 let messageIndex = MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: 0), timestamp: 1)
-                result.append(.GroupReferenceEntry(index: ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex), presentationData: state.presentationData, groupId: groupReference.groupId, peers: groupReference.renderedPeers, editing: state.editing, unreadState: groupReference.unreadState, revealed: state.archiveShouldBeTemporaryRevealed, hiddenByDefault: hideArchivedFolderByDefault))
+                result.append(.GroupReferenceEntry(index: ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex), presentationData: state.presentationData, groupId: groupReference.groupId, peers: groupReference.renderedPeers, message: groupReference.message, editing: state.editing, unreadState: groupReference.unreadState, revealed: state.archiveShouldBeTemporaryRevealed, hiddenByDefault: hideArchivedFolderByDefault))
                 if pinningIndex != 0 {
                     pinningIndex -= 1
                 }
