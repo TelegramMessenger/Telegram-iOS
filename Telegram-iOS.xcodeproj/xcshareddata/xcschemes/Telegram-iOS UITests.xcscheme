@@ -10,7 +10,6 @@
       buildConfiguration = "Debug Hockeyapp"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      language = ""
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
          <TestableReference
@@ -28,7 +27,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D008599B1B28189D00EAF753"
-            BuildableName = "Telegram X.app"
+            BuildableName = "Telegram.app"
             BlueprintName = "Telegram-iOS"
             ReferencedContainer = "container:Telegram-iOS.xcodeproj">
          </BuildableReference>
@@ -40,7 +39,6 @@
       buildConfiguration = "Debug Hockeyapp"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      language = ""
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
@@ -52,7 +50,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D008599B1B28189D00EAF753"
-            BuildableName = "Telegram X.app"
+            BuildableName = "Telegram.app"
             BlueprintName = "Telegram-iOS"
             ReferencedContainer = "container:Telegram-iOS.xcodeproj">
          </BuildableReference>
@@ -70,7 +68,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D008599B1B28189D00EAF753"
-            BuildableName = "Telegram X.app"
+            BuildableName = "Telegram.app"
             BlueprintName = "Telegram-iOS"
             ReferencedContainer = "container:Telegram-iOS.xcodeproj">
          </BuildableReference>
