@@ -1,5 +1,5 @@
 
-public enum PeerNotificationSettingsBehavior: PostboxCoding {
+public indirect enum PeerNotificationSettingsBehavior: PostboxCoding {
     case none
     case reset(atTimestamp: Int32, toValue: PeerNotificationSettings)
     

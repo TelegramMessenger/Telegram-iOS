@@ -31,10 +31,10 @@ private enum Entry: Equatable, CustomStringConvertible {
     
     var description: String {
         switch self {
-        case let .Message(id, timestamp, text, media, flags):
-            return "Message(\(id), \(timestamp), \(text), \(media), \(flags))"
-        case let .Hole(min, max, timestamp):
-            return "Hole(\(min), \(max), \(timestamp))"
+            case let .Message(id, timestamp, text, media, flags):
+                return "Message(\(id), \(timestamp), \(text), \(media), \(flags))"
+            case let .Hole(min, max, timestamp):
+                return "Hole(\(min), \(max), \(timestamp))"
         }
     }
 }

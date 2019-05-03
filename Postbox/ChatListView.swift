@@ -63,7 +63,7 @@ public struct ChatListGroupReferenceEntry: Equatable {
     }
 }
 
-public enum ChatListEntry: Comparable {
+public indirect enum ChatListEntry: Comparable {
     case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, PeerPresence?, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
     
@@ -152,7 +152,7 @@ private func processedChatListEntry(_ entry: MutableChatListEntry, cachedDataTab
     }
 }
 
-enum MutableChatListEntry: Equatable {
+indirect enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(ChatListIndex, IntermediateMessage?, CombinedPeerReadState?, PeerChatListEmbeddedInterfaceState?)
     case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, PeerPresence?, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
