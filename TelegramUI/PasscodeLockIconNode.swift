@@ -84,7 +84,7 @@ final class PasscodeLockIconNode: ASDisplayNode {
         animation.fromValue = 1.0 as NSNumber
         animation.toValue = 0.0 as NSNumber
         animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
-        animation.duration = 0.55
+        animation.duration = 0.75
         self.pop_add(animation, forKey: "progress")
     }
     
@@ -107,7 +107,8 @@ final class PasscodeLockIconNode: ASDisplayNode {
         
         let progress = parameters.progress
         let fromScale = parameters.fromScale
-        let lockProgress = min(1.0, progress / 0.85)
+        let lockSpan: CGFloat = parameters.keepLockedColor ? 0.5 : 0.85
+        let lockProgress = min(1.0, progress / lockSpan)
         
         context.translateBy(x: bounds.width / 2.0, y: bounds.height / 2.0)
         context.scaleBy(x: fromScale + (1.0 - fromScale) * lockProgress, y: fromScale + (1.0 - fromScale) * lockProgress)
@@ -131,8 +132,8 @@ final class PasscodeLockIconNode: ASDisplayNode {
             topRect = CGRect(x: 19.0 - width, y: lineWidth / 2.0 + 1.0, width: width, height: 22.0)
             topRadius = 6.0 * (lockProgress - 0.5) * 2.0
         }
-        if progress > 0.85 {
-            let innerProgress = (progress - 0.85) / 0.15
+        if progress > lockSpan {
+            let innerProgress = (progress - lockSpan) / (1.0 - lockSpan)
             if !parameters.keepLockedColor {
                 if innerProgress < 0.6 {
                     offset = 2.0 * min(1.0, innerProgress / 0.6)

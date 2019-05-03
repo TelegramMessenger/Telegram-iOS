@@ -130,6 +130,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     }
     
     @objc private func deletePressed() {
+        self.hapticFeedback.tap()
         self.inputFieldNode.delete()
     }
     
@@ -222,12 +223,19 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.animateError()
     }
     
-    func initialAppearance() {
-        self.titleNode.setAttributedText(NSAttributedString(string: self.strings.Passcode_AppLockedAlert.replacingOccurrences(of: "\n", with: " "), font: titleFont, textColor: .white), animation: .none, completion: {
-            Queue.mainQueue().after(2.0, {
-                self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .crossFade)
+    func initialAppearance(fadeIn: Bool = false) {
+        if fadeIn {
+            let effect = self.theme.overallDarkAppearance ? UIBlurEffect(style: .dark) : UIBlurEffect(style: .light)
+            UIView.animate(withDuration: 0.3, animations: {
+                if #available(iOS 9.0, *) {
+                    self.effectView.effect = effect
+                } else {
+                    self.effectView.alpha = 1.0
+                }
             })
-        })
+            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        }
+        self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .none)
     }
     
     func animateIn(iconFrame: CGRect, completion: @escaping () -> Void = {}) {
@@ -292,7 +300,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     }
     
     func animateSuccess() {
-        //self.iconNode.animateUnlock()
+        self.iconNode.animateUnlock()
         self.inputFieldNode.animateSuccess()
     }
     
