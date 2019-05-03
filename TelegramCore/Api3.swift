@@ -1,6 +1,6 @@
 extension Api {
 struct upload {
-    enum WebFile: TypeConstructorDescription {
+    indirect enum WebFile: TypeConstructorDescription {
         case webFile(size: Int32, mimeType: String, fileType: Api.storage.FileType, mtime: Int32, bytes: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -52,7 +52,7 @@ struct upload {
         }
     
     }
-    enum File: TypeConstructorDescription {
+    indirect enum File: TypeConstructorDescription {
         case file(type: Api.storage.FileType, mtime: Int32, bytes: Buffer)
         case fileCdnRedirect(dcId: Int32, fileToken: Buffer, encryptionKey: Buffer, encryptionIv: Buffer, fileHashes: [Api.FileHash])
     
@@ -138,7 +138,7 @@ struct upload {
         }
     
     }
-    enum CdnFile: TypeConstructorDescription {
+    indirect enum CdnFile: TypeConstructorDescription {
         case cdnFileReuploadNeeded(requestToken: Buffer)
         case cdnFile(bytes: Buffer)
     
@@ -196,7 +196,7 @@ struct upload {
 }
 extension Api {
 struct storage {
-    enum FileType: TypeConstructorDescription {
+    indirect enum FileType: TypeConstructorDescription {
         case fileUnknown
         case filePartial
         case fileJpeg
@@ -334,7 +334,7 @@ struct storage {
 }
 extension Api {
 struct account {
-    enum TmpPassword: TypeConstructorDescription {
+    indirect enum TmpPassword: TypeConstructorDescription {
         case tmpPassword(tmpPassword: Buffer, validUntil: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -372,7 +372,7 @@ struct account {
         }
     
     }
-    enum PasswordSettings: TypeConstructorDescription {
+    indirect enum PasswordSettings: TypeConstructorDescription {
         case passwordSettings(flags: Int32, email: String?, secureSettings: Api.SecureSecretSettings?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -416,7 +416,7 @@ struct account {
         }
     
     }
-    enum WallPapers: TypeConstructorDescription {
+    indirect enum WallPapers: TypeConstructorDescription {
         case wallPapersNotModified
         case wallPapers(hash: Int32, wallpapers: [Api.WallPaper])
     
@@ -472,7 +472,7 @@ struct account {
         }
     
     }
-    enum PasswordInputSettings: TypeConstructorDescription {
+    indirect enum PasswordInputSettings: TypeConstructorDescription {
         case passwordInputSettings(flags: Int32, newAlgo: Api.PasswordKdfAlgo?, newPasswordHash: Buffer?, hint: String?, email: String?, newSecureSettings: Api.SecureSecretSettings?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -530,7 +530,7 @@ struct account {
         }
     
     }
-    enum WebAuthorizations: TypeConstructorDescription {
+    indirect enum WebAuthorizations: TypeConstructorDescription {
         case webAuthorizations(authorizations: [Api.WebAuthorization], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -580,7 +580,7 @@ struct account {
         }
     
     }
-    enum SentEmailCode: TypeConstructorDescription {
+    indirect enum SentEmailCode: TypeConstructorDescription {
         case sentEmailCode(emailPattern: String, length: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -618,7 +618,7 @@ struct account {
         }
     
     }
-    enum Authorizations: TypeConstructorDescription {
+    indirect enum Authorizations: TypeConstructorDescription {
         case authorizations(authorizations: [Api.Authorization])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -658,7 +658,7 @@ struct account {
         }
     
     }
-    enum AuthorizationForm: TypeConstructorDescription {
+    indirect enum AuthorizationForm: TypeConstructorDescription {
         case authorizationForm(flags: Int32, requiredTypes: [Api.SecureRequiredType], values: [Api.SecureValue], errors: [Api.SecureValueError], users: [Api.User], privacyPolicyUrl: String?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -736,7 +736,7 @@ struct account {
         }
     
     }
-    enum Password: TypeConstructorDescription {
+    indirect enum Password: TypeConstructorDescription {
         case password(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, srpB: Buffer?, srpId: Int64?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -808,7 +808,7 @@ struct account {
         }
     
     }
-    enum PrivacyRules: TypeConstructorDescription {
+    indirect enum PrivacyRules: TypeConstructorDescription {
         case privacyRules(rules: [Api.PrivacyRule], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -858,7 +858,7 @@ struct account {
         }
     
     }
-    enum AutoDownloadSettings: TypeConstructorDescription {
+    indirect enum AutoDownloadSettings: TypeConstructorDescription {
         case autoDownloadSettings(low: Api.AutoDownloadSettings, medium: Api.AutoDownloadSettings, high: Api.AutoDownloadSettings)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -910,7 +910,7 @@ struct account {
 }
 extension Api {
 struct photos {
-    enum Photo: TypeConstructorDescription {
+    indirect enum Photo: TypeConstructorDescription {
         case photo(photo: Api.Photo, users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -956,7 +956,7 @@ struct photos {
         }
     
     }
-    enum Photos: TypeConstructorDescription {
+    indirect enum Photos: TypeConstructorDescription {
         case photos(photos: [Api.Photo], users: [Api.User])
         case photosSlice(count: Int32, photos: [Api.Photo], users: [Api.User])
     
@@ -1050,7 +1050,7 @@ struct photos {
 }
 extension Api {
 struct phone {
-    enum PhoneCall: TypeConstructorDescription {
+    indirect enum PhoneCall: TypeConstructorDescription {
         case phoneCall(phoneCall: Api.PhoneCall, users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
