@@ -4211,7 +4211,7 @@ Unused sets are archived when you add more.";
 
 "Undo.ChatDeletedForBothSides" = "Chat deleted for both sides";
 
-"DataUpgrade.Running" = "Optimizing...";
+"DataUpgrade.Running" = "Optimizing Telegram...";
 
 "Call.Mute" = "mute";
 "Call.Camera" = "camera";
