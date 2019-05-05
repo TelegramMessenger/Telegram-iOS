@@ -158,15 +158,24 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             return
         }
         
+        var size = validLayout.size
+        if case .compact = validLayout.metrics.widthClass, size.width > size.height {
+            size = CGSize(width: size.height, height: size.width)
+        }
+        
+        if let background = self.background, background.size == size {
+            return
+        }
+        
         switch self.wallpaper {
             case .image, .file:
                 if let image = chatControllerBackgroundImage(wallpaper: self.wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, composed: false) {
-                    self.background = ImageBasedPasscodeBackground(image: image, size: validLayout.size)
+                    self.background = ImageBasedPasscodeBackground(image: image, size: size)
                 } else {
-                    self.background = DefaultPasscodeBackground(size: validLayout.size)
+                    self.background = DefaultPasscodeBackground(size: size)
                 }
             default:
-                self.background = DefaultPasscodeBackground(size: validLayout.size)
+                self.background = DefaultPasscodeBackground(size: size)
         }
         
         if let background = self.background {
@@ -313,12 +322,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        let hadValidLayout = self.validLayout != nil
         self.validLayout = layout
-        
-        if !hadValidLayout {
-            self.updateBackground()
-        }
+    
+        self.updateBackground()
         
         if layout.size.width == 320.0 {
             self.iconNode.alpha = 0.0

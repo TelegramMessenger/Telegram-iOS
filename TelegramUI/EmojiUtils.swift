@@ -3,20 +3,28 @@ import CoreText
 
 extension UnicodeScalar {
     var isEmoji: Bool {
-        switch value {
+        switch self.value {
             case 0x1F600...0x1F64F, // Emoticons
-            0x1F300...0x1F5FF, // Misc Symbols and Pictographs
-            0x1F680...0x1F6FF, // Transport and Map
-            0x1F1E6...0x1F1FF, // Regional country flags
-            0x2600...0x26FF, // Misc symbols
-            0x2700...0x27BF, // Dingbats
-            0xE0020...0xE007F, // Tags
-            0xFE00...0xFE0F, // Variation Selectors
-            0x1F900...0x1F9FF, // Supplemental Symbols and Pictographs
-            127000...127600, // Various asian characters
-            65024...65039, // Variation selector
-            9100...9300, // Misc items
-            8400...8447: // Combining Diacritical Marks for Symbols
+                 0x1F300...0x1F5FF, // Misc Symbols and Pictographs
+                 0x1F680...0x1F6FF, // Transport and Map
+                 0x1F1E6...0x1F1FF, // Regional country flags
+                 0xE0020...0xE007F, // Tags
+                 0xFE00...0xFE0F, // Variation Selectors
+                 0x1F900...0x1F9FF, // Supplemental Symbols and Pictographs
+                 127000...127600, // Various asian characters
+                 65024...65039, // Variation selector
+                 9100...9300, // Misc items
+                 8400...8447: // Combining Diacritical Marks for Symbols
+                return true
+            default:
+                return false
+        }
+    }
+    
+    var maybeEmoji: Bool {
+        switch self.value {
+            case 0x2600...0x26FF, // Misc symbols
+                 0x2700...0x27BF: // Dingbats
                 return true
             default:
                 return false
@@ -24,7 +32,7 @@ extension UnicodeScalar {
     }
     
     var isZeroWidthJoiner: Bool {
-        return value == 8205
+        return self.value == 8205
     }
 }
 
@@ -37,34 +45,44 @@ extension String {
         return t
     }
     
-    var glyphCount: Int {
-        let richText = NSAttributedString(string: self)
-        let line = CTLineCreateWithAttributedString(richText)
-        return CTLineGetGlyphCount(line)
-    }
-    
     var isSingleEmoji: Bool {
-        return glyphCount == 1 && containsEmoji
+        return self.emojis.count == 1 && self.containsEmoji
     }
     
     var containsEmoji: Bool {
-        return unicodeScalars.contains { $0.isEmoji }
+        return self.unicodeScalars.contains { $0.isEmoji }
     }
     
     var containsOnlyEmoji: Bool {
-        return !isEmpty && !unicodeScalars.contains(where: {
-            !$0.isEmoji && !$0.isZeroWidthJoiner
-        })
+        guard !self.isEmpty else {
+            return false
+        }
+        var nextShouldBeFE0F = false
+        for scalar in self.unicodeScalars {
+            if nextShouldBeFE0F {
+                if scalar.value == 0xfe0f {
+                    nextShouldBeFE0F = false
+                    continue
+                } else {
+                    return false
+                }
+            }
+            if scalar.maybeEmoji {
+                nextShouldBeFE0F = true
+            }
+            else if !scalar.isEmoji && !scalar.isZeroWidthJoiner {
+                return false
+            }
+        }
+        return !nextShouldBeFE0F
     }
     
-    // The next tricks are mostly to demonstrate how tricky it can be to determine emoji's
-    // If anyone has suggestions how to improve this, please let me know
     var emojiString: String {
-        return emojiScalars.map { String($0) }.reduce("", +)
+        return self.emojiScalars.map { String($0) }.reduce("", +)
     }
     
     var firstEmoji: String {
-        if let first = emojiScalars.first {
+        if let first = self.emojiScalars.first {
             return String(first)
         } else {
             return ""
@@ -84,7 +102,7 @@ extension String {
     fileprivate var emojiScalars: [UnicodeScalar] {
         var chars: [UnicodeScalar] = []
         var previous: UnicodeScalar?
-        for cur in unicodeScalars {
+        for cur in self.unicodeScalars {
             if let previous = previous, previous.isZeroWidthJoiner && cur.isEmoji {
                 chars.append(previous)
                 chars.append(cur)

@@ -192,17 +192,26 @@ private func matchingEmojiEntry(_ emoji: String) -> (UInt8, UInt8, UInt8)? {
     return nil
 }
 
+func messageTextIsElligibleForLargeEmoji(_ emoji: String) -> Bool {
+    for emoji in emoji.emojis {
+        if let _ = matchingEmojiEntry(emoji) {
+        } else {
+            return false
+        }
+    }
+    return true
+}
+
 func largeEmoji(postbox: Postbox, emoji: String, outline: Bool = true) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     var dataSignals: [Signal<MediaResourceData, NoError>] = []
     for emoji in emoji.emojis {
+        let thumbnailResource = EmojiThumbnailResource(emoji: emoji)
+        let thumbnailRepresentation = CachedEmojiThumbnailRepresentation(outline: outline)
+        let thumbnailSignal = postbox.mediaBox.cachedResourceRepresentation(thumbnailResource, representation: thumbnailRepresentation, complete: true, fetch: true)
+        
         if let entry = matchingEmojiEntry(emoji) {
-            let thumbnailResource = EmojiThumbnailResource(emoji: emoji)
-            let thumbnailRepresentation = CachedEmojiThumbnailRepresentation(outline: outline)
-            
             let spriteResource = EmojiSpriteResource(packId: entry.0, stickerId: entry.1)
             let representation = CachedEmojiRepresentation(tile: entry.2, outline: outline)
-            
-            let thumbnailSignal = postbox.mediaBox.cachedResourceRepresentation(thumbnailResource, representation: thumbnailRepresentation, complete: true, fetch: true)
             let signal: Signal<MediaResourceData?, NoError> = .single(nil) |> then(postbox.mediaBox.cachedResourceRepresentation(spriteResource, representation: representation, complete: true, fetch: true) |> map(Optional.init))
             
             let dataSignal = thumbnailSignal
@@ -217,6 +226,8 @@ func largeEmoji(postbox: Postbox, emoji: String, outline: Bool = true) -> Signal
                 }
             }
             dataSignals.append(dataSignal)
+        } else {
+            dataSignals.append(thumbnailSignal)
         }
     }
 

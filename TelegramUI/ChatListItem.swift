@@ -724,11 +724,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             switch contentData {
                 case let .chat(itemPeer, peer, _, messageText):
+                    let messageText = messageText.replacingOccurrences(of: "\n\n", with: " ")
+                    
                     if inlineAuthorPrefix == nil, let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                         
-                        attributedText = NSAttributedString(string: embeddedState.text.string, font: textFont, textColor: theme.messageTextColor)
+                        attributedText = NSAttributedString(string: embeddedState.text.string.replacingOccurrences(of: "\n\n", with: " "), font: textFont, textColor: theme.messageTextColor)
                     } else if let message = message {
                         if let inlineAuthorPrefix = inlineAuthorPrefix {
                             let composedString = NSMutableAttributedString()
