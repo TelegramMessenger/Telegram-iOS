@@ -1140,7 +1140,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
             case let .updateUserPhone(userId, phone):
                 updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), { peer in
                     if let user = peer as? TelegramUser {
-                        return user.withUpdatedPhone(phone)
+                        return user.withUpdatedPhone(phone.isEmpty ? nil : phone)
                     } else {
                         return peer
                     }
