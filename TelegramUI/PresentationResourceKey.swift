@@ -64,6 +64,7 @@ enum PresentationResourceKey: Int32 {
     case chatListBadgeBackgroundActive
     case chatListBadgeBackgroundInactive
     case chatListBadgeBackgroundMention
+    case chatListBadgeBackgroundInactiveMention
     case chatListBadgeBackgroundPinned
     case chatListMutedIcon
     case chatListVerifiedIcon

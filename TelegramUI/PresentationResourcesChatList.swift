@@ -179,6 +179,12 @@ struct PresentationResourcesChatList {
         })
     }
     
+    static func badgeBackgroundInactiveMention(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListBadgeBackgroundInactiveMention.rawValue, { theme in
+            return generateBadgeBackgroundImage(theme: theme, active: false, icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/MentionBadgeIcon"), color: theme.chatList.unreadBadgeInactiveTextColor))
+        })
+    }
+    
     static func badgeBackgroundPinned(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListBadgeBackgroundPinned.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPinnedIcon"), color: theme.chatList.pinnedBadgeColor)

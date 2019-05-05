@@ -1118,7 +1118,8 @@ final class ContactListNode: ASDisplayNode {
                 |> deliverOnMainQueue
             }
         }
-        self.disposable.set(transition.start(next: { [weak self] transition in
+        self.disposable.set((transition
+        |> deliverOnMainQueue).start(next: { [weak self] transition in
             self?.enqueueTransition(transition)
         }))
         

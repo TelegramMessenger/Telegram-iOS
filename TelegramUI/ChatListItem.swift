@@ -767,6 +767,18 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                         contentImageMedia = file
                                         break
                                     }
+                                } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                                    if let image = content.image {
+                                        textLeftCutout += 26.0
+                                        contentImageMedia = image
+                                        break
+                                    } else if let file = content.file {
+                                        if file.isVideo && !file.isInstantVideo {
+                                            textLeftCutout += 26.0
+                                            contentImageMedia = file
+                                            break
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -884,7 +896,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let totalMentionCount = tagSummaryCount - actionsSummaryCount
             if !isPeerGroup {
                 if totalMentionCount > 0 {
-                    currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.presentationData.theme)
+                    if Namespaces.PeerGroup.archive == item.peerGroupId {
+                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactiveMention(item.presentationData.theme)
+                    } else {
+                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.presentationData.theme)
+                    }
                     mentionBadgeContent = .mention
                 } else if item.index.pinningIndex != nil && !isAd && currentBadgeBackgroundImage == nil {
                     currentPinnedIconImage = PresentationResourcesChatList.badgeBackgroundPinned(item.presentationData.theme)
