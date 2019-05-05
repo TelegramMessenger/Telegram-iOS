@@ -23,29 +23,14 @@ private struct PrivatePeerId: Hashable {
 }
 
 func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
+    progress(0.0)
+    
     let startTime = CFAbsoluteTimeGetCurrent()
     
     let globalMessageIdsTable = ValueBoxTable(id: 3, keyType: .int64, compactValuesOnCreation: false)
     let messageHistoryIndexTable = ValueBoxTable(id: 4, keyType: .binary, compactValuesOnCreation: true)
     
     valueBox.removeAllFromTable(globalMessageIdsTable)
-    
-    /*var debugPeerIds = Set<PrivatePeerId>()
-    var debugMessageIds = Set<MessageId>()
-    
-    valueBox.scan(messageHistoryIndexTable, keys: { key in
-        let peerId = PrivatePeerId(key.getInt64(0))
-        debugPeerIds.insert(peerId)
-        if peerId.namespace == 0 || peerId.namespace == 1 {
-            if key.getInt32(8) == 0 {
-                debugMessageIds.insert(MessageId(peerId: PeerId(peerId.toInt64()), namespace: 0, id: key.getInt32(8 + 4)))
-            }
-        }
-        return true
-    })
-    
-    var checkPeerIds = Set<PrivatePeerId>()
-    var checkMessageIds = Set<MessageId>()*/
     
     let absoluteLowerBound = ValueBoxKey(length: 8)
     absoluteLowerBound.setInt64(0, value: 0)
@@ -57,6 +42,10 @@ func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox, pro
     let sharedGlobalIdsBuffer = WriteBuffer()
     
     var totalMessageCount = 0
+    
+    let expectedTotalCount = valueBox.count(messageHistoryIndexTable)
+    var messageIndex = -1
+    let reportBase = max(1, expectedTotalCount / 100)
     
     let currentLowerBound: ValueBoxKey = absoluteLowerBound
     while true {
@@ -82,6 +71,11 @@ func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox, pro
                     //assert(key.getInt32(8) == 0)
                     
                     totalMessageCount += 1
+                    
+                    if messageIndex % reportBase == 0 {
+                        progress(min(1.0, Float(messageIndex) / Float(expectedTotalCount)))
+                    }
+                    messageIndex += 1
                     
                     let HistoryEntryTypeMask: Int8 = 1
                     let HistoryEntryTypeMessage: Int8 = 0

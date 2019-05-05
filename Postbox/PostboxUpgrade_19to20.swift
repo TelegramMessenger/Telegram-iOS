@@ -153,6 +153,8 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox, pro
     
     var matchingPeerIds: [PrivatePeerId] = []
     
+    var expectedTotalCount = 0
+    
     let currentLowerBound: ValueBoxKey = absoluteLowerBound
     while true {
         var currentPeerId: PrivatePeerId?
@@ -164,12 +166,20 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox, pro
         if let currentPeerId = currentPeerId {
             if currentPeerId.namespace == 0 || currentPeerId.namespace == 1 { // CloudUser || CloudGroup
                 matchingPeerIds.append(currentPeerId)
+                
+                let nextLowerBound = ValueBoxKey(length: 8)
+                nextLowerBound.setInt64(0, value: currentPeerId.toInt64() + 1)
+                
+                expectedTotalCount += valueBox.count(messageHistoryIndexTable, start: currentLowerBound, end: nextLowerBound)
             }
             currentLowerBound.setInt64(0, value: currentPeerId.toInt64() + 1)
         } else {
             break
         }
     }
+    
+    var messageIndex = -1
+    let reportBase = max(1, expectedTotalCount / 100)
     
     for peerId in matchingPeerIds {
         let peerCloudLowerBound = ValueBoxKey(length: 8 + 4)
@@ -178,6 +188,11 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox, pro
         
         valueBox.range(messageHistoryIndexTable, start: peerCloudLowerBound, end: peerCloudLowerBound.successor, values: { key, indexValue in
             totalMessageCount += 1
+            
+            if messageIndex % reportBase == 0 {
+                progress(min(1.0, Float(messageIndex) / Float(expectedTotalCount)))
+            }
+            messageIndex += 1
             
             var flags: Int8 = 0
             indexValue.read(&flags, offset: 0, length: 1)
