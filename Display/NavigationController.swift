@@ -849,6 +849,13 @@ open class NavigationController: UINavigationController, ContainableController, 
         }))
     }
     
+    public func filterController(_ controller: ViewController, animated: Bool) {
+        let controllers = self.viewControllers.filter({ $0 !== controller })
+        if controllers.count != self.viewControllers.count {
+            self.setViewControllers(controllers, animated: animated)
+        }
+    }
+    
     public func replaceControllersAndPush(controllers: [UIViewController], controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         self.view.endEditing(true)
         self.scheduleAfterLayout { [weak self] in
