@@ -1523,8 +1523,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
             
             var textFrame = self.textNode.frame
+            let textDeltaX = textFrame.origin.x - contentRect.origin.x
+            transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textDeltaX, y: 0.0))
             textFrame.origin.x = contentRect.origin.x
-            transition.updateFrame(node: self.textNode, frame: CGRect(origin: textFrame.origin, size: textFrame.size))
+            self.textNode.frame = textFrame
             
             var contentImageFrame = self.contentImageNode.frame
             contentImageFrame.origin = textFrame.origin.offsetBy(dx: 1.0, dy: 0.0)

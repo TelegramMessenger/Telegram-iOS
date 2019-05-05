@@ -798,11 +798,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
         
         self.chatListDisplayNode.dismissSelf = { [weak self] in
-            if let navigationController = self?.navigationController as? NavigationController {
-                if navigationController.viewControllers.count > 1 {
-                    let _ = navigationController.popViewController(animated: true)
-                }
+            guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController else {
+                return
             }
+            navigationController.filterController(strongSelf, animated: true)
         }
         
         self.chatListDisplayNode.chatListNode.contentOffsetChanged = { [weak self] offset in
@@ -1526,17 +1525,16 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     return true
                 })
         
-                let title: String
+                var title = peerIds.count == 1 ? strongSelf.presentationData.strings.ChatList_UndoArchiveTitle : strongSelf.presentationData.strings.ChatList_UndoArchiveMultipleTitle
                 let text: String
                 let undo: Bool
                 switch previousHintCount {
                     case 0:
-                        title = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
                         text = strongSelf.presentationData.strings.ChatList_UndoArchiveText1
                         undo = false
                     default:
+                        text = title
                         title = ""
-                        text = strongSelf.presentationData.strings.ChatList_UndoArchiveTitle
                         undo = true
                 }
                 strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .archivedChat(peerId: peerIds[0], title: title, text: text, undo: undo), elevatedLayout: false, animateInAsReplacement: true, action: action), in: .current)
