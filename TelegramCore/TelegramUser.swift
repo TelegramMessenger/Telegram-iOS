@@ -228,7 +228,7 @@ public final class TelegramUser: Peer {
         return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: firstName, lastName: lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags)
     }
     
-    func withUpdatedPhone(_ phone: String) -> TelegramUser {
+    func withUpdatedPhone(_ phone: String?) -> TelegramUser {
         return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags)
     }
     

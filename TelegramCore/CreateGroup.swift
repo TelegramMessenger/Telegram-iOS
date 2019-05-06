@@ -9,8 +9,13 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> Signal<PeerId?, NoError> {
-    return account.postbox.transaction { transaction -> Signal<PeerId?, NoError> in
+public enum CreateGroupError {
+    case generic
+    case privacy
+}
+
+public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> Signal<PeerId?, CreateGroupError> {
+    return account.postbox.transaction { transaction -> Signal<PeerId?, CreateGroupError> in
         var inputUsers: [Api.InputUser] = []
         for peerId in peerIds {
             if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
@@ -20,29 +25,29 @@ public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> S
             }
         }
         return account.network.request(Api.functions.messages.createChat(users: inputUsers, title: title))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-            return .single(nil)
+        |> mapError { error -> CreateGroupError in
+            if error.errorDescription == "USERS_TOO_FEW" {
+                return .privacy
+            }
+            return .generic
         }
-        |> mapToSignal { updates -> Signal<PeerId?, NoError> in
-            if let updates = updates {
-                account.stateManager.addUpdates(updates)
-                if let message = updates.messages.first, let peerId = apiMessagePeerId(message) {
-                    return account.postbox.multiplePeersView([peerId])
-                    |> filter { view in
-                        return view.peers[peerId] != nil
-                    }
-                    |> take(1)
-                    |> map { _ in
-                        return peerId
-                    }
-                } else {
-                    return .single(nil)
+        |> mapToSignal { updates -> Signal<PeerId?, CreateGroupError> in
+            account.stateManager.addUpdates(updates)
+            if let message = updates.messages.first, let peerId = apiMessagePeerId(message) {
+                return account.postbox.multiplePeersView([peerId])
+                |> filter { view in
+                    return view.peers[peerId] != nil
+                }
+                |> take(1)
+                |> introduceError(CreateGroupError.self)
+                |> map { _ in
+                    return peerId
                 }
             } else {
                 return .single(nil)
             }
         }
     }
+    |> introduceError(CreateGroupError.self)
     |> switchToLatest
 }
