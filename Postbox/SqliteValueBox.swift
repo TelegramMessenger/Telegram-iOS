@@ -150,7 +150,7 @@ private struct TablePairKey: Hashable {
     let table2: Int32
 }
 
-final class SqliteValueBox: ValueBox {
+public final class SqliteValueBox: ValueBox {
     private let lock = NSRecursiveLock()
     
     fileprivate let basePath: String
@@ -340,7 +340,7 @@ final class SqliteValueBox: ValueBox {
         //database.execute("PRAGMA cache_size=-2097152")
         resultCode = database.execute("PRAGMA mmap_size=0")
         assert(resultCode)
-        resultCode = database.execute("PRAGMA synchronous=NORMAL")
+        resultCode = database.execute("PRAGMA synchronous=FULL")
         assert(resultCode)
         resultCode = database.execute("PRAGMA temp_store=MEMORY")
         assert(resultCode)
@@ -431,6 +431,12 @@ final class SqliteValueBox: ValueBox {
     public func commit() {
         assert(self.queue.isCurrent())
         let resultCode = self.database.execute("COMMIT")
+        assert(resultCode)
+    }
+    
+    public func checkpoint() {
+        assert(self.queue.isCurrent())
+        let resultCode = self.database.execute("PRAGMA wal_checkpoint(PASSIVE)")
         assert(resultCode)
     }
     
@@ -1346,7 +1352,7 @@ final class SqliteValueBox: ValueBox {
         return nil
     }
     
-    func read(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void) -> Void) {
+    public func read(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void) -> Void) {
         assert(self.queue.isCurrent())
         if let _ = self.tables[table.id] {
             let statement = self.getRowIdStatement(table, key: key)
@@ -1367,7 +1373,7 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
-    func readWrite(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void, (UnsafeRawPointer, Int, Int) -> Void) -> Void) {
+    public func readWrite(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void, (UnsafeRawPointer, Int, Int) -> Void) -> Void) {
         if let _ = self.tables[table.id] {
             let statement = self.getRowIdStatement(table, key: key)
             
@@ -1637,7 +1643,7 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
-    func renameTable(_ table: ValueBoxTable, to toTable: ValueBoxTable) {
+    public func renameTable(_ table: ValueBoxTable, to toTable: ValueBoxTable) {
         self.checkTable(table)
         let resultCode = database.execute("ALTER TABLE t\(table.id) RENAME TO t\(toTable.id)")
         assert(resultCode)
@@ -1711,7 +1717,7 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
-    func count(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) -> Int {
+    public func count(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) -> Int {
         self.checkTable(table)
         
         var statementImpl: OpaquePointer? = nil
@@ -1916,7 +1922,7 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
-    func exportEncrypted(to exportBasePath: String, encryptionParameters: ValueBoxEncryptionParameters) {
+    public func exportEncrypted(to exportBasePath: String, encryptionParameters: ValueBoxEncryptionParameters) {
         self.exportEncrypted(database: self.database, to: exportBasePath, encryptionParameters: encryptionParameters)
     }
         

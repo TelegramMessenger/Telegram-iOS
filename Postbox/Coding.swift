@@ -31,6 +31,13 @@ public func declareEncodable(_ type: Any.Type, f: @escaping(PostboxDecoder) -> P
     typeStore.dict[murMurHashString32("\(type)")] = f
 }
 
+public func declareEncodable(typeHash: Int32, _ f: @escaping(PostboxDecoder) -> PostboxCoding) {
+    if typeStore.dict[typeHash] != nil {
+        assertionFailure("Encodable type hash collision for \(typeHash)")
+    }
+    typeStore.dict[typeHash] = f
+}
+
 public func persistentHash32(_ string: String) -> Int32 {
     return murMurHashString32(string)
 }

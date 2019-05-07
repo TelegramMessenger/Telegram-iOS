@@ -51,6 +51,8 @@ final class AccountManagerImpl {
     private var accessChallengeDataViews = Bag<(MutableAccessChallengeDataView, ValuePipe<AccessChallengeDataView>)>()
     
     fileprivate init(queue: Queue, basePath: String, temporarySessionId: Int64) {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
         self.queue = queue
         self.basePath = basePath
         self.temporarySessionId = temporarySessionId
@@ -68,6 +70,8 @@ final class AccountManagerImpl {
         self.tables.append(self.recordTable)
         self.tables.append(self.sharedDataTable)
         self.tables.append(self.noticeTable)
+        
+        print("AccountManager initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
     }
     
     deinit {
@@ -141,6 +145,7 @@ final class AccountManagerImpl {
                 self.beforeCommit()
                 
                 self.valueBox.commit()
+                self.valueBox.checkpoint()
                 
                 subscriber.putNext(result)
                 subscriber.putCompletion()

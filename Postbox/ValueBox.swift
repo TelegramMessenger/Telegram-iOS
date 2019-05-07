@@ -1,17 +1,23 @@
 import Foundation
 
-enum ValueBoxKeyType: Int32 {
+public enum ValueBoxKeyType: Int32 {
     case binary
     case int64
 }
 
-struct ValueBoxTable {
+public struct ValueBoxTable {
     let id: Int32
     let keyType: ValueBoxKeyType
     let compactValuesOnCreation: Bool
+    
+    public init(id: Int32, keyType: ValueBoxKeyType, compactValuesOnCreation: Bool) {
+        self.id = id
+        self.keyType = keyType
+        self.compactValuesOnCreation = compactValuesOnCreation
+    }
 }
 
-struct ValueBoxFullTextTable {
+public struct ValueBoxFullTextTable {
     let id: Int32
 }
 
@@ -51,9 +57,10 @@ public struct ValueBoxEncryptionParameters {
     }
 }
 
-protocol ValueBox {
+public protocol ValueBox {
     func begin()
     func commit()
+    func checkpoint()
     
     func beginStats()
     func endStats()
