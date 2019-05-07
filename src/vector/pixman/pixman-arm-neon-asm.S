@@ -23,6 +23,8 @@
  * Author:  Siarhei Siamashka (siarhei.siamashka@nokia.com)
  */
 
+#if defined(__ARM_NEON__)
+
 /*
  * This file contains implementations of NEON optimized pixel processing
  * functions. There is no full and detailed tutorial, but some functions
@@ -495,3 +497,4 @@ generate_composite_function \
     0  /* mask_basereg  */
 
 /******************************************************************************/
+#endif // defined(__ARM_NEON__)
