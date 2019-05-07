@@ -193,7 +193,7 @@ bool LOTCompItem::render(const rlottie::Surface &surface)
 }
 
 void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
-                         float parentAlpha, const DirtyFlag &flag)
+                         float /*parentAlpha*/, const DirtyFlag &flag)
 {
     if (flag.testFlag(DirtyFlagBit::None) && mData->isStatic()) return;
 
@@ -204,9 +204,8 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
     } else {
         mData->mShape.value(frameNo).toPath(mLocalPath);
     }
-    float opacity = mData->opacity(frameNo);
-    opacity = opacity * parentAlpha;
-    mCombinedAlpha = opacity;
+    /* mask item dosen't inherit opacity */
+    mCombinedAlpha = mData->opacity(frameNo);
 
     mFinalPath.clone(mLocalPath);
     mFinalPath.transform(parentMatrix);
