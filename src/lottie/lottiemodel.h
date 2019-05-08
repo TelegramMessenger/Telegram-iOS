@@ -746,6 +746,8 @@ public:
     struct Segment {
         float start{0};
         float end{0};
+        Segment() {}
+        Segment(float s, float e):start(s), end(e) {}
     };
     enum class TrimType {
         Simultaneously,
@@ -763,8 +765,8 @@ public:
         float offset = fmod(mOffset.value(frameNo), 360.0f)/ 360.0f;
 
         float diff = fabs(start - end);
-        if (vCompare(diff, 0.0f)) return {0, 0};
-        if (vCompare(diff, 1.0f)) return {0, 1};
+        if (vCompare(diff, 0.0f)) return Segment(0, 0);
+        if (vCompare(diff, 1.0f)) return Segment(0, 1);
 
         // no offset case
         if (vCompare(fabs(offset), 0.0f)) {
