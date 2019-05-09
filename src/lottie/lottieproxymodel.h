@@ -20,6 +20,7 @@
 #define LOTTIEPROXYMODEL_H
 
 #include<bitset>
+#include<algorithm>
 #include "lottiemodel.h"
 #include "rlottie.h"
 
@@ -59,12 +60,10 @@ public:
     {
         uint index = static_cast<uint>(value.property());
         if (mBitset.test(index)) {
-            for (uint i=0; i < mFilters.size(); i++ ) {
-                if (mFilters[i].property() == value.property()) {
-                    mFilters[i] = value;
-                    break;
-                }
-            }
+            std::replace_if(mFilters.begin(),
+                            mFilters.end(),
+                            [&value](const LOTVariant &e) {return e.property() == value.property();},
+                            value);
         } else {
             mBitset.set(index);
             mFilters.push_back(value);
@@ -76,12 +75,10 @@ public:
         uint index = static_cast<uint>(value.property());
         if (mBitset.test(index)) {
             mBitset.reset(index);
-            for (uint i=0; i < mFilters.size(); i++ ) {
-                if (mFilters[i].property() == value.property()) {
-                    mFilters.erase(mFilters.begin() + i);
-                    break;
-                }
-            }
+            mFilters.erase(std::remove_if(mFilters.begin(),
+                                          mFilters.end(),
+                                          [&value](const LOTVariant &e) {return e.property() == value.property();}),
+                           mFilters.end());
         }
     }
     bool hasFilter(rlottie::Property prop) const
@@ -105,12 +102,14 @@ public:
 private:
     LOTVariant data(rlottie::Property prop) const
     {
-        for (uint i=0; i < mFilters.size(); i++ ) {
-            if (mFilters[i].property() == prop) {
-                return mFilters[i];
-            }
+        auto result = std::find_if(mFilters.begin(),
+                                   mFilters.end(),
+                                   [prop](const LOTVariant &e){return e.property() == prop;});
+        if (result != mFilters.end()) {
+            return *result;
+        } else {
+            return LOTVariant(prop, 0);
         }
-        return LOTVariant(prop, 0);
     }
     std::vector<LOTVariant>    mFilters;
     std::bitset<32>            mBitset{0};

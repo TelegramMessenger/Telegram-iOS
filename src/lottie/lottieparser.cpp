@@ -54,10 +54,10 @@
 // This parser uses in-situ strings, so the JSON buffer will be altered during
 // the parse.
 
-#include <iostream>
+#include <array>
+
 #include "lottiemodel.h"
 #include "rapidjson/document.h"
-#include "velapsedtimer.h"
 
 RAPIDJSON_DIAG_PUSH
 #ifdef __GNUC__
