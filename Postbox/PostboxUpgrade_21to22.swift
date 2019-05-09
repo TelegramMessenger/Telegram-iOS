@@ -7,6 +7,7 @@ import SwiftSignalKit
 #endif
 
 func postboxUpgrade_21to22(queue: Queue, basePath: String, valueBox: ValueBox, encryptionParameters: ValueBoxEncryptionParameters, progress: (Float) -> Void) -> String? {
+    postboxLog("Upgrade 21->22 started")
     if encryptionParameters.forceEncryptionIfNoSet {
         let exportPath = "\(basePath)/version22"
         let _ = try? FileManager.default.removeItem(atPath: exportPath)

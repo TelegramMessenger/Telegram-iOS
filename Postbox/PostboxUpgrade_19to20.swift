@@ -121,6 +121,7 @@ private func removeMediaReference(valueBox: ValueBox, table: ValueBoxTable, id: 
 }
 
 func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
+    postboxLog("Upgrade 19->20 started")
     let startTime = CFAbsoluteTimeGetCurrent()
     
     let messageHistoryIndexTable = ValueBoxTable(id: 4, keyType: .binary, compactValuesOnCreation: true)

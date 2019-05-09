@@ -626,7 +626,7 @@ final class HistoryViewLoadedState {
         if self.remove(postbox: postbox, index: index) {
             updated = true
         }
-        if self.add(entry: entry.updatedTimestamp(timestamp)) {
+        if self.add(postbox: postbox, entry: entry.updatedTimestamp(timestamp)) {
             updated = true
         }
         return updated
@@ -736,11 +736,31 @@ final class HistoryViewLoadedState {
         return hasChanges
     }
     
-    func add(entry: MutableMessageHistoryEntry) -> Bool {
+    func add(postbox: Postbox, entry: MutableMessageHistoryEntry) -> Bool {
         let space = PeerIdAndNamespace(peerId: entry.index.id.peerId, namespace: entry.index.id.namespace)
         
         if self.orderedEntriesBySpace[space] == nil {
             self.orderedEntriesBySpace[space] = OrderedHistoryViewEntries(entries: [], bounds: nil)
+        }
+
+        var updated = false
+        for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
+            switch self.orderedEntriesBySpace[space]!.entries[i] {
+                case .IntermediateMessageEntry:
+                    break
+                case let .MessageEntry(currentEntry):
+                    if !currentEntry.message.associatedMessageIds.isEmpty && currentEntry.message.associatedMessageIds.contains(entry.index.id) {
+                        var associatedMessages = currentEntry.message.associatedMessages
+                        switch entry {
+                            case let .IntermediateMessageEntry(message, _, _):
+                                associatedMessages[entry.index.id] = postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable)
+                            case let .MessageEntry(message):
+                                associatedMessages[entry.index.id] = message.message
+                        }
+                        self.orderedEntriesBySpace[space]!.entries[i] = .MessageEntry(MessageHistoryMessageEntry(message: currentEntry.message.withUpdatedAssociatedMessages(associatedMessages), location: currentEntry.location, monthLocation: currentEntry.monthLocation, attributes: currentEntry.attributes))
+                        updated = true
+                    }
+            }
         }
         
         let insertionIndex = binaryInsertionIndex(self.orderedEntriesBySpace[space]!.entries, extract: { $0.index }, searchItem: entry.index)
@@ -796,16 +816,29 @@ final class HistoryViewLoadedState {
                     self.orderedEntriesBySpace[space]!.entries.removeLast()
                 }
             }
-            return true
-        } else {
-            return false
         }
+        
+        return updated
     }
     
     func remove(postbox: Postbox, index: MessageIndex) -> Bool {
         let space = PeerIdAndNamespace(peerId: index.id.peerId, namespace: index.id.namespace)
         if self.orderedEntriesBySpace[space] == nil {
             return false
+        }
+        
+        var updated = false
+        
+        for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
+            switch self.orderedEntriesBySpace[space]!.entries[i] {
+                case .IntermediateMessageEntry:
+                    break
+                case let .MessageEntry(entry):
+                    if let associatedMessages = entry.message.associatedMessages.filteredOut(keysIn: [index.id]) {
+                        self.orderedEntriesBySpace[space]!.entries[i] = .MessageEntry(MessageHistoryMessageEntry(message: entry.message.withUpdatedAssociatedMessages(associatedMessages), location: entry.location, monthLocation: entry.monthLocation, attributes: entry.attributes))
+                        updated = true
+                    }
+            }
         }
         
         if let itemIndex = binarySearch(self.orderedEntriesBySpace[space]!.entries, extract: { $0.index }, searchItem: index) {
@@ -819,10 +852,10 @@ final class HistoryViewLoadedState {
             }
             self.orderedEntriesBySpace[space]!.entries.remove(at: itemIndex)
             self.spacesWithRemovals.insert(space)
-            return true
-        } else {
-            return false
+            updated = true
         }
+        
+        return updated
     }
     
     func completeAndSample(postbox: Postbox) -> HistoryViewLoadedSample {

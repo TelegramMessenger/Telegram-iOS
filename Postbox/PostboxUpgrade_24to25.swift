@@ -36,6 +36,7 @@ private struct ChatListIndexFlags: OptionSet {
 }
 
 func postboxUpgrade_24to25(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
+    postboxLog("Upgrade 24->25 started")
     let messageHistoryMetadataTable = ValueBoxTable(id: 10, keyType: .binary, compactValuesOnCreation: true)
     
     let chatListTable = ValueBoxTable(id: 9, keyType: .binary, compactValuesOnCreation: true)

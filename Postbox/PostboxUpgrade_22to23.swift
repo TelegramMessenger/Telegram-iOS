@@ -1,6 +1,7 @@
 import Foundation
 
 func postboxUpgrade_22to23(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
+    postboxLog("Upgrade 22->23 started")
     progress(0.0)
     
     let startTime = CFAbsoluteTimeGetCurrent()

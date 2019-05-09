@@ -23,6 +23,7 @@ private struct PrivatePeerId: Hashable {
 }
 
 func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
+    postboxLog("Upgrade 18->19 started")
     progress(0.0)
     
     let startTime = CFAbsoluteTimeGetCurrent()

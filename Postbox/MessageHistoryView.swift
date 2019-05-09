@@ -381,7 +381,7 @@ final class MutableMessageHistoryView {
                         switch operation {
                             case let .InsertMessage(message):
                                 if unwrappedTag.isEmpty || message.tags.contains(unwrappedTag) {
-                                    if loadedState.add(entry: .IntermediateMessageEntry(message, nil, nil)) {
+                                    if loadedState.add(postbox: postbox, entry: .IntermediateMessageEntry(message, nil, nil)) {
                                         hasChanges = true
                                     }
                                 }

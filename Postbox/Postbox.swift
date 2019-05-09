@@ -943,6 +943,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             var valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                 subscriber.putNext(.upgrading(progress))
             })
+            
             loop: while true {
                 let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
                 
