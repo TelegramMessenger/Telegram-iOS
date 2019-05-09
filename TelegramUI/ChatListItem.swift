@@ -935,7 +935,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var isVerified = false
             let isSecret = !isPeerGroup && item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat
             
-            if case let .chat(itemPeer) = contentPeer {
+            if !isPeerGroup, case let .chat(itemPeer) = contentPeer {
                 if let peer = itemPeer.chatMainPeer {
                     if let peer = peer as? TelegramUser {
                         isVerified = peer.flags.contains(.isVerified)
@@ -1386,7 +1386,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition.animatePosition(node: strongSelf.titleNode, from: CGPoint(x: titlePosition.x - contentDelta.x, y: titlePosition.y - contentDelta.y))
                         
                         let textPosition = strongSelf.textNode.position
-                        transition.animatePosition(node: strongSelf.textNode, from: CGPoint(x: textPosition.x - contentDelta.x, y: textPosition.y - contentDelta.y))
+                        transition.animatePositionAdditive(node: strongSelf.textNode, offset: CGPoint(x: -contentDelta.x, y: -contentDelta.y))
                         
                         let authorPosition = strongSelf.authorNode.position
                         transition.animatePosition(node: strongSelf.authorNode, from: CGPoint(x: authorPosition.x - contentDelta.x, y: authorPosition.y - contentDelta.y))
