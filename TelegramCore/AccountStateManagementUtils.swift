@@ -2190,8 +2190,10 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 var currentPinningIndex: UInt16?
                 var currentMinTimestamp: Int32?
                 switch currentInclusion {
-                    case let .ifHasMessagesOrOneOf(_, pinningIndex, minTimestamp):
-                        currentPinningIndex = pinningIndex
+                    case let .ifHasMessagesOrOneOf(currentGroupId, pinningIndex, minTimestamp):
+                        if currentGroupId == groupId {
+                            currentPinningIndex = pinningIndex
+                        }
                         currentMinTimestamp = minTimestamp
                     default:
                         break

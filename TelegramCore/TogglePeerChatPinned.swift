@@ -50,8 +50,8 @@ public func toggleItemPinned(postbox: Postbox, groupId: PeerGroupId, itemId: Pin
             } else {
                 itemIds.insert(itemId, at: 0)
             }
-            transaction.setPinnedItemIds(groupId: groupId, itemIds: itemIds)
             addSynchronizePinnedChatsOperation(transaction: transaction, groupId: groupId)
+            transaction.setPinnedItemIds(groupId: groupId, itemIds: itemIds)
             return .done
         }
     }
