@@ -93,6 +93,13 @@ private func peerIdsRequiringLocalChatStateFromUpdates(_ updates: [Api.Update]) 
                 peerIds.insert(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
             case let .updateReadHistoryInbox(_, _, peer, _, _, _, _):
                 peerIds.insert(peer.peerId)
+            case let .updateDraftMessage(peer, draft):
+                switch draft {
+                    case .draftMessage:
+                        peerIds.insert(peer.peerId)
+                    case .draftMessageEmpty:
+                        break
+                }
             default:
                 break
         }
