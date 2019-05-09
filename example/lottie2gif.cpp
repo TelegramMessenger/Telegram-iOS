@@ -1,5 +1,5 @@
 #include "gif.h"
-#include "rlottie.h"
+#include <rlottie.h>
 
 #include<iostream>
 #include<vector>
