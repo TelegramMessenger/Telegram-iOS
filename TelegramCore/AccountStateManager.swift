@@ -370,7 +370,7 @@ public final class AccountStateManager {
                     }
                 }
                 |> take(1)
-                |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
+                |> mapToSignal { state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
                     if let authorizedState = state.state {
                         var flags: Int32 = 0
                         var ptsTotalLimit: Int32? = nil
@@ -379,10 +379,21 @@ public final class AccountStateManager {
                         //ptsTotalLimit = 1000
                         #endif
                         let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsTotalLimit: ptsTotalLimit, date: authorizedState.date, qts: authorizedState.qts))
+                        |> map(Optional.init)
+                        |> `catch` { error -> Signal<Api.updates.Difference?, MTRpcError> in
+                            if error.errorCode == 406 && error.errorDescription == "AUTH_KEY_DUPLICATED" {
+                                return .single(nil)
+                            } else {
+                                return .fail(error)
+                            }
+                        }
                         |> retryRequest
                         
                         return request
-                        |> mapToSignal { difference -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
+                        |> mapToSignal { difference -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+                            guard let difference = difference else {
+                                return .single((nil, nil, true))
+                            }
                             switch difference {
                                 case .differenceTooLong:
                                     preconditionFailure()
@@ -392,19 +403,19 @@ public final class AccountStateManager {
                                     |> then(.single((nil, nil)))*/
                                 default:
                                     return initialStateWithDifference(postbox: postbox, difference: difference)
-                                    |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
+                                    |> mapToSignal { state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
                                         if state.initialState.state != authorizedState {
                                             Logger.shared.log("State", "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
-                                            return .single((nil, nil))
+                                            return .single((nil, nil, false))
                                         } else {
                                             return finalStateWithDifference(postbox: postbox, network: network, state: state, difference: difference)
-                                                |> mapToSignal { finalState -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
+                                                |> mapToSignal { finalState -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
                                                     if !finalState.state.preCachedResources.isEmpty {
                                                         for (resource, data) in finalState.state.preCachedResources {
                                                             mediaBox.storeResourceData(resource.id, data: data)
                                                         }
                                                     }
-                                                    return postbox.transaction { transaction -> (Api.updates.Difference?, AccountReplayedFinalState?) in
+                                                    return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool) in
                                                         let startTime = CFAbsoluteTimeGetCurrent()
                                                         let replayedState = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
                                                         let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
@@ -413,9 +424,9 @@ public final class AccountStateManager {
                                                         }
                                                         
                                                         if let replayedState = replayedState {
-                                                            return (difference, replayedState)
+                                                            return (difference, replayedState, false)
                                                         } else {
-                                                            return (nil, nil)
+                                                            return (nil, nil, false)
                                                         }
                                                     }
                                             }
@@ -427,21 +438,21 @@ public final class AccountStateManager {
                         let appliedState = network.request(Api.functions.updates.getState())
                         |> retryRequest
                         |> mapToSignal { state in
-                            return postbox.transaction { transaction -> (Api.updates.Difference?, AccountReplayedFinalState?) in
+                            return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool) in
                                 if let currentState = transaction.getState() as? AuthorizedAccountState {
                                     switch state {
                                         case let .state(pts, qts, date, seq, _):
                                             transaction.setState(currentState.changedState(AuthorizedAccountState.State(pts: pts, qts: qts, date: date, seq: seq)))
                                     }
                                 }
-                                return (nil, nil)
+                                return (nil, nil, false)
                             }
                         }
                         return appliedState
                     }
                 }
                 |> deliverOn(self.queue)
-                let _ = signal.start(next: { [weak self] difference, finalState in
+                let _ = signal.start(next: { [weak self] difference, finalState, skipBecauseOfError in
                     if let strongSelf = self {
                         if case .pollDifference = strongSelf.operations.removeFirst().content {
                             let events: AccountFinalStateEvents
@@ -460,6 +471,10 @@ public final class AccountStateManager {
                                         }
                                         strongSelf.currentIsUpdatingValue = false
                                     strongSelf.significantStateUpdateCompletedPipe.putNext(Void())
+                                }
+                            } else if skipBecauseOfError {
+                                if !events.isEmpty {
+                                    strongSelf.insertProcessEvents(events)
                                 }
                             } else {
                                 if !events.isEmpty {
