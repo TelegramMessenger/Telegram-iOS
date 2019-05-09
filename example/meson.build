@@ -5,8 +5,8 @@ common_source += files('lottieview.cpp')
 demo_sources = files('demo.cpp')
 demo_sources += common_source
 
-executable('rlottie',
-           'rlottietest.cpp',
+executable('lottie2gif',
+           'lottie2gif.cpp',
            include_directories : inc,
            link_with : rlottie_lib)
 

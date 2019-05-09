@@ -47,6 +47,7 @@ target_link_libraries(rlottie
 #declare source and include files
 add_subdirectory(inc)
 add_subdirectory(src)
+add_subdirectory(example)
 
 SET(PREFIX ${CMAKE_INSTALL_PREFIX})
 SET(EXEC_DIR ${PREFIX})

@@ -111,12 +111,12 @@ private:
     }
 
     int result() {
-        std::cout<<"Generated Gif file : "<<baseName.data()<<std::endl;
+        std::cout<<"Generated GIF file : "<<baseName.data()<<std::endl;
         return 0;
     }
 
     int help() {
-        std::cout<<"Usage: lottie json_file_name\n";
+        std::cout<<"Usage: \n   lottie2gif [lottieFileName]\n";
         return 1;
     }
 
