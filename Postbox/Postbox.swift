@@ -710,7 +710,7 @@ public final class Transaction {
     public func getPinnedItemIds(groupId: PeerGroupId) -> [PinnedItemId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.chatListTable.getPinnedItemIds(groupId: groupId, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable)
+            return postbox.getPinnedItemIds(groupId: groupId)
         } else {
             return []
         }
@@ -1815,6 +1815,38 @@ public final class Postbox {
         self.chatListTable.updateInclusion(peerId: id, updatedChatListInclusions: &self.currentUpdatedChatListInclusions, { _ in
             return inclusion
         })
+    }
+    
+    fileprivate func getPinnedItemIds(groupId: PeerGroupId) -> [PinnedItemId] {
+        var itemIds = self.chatListTable.getPinnedItemIds(groupId: groupId, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable)
+        for (peerId, inclusion) in self.currentUpdatedChatListInclusions {
+            var found = false
+            inner: for i in 0 ..< itemIds.count {
+                if case .peer(peerId) = itemIds[i].id {
+                    found = true
+                    switch inclusion {
+                        case let .ifHasMessagesOrOneOf(updatedGroupId, pinningIndex, _):
+                            if updatedGroupId != groupId || pinningIndex == nil {
+                                itemIds.remove(at: i)
+                            }
+                        default:
+                            itemIds.remove(at: i)
+                    }
+                    break inner
+                }
+            }
+            if !found {
+                switch inclusion {
+                    case let .ifHasMessagesOrOneOf(updatedGroupId, pinningIndex, _):
+                        if updatedGroupId == groupId, let pinningIndex = pinningIndex {
+                            itemIds.append((.peer(peerId), Int(pinningIndex)))
+                        }
+                    default:
+                        break
+                }
+            }
+        }
+        return itemIds.sorted(by: { $0.1 < $1.1 }).map({ $0.0 })
     }
     
     fileprivate func setPinnedItemIds(groupId: PeerGroupId, itemIds: [PinnedItemId]) {
