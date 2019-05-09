@@ -38,6 +38,7 @@ class NavigationTransitionCoordinator {
     private let inlineNavigationBarTransition: Bool
     
     private(set) var animatingCompletion = false
+    private var currentCompletion: (() -> Void)?
     
     init(transition: NavigationTransition, container: UIView, topView: UIView, topNavigationBar: NavigationBar?, bottomView: UIView, bottomNavigationBar: NavigationBar?) {
         self.transition = transition
@@ -148,6 +149,8 @@ class NavigationTransitionCoordinator {
     }
     
     func animateCancel(_ completion: @escaping () -> ()) {
+        self.currentCompletion = completion
+        
         UIView.animate(withDuration: 0.1, delay: 0.0, options: UIViewAnimationOptions(), animations: { () -> Void in
             self.progress = 0.0
         }) { (completed) -> Void in
@@ -173,13 +176,33 @@ class NavigationTransitionCoordinator {
             
             self.endNavigationBarTransition()
             
-            completion()
+            if let currentCompletion = self.currentCompletion {
+                self.currentCompletion = nil
+                currentCompletion()
+            }
+        }
+    }
+    
+    func complete() {
+        self.animatingCompletion = true
+        
+        self.progress = 1.0
+        
+        self.dimView.removeFromSuperview()
+        self.shadowView.removeFromSuperview()
+        
+        self.endNavigationBarTransition()
+        
+        if let currentCompletion = self.currentCompletion {
+            self.currentCompletion = nil
+            currentCompletion()
         }
     }
     
     func animateCompletion(_ velocity: CGFloat, completion: @escaping () -> ()) {
         self.animatingCompletion = true
         let distance = (1.0 - self.progress) * self.container.bounds.size.width
+        self.currentCompletion = completion
         let f = {
             /*switch self.transition {
                 case .Push:
@@ -201,7 +224,10 @@ class NavigationTransitionCoordinator {
             
             self.endNavigationBarTransition()
             
-            completion()
+            if let currentCompletion = self.currentCompletion {
+                self.currentCompletion = nil
+                currentCompletion()
+            }
         }
         
         if abs(velocity) < CGFloat.ulpOfOne && abs(self.progress) < CGFloat.ulpOfOne {

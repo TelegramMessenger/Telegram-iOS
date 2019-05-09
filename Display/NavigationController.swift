@@ -966,6 +966,9 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         let previousControllers = self._viewControllers
         self._viewControllers = resultControllers
+        if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
+            navigationTransitionCoordinator.complete()
+        }
         if let layout = self.validLayout {
             self.updateControllerLayouts(previousControllers: previousControllers, layout: layout, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
         }
