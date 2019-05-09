@@ -205,6 +205,8 @@ final class SharedApplicationContext {
         precondition(!testIsLaunched)
         testIsLaunched = true
         
+        let launchStartTime = CFAbsoluteTimeGetCurrent()
+        
         let statusBarHost = ApplicationStatusBarHost()
         let (window, hostView) = nativeWindowHostView()
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
@@ -632,6 +634,9 @@ final class SharedApplicationContext {
                 if let progress = progress {
                     if self.dataImportSplash == nil {
                         self.dataImportSplash = LegacyDataImportSplash(theme: initialPresentationDataAndSettings?.presentationData.theme, strings: initialPresentationDataAndSettings?.presentationData.strings)
+                        self.dataImportSplash?.serviceAction = {
+                            self.debugPressed()
+                        }
                         self.mainWindow.coveringView = self.dataImportSplash
                     }
                     self.dataImportSplash?.progress = (.generic, progress)
@@ -954,6 +959,8 @@ final class SharedApplicationContext {
                     if readyTime > 0.5 {
                         print("Application: context took \(readyTime) to become ready")
                     }
+                    print("Launch to ready took \((CFAbsoluteTimeGetCurrent() - launchStartTime) * 1000.0) ms")
+                    
                     self.mainWindow.viewController = context.rootController
                     if firstTime {
                         let layer = context.rootController.view.layer
@@ -1986,7 +1993,7 @@ final class SharedApplicationContext {
     }
     
     @objc func debugPressed() {
-        let _ = (Logger.shared.collectLogs()
+        let _ = (Logger.shared.collectShortLogFiles()
         |> deliverOnMainQueue).start(next: { logs in
             var activityItems: [Any] = []
             for (_, path) in logs {
