@@ -18,9 +18,9 @@ Here is just a small sampling of the power of Lottie
 	- [Meson Build](#meson-build)
 	- [Cmake Build](#cmake-build)
 	- [Test](#test)
+- [Demo](#demo)
 - [Previewing Lottie JSON Files](#previewing-lottie-json-files)
 - [Quick Start](#quick-start)
-- [Demo](#demo)
 - [Dynamic Property](#dynamic-property)
 - [Supported After Effects Features](#supported-after-effects-features)
 - [Issues or Feature Requests?](#issues-or-feature-requests)
@@ -87,6 +87,17 @@ ninja test
 [Back to contents](#contents)
 
 #
+## Demo
+If you want to see rlottie librray in action without building it please visit [rlottie online viewer](http://rlottie.com)
+
+While building rlottie library it generates a simple lottie to GIF converter which can be used to convert lottie json file to GIF file.
+
+Run Demo 
+```
+lottie2gif [lottie file name]
+```
+
+#
 ## Previewing Lottie JSON Files
 Please visit [rlottie online viewer](http://rlottie.com)
 
@@ -135,11 +146,6 @@ rlottie::Surface surface = handle.get();
 ```
 
 [Back to contents](#contents)
-
-#
-## Demo
-
-Update me
 
 #
 ## Dynamic Property
