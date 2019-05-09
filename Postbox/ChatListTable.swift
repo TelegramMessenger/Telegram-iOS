@@ -212,13 +212,14 @@ final class ChatListTable: Table {
         }
     }
     
-    func getPinnedItemIds(groupId: PeerGroupId, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [PinnedItemId] {
-        var itemIds: [PinnedItemId] = []
+    func getPinnedItemIds(groupId: PeerGroupId, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [(id: PinnedItemId, rank: Int)] {
+        var itemIds: [(id: PinnedItemId, rank: Int)] = []
         self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.key(groupId: groupId, index: ChatListIndex(pinningIndex: UInt16.max - 1, messageIndex: MessageIndex.absoluteUpperBound()), type: .message).successor, values: { key, value in
+            let keyIndex = extractKey(key)
             let entry = readEntry(groupId: groupId, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, key: key, value: value)
             switch entry {
                 case let .message(index, _, _):
-                    itemIds.append(.peer(index.messageIndex.id.peerId))
+                    itemIds.append((.peer(index.messageIndex.id.peerId), Int(keyIndex.pinningIndex ?? 0)))
                 default:
                     break
             }
@@ -229,7 +230,7 @@ final class ChatListTable: Table {
     
     func setPinnedItemIds(groupId: PeerGroupId, itemIds: [PinnedItemId], updatedChatListInclusions: inout [PeerId: PeerChatListInclusion], messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) {
         let updatedIds = Set(itemIds)
-        for itemId in self.getPinnedItemIds(groupId: groupId, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable) {
+        for (itemId, _) in self.getPinnedItemIds(groupId: groupId, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable) {
             if !updatedIds.contains(itemId) {
                 switch itemId {
                     case let .peer(peerId):
