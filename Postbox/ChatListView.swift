@@ -367,29 +367,31 @@ final class MutableChatListView {
                     foundIndices.removeSubrange(maxCount...)
                 }
                 
-                var message: Message?
-                var renderedPeers: [ChatListGroupReferencePeer] = []
-                for (index, messageIndex) in foundIndices {
-                    if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
-                        var peers = SimpleDictionary<PeerId, Peer>()
-                        peers[peer.id] = peer
-                        if let associatedPeerId = peer.associatedPeerId {
-                            if let associatedPeer = postbox.peerTable.get(associatedPeerId) {
-                                peers[associatedPeer.id] = associatedPeer
+                if !foundIndices.isEmpty {
+                    var message: Message?
+                    var renderedPeers: [ChatListGroupReferencePeer] = []
+                    for (index, messageIndex) in foundIndices {
+                        if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
+                            var peers = SimpleDictionary<PeerId, Peer>()
+                            peers[peer.id] = peer
+                            if let associatedPeerId = peer.associatedPeerId {
+                                if let associatedPeer = postbox.peerTable.get(associatedPeerId) {
+                                    peers[associatedPeer.id] = associatedPeer
+                                }
+                            }
+                            
+                            let renderedPeer = RenderedPeer(peerId: peer.id, peers: peers)
+                            let isUnread = postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false
+                            renderedPeers.append(ChatListGroupReferencePeer(peer: renderedPeer, isUnread: isUnread))
+                            
+                            if foundIndices.count == 1 && message == nil {
+                                message = postbox.messageHistoryTable.getMessage(messageIndex).flatMap({ postbox.messageHistoryTable.renderMessage($0, peerTable: postbox.peerTable) })
                             }
                         }
-                        
-                        let renderedPeer = RenderedPeer(peerId: peer.id, peers: peers)
-                        let isUnread = postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false
-                        renderedPeers.append(ChatListGroupReferencePeer(peer: renderedPeer, isUnread: isUnread))
-                        
-                        if foundIndices.count == 1 && message == nil {
-                            message = postbox.messageHistoryTable.getMessage(messageIndex).flatMap({ postbox.messageHistoryTable.renderMessage($0, peerTable: postbox.peerTable) })
-                        }
                     }
+                    
+                    self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, message: message, renderedPeers: renderedPeers, unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
                 }
-                
-                self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, message: message, renderedPeers: renderedPeers, unreadState: postbox.groupMessageStatsTable.get(groupId: groupId)))
             }
         }
     }
