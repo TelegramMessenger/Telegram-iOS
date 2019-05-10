@@ -84,6 +84,9 @@ private enum PendingMessageResult {
 }
 
 private func uploadActivityTypeForMessage(_ message: Message) -> PeerInputActivity? {
+    guard message.forwardInfo == nil else {
+        return nil
+    }
     for media in message.media {
         if let _ = media as? TelegramMediaImage {
             return .uploadingPhoto(progress: 0)
