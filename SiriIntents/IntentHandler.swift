@@ -55,10 +55,13 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             return
         }
         
-        let apiId: Int32 = BuildConfig.shared().apiId
+        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+        
+        let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
+        
+        let apiId: Int32 = buildConfig.apiId
         let languagesCategory = "ios"
         
-        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
         let appGroupName = "group.\(baseAppBundleId)"
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
         
@@ -88,7 +91,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
             let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
             
-            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, appData: BuildConfig.shared().bundleData), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
+            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, appData: buildConfig.bundleData), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
             |> mapToSignal { account -> Signal<Account, NoError> in
                 if let account = account {
                     switch account {
