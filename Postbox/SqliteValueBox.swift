@@ -6,6 +6,11 @@ import sqlcipher
     import SwiftSignalKit
 #endif
 
+private struct SqliteValueBoxTable {
+    let table: ValueBoxTable
+    let hasPrimaryKey: Bool
+}
+
 let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
 private func checkTableKey(_ table: ValueBoxTable, _ key: ValueBoxKey) {
@@ -157,7 +162,7 @@ final class SqliteValueBox: ValueBox {
     private let encryptionParameters: ValueBoxEncryptionParameters?
     private let databasePath: String
     private var database: Database!
-    private var tables: [Int32: ValueBoxTable] = [:]
+    private var tables: [Int32: SqliteValueBoxTable] = [:]
     private var fullTextTables: [Int32: ValueBoxFullTextTable] = [:]
     private var getStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var getRowIdStatements: [Int32 : SqlitePreparedStatement] = [:]
@@ -174,7 +179,8 @@ final class SqliteValueBox: ValueBox {
     private var scanKeysStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var existsStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var updateStatements: [Int32 : SqlitePreparedStatement] = [:]
-    private var insertOrReplaceStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var insertOrReplacePrimaryKeyStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var insertOrReplaceIndexKeyStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var deleteStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var moveStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var copyStatements: [TablePairKey : SqlitePreparedStatement] = [:]
@@ -379,31 +385,12 @@ final class SqliteValueBox: ValueBox {
         }
         
         if result < 4 {
-            let currentTables = self.listTables(database)
-            for i in 0 ..< currentTables.count {
-                if i == 0 {
-                    upgradeProgress(0.0)
-                }
-                
-                let table = currentTables[i]
-                
-                resultCode = database.execute("ALTER TABLE t\(table.id) RENAME TO t\(table.id)_backup")
-                assert(resultCode)
-                self.createTable(database: database, table: table)
-                resultCode = database.execute("INSERT INTO t\(table.id) SELECT * FROM t\(table.id)_backup")
-                assert(resultCode)
-                resultCode = database.execute("DROP TABLE t\(table.id)_backup")
-                assert(resultCode)
-                
-                upgradeProgress(Float(i) / Float(currentTables.count - 1))
-            }
-            
             resultCode = database.execute("PRAGMA user_version=4")
             assert(resultCode)
         }
         
         for table in self.listTables(database) {
-            self.tables[table.id] = table
+            self.tables[table.table.id] = table
         }
         for table in self.listFullTextTables(database) {
             self.fullTextTables[table.id] = table
@@ -499,13 +486,13 @@ final class SqliteValueBox: ValueBox {
         return result ?? ""
     }
     
-    private func listTables(_ database: Database) -> [ValueBoxTable] {
+    private func listTables(_ database: Database) -> [SqliteValueBoxTable] {
         assert(self.queue.isCurrent())
         var statement: OpaquePointer? = nil
         let status = sqlite3_prepare_v2(database.handle, "SELECT name, type, sql FROM sqlite_master", -1, &statement, nil)
         assert(status == SQLITE_OK)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        var tables: [ValueBoxTable] = []
+        var tables: [SqliteValueBoxTable] = []
         
         while preparedStatement.step(handle: database.handle, true, path: self.databasePath) {
             guard let name = preparedStatement.stringAt(0) else {
@@ -523,16 +510,21 @@ final class SqliteValueBox: ValueBox {
             if name.hasPrefix("t") {
                 if let intName = Int(String(name[name.index(after: name.startIndex)...])) {
                     let keyType: ValueBoxKeyType
+                    var hasPrimaryKey = false
                     if sql.range(of: "(key INTEGER") != nil {
                         keyType = .int64
+                        hasPrimaryKey = true
                     } else if sql.range(of: "(key BLOB") != nil {
                         keyType = .binary
+                        if sql.range(of: "(key BLOB PRIMARY KEY") != nil {
+                            hasPrimaryKey = true
+                        }
                     } else {
                         assertionFailure()
                         continue
                     }
                     let isCompact = sql.range(of: "WITHOUT ROWID") != nil
-                    tables.append(ValueBoxTable(id: Int32(intName), keyType: keyType, compactValuesOnCreation: isCompact))
+                    tables.append(SqliteValueBoxTable(table: ValueBoxTable(id: Int32(intName), keyType: keyType, compactValuesOnCreation: isCompact), hasPrimaryKey: hasPrimaryKey))
                 }
             }
         }
@@ -557,13 +549,16 @@ final class SqliteValueBox: ValueBox {
         return tables
     }
     
-    private func checkTable(_ table: ValueBoxTable) {
+    private func checkTable(_ table: ValueBoxTable) -> SqliteValueBoxTable {
         assert(self.queue.isCurrent())
         if let currentTable = self.tables[table.id] {
-            precondition(currentTable.keyType == table.keyType)
+            precondition(currentTable.table.keyType == table.keyType)
+            return currentTable
         } else {
             self.createTable(database: self.database, table: table)
-            self.tables[table.id] = table
+            let resultTable = SqliteValueBoxTable(table: table, hasPrimaryKey: true)
+            self.tables[table.id] = resultTable
+            return resultTable
         }
     }
     
@@ -1043,29 +1038,45 @@ final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func insertOrReplaceStatement(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
+    private func insertOrReplaceStatement(_ table: SqliteValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
-        checkTableKey(table, key)
+        checkTableKey(table.table, key)
         
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.insertOrReplaceStatements[table.id] {
-            resultStatement = statement
-        } else {
-            var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.id) (key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", -1, &statement, nil)
-            if status != SQLITE_OK {
-                let errorText = self.database.currentError() ?? "Unknown error"
-                preconditionFailure(errorText)
+        if table.table.keyType == .int64 || table.hasPrimaryKey {
+            if let statement = self.insertOrReplacePrimaryKeyStatements[table.table.id] {
+                resultStatement = statement
+            } else {
+                var statement: OpaquePointer? = nil
+                let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", -1, &statement, nil)
+                if status != SQLITE_OK {
+                    let errorText = self.database.currentError() ?? "Unknown error"
+                    preconditionFailure(errorText)
+                }
+                let preparedStatement = SqlitePreparedStatement(statement: statement)
+                self.insertOrReplacePrimaryKeyStatements[table.table.id] = preparedStatement
+                resultStatement = preparedStatement
             }
-            let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.insertOrReplaceStatements[table.id] = preparedStatement
-            resultStatement = preparedStatement
+        } else {
+            if let statement = self.insertOrReplaceIndexKeyStatements[table.table.id] {
+                resultStatement = statement
+            } else {
+                var statement: OpaquePointer? = nil
+                let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
+                if status != SQLITE_OK {
+                    let errorText = self.database.currentError() ?? "Unknown error"
+                    preconditionFailure(errorText)
+                }
+                let preparedStatement = SqlitePreparedStatement(statement: statement)
+                self.insertOrReplacePrimaryKeyStatements[table.table.id] = preparedStatement
+                resultStatement = preparedStatement
+            }
         }
         
         resultStatement.reset()
         
-        switch table.keyType {
+        switch table.table.keyType {
             case .binary:
                 resultStatement.bind(1, data: key.memory, length: key.length)
             case .int64:
@@ -1583,12 +1594,26 @@ final class SqliteValueBox: ValueBox {
     
     public func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) {
         assert(self.queue.isCurrent())
-        self.checkTable(table)
+        let sqliteTable = self.checkTable(table)
         
-        let statement = self.insertOrReplaceStatement(table, key: key, value: value)
-        while statement.step(handle: self.database.handle, path: self.databasePath) {
+        if sqliteTable.hasPrimaryKey {
+            let statement = self.insertOrReplaceStatement(sqliteTable, key: key, value: value)
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            }
+            statement.reset()
+        } else {
+            if self.exists(table, key: key) {
+                let statement = self.updateStatement(table, key: key, value: value)
+                while statement.step(handle: self.database.handle, path: self.databasePath) {
+                }
+                statement.reset()
+            } else {
+                let statement = self.insertOrReplaceStatement(sqliteTable, key: key, value: value)
+                while statement.step(handle: self.database.handle, path: self.databasePath) {
+                }
+                statement.reset()
+            }
         }
-        statement.reset()
     }
     
     public func remove(_ table: ValueBoxTable, key: ValueBoxKey, secure: Bool) {
@@ -1638,10 +1663,10 @@ final class SqliteValueBox: ValueBox {
     }
     
     func renameTable(_ table: ValueBoxTable, to toTable: ValueBoxTable) {
-        self.checkTable(table)
+        let sqliteTable = self.checkTable(table)
         let resultCode = database.execute("ALTER TABLE t\(table.id) RENAME TO t\(toTable.id)")
         assert(resultCode)
-        self.tables[toTable.id] = table
+        self.tables[toTable.id] = SqliteValueBoxTable(table: ValueBoxTable(id: toTable.id, keyType: sqliteTable.table.keyType, compactValuesOnCreation: sqliteTable.table.compactValuesOnCreation), hasPrimaryKey: sqliteTable.hasPrimaryKey)
         self.tables.removeValue(forKey: table.id)
     }
     
@@ -1712,7 +1737,7 @@ final class SqliteValueBox: ValueBox {
     }
     
     func count(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) -> Int {
-        self.checkTable(table)
+        let _ = self.checkTable(table)
         
         var statementImpl: OpaquePointer? = nil
         let status = sqlite3_prepare_v2(self.database.handle, "SELECT COUNT(*) FROM t\(table.id) WHERE key > ? AND key < ?", -1, &statementImpl, nil)
@@ -1742,7 +1767,7 @@ final class SqliteValueBox: ValueBox {
     }
     
     public func count(_ table: ValueBoxTable) -> Int {
-        self.checkTable(table)
+        let _ = self.checkTable(table)
         
         var statementImpl: OpaquePointer? = nil
         let status = sqlite3_prepare_v2(self.database.handle, "SELECT COUNT(*) FROM t\(table.id)", -1, &statementImpl, nil)
@@ -1836,10 +1861,15 @@ final class SqliteValueBox: ValueBox {
         }
         self.updateStatements.removeAll()
         
-        for (_, statement) in self.insertOrReplaceStatements {
+        for (_, statement) in self.insertOrReplaceIndexKeyStatements {
             statement.destroy()
         }
-        self.insertOrReplaceStatements.removeAll()
+        self.insertOrReplaceIndexKeyStatements.removeAll()
+        
+        for (_, statement) in self.insertOrReplacePrimaryKeyStatements {
+            statement.destroy()
+        }
+        self.insertOrReplacePrimaryKeyStatements.removeAll()
         
         for (_, statement) in self.deleteStatements {
             statement.destroy()
@@ -1964,6 +1994,11 @@ final class SqliteValueBox: ValueBox {
         assert(resultCode)
         
         return updatedDatabase
+    }
+    
+    public func vacuum() {
+        let resultCode = self.database.execute("VACUUM")
+        assert(resultCode)
     }
 }
 

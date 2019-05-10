@@ -1012,7 +1012,7 @@ public final class Postbox {
     private let queue: Queue
     public let seedConfiguration: SeedConfiguration
     private let basePath: String
-    let valueBox: ValueBox
+    let valueBox: SqliteValueBox
     
     private let ipcNotificationsDisposable = MetaDisposable()
     
@@ -1145,7 +1145,7 @@ public final class Postbox {
     
     var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
     
-    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: ValueBox) {
+    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox) {
         assert(queue.isCurrent())
         
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -3121,5 +3121,14 @@ public final class Postbox {
                 table.clearMemoryCache()
             }
         }).start()
+    }
+    
+    public func optimizeStorage() -> Signal<Never, NoError> {
+        return Signal { subscriber in
+            self.valueBox.vacuum()
+            subscriber.putCompletion()
+            
+            return EmptyDisposable
+        }
     }
 }

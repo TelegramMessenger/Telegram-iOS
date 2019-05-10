@@ -182,6 +182,8 @@ func postboxUpgrade_20to21(metadataTable: MetadataTable, valueBox: ValueBox, pro
     var messageIndex = -1
     let reportBase = max(1, expectedTotalCount / 100)
     
+    postboxLog("Upgrade 20->21 expected to process \(expectedTotalCount) messages")
+    
     for peerId in matchingPeerIds {
         let peerCloudLowerBound = ValueBoxKey(length: 8 + 4)
         peerCloudLowerBound.setInt64(0, value: peerId.toInt64())

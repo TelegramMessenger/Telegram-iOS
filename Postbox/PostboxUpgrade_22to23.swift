@@ -21,6 +21,8 @@ func postboxUpgrade_22to23(metadataTable: MetadataTable, valueBox: ValueBox, pro
     var messageIndex = -1
     let reportBase = max(1, expectedTotalCount / 100)
     
+    postboxLog("Upgrade 22->23 expected to process \(expectedTotalCount) messages")
+    
     valueBox.scan(messageHistoryTable, keys: { key in
         totalMessageCount += 1
         
