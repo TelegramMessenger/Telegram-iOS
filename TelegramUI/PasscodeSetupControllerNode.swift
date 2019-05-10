@@ -215,7 +215,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                             self.inputFieldNode.reset(animated: false)
                             self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
                             self.subtitleNode.isHidden = false
-                            self.subtitleNode.attributedText = NSAttributedString(string: "Passcodes don't match. Please try again.", font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+                            self.subtitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.PasscodeSettings_DoNotMatch, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
                             self.modeButtonNode.isHidden = false
                             
                             if let validLayout = self.validLayout {
