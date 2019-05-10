@@ -133,6 +133,17 @@ public extension Peer {
                 return false
         }
     }
+    
+    public var isVerified: Bool {
+        switch self {
+            case let user as TelegramUser:
+                return user.flags.contains(.isVerified)
+            case let channel as TelegramChannel:
+                return channel.flags.contains(.isVerified)
+            default:
+                return false
+        }
+    }
 }
 
 public extension PeerId {
