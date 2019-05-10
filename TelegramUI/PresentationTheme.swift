@@ -21,6 +21,16 @@ public final class PresentationThemeAuth {
     }
 }
 
+public final class PresentationThemePasscode {
+    public let backgroundColors: (UIColor, UIColor)
+    public let buttonColor: UIColor?
+    
+    public init(backgroundColors: (UIColor, UIColor), buttonColor: UIColor?) {
+        self.backgroundColors = backgroundColors
+        self.buttonColor = buttonColor
+    }
+}
+
 public final class PresentationThemeRootTabBar {
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
@@ -913,6 +923,7 @@ public final class PresentationTheme: Equatable {
     public let overallDarkAppearance: Bool
     public let allowsCustomWallpapers: Bool
     public let auth: PresentationThemeAuth
+    public let passcode: PresentationThemePasscode
     public let rootController: PresentationThemeRootController
     public let list: PresentationThemeList
     public let chatList: PresentationThemeChatList
@@ -922,11 +933,12 @@ public final class PresentationTheme: Equatable {
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, overallDarkAppearance: Bool, allowsCustomWallpapers: Bool, auth: PresentationThemeAuth, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification) {
+    public init(name: PresentationThemeName, overallDarkAppearance: Bool, allowsCustomWallpapers: Bool, auth: PresentationThemeAuth, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification) {
         self.name = name
         self.overallDarkAppearance = overallDarkAppearance
         self.allowsCustomWallpapers = allowsCustomWallpapers
         self.auth = auth
+        self.passcode = passcode
         self.rootController = rootController
         self.list = list
         self.chatList = chatList

@@ -202,6 +202,29 @@ struct PresentationResourcesChatList {
             return UIImage(bundleImageName: "Chat List/PeerVerifiedIcon")?.precomposed()
         })
     }
+
+    static func scamIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListScamIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 37.0, height: 16.0), contextGenerator: { size, context in
+                let bounds = CGRect(origin: CGPoint(), size: size)
+                context.clear(bounds)
+                
+                context.setFillColor(theme.list.itemDestructiveColor.cgColor)
+                context.setStrokeColor(theme.list.itemDestructiveColor.cgColor)
+                context.setLineWidth(1.0)
+                
+                context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 2.0).cgPath)
+                context.strokePath()
+                
+                let titlePath = CGMutablePath()
+                titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -2.0 + UIScreenPixel))
+                let titleString = NSAttributedString(string: "SCAM", font: Font.bold(10.0), textColor: theme.list.itemDestructiveColor, paragraphAlignment: .center)
+                let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
+                let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
+                CTFrameDraw(titleFrame, context)
+            })
+        })
+    }
     
     static func secretIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListSecretIcon.rawValue, { theme in

@@ -259,7 +259,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
     private let callButton: HighlightableButtonNode
     
     private let nameNode: TextNode
-    private var verificationIconNode: ASImageNode?
+    private var credibilityIconNode: ASImageNode?
     private let statusNode: TextNode
     
     private let arrowNode: ASImageNode
@@ -371,15 +371,15 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                 updatedTheme = item.theme
             }
             
-            var isVerified = false
-            if let peer = item.peer as? TelegramUser {
-                isVerified = peer.flags.contains(.isVerified)
-            } else if let peer = item.peer as? TelegramChannel {
-                isVerified = peer.flags.contains(.isVerified)
-            }
-            var verificationIconImage: UIImage?
-            if isVerified {
-                verificationIconImage = PresentationResourcesItemList.verifiedPeerIcon(item.theme)
+            var credibilityIconImage: UIImage?
+            var credibilityIconOffset: CGFloat = 4.0
+            if let peer = item.peer {
+                if peer.isScam {
+                    credibilityIconImage = PresentationResourcesChatList.scamIcon(item.theme)
+                    credibilityIconOffset = 6.0
+                } else if peer.isVerified {
+                    credibilityIconImage = PresentationResourcesItemList.verifiedPeerIcon(item.theme)
+                }
             }
             
             let displayTitle: ItemListAvatarAndNameInfoItemName
@@ -392,8 +392,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
             }
             
             var additionalTitleInset: CGFloat = 0.0
-            if let verificationIconImage = verificationIconImage {
-                additionalTitleInset += 3.0 + verificationIconImage.size.width
+            if let credibilityIconImage = credibilityIconImage {
+                additionalTitleInset += 3.0 + credibilityIconImage.size.width
             }
             
             var nameMaximumNumberOfLines = 1
@@ -664,21 +664,21 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                     let nameFrame = CGRect(origin: CGPoint(x: params.leftInset + 94.0, y: nameY), size: nameNodeLayout.size)
                     strongSelf.nameNode.frame = nameFrame
                     
-                    if let verificationIconImage = verificationIconImage {
-                        if strongSelf.verificationIconNode == nil {
-                            let verificationIconNode = ASImageNode()
-                            verificationIconNode.isLayerBacked = true
-                            verificationIconNode.displayWithoutProcessing = true
-                            verificationIconNode.displaysAsynchronously = false
-                            verificationIconNode.alpha = strongSelf.nameNode.alpha
-                            strongSelf.verificationIconNode = verificationIconNode
-                            strongSelf.addSubnode(verificationIconNode)
+                    if let credibilityIconImage = credibilityIconImage {
+                        if strongSelf.credibilityIconNode == nil {
+                            let credibilityIconNode = ASImageNode()
+                            credibilityIconNode.isLayerBacked = true
+                            credibilityIconNode.displayWithoutProcessing = true
+                            credibilityIconNode.displaysAsynchronously = false
+                            credibilityIconNode.alpha = strongSelf.nameNode.alpha
+                            strongSelf.credibilityIconNode = credibilityIconNode
+                            strongSelf.addSubnode(credibilityIconNode)
                         }
-                        strongSelf.verificationIconNode?.image = verificationIconImage
-                        strongSelf.verificationIconNode?.frame = CGRect(origin: CGPoint(x: nameFrame.maxX + 3.0, y: nameFrame.minY + 4.0 + UIScreenPixel), size: verificationIconImage.size)
-                    } else if let verificationIconNode = strongSelf.verificationIconNode {
-                        strongSelf.verificationIconNode = nil
-                        verificationIconNode.removeFromSupernode()
+                        strongSelf.credibilityIconNode?.image = credibilityIconImage
+                        strongSelf.credibilityIconNode?.frame = CGRect(origin: CGPoint(x: nameFrame.maxX + credibilityIconOffset, y: nameFrame.minY + 4.0 + UIScreenPixel), size: credibilityIconImage.size)
+                    } else if let credibilityIconNode = strongSelf.credibilityIconNode {
+                        strongSelf.credibilityIconNode = nil
+                        credibilityIconNode.removeFromSupernode()
                     }
                     
                     strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 94.0, y: nameFrame.maxY + 3.0), size: statusNodeLayout.size)
@@ -795,15 +795,15 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                             strongSelf.nameNode.alpha = 0.0
                             strongSelf.callButton.layer.animateAlpha(from: CGFloat(strongSelf.callButton.layer.opacity), to: 0.0, duration: 0.3)
                             strongSelf.callButton.alpha = 0.0
-                            if let verificationIconNode = strongSelf.verificationIconNode {
-                                verificationIconNode.layer.animateAlpha(from: CGFloat(verificationIconNode.layer.opacity), to: 0.0, duration: 0.3)
-                                verificationIconNode.alpha = 0.0
+                            if let credibilityIconNode = strongSelf.credibilityIconNode {
+                                credibilityIconNode.layer.animateAlpha(from: CGFloat(credibilityIconNode.layer.opacity), to: 0.0, duration: 0.3)
+                                credibilityIconNode.alpha = 0.0
                             }
                         } else {
                             strongSelf.statusNode.alpha = 0.0
                             strongSelf.nameNode.alpha = 0.0
                             strongSelf.callButton.alpha = 0.0
-                            strongSelf.verificationIconNode?.alpha = 0.0
+                            strongSelf.credibilityIconNode?.alpha = 0.0
                         }
                     } else {
                         var animateOut = false
@@ -849,15 +849,15 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                             strongSelf.callButton.layer.animateAlpha(from: CGFloat(strongSelf.callButton.layer.opacity), to: 1.0, duration: 0.3)
                             strongSelf.callButton.alpha = 1.0
                             
-                            if let verificationIconNode = strongSelf.verificationIconNode {
-                                verificationIconNode.layer.animateAlpha(from: CGFloat(verificationIconNode.layer.opacity), to: 1.0, duration: 0.3)
-                                verificationIconNode.alpha = 1.0
+                            if let credibilityIconNode = strongSelf.credibilityIconNode {
+                                credibilityIconNode.layer.animateAlpha(from: CGFloat(credibilityIconNode.layer.opacity), to: 1.0, duration: 0.3)
+                                credibilityIconNode.alpha = 1.0
                             }
                         } else {
                             strongSelf.statusNode.alpha = 1.0
                             strongSelf.nameNode.alpha = 1.0
                             strongSelf.callButton.alpha = 1.0
-                            strongSelf.verificationIconNode?.alpha = 1.0
+                            strongSelf.credibilityIconNode?.alpha = 1.0
                         }
                     }
                     if let presence = item.presence as? TelegramUserPresence {

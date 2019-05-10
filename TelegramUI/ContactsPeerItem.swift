@@ -427,20 +427,14 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     }
             }
             
-            var isVerified = false
+            var verificationIconImage: UIImage?
             switch item.peer {
                 case let .peer(peer, _):
-                    if let peer = peer as? TelegramUser {
-                        isVerified = peer.flags.contains(.isVerified)
-                    } else if let peer = peer as? TelegramChannel {
-                        isVerified = peer.flags.contains(.isVerified)
+                    if let peer = peer, peer.isVerified {
+                        verificationIconImage = PresentationResourcesChatList.verifiedIcon(item.theme)
                     }
                 case .deviceContact:
                     break
-            }
-            var verificationIconImage: UIImage?
-            if isVerified {
-                verificationIconImage = PresentationResourcesChatList.verifiedIcon(item.theme)
             }
             
             let actionIconImage: UIImage?

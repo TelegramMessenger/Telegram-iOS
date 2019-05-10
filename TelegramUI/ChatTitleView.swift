@@ -84,6 +84,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     private let titleNode: ImmediateTextNode
     private let titleLeftIconNode: ASImageNode
     private let titleRightIconNode: ASImageNode
+    private let titleCredibilityIconNode: ASImageNode
     private let activityNode: ChatTitleActivityNode
     
     private let button: HighlightTrackingButtonNode
@@ -92,6 +93,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private var titleLeftIcon: ChatTitleIcon = .none
     private var titleRightIcon: ChatTitleIcon = .none
+    private var titleScamIcon = false
     
     private var networkStatusNode: ChatTitleNetworkStatusNode?
     
@@ -168,6 +170,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 var string: NSAttributedString?
                 var titleLeftIcon: ChatTitleIcon = .none
                 var titleRightIcon: ChatTitleIcon = .none
+                var titleScamIcon = false
                 switch titleContent {
                     case let .peer(peerView, _):
                         if let peer = peerViewMainPeer(peerView) {
@@ -176,6 +179,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             } else {
                                 string = NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                             }
+                            titleScamIcon = peer.isScam
                         }
                         if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
                             titleLeftIcon = .lock
@@ -202,6 +206,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         default:
                             self.titleLeftIconNode.image = nil
                     }
+                    self.setNeedsLayout()
+                }
+                
+                if titleScamIcon != self.titleScamIcon {
+                    self.titleScamIcon = titleScamIcon
+                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(self.theme) : nil
                     self.setNeedsLayout()
                 }
                 
@@ -340,10 +350,10 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                         if let presence = peerView.peerPresences[participant.peerId] as? TelegramUserPresence {
                                             let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
                                             switch relativeStatus {
-                                                case .online:
-                                                    onlineCount += 1
-                                                default:
-                                                    break
+                                            case .online:
+                                                onlineCount += 1
+                                            default:
+                                                break
                                             }
                                         }
                                     }
@@ -438,6 +448,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.titleRightIconNode.displayWithoutProcessing = true
         self.titleRightIconNode.displaysAsynchronously = false
         
+        self.titleCredibilityIconNode = ASImageNode()
+        self.titleCredibilityIconNode.isLayerBacked = true
+        self.titleCredibilityIconNode.displayWithoutProcessing = true
+        self.titleCredibilityIconNode.displaysAsynchronously = false
+        
         self.activityNode = ChatTitleActivityNode()
         self.button = HighlightTrackingButtonNode()
         
@@ -463,19 +478,23 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     strongSelf.activityNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleLeftIconNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleRightIconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.titleCredibilityIconNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleNode.alpha = 0.4
                     strongSelf.activityNode.alpha = 0.4
                     strongSelf.titleLeftIconNode.alpha = 0.4
                     strongSelf.titleRightIconNode.alpha = 0.4
+                    strongSelf.titleCredibilityIconNode.alpha = 0.4
                 } else {
                     strongSelf.titleNode.alpha = 1.0
                     strongSelf.activityNode.alpha = 1.0
                     strongSelf.titleLeftIconNode.alpha = 1.0
                     strongSelf.titleRightIconNode.alpha = 1.0
+                    strongSelf.titleCredibilityIconNode.alpha = 1.0
                     strongSelf.titleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     strongSelf.activityNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     strongSelf.titleLeftIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     strongSelf.titleRightIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.titleCredibilityIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -517,19 +536,29 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         
         var leftIconWidth: CGFloat = 0.0
         var rightIconWidth: CGFloat = 0.0
+        var credibilityIconWidth: CGFloat = 0.0
         
         if let image = self.titleLeftIconNode.image {
             if self.titleLeftIconNode.supernode == nil {
-                self.contentContainer.addSubnode(titleLeftIconNode)
+                self.contentContainer.addSubnode(self.titleLeftIconNode)
             }
             leftIconWidth = image.size.width + 6.0
         } else if self.titleLeftIconNode.supernode != nil {
             self.titleLeftIconNode.removeFromSupernode()
         }
         
+        if let image = self.titleCredibilityIconNode.image {
+            if self.titleCredibilityIconNode.supernode == nil {
+                self.contentContainer.addSubnode(self.titleCredibilityIconNode)
+            }
+            credibilityIconWidth = image.size.width + 3.0
+        } else if self.titleCredibilityIconNode.supernode != nil {
+            self.titleCredibilityIconNode.removeFromSupernode()
+        }
+        
         if let image = self.titleRightIconNode.image {
             if self.titleRightIconNode.supernode == nil {
-                self.contentContainer.addSubnode(titleRightIconNode)
+                self.contentContainer.addSubnode(self.titleRightIconNode)
             }
             rightIconWidth = image.size.width + 3.0
         } else if self.titleRightIconNode.supernode != nil {
@@ -538,7 +567,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         
         let titleSideInset: CGFloat = 3.0
         if size.height > 40.0 {
-            let titleSize = self.titleNode.updateLayout(CGSize(width: clearBounds.width - leftIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height))
+            var titleSize = self.titleNode.updateLayout(CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height))
+            titleSize.width += credibilityIconWidth
             let activitySize = self.activityNode.updateLayout(clearBounds.size, alignment: .center)
             let titleInfoSpacing: CGFloat = 0.0
             
@@ -570,22 +600,28 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             if let image = self.titleLeftIconNode.image {
                 self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.minX - image.size.width - 3.0 - UIScreenPixel, y: titleFrame.minY + 4.0), size: image.size)
             }
+            if let image = self.titleCredibilityIconNode.image {
+                self.titleCredibilityIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width - 1.0, y: titleFrame.minY + 2.0), size: image.size)
+            }
             if let image = self.titleRightIconNode.image {
-                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 3.0, y: titleFrame.minY + 7.0), size: image.size)
+                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 3.0, y: titleFrame.minY + 6.0), size: image.size)
             }
         } else {
-            let titleSize = self.titleNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0 - leftIconWidth - rightIconWidth - titleSideInset * 2.0), height: size.height))
+            let titleSize = self.titleNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0 - leftIconWidth - credibilityIconWidth - rightIconWidth - titleSideInset * 2.0), height: size.height))
             let activitySize = self.activityNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0), height: size.height), alignment: .center)
             
             let titleInfoSpacing: CGFloat = 8.0
-            let combinedWidth = titleSize.width + leftIconWidth + rightIconWidth + activitySize.width + titleInfoSpacing
+            let combinedWidth = titleSize.width + leftIconWidth + credibilityIconWidth + rightIconWidth + activitySize.width + titleInfoSpacing
             
             let titleFrame = CGRect(origin: CGPoint(x: leftIconWidth + floor((clearBounds.width - combinedWidth) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
             self.titleNode.frame = titleFrame
-            self.activityNode.frame = CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - activitySize.height) / 2.0)), size: activitySize)
+            self.activityNode.frame = CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + credibilityIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - activitySize.height) / 2.0)), size: activitySize)
             
             if let image = self.titleLeftIconNode.image {
                 self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.minY + 4.0), size: image.size)
+            }
+            if let image = self.titleCredibilityIconNode.image {
+                self.titleCredibilityIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width - 1.0, y: titleFrame.minY + 6.0), size: image.size)
             }
             if let image = self.titleRightIconNode.image {
                 self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width - 1.0, y: titleFrame.minY + 6.0), size: image.size)

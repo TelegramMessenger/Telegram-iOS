@@ -604,14 +604,22 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         }
     }
     
-    if let cachedUserData = cachedPeerData as? CachedUserData, let about = cachedUserData.about, !about.isEmpty {
-        let title: String
-        if let peer = peer as? TelegramUser, let _ = peer.botInfo {
-            title = presentationData.strings.Profile_BotInfo
+    let aboutTitle: String
+    if let _ = user.botInfo {
+        aboutTitle = presentationData.strings.Profile_BotInfo
+    } else {
+        aboutTitle = presentationData.strings.Profile_About
+    }
+    if user.isScam {
+        let aboutValue: String
+        if let _ = user.botInfo {
+            aboutValue = presentationData.strings.UserInfo_ScamBotWarning
         } else {
-            title = presentationData.strings.Profile_About
+            aboutValue = presentationData.strings.UserInfo_ScamUserWarning
         }
-        entries.append(UserInfoEntry.about(presentationData.theme, peer, title, about))
+        entries.append(UserInfoEntry.about(presentationData.theme, peer, aboutTitle, aboutValue))
+    } else if let cachedUserData = cachedPeerData as? CachedUserData, let about = cachedUserData.about, !about.isEmpty {
+        entries.append(UserInfoEntry.about(presentationData.theme, peer, aboutTitle, about))
     }
     
     if !isEditing {

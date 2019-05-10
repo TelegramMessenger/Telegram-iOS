@@ -133,6 +133,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     
     private var nameNode: TextNode?
     private var adminBadgeNode: TextNode?
+    private var credibilityIconNode: ASImageNode?
     var forwardInfoNode: ChatMessageForwardInfoNode?
     private var replyInfoNode: ChatMessageReplyInfoNode?
     
@@ -213,6 +214,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         
         self.nameNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.adminBadgeNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.credibilityIconNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.forwardInfoNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.replyInfoNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
@@ -641,6 +643,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 index += 1
             }
             
+            var currentCredibilityIconImage: UIImage?
+            
             var initialDisplayHeader = true
             if let backgroundHiding = backgroundHiding, case .always = backgroundHiding {
                 initialDisplayHeader = false
@@ -659,6 +663,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 } else if let effectiveAuthor = effectiveAuthor {
                     authorNameString = effectiveAuthor.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     authorNameColor = chatMessagePeerIdColors[Int(effectiveAuthor.id.id % 7)]
+                    
+                    currentCredibilityIconImage = effectiveAuthor.isScam ? PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme) : nil
                 }
                 if let rawAuthorNameColor = authorNameColor {
                     var dimColors = false
@@ -800,18 +806,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         attributedString = NSAttributedString(string: "", font: nameFont, textColor: inlineBotNameColor)
                     }
                     
+                    var credibilityIconWidth: CGFloat = 0.0
+                    if let credibilityIconImage = currentCredibilityIconImage {
+                        credibilityIconWidth += credibilityIconImage.size.width + 4.0
+                    }
                     let adminBadgeSizeAndApply = adminBadgeLayout(TextNodeLayoutArguments(attributedString: adminBadgeString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     adminNodeSizeApply = (adminBadgeSizeAndApply.0.size, {
                         return adminBadgeSizeAndApply.1()
                     })
                     
-                    let sizeAndApply = authorNameLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - adminBadgeSizeAndApply.0.size.width), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    let sizeAndApply = authorNameLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - credibilityIconWidth - adminBadgeSizeAndApply.0.size.width), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     nameNodeSizeApply = (sizeAndApply.0.size, {
                         return sizeAndApply.1()
                     })
 
                     nameNodeOriginY = headerSize.height
-                    headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + adminBadgeSizeAndApply.0.size.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
+                    headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + adminBadgeSizeAndApply.0.size.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + credibilityIconWidth)
                     headerSize.height += nameNodeSizeApply.0.height
                 }
 
@@ -1242,6 +1252,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             strongSelf.insertSubnode(nameNode, belowSubnode: strongSelf.messageAccessibilityArea)
                         }
                         nameNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
+                        
+                        if let credibilityIconImage = currentCredibilityIconImage {
+                            let credibilityIconNode: ASImageNode
+                            if let node = strongSelf.credibilityIconNode {
+                                credibilityIconNode = node
+                            } else {
+                                credibilityIconNode = ASImageNode()
+                                strongSelf.credibilityIconNode = credibilityIconNode
+                                strongSelf.insertSubnode(credibilityIconNode, belowSubnode: strongSelf.messageAccessibilityArea)
+                            }
+                            credibilityIconNode.frame = CGRect(origin: CGPoint(x: nameNode.frame.maxX + 4.0, y: nameNode.frame.minY), size: credibilityIconImage.size)
+                            credibilityIconNode.image = credibilityIconImage
+                        } else {
+                            strongSelf.credibilityIconNode?.removeFromSupernode()
+                            strongSelf.credibilityIconNode = nil
+                        }
                         
                         if let adminBadgeNode = adminNodeSizeApply.1() {
                             strongSelf.adminBadgeNode = adminBadgeNode
