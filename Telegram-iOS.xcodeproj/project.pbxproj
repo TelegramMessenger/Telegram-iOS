@@ -425,6 +425,8 @@
 		D0E8B8AF2044496C00605593 /* voip_fail.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8AA2044496C00605593 /* voip_fail.caf */; };
 		D0E8B8B02044496C00605593 /* voip_ringback.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8AB2044496C00605593 /* voip_ringback.caf */; };
 		D0E8B8B12044496C00605593 /* voip_busy.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8AC2044496C00605593 /* voip_busy.caf */; };
+		D0E8C2DE2285EA55009F26E8 /* BlackIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E8C2DD2285EA55009F26E8 /* BlackIcon@2x.png */; };
+		D0E8C2E02285EA6A009F26E8 /* BlackIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E8C2DF2285EA6A009F26E8 /* BlackIcon@3x.png */; };
 		D0EA97941FE84F2D00792DD6 /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
 		D0EA97951FE84F2E00792DD6 /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
 		D0EB243B201B77C400F6CC13 /* ClearNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EB243A201B77C400F6CC13 /* ClearNotificationsManager.swift */; };
@@ -1174,6 +1176,8 @@
 		D0E8B8AA2044496C00605593 /* voip_fail.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = voip_fail.caf; path = "Telegram-iOS/Resources/voip_fail.caf"; sourceTree = "<group>"; };
 		D0E8B8AB2044496C00605593 /* voip_ringback.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = voip_ringback.caf; path = "Telegram-iOS/Resources/voip_ringback.caf"; sourceTree = "<group>"; };
 		D0E8B8AC2044496C00605593 /* voip_busy.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = voip_busy.caf; path = "Telegram-iOS/Resources/voip_busy.caf"; sourceTree = "<group>"; };
+		D0E8C2DD2285EA55009F26E8 /* BlackIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackIcon@2x.png"; sourceTree = "<group>"; };
+		D0E8C2DF2285EA6A009F26E8 /* BlackIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackIcon@3x.png"; sourceTree = "<group>"; };
 		D0EA97961FE8536900792DD6 /* SiriIntents-Hockeyapp.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "SiriIntents-Hockeyapp.entitlements"; sourceTree = "<group>"; };
 		D0EA97971FE8537000792DD6 /* Share-HockeyApp.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Share-HockeyApp.entitlements"; sourceTree = "<group>"; };
 		D0EA97981FE8537000792DD6 /* Share-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Share-AppStore.entitlements"; sourceTree = "<group>"; };
@@ -1955,6 +1959,8 @@
 		D008599E1B28189D00EAF753 /* Telegram-iOS */ = {
 			isa = PBXGroup;
 			children = (
+				D0E8C2DD2285EA55009F26E8 /* BlackIcon@2x.png */,
+				D0E8C2DF2285EA6A009F26E8 /* BlackIcon@3x.png */,
 				D0338729223A8347007A2CE4 /* Config */,
 				09C50E7821738150009E676F /* Watch */,
 				D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */,
@@ -2898,6 +2904,7 @@
 				D0E8B8AE2044496C00605593 /* voip_end.caf in Resources */,
 				D0CE6F68213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D0CE6F6A213EDA4400BCD44B /* Localizable.strings in Resources */,
+				D0E8C2DE2285EA55009F26E8 /* BlackIcon@2x.png in Resources */,
 				D09DCBB71D0C856B00F51FFE /* Localizable.strings in Resources */,
 				D0CE6F66213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D08DB0B8213F4D1D00F2ADBF /* powerful_mask@2x.png in Resources */,
@@ -2966,6 +2973,7 @@
 				D0E8B8B02044496C00605593 /* voip_ringback.caf in Resources */,
 				D00ED75A1FE94630001F38BD /* AppIntentVocabulary.plist in Resources */,
 				D04DCC221F71C80000B021D7 /* 1.m4a in Resources */,
+				D0E8C2E02285EA6A009F26E8 /* BlackIcon@3x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

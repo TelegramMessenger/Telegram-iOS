@@ -580,6 +580,20 @@ final class SharedApplicationContext {
             self.window?.rootViewController?.present(controller, animated: true, completion: nil)
         }, dismissNativeController: {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
+        }, getAlternateIconName: {
+            if #available(iOS 10.3, *) {
+                return application.alternateIconName
+            } else {
+                return nil
+            }
+        }, requestSetAlternateIconName: { name, completion in
+            if #available(iOS 10.3, *) {
+                application.setAlternateIconName(name, completionHandler: { error in
+                    completion(error == nil)
+                })
+            } else {
+                completion(false)
+            }
         })
         
         let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in

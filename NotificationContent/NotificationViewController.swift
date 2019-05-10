@@ -118,6 +118,10 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                 return nil
             }, presentNativeController: { _ in
             }, dismissNativeController: {
+            }, getAlternateIconName: {
+                return nil
+            }, requestSetAlternateIconName: { _, f in
+                f(false)
             })
             
             let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"

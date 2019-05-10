@@ -142,6 +142,10 @@ class ShareRootController: UIViewController {
                 return nil
             }, presentNativeController: { _ in
             }, dismissNativeController: {
+            }, getAlternateIconName: {
+                return nil
+            }, requestSetAlternateIconName: { _, f in
+                f(false)
             })
             
             let sharedExtensionContext: SharedExtensionContext
