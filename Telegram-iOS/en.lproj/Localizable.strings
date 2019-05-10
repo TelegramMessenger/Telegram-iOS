@@ -4245,6 +4245,7 @@ Unused sets are archived when you add more.";
 "ChatList.ArchivedChatsTitle" = "Archived Chats";
 
 "PasscodeSettings.PasscodeOptions" = "Passcode Options";
+"PasscodeSettings.DoNotMatch" = "Passcodes don't match. Please try again.";
 
 "Conversation.PrivateChannelTooltip" = "This channel is private";
 
@@ -4263,3 +4264,8 @@ Unused sets are archived when you add more.";
 "ArchivedChats.IntroText2" = "Muted chats stay archived when new messages arrive.";
 "ArchivedChats.IntroTitle3" = "Pinned Chats";
 "ArchivedChats.IntroText3" = "You can pin up to 100 archived chats to the top.";
+
+"UserInfo.ScamUserWarning" = "⚠️ Warning: Many users reported this user as a scam. Please be careful, especially if it asks you for money.";
+"UserInfo.ScamBotWarning" = "⚠️ Warning: Many users reported this user as a scam. Please be careful, especially if it asks you for money.";
+"ChannelInfo.ScamChannelWarning" = "⚠️ Warning: Many users reported this channel as a scam. Please be careful, especially if it asks you for money.";
+"GroupInfo.ScamGroupWarning" = "⚠️ Warning: Many users reported this group as a scam. Please be careful, especially if it asks you for money.";
