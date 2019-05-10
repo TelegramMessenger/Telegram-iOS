@@ -2159,6 +2159,7 @@ Unused sets are archived when you add more.";
 "ShareMenu.CopyShareLinkGame" = "Copy link to game";
 
 "Message.PinnedGame" = "pinned a game";
+"Message.AuthorPinnedGame" = "%@ pinned a game";
 
 "Target.ShareGameConfirmationPrivate" = "Share the game with %@?";
 "Target.ShareGameConfirmationGroup" = "Share the game with \"%@\"?";
