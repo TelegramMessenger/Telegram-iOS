@@ -2458,11 +2458,11 @@ public final class Postbox {
     }
     
     public func tailChatListView(groupId: PeerGroupId, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.aroundChatListView(groupId: groupId, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents)
+        return self.aroundChatListView(groupId: groupId, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, userInteractive: true)
     }
     
-    public func aroundChatListView(groupId: PeerGroupId, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.transactionSignal { subscriber, transaction in
+    public func aroundChatListView(groupId: PeerGroupId, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return self.transactionSignal(userInteractive: userInteractive, { subscriber, transaction in
             let (entries, earlier, later) = self.fetchAroundChatEntries(groupId: groupId, index: index, count: count)
             
             let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents)
@@ -2485,7 +2485,7 @@ public final class Postbox {
                     }
                 }
             }
-        }
+        })
     }
     
     public func contactPeerIdsView() -> Signal<ContactPeerIdsView, NoError> {

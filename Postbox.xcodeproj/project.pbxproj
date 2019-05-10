@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9F291C9B2264CFCC00C66267 /* PeerGroupAssociationTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E059226099F300CB9E8A /* PeerGroupAssociationTable.swift */; };
+		9F291C9B2264CFCC00C66267 /* (null) in Sources */ = {isa = PBXBuildFile; };
 		9F5B6E762011449F00C58B2A /* PostboxLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB8E1FE9EB5500609802 /* PostboxLogging.swift */; };
 		C20EB2A31F7179DC00DD3A57 /* PeerNotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE3EBB1F68261B0069BC90 /* PeerNotificationSettingsView.swift */; };
 		C25B56FE1F431C3300581D02 /* MessageHistoryTagsSummaryTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D070479F1F3CE16500F6A8D4 /* MessageHistoryTagsSummaryTable.swift */; };
@@ -1179,7 +1179,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9F291C9B2264CFCC00C66267 /* PeerGroupAssociationTable.swift in Sources */,
+				9F291C9B2264CFCC00C66267 /* (null) in Sources */,
 				9F5B6E762011449F00C58B2A /* PostboxLogging.swift in Sources */,
 				C20EB2A31F7179DC00DD3A57 /* PeerNotificationSettingsView.swift in Sources */,
 				C25B56FE1F431C3300581D02 /* MessageHistoryTagsSummaryTable.swift in Sources */,
