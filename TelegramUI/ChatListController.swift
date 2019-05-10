@@ -1485,7 +1485,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
         let postbox = self.context.account.postbox
         self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds[0])
-        let _ = (ApplicationSpecificNotice.incrementArchiveChatTipsTips(accountManager: self.context.sharedContext.accountManager, count: 1)
+        let _ = (ApplicationSpecificNotice.incrementArchiveChatTips(accountManager: self.context.sharedContext.accountManager, count: 1)
         |> deliverOnMainQueue).start(next: { [weak self] previousHintCount in
             let _ = (postbox.transaction { transaction -> Void in
                 for peerId in peerIds {

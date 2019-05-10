@@ -183,6 +183,33 @@ public final class CallController: ViewController {
             }
         }
         
+        self.controllerNode.callEnded = { [weak self] didPresentRating in
+            if let strongSelf = self, !didPresentRating {
+                let _ = (combineLatest(strongSelf.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.callListSettings]), ApplicationSpecificNotice.getCallsTabTip(accountManager: strongSelf.sharedContext.accountManager))
+                |> map { sharedData, callsTabTip -> Int32 in
+                    var value = false
+                    if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.callListSettings] as? CallListSettings {
+                        value = settings.showTab
+                    }
+                    if value {
+                        return 3
+                    } else {
+                        return callsTabTip
+                    }
+                } |> deliverOnMainQueue).start(next: { [weak self] callsTabTip in
+                    if let strongSelf = self {
+                        if callsTabTip == 2 {
+                            let controller = callSuggestTabController(sharedContext: strongSelf.sharedContext)
+                            strongSelf.present(controller, in: .window(.root))
+                        }
+                        if callsTabTip < 3 {
+                            let _ = ApplicationSpecificNotice.incrementCallsTabTips(accountManager: strongSelf.sharedContext.accountManager, count: 4).start()
+                        }
+                    }
+                })
+            }
+        }
+        
         self.controllerNode.dismissedInteractively = { [weak self] in
             self?.animatedAppearance = false
             self?.presentingViewController?.dismiss(animated: false, completion: nil)

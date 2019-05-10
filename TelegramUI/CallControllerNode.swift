@@ -52,8 +52,9 @@ final class CallControllerNode: ASDisplayNode {
     var acceptCall: (() -> Void)?
     var endCall: (() -> Void)?
     var back: (() -> Void)?
-    var dismissedInteractively: (() -> Void)?
     var presentCallRating: ((CallId) -> Void)?
+    var callEnded: ((Bool) -> Void)?
+    var dismissedInteractively: (() -> Void)?
     
     init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false) {
         self.sharedContext = sharedContext
@@ -279,8 +280,12 @@ final class CallControllerNode: ASDisplayNode {
         
         self.updateButtonsMode()
         
-        if case let .terminated(id, _, reportRating) = callState, let callId = id, reportRating || self.forceReportRating {
-            self.presentCallRating?(callId)
+        if case let .terminated(id, _, reportRating) = callState, let callId = id {
+            let presentRating = reportRating || self.forceReportRating
+            if presentRating {
+                self.presentCallRating?(callId)
+            }
+            self.callEnded?(presentRating)
         }
     }
     

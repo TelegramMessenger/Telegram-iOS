@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import Contacts
 import AddressBook
+import TelegramUIPrivateModule
 
 public struct PresentationDateTimeFormat: Equatable {
     let timeFormat: PresentationTimeFormat
@@ -232,7 +233,8 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
         let effectiveTheme: PresentationThemeReference
         var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
         
-        if automaticThemeShouldSwitchNow(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme) {
+        let parameters = AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting)
+        if automaticThemeShouldSwitchNow(parameters, currentTheme: themeSettings.theme) {
             effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
             switch effectiveChatWallpaper {
                 case .builtin, .color:
@@ -286,7 +288,43 @@ private func roundTimeToDay(_ timestamp: Int32) -> Int32 {
     return Int32(components.hour! * 60 * 60 + components.minute! * 60 + components.second!)
 }
 
-func automaticThemeShouldSwitchNow(_ settings: AutomaticThemeSwitchSetting, currentTheme: PresentationThemeReference) -> Bool {
+private enum PreparedAutomaticThemeSwitchTrigger {
+    case none
+    case time(fromSeconds: Int32, toSeconds: Int32)
+    case brightness(threshold: Double)
+}
+
+private struct AutomaticThemeSwitchParameters {
+    let trigger: PreparedAutomaticThemeSwitchTrigger
+    let theme: PresentationBuiltinThemeReference
+    
+    init(settings: AutomaticThemeSwitchSetting) {
+        let trigger: PreparedAutomaticThemeSwitchTrigger
+        switch settings.trigger {
+            case .none:
+                trigger = .none
+            case let .timeBased(setting):
+                let fromValue: Int32
+                let toValue: Int32
+                switch setting {
+                    case let .automatic(latitude, longitude, _):
+                        let calculator = EDSunriseSet(date: Date(), timezone: TimeZone.current, latitude: latitude, longitude: longitude)!
+                        fromValue = roundTimeToDay(Int32(calculator.sunset.timeIntervalSince1970))
+                        toValue = roundTimeToDay(Int32(calculator.sunrise.timeIntervalSince1970))
+                    case let .manual(fromSeconds, toSeconds):
+                        fromValue = fromSeconds
+                        toValue = toSeconds
+                }
+                trigger = .time(fromSeconds: fromValue, toSeconds: toValue)
+            case let .brightness(threshold):
+                trigger = .brightness(threshold: threshold)
+        }
+        self.trigger = trigger
+        self.theme = settings.theme
+    }
+}
+
+private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchParameters, currentTheme: PresentationThemeReference) -> Bool {
     switch currentTheme {
         case let .builtin(builtin):
             switch builtin {
@@ -296,20 +334,10 @@ func automaticThemeShouldSwitchNow(_ settings: AutomaticThemeSwitchSetting, curr
                     break
             }
     }
-    switch settings.trigger {
+    switch parameters.trigger {
         case .none:
             return false
-        case let .timeBased(setting):
-            let fromValue: Int32
-            let toValue: Int32
-            switch setting {
-                case let .automatic(automatic):
-                    fromValue = automatic.sunset
-                    toValue = automatic.sunrise
-                case let .manual(fromSeconds, toSeconds):
-                    fromValue = fromSeconds
-                    toValue = toSeconds
-            }
+        case let .time(fromValue, toValue):
             let roundedTimestamp = roundTimeToDay(Int32(Date().timeIntervalSince1970))
             if roundedTimestamp >= fromValue || roundedTimestamp <= toValue {
                 return true
@@ -321,15 +349,21 @@ func automaticThemeShouldSwitchNow(_ settings: AutomaticThemeSwitchSetting, curr
     }
 }
 
+func automaticThemeShouldSwitchNow(settings: AutomaticThemeSwitchSetting, currentTheme: PresentationThemeReference) -> Bool {
+    let parameters = AutomaticThemeSwitchParameters(settings: settings)
+    return automaticThemeShouldSwitchNow(parameters, currentTheme: currentTheme)
+}
+
 private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting, currentTheme: PresentationThemeReference) -> Signal<Bool, NoError> {
     if case .none = settings.trigger {
         return .single(false)
     } else {
         return Signal { subscriber in
-            subscriber.putNext(automaticThemeShouldSwitchNow(settings, currentTheme: currentTheme))
+            let parameters = AutomaticThemeSwitchParameters(settings: settings)
+            subscriber.putNext(automaticThemeShouldSwitchNow(parameters, currentTheme: currentTheme))
             
             let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: {
-                subscriber.putNext(automaticThemeShouldSwitchNow(settings, currentTheme: currentTheme))
+                subscriber.putNext(automaticThemeShouldSwitchNow(parameters, currentTheme: currentTheme))
             }, queue: Queue.mainQueue())
             timer.start()
             

@@ -829,7 +829,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         if let interactiveMediaNode = node.0 as? ChatMessageInteractiveMediaNode, interactiveMediaNode.automaticPlayback ?? false, videoNode.hasAttachedContext {
             copyView.removeFromSuperview()
-            //surfaceCopyView.removeFromSuperview()
             
             let previousFrame = videoNode.frame
             let previousSuperview = videoNode.view.superview
@@ -860,6 +859,33 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     })
                 }
             }
+        
+            let transformScale: CGFloat = initialScale * targetScale
+            fromTransform = CATransform3DScale(videoNode.layer.transform, initialScale, initialScale, 1.0)
+            toTransform = CATransform3DScale(videoNode.layer.transform, transformScale, transformScale, 1.0)
+            
+            if videoNode.hasAttachedContext {
+                if self.isPaused || !self.keepSoundOnDismiss {
+                    videoNode.continuePlayingWithoutSound()
+                }
+            }
+        } else if let _ = node.0 as? InstantPagePlayableVideoNode, videoNode.hasAttachedContext {
+            copyView.removeFromSuperview()
+            
+            let previousFrame = videoNode.frame
+            let previousSuperview = videoNode.view.superview
+            addToTransitionSurface(videoNode.view)
+            videoNode.view.superview?.bringSubview(toFront: videoNode.view)
+            
+            if let previousSuperview = previousSuperview {
+                videoNode.frame = previousSuperview.convert(previousFrame, to: videoNode.view.superview)
+                transformedSuperFrame = transformedSuperFrame.offsetBy(dx: videoNode.position.x - previousFrame.center.x, dy: videoNode.position.y - previousFrame.center.y)
+            }
+            
+            let initialScale = min(videoNode.layer.bounds.width / node.0.view.bounds.width, videoNode.layer.bounds.height / node.0.view.bounds.height)
+            let targetScale = max(transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height)
+            
+            videoNode.backgroundColor = .clear
         
             let transformScale: CGFloat = initialScale * targetScale
             fromTransform = CATransform3DScale(videoNode.layer.transform, initialScale, initialScale, 1.0)
@@ -950,8 +976,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         
         self.statusButtonNode.layer.animatePosition(from: self.statusButtonNode.layer.position, to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-            //positionCompleted = true
-            //intermediateCompletion()
         })
         self.statusButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         self.statusButtonNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)

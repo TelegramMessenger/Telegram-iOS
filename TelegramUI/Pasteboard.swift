@@ -28,48 +28,25 @@ private func rtfStringWithAppliedEntities(_ text: String, entities: [MessageText
         }
         
         switch entity.type {
-//            case .Url:
-//                string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
-//                if underlineLinks {
-//                    string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
-//                }
-//                if nsString == nil {
-//                    nsString = text as NSString
-//                }
-//                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: nsString!.substring(with: range), range: range)
-//        case .Email:
-//            string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
-//            if nsString == nil {
-//                nsString = text as NSString
-//            }
-//            if underlineLinks && underlineAllLinks {
-//                string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
-//            }
-//            string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: "mailto:\(nsString!.substring(with: range))", range: range)
-//        case let .TextUrl(url):
-//            string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
-//            if nsString == nil {
-//                nsString = text as NSString
-//            }
-//            if underlineLinks && underlineAllLinks {
-//                string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
-//            }
-//            string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: url, range: range)
-        case .Bold:
-            string.append("\\f1\\b ")
-            string.append(nsString.substring(with: range))
-            string.append("\\b0\\f0 ")
-        case .Italic:
-            string.append("\\f2\\i ")
-            string.append(nsString.substring(with: range))
-            string.append("\\i0\\f0 ")
-        case .Code, .Pre:
-            string.append("\\f3 ")
-            string.append(nsString.substring(with: range))
-            string.append("\\f0 ")
-        default:
-            string.append(nsString.substring(with: range))
-            break
+            case let .TextUrl(url):
+                string.append("{\\field{\\*\\fldinst HYPERLINK \"\(url)\"}{\\fldrslt ")
+                string.append(nsString.substring(with: range))
+                string.append("}}")
+            case .Bold:
+                string.append("\\f1\\b ")
+                string.append(nsString.substring(with: range))
+                string.append("\\b0\\f0 ")
+            case .Italic:
+                string.append("\\f2\\i ")
+                string.append(nsString.substring(with: range))
+                string.append("\\i0\\f0 ")
+            case .Code, .Pre:
+                string.append("\\f3 ")
+                string.append(nsString.substring(with: range))
+                string.append("\\f0 ")
+            default:
+                string.append(nsString.substring(with: range))
+                break
         }
         remainingRange = NSMakeRange(range.location + range.length, remainingRange.location + remainingRange.length - (range.location + range.length))
     }
@@ -89,8 +66,11 @@ func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.Document
     if let attributedString = try? NSAttributedString(data: data, options: [NSAttributedString.DocumentReadingOptionKey.documentType: type], documentAttributes: nil) {
         
         let string = NSMutableAttributedString(string: attributedString.string)
-        attributedString.enumerateAttribute(.font, in: NSRange(location: 0, length: attributedString.length), options: [], using: { value, range, _ in
-            if let font = value as? UIFont {
+        attributedString.enumerateAttributes(in: NSRange(location: 0, length: attributedString.length), options: [], using: { attributes, range, _ in
+            if let value = attributes[.link], let url = (value as? URL)?.absoluteString {
+                string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
+            }
+            else if let value = attributes[.font], let font = value as? UIFont {
                 let fontName = font.fontName.lowercased()
                 if fontName.contains("bold") {
                     string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)

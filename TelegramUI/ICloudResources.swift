@@ -2,12 +2,18 @@ import Foundation
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import Display
 
 public struct ICloudFileResourceId: MediaResourceId {
     public let urlData: String
+    public let thumbnail: Bool
     
     public var uniqueId: String {
-        return "icloud-\(persistentHash32(self.urlData))"
+        if self.thumbnail {
+            return "icloud-thumb-\(persistentHash32(self.urlData))"
+        } else {
+            return "icloud-\(persistentHash32(self.urlData))"
+        }
     }
     
     public var hashValue: Int {
@@ -25,26 +31,30 @@ public struct ICloudFileResourceId: MediaResourceId {
 
 public class ICloudFileResource: TelegramMediaResource {
     public let urlData: String
+    public let thumbnail: Bool
     
-    public init(urlData: String) {
+    public init(urlData: String, thumbnail: Bool) {
         self.urlData = urlData
+        self.thumbnail = thumbnail
     }
     
     public required init(decoder: PostboxDecoder) {
         self.urlData = decoder.decodeStringForKey("url", orElse: "")
+        self.thumbnail = decoder.decodeBoolForKey("thumb", orElse: false)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.urlData, forKey: "url")
+        encoder.encodeBool(self.thumbnail, forKey: "thumb")
     }
     
     public var id: MediaResourceId {
-        return ICloudFileResourceId(urlData: self.urlData)
+        return ICloudFileResourceId(urlData: self.urlData, thumbnail: self.thumbnail)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? ICloudFileResource {
-            if self.urlData != to.urlData {
+            if self.urlData != to.urlData || self.thumbnail != to.thumbnail {
                 return false
             }
             return true
@@ -194,11 +204,25 @@ func fetchICloudFileResource(resource: ICloudFileResource) -> Signal<MediaResour
             return EmptyDisposable
         }
         
+        let complete = {
+            if resource.thumbnail {
+                let tempFile = TempBox.shared.tempFile(fileName: "thumb.jpg")
+                var data = Data()
+                if let image = generatePdfPreviewImage(url: url, size: CGSize(width: 320.0, height: 320.0)), let jpegData = UIImageJPEGRepresentation(image, 0.5) {
+                    data = jpegData
+                }
+                if let _ = try? data.write(to: URL(fileURLWithPath: tempFile.path)) {
+                    subscriber.putNext(.moveTempFile(file: tempFile))
+                }
+            } else {
+                subscriber.putNext(.copyLocalItem(ICloudFileResourceCopyItem(url: url)))
+            }
+            subscriber.putCompletion()
+        }
+        
         if !isRemote || isCurrent {
             //url.stopAccessingSecurityScopedResource()
-            
-            subscriber.putNext(.copyLocalItem(ICloudFileResourceCopyItem(url: url)))
-            subscriber.putCompletion()
+            complete()
             return EmptyDisposable
         }
         
@@ -207,9 +231,7 @@ func fetchICloudFileResource(resource: ICloudFileResource) -> Signal<MediaResour
         fileCoordinator.coordinate(with: [fileAccessIntent], queue: OperationQueue.main, byAccessor: { error in
             if error == nil {
                 //url.stopAccessingSecurityScopedResource()
-                
-                subscriber.putNext(.copyLocalItem(ICloudFileResourceCopyItem(url: url)))
-                subscriber.putCompletion()
+                complete()
             } else {
                 subscriber.putCompletion()
             }

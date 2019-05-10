@@ -368,6 +368,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, requestStopPollInMessage: { _ in
         }, updateInputLanguage: { _ in
         }, unarchiveChat: {
+        }, openLinkEditing: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })
@@ -469,6 +470,12 @@ public class PeerMediaCollectionController: TelegramController {
         super.viewDidAppear(animated)
         
         self.mediaCollectionDisplayNode.historyNode.preloadPages = true
+    }
+    
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.mediaCollectionDisplayNode.clearHighlightAnimated(true)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

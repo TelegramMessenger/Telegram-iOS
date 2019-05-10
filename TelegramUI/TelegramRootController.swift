@@ -84,7 +84,15 @@ public final class TelegramRootController: NavigationController {
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
         
+     
+        guard let lastController = self.viewControllers.last as? ViewController else {
+            return
+        }
         
+        Queue.mainQueue().after(1.0) {
+            let controller = callSuggestTabController(sharedContext: self.context.sharedContext)
+            lastController.present(controller, in: .window(.root))
+        }
     }
     
     public func updateRootControllers(showCallsTab: Bool) {

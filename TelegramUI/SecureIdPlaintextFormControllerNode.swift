@@ -627,6 +627,11 @@ struct SecureIdPlaintextFormControllerNodeInitParams {
     let secureIdContext: SecureIdAccessContext
 }
 
+private enum SecureIdPlaintextFormNavigatonTransition {
+    case none
+    case push
+}
+
 final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlaintextFormControllerNodeInitParams, SecureIdPlaintextFormInnerState> {
     private var _itemParams: SecureIdPlaintextFormParams?
     override var itemParams: SecureIdPlaintextFormParams {
@@ -698,6 +703,20 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
         }
     }
     
+    private func updateInnerState(transition: ContainedViewLayoutTransition, navigationTransition: SecureIdPlaintextFormNavigatonTransition, with innerState: SecureIdPlaintextFormInnerState) {
+        if case .push = navigationTransition {
+            if let snapshotView = self.scrollNode.view.snapshotContentTree() {
+                snapshotView.frame = self.scrollNode.view.frame.offsetBy(dx: 0.0, dy: self.scrollNode.view.contentInset.top)
+                self.scrollNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.scrollNode.view)
+                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -self.scrollNode.view.bounds.width, y: 0.0), duration: 0.25, removeOnCompletion: false, additive: true, completion : { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+                self.scrollNode.view.layer.animatePosition(from: CGPoint(x: self.scrollNode.view.bounds.width, y: 0.0), to: CGPoint(), duration: 0.25, additive: true)
+            }
+        }
+        self.updateInnerState(transition: transition, with: innerState)
+    }
+    
     func activateMainInput() {
         self.enumerateItemsAndEntries({ itemEntry, itemNode in
             switch itemEntry {
@@ -735,9 +754,8 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                     case let .input(input):
                         self.savePhone(input.countryCode + input.number)
                         return
-                    case let .verify:
+                    case .verify:
                         self.verifyPhoneCode()
-                        
                         return
                 }
             case let .email(email):
@@ -761,7 +779,6 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                                 guard case .saving = innerState.actionState else {
                                     return
                                 }
-                                
                                 strongSelf.completedWithValue?(result)
                             }
                         }, error: { [weak self] error in
@@ -804,39 +821,39 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
         self.updateInnerState(transition: .immediate, with: innerState)
         
         self.actionDisposable.set((secureIdPreparePhoneVerification(network: self.context.account.network, value: SecureIdPhoneValue(phone: inputPhone))
-            |> deliverOnMainQueue).start(next: { [weak self] result in
-                if let strongSelf = self {
-                    guard var innerState = strongSelf.innerState else {
-                        return
-                    }
-                    guard case .saving = innerState.actionState else {
-                        return
-                    }
-                    innerState.actionState = .none
-                    innerState.data = .phone(.verify(PhoneVerifyState(phone: inputPhone, payload: result, code: "")))
-                    strongSelf.updateInnerState(transition: .immediate, with: innerState)
-                    strongSelf.activateMainInput()
+        |> deliverOnMainQueue).start(next: { [weak self] result in
+            if let strongSelf = self {
+                guard var innerState = strongSelf.innerState else {
+                    return
                 }
-                }, error: { [weak self] error in
-                    if let strongSelf = self {
-                        guard var innerState = strongSelf.innerState else {
-                            return
-                        }
-                        guard case .saving = innerState.actionState else {
-                            return
-                        }
-                        innerState.actionState = .none
-                        strongSelf.updateInnerState(transition: .immediate, with: innerState)
-                        let errorText: String
-                        switch error {
-                        case .generic:
-                            errorText = strongSelf.strings.Login_UnknownError
-                        case .flood:
-                            errorText = strongSelf.strings.Login_CodeFloodError
-                        }
-                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
-                    }
-            }))
+                guard case .saving = innerState.actionState else {
+                    return
+                }
+                innerState.actionState = .none
+                innerState.data = .phone(.verify(PhoneVerifyState(phone: inputPhone, payload: result, code: "")))
+                strongSelf.updateInnerState(transition: .immediate, navigationTransition: .push, with: innerState)
+                strongSelf.activateMainInput()
+            }
+        }, error: { [weak self] error in
+            if let strongSelf = self {
+                guard var innerState = strongSelf.innerState else {
+                    return
+                }
+                guard case .saving = innerState.actionState else {
+                    return
+                }
+                innerState.actionState = .none
+                strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                let errorText: String
+                switch error {
+                    case .generic:
+                        errorText = strongSelf.strings.Login_UnknownError
+                    case .flood:
+                        errorText = strongSelf.strings.Login_CodeFloodError
+                }
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
+            }
+        }))
     }
     
     private func saveEmailAddress(_ value: String) {
@@ -872,7 +889,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                 }
                 innerState.actionState = .none
                 innerState.data = .email(.verify(EmailVerifyState(email: value, payload: result, code: "")))
-                strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                strongSelf.updateInnerState(transition: .immediate, navigationTransition: .push, with: innerState)
                 strongSelf.activateMainInput()
             }, error: { [weak self] error in
                 guard let strongSelf = self else {

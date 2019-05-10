@@ -3219,6 +3219,23 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
             }
             |> deliverOnMainQueue).start()
+        }, openLinkEditing: { [weak self] in
+            if let strongSelf = self {
+                var selectionRange: Range<Int>?
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+                    selectionRange = state.interfaceState.effectiveInputState.selectionRange
+                    return state
+                })
+                
+                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, link: nil, apply: { [weak self] link in
+                    if let strongSelf = self {
+                        strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            return (chatTextInputAddLinkAttribute(current, url: link), inputMode)
+                        }
+                    }
+                })
+                strongSelf.present(controller, in: .window(.root))
+            }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
         switch self.chatLocation {
@@ -3799,7 +3816,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         
-        if let (updatedUrlPreviewUrl, updatedUrlPreviewSignal) = urlPreviewStateForInputText(updatedChatPresentationInterfaceState.interfaceState.composeInputState.inputText.string, context: self.context, currentQuery: self.urlPreviewQueryState?.0) {
+        if let (updatedUrlPreviewUrl, updatedUrlPreviewSignal) = urlPreviewStateForInputText(updatedChatPresentationInterfaceState.interfaceState.composeInputState.inputText, context: self.context, currentQuery: self.urlPreviewQueryState?.0) {
             self.urlPreviewQueryState?.1.dispose()
             var inScope = true
             var inScopeResult: ((TelegramMediaWebpage?) -> TelegramMediaWebpage?)?
@@ -3865,7 +3882,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
         
         let isEditingMedia: Bool = updatedChatPresentationInterfaceState.editMessageState?.content != .plaintext
-        let editingUrlPreviewText: String? = isEditingMedia ? nil : updatedChatPresentationInterfaceState.interfaceState.editMessage?.inputState.inputText.string
+        let editingUrlPreviewText: NSAttributedString? = isEditingMedia ? nil : updatedChatPresentationInterfaceState.interfaceState.editMessage?.inputState.inputText
         if let (updatedEditingUrlPreviewUrl, updatedEditingUrlPreviewSignal) = urlPreviewStateForInputText(editingUrlPreviewText, context: self.context, currentQuery: self.editingUrlPreviewQueryState?.0) {
             self.editingUrlPreviewQueryState?.1.dispose()
             var inScope = true
@@ -4353,7 +4370,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     for item in results {
                                         if let item = item {
                                             let fileId = arc4random64()
-                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData), previewRepresentations: [], immediateThumbnailData: nil, mimeType: guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension), size: item.fileSize, attributes: [.FileName(fileName: item.fileName)])
+                                            let mimeType = guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension)
+                                            var previewRepresentations: [TelegramMediaImageRepresentation] = []
+                                            if mimeType == "application/pdf" {
+                                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 320.0, height: 320.0), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true)))
+                                            }
+                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, immediateThumbnailData: nil, mimeType: mimeType, size: item.fileSize, attributes: [.FileName(fileName: item.fileName)])
                                             let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: nil)
                                             messages.append(message)
                                         }
@@ -5219,9 +5241,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         
                         var cancelImpl: (() -> Void)?
                         let presentationData = self.presentationData
+                        let displayTime = CACurrentMediaTime()
                         let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
                             let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
-                                cancelImpl?()
+                                if CACurrentMediaTime() - displayTime > 1.5 {
+                                    cancelImpl?()
+                                }
                             }))
                             if let customPresentProgress = customPresentProgress {
                                 customPresentProgress(controller, nil)
@@ -6313,7 +6338,42 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         
         var inputShortcuts: [KeyShortcut]
         if self.chatDisplayNode.isInputViewFocused {
-            inputShortcuts = [KeyShortcut(title: strings.KeyCommand_SendMessage, input: "\r", action: {})]
+            inputShortcuts = [
+                KeyShortcut(title: strings.KeyCommand_SendMessage, input: "\r", action: {}),
+                KeyShortcut(input: "B", modifiers: [.command], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.bold), inputMode)
+                        }
+                    }
+                }),
+                KeyShortcut(input: "I", modifiers: [.command], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.italic), inputMode)
+                        }
+                    }
+                }),
+                KeyShortcut(input: "M", modifiers: [.shift, .command], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.monospace), inputMode)
+                        }
+                    }
+                }),
+                KeyShortcut(input: "K", modifiers: [.command], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.interfaceInteraction?.openLinkEditing()
+                    }
+                }),
+                KeyShortcut(input: "N", modifiers: [.shift, .command], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            return (chatTextInputClearFormattingAttributes(current), inputMode)
+                        }
+                    }
+                })
+            ]
         } else {
             inputShortcuts = [
                 KeyShortcut(title: strings.KeyCommand_FocusOnInputField, input: "\r", action: { [weak self] in

@@ -274,7 +274,7 @@ private func fontSizeMultiplierForVariant(_ variant: InstantPagePresentationFont
     }
 }
 
-func instantPageThemeTypeForSettingsAndTime(themeSettings: PresentationThemeSettings?, settings: InstantPagePresentationSettings, time: Date?) -> InstantPageThemeType {
+func instantPageThemeTypeForSettingsAndTime(themeSettings: PresentationThemeSettings?, settings: InstantPagePresentationSettings, time: Date?) -> (InstantPageThemeType, Bool) {
     if settings.autoNightMode {
         switch settings.themeType {
             case .light, .sepia, .gray:
@@ -285,7 +285,7 @@ func instantPageThemeTypeForSettingsAndTime(themeSettings: PresentationThemeSett
                     if case .none = themeSettings.automaticThemeSwitchSetting.trigger {
                     } else {
                         fallback = false
-                        useDarkTheme = automaticThemeShouldSwitchNow(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme)
+                        useDarkTheme = automaticThemeShouldSwitchNow(settings: themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme)
                     }
                 }
                 if fallback, let time = time {
@@ -295,14 +295,14 @@ func instantPageThemeTypeForSettingsAndTime(themeSettings: PresentationThemeSett
                     }
                 }
                 if useDarkTheme {
-                    return .dark
+                    return (.dark, true)
                 }
             case .dark:
                 break
         }
     }
     
-    return settings.themeType
+    return (settings.themeType, false)
 }
 
 func instantPageThemeForType(_ type: InstantPageThemeType, settings: InstantPagePresentationSettings) -> InstantPageTheme {

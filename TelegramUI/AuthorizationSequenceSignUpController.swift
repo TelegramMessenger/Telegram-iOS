@@ -128,12 +128,21 @@ final class AuthorizationSequenceSignUpController: ViewController {
     }
     
     @objc func nextPressed() {
-        if self.controllerNode.currentName.0.isEmpty {
-            hapticFeedback.error()
+        let firstName = self.controllerNode.currentName.0.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lastName = self.controllerNode.currentName.1.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        var name: (String, String)?
+        if firstName.isEmpty && lastName.isEmpty {
+            self.hapticFeedback.error()
             self.controllerNode.animateError()
+            return
+        } else if firstName.isEmpty && !lastName.isEmpty {
+            name = (lastName, "")
         } else {
-            let name = self.controllerNode.currentName
-            
+            name = (firstName, lastName)
+        }
+        
+        if let name = name {
             self.signUpWithName?(name.0, name.1, self.controllerNode.currentPhoto.flatMap({ image in
                 return compressImageToJPEG(image, quality: 0.7)
             }))

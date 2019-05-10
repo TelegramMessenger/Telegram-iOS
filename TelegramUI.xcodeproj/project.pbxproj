@@ -185,6 +185,9 @@
 		09F85BA721E7DA5F00D73170 /* BlurredImageNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F85BA621E7DA5F00D73170 /* BlurredImageNode.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
 		09FFBCD1227B7F9900C33B4B /* anim_archiveswipe.json in Resources */ = {isa = PBXBuildFile; fileRef = 09FFBCCF227B7F9000C33B4B /* anim_archiveswipe.json */; };
+		09FFBCD72281BB2D00C33B4B /* ChatTextLinkEditController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FFBCD62281BB2D00C33B4B /* ChatTextLinkEditController.swift */; };
+		09FFBCD9228473BD00C33B4B /* CallSuggestTabController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FFBCD8228473BD00C33B4B /* CallSuggestTabController.swift */; };
+		09FFBCDB22849CB500C33B4B /* PDF.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FFBCDA22849CB500C33B4B /* PDF.swift */; };
 		9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */; };
 		9F06830B21A404C4001D8EDB /* NotificationExceptionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830A21A404C4001D8EDB /* NotificationExceptionSettingsController.swift */; };
 		D000CABA21EE130D0011B15D /* MapResourceToAvatarSizes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */; };
@@ -194,7 +197,7 @@
 		D00580B621E4C02100CB7CD3 /* UndoOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B521E4C02100CB7CD3 /* UndoOverlayController.swift */; };
 		D00580B821E4C03400CB7CD3 /* UndoOverlayControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B721E4C03400CB7CD3 /* UndoOverlayControllerNode.swift */; };
 		D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */; };
-		D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */; };
+		D007019C2029E8F2006B9E34 /* LegacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
 		D00701A12029F6D0006B9E34 /* TGMimeTypeMap.h in Headers */ = {isa = PBXBuildFile; fileRef = D007019F2029F6D0006B9E34 /* TGMimeTypeMap.h */; };
 		D00701A22029F6D0006B9E34 /* TGMimeTypeMap.m in Sources */ = {isa = PBXBuildFile; fileRef = D00701A02029F6D0006B9E34 /* TGMimeTypeMap.m */; };
@@ -1379,6 +1382,9 @@
 		09F85BA621E7DA5F00D73170 /* BlurredImageNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredImageNode.swift; sourceTree = "<group>"; };
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
 		09FFBCCF227B7F9000C33B4B /* anim_archiveswipe.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_archiveswipe.json; sourceTree = "<group>"; };
+		09FFBCD62281BB2D00C33B4B /* ChatTextLinkEditController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTextLinkEditController.swift; sourceTree = "<group>"; };
+		09FFBCD8228473BD00C33B4B /* CallSuggestTabController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallSuggestTabController.swift; sourceTree = "<group>"; };
+		09FFBCDA22849CB500C33B4B /* PDF.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDF.swift; sourceTree = "<group>"; };
 		9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionControllerNode.swift; sourceTree = "<group>"; };
 		9F06830A21A404C4001D8EDB /* NotificationExceptionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionSettingsController.swift; sourceTree = "<group>"; };
 		D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapResourceToAvatarSizes.swift; sourceTree = "<group>"; };
@@ -1398,7 +1404,7 @@
 		D00580B521E4C02100CB7CD3 /* UndoOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoOverlayController.swift; sourceTree = "<group>"; };
 		D00580B721E4C03400CB7CD3 /* UndoOverlayControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoOverlayControllerNode.swift; sourceTree = "<group>"; };
 		D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDownloadedMedia.swift; sourceTree = "<group>"; };
-		D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegqacyICloudFileController.swift; sourceTree = "<group>"; };
+		D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyICloudFileController.swift; sourceTree = "<group>"; };
 		D007019D2029EFDD006B9E34 /* ICloudResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudResources.swift; sourceTree = "<group>"; };
 		D007019F2029F6D0006B9E34 /* TGMimeTypeMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMimeTypeMap.h; sourceTree = "<group>"; };
 		D00701A02029F6D0006B9E34 /* TGMimeTypeMap.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMimeTypeMap.m; sourceTree = "<group>"; };
@@ -2706,6 +2712,7 @@
 				D0F69E931D6B8C9B0046BCD6 /* ProgressiveImage.swift */,
 				D0E8B8B8204477B600605593 /* SecretChatKeyVisualization.swift */,
 				D0F69E941D6B8C9B0046BCD6 /* WebP.swift */,
+				09FFBCDA22849CB500C33B4B /* PDF.swift */,
 			);
 			name = Images;
 			sourceTree = "<group>";
@@ -3524,7 +3531,7 @@
 				D0EB41FE1F30ED4F00838FE6 /* LegacyImageProcessors.h */,
 				D0EB41FF1F30ED4F00838FE6 /* LegacyImageProcessors.m */,
 				D0CFBB851FD715E700B65C0D /* LegacyHTTPOperationImpl.swift */,
-				D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */,
+				D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */,
 				D07ABBA4202A14BC003671DE /* LegacyImagePicker.swift */,
 				D07ABBAA202A1BD1003671DE /* LegacyWallpaperEditor.swift */,
 				D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */,
@@ -4401,6 +4408,7 @@
 				0962E65C21B1486D00245FD9 /* CallDebugNode.swift */,
 				09DD88F021BE1090000766BC /* CallRatingController.swift */,
 				09749BC821F1BBA1008FDDE9 /* CallFeedbackController.swift */,
+				09FFBCD8228473BD00C33B4B /* CallSuggestTabController.swift */,
 			);
 			name = Call;
 			sourceTree = "<group>";
@@ -4805,6 +4813,7 @@
 				D0CE8CE61F6F35A300AA2DB0 /* ChatTextInputPanelState.swift */,
 				D053DAD9201A4C4400993D32 /* ChatTextInputAttributes.swift */,
 				D053DADB201AAAB100993D32 /* ChatTextInputMenu.swift */,
+				09FFBCD62281BB2D00C33B4B /* ChatTextLinkEditController.swift */,
 			);
 			name = "Text Input";
 			sourceTree = "<group>";
@@ -5498,6 +5507,7 @@
 				09619B9621A4ABF600493558 /* InstantPageReferenceControllerNode.swift in Sources */,
 				D0AB263321C3DFEA008F6685 /* CreatePollOptionActionItem.swift in Sources */,
 				D0F8C397201774A200236FC5 /* FeedGroupingController.swift in Sources */,
+				09FFBCDB22849CB500C33B4B /* PDF.swift in Sources */,
 				09D968A1221F7FF100B1458A /* ChatTypingActivityContentNode.swift in Sources */,
 				D0EC6CF31EB9F58800EBF1C3 /* PresentationThemeSettings.swift in Sources */,
 				D067B4AD211C916300796039 /* TGChannelIntroController.m in Sources */,
@@ -5562,6 +5572,7 @@
 				09C500242142BA6400EF253E /* ItemListWebsiteItem.swift in Sources */,
 				D0EC6D0C1EB9F58800EBF1C3 /* stream.c in Sources */,
 				D0EC6D0D1EB9F58800EBF1C3 /* MediaFrameSource.swift in Sources */,
+				09FFBCD72281BB2D00C33B4B /* ChatTextLinkEditController.swift in Sources */,
 				D0EC6D0E1EB9F58800EBF1C3 /* MediaPlaybackData.swift in Sources */,
 				09CE95042236C6B300A7D2C3 /* CachedInstantPages.swift in Sources */,
 				D0AB269E21D56A12008F6685 /* ChannelPermissionsController.swift in Sources */,
@@ -6089,6 +6100,7 @@
 				D08984F02114AE0C00918162 /* DataPrivacySettingsController.swift in Sources */,
 				D087BFAD1F741B9D003FD209 /* ShareContentContainerNode.swift in Sources */,
 				D0EC6DFB1EB9F58900EBF1C3 /* AvatarGalleryController.swift in Sources */,
+				09FFBCD9228473BD00C33B4B /* CallSuggestTabController.swift in Sources */,
 				D0EC6DFC1EB9F58900EBF1C3 /* GalleryController.swift in Sources */,
 				D0EC6DFD1EB9F58900EBF1C3 /* GalleryControllerNode.swift in Sources */,
 				D0E9BA571F055A0B00F079A4 /* STPFormTextField.m in Sources */,
@@ -6112,7 +6124,7 @@
 				D0C26D571FDF2388004ABF18 /* OpenChatMessage.swift in Sources */,
 				D0FA08BE20481EA300DD23FC /* Locale.swift in Sources */,
 				D0E412CE206A707400BEE4A2 /* FormControllerTextItem.swift in Sources */,
-				D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */,
+				D007019C2029E8F2006B9E34 /* LegacyICloudFileController.swift in Sources */,
 				0902838D2194AEB90067EFBD /* ImageTransparency.swift in Sources */,
 				D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */,
 				D0208AD61FA33D14001F0D5F /* RaiseToListenActivator.m in Sources */,

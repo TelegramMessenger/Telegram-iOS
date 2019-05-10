@@ -599,6 +599,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var removePeerChatImpl: ((Peer, Bool) -> Void)?
     var endEditingImpl: (() -> Void)?
+    var errorImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -899,8 +900,6 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         actionsDisposable.add(toggleShouldChannelMessagesSignatures(account: context.account, peerId: peerId, enabled: enabled).start())
     })
     
-    let hapticFeedback = HapticFeedback()
-    
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId, updateData: true), context.account.postbox.combinedView(keys: [globalNotificationsKey]))
         |> map { presentationData, state, view, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
@@ -966,7 +965,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         }
                         
                         guard !failed else {
-                            hapticFeedback.error()
+                            errorImpl?()
                             return
                         }
                         
@@ -1110,6 +1109,16 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     endEditingImpl = {
         [weak controller] in
         controller?.view.endEditing(true)
+    }
+    
+    let hapticFeedback = HapticFeedback()
+    errorImpl = { [weak controller] in
+        hapticFeedback.error()
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListMultilineInputItemNode {
+                itemNode.animateError()
+            }
+        }
     }
     return controller
 }

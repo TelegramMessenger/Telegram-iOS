@@ -30,3 +30,11 @@ extension CharacterSet {
         return allowed
     }()
 }
+
+//func isValidUrl(_ url: String) -> Bool {
+//    if let url = URL(string: url) {
+//        return url.
+//    } elsee {
+//        return false
+//    }
+//}

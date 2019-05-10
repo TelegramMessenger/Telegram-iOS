@@ -336,7 +336,7 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
 
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
 
-func urlPreviewStateForInputText(_ inputText: String?, context: AccountContext, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
+func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContext, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
     guard let text = inputText else {
         if currentQuery != nil {
             return (nil, .single({ _ in return nil }))
@@ -345,14 +345,23 @@ func urlPreviewStateForInputText(_ inputText: String?, context: AccountContext, 
         }
     }
     if let dataDetector = dataDetector {
-        let utf16 = text.utf16
+        let utf16 = text.string.utf16
         
         var detectedUrl: String?
         
-        let matches = dataDetector.matches(in: text, options: [], range: NSRange(location: 0, length: utf16.count))
+        let nsRange = NSRange(location: 0, length: utf16.count)
+        let matches = dataDetector.matches(in: text.string, options: [], range: nsRange)
         if let match = matches.first {
-            let urlText = (text as NSString).substring(with: match.range)
+            let urlText = (text.string as NSString).substring(with: match.range)
             detectedUrl = urlText
+        }
+        
+        if detectedUrl == nil {
+            inputText?.enumerateAttribute(ChatTextInputAttributes.textUrl, in: nsRange, options: [], using: { value, range, stop in
+                if let value = value as? ChatTextInputTextUrlAttribute {
+                    detectedUrl = value.url
+                }
+            })
         }
         
         if detectedUrl != currentQuery {

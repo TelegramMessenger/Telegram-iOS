@@ -5,7 +5,73 @@ import Display
 import Postbox
 import TelegramCore
 
-private final class CallRatingContentActionNode: HighlightableButtonNode {
+private func generateIconImage(theme: AlertControllerTheme) -> UIImage? {
+    return UIImage(bundleImageName: "Call List/AlertIcon")
+//    return generateImage(frame.size, contextGenerator: { size, context in
+//        let bounds = CGRect(origin: CGPoint(), size: size)
+//        context.clear(bounds)
+//
+//        let relativeFrame = CGRect(x: -frame.minX, y: frame.minY - background.size.height + frame.size.height
+//            , width: background.size.width, height: background.size.height)
+//
+//        context.beginPath()
+//        context.addEllipse(in: bounds)
+//        context.clip()
+//
+//        context.setAlpha(0.8)
+//        context.draw(background.foregroundImage.cgImage!, in: relativeFrame)
+//
+//        if highlighted {
+//            context.setFillColor(UIColor(white: 1.0, alpha: 0.65).cgColor)
+//            context.fillEllipse(in: bounds)
+//        }
+//
+//        context.setAlpha(1.0)
+//        context.textMatrix = .identity
+//
+//        let titleFont: UIFont
+//        let subtitleFont: UIFont
+//        let titleOffset: CGFloat
+//        let subtitleOffset: CGFloat
+//        if size.width > 80.0 {
+//            titleFont = largeTitleFont
+//            subtitleFont = largeSubtitleFont
+//            if subtitle.isEmpty {
+//                titleOffset = -18.0
+//            } else {
+//                titleOffset = -11.0
+//            }
+//            subtitleOffset = -54.0
+//        } else {
+//            titleFont = regularTitleFont
+//            subtitleFont = regularSubtitleFont
+//            if subtitle.isEmpty {
+//                titleOffset = -17.0
+//            } else {
+//                titleOffset = -10.0
+//            }
+//            subtitleOffset = -48.0
+//        }
+//
+//        let titlePath = CGMutablePath()
+//        titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: titleOffset))
+//        let titleString = NSAttributedString(string: title, font: titleFont, textColor: .white, paragraphAlignment: .center)
+//        let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
+//        let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
+//        CTFrameDraw(titleFrame, context)
+//
+//        if !subtitle.isEmpty {
+//            let subtitlePath = CGMutablePath()
+//            subtitlePath.addRect(bounds.offsetBy(dx: 0.0, dy: subtitleOffset))
+//            let subtitleString = NSAttributedString(string: subtitle, font: subtitleFont, textColor: .white, paragraphAlignment: .center)
+//            let subtitleFramesetter = CTFramesetterCreateWithAttributedString(subtitleString as CFAttributedString)
+//            let subtitleFrame = CTFramesetterCreateFrame(subtitleFramesetter, CFRangeMake(0, subtitleString.length), subtitlePath, nil)
+//            CTFrameDraw(subtitleFrame, context)
+//        }
+//    })
+}
+
+private final class CallSuggestTabContentActionNode: HighlightableButtonNode {
     private let backgroundNode: ASDisplayNode
     
     let action: TextAlertAction
@@ -76,20 +142,16 @@ private final class CallRatingContentActionNode: HighlightableButtonNode {
     }
 }
 
-private final class CallRatingAlertContentNode: AlertContentNode {
+private final class CallSuggestTabAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
-    private let apply: (Int) -> Void
-    
-    var rating: Int?
     
     private let titleNode: ASTextNode
-    private let starNodes: [ASButtonNode]
+    private let textNode: ASTextNode
+    private let iconNode: ASImageNode
     
     private let actionNodesSeparator: ASDisplayNode
-    private let actionNodes: [CallRatingContentActionNode]
+    private let actionNodes: [CallSuggestTabContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
-    
-    private let disposable = MetaDisposable()
     
     private var validLayout: CGSize?
     
@@ -97,24 +159,22 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], dismiss: @escaping () -> Void, apply: @escaping (Int) -> Void) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction]) {
         self.strings = strings
-        self.apply = apply
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
         
-        var starNodes: [ASButtonNode] = []
-        for _ in 0 ..< 5 {
-            starNodes.append(ASButtonNode())
-        }
-        self.starNodes = starNodes
+        self.textNode = ASTextNode()
+        self.textNode.maximumNumberOfLines = 0
+        
+        self.iconNode = ASImageNode()
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
         
-        self.actionNodes = actions.map { action -> CallRatingContentActionNode in
-            return CallRatingContentActionNode(theme: theme, action: action)
+        self.actionNodes = actions.map { action -> CallSuggestTabContentActionNode in
+            return CallSuggestTabContentActionNode(theme: theme, action: action)
         }
         
         var actionVerticalSeparators: [ASDisplayNode] = []
@@ -130,12 +190,8 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         super.init()
         
         self.addSubnode(self.titleNode)
-        
-        for node in self.starNodes {
-            node.addTarget(self, action: #selector(self.starPressed(_:)), forControlEvents: .touchDown)
-            node.addTarget(self, action: #selector(self.starReleased(_:)), forControlEvents: .touchUpInside)
-            self.addSubnode(node)
-        }
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.iconNode)
         
         self.addSubnode(self.actionNodesSeparator)
         
@@ -150,42 +206,10 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         self.updateTheme(theme)
     }
     
-    deinit {
-        self.disposable.dispose()
-    }
-    
-    @objc func starPressed(_ sender: ASButtonNode) {
-        if let index = self.starNodes.firstIndex(of: sender) {
-            self.rating = index + 1
-            for i in 0 ..< self.starNodes.count {
-                let node = self.starNodes[i]
-                node.isSelected = i <= index
-            }
-        }
-    }
-    
-    @objc func starReleased(_ sender: ASButtonNode) {
-        if let index = self.starNodes.firstIndex(of: sender) {
-            self.rating = index + 1
-            for i in 0 ..< self.starNodes.count {
-                let node = self.starNodes[i]
-                node.isSelected = i <= index
-            }
-            if let rating = self.rating {
-                self.apply(rating)
-            }
-        }
-    }
-    
     override func updateTheme(_ theme: AlertControllerTheme) {
-        self.titleNode.attributedText = NSAttributedString(string: strings.Calls_RatingTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        
-        for node in self.starNodes {
-            node.setImage(generateTintedImage(image: UIImage(bundleImageName: "Call/Star"), color: theme.accentColor), for: [])
-            let highlighted = generateTintedImage(image: UIImage(bundleImageName: "Call/StarHighlighted"), color: theme.accentColor)
-            node.setImage(highlighted, for: [.selected])
-            node.setImage(highlighted, for: [.selected, .highlighted])
-        }
+        self.titleNode.attributedText = NSAttributedString(string: strings.Calls_CallTabTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: strings.Calls_CallTabDescription, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.iconNode.image = generateIconImage(theme: theme)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -212,6 +236,16 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
         origin.y += titleSize.height + 13.0
         
+        var iconSize = CGSize()
+        if let icon = self.iconNode.image {
+            iconSize = icon.size
+            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: origin.y), size: iconSize))
+            origin.y += iconSize.height + 16.0
+        }
+        
+        let textSize = self.textNode.measure(size)
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
+        
         let actionButtonHeight: CGFloat = 44.0
         var minActionsWidth: CGFloat = 0.0
         let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
@@ -224,10 +258,10 @@ private final class CallRatingAlertContentNode: AlertContentNode {
                 effectiveActionLayout = .vertical
             }
             switch effectiveActionLayout {
-            case .horizontal:
-                minActionsWidth += actionTitleSize.width + actionTitleInsets
-            case .vertical:
-                minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
+                case .horizontal:
+                    minActionsWidth += actionTitleSize.width + actionTitleInsets
+                case .vertical:
+                    minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
             }
         }
         
@@ -245,16 +279,7 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         }
         
         let resultWidth = contentWidth + insets.left + insets.right
-        
-        let starSize = CGSize(width: 42.0, height: 38.0)
-        let starsOrigin = floorToScreenPixels((resultWidth - starSize.width * 5.0) / 2.0)
-        for i in 0 ..< self.starNodes.count {
-            let node = self.starNodes[i]
-            transition.updateFrame(node: node, frame: CGRect(x: starsOrigin + 42.0 * CGFloat(i), y: origin.y, width: starSize.width, height: starSize.height))
-        }
-        origin.y += titleSize.height
-        
-        let resultSize = CGSize(width: resultWidth, height: titleSize.height + actionsHeight + 56.0 + insets.top + insets.bottom)
+        let resultSize = CGSize(width: resultWidth, height: titleSize.height + iconSize.height + textSize.height + actionsHeight + 34.0 + insets.top + insets.bottom)
         
         transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
         
@@ -266,24 +291,24 @@ private final class CallRatingAlertContentNode: AlertContentNode {
             if separatorIndex >= 0 {
                 let separatorNode = self.actionVerticalSeparators[separatorIndex]
                 switch effectiveActionLayout {
-                case .horizontal:
-                    transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
-                case .vertical:
-                    transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
+                    case .horizontal:
+                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
+                    case .vertical:
+                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
                 }
             }
             separatorIndex += 1
             
             let currentActionWidth: CGFloat
             switch effectiveActionLayout {
-            case .horizontal:
-                if nodeIndex == self.actionNodes.count - 1 {
-                    currentActionWidth = resultSize.width - actionOffset
-                } else {
-                    currentActionWidth = actionWidth
-                }
-            case .vertical:
-                currentActionWidth = resultSize.width
+                case .horizontal:
+                    if nodeIndex == self.actionNodes.count - 1 {
+                        currentActionWidth = resultSize.width - actionOffset
+                    } else {
+                        currentActionWidth = actionWidth
+                    }
+                case .vertical:
+                    currentActionWidth = resultSize.width
             }
             
             let actionNodeFrame: CGRect
@@ -305,54 +330,23 @@ private final class CallRatingAlertContentNode: AlertContentNode {
     }
 }
 
-func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comment: String, userInitiated: Bool, includeLogs: Bool) -> Signal<Void, NoError> {
-    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 4244000)
-
-    let rate = rateCall(account: account, callId: callId, starsCount: Int32(starsCount), comment: comment, userInitiated: userInitiated)
-    if includeLogs {
-        let id = arc4random64()
-        let name = "\(callId.id)_\(callId.accessHash).log"
-        let path = callLogsPath(account: account) + "/" + name
-        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-        let message = EnqueueMessage.message(text: comment, attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
-        return rate
-        |> then(enqueueMessages(account: account, peerId: peerId, messages: [message])
-        |> mapToSignal({ _ -> Signal<Void, NoError> in
-            return .single(Void())
-        }))
-    } else if !comment.isEmpty {
-        return rate
-        |> then(enqueueMessages(account: account, peerId: peerId, messages: [.message(text: comment, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
-        |> mapToSignal({ _ -> Signal<Void, NoError> in
-            return .single(Void())
-        }))
-    } else {
-        return rate
-    }
-}
-
-func callRatingController(sharedContext: SharedAccountContext, account: Account, callId: CallId, userInitiated: Bool, present: @escaping (ViewController, Any) -> Void) -> AlertController {
+func callSuggestTabController(sharedContext: SharedAccountContext) -> AlertController {
     let presentationData = sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
     
     var dismissImpl: ((Bool) -> Void)?
-    var contentNode: CallRatingAlertContentNode?
+    var contentNode: CallSuggestTabAlertContentNode?
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_NotNow, action: {
         dismissImpl?(true)
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Calls_AddTab, action: {
+        dismissImpl?(true)
+        let _ = updateCallListSettingsInteractively(accountManager: sharedContext.accountManager, {
+            $0.withUpdatedShowTab(true)
+        }).start()
     })]
     
-    contentNode = CallRatingAlertContentNode(theme: AlertControllerTheme(presentationTheme: theme), ptheme: theme, strings: strings, actions: actions, dismiss: {
-        dismissImpl?(true)
-    }, apply: { rating in
-        dismissImpl?(true)
-        if rating < 4 {
-            let controller = callFeedbackController(sharedContext: sharedContext, account: account, callId: callId, rating: rating, userInitiated: userInitiated)
-            present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        } else {
-            let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: "", userInitiated: userInitiated, includeLogs: false).start()
-        }
-    })
+    contentNode = CallSuggestTabAlertContentNode(theme: AlertControllerTheme(presentationTheme: theme), ptheme: theme, strings: strings, actions: actions)
     
     let controller = AlertController(theme: AlertControllerTheme(presentationTheme: theme), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in

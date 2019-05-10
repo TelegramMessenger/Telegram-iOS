@@ -1206,6 +1206,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var endEditingImpl: (() -> Void)?
     var removePeerChatImpl: ((Peer, Bool) -> Void)?
+    var errorImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -1931,8 +1932,6 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     
     let searchContext = GroupMembersSearchContext(context: context, peerId: originalPeerId)
     
-    let hapticFeedback = HapticFeedback()
-    
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView.get(), context.account.postbox.combinedView(keys: [globalNotificationsKey]), channelMembersPromise.get())
     |> map { presentationData, state, view, combinedView, channelMembers -> (ItemListControllerState, (ItemListNodeState<GroupInfoEntry>, GroupInfoEntry.ItemGenerationArguments)) in
@@ -1969,9 +1968,6 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             if let editingName = editingState.editingName, editingName.isEmpty {
                 doneEnabled = false
             }
-            if editingState.editingDescriptionText.count > 255 {
-                doneEnabled = false
-            }
             if peer is TelegramChannel {
                 if (view.cachedData as? CachedChannelData) == nil {
                     doneEnabled = false
@@ -1998,7 +1994,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     }
                     
                     guard !failed else {
-                        hapticFeedback.error()
+                        errorImpl?()
                         return
                     }
                     
@@ -2238,6 +2234,17 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
         [weak controller] in
         controller?.view.endEditing(true)
     }
+    
+    let hapticFeedback = HapticFeedback()
+    errorImpl = { [weak controller] in
+        hapticFeedback.error()
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListMultilineInputItemNode {
+                itemNode.animateError()
+            }
+        }
+    }
+    
     controller.visibleBottomContentOffsetChanged = { offset in
         if let (peerId, loadMoreControl) = loadMoreControl.with({ $0 }), case let .known(value) = offset, value < 40.0 {
             context.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
@@ -2309,85 +2316,85 @@ func handlePeerInfoAboutTextAction(context: AccountContext, peerId: PeerId, navi
     
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch action {
-    case .tap:
-        switch itemLink {
-        case let .url(url):
-            openLinkImpl(url)
-        case let .mention(mention):
-            openPeerMentionImpl(mention)
-        case let .hashtag(_, hashtag):
-            let peerSignal = context.account.postbox.loadedPeerWithId(peerId)
-            let _ = (peerSignal
-            |> deliverOnMainQueue).start(next: { peer in
-                let searchController = HashtagSearchController(context: context, peer: peer, query: hashtag)
-                (controller.navigationController as? NavigationController)?.pushViewController(searchController)
-            })
-        }
-    case .longTap:
-        switch itemLink {
-        case let .url(url):
-            let canOpenIn = availableOpenInOptions(context: context, item: .url(url: url)).count > 1
-            let openText = canOpenIn ? presentationData.strings.Conversation_FileOpenIn : presentationData.strings.Conversation_LinkDialogOpen
-            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
-            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: url),
-                ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
+        case .tap:
+            switch itemLink {
+                case let .url(url):
                     openLinkImpl(url)
-                }),
-                ActionSheetButtonItem(title: presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    UIPasteboard.general.string = url
-                }),
-                ActionSheetButtonItem(title: presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    if let link = URL(string: url) {
-                        let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
-                    }
-                })
-                ]), ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                    })
-                ])])
-            controller.present(actionSheet, in: .window(.root))
-        case let .mention(mention):
-            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
-            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: mention),
-                ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
+                case let .mention(mention):
                     openPeerMentionImpl(mention)
-                }),
-                ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    UIPasteboard.general.string = mention
-                })
-                ]), ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                })
-            ])])
-            controller.present(actionSheet, in: .window(.root))
-        case let .hashtag(_, hashtag):
-            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
-            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: hashtag),
-                ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    let searchController = HashtagSearchController(context: context, peer: nil, query: hashtag)
-                    (controller.navigationController as? NavigationController)?.pushViewController(searchController)
-                }),
-                ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    UIPasteboard.general.string = hashtag
-                })
-            ]), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                })
-            ])])
-            controller.present(actionSheet, in: .window(.root))
-        }
+                case let .hashtag(_, hashtag):
+                    let peerSignal = context.account.postbox.loadedPeerWithId(peerId)
+                    let _ = (peerSignal
+                    |> deliverOnMainQueue).start(next: { peer in
+                        let searchController = HashtagSearchController(context: context, peer: peer, query: hashtag)
+                        (controller.navigationController as? NavigationController)?.pushViewController(searchController)
+                    })
+            }
+        case .longTap:
+            switch itemLink {
+                case let .url(url):
+                    let canOpenIn = availableOpenInOptions(context: context, item: .url(url: url)).count > 1
+                    let openText = canOpenIn ? presentationData.strings.Conversation_FileOpenIn : presentationData.strings.Conversation_LinkDialogOpen
+                    let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: url),
+                        ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            openLinkImpl(url)
+                        }),
+                        ActionSheetButtonItem(title: presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            UIPasteboard.general.string = url
+                        }),
+                        ActionSheetButtonItem(title: presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let link = URL(string: url) {
+                                let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+                            }
+                        })
+                        ]), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                    controller.present(actionSheet, in: .window(.root))
+                case let .mention(mention):
+                    let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: mention),
+                        ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            openPeerMentionImpl(mention)
+                        }),
+                        ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            UIPasteboard.general.string = mention
+                        })
+                        ]), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    controller.present(actionSheet, in: .window(.root))
+                case let .hashtag(_, hashtag):
+                    let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: hashtag),
+                        ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            let searchController = HashtagSearchController(context: context, peer: nil, query: hashtag)
+                            (controller.navigationController as? NavigationController)?.pushViewController(searchController)
+                        }),
+                        ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            UIPasteboard.general.string = hashtag
+                        })
+                    ]), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    controller.present(actionSheet, in: .window(.root))
+            }
     }
 }

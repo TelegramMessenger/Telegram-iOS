@@ -117,7 +117,7 @@ class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: View
         return self.internalState.layoutState
     }
     
-    private let scrollNode: FormControllerScrollerNode
+    let scrollNode: FormControllerScrollerNode
     
     private var appliedLayout: FormControllerLayoutState?
     private var appliedEntries: [Entry] = []

@@ -1329,10 +1329,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
-        if action == Selector(("_lookup:")) || action == Selector(("_share:")) {
-            return ASEditableTextNodeTargetForAction(target: nil)
-        }
-        else if action == Selector(("_showTextStyleOptions:")) {
+       if action == Selector(("_showTextStyleOptions:")) {
             if case .general = self.inputMenu.state {
                 if let textInputNode = self.textInputNode, textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 {
                     return ASEditableTextNodeTargetForAction(target: nil)
@@ -1341,7 +1338,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             } else {
                 return ASEditableTextNodeTargetForAction(target: nil)
             }
-        } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) {
+        } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) || action == #selector(self.formatAttributesLink(_:)) {
             if case .format = self.inputMenu.state {
                 return ASEditableTextNodeTargetForAction(target: self)
             } else {
@@ -1356,10 +1353,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func _showTextStyleOptions(_ sender: Any) {
         self.inputMenu.format()
-    }
-    
-    @objc func formatAttributesLink(_ sender: Any) {
-        
     }
     
     @objc func formatAttributesBold(_ sender: Any) {
@@ -1381,6 +1374,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.monospace), inputMode)
         }
+    }
+    
+    @objc func formatAttributesLink(_ sender: Any) {
+        self.inputMenu.back()
+        self.interfaceInteraction?.openLinkEditing()
     }
     
     @objc func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {

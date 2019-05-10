@@ -84,7 +84,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let themeReferenceDate = Date()
         self.themeReferenceDate = themeReferenceDate
         self.theme = settings.flatMap { settings in
-            return instantPageThemeForType(instantPageThemeTypeForSettingsAndTime(themeSettings: themeSettings, settings: settings, time: themeReferenceDate), settings: settings)
+            return instantPageThemeForType(instantPageThemeTypeForSettingsAndTime(themeSettings: themeSettings, settings: settings, time: themeReferenceDate).0, settings: settings)
         }
         self.sourcePeerType = sourcePeerType
         self.statusBar = statusBar
@@ -162,7 +162,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             self.settings = settings
             let themeType = instantPageThemeTypeForSettingsAndTime(themeSettings: self.themeSettings, settings: settings, time: self.themeReferenceDate)
-            let theme = instantPageThemeForType(themeType, settings: settings)
+            let theme = instantPageThemeForType(themeType.0, settings: settings)
             self.theme = theme
             self.strings = strings
             
@@ -1257,10 +1257,13 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
+        var fromPlayingVideo = false
+        
         var entries: [InstantPageGalleryEntry] = []
         if media.media is TelegramMediaWebpage {
             entries.append(InstantPageGalleryEntry(index: 0, pageId: webPage.webpageId, media: media, caption: nil, credit: nil, location: nil))
         } else if let file = media.media as? TelegramMediaFile, file.isAnimated {
+            fromPlayingVideo = true
             entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, credit: media.credit, location: nil))
         } else {
             var medias: [InstantPageMedia] = mediasFromItems(items)
@@ -1282,7 +1285,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let centralIndex = centralIndex {
-            let controller = InstantPageGalleryController(context: self.context, webPage: webPage, entries: entries, centralIndex: centralIndex, replaceRootController: { _, _ in
+            let controller = InstantPageGalleryController(context: self.context, webPage: webPage, entries: entries, centralIndex: centralIndex, fromPlayingVideo: fromPlayingVideo, replaceRootController: { _, _ in
             }, baseNavigationController: self.getNavigationController())
             self.hiddenMediaDisposable.set((controller.hiddenMedia |> deliverOnMainQueue).start(next: { [weak self] entry in
                 if let strongSelf = self {
@@ -1392,7 +1395,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 })
             }
             
-            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
             self.navigationBar.updateDimmed(false, transition: transition)
             transition.updateAlpha(node: self.statusBar, alpha: 1.0)
         }

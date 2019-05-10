@@ -128,6 +128,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case volumeButtonToUnmuteTip = 9
     case archiveChatTips = 10
     case archiveIntroDismissed = 11
+    case callsTabTip = 12
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -191,6 +192,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func volumeButtonToUnmuteTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.volumeButtonToUnmuteTip.key)
+    }
+    
+    static func callsTabTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.callsTabTip.key)
     }
 }
 
@@ -295,7 +300,7 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    static func incrementArchiveChatTipsTips(accountManager: AccountManager, count: Int = 1) -> Signal<Int, NoError> {
+    static func incrementArchiveChatTips(accountManager: AccountManager, count: Int = 1) -> Signal<Int, NoError> {
         return accountManager.transaction { transaction -> Int in
             var currentValue: Int32 = 0
             if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.archiveChatTips()) as? ApplicationSpecificCounterNotice {
@@ -430,6 +435,37 @@ public struct ApplicationSpecificNotice {
         let _ = accountManager.transaction { transaction -> Void in
             transaction.setNotice(ApplicationSpecificNoticeKeys.volumeButtonToUnmuteTip(), ApplicationSpecificBoolNotice())
         }.start()
+    }
+    
+    static func getCallsTabTip(accountManager: AccountManager) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.callsTabTip()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    static func incrementCallsTabTips(accountManager: AccountManager, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.callsTabTip()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += min(3, Int32(count))
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.callsTabTip(), ApplicationSpecificCounterNotice(value: currentValue))
+            
+            return Int(previousValue)
+        }
+    }
+    
+    static func setCallsTabTip(accountManager: AccountManager) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.callsTabTip(), ApplicationSpecificBoolNotice())
+        }
     }
 
     static func reset(accountManager: AccountManager) -> Signal<Void, NoError> {

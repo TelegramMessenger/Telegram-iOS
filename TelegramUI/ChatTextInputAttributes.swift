@@ -10,6 +10,7 @@ struct ChatTextInputAttributes {
     static let italic = NSAttributedStringKey(rawValue: "Attribute__Italic")
     static let monospace = NSAttributedStringKey(rawValue: "Attribute__Monospace")
     static let textMention = NSAttributedStringKey(rawValue: "Attribute__TextMention")
+    static let textUrl = NSAttributedStringKey(rawValue: "Attribute__TextUrl")
 }
 
 func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedString {
@@ -18,7 +19,7 @@ func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedStr
     
     text.enumerateAttributes(in: fullRange, options: [], using: { attributes, range, _ in
         for (key, value) in attributes {
-            if key == ChatTextInputAttributes.textMention {
+            if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl {
                 result.addAttribute(key, value: value, range: range)
             } else if key == ChatTextInputAttributes.bold || key == ChatTextInputAttributes.italic || key == ChatTextInputAttributes.monospace {
                 result.addAttribute(key, value: value, range: range)
@@ -47,9 +48,12 @@ func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize:
         var fontAttributes: FontAttributes = []
         
         for (key, value) in attributes {
-            if key == ChatTextInputAttributes.textMention {
+            if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl {
                 result.addAttribute(key, value: value, range: range)
                 result.addAttribute(NSAttributedStringKey.foregroundColor, value: accentTextColor, range: range)
+                if accentTextColor.isEqual(textColor) {
+                    result.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+                }
             } else if key == ChatTextInputAttributes.bold {
                 result.addAttribute(key, value: value, range: range)
                 fontAttributes.insert(.bold)
@@ -108,6 +112,24 @@ final class ChatTextInputTextMentionAttribute: NSObject {
     override func isEqual(_ object: Any?) -> Bool {
         if let other = object as? ChatTextInputTextMentionAttribute {
             return self.peerId == other.peerId
+        } else {
+            return false
+        }
+    }
+}
+
+final class ChatTextInputTextUrlAttribute: NSObject {
+    let url: String
+    
+    init(url: String) {
+        self.url = url
+        
+        super.init()
+    }
+    
+    override func isEqual(_ object: Any?) -> Bool {
+        if let other = object as? ChatTextInputTextUrlAttribute {
+            return self.url == other.url
         } else {
             return false
         }
@@ -243,7 +265,9 @@ func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: Prese
     if !resultAttributedText.isEqual(to: initialAttributedText) {
         textNode.textView.textStorage.removeAttribute(NSAttributedStringKey.font, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedStringKey.foregroundColor, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(NSAttributedStringKey.underlineStyle, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textUrl, range: fullRange)
         
         textNode.textView.textStorage.addAttribute(NSAttributedStringKey.font, value: Font.regular(baseFontSize), range: fullRange)
         textNode.textView.textStorage.addAttribute(NSAttributedStringKey.foregroundColor, value: theme.chat.inputPanel.primaryTextColor, range: fullRange)
@@ -252,9 +276,13 @@ func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: Prese
             var fontAttributes: FontAttributes = []
             
             for (key, value) in attributes {
-                if key == ChatTextInputAttributes.textMention {
+                if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl {
                     textNode.textView.textStorage.addAttribute(key, value: value, range: range)
                     textNode.textView.textStorage.addAttribute(NSAttributedStringKey.foregroundColor, value: theme.chat.inputPanel.panelControlAccentColor, range: range)
+                    
+                    if theme.chat.inputPanel.panelControlAccentColor.isEqual(theme.chat.inputPanel.primaryTextColor) {
+                        textNode.textView.textStorage.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+                    }
                 } else if key == ChatTextInputAttributes.bold {
                     textNode.textView.textStorage.addAttribute(key, value: value, range: range)
                     fontAttributes.insert(.bold)
@@ -318,7 +346,6 @@ func refreshChatTextInputTypingAttributes(_ textNode: ASEditableTextNode, theme:
 func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, attribute: NSAttributedStringKey) -> ChatTextInputState {
     if !state.selectionRange.isEmpty {
         let nsRange = NSRange(location: state.selectionRange.lowerBound, length: state.selectionRange.count)
-        
         var addAttribute = true
         var attributesToRemove: [NSAttributedStringKey] = []
         state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
@@ -337,6 +364,47 @@ func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, attribute:
         if addAttribute {
             result.addAttribute(attribute, value: true as Bool, range: nsRange)
         }
+        return ChatTextInputState(inputText: result, selectionRange: state.selectionRange)
+    } else {
+        return state
+    }
+}
+
+func chatTextInputClearFormattingAttributes(_ state: ChatTextInputState) -> ChatTextInputState {
+    if !state.selectionRange.isEmpty {
+        let nsRange = NSRange(location: state.selectionRange.lowerBound, length: state.selectionRange.count)
+        var attributesToRemove: [NSAttributedStringKey] = []
+        state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
+            for (key, _) in attributes {
+                attributesToRemove.append(key)
+            }
+        }
+        
+        let result = NSMutableAttributedString(attributedString: state.inputText)
+        for attribute in attributesToRemove {
+            result.removeAttribute(attribute, range: nsRange)
+        }
+        return ChatTextInputState(inputText: result, selectionRange: state.selectionRange)
+    } else {
+        return state
+    }
+}
+
+func chatTextInputAddLinkAttribute(_ state: ChatTextInputState, url: String) -> ChatTextInputState {
+    if !state.selectionRange.isEmpty {
+        let nsRange = NSRange(location: state.selectionRange.lowerBound, length: state.selectionRange.count)
+        var attributesToRemove: [NSAttributedStringKey] = []
+        state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
+            for (key, _) in attributes {
+                attributesToRemove.append(key)
+            }
+        }
+        
+        let result = NSMutableAttributedString(attributedString: state.inputText)
+        for attribute in attributesToRemove {
+            result.removeAttribute(attribute, range: nsRange)
+        }
+        result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: nsRange)
         return ChatTextInputState(inputText: result, selectionRange: state.selectionRange)
     } else {
         return state

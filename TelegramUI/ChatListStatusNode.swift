@@ -239,6 +239,10 @@ private class ChatListStatusChecksNode: ChatListStatusContentNode {
         return StatusChecksNodeParameters(color: self.color, progress: self.effectiveProgress)
     }
     
+    override func didEnterHierarchy() {
+        super.didEnterHierarchy()
+    }
+    
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
