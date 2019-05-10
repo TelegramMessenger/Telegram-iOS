@@ -802,7 +802,11 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             }
         }
     } else {
-        if let cachedChannelData = view.cachedData as? CachedChannelData {
+        if let peer = peerViewMainPeer(view), peer.isScam {
+            entries.append(.aboutHeader(presentationData.theme, presentationData.strings.Channel_About_Title.uppercased()))
+            entries.append(.about(presentationData.theme, presentationData.strings.GroupInfo_ScamGroupWarning))
+        }
+        else if let cachedChannelData = view.cachedData as? CachedChannelData {
             if let about = cachedChannelData.about, !about.isEmpty {
                 entries.append(.aboutHeader(presentationData.theme, presentationData.strings.Channel_About_Title.uppercased()))
                 entries.append(.about(presentationData.theme, about))

@@ -32,7 +32,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     private let peerNodes: [SelectablePeerNode]
     private let moreNode: MoreNode?
     
-    init(context: AccountContext, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], isGroup: Bool, theme: PresentationTheme, strings: PresentationStrings) {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.titleNode = ASTextNode()
         self.countNode = ASTextNode()
@@ -66,11 +66,16 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         
         self.addSubnode(self.countNode)
         let membersString: String
-        if !members.isEmpty {
-            membersString = strings.Invitation_Members(memberCount)
+        if isGroup {
+            if !members.isEmpty {
+                membersString = strings.Invitation_Members(memberCount)
+            } else {
+                membersString = strings.Conversation_StatusMembers(memberCount)
+            }
         } else {
-            membersString = strings.Conversation_StatusMembers(memberCount)
+            membersString = strings.Conversation_StatusSubscribers(memberCount)
         }
+
         self.countNode.attributedText = NSAttributedString(string: membersString, font: Font.regular(16.0), textColor: theme.actionSheet.secondaryTextColor)
         
         if !self.peerNodes.isEmpty {

@@ -456,12 +456,12 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             entries.append(.addressName(theme: presentationData.theme, text: presentationData.strings.Channel_LinkItem, value: username))
         }
         
-        if let cachedChannelData = view.cachedData as? CachedChannelData {
-            if let _ = state.editingState, canEditChannel {
-            } else {
-                if let about = cachedChannelData.about, !about.isEmpty {
-                    entries.append(.about(theme: presentationData.theme, text: presentationData.strings.Channel_AboutItem, value: about))
-                }
+        if let _ = state.editingState, canEditChannel {
+        } else {
+            if peer.isScam {
+                entries.append(.about(theme: presentationData.theme, text: presentationData.strings.Channel_AboutItem, value: presentationData.strings.ChannelInfo_ScamChannelWarning))
+            } else if let cachedChannelData = view.cachedData as? CachedChannelData, let about = cachedChannelData.about, !about.isEmpty {
+                entries.append(.about(theme: presentationData.theme, text: presentationData.strings.Channel_AboutItem, value: about))
             }
         }
         

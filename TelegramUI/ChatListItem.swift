@@ -285,7 +285,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let onlineNode: ChatListOnlineNode
     let pinnedIconNode: ASImageNode
     var secretIconNode: ASImageNode?
-    var verificationIconNode: ASImageNode?
+    var credibilityIconNode: ASImageNode?
     let mutedIconNode: ASImageNode
     
     var selectableControlNode: ItemListSelectableControlNode?
@@ -660,7 +660,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentMentionBadgeImage: UIImage?
             var currentPinnedIconImage: UIImage?
             var currentMutedIconImage: UIImage?
-            var currentVerificationIconImage: UIImage?
+            var currentCredibilityIconImage: UIImage?
             var currentSecretIconImage: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
@@ -932,35 +932,31 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 titleIconsWidth += currentMutedIconImage.size.width
             }
             
-            var isVerified = false
+    
             let isSecret = !isPeerGroup && item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat
-            
-            if !isPeerGroup, case let .chat(itemPeer) = contentPeer {
-                if let peer = itemPeer.chatMainPeer {
-                    if let peer = peer as? TelegramUser {
-                        isVerified = peer.flags.contains(.isVerified)
-                    } else if let peer = peer as? TelegramChannel {
-                        isVerified = peer.flags.contains(.isVerified)
-                    }
-                }
-            }
-            
             if isSecret {
                 currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
             }
-            if isVerified {
-                currentVerificationIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+            var credibilityIconOffset: CGFloat = 0.0
+            if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
+                if peer.isScam {
+                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme)
+                    credibilityIconOffset = 2.0
+                } else if peer.isVerified {
+                    currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                    credibilityIconOffset = 3.0
+                }
             }
             if let currentSecretIconImage = currentSecretIconImage {
                 titleIconsWidth += currentSecretIconImage.size.width + 2.0
             }
-            if let currentVerificationIconImage = currentVerificationIconImage {
+            if let currentCredibilityIconImage = currentCredibilityIconImage {
                 if titleIconsWidth.isZero {
                     titleIconsWidth += 4.0
                 } else {
                     titleIconsWidth += 2.0
                 }
-                titleIconsWidth += currentVerificationIconImage.size.width
+                titleIconsWidth += currentCredibilityIconImage.size.width
             }
             
             let layoutOffset: CGFloat = 0.0
@@ -1291,9 +1287,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleLayout.size.width + 3.0 + titleOffset
                     
-                    if let currentVerificationIconImage = currentVerificationIconImage {
+                    if let currentCredibilityIconImage = currentCredibilityIconImage {
                         let iconNode: ASImageNode
-                        if let current = strongSelf.verificationIconNode {
+                        if let current = strongSelf.credibilityIconNode {
                             iconNode = current
                         } else {
                             iconNode = ASImageNode()
@@ -1301,20 +1297,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             iconNode.displaysAsynchronously = false
                             iconNode.displayWithoutProcessing = true
                             strongSelf.addSubnode(iconNode)
-                            strongSelf.verificationIconNode = iconNode
+                            strongSelf.credibilityIconNode = iconNode
                         }
-                        iconNode.image = currentVerificationIconImage
-                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: contentRect.origin.y + 3.0), size: currentVerificationIconImage.size))
-                        nextTitleIconOrigin += currentVerificationIconImage.size.width + 5.0
-                    } else if let verificationIconNode = strongSelf.verificationIconNode {
-                        strongSelf.verificationIconNode = nil
-                        verificationIconNode.removeFromSupernode()
+                        iconNode.image = currentCredibilityIconImage
+                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: contentRect.origin.y + credibilityIconOffset), size: currentCredibilityIconImage.size))
+                        nextTitleIconOrigin += currentCredibilityIconImage.size.width + 5.0
+                    } else if let credibilityIconNode = strongSelf.credibilityIconNode {
+                        strongSelf.credibilityIconNode = nil
+                        credibilityIconNode.removeFromSupernode()
                     }
                     
                     if let currentMutedIconImage = currentMutedIconImage {
                         strongSelf.mutedIconNode.image = currentMutedIconImage
                         strongSelf.mutedIconNode.isHidden = false
-                        transition.updateFrame(node: strongSelf.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: contentRect.origin.y + 6.0), size: currentMutedIconImage.size))
+                        transition.updateFrame(node: strongSelf.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: contentRect.origin.y + 5.0), size: currentMutedIconImage.size))
                         nextTitleIconOrigin += currentMutedIconImage.size.width + 3.0
                     } else {
                         strongSelf.mutedIconNode.image = nil
@@ -1542,9 +1538,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleFrame.size.width + 3.0 + titleOffset
             
-            if let verificationIconNode = self.verificationIconNode {
-                transition.updateFrame(node: verificationIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: verificationIconNode.frame.origin.y), size: verificationIconNode.bounds.size))
-                nextTitleIconOrigin += verificationIconNode.bounds.size.width + 5.0
+            if let credibilityIconNode = self.credibilityIconNode {
+                transition.updateFrame(node: credibilityIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: credibilityIconNode.frame.origin.y), size: credibilityIconNode.bounds.size))
+                nextTitleIconOrigin += credibilityIconNode.bounds.size.width + 5.0
             }
             
             let mutedIconFrame = self.mutedIconNode.frame

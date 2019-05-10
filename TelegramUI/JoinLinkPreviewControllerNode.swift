@@ -452,6 +452,6 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             self.actionButtonNode.setTitle(data.isGroup ? self.presentationData.strings.Invitation_JoinGroup : self.presentationData.strings.Channel_JoinChannel, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
         }
         
-        self.transitionToContentNode(JoinLinkPreviewPeerContentNode(context: self.context, image: image, title: title, memberCount: memberCount, members: members, theme: self.presentationData.theme, strings: self.presentationData.strings))
+        self.transitionToContentNode(JoinLinkPreviewPeerContentNode(context: self.context, image: image, title: title, memberCount: memberCount, members: members, isGroup: data.isGroup, theme: self.presentationData.theme, strings: self.presentationData.strings))
     }
 }
