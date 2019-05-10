@@ -80,7 +80,14 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
                 }
             case Namespaces.Peer.SecretChat:
                 if let secretChat = updated as? TelegramSecretChat {
-                    updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: secretChat.creationDate, forceRootGroupIfNotExists: true)
+                    let isActive: Bool
+                    switch secretChat.embeddedState {
+                        case .active, .handshake:
+                            isActive = true
+                        case .terminated:
+                            isActive = false
+                    }
+                    updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: secretChat.creationDate, forceRootGroupIfNotExists: isActive)
                 } else {
                     assertionFailure()
                 }
