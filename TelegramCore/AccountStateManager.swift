@@ -555,6 +555,12 @@ public final class AccountStateManager {
                                     strongSelf.addOperation(.collectUpdateGroups(groups, 2.0), position: .last)
                                 }
                             } else {
+                                if let replayedState = replayedState {
+                                    let events = AccountFinalStateEvents(state: replayedState)
+                                    if !events.displayAlerts.isEmpty {
+                                        strongSelf.insertProcessEvents(AccountFinalStateEvents(displayAlerts: events.displayAlerts))
+                                    }
+                                }
                                 strongSelf.replaceOperations(with: .pollDifference(AccountFinalStateEvents()))
                             }
                             strongSelf.startFirstOperation()
