@@ -744,7 +744,7 @@ final class HistoryViewLoadedState {
         }
 
         var updated = false
-        for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
+        /*for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
             switch self.orderedEntriesBySpace[space]!.entries[i] {
                 case .IntermediateMessageEntry:
                     break
@@ -761,7 +761,7 @@ final class HistoryViewLoadedState {
                         updated = true
                     }
             }
-        }
+        }*/
         
         let insertionIndex = binaryInsertionIndex(self.orderedEntriesBySpace[space]!.entries, extract: { $0.index }, searchItem: entry.index)
         
@@ -816,6 +816,7 @@ final class HistoryViewLoadedState {
                     self.orderedEntriesBySpace[space]!.entries.removeLast()
                 }
             }
+            updated = true
         }
         
         return updated
@@ -829,7 +830,7 @@ final class HistoryViewLoadedState {
         
         var updated = false
         
-        for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
+        /*for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
             switch self.orderedEntriesBySpace[space]!.entries[i] {
                 case .IntermediateMessageEntry:
                     break
@@ -839,7 +840,7 @@ final class HistoryViewLoadedState {
                         updated = true
                     }
             }
-        }
+        }*/
         
         if let itemIndex = binarySearch(self.orderedEntriesBySpace[space]!.entries, extract: { $0.index }, searchItem: index) {
             if let currentBounds = self.orderedEntriesBySpace[space]!.bounds {

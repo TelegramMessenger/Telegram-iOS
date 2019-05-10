@@ -2003,7 +2003,9 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func vacuum() {
-        let resultCode = self.database.execute("VACUUM")
+        var resultCode = self.database.execute("VACUUM")
+        assert(resultCode)
+        resultCode = self.database.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         assert(resultCode)
     }
 }
