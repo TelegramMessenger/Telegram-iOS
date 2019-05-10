@@ -1048,7 +1048,6 @@
 		D073E51F21FF7CE900742DDD /* Crypto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Crypto.m; sourceTree = "<group>"; };
 		D073E52122003E1E00742DDD /* Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Data.swift; sourceTree = "<group>"; };
 		D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-AppStore.entitlements"; sourceTree = "<group>"; };
-		D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-AppStore.xcconfig"; sourceTree = "<group>"; };
 		D084023120E1883500065674 /* ApplicationShortcutItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationShortcutItem.swift; sourceTree = "<group>"; };
 		D08410431FABDC5B008FFE92 /* TGItemProviderSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGItemProviderSignals.h; sourceTree = "<group>"; };
 		D08410441FABDC5C008FFE92 /* TGItemProviderSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGItemProviderSignals.m; sourceTree = "<group>"; };
@@ -2136,7 +2135,6 @@
 			isa = PBXGroup;
 			children = (
 				D0338734223A9A7E007A2CE4 /* Hockeyapp-Internal */,
-				D033872B223A835E007A2CE4 /* AppStore */,
 				D033872A223A834F007A2CE4 /* AppStoreLLC */,
 			);
 			name = Config;
@@ -2148,14 +2146,6 @@
 				D0ADF914212B399A00310BBC /* Config-AppStoreLLC.xcconfig */,
 			);
 			name = AppStoreLLC;
-			sourceTree = "<group>";
-		};
-		D033872B223A835E007A2CE4 /* AppStore */ = {
-			isa = PBXGroup;
-			children = (
-				D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */,
-			);
-			name = AppStore;
 			sourceTree = "<group>";
 		};
 		D0338734223A9A7E007A2CE4 /* Hockeyapp-Internal */ = {
@@ -3812,7 +3802,6 @@
 		};
 		09C56FA72172797500BDF00F /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -3962,7 +3951,6 @@
 		};
 		09C56FA92172797500BDF00F /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -4242,7 +4230,6 @@
 		};
 		09C56FAE2172797500BDF00F /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_COMPLICATION_NAME = Complication;
@@ -4394,7 +4381,6 @@
 		};
 		09C56FB02172797500BDF00F /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_COMPLICATION_NAME = Complication;
@@ -4753,7 +4739,6 @@
 		};
 		D000CAD321FB6E380011B15D /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -4905,7 +4890,6 @@
 		};
 		D000CAD521FB6E380011B15D /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -5164,7 +5148,6 @@
 		};
 		D00859BA1B28189D00EAF753 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 9999;
@@ -5250,7 +5233,6 @@
 		};
 		D00859BD1B28189D00EAF753 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -5894,7 +5876,6 @@
 		};
 		D02CF60A215D9ABF00E0F56A /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -6046,7 +6027,6 @@
 		};
 		D02CF60C215D9ABF00E0F56A /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -6285,7 +6265,6 @@
 		};
 		D03B0E851D63484500955575 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				BITCODE_GENERATION_MODE = bitcode;
 				BUILD_NUMBER = 99999;
@@ -6316,7 +6295,6 @@
 		};
 		D079FCF91F06BBA40038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 9999;
@@ -6368,7 +6346,6 @@
 		};
 		D079FCFA1F06BBA40038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -6411,7 +6388,6 @@
 		};
 		D079FCFD1F06BBA40038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				BITCODE_GENERATION_MODE = marker;
 				BUILD_NUMBER = 99999;
@@ -6444,7 +6420,6 @@
 		};
 		D079FCFE1F06BBA40038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				BITCODE_GENERATION_MODE = marker;
 				BUILD_NUMBER = 99999;
@@ -6993,7 +6968,6 @@
 		};
 		D0B2F744204F4C9900D3BFB9 /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -7065,7 +7039,6 @@
 		};
 		D0B2F745204F4C9900D3BFB9 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -7501,7 +7474,6 @@
 		};
 		D0D268901D79A70B00C422DA /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				BITCODE_GENERATION_MODE = bitcode;
 				BUILD_NUMBER = 99999;
@@ -7599,7 +7571,6 @@
 		};
 		D0ECCB841FE9C38500609802 /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -7668,7 +7639,6 @@
 		};
 		D0ECCB851FE9C38500609802 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;

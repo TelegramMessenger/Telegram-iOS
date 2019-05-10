@@ -4212,7 +4212,10 @@ Unused sets are archived when you add more.";
 
 "Undo.ChatDeletedForBothSides" = "Chat deleted for both sides";
 
-"DataUpgrade.Running" = "Optimizing Telegram...";
+"AppUpgrade.Running" = "Optimizing Telegram...
+This may take a while, depending on the size of the database. Please keep the app open until the process is finished.
+
+Sorry for the inconvenience.";
 
 "Call.Mute" = "mute";
 "Call.Camera" = "camera";

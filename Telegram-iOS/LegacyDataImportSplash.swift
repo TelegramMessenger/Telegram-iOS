@@ -13,7 +13,7 @@ final class LegacyDataImportSplash: WindowCoveringView {
                 if let size = self.validSize {
                     switch self.progress.0 {
                         case .generic:
-                            self.textNode.attributedText = NSAttributedString(string: self.strings?.DataUpgrade_Running ?? "Optimizing...", font: Font.regular(17.0), textColor: self.theme?.list.itemPrimaryTextColor ?? .black)
+                            self.textNode.attributedText = NSAttributedString(string: self.strings?.AppUpgrade_Running ?? "Optimizing...", font: Font.regular(17.0), textColor: self.theme?.list.itemPrimaryTextColor ?? .black)
                         case .media:
                             self.textNode.attributedText = NSAttributedString(string: "Optimizing cache", font: Font.regular(17.0), textColor: self.theme?.list.itemPrimaryTextColor ?? .black)
                         case .messages:
@@ -39,7 +39,9 @@ final class LegacyDataImportSplash: WindowCoveringView {
         
         self.progressNode = RadialStatusNode(backgroundNodeColor: theme?.list.plainBackgroundColor ?? .white)
         self.textNode = ImmediateTextNode()
-        self.textNode.attributedText = NSAttributedString(string: self.strings?.DataUpgrade_Running ?? "Optimizing...", font: Font.regular(17.0), textColor: self.theme?.list.itemPrimaryTextColor ?? .black)
+        self.textNode.maximumNumberOfLines = 0
+        self.textNode.textAlignment = .center
+        self.textNode.attributedText = NSAttributedString(string: self.strings?.AppUpgrade_Running ?? "Optimizing...", font: Font.regular(17.0), textColor: self.theme?.list.itemPrimaryTextColor ?? .black)
         
         super.init(frame: CGRect())
         
@@ -61,10 +63,11 @@ final class LegacyDataImportSplash: WindowCoveringView {
         self.validSize = size
         
         let progressSize = CGSize(width: 60.0, height: 60.0)
-        let progressFrame = CGRect(origin: CGPoint(x: floor((size.width - progressSize.width) / 2.0), y: floor((size.height - progressSize.height) / 2.0) - 8.0), size: progressSize)
-        self.progressNode.frame = progressFrame
         
-        let textSize = self.textNode.updateLayout(size)
+        let textSize = self.textNode.updateLayout(CGSize(width: size.width - 20.0, height: .greatestFiniteMagnitude))
+        
+        let progressFrame = CGRect(origin: CGPoint(x: floor((size.width - progressSize.width) / 2.0), y: floor((size.height - progressSize.height - 15.0 - textSize.height) / 2.0)), size: progressSize)
+        self.progressNode.frame = progressFrame
         self.textNode.frame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: progressFrame.maxY + 15.0), size: textSize)
     }
     
