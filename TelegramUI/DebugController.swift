@@ -46,6 +46,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case reimport(PresentationTheme)
     case resetData(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
+    case optimizeDatabase(PresentationTheme)
     case animatedStickers(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case versionInfo(PresentationTheme)
@@ -60,7 +61,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .resetBiometricsData, .animatedStickers, .photoPreview:
+            case .clearTips, .reimport, .resetData, .resetBiometricsData, .optimizeDatabase, .animatedStickers, .photoPreview:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -101,12 +102,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 14
             case .resetBiometricsData:
                 return 15
-            case .animatedStickers:
+            case .optimizeDatabase:
                 return 16
-            case .photoPreview:
+            case .animatedStickers:
                 return 17
-            case .versionInfo:
+            case .photoPreview:
                 return 18
+            case .versionInfo:
+                return 19
         }
     }
     
@@ -390,6 +393,22 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
                     }).start()
                 })
+            case let .optimizeDatabase(theme):
+                return ItemListActionItem(theme: theme, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    guard let context = arguments.context else {
+                        return
+                    }
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                    arguments.presentController(controller, nil)
+                    let _ = (context.account.postbox.optimizeStorage()
+                    |> deliverOnMainQueue).start(completed: {
+                        controller.dismiss()
+                        
+                        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success)
+                        arguments.presentController(controller, nil)
+                    })
+                })
             case let .animatedStickers(theme):
                 return ItemListSwitchItem(theme: theme, title: "AJSON", value: GlobalExperimentalSettings.animatedStickers, sectionId: self.section, style: .blocks, updated: { value in
                     GlobalExperimentalSettings.animatedStickers = value
@@ -438,6 +457,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
         entries.append(.reimport(presentationData.theme))
     }
     entries.append(.resetData(presentationData.theme))
+    entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.versionInfo(presentationData.theme))
     
