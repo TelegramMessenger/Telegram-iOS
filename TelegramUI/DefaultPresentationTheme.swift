@@ -52,6 +52,11 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         introDotColor: UIColor(rgb: 0xd9d9d9)
     )
     
+    let passcode = PresentationThemePasscode(
+        backgroundColors: (UIColor(rgb: 0x46739e), UIColor(rgb: 0x2a5982)),
+        buttonColor: nil
+    )
+    
     let rootController = PresentationThemeRootController(
         statusBar: rootStatusBar,
         tabBar: rootTabBar,
@@ -435,6 +440,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         overallDarkAppearance: false,
         allowsCustomWallpapers: true,
         auth: auth,
+        passcode: passcode,
         rootController: rootController,
         list: list,
         chatList: day ? chatListDay : chatList,

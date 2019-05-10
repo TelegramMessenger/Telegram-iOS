@@ -52,6 +52,11 @@ private let auth = PresentationThemeAuth(
     introDotColor: UIColor(rgb: 0x5e5e5e)
 )
 
+private let passcode = PresentationThemePasscode(
+    backgroundColors: (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000)),
+    buttonColor: UIColor(rgb: 0x1c1c1d)
+)
+
 private let rootController = PresentationThemeRootController(
     statusBar: rootStatusBar,
     tabBar: rootTabBar,
@@ -326,6 +331,7 @@ let defaultDarkPresentationTheme = PresentationTheme(
     overallDarkAppearance: true,
     allowsCustomWallpapers: false,
     auth: auth,
+    passcode: passcode,
     rootController: rootController,
     list: list,
     chatList: chatList,

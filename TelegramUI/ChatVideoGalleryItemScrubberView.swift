@@ -121,7 +121,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                             case .Remote:
                                 text = dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator)
                             case let .Fetching(_, progress):
-                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true), dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator)).0
+                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true, decimalSeparator: decimalSeparator), dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator)).0
                             default:
                                 text = ""
                         }

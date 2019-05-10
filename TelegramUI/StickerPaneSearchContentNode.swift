@@ -266,7 +266,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if query.isSingleEmoji {
-                    signals = .single([searchStickers(account: account, query: text.firstEmoji)
+                    signals = .single([searchStickers(account: account, query: text)
                     |> take(1)
                     |> map { (nil, $0) }])
                 } else if query.count > 1, let languageCode = languageCode, !languageCode.isEmpty && languageCode != "emoji" {

@@ -9,15 +9,15 @@ protocol PasscodeBackground {
     var foregroundImage: UIImage { get }
 }
 
-final class DefaultPasscodeBackground: PasscodeBackground {
+final class GradientPasscodeBackground: PasscodeBackground {
     public private(set) var size: CGSize
     public private(set) var backgroundImage: UIImage
     public private(set) var foregroundImage: UIImage
     
-    init(size: CGSize) {
+    init(size: CGSize, backgroundColors: (UIColor, UIColor), buttonColor: UIColor?) {
         self.size = size
         self.backgroundImage = generateImage(CGSize(width: 8.0, height: size.height), contextGenerator: { size, context in
-            let gradientColors = [UIColor(rgb: 0x46739e).cgColor, UIColor(rgb: 0x2a5982).cgColor] as CFArray
+            let gradientColors = [backgroundColors.1.cgColor, backgroundColors.0.cgColor] as CFArray
             var locations: [CGFloat] = [0.0, 1.0]
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
@@ -26,7 +26,11 @@ final class DefaultPasscodeBackground: PasscodeBackground {
         self.foregroundImage = generateImage(CGSize(width: 1.0, height: 1.0), contextGenerator: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
             context.clear(bounds)
-            context.setFillColor(UIColor.white.withAlphaComponent(0.5).cgColor)
+            if let buttonColor = buttonColor {
+                context.setFillColor(buttonColor.cgColor)
+            } else {
+                context.setFillColor(UIColor.white.withAlphaComponent(0.5).cgColor)
+            }
             context.fill(bounds)
         })!
     }

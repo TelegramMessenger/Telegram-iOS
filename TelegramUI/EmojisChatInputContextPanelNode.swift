@@ -81,7 +81,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
         var index = 0
         var stableIds = Set<EmojisChatInputContextPanelEntryStableId>()
         for (symbol, text) in results {
-            let entry = EmojisChatInputContextPanelEntry(index: index, theme: self.theme, symbol: symbol, text: text)
+            let entry = EmojisChatInputContextPanelEntry(index: index, theme: self.theme, symbol: symbol.normalizedEmoji, text: text)
             if stableIds.contains(entry.stableId) {
                 continue
             }
