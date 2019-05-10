@@ -271,7 +271,11 @@ class StatusBarManager {
         if self.volumeTimer != nil {
             globalStatusBar?.1 = 0.0
         }
-        self.volumeControlStatusBarNode.isDark = globalStatusBar?.0.systemStyle == UIStatusBarStyle.lightContent
+        var isDark = true
+        if let globalStatusBar = globalStatusBar {
+            isDark = globalStatusBar.0.systemStyle == UIStatusBarStyle.lightContent
+        }
+        self.volumeControlStatusBarNode.isDark = isDark
         
         if let globalStatusBar = globalStatusBar, !forceHiddenBySystemWindows {
             let statusBarStyle: UIStatusBarStyle

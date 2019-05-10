@@ -31,6 +31,8 @@ final class PresentationContext {
         }
     }
     
+    weak var volumeControlStatusBarNodeView: UIView?
+    
     var updateIsInteractionBlocked: ((Bool) -> Void)?
     
     var updateHasOpaqueOverlay: ((Bool) -> Void)?
@@ -89,7 +91,7 @@ final class PresentationContext {
         if let topController = topController {
             return topController.view
         } else {
-            return topLevelSubview
+            return self.topLevelSubview
         }
     }
     
@@ -176,14 +178,22 @@ final class PresentationContext {
                             if let topLevelSubview = strongSelf.topLevelSubview(for: level) {
                                 view.insertSubview(controller.view, belowSubview: topLevelSubview)
                             } else {
-                                view.addSubview(controller.view)
+                                if let volumeControlStatusBarNodeView = strongSelf.volumeControlStatusBarNodeView {
+                                    view.insertSubview(controller.view, belowSubview: volumeControlStatusBarNodeView)
+                                } else {
+                                    view.addSubview(controller.view)
+                                }
                             }
                             controller.containerLayoutUpdated(layout, transition: .immediate)
                         } else {
                             if let topLevelSubview = strongSelf.topLevelSubview(for: level) {
                                 view.insertSubview(controller.view, belowSubview: topLevelSubview)
                             } else {
-                                view.addSubview(controller.view)
+                                if let volumeControlStatusBarNodeView = strongSelf.volumeControlStatusBarNodeView {
+                                    view.insertSubview(controller.view, belowSubview: volumeControlStatusBarNodeView)
+                                } else {
+                                    view.addSubview(controller.view)
+                                }
                             }
                         }
                         (controller as? UIViewController)?.setIgnoreAppearanceMethodInvocations(false)
@@ -249,7 +259,11 @@ final class PresentationContext {
                 if let topLevelSubview = self.topLevelSubview {
                     view.insertSubview(controller.view, belowSubview: topLevelSubview)
                 } else {
-                    view.addSubview(controller.view)
+                    if let volumeControlStatusBarNodeView = self.volumeControlStatusBarNodeView {
+                        view.insertSubview(controller.view, belowSubview: volumeControlStatusBarNodeView)
+                    } else {
+                        view.addSubview(controller.view)
+                    }
                 }
                 controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
                 controller.containerLayoutUpdated(layout, transition: .immediate)

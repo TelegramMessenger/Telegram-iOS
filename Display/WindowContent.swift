@@ -430,6 +430,7 @@ public class Window1 {
         }*/
         
         self.presentationContext.view = self.hostView.containerView
+        self.presentationContext.volumeControlStatusBarNodeView = self.volumeControlStatusBarNode.view
         self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), transition: .immediate)
         self.overlayPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), transition: .immediate)
         
