@@ -49,6 +49,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case optimizeDatabase(PresentationTheme)
     case animatedStickers(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
+    case alternateIcon(PresentationTheme)
     case versionInfo(PresentationTheme)
     
     var section: ItemListSectionId {
@@ -61,7 +62,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .resetBiometricsData, .optimizeDatabase, .animatedStickers, .photoPreview:
+            case .clearTips, .reimport, .resetData, .resetBiometricsData, .optimizeDatabase, .animatedStickers, .photoPreview, .alternateIcon:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -108,8 +109,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 17
             case .photoPreview:
                 return 18
-            case .versionInfo:
+            case .alternateIcon:
                 return 19
+            case .versionInfo:
+                return 20
         }
     }
     
@@ -423,6 +426,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         })
                     }).start()
                 })
+            case let .alternateIcon(theme):
+                return ItemListActionItem(theme: theme, title: "Change Icon", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    if arguments.sharedContext.applicationBindings.getAlternateIconName() == "Black" {
+                        arguments.sharedContext.applicationBindings.requestSetAlternateIconName(nil, { _ in })
+                    } else {
+                        arguments.sharedContext.applicationBindings.requestSetAlternateIconName("Black", { _ in })
+                    }
+                })
             case let .versionInfo(theme):
                 let bundle = Bundle.main
                 let bundleId = bundle.bundleIdentifier ?? ""
@@ -459,6 +470,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetData(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
+    entries.append(.alternateIcon(presentationData.theme))
     entries.append(.versionInfo(presentationData.theme))
     
     return entries
