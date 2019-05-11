@@ -64,6 +64,7 @@ private var backgroundButtonIcon: UIImage = {
 
 final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
+    private var presentationData: PresentationData
     private var message: Message?
     
     fileprivate let _title = Promise<String>()
@@ -85,6 +86,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
     
     init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
+        self.presentationData = presentationData
         
         self.containerNode = ASDisplayNode()
         self.containerNode.backgroundColor = .black
@@ -155,6 +157,9 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }))
             self.setupStatus(resource: fileReference.media.resource)
+            
+            
+            self._title.set(.single("\(fileReference.media.fileName ?? "") - \(dataSizeString(fileReference.media.size ?? 0, forceDecimal: false, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))"))
             
             let speedItem = UIBarButtonItem(image: UIImage(bundleImageName: "Media Gallery/SlowDown"), style: .plain, target: self, action: #selector(self.toggleSpeedButtonPressed))
             let backgroundItem = UIBarButtonItem(image: backgroundButtonIcon, style: .plain, target: self, action: #selector(self.toggleBackgroundButtonPressed))
