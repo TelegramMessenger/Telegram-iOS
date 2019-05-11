@@ -346,16 +346,18 @@ final class SharedApplicationContext {
         }
         #endif
         
-        let apiId: Int32 = BuildConfig.shared().apiId
-        let languagesCategory = "ios"
-        
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
-        
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManager.voipMaxLayer, appData: BuildConfig.shared().bundleData)
         
         let baseAppBundleId = Bundle.main.bundleIdentifier!
         let appGroupName = "group.\(baseAppBundleId)"
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        
+        let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
+        
+        let apiId: Int32 = buildConfig.apiId
+        let languagesCategory = "ios"
+        
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManager.voipMaxLayer, appData: buildConfig.bundleData)
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()
@@ -371,7 +373,7 @@ final class SharedApplicationContext {
             isDebugConfiguration = true
         }
         
-        if isDebugConfiguration || BuildConfig.shared().isInternalBuild {
+        if isDebugConfiguration || buildConfig.isInternalBuild {
             LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
         } else {
             LoggingSettings.defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
@@ -428,7 +430,7 @@ final class SharedApplicationContext {
         
         telegramUIDeclareEncodables()
         
-        GlobalExperimentalSettings.isAppStoreBuild = BuildConfig.shared().isAppStoreBuild
+        GlobalExperimentalSettings.isAppStoreBuild = buildConfig.isAppStoreBuild
         
         GlobalExperimentalSettings.enableFeed = false
         #if DEBUG
@@ -444,7 +446,7 @@ final class SharedApplicationContext {
         
         initializeAccountManagement()
         
-        let applicationBindings = TelegramApplicationBindings(isMainApp: true, containerPath: appGroupUrl.path, appSpecificScheme: BuildConfig.shared().appSpecificUrlScheme, openUrl: { url in
+        let applicationBindings = TelegramApplicationBindings(isMainApp: true, containerPath: appGroupUrl.path, appSpecificScheme: buildConfig.appSpecificUrlScheme, openUrl: { url in
             var parsedUrl = URL(string: url)
             if let parsed = parsedUrl {
                 if parsed.scheme == nil || parsed.scheme!.isEmpty {
@@ -537,7 +539,7 @@ final class SharedApplicationContext {
                 UIApplication.shared.openURL(url)
             }
         }, openAppStorePage: {
-            let appStoreId = BuildConfig.shared().appStoreId
+            let appStoreId = buildConfig.appStoreId
             if let url = URL(string: "itms-apps://itunes.apple.com/app/id\(appStoreId)") {
                 UIApplication.shared.openURL(url)
             }
@@ -936,7 +938,7 @@ final class SharedApplicationContext {
             |> deliverOnMainQueue
             |> map { accountAndSettings -> UnauthorizedApplicationContext? in
                 return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers in
-                    return UnauthorizedApplicationContext(sharedContext: sharedApplicationContext.sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers)
+                    return UnauthorizedApplicationContext(buildConfig: buildConfig, sharedContext: sharedApplicationContext.sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers)
                 }
             }
         })
@@ -1157,7 +1159,7 @@ final class SharedApplicationContext {
             }
         })
         
-        if let hockeyAppId = BuildConfig.shared().hockeyAppId, !hockeyAppId.isEmpty {
+        if let hockeyAppId = buildConfig.hockeyAppId, !hockeyAppId.isEmpty {
             BITHockeyManager.shared().configure(withIdentifier: hockeyAppId, delegate: self)
             BITHockeyManager.shared().crashManager.crashManagerStatus = .alwaysAsk
             BITHockeyManager.shared().start()

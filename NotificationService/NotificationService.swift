@@ -461,7 +461,16 @@ class NotificationService: UNNotificationServiceExtension {
                         contentHandler(bestAttemptContent)
                     }
                 } else {
-                    self.cancelFetch = fetchImageWithAccount(proxyConnection: accountInfos.proxy, account: account, inputFileLocation: inputFileLocation, datacenterId: datacenterId, completion: { [weak self] data in
+                    let appBundleIdentifier = Bundle.main.bundleIdentifier!
+                    guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
+                        return
+                    }
+                    
+                    let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+                    
+                    let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
+                    
+                    self.cancelFetch = fetchImageWithAccount(buildConfig: buildConfig, proxyConnection: accountInfos.proxy, account: account, inputFileLocation: inputFileLocation, datacenterId: datacenterId, completion: { [weak self] data in
                         DispatchQueue.main.async {
                             guard let strongSelf = self else {
                                 return

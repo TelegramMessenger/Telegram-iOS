@@ -339,20 +339,18 @@ API_AVAILABLE(ios(10))
     return instance;
 }
 
-- (instancetype)init {
+- (instancetype _Nonnull)initWithBaseAppBundleId:(NSString * _Nonnull)baseAppBundleId {
     self = [super init];
     if (self != nil) {
         _apiId = APP_CONFIG_API_ID;
         _apiHash = @(APP_CONFIG_API_HASH);
         _hockeyAppId = @(APP_CONFIG_HOCKEYAPP_ID);
         
-        NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
-        
         MTPKCS *signature = checkSignature([[[NSBundle mainBundle] executablePath] UTF8String]);
         NSMutableDictionary *dataDict = [[NSMutableDictionary alloc] init];
         
-        if (bundleId != nil) {
-            dataDict[@"bundleId"] = bundleId;
+        if (baseAppBundleId != nil) {
+            dataDict[@"bundleId"] = baseAppBundleId;
         }
         if (signature.name != nil) {
             dataDict[@"name"] = signature.name;

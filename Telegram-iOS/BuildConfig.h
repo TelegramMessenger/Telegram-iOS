@@ -9,7 +9,7 @@
 
 @interface BuildConfig : NSObject
 
-+ (instancetype _Nonnull)sharedBuildConfig;
+- (instancetype _Nonnull)initWithBaseAppBundleId:(NSString * _Nonnull)baseAppBundleId;
 
 @property (nonatomic, strong, readonly) NSData * _Nullable bundleData;
 @property (nonatomic, strong, readonly) NSString * _Nullable hockeyAppId;

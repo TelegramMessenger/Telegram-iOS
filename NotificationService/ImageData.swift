@@ -46,7 +46,7 @@ private final class ParsedFile: NSObject {
     }
 }
 
-func fetchImageWithAccount(proxyConnection: AccountProxyConnection?, account: StoredAccountInfo, inputFileLocation: Api.InputFileLocation, datacenterId: Int32, completion: @escaping (Data?) -> Void) -> () -> Void {
+func fetchImageWithAccount(buildConfig: BuildConfig, proxyConnection: AccountProxyConnection?, account: StoredAccountInfo, inputFileLocation: Api.InputFileLocation, datacenterId: Int32, completion: @escaping (Data?) -> Void) -> () -> Void {
     MTLogSetEnabled(true)
     MTLogSetLoggingFunction({ str, args in
         //let string = NSString(format: str! as NSString, args!)
@@ -57,7 +57,7 @@ func fetchImageWithAccount(proxyConnection: AccountProxyConnection?, account: St
     
     var apiEnvironment = MTApiEnvironment()
     
-    apiEnvironment.apiId = BuildConfig.shared().apiId
+    apiEnvironment.apiId = buildConfig.apiId
     apiEnvironment.langPack = "ios"
     apiEnvironment.layer = NSNumber(value: Int(serialization.currentLayer()))
     apiEnvironment.disableUpdates = true
