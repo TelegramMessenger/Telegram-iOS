@@ -316,6 +316,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
         switch historyState {
             case let .channel(peerId, _):
                 let hash = hashForMessages(previousMessages, withChannelIds: false)
+                Logger.shared.log("HistoryValidation", "validate batch for \(peerId): \(previousMessages.map({ $0.id }))")
                 if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                     let requestSignal: Signal<Api.messages.Messages, MTRpcError>
                     if let tag = tag {
@@ -519,6 +520,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                         switch historyState {
                                             case .channel:
                                                 deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [id])
+                                                Logger.shared.log("HistoryValidation", "deleting message \(id) in \(id.peerId)")
                                             /*case let .group(groupId, _):
                                                 transaction.removeMessagesFromGroupFeedIndex(groupId: groupId, ids: [id])*/
                                         }
