@@ -108,10 +108,19 @@ private func upgradedSharedDataValue(_ value: PreferencesEntry?) -> PreferencesE
 }
 
 public func upgradedAccounts(accountManager: AccountManager, rootPath: String, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Float, NoError> {
-    return accountManager.transaction { transaction -> (Int32, AccountRecordId?) in
+    return accountManager.transaction { transaction -> (Int32?, AccountRecordId?) in
         return (transaction.getVersion(), transaction.getCurrent()?.0)
     }
     |> mapToSignal { version, currentId -> Signal<Float, NoError> in
+        guard let version = version else {
+            return accountManager.transaction { transaction -> Void in
+                transaction.setVersion(4)
+            }
+            |> ignoreValues
+            |> mapToSignal { _ -> Signal<Float, NoError> in
+                return .complete()
+            }
+        }
         var signal: Signal<Float, NoError> = .complete()
         if version < 1 {
             if let currentId = currentId {
