@@ -441,7 +441,7 @@ protected:
    bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value) final;
 private:
    LOTProxyModel<LOTStrokeData> mModel;
-   LOTStrokeData               *mData;
+   LOTStrokeData               *mData{nullptr};
    VColor                       mColor;
    float                        mWidth{0};
    float                        mDashArray[6];
