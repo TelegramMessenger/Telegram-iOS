@@ -112,4 +112,23 @@ extension String {
         
         return string
     }
+    
+    var basicEmoji: String {
+        let fitzCodes: [UInt32] = [
+            0x1f3fb,
+            0x1f3fc,
+            0x1f3fd,
+            0x1f3fe,
+            0x1f3ff
+        ]
+        
+        var string = ""
+        for scalar in self.unicodeScalars {
+            if fitzCodes.contains(scalar.value) {
+                continue
+            }
+            string.unicodeScalars.append(scalar)
+        }
+        return string
+    }
 }
