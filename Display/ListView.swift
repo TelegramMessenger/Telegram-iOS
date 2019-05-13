@@ -1142,12 +1142,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         } else if let itemHighlightOverlayBackground = self.itemHighlightOverlayBackground {
             self.itemHighlightOverlayBackground = nil
-            transition.updateAlpha(node: itemHighlightOverlayBackground, alpha: 0.0, completion: { [weak itemHighlightOverlayBackground] _ in
-                itemHighlightOverlayBackground?.removeFromSupernode()
-            })
             for (_, headerNode) in self.itemHeaderNodes {
                 self.view.bringSubview(toFront: headerNode.view)
             }
+            self.view.bringSubview(toFront: itemHighlightOverlayBackground.view)
+            transition.updateAlpha(node: itemHighlightOverlayBackground, alpha: 0.0, completion: { [weak itemHighlightOverlayBackground] _ in
+                itemHighlightOverlayBackground?.removeFromSupernode()
+            })
             if let verticalScrollIndicator = self.verticalScrollIndicator {
                 verticalScrollIndicator.view.superview?.bringSubview(toFront: verticalScrollIndicator.view)
             }
