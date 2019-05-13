@@ -328,7 +328,7 @@ public final class SqliteValueBox: ValueBox {
         //database.execute("PRAGMA cache_size=-2097152")
         resultCode = database.execute("PRAGMA mmap_size=0")
         assert(resultCode)
-        resultCode = database.execute("PRAGMA synchronous=FULL")
+        resultCode = database.execute("PRAGMA synchronous=NORMAL")
         assert(resultCode)
         resultCode = database.execute("PRAGMA temp_store=MEMORY")
         assert(resultCode)
