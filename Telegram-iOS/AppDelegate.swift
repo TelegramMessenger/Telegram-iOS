@@ -205,6 +205,23 @@ final class SharedApplicationContext {
         precondition(!testIsLaunched)
         testIsLaunched = true
         
+        do {
+            let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+            let valueBox = SqliteValueBox(basePath: "\(documentsPath)/test_db", queue: Queue.mainQueue(), encryptionParameters: nil, upgradeProgress:{ _ in })
+            let table = ValueBoxTable(id: 1, keyType: .int64, compactValuesOnCreation: false)
+            let key = ValueBoxKey(length: 8)
+            key.setInt64(0, value: 1234567)
+            valueBox.begin()
+            if valueBox.get(table, key: key) != nil {
+                print("test_db: found")
+            } else {
+                print("test_db: not found")
+            }
+            valueBox.set(table, key: key, value: MemoryBuffer())
+            valueBox.commit()
+            valueBox.begin()
+        }
+        
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
         let statusBarHost = ApplicationStatusBarHost()
