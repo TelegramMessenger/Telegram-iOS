@@ -71,8 +71,13 @@ final class AccountManagerImpl {
         self.sharedDataTable = AccountManagerSharedDataTable(valueBox: self.valueBox, table: AccountManagerSharedDataTable.tableSpec(2))
         self.noticeTable = NoticeTable(valueBox: self.valueBox, table: NoticeTable.tableSpec(3))
         
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath)), let atomicState = try? JSONDecoder().decode(AccountManagerAtomicState.self, from: data) {
-            self.currentAtomicState = atomicState
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath)) {
+            if let atomicState = try? JSONDecoder().decode(AccountManagerAtomicState.self, from: data) {
+                self.currentAtomicState = atomicState
+            } else {
+                let _ = try? FileManager.default.removeItem(atPath: self.atomicStatePath)
+                preconditionFailure()
+            }
         } else {
             var legacyRecordDict: [AccountRecordId: AccountRecord] = [:]
             for record in self.legacyRecordTable.getRecords() {
