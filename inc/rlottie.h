@@ -52,22 +52,42 @@ struct LOTLayerNode;
 namespace rlottie {
 
 struct Color {
-    Color(){}
-    Color(float r, float g , float b):mr(r), mg(g), mb(b){}
-public:
-    float mr{0}, mg{0}, mb{0};
+    Color() = default;
+    Color(float r, float g , float b):_r(r), _g(g), _b(b){}
+    float r() const {return _r;}
+    float g() const {return _g;}
+    float b() const {return _b;}
+private:
+    float _r{0};
+    float _g{0};
+    float _b{0};
 };
 
 struct Size {
-    Size(float w, float h):mw(w), mh(h){}
+    Size() = default;
+    Size(float w, float h):_w(w), _h(h){}
+    float w() const {return _w;}
+    float h() const {return _h;}
 private:
-    float mw{0} , mh{0};
+    float _w{0};
+    float _h{0};
 };
 
 struct Point {
-    Point(float x, float y):mx(x), my(y){}
+    Point() = default;
+    Point(float x, float y):_x(x), _y(y){}
+    float x() const {return _x;}
+    float y() const {return _y;}
 private:
-    float mx{0} , my{0};
+    float _x{0};
+    float _y{0};
+};
+
+struct FrameInfo {
+    FrameInfo(uint32_t frame): _frameNo(frame){}
+    uint32_t curFrame() const {return _frameNo;}
+private:
+    uint32_t _frameNo;
 };
 
 enum class Property {
@@ -409,6 +429,11 @@ private:
     void setValue(Float_Type, Property, const std::string &, float);
     void setValue(Size_Type, Property, const std::string &, Size);
     void setValue(Point_Type, Property, const std::string &, Point);
+
+    void setValue(Color_Type, Property, const std::string &, std::function<Color(const FrameInfo &)> &&);
+    void setValue(Float_Type, Property, const std::string &, std::function<float(const FrameInfo &)> &&);
+    void setValue(Size_Type, Property, const std::string &, std::function<Size(const FrameInfo &)> &&);
+    void setValue(Point_Type, Property, const std::string &, std::function<Point(const FrameInfo &)> &&);
     /**
      *  @brief default constructor
      *

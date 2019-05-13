@@ -73,7 +73,7 @@ bool strokeProp(rlottie::Property prop)
 }
 
 LOTCompItem::LOTCompItem(LOTModel *model)
-    : mRootModel(model), mUpdateViewBox(false), mCurFrameNo(-1)
+    : mUpdateViewBox(false), mCurFrameNo(-1)
 {
     mCompData = model->mRoot.get();
     mRootLayer = createLayerItem(mCompData->mRootLayer.get());

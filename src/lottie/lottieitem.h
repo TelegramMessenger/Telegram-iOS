@@ -62,7 +62,6 @@ public:
 private:
    VMatrix                                    mScaleMatrix;
    VSize                                      mViewSize;
-   LOTModel                                   *mRootModel;
    LOTCompositionData                         *mCompData;
    std::unique_ptr<LOTLayerItem>               mRootLayer;
    bool                                        mUpdateViewBox;
@@ -441,7 +440,6 @@ protected:
    bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value) final;
 private:
    LOTProxyModel<LOTStrokeData> mModel;
-   LOTStrokeData               *mData{nullptr};
    VColor                       mColor;
    float                        mWidth{0};
    float                        mDashArray[6];

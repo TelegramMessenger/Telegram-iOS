@@ -50,7 +50,14 @@ main(void)
    LottieView *view = new LottieView(app->evas());
    view->setFilePath(filePath.c_str());
    if (view->player()) {
-       view->player()->setValue<rlottie::Property::FillColor>("**", rlottie::Color(0, 1, 0));
+       view->player()->setValue<rlottie::Property::FillColor>("**",
+           [](const rlottie::FrameInfo& info) {
+                if (info.curFrame() < 15 )
+                    return rlottie::Color(0, 1, 0);
+                else {
+                    return rlottie::Color(1, 0, 0);
+                }
+            });
    }
    view->setPos(0, 0);
    view->setSize(800, 800);

@@ -318,26 +318,54 @@ void Animation::setValue(Color_Type,Property prop,
                          const std::string &keypath,
                          Color value)
 {
-    d->setValue(keypath, LOTVariant(prop, value));
+    d->setValue(keypath, LOTVariant(prop, [value](const FrameInfo &){ return value;}));
 }
 
 void Animation::setValue(Float_Type, Property prop,
                          const std::string &keypath,
                          float value)
 {
-    d->setValue(keypath, LOTVariant(prop, value));
+    d->setValue(keypath, LOTVariant(prop, [value](const FrameInfo &){ return value;}));
 }
 
 void Animation::setValue(Size_Type,Property prop,
                          const std::string &keypath,
                          Size value)
 {
-    d->setValue(keypath, LOTVariant(prop, value));
+    d->setValue(keypath, LOTVariant(prop, [value](const FrameInfo &){ return value;}));
 }
 
 void Animation::setValue(Point_Type, Property prop,
                          const std::string &keypath,
                          Point value)
+{
+    d->setValue(keypath, LOTVariant(prop, [value](const FrameInfo &){ return value;}));
+}
+
+void Animation::setValue(Color_Type,Property prop,
+                         const std::string &keypath,
+                         std::function<Color(const FrameInfo &)> && value)
+{
+    d->setValue(keypath, LOTVariant(prop, value));
+}
+
+void Animation::setValue(Float_Type, Property prop,
+                         const std::string &keypath,
+                         std::function<float(const FrameInfo &)> && value)
+{
+    d->setValue(keypath, LOTVariant(prop, value));
+}
+
+void Animation::setValue(Size_Type,Property prop,
+                         const std::string &keypath,
+                         std::function<Size(const FrameInfo &)> && value)
+{
+    d->setValue(keypath, LOTVariant(prop, value));
+}
+
+void Animation::setValue(Point_Type, Property prop,
+                         const std::string &keypath,
+                         std::function<Point(const FrameInfo &)> && value)
 {
     d->setValue(keypath, LOTVariant(prop, value));
 }
