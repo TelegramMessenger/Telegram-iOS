@@ -186,7 +186,7 @@ final class AccountManagerMetadataTable: Table {
         return result
     }
     
-    func getVersion() -> Int32 {
+    func getVersion() -> Int32? {
         if let value = self.valueBox.get(self.table, key: self.key(.version)) {
             var id: Int32 = 0
             value.read(&id, offset: 0, length: 4)

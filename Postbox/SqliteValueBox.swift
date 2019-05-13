@@ -218,6 +218,30 @@ public final class SqliteValueBox: ValueBox {
         
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         let path = basePath + "/db_sqlite"
+        
+        #if DEBUG
+        let exists = FileManager.default.fileExists(atPath: path)
+        postboxLog("Opening \(path), exists: \(exists)")
+        if exists {
+            do {
+                let data = try Data(contentsOf: URL(fileURLWithPath: path))
+                postboxLog("\(path) size: \(data.count)")
+            } catch let e {
+                postboxLog("Couldn't open database: \(e)")
+            }
+        }
+        let walExists = FileManager.default.fileExists(atPath: path + "-wal")
+        postboxLog("Opening \(path)-wal, exists: \(walExists)")
+        if walExists {
+            do {
+                let data = try Data(contentsOf: URL(fileURLWithPath: path + "-wal"))
+                postboxLog("\(path)-wal size: \(data.count)")
+            } catch let e {
+                postboxLog("Couldn't open database: \(e)")
+            }
+        }
+        #endif
+        
         var database: Database
         if let result = Database(path) {
             database = result

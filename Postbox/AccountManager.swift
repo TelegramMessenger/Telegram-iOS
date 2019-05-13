@@ -18,7 +18,7 @@ public struct AccountManagerModifier {
     public let updateSharedData: (ValueBoxKey, (PreferencesEntry?) -> PreferencesEntry?) -> Void
     public let getAccessChallengeData: () -> PostboxAccessChallengeData
     public let setAccessChallengeData: (PostboxAccessChallengeData) -> Void
-    public let getVersion: () -> Int32
+    public let getVersion: () -> Int32?
     public let setVersion: (Int32) -> Void
     public let getNotice: (NoticeEntryKey) -> NoticeEntry?
     public let setNotice: (NoticeEntryKey, NoticeEntry?) -> Void
@@ -30,6 +30,7 @@ final class AccountManagerImpl {
     private let basePath: String
     private let atomicStatePath: String
     private let temporarySessionId: Int64
+    private let guardValueBox: ValueBox
     private let valueBox: ValueBox
     
     private var tables: [Table] = []
@@ -64,6 +65,7 @@ final class AccountManagerImpl {
         self.atomicStatePath = "\(basePath)/atomic-state"
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
+        self.guardValueBox = SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
         self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
         
         self.legacyMetadataTable = AccountManagerMetadataTable(valueBox: self.valueBox, table: AccountManagerMetadataTable.tableSpec(0))
@@ -71,14 +73,16 @@ final class AccountManagerImpl {
         self.sharedDataTable = AccountManagerSharedDataTable(valueBox: self.valueBox, table: AccountManagerSharedDataTable.tableSpec(2))
         self.noticeTable = NoticeTable(valueBox: self.valueBox, table: NoticeTable.tableSpec(3))
         
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath)) {
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath))
             if let atomicState = try? JSONDecoder().decode(AccountManagerAtomicState.self, from: data) {
                 self.currentAtomicState = atomicState
             } else {
                 let _ = try? FileManager.default.removeItem(atPath: self.atomicStatePath)
                 preconditionFailure()
             }
-        } else {
+        } catch let e {
+            postboxLog("load atomic state error: \(e)")
             var legacyRecordDict: [AccountRecordId: AccountRecord] = [:]
             for record in self.legacyRecordTable.getRecords() {
                 legacyRecordDict[record.id] = record
