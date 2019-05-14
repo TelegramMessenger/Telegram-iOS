@@ -210,6 +210,10 @@ public final class SqliteValueBox: ValueBox {
         checkpoints.dispose()
     }
     
+    func internalClose() {
+        self.database = nil
+    }
+    
     private func openDatabase(encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void) -> Database {
         assert(self.queue.isCurrent())
         

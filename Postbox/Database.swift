@@ -37,7 +37,9 @@ public final class Database {
         }
     }
 
-    deinit { sqlite3_close(self.handle) } // sqlite3_close_v2 in Yosemite/iOS 8?
+    deinit {
+        sqlite3_close(self.handle)
+    } // sqlite3_close_v2 in Yosemite/iOS 8?
 
     public func execute(_ SQL: String) -> Bool {
         let res = sqlite3_exec(self.handle, SQL, nil, nil, nil)

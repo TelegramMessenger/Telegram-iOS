@@ -973,6 +973,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                             subscriber.putNext(.upgrading(progress))
                                         })
                                         if let updatedPath = updatedPath {
+                                            valueBox.internalClose()
                                             let _ = try? FileManager.default.removeItem(atPath: basePath + "/db")
                                             let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: basePath + "/db")
                                             valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
