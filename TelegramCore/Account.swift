@@ -350,7 +350,7 @@ public func accountTransaction<T>(rootPath: String, id: AccountRecordId, encrypt
     }
 }
 
-public func accountWithId(accountManager: AccountManager, networkArguments: NetworkInitializationArguments, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
+public func accountWithId(accountManager: AccountManager, networkArguments: NetworkInitializationArguments, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, backupData: AccountBackupData?, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
     let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters)
@@ -366,7 +366,18 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
                 }
                 |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountResult, NoError> in
                     return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
-                        return (transaction.getState(), localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                        var state = transaction.getState()
+                        if state == nil, let backupData = backupData {
+                            let backupState = AuthorizedAccountState(isTestingEnvironment: beginWithTestingEnvironment, masterDatacenterId: backupData.masterDatacenterId, peerId: PeerId(backupData.peerId), state: nil)
+                            state = backupState
+                            let dict = NSMutableDictionary()
+                            dict.setObject(MTDatacenterAuthInfo(authKey: backupData.masterDatacenterKey, authKeyId: backupData.masterDatacenterKeyId, saltSet: [], authKeyAttributes: [:], mainTempAuthKey: nil, mediaTempAuthKey: nil), forKey: backupData.masterDatacenterId as NSNumber)
+                            let data = NSKeyedArchiver.archivedData(withRootObject: dict)
+                            transaction.setState(backupState)
+                            transaction.setKeychainEntry(data, forKey: "persistent:datacenterAuthInfoById")
+                        }
+                        
+                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
                     }
                     |> mapToSignal { (accountState, localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
                         let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
@@ -908,6 +919,62 @@ public func decryptedNotificationPayload(account: Account, data: Data) -> Signal
     return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: true)
     |> map { secret -> Data? in
         return decryptedNotificationPayload(key: secret, data: data)
+    }
+}
+
+public struct AccountBackupData: Codable, Equatable {
+    public var masterDatacenterId: Int32
+    public var peerId: Int64
+    public var masterDatacenterKey: Data
+    public var masterDatacenterKeyId: Int64
+}
+
+public final class AccountBackupDataAttribute: AccountRecordAttribute, Equatable {
+    public let data: AccountBackupData
+    
+    public init(data: AccountBackupData) {
+        self.data = data
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.data = try! JSONDecoder().decode(AccountBackupData.self, from: decoder.decodeDataForKey("data")!)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeData(try! JSONEncoder().encode(self.data), forKey: "data")
+    }
+    
+    public static func ==(lhs: AccountBackupDataAttribute, rhs: AccountBackupDataAttribute) -> Bool {
+        return lhs.data == rhs.data
+    }
+    
+    public func isEqual(to: AccountRecordAttribute) -> Bool {
+        if let to = to as? AccountBackupDataAttribute {
+            return self == to
+        } else {
+            return false
+        }
+    }
+}
+
+public func accountBackupData(postbox: Postbox) -> Signal<AccountBackupData?, NoError> {
+    return postbox.transaction { transaction -> AccountBackupData? in
+        guard let state = transaction.getState() as? AuthorizedAccountState else {
+            return nil
+        }
+        guard let authInfoData = transaction.keychainEntryForKey("persistent:datacenterAuthInfoById") else {
+            return nil
+        }
+        guard let authInfo = NSKeyedUnarchiver.unarchiveObject(with: authInfoData) as? NSDictionary else {
+            return nil
+        }
+        guard let datacenterAuthInfo = authInfo.object(forKey: state.masterDatacenterId as NSNumber) as? MTDatacenterAuthInfo else {
+            return nil
+        }
+        guard let authKey = datacenterAuthInfo.authKey else {
+            return nil
+        }
+        return AccountBackupData(masterDatacenterId: state.masterDatacenterId, peerId: state.peerId.toInt64(), masterDatacenterKey: authKey, masterDatacenterKeyId: datacenterAuthInfo.authKeyId)
     }
 }
 
