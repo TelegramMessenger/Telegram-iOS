@@ -45,6 +45,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case clearTips(PresentationTheme)
     case reimport(PresentationTheme)
     case resetData(PresentationTheme)
+    case resetDatabase(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case animatedStickers(PresentationTheme)
@@ -62,7 +63,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .resetBiometricsData, .optimizeDatabase, .animatedStickers, .photoPreview, .alternateIcon:
+            case .clearTips, .reimport, .resetData, .resetDatabase, .resetBiometricsData, .optimizeDatabase, .animatedStickers, .photoPreview, .alternateIcon:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -101,18 +102,20 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 13
             case .resetData:
                 return 14
-            case .resetBiometricsData:
+            case .resetDatabase:
                 return 15
-            case .optimizeDatabase:
+            case .resetBiometricsData:
                 return 16
-            case .animatedStickers:
+            case .optimizeDatabase:
                 return 17
-            case .photoPreview:
+            case .animatedStickers:
                 return 18
-            case .alternateIcon:
+            case .photoPreview:
                 return 19
-            case .versionInfo:
+            case .alternateIcon:
                 return 20
+            case .versionInfo:
+                return 21
         }
     }
     
@@ -390,6 +393,28 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     ])])
                     arguments.presentController(actionSheet, nil)
                 })
+            case let .resetDatabase(theme):
+                return ItemListActionItem(theme: theme, title: "Clear Database", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    guard let context = arguments.context else {
+                        return
+                    }
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: "All secret chats will be lost."),
+                        ActionSheetButtonItem(title: "Clear Database", color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            let databasePath = context.account.basePath + "/postbox/db"
+                            let _ = try? FileManager.default.removeItem(atPath: databasePath)
+                            preconditionFailure()
+                        }),
+                    ]), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    arguments.presentController(actionSheet, nil)
+                })
             case let .resetBiometricsData(theme):
                 return ItemListActionItem(theme: theme, title: "Reset Biometrics Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     let _ = updatePresentationPasscodeSettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
@@ -468,6 +493,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
         entries.append(.reimport(presentationData.theme))
     }
     entries.append(.resetData(presentationData.theme))
+    entries.append(.resetDatabase(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.alternateIcon(presentationData.theme))

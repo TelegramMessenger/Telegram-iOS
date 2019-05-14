@@ -61,6 +61,7 @@ private func preFetchedLegacyResourcePath(basePath: String, resource: MediaResou
 private struct AccountAttributes: Equatable {
     let sortIndex: Int32
     let isTestingEnvironment: Bool
+    let backupData: AccountBackupData?
 }
 
 private enum AddedAccountResult {
@@ -91,6 +92,7 @@ public final class SharedAccountContext {
     public var activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account, Int32)], currentAuth: UnauthorizedAccount?), NoError> {
         return self.activeAccountsPromise.get()
     }
+    private let managedAccountDisposables = DisposableDict<AccountRecordId>()
     private let activeAccountsWithInfoPromise = Promise<(primary: AccountRecordId?, accounts: [AccountWithInfo])>()
     public var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> {
         return self.activeAccountsWithInfoPromise.get()
@@ -301,13 +303,16 @@ public final class SharedAccountContext {
                         return false
                     }
                 })
+                var backupData: AccountBackupData?
                 var sortIndex: Int32 = 0
                 for attribute in record.attributes {
                     if let attribute = attribute as? AccountSortOrderAttribute {
                         sortIndex = attribute.order
+                    } else if let attribute = attribute as? AccountBackupDataAttribute {
+                        backupData = attribute.data
                     }
                 }
-                result[record.id] = AccountAttributes(sortIndex: sortIndex, isTestingEnvironment: isTestingEnvironment)
+                result[record.id] = AccountAttributes(sortIndex: sortIndex, isTestingEnvironment: isTestingEnvironment, backupData: backupData)
             }
             let authRecord: (AccountRecordId, Bool)? = view.currentAuthAccount.flatMap({ authAccount in
                 let isTestingEnvironment = authAccount.attributes.contains(where: { attribute in
@@ -341,7 +346,7 @@ public final class SharedAccountContext {
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
             for (id, attributes) in records {
                 if self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == id}) == nil {
-                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, backupData: attributes.backupData, auxiliaryMethods: telegramAccountAuxiliaryMethods)
                     |> map { result -> AddedAccountResult in
                         switch result {
                             case let .authorized(account):
@@ -362,7 +367,7 @@ public final class SharedAccountContext {
                 }
             }
             if let authRecord = authRecord, authRecord.0 != self.activeAccountsValue?.currentAuth?.id {
-                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, backupData: nil, auxiliaryMethods: telegramAccountAuxiliaryMethods)
                 |> mapToSignal { result -> Signal<UnauthorizedAccount?, NoError> in
                     switch result {
                         case let .unauthorized(account):
@@ -436,9 +441,11 @@ public final class SharedAccountContext {
                             existingAccountPeerKeys.insert(AccountPeerKey(peerId: account.peerId, isTestingEnvironment: account.testingEnvironment))
                             if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == account.id }) {
                                 self.activeAccountsValue?.accounts.remove(at: index)
+                                self.managedAccountDisposables.set(nil, forKey: account.id)
                                 assertionFailure()
                             }
                             self.activeAccountsValue!.accounts.append((account.id, account, accountRecord.2))
+                            self.managedAccountDisposables.set(self.updateAccountBackupData(account: account).start(), forKey: account.id)
                             account.resetStateManagement()
                             hadUpdates = true
                         }
@@ -460,6 +467,7 @@ public final class SharedAccountContext {
                     hadUpdates = true
                     if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == id }) {
                         self.activeAccountsValue?.accounts.remove(at: index)
+                        self.managedAccountDisposables.set(nil, forKey: id)
                     }
                 }
                 var primary: Account?
@@ -635,6 +643,26 @@ public final class SharedAccountContext {
         self.callDisposable?.dispose()
         self.callStateDisposable?.dispose()
         self.currentCallStatusTextTimer?.invalidate()
+    }
+    
+    private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {
+        return accountBackupData(postbox: account.postbox)
+        |> mapToSignal { backupData -> Signal<Never, NoError> in
+            guard let backupData = backupData else {
+                return .complete()
+            }
+            return self.accountManager.transaction { transaction -> Void in
+                transaction.updateRecord(account.id, { record in
+                    guard let record = record else {
+                        return nil
+                    }
+                    var attributes = record.attributes.filter({ !($0 is AccountBackupDataAttribute) })
+                    attributes.append(AccountBackupDataAttribute(data: backupData))
+                    return AccountRecord(id: record.id, attributes: attributes, temporarySessionId: record.temporarySessionId)
+                })
+            }
+            |> ignoreValues
+        }
     }
     
     public func updateNotificationTokensRegistration() {
