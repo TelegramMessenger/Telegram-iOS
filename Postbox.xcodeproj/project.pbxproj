@@ -78,6 +78,8 @@
 		D03BCCF81C73561C0097A291 /* Table.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BCCF71C73561C0097A291 /* Table.swift */; };
 		D040CA6422665370007123CE /* PostboxUpgrade_23to24.swift in Sources */ = {isa = PBXBuildFile; fileRef = D040CA6322665370007123CE /* PostboxUpgrade_23to24.swift */; };
 		D040CA6522665370007123CE /* PostboxUpgrade_23to24.swift in Sources */ = {isa = PBXBuildFile; fileRef = D040CA6322665370007123CE /* PostboxUpgrade_23to24.swift */; };
+		D0439B3F2289F6300067E026 /* AccountManagerAtomicState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0439B3E2289F6300067E026 /* AccountManagerAtomicState.swift */; };
+		D0439B402289F6300067E026 /* AccountManagerAtomicState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0439B3E2289F6300067E026 /* AccountManagerAtomicState.swift */; };
 		D044CA2A1C617D39002160FF /* SeedConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044CA291C617D39002160FF /* SeedConfiguration.swift */; };
 		D044CA2C1C617E2D002160FF /* MessageHistoryMetadataTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044CA2B1C617E2D002160FF /* MessageHistoryMetadataTable.swift */; };
 		D044CA2E1C618373002160FF /* ChatListHole.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044CA2D1C618373002160FF /* ChatListHole.swift */; };
@@ -445,6 +447,7 @@
 		D039FB1A21714D9800BD1BAD /* PeerPresencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerPresencesView.swift; sourceTree = "<group>"; };
 		D03BCCF71C73561C0097A291 /* Table.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Table.swift; sourceTree = "<group>"; };
 		D040CA6322665370007123CE /* PostboxUpgrade_23to24.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_23to24.swift; sourceTree = "<group>"; };
+		D0439B3E2289F6300067E026 /* AccountManagerAtomicState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountManagerAtomicState.swift; sourceTree = "<group>"; };
 		D044CA291C617D39002160FF /* SeedConfiguration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeedConfiguration.swift; sourceTree = "<group>"; };
 		D044CA2B1C617E2D002160FF /* MessageHistoryMetadataTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryMetadataTable.swift; sourceTree = "<group>"; };
 		D044CA2D1C618373002160FF /* ChatListHole.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListHole.swift; sourceTree = "<group>"; };
@@ -731,6 +734,7 @@
 				D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */,
 				D000CAD922006C6C0011B15D /* SharedAccountMediaManager.swift */,
 				D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */,
+				D0439B3E2289F6300067E026 /* AccountManagerAtomicState.swift */,
 			);
 			name = "Account Manager";
 			sourceTree = "<group>";
@@ -1272,6 +1276,7 @@
 				D0F7B1D91E045C6A007EB8A5 /* OrderStatisticTable.swift in Sources */,
 				D0FC194B201E8EAF00FEDBB2 /* MediaBoxFile.swift in Sources */,
 				D073CEA01DCBF3C1007511FD /* ItemCollectionsView.swift in Sources */,
+				D0439B402289F6300067E026 /* AccountManagerAtomicState.swift in Sources */,
 				D0BE383A1E7C1FD4000079AF /* ItemCollectionInfoView.swift in Sources */,
 				D0B418491D7DFE20004562A4 /* ChatListView.swift in Sources */,
 				D048B33E203C838500038D05 /* PostboxUpgrade_15to16.swift in Sources */,
@@ -1372,6 +1377,7 @@
 				D01C7F071EFC1ED3008305F1 /* UnorderedItemListTable.swift in Sources */,
 				D0633D07225B98FC003DD95F /* MessageHistoryViewEntryAttributes.swift in Sources */,
 				D021FC262024B83700C34AB7 /* FileSize.swift in Sources */,
+				D0439B3F2289F6300067E026 /* AccountManagerAtomicState.swift in Sources */,
 				D0AA55131FB4C6AB00C2AB58 /* BinarySearch.swift in Sources */,
 				D0943AF81FDAC53F001522CC /* ChatLocation.swift in Sources */,
 				D0F3CC741DDE1EB9008148FA /* ItemCacheMetaTable.swift in Sources */,

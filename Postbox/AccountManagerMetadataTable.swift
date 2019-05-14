@@ -114,13 +114,42 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable {
     }
 }
 
-public struct AuthAccountRecord: PostboxCoding {
+public struct AuthAccountRecord: PostboxCoding, Codable {
+    enum CodingKeys: String, CodingKey {
+        case id
+        case attributes
+    }
+    
     public let id: AccountRecordId
     public let attributes: [AccountRecordAttribute]
     
     init(id: AccountRecordId, attributes: [AccountRecordAttribute]) {
         self.id = id
         self.attributes = attributes
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(AccountRecordId.self, forKey: .id)
+        let attributesData = try container.decode(Array<Data>.self, forKey: .attributes)
+        var attributes: [AccountRecordAttribute] = []
+        for data in attributesData {
+            if let object = PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? AccountRecordAttribute {
+                attributes.append(object)
+            }
+        }
+        self.attributes = attributes
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        let attributesData: [Data] = self.attributes.map { attribute in
+            let encoder = PostboxEncoder()
+            encoder.encodeRootObject(attribute)
+            return encoder.makeData()
+        }
+        try container.encode(attributesData, forKey: .attributes)
     }
     
     public init(decoder: PostboxDecoder) {
@@ -157,7 +186,7 @@ final class AccountManagerMetadataTable: Table {
         return result
     }
     
-    func getVersion() -> Int32 {
+    func getVersion() -> Int32? {
         if let value = self.valueBox.get(self.table, key: self.key(.version)) {
             var id: Int32 = 0
             value.read(&id, offset: 0, length: 4)

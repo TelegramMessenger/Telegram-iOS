@@ -4,7 +4,7 @@ public protocol AccountRecordAttribute: PostboxCoding {
     func isEqual(to: AccountRecordAttribute) -> Bool
 }
 
-public struct AccountRecordId: Comparable, Hashable {
+public struct AccountRecordId: Comparable, Hashable, Codable {
     let rawValue: Int64
     
     public init(rawValue: Int64) {
@@ -34,10 +34,42 @@ public func generateAccountRecordId() -> AccountRecordId {
     return AccountRecordId(rawValue: id)
 }
 
-public struct AccountRecord: PostboxCoding, Equatable {
+public struct AccountRecord: PostboxCoding, Equatable, Codable {
+    enum CodingKeys: String, CodingKey {
+        case id
+        case attributes
+        case temporarySessionId
+    }
+    
     public let id: AccountRecordId
     public let attributes: [AccountRecordAttribute]
     public let temporarySessionId: Int64?
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(AccountRecordId.self, forKey: .id)
+        let attributesData = try container.decode(Array<Data>.self, forKey: .attributes)
+        var attributes: [AccountRecordAttribute] = []
+        for data in attributesData {
+            if let object = PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? AccountRecordAttribute {
+                attributes.append(object)
+            }
+        }
+        self.attributes = attributes
+        self.temporarySessionId = try container.decodeIfPresent(Int64.self, forKey: .temporarySessionId)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        let attributesData: [Data] = self.attributes.map { attribute in
+            let encoder = PostboxEncoder()
+            encoder.encodeRootObject(attribute)
+            return encoder.makeData()
+        }
+        try container.encode(attributesData, forKey: .attributes)
+        try container.encodeIfPresent(self.temporarySessionId, forKey: .attributes)
+    }
     
     public init(id: AccountRecordId, attributes: [AccountRecordAttribute], temporarySessionId: Int64?) {
         self.id = id

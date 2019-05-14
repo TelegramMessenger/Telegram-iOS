@@ -18,7 +18,7 @@ public struct AccountManagerModifier {
     public let updateSharedData: (ValueBoxKey, (PreferencesEntry?) -> PreferencesEntry?) -> Void
     public let getAccessChallengeData: () -> PostboxAccessChallengeData
     public let setAccessChallengeData: (PostboxAccessChallengeData) -> Void
-    public let getVersion: () -> Int32
+    public let getVersion: () -> Int32?
     public let setVersion: (Int32) -> Void
     public let getNotice: (NoticeEntryKey) -> NoticeEntry?
     public let setNotice: (NoticeEntryKey, NoticeEntry?) -> Void
@@ -28,13 +28,19 @@ public struct AccountManagerModifier {
 final class AccountManagerImpl {
     private let queue: Queue
     private let basePath: String
+    private let atomicStatePath: String
     private let temporarySessionId: Int64
+    private let guardValueBox: ValueBox?
     private let valueBox: ValueBox
     
     private var tables: [Table] = []
     
-    private let metadataTable: AccountManagerMetadataTable
-    private let recordTable: AccountManagerRecordTable
+    private var currentAtomicState: AccountManagerAtomicState
+    private var currentAtomicStateUpdated = false
+    
+    private let legacyMetadataTable: AccountManagerMetadataTable
+    private let legacyRecordTable: AccountManagerRecordTable
+    
     let sharedDataTable: AccountManagerSharedDataTable
     let noticeTable: NoticeTable
     
@@ -46,6 +52,7 @@ final class AccountManagerImpl {
     private var currentUpdatedAccessChallengeData: PostboxAccessChallengeData?
     
     private var recordsViews = Bag<(MutableAccountRecordsView, ValuePipe<AccountRecordsView>)>()
+    
     private var sharedDataViews = Bag<(MutableAccountSharedDataView, ValuePipe<AccountSharedDataView>)>()
     private var noticeEntryViews = Bag<(MutableNoticeEntryView, ValuePipe<NoticeEntryView>)>()
     private var accessChallengeDataViews = Bag<(MutableAccessChallengeDataView, ValuePipe<AccessChallengeDataView>)>()
@@ -55,19 +62,39 @@ final class AccountManagerImpl {
         
         self.queue = queue
         self.basePath = basePath
+        self.atomicStatePath = "\(basePath)/atomic-state"
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
+        self.guardValueBox = nil//SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
         self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
         
-        self.metadataTable = AccountManagerMetadataTable(valueBox: self.valueBox, table: AccountManagerMetadataTable.tableSpec(0))
-        self.recordTable = AccountManagerRecordTable(valueBox: self.valueBox, table: AccountManagerRecordTable.tableSpec(1))
+        self.legacyMetadataTable = AccountManagerMetadataTable(valueBox: self.valueBox, table: AccountManagerMetadataTable.tableSpec(0))
+        self.legacyRecordTable = AccountManagerRecordTable(valueBox: self.valueBox, table: AccountManagerRecordTable.tableSpec(1))
         self.sharedDataTable = AccountManagerSharedDataTable(valueBox: self.valueBox, table: AccountManagerSharedDataTable.tableSpec(2))
         self.noticeTable = NoticeTable(valueBox: self.valueBox, table: NoticeTable.tableSpec(3))
         
-        postboxLog("AccountManager: currentAccountId = \(String(describing: self.metadataTable.getCurrentAccountId()))")
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath))
+            if let atomicState = try? JSONDecoder().decode(AccountManagerAtomicState.self, from: data) {
+                self.currentAtomicState = atomicState
+            } else {
+                let _ = try? FileManager.default.removeItem(atPath: self.atomicStatePath)
+                preconditionFailure()
+            }
+        } catch let e {
+            postboxLog("load atomic state error: \(e)")
+            var legacyRecordDict: [AccountRecordId: AccountRecord] = [:]
+            for record in self.legacyRecordTable.getRecords() {
+                legacyRecordDict[record.id] = record
+            }
+            self.currentAtomicState = AccountManagerAtomicState(records: legacyRecordDict, currentRecordId: self.legacyMetadataTable.getCurrentAccountId(), currentAuthRecord: self.legacyMetadataTable.getCurrentAuthAccount())
+            self.syncAtomicStateToFile()
+        }
         
-        self.tables.append(self.metadataTable)
-        self.tables.append(self.recordTable)
+        postboxLog("AccountManager: currentAccountId = \(String(describing: currentAtomicState.currentRecordId))")
+        
+        self.tables.append(self.legacyMetadataTable)
+        self.tables.append(self.legacyRecordTable)
         self.tables.append(self.sharedDataTable)
         self.tables.append(self.noticeTable)
         
@@ -84,38 +111,51 @@ final class AccountManagerImpl {
                 self.valueBox.begin()
                 
                 let transaction = AccountManagerModifier(getRecords: {
-                    return self.recordTable.getRecords()
+                    return self.currentAtomicState.records.map { $0.1 }
                 }, updateRecord: { id, update in
-                    let current = self.recordTable.getRecord(id: id)
+                    let current = self.currentAtomicState.records[id]
                     let updated = update(current)
                     if updated != current {
-                        self.recordTable.setRecord(id: id, record: updated, operations: &self.currentRecordOperations)
+                        if let updated = updated {
+                            self.currentAtomicState.records[id] = updated
+                        } else {
+                            self.currentAtomicState.records.removeValue(forKey: id)
+                        }
+                        self.currentAtomicStateUpdated = true
+                        self.currentRecordOperations.append(.set(id: id, record: updated))
                     }
                 }, getCurrent: {
-                    if let id = self.metadataTable.getCurrentAccountId() {
-                        let record = self.recordTable.getRecord(id: id)
-                        return (id, record?.attributes ?? [])
+                    if let id = self.currentAtomicState.currentRecordId, let record = self.currentAtomicState.records[id] {
+                        return (record.id, record.attributes)
                     } else {
                         return nil
                     }
                 }, setCurrentId: { id in
-                    self.metadataTable.setCurrentAccountId(id, operations: &self.currentMetadataOperations)
+                    self.currentAtomicState.currentRecordId = id
+                    self.currentMetadataOperations.append(.updateCurrentAccountId(id))
+                    self.currentAtomicStateUpdated = true
                 }, getCurrentAuth: {
-                    if let id = self.metadataTable.getCurrentAuthAccount() {
-                        return id
+                    if let record = self.currentAtomicState.currentAuthRecord {
+                        return record
                     } else {
                         return nil
                     }
                 }, createAuth: { attributes in
                     let record = AuthAccountRecord(id: generateAccountRecordId(), attributes: attributes)
-                    self.metadataTable.setCurrentAuthAccount(record, operations: &self.currentMetadataOperations)
+                    self.currentAtomicState.currentAuthRecord = record
+                    self.currentAtomicStateUpdated = true
+                    self.currentMetadataOperations.append(.updateCurrentAuthAccountRecord(record))
                     return record
                 }, removeAuth: {
-                    self.metadataTable.setCurrentAuthAccount(nil, operations: &self.currentMetadataOperations)
+                    self.currentAtomicState.currentAuthRecord = nil
+                    self.currentMetadataOperations.append(.updateCurrentAuthAccountRecord(nil))
+                    self.currentAtomicStateUpdated = true
                 }, createRecord: { attributes in
                     let id = generateAccountRecordId()
                     let record = AccountRecord(id: id, attributes: attributes, temporarySessionId: nil)
-                    self.recordTable.setRecord(id: id, record: record, operations: &self.currentRecordOperations)
+                    self.currentAtomicState.records[id] = record
+                    self.currentRecordOperations.append(.set(id: id, record: record))
+                    self.currentAtomicStateUpdated = true
                     return id
                 }, getSharedData: { key in
                     return self.sharedDataTable.get(key: key)
@@ -123,14 +163,14 @@ final class AccountManagerImpl {
                     let updated = f(self.sharedDataTable.get(key: key))
                     self.sharedDataTable.set(key: key, value: updated, updatedKeys: &self.currentUpdatedSharedDataKeys)
                 }, getAccessChallengeData: {
-                    return self.metadataTable.getAccessChallengeData()
+                    return self.legacyMetadataTable.getAccessChallengeData()
                 }, setAccessChallengeData: { data in
                     self.currentUpdatedAccessChallengeData = data
-                    self.metadataTable.setAccessChallengeData(data)
+                    self.legacyMetadataTable.setAccessChallengeData(data)
                 }, getVersion: {
-                    return self.metadataTable.getVersion()
+                    return self.legacyMetadataTable.getVersion()
                 }, setVersion: { version in
-                    self.metadataTable.setVersion(version)
+                    self.legacyMetadataTable.setVersion(version)
                 }, getNotice: { key in
                     self.noticeTable.get(key: key)
                 }, setNotice: { key, value in
@@ -145,7 +185,7 @@ final class AccountManagerImpl {
                 self.beforeCommit()
                 
                 self.valueBox.commit()
-                self.valueBox.checkpoint()
+                //self.valueBox.checkpoint()
                 
                 subscriber.putNext(result)
                 subscriber.putCompletion()
@@ -154,7 +194,22 @@ final class AccountManagerImpl {
         }
     }
     
+    private func syncAtomicStateToFile() {
+        if let data = try? JSONEncoder().encode(self.currentAtomicState) {
+            if let _ = try? data.write(to: URL(fileURLWithPath: self.atomicStatePath), options: [.atomic]) {
+            } else {
+                preconditionFailure()
+            }
+        } else {
+            preconditionFailure()
+        }
+    }
+    
     private func beforeCommit() {
+        if self.currentAtomicStateUpdated {
+            self.syncAtomicStateToFile()
+        }
+        
         if !self.currentRecordOperations.isEmpty || !self.currentMetadataOperations.isEmpty {
             for (view, pipe) in self.recordsViews.copyItems() {
                 if view.replay(operations: self.currentRecordOperations, metadataOperations: self.currentMetadataOperations) {
@@ -192,6 +247,7 @@ final class AccountManagerImpl {
         self.currentUpdatedSharedDataKeys.removeAll()
         self.currentUpdatedNoticeEntryKeys.removeAll()
         self.currentUpdatedAccessChallengeData = nil
+        self.currentAtomicStateUpdated = false
         
         for table in self.tables {
             table.beforeCommit()
@@ -227,9 +283,10 @@ final class AccountManagerImpl {
     }
     
     private func accountRecordsInternal(transaction: AccountManagerModifier) -> Signal<AccountRecordsView, NoError> {
+        assert(self.queue.isCurrent())
         let mutableView = MutableAccountRecordsView(getRecords: {
-            return self.recordTable.getRecords()
-        }, currentId: self.metadataTable.getCurrentAccountId(), currentAuth: self.metadataTable.getCurrentAuthAccount())
+            return self.currentAtomicState.records.map { $0.1 }
+        }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
         let pipe = ValuePipe<AccountRecordsView>()
         let index = self.recordsViews.add((mutableView, pipe))
         
