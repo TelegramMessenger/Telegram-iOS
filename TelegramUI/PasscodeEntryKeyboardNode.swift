@@ -187,7 +187,6 @@ private let buttonsData = [
 
 final class PasscodeEntryKeyboardNode: ASDisplayNode {
     private var background: PasscodeBackground?
-    private let hapticFeedback = HapticFeedback()
     
     var charactedEntered: ((String) -> Void)?
     
@@ -204,7 +203,6 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
             for (title, subtitle) in buttonsData {
                 let buttonNode = PasscodeEntryButtonNode(background: background, title: title, subtitle: subtitle)
                 buttonNode.action = { [weak self] in
-                    self?.hapticFeedback.tap()
                     self?.charactedEntered?(title)
                 }
                 self.addSubnode(buttonNode)
