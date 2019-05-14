@@ -498,7 +498,7 @@ int LottieParserImpl::PeekType()
     return -1;
 }
 
-void LottieParserImpl::Skip(const char *key)
+void LottieParserImpl::Skip(const char */*key*/)
 {
     if (PeekType() == kArrayType) {
         EnterArray();

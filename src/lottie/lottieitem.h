@@ -260,7 +260,7 @@ public:
    virtual void renderList(std::vector<VDrawable *> &){}
    void setParent(LOTContentItem *parent) {mParent = parent;}
    LOTContentItem *parent() const {return mParent;}
-   virtual bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value) {return false;}
+   virtual bool resolveKeyPath(LOTKeyPath &, uint, LOTVariant &) {return false;}
 private:
    LOTContentItem *mParent{nullptr};
 };

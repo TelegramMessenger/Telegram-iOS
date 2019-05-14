@@ -1238,7 +1238,7 @@ void LOTPolystarItem::updatePath(VPath& path, int frameNo)
 LOTPaintDataItem::LOTPaintDataItem(bool staticContent):mDrawable(std::make_unique<LOTDrawable>()),
                                                        mStaticContent(staticContent){}
 
-void LOTPaintDataItem::update(int frameNo, const VMatrix &parentMatrix,
+void LOTPaintDataItem::update(int frameNo, const VMatrix &/*parentMatrix*/,
                               float parentAlpha, const DirtyFlag &flag)
 {
     mRenderNodeUpdate = true;

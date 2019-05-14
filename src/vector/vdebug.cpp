@@ -161,7 +161,7 @@ void VDebug::stringify(std::ostream& os)
 }
 
 template <typename Arg>
-char* decode(std::ostream& os, char* b, Arg* dummy)
+char* decode(std::ostream& os, char* b, Arg* /*dummy*/)
 {
     Arg arg = *reinterpret_cast<Arg*>(b);
     os << arg;
@@ -169,7 +169,7 @@ char* decode(std::ostream& os, char* b, Arg* dummy)
 }
 
 template <>
-char* decode(std::ostream& os, char* b, VDebug::string_literal_t* dummy)
+char* decode(std::ostream& os, char* b, VDebug::string_literal_t* /*dummy*/)
 {
     VDebug::string_literal_t s =
         *reinterpret_cast<VDebug::string_literal_t*>(b);
@@ -178,7 +178,7 @@ char* decode(std::ostream& os, char* b, VDebug::string_literal_t* dummy)
 }
 
 template <>
-char* decode(std::ostream& os, char* b, char** dummy)
+char* decode(std::ostream& os, char* b, char** /*dummy*/)
 {
     while (*b != '\0') {
         os << *b;
@@ -454,7 +454,9 @@ private:
     size_t const              m_size;
     Item*                     m_ring;
     std::atomic<unsigned int> m_write_index;
+public:
     char                      pad[64];
+private:
     unsigned int              m_read_index;
 };
 
@@ -654,7 +656,7 @@ public:
         m_state.store(State::READY, std::memory_order_release);
     }
 
-    NanoLogger(GuaranteedLogger gl, std::string const& log_directory,
+    NanoLogger(GuaranteedLogger /*gl*/, std::string const& log_directory,
                std::string const& log_file_name, uint32_t log_file_roll_size_mb)
         : m_state(State::INIT),
           m_buffer_base(new QueueBuffer()),
