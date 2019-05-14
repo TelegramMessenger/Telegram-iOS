@@ -89,14 +89,14 @@ public:
 };
 
 static void
-onExitCb(void *data, void *extra)
+onExitCb(void *data, void */*extra*/)
 {
     LottieViewTest *view = (LottieViewTest *)data;
     delete view;
 }
 
 static void
-onRenderPreCb(void *data, void *extra)
+onRenderPreCb(void *data, void */*extra*/)
 {
     LottieViewTest *view = (LottieViewTest *)data;
     view->render();

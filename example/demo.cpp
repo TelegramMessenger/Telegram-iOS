@@ -25,14 +25,14 @@
 using namespace std;
 
 static void
-onExitCb(void *data, void *extra)
+onExitCb(void *data, void */*extra*/)
 {
     LottieView *view = (LottieView *)data;
     delete view;
 }
 
 static void
-onRenderPreCb(void *data, void *extra)
+onRenderPreCb(void *data, void */*extra*/)
 {
     LottieView *view = (LottieView *)data;
     view->render();

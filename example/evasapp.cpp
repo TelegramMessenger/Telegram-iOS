@@ -43,7 +43,7 @@ _on_delete(Ecore_Evas *ee)
 }
 
 static Eina_Bool
-on_key_down(void *data, int type, void *event)
+on_key_down(void *data, int /*type*/, void *event)
 {
     Ecore_Event_Key *keyData = (Ecore_Event_Key *)event;
 
@@ -120,7 +120,7 @@ static bool isJsonFile(const char *filename) {
 }
 
 std::vector<std::string>
-EvasApp::jsonFiles(const std::string &dirName, bool recurse)
+EvasApp::jsonFiles(const std::string &dirName, bool /*recurse*/)
 {
     DIR *d;
     struct dirent *dir;

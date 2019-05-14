@@ -77,7 +77,7 @@ public:
 };
 
 static void
-onExitCb(void *data, void *extra)
+onExitCb(void *data, void */*extra*/)
 {
     UxSampleTest *view = (UxSampleTest *)data;
     delete view;
@@ -104,7 +104,7 @@ onKeyCb(void *data, void *extra)
 }
 
 static void
-onRenderPreCb(void *data, void *extra)
+onRenderPreCb(void *data, void */*extra*/)
 {
     UxSampleTest *view = (UxSampleTest *)data;
     if (view->mView)
@@ -112,7 +112,7 @@ onRenderPreCb(void *data, void *extra)
 }
 
 static void
-onResizeCb(void *data, void *extra)
+onResizeCb(void *data, void */*extra*/)
 {
     UxSampleTest *view = (UxSampleTest *)data;
     view->resize();

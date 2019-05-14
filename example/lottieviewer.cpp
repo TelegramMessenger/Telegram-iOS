@@ -120,7 +120,7 @@ _slider_cb(void *data, Evas_Object *obj, void *event_info EINA_UNUSED)
 }
 
 static void
-_button_clicked_cb(void *data, Evas_Object *obj, void *event_info)
+_button_clicked_cb(void *data, Evas_Object */*obj*/, void */*event_info*/)
 {
    AppInfo *info = (AppInfo *)data;
 
@@ -189,7 +189,7 @@ create_layout(Evas_Object *parent, const char *file)
 }
 
 static void
-_gl_selected_cb(void *data, Evas_Object *obj, void *event_info)
+_gl_selected_cb(void *data, Evas_Object */*obj*/, void *event_info)
 {
    Evas_Object *nf = (Evas_Object *)data;
    Elm_Object_Item *it = (Elm_Object_Item *)event_info;
@@ -200,7 +200,7 @@ _gl_selected_cb(void *data, Evas_Object *obj, void *event_info)
 }
 
 static char *
-_gl_text_get(void *data, Evas_Object *obj, const char *part)
+_gl_text_get(void *data, Evas_Object */*obj*/, const char */*part*/)
 {
    ItemData *id = (ItemData *) data;
    const char *ptr = strrchr(jsonFiles[id->index].c_str(), '/');
@@ -209,7 +209,7 @@ _gl_text_get(void *data, Evas_Object *obj, const char *part)
 }
 
 static void
-_gl_del(void *data, Evas_Object *obj)
+_gl_del(void */*data*/, Evas_Object */*obj*/)
 {
 }
 
