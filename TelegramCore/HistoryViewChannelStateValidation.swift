@@ -316,6 +316,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
         switch historyState {
             case let .channel(peerId, _):
                 let hash = hashForMessages(previousMessages, withChannelIds: false)
+                Logger.shared.log("HistoryValidation", "validate batch for \(peerId): \(previousMessages.map({ $0.id }))")
                 if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                     let requestSignal: Signal<Api.messages.Messages, MTRpcError>
                     if let tag = tag {
@@ -358,34 +359,6 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                 } else {
                     return .complete()
                 }
-            /*case let .group(groupId, _):
-                signal = .single(.notModified)
-                let hash = hashForMessages(previousMessages, withChannelIds: true)
-                let upperIndex = MessageIndex(previousMessages[previousMessages.count - 1])
-                let minIndex = MessageIndex(previousMessages[0]).predecessor()
-                
-                let upperInputPeer: Api.Peer = groupBoundaryPeer(upperIndex.id.peerId, accountPeerId: accountPeerId)
-                let lowerInputPeer: Api.Peer = groupBoundaryPeer(minIndex.id.peerId, accountPeerId: accountPeerId)
-                
-                var flags: Int32 = 0
-                flags |= (1 << 0)
-                
-                let offsetPosition: Api.FeedPosition = .feedPosition(date: upperIndex.timestamp, peer: upperInputPeer, id: upperIndex.id.id)
-                let addOffset: Int32 = -1
-                let minPosition: Api.FeedPosition = .feedPosition(date: minIndex.timestamp, peer: lowerInputPeer, id: minIndex.id.id)
-                
-                flags |= (1 << 0)
-                flags |= (1 << 2)
-                
-                signal = network.request(Api.functions.channels.getFeed(flags: flags, feedId: groupId.rawValue, offsetPosition: offsetPosition, addOffset: addOffset, limit: 200, maxPosition: nil, minPosition: minPosition, hash: hash))
-            |> map { result -> ValidatedMessages in
-                switch result {
-                    case let .feedMessages(_, _, _, _, messages, chats, users):
-                        return .messages(messages, chats, users, nil)
-                    case .feedMessagesNotModified:
-                        return .notModified
-                }
-            }*/
         }
         
         return signal
@@ -394,37 +367,81 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
             return .single(nil)
         }
         |> mapToSignal { result -> Signal<Void, NoError> in
-            return postbox.transaction { transaction -> Void in
-                if let result = result {
-                    switch result {
-                        case let .messages(messages, chats, users, channelPts):
-                            var storeMessages: [StoreMessage] = []
+            guard let result = result else {
+                return .complete()
+            }
+            switch result {
+                case let .messages(messages, chats, users, channelPts):
+                    var storeMessages: [StoreMessage] = []
+                    
+                    for message in messages {
+                        if let storeMessage = StoreMessage(apiMessage: message) {
+                            var attributes = storeMessage.attributes
                             
-                            for message in messages {
-                                if let storeMessage = StoreMessage(apiMessage: message) {
-                                    var attributes = storeMessage.attributes
-                                    
-                                    if let channelPts = channelPts {
-                                        attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
-                                    }
-                                    
-                                    switch historyState {
-                                        case .channel:
-                                            break
-                                        /*case let .group(_, groupState):
-                                            attributes.append(PeerGroupMessageStateVersionAttribute(stateIndex: groupState.stateIndex))*/
-                                    }
-                                    
-                                    storeMessages.append(storeMessage.withUpdatedAttributes(attributes))
-                                }
+                            if let channelPts = channelPts {
+                                attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
                             }
                             
-                            /*if case .group = historyState {
-                                let prevHash = hashForMessages(previousMessages, withChannelIds: true)
-                                let updatedHash = hashForMessages(storeMessages, withChannelIds: true)
-                                print("\(updatedHash) != \(prevHash)")
-                            }*/
-                            
+                            storeMessages.append(storeMessage.withUpdatedAttributes(attributes))
+                        }
+                    }
+                    
+                    var validMessageIds = Set<MessageId>()
+                    for message in storeMessages {
+                        if case let .Id(id) = message.id {
+                            validMessageIds.insert(id)
+                        }
+                    }
+                    
+                    var maybeRemovedMessageIds: [MessageId] = []
+                    for id in previous.keys {
+                        if !validMessageIds.contains(id) {
+                            maybeRemovedMessageIds.append(id)
+                        }
+                    }
+                    
+                    let actuallyRemovedMessagesSignal: Signal<Set<MessageId>, NoError>
+                    if maybeRemovedMessageIds.isEmpty {
+                        actuallyRemovedMessagesSignal = .single(Set())
+                    } else {
+                        actuallyRemovedMessagesSignal = postbox.transaction { transaction -> Signal<Set<MessageId>, NoError> in
+                            switch historyState {
+                                case let .channel(peerId, _):
+                                    if let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel) {
+                                        return network.request(Api.functions.channels.getMessages(channel: inputChannel, id: maybeRemovedMessageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
+                                        |> map { result -> Set<MessageId> in
+                                            let apiMessages: [Api.Message]
+                                            switch result {
+                                                case let .channelMessages(_, _, _, messages, _, _):
+                                                    apiMessages = messages
+                                                case let .messages(messages, _, _):
+                                                    apiMessages = messages
+                                                case let .messagesSlice(_, _, messages, _, _):
+                                                    apiMessages = messages
+                                                case .messagesNotModified:
+                                                    return Set()
+                                            }
+                                            var ids = Set<MessageId>()
+                                            for message in apiMessages {
+                                                if let id = message.id {
+                                                    ids.insert(id)
+                                                }
+                                            }
+                                            return ids
+                                        }
+                                        |> `catch` { _ -> Signal<Set<MessageId>, NoError> in
+                                            return .single(Set(maybeRemovedMessageIds))
+                                        }
+                                    }
+                            }
+                            return .single(Set(maybeRemovedMessageIds))
+                        }
+                        |> switchToLatest
+                    }
+                    
+                    return actuallyRemovedMessagesSignal
+                    |> mapToSignal { removedMessageIds -> Signal<Void, NoError> in
+                        return postbox.transaction { transaction -> Void in
                             var validMessageIds = Set<MessageId>()
                             for message in storeMessages {
                                 if case let .Id(id) = message.id {
@@ -470,22 +487,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                                     attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
                                                 }
                                                 
-                                                switch historyState {
-                                                    case .channel:
-                                                        break
-                                                    /*case let .group(_, groupState):
-                                                        for i in (0 ..< attributes.count).reversed() {
-                                                            if let _ = attributes[i] as? PeerGroupMessageStateVersionAttribute {
-                                                                attributes.remove(at: i)
-                                                            }
-                                                        }
-                                                        attributes.append(PeerGroupMessageStateVersionAttribute(stateIndex: groupState.stateIndex))*/
-                                                }
-                                                
-                                                var updatedFlags = StoreMessageFlags(currentMessage.flags)
-                                                /*if case .group = historyState {
-                                                    updatedFlags.insert(.CanBeGroupedIntoFeed)
-                                                }*/
+                                                let updatedFlags = StoreMessageFlags(currentMessage.flags)
                                                 
                                                 return .update(StoreMessage(id: message.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: updatedFlags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                             }
@@ -493,17 +495,14 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                         
                                         if previous[id] == nil {
                                             print("\(id) missing")
-                                            /*if case let .group(groupId, _) = historyState {
-                                                let _ = transaction.addMessagesToGroupFeedIndex(groupId: groupId, ids: [id])
-                                            }*/
                                         }
                                     } else {
                                         let _ = transaction.addMessages([message], location: .Random)
                                     }
                                 }
                             }
-                            
-                            for id in previous.keys {
+                        
+                            for id in removedMessageIds {
                                 if !validMessageIds.contains(id) {
                                     if let tag = tag {
                                         transaction.updateMessage(id, update: { currentMessage in
@@ -519,43 +518,38 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                         switch historyState {
                                             case .channel:
                                                 deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [id])
-                                            /*case let .group(groupId, _):
-                                                transaction.removeMessagesFromGroupFeedIndex(groupId: groupId, ids: [id])*/
+                                                Logger.shared.log("HistoryValidation", "deleting message \(id) in \(id.peerId)")
                                         }
                                     }
                                 }
                             }
-                        case .notModified:
-                            for id in previous.keys {
-                                transaction.updateMessage(id, update: { currentMessage in
-                                    var storeForwardInfo: StoreMessageForwardInfo?
-                                    if let forwardInfo = currentMessage.forwardInfo {
-                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                                    }
-                                    var attributes = currentMessage.attributes
-                                    for i in (0 ..< attributes.count).reversed() {
-                                        switch historyState {
-                                            case .channel:
-                                                if let _ = attributes[i] as? ChannelMessageStateVersionAttribute {
-                                                    attributes.remove(at: i)
-                                                }
-                                            /*case .group:
-                                                if let _ = attributes[i] as? PeerGroupMessageStateVersionAttribute {
-                                                    attributes.remove(at: i)
-                                                }*/
-                                        }
-                                    }
-                                    switch historyState {
-                                        case let .channel(_, channelState):
-                                            attributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
-                                        /*case let .group(_, groupState):
-                                            attributes.append(PeerGroupMessageStateVersionAttribute(stateIndex: groupState.stateIndex))*/
-                                    }
-                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
-                                })
-                            }
+                        }
                     }
-                }
+                case .notModified:
+                    return postbox.transaction { transaction -> Void in
+                        for id in previous.keys {
+                            transaction.updateMessage(id, update: { currentMessage in
+                                var storeForwardInfo: StoreMessageForwardInfo?
+                                if let forwardInfo = currentMessage.forwardInfo {
+                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                }
+                                var attributes = currentMessage.attributes
+                                for i in (0 ..< attributes.count).reversed() {
+                                    switch historyState {
+                                        case .channel:
+                                            if let _ = attributes[i] as? ChannelMessageStateVersionAttribute {
+                                                attributes.remove(at: i)
+                                            }
+                                    }
+                                }
+                                switch historyState {
+                                    case let .channel(_, channelState):
+                                        attributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
+                                }
+                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                            })
+                        }
+                    }
             }
         }
     } |> switchToLatest
