@@ -22,8 +22,7 @@ private let redactChildrenOfType: [String: Set<String>] = [
     "InputSingleMedia.inputSingleMedia": Set(["message"]),
     "inputPhoneContact": Set(["phone"]),
     "user": Set(["phone"]),
-    "updateUserPhone": Set(["phone"]),
-    "inputPhoneContact": Set(["phone"])
+    "updateUserPhone": Set(["phone"])
 ]
 
 private let redactFunctionParameters: [String: Set<String>] = [
