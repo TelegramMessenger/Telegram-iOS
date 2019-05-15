@@ -19,7 +19,11 @@ private let redactChildrenOfType: [String: Set<String>] = [
     "Updates.updateShortChatMessage": Set(["message"]),
     "BotInlineMessage.botInlineMessageText": Set(["message"]),
     "DraftMessage.draftMessage": Set(["message"]),
-    "InputSingleMedia.inputSingleMedia": Set(["message"])
+    "InputSingleMedia.inputSingleMedia": Set(["message"]),
+    "inputPhoneContact": Set(["phone"]),
+    "user": Set(["phone"]),
+    "updateUserPhone": Set(["phone"]),
+    "inputPhoneContact": Set(["phone"])
 ]
 
 private let redactFunctionParameters: [String: Set<String>] = [
