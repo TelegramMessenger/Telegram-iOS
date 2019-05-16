@@ -930,18 +930,20 @@ public struct AccountBackupData: Codable, Equatable {
 }
 
 public final class AccountBackupDataAttribute: AccountRecordAttribute, Equatable {
-    public let data: AccountBackupData
+    public let data: AccountBackupData?
     
-    public init(data: AccountBackupData) {
+    public init(data: AccountBackupData?) {
         self.data = data
     }
     
     public init(decoder: PostboxDecoder) {
-        self.data = try! JSONDecoder().decode(AccountBackupData.self, from: decoder.decodeDataForKey("data")!)
+        self.data = try? JSONDecoder().decode(AccountBackupData.self, from: decoder.decodeDataForKey("data") ?? Data())
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeData(try! JSONEncoder().encode(self.data), forKey: "data")
+        if let data = self.data, let serializedData = try? JSONEncoder().encode(data) {
+            encoder.encodeData(serializedData, forKey: "data")
+        }
     }
     
     public static func ==(lhs: AccountBackupDataAttribute, rhs: AccountBackupDataAttribute) -> Bool {
