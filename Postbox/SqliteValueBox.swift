@@ -537,7 +537,7 @@ public final class SqliteValueBox: ValueBox {
         precondition(self.queue.isCurrent())
         var statement: OpaquePointer? = nil
         let status = sqlite3_prepare_v2(database.handle, "SELECT name FROM __meta_fulltext_tables", -1, &statement, nil)
-        precondition(status == SQLITE_OK)
+        assert(status == SQLITE_OK)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [ValueBoxFullTextTable] = []
         
