@@ -13,6 +13,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
     
     private let strings: PresentationStrings
     private let theme: PresentationTheme
+    private let back: () -> Void
     
     var initialName: (String, String) = ("", "")
     private var termsOfService: UnauthorizedAccountTermsOfService?
@@ -33,9 +34,10 @@ final class AuthorizationSequenceSignUpController: ViewController {
         }
     }
     
-    init(strings: PresentationStrings, theme: PresentationTheme, back: @escaping () -> Void) {
+    init(strings: PresentationStrings, theme: PresentationTheme, back: @escaping () -> Void, displayCancel: Bool) {
         self.strings = strings
         self.theme = theme
+        self.back = back
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
@@ -57,10 +59,21 @@ final class AuthorizationSequenceSignUpController: ViewController {
                 back()
             })]), in: .window(.root))
         }
+        
+        if displayCancel {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    @objc private func cancelPressed() {
+        self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.theme), title: nil, text: self.strings.Login_CancelSignUpConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.strings.Login_CancelPhoneVerificationContinue, action: {
+        }), TextAlertAction(type: .defaultAction, title: self.strings.Login_CancelPhoneVerificationStop, action: { [weak self] in
+            self?.back()
+        })]), in: .window(.root))
     }
     
     override public func loadDisplayNode() {

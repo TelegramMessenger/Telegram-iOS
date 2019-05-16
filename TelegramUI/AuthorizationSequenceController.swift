@@ -634,7 +634,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         return controller
     }
     
-    private func signUpController(firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?) -> AuthorizationSequenceSignUpController {
+    private func signUpController(firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?, displayCancel: Bool) -> AuthorizationSequenceSignUpController {
         var currentController: AuthorizationSequenceSignUpController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceSignUpController {
@@ -655,7 +655,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
                     transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
                 }).start()
-            })
+            }, displayCancel: displayCancel)
             controller.signUpWithName = { [weak self, weak controller] firstName, lastName, avatarData in
                 if let strongSelf = self {
                     controller?.inProgress = true
@@ -744,12 +744,15 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         controllers.append(self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .signUp(_, _, _, firstName, lastName, termsOfService, syncContacts):
+                    case let .signUp(_, _, _, firstName, lastName, termsOfService, _):
                         var controllers: [ViewController] = []
+                        var displayCancel = false
                         if !self.otherAccountPhoneNumbers.1.isEmpty {
                             controllers.append(self.splashController())
+                        } else {
+                            displayCancel = true
                         }
-                        controllers.append(self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService))
+                        controllers.append(self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService, displayCancel: displayCancel))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                 }
         }
