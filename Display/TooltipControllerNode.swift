@@ -107,7 +107,7 @@ final class TooltipControllerNode: ASDisplayNode {
     }
     
     func animateIn() {
-        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
     func animateOut(completion: @escaping () -> Void) {
