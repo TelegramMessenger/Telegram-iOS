@@ -41,9 +41,6 @@
       location = "group:submodules/HockeySDK-iOS/Support/HockeySDK.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:ModernProto/ModernProto.xcodeproj">
-   </FileRef>
-   <FileRef
       location = "group:Telegram-iOS.xcodeproj">
    </FileRef>
 </Workspace>

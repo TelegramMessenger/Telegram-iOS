@@ -215,7 +215,6 @@
 		09FDAEE62140477F00BF856F /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */; };
 		D000CACF21FB6E380011B15D /* NotificationService.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D000CAC821FB6E370011B15D /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D001D5AA1F878DA300DF975A /* PhoneCountries.txt in Resources */ = {isa = PBXBuildFile; fileRef = D001D5A91F878DA300DF975A /* PhoneCountries.txt */; };
-		D006CFA021A8D11B00FDCD32 /* ModernProto.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D00859A21B28189D00EAF753 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00859A11B28189D00EAF753 /* AppDelegate.swift */; };
 		D00859A91B28189D00EAF753 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D00859A81B28189D00EAF753 /* Images.xcassets */; };
 		D00859AC1B28189D00EAF753 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = D00859AA1B28189D00EAF753 /* LaunchScreen.xib */; };
@@ -538,7 +537,6 @@
 				D0B4AF901EC122A700D51FF6 /* TelegramUI.framework in Embed Frameworks */,
 				D096C2C21CC3C104006D814E /* Postbox.framework in Embed Frameworks */,
 				D096C2C51CC3C11A006D814E /* SwiftSignalKit.framework in Embed Frameworks */,
-				D006CFA021A8D11B00FDCD32 /* ModernProto.framework in Embed Frameworks */,
 				D015E051225D303F00CB9E8A /* WebP.framework in Embed Frameworks */,
 				D0CAF3191D763B230011F558 /* MtProtoKitDynamic.framework in Embed Frameworks */,
 			);
@@ -913,7 +911,6 @@
 		D000CAC321FB6E170011B15D /* NotificationService-AppStoreLLC.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-AppStoreLLC.entitlements"; sourceTree = "<group>"; };
 		D000CAC821FB6E370011B15D /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D001D5A91F878DA300DF975A /* PhoneCountries.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PhoneCountries.txt; path = "Telegram-iOS/Resources/PhoneCountries.txt"; sourceTree = "<group>"; };
-		D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ModernProto.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D006CFA121A8D12600FDCD32 /* ModernProto.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ModernProto.framework; path = "../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-ffbqcdyqpehxdvcwhyaorlehrrdc/Build/Products/Debug Hockeyapp-iphoneos/ModernProto.framework"; sourceTree = "<group>"; };
 		D008599C1B28189D00EAF753 /* Telegram.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Telegram.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00859A01B28189D00EAF753 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -1922,7 +1919,6 @@
 			isa = PBXGroup;
 			children = (
 				D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */,
-				D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */,
 				D023EBB31DDB2F0E00BD496D /* Resources */,
 				D03B0E791D63484500955575 /* Share */,
 				D0D268771D79A70A00C422DA /* SiriIntents */,
