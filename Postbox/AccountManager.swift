@@ -75,9 +75,11 @@ final class AccountManagerImpl {
         
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath))
-            if let atomicState = try? JSONDecoder().decode(AccountManagerAtomicState.self, from: data) {
+            do {
+                let atomicState = try JSONDecoder().decode(AccountManagerAtomicState.self, from: data)
                 self.currentAtomicState = atomicState
-            } else {
+            } catch let e {
+                postboxLog("decode atomic state error: \(e)")
                 let _ = try? FileManager.default.removeItem(atPath: self.atomicStatePath)
                 preconditionFailure()
             }
