@@ -65,7 +65,7 @@ final class AccountManagerImpl {
         self.atomicStatePath = "\(basePath)/atomic-state"
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
-        self.guardValueBox = nil//SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
+        self.guardValueBox = SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
         self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: nil, upgradeProgress: { _ in })
         
         self.legacyMetadataTable = AccountManagerMetadataTable(valueBox: self.valueBox, table: AccountManagerMetadataTable.tableSpec(0))

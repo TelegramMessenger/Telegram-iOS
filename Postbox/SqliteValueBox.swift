@@ -247,8 +247,8 @@ public final class SqliteValueBox: ValueBox {
             database = result
         } else {
             postboxLog("Couldn't open DB")
-            //let _ = try? FileManager.default.removeItem(atPath: path)
-            //database = Database(path)!
+            let _ = try? FileManager.default.removeItem(atPath: path)
+            database = Database(path)!
             preconditionFailure("Couldn't open database")
         }
         
