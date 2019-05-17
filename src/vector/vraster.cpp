@@ -18,6 +18,7 @@
 
 #include "vraster.h"
 #include <cstring>
+#include <memory>
 #include "v_ft_raster.h"
 #include "v_ft_stroker.h"
 #include "vdebug.h"
@@ -28,19 +29,28 @@
 
 V_BEGIN_NAMESPACE
 
+template<typename T>
+class dyn_array
+{
+public:
+    dyn_array(size_t size):mCapacity(size),mData(std::make_unique<T[]>(mCapacity)){}
+    void reserve(size_t size)
+    {
+        if (mCapacity > size) return;
+        mCapacity = size;
+        mData = std::make_unique<T[]>(mCapacity);
+    }
+    T* data() const {return mData.get();}
+
+private:
+    size_t                 mCapacity{0};
+    std::unique_ptr<T[]>   mData{nullptr};
+};
+
 struct FTOutline {
 public:
-    ~FTOutline()
-    {
-        if (mPointSize) delete[] ft.points;
-        if (mTagSize) delete[] ft.tags;
-        if (mSegmentSize) {
-            delete[] ft.contours;
-            delete[] ft.contours_flag;
-        }
-    }
     void reset();
-    void grow(int, int);
+    void grow(size_t, size_t);
     void convert(const VPath &path);
     void convert(CapStyle, JoinStyle, float, float);
     void moveTo(const VPointF &pt);
@@ -50,14 +60,15 @@ public:
     void end();
     void transform(const VMatrix &m);
     SW_FT_Outline          ft;
-    int                    mPointSize{0};
-    int                    mSegmentSize{0};
-    int                    mTagSize{0};
     bool                   closed{false};
     SW_FT_Stroker_LineCap  ftCap;
     SW_FT_Stroker_LineJoin ftJoin;
     SW_FT_Fixed            ftWidth;
     SW_FT_Fixed            ftMeterLimit;
+    dyn_array<SW_FT_Vector> mPointMemory{100};
+    dyn_array<char>         mTagMemory{100};
+    dyn_array<short>        mContourMemory{10};
+    dyn_array<char>         mContourFlagMemory{10};
 };
 
 void FTOutline::reset()
@@ -66,35 +77,18 @@ void FTOutline::reset()
     ft.flags = 0x0;
 }
 
-void FTOutline::grow(int points, int segments)
+void FTOutline::grow(size_t points, size_t segments)
 {
     reset();
+    mPointMemory.reserve(points + segments);
+    mTagMemory.reserve(points + segments);
+    mContourMemory.reserve(segments);
+    mContourFlagMemory.reserve(segments);
 
-    int point_size = (points + segments);
-    int segment_size = (sizeof(short) * segments);
-    int tag_size = (sizeof(char) * (points + segments));
-
-    if (point_size > mPointSize) {
-        if (mPointSize) delete [] ft.points;
-        ft.points = new SW_FT_Vector[point_size];
-        mPointSize = point_size;
-    }
-
-    if (segment_size > mSegmentSize) {
-        if (mSegmentSize) {
-            delete [] ft.contours;
-            delete [] ft.contours_flag;
-        }
-        ft.contours = new short[segment_size];
-        ft.contours_flag = new char[segment_size];
-        mSegmentSize = segment_size;
-    }
-
-    if (tag_size > mTagSize) {
-        if (mTagSize) delete [] ft.tags;
-        ft.tags = new char[tag_size];
-        mTagSize = tag_size;
-    }
+    ft.points = mPointMemory.data();
+    ft.tags = mTagMemory.data();
+    ft.contours = mContourMemory.data();
+    ft.contours_flag = mContourFlagMemory.data();
 }
 
 void FTOutline::convert(const VPath &path)
@@ -104,7 +98,7 @@ void FTOutline::convert(const VPath &path)
 
     grow(points.size(), path.segments());
 
-    int index = 0;
+    size_t index = 0;
     for (auto element : elements) {
         switch (element) {
         case VPath::Element::MoveTo:
