@@ -222,7 +222,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
             offset = postbox.loadedPeerWithId(upperBound.id.peerId)
             |> take(1)
             |> map { peer in
-                return (upperBound.timestamp, upperBound.id.id + 1, apiInputPeer(peer) ?? .inputPeerEmpty)
+                return (upperBound.timestamp, upperBound.id.id, apiInputPeer(peer) ?? .inputPeerEmpty)
             }
         }
         
