@@ -251,8 +251,8 @@ public final class SqliteValueBox: ValueBox {
             database = result
         } else {
             postboxLog("Couldn't open DB")
-            //let _ = try? FileManager.default.removeItem(atPath: path)
-            //database = Database(path)!
+            let _ = try? FileManager.default.removeItem(atPath: path)
+            database = Database(path)!
             preconditionFailure("Couldn't open database")
         }
         
@@ -541,7 +541,7 @@ public final class SqliteValueBox: ValueBox {
         precondition(self.queue.isCurrent())
         var statement: OpaquePointer? = nil
         let status = sqlite3_prepare_v2(database.handle, "SELECT name FROM __meta_fulltext_tables", -1, &statement, nil)
-        precondition(status == SQLITE_OK)
+        assert(status == SQLITE_OK)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [ValueBoxFullTextTable] = []
         
