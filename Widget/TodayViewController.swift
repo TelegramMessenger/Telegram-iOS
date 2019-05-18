@@ -23,6 +23,7 @@ private let auxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInputState:
     return nil
 })
 
+@objc(TodayViewController)
 class TodayViewController: UIViewController, NCWidgetProviding {
     private var initializedInterface = false
     

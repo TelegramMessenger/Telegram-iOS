@@ -42,6 +42,7 @@ private func parseFileLocationResource(_ dict: [AnyHashable: Any]) -> TelegramMe
     return CloudFileMediaResource(datacenterId: Int(datacenterId), volumeId: volumeId, localId: localId, secret: secret, size: nil, fileReference: fileReference)
 }
 
+@objc(NotificationViewController)
 class NotificationViewController: UIViewController, UNNotificationContentExtension {
     private let imageNode = TransformImageNode()
     private var imageInfo: (isSticker: Bool, dimensions: CGSize)?
