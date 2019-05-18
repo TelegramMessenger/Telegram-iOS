@@ -4272,3 +4272,10 @@ Sorry for the inconvenience.";
 "UserInfo.ScamBotWarning" = "⚠️ Warning: Many users reported this user as a scam. Please be careful, especially if it asks you for money.";
 "ChannelInfo.ScamChannelWarning" = "⚠️ Warning: Many users reported this channel as a scam. Please be careful, especially if it asks you for money.";
 "GroupInfo.ScamGroupWarning" = "⚠️ Warning: Many users reported this group as a scam. Please be careful, especially if it asks you for money.";
+
+"Privacy.AddNewPeer" = "Add Users or Groups";
+"PrivacyPhoneNumberSettings.WhoCanSeeMyPhoneNumber" = "WHO CAN SEE MY PHONE NUMBER";
+"PrivacyLastSeenSettings.CustomHelp" = "Users who already have your number saved in the contacts will also see it on Telegram.";
+"Privacy.PhoneNumber" = "Phone Number";
+"PrivacySettings.PhoneNumber" = "Phone Number";
+"Contacts.SearchUsersAndGroupsLabel" = "Search for users and groups";
