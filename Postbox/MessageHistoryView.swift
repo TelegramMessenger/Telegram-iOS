@@ -381,18 +381,18 @@ final class MutableMessageHistoryView {
                         switch operation {
                             case let .InsertMessage(message):
                                 if unwrappedTag.isEmpty || message.tags.contains(unwrappedTag) {
-                                    if loadedState.add(postbox: postbox, entry: .IntermediateMessageEntry(message, nil, nil)) {
+                                    if loadedState.add(entry: .IntermediateMessageEntry(message, nil, nil)) {
                                         hasChanges = true
                                     }
                                 }
                             case let .Remove(indicesAndTags):
                                 for (index, _) in indicesAndTags {
-                                    if loadedState.remove(postbox: postbox, index: index) {
+                                    if loadedState.remove(index: index) {
                                         hasChanges = true
                                     }
                                 }
                             case let .UpdateEmbeddedMedia(index, buffer):
-                                if loadedState.updateEmbeddedMedia(postbox: postbox, index: index, buffer: buffer) {
+                                if loadedState.updateEmbeddedMedia(index: index, buffer: buffer) {
                                     hasChanges = true
                                 }
                             case let .UpdateGroupInfos(groupInfos):

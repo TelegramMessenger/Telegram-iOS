@@ -248,7 +248,7 @@ class MessageHistoryViewTests: XCTestCase {
                                 let attributesData = ReadBuffer(data: Data())
                                 
                                 let stableId = addMessage(Int32(insertId), Int32(insertId))
-                                let _ = loadedState.add(postbox: self.postbox!, entry: .IntermediateMessageEntry(IntermediateMessage(stableId: stableId, stableVersion: 0, id: MessageId(peerId: peerId, namespace: namespace, id: insertId), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: insertId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
+                                let _ = loadedState.add(entry: .IntermediateMessageEntry(IntermediateMessage(stableId: stableId, stableVersion: 0, id: MessageId(peerId: peerId, namespace: namespace, id: insertId), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: insertId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
                                 
                                 let entries = loadedState.completeAndSample(postbox: self.postbox!).entries
                                 let ids = entries.map({ $0.message.id.id })
@@ -334,10 +334,10 @@ class MessageHistoryViewTests: XCTestCase {
                             if isAdd {
                                 let stableId = addMessage(Int32(itemId), Int32(itemId))
                                 let attributesData = ReadBuffer(data: Data())
-                                let _ = loadedState.add(postbox: self.postbox!, entry: .IntermediateMessageEntry(IntermediateMessage(stableId: stableId, stableVersion: 0, id: messageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: itemId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
+                                let _ = loadedState.add(entry: .IntermediateMessageEntry(IntermediateMessage(stableId: stableId, stableVersion: 0, id: messageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: itemId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
                             } else {
                                 removeMessage(itemId)
-                                let _ = loadedState.remove(postbox: self.postbox!, index: MessageIndex(id: messageId, timestamp: itemId))
+                                let _ = loadedState.remove(index: MessageIndex(id: messageId, timestamp: itemId))
                             }
                             
                             let entries = loadedState.completeAndSample(postbox: self.postbox!).entries
