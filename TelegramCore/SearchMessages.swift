@@ -84,6 +84,12 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
             users = apiUsers
             totalCount = count
             nextRate = apiNextRate
+        case let .messagesSliceLegacy(_, count, apiMessages, apiChats, apiUsers):
+            messages = apiMessages
+            chats = apiChats
+            users = apiUsers
+            totalCount = count
+            nextRate = nil
         case .messagesNotModified:
             messages = []
             chats = []
@@ -359,7 +365,11 @@ public func downloadMessage(postbox: Postbox, network: Network, messageId: Messa
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
-                        case let.messagesSlice(_, _, _, apiMessages, apiChats, apiUsers):
+                        case let .messagesSlice(_, _, _, apiMessages, apiChats, apiUsers):
+                            messages = apiMessages
+                            chats = apiChats
+                            users = apiUsers
+                        case let .messagesSliceLegacy(_, _, apiMessages, apiChats, apiUsers):
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
@@ -446,6 +456,10 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
                 messages = apiMessages
                 chats = apiChats
                 users = apiUsers
+            case let .messagesSliceLegacy(_, _, apiMessages, apiChats, apiUsers):
+                messages = apiMessages
+                chats = apiChats
+                users = apiUsers
             case .messagesNotModified:
                 messages = []
                 chats = []
@@ -514,7 +528,9 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
                             messages = apiMessages
                         case let .channelMessages(_, _, _, apiMessages, _, _):
                             messages = apiMessages
-                        case let.messagesSlice(_, _, _, apiMessages, _, _):
+                        case let .messagesSlice(_, _, _, apiMessages, _, _):
+                            messages = apiMessages
+                        case let .messagesSliceLegacy(_, _, apiMessages, _, _):
                             messages = apiMessages
                         case .messagesNotModified:
                             messages = []
@@ -538,7 +554,9 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
                         messages = apiMessages
                     case let .channelMessages(_, _, _, apiMessages, _, _):
                         messages = apiMessages
-                    case let.messagesSlice(_, _, _, apiMessages, _, _):
+                    case let .messagesSlice(_, _, _, apiMessages, _, _):
+                        messages = apiMessages
+                    case let .messagesSliceLegacy(_, _, apiMessages, _, _):
                         messages = apiMessages
                     case .messagesNotModified:
                         messages = []

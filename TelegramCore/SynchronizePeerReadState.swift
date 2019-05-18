@@ -53,6 +53,8 @@ private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId
                     apiMessages = messages
                 case let .messagesSlice(_, _, _, messages, _, _):
                     apiMessages = messages
+                case let .messagesSliceLegacy(_, _, messages, _, _):
+                    apiMessages = messages
                 case .messagesNotModified:
                     apiMessages = []
             }

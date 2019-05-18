@@ -476,6 +476,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1951620897] = { return Api.messages.Messages.parse_messagesNotModified($0) }
     dict[-1725551049] = { return Api.messages.Messages.parse_channelMessages($0) }
     dict[-923939298] = { return Api.messages.Messages.parse_messagesSlice($0) }
+    dict[-1497072982] = { return Api.messages.Messages.parse_messagesSliceLegacy($0) }
     dict[-1022713000] = { return Api.Invoice.parse_invoice($0) }
     dict[-2122045747] = { return Api.PeerSettings.parse_peerSettings($0) }
     dict[955951967] = { return Api.auth.SentCode.parse_sentCode($0) }
@@ -2227,6 +2228,7 @@ struct messages {
         case messagesNotModified(count: Int32)
         case channelMessages(flags: Int32, pts: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case messagesSlice(flags: Int32, count: Int32, nextRate: Int32?, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+        case messagesSliceLegacy(flags: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -2302,6 +2304,28 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
+                case .messagesSliceLegacy(let flags, let count, let messages, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-1497072982)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
     }
     }
     
@@ -2315,6 +2339,8 @@ struct messages {
                 return ("channelMessages", [("flags", flags), ("pts", pts), ("count", count), ("messages", messages), ("chats", chats), ("users", users)])
                 case .messagesSlice(let flags, let count, let nextRate, let messages, let chats, let users):
                 return ("messagesSlice", [("flags", flags), ("count", count), ("nextRate", nextRate), ("messages", messages), ("chats", chats), ("users", users)])
+                case .messagesSliceLegacy(let flags, let count, let messages, let chats, let users):
+                return ("messagesSliceLegacy", [("flags", flags), ("count", count), ("messages", messages), ("chats", chats), ("users", users)])
     }
     }
     
@@ -2411,6 +2437,35 @@ struct messages {
             let _c6 = _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.messages.Messages.messagesSlice(flags: _1!, count: _2!, nextRate: _3, messages: _4!, chats: _5!, users: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messagesSliceLegacy(_ reader: BufferReader) -> Messages? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.Message]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+            }
+            var _4: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.Messages.messagesSliceLegacy(flags: _1!, count: _2!, messages: _3!, chats: _4!, users: _5!)
             }
             else {
                 return nil

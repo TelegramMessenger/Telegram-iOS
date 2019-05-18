@@ -17,7 +17,9 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
     let phoneNumberPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyPhoneNumber))
     let autoremoveTimeout = account.network.request(Api.functions.account.getAccountTTL())
     return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, autoremoveTimeout)
-    |> retryRequest
+    |> `catch` { _ in
+        return .complete()
+    }
     |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, autoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
         let accountTimeoutSeconds: Int32
         switch autoremoveTimeout {

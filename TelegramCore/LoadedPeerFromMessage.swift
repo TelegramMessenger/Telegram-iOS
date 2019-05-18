@@ -41,6 +41,8 @@ public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: M
                                             apiUsers = users
                                         case let .messagesSlice(_, _, _, _, _, users):
                                             apiUsers = users
+                                        case let .messagesSliceLegacy(_, _, _, _, users):
+                                            apiUsers = users
                                         case let .channelMessages(_, _, _, _, _, users):
                                             apiUsers = users
                                         case .messagesNotModified:
