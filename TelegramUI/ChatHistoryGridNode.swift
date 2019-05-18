@@ -326,10 +326,10 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
             if let strongSelf = self, let historyView = strongSelf.historyView, let top = visibleItems.top, let bottom = visibleItems.bottom, let visibleTop = visibleItems.topVisible, let visibleBottom = visibleItems.bottomVisible {
                 if top.0 < 5 && historyView.originalView.laterId != nil {
                     let lastEntry = historyView.filteredEntries[historyView.filteredEntries.count - 1 - visibleTop.0]
-                    strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: 200))
+                    strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: 100))
                 } else if bottom.0 >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
                     let firstEntry = historyView.filteredEntries[historyView.filteredEntries.count - 1 - visibleBottom.0]
-                    strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: 200))
+                    strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: 100))
                 }
             }
         }
