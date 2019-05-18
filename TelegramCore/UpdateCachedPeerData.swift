@@ -142,14 +142,13 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                         switch userFull.link {
                                             case let .link(_, foreignLink, _):
                                                 switch foreignLink {
-                                                    case .contactLinkContact, .contactLinkHasPhone:
-                                                    hasPhone = true
+                                                    case .contactLinkContact:
+                                                        hasPhone = true
                                                     case .contactLinkNone:
                                                         hasPhone = false
                                                     case .contactLinkUnknown:
                                                         hasPhone = false
                                                 }
-                                                break
                                         }
                                         return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedHasAccountPeerPhone(hasPhone).withUpdatedPinnedMessageId(pinnedMessageId)
                                 }

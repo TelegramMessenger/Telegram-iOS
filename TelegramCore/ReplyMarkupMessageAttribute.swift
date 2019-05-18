@@ -14,6 +14,7 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
     case switchInline(samePeer: Bool, query: String)
     case openWebApp
     case payment
+    case urlAuth(url: String, buttonId: Int32)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -33,6 +34,8 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
                 self = .openWebApp
             case 7:
                 self = .payment
+            case 8:
+                self = .urlAuth(url: decoder.decodeStringForKey("u", orElse: ""), buttonId: decoder.decodeInt32ForKey("b", orElse: 0))
             default:
                 self = .text
         }
@@ -60,59 +63,10 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
                 encoder.encodeInt32(6, forKey: "v")
             case .payment:
                 encoder.encodeInt32(7, forKey: "v")
-        }
-    }
-    
-    public static func ==(lhs: ReplyMarkupButtonAction, rhs: ReplyMarkupButtonAction) -> Bool {
-        switch lhs {
-            case .text:
-                if case .text = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .url(url):
-                if case .url(url) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .callback(data):
-                if case .callback(data) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .requestPhone:
-                if case .requestPhone = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .requestMap:
-                if case .requestMap = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .switchInline(samePeer, query):
-                if case .switchInline(samePeer, query) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .openWebApp:
-                if case .openWebApp = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .payment:
-                if case .payment = rhs {
-                    return true
-                } else {
-                    return false
-                }
+            case let .urlAuth(url, buttonId):
+                encoder.encodeInt32(8, forKey: "v")
+                encoder.encodeString(url, forKey: "u")
+                encoder.encodeInt32(buttonId, forKey: "b")
         }
     }
 }
@@ -225,6 +179,8 @@ extension ReplyMarkupButton {
                 self.init(title: text, action: .openWebApp)
             case let .keyboardButtonBuy(text):
                 self.init(title: text, action: .payment)
+            case let .keyboardButtonUrlAuth(text, url, buttonId):
+                self.init(title: text, action: .urlAuth(url: url, buttonId: buttonId))
         }
     }
 }

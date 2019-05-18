@@ -5,10 +5,40 @@ import Foundation
     import Postbox
 #endif
 
+public final class SelectivePrivacyPeer: Equatable {
+    public let peer: Peer
+    public let participantCount: Int32?
+    
+    public init(peer: Peer, participantCount: Int32?) {
+        self.peer = peer
+        self.participantCount = participantCount
+    }
+    
+    public static func ==(lhs: SelectivePrivacyPeer, rhs: SelectivePrivacyPeer) -> Bool {
+        if !lhs.peer.isEqual(rhs.peer) {
+            return false
+        }
+        if lhs.participantCount != rhs.participantCount {
+            return false
+        }
+        return true
+    }
+    
+    public var userCount: Int {
+        if let participantCount = self.participantCount {
+            return Int(participantCount)
+        } else if let group = self.peer as? TelegramGroup {
+            return group.participantCount
+        } else {
+            return 1
+        }
+    }
+}
+
 public enum SelectivePrivacySettings: Equatable {
-    case enableEveryone(disableFor: Set<PeerId>)
-    case enableContacts(enableFor: Set<PeerId>, disableFor: Set<PeerId>)
-    case disableEveryone(enableFor: Set<PeerId>)
+    case enableEveryone(disableFor: [PeerId: SelectivePrivacyPeer])
+    case enableContacts(enableFor: [PeerId: SelectivePrivacyPeer], disableFor: [PeerId: SelectivePrivacyPeer])
+    case disableEveryone(enableFor: [PeerId: SelectivePrivacyPeer])
     
     public static func ==(lhs: SelectivePrivacySettings, rhs: SelectivePrivacySettings) -> Bool {
         switch lhs {
@@ -33,25 +63,25 @@ public enum SelectivePrivacySettings: Equatable {
         }
     }
     
-    func withEnabledPeerIds(_ peerIds: Set<PeerId>) -> SelectivePrivacySettings {
+    func withEnabledPeers(_ peers: [PeerId: SelectivePrivacyPeer]) -> SelectivePrivacySettings {
         switch self {
             case let .disableEveryone(enableFor):
-                return .disableEveryone(enableFor: enableFor.union(peerIds))
+                return .disableEveryone(enableFor: enableFor.merging(peers, uniquingKeysWith: { lhs, rhs in lhs }))
             case let .enableContacts(enableFor, disableFor):
-                return .enableContacts(enableFor: enableFor.union(peerIds), disableFor: disableFor)
+                return .enableContacts(enableFor: enableFor.merging(peers, uniquingKeysWith: { lhs, rhs in lhs }), disableFor: disableFor)
             case .enableEveryone:
                 return self
         }
     }
     
-    func withDisabledPeerIds(_ peerIds: Set<PeerId>) -> SelectivePrivacySettings {
+    func withDisabledPeers(_ peers: [PeerId: SelectivePrivacyPeer]) -> SelectivePrivacySettings {
         switch self {
             case .disableEveryone:
                 return self
             case let .enableContacts(enableFor, disableFor):
-                return .enableContacts(enableFor: enableFor, disableFor: disableFor.union(peerIds))
+                return .enableContacts(enableFor: enableFor, disableFor: disableFor.merging(peers, uniquingKeysWith: { lhs, rhs in lhs }))
             case let .enableEveryone(disableFor):
-                return .enableEveryone(disableFor: disableFor.union(peerIds))
+                return .enableEveryone(disableFor: disableFor.merging(peers, uniquingKeysWith: { lhs, rhs in lhs }))
         }
     }
 }
@@ -63,16 +93,18 @@ public struct AccountPrivacySettings: Equatable {
     public let voiceCallsP2P: SelectivePrivacySettings
     public let profilePhoto: SelectivePrivacySettings
     public let forwards: SelectivePrivacySettings
+    public let phoneNumber: SelectivePrivacySettings
     
     public let accountRemovalTimeout: Int32
     
-    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, accountRemovalTimeout: Int32) {
+    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, accountRemovalTimeout: Int32) {
         self.presence = presence
         self.groupInvitations = groupInvitations
         self.voiceCalls = voiceCalls
         self.voiceCallsP2P = voiceCallsP2P
         self.profilePhoto = profilePhoto
         self.forwards = forwards
+        self.phoneNumber = phoneNumber
         self.accountRemovalTimeout = accountRemovalTimeout
     }
     
@@ -95,6 +127,9 @@ public struct AccountPrivacySettings: Equatable {
         if lhs.forwards != rhs.forwards {
             return false
         }
+        if lhs.phoneNumber != rhs.phoneNumber {
+            return false
+        }
         if lhs.accountRemovalTimeout != rhs.accountRemovalTimeout {
             return false
         }
@@ -104,29 +139,53 @@ public struct AccountPrivacySettings: Equatable {
 }
 
 extension SelectivePrivacySettings {
-    init(apiRules: [Api.PrivacyRule]) {
-        var current: SelectivePrivacySettings = .disableEveryone(enableFor: Set())
+    init(apiRules: [Api.PrivacyRule], peers: [PeerId: SelectivePrivacyPeer]) {
+        var current: SelectivePrivacySettings = .disableEveryone(enableFor: [:])
         
-        var disableFor = Set<PeerId>()
-        var enableFor = Set<PeerId>()
+        var disableFor: [PeerId: SelectivePrivacyPeer] = [:]
+        var enableFor: [PeerId: SelectivePrivacyPeer] = [:]
         
         for rule in apiRules {
             switch rule {
                 case .privacyValueAllowAll:
-                    current = .enableEveryone(disableFor: Set())
+                    current = .enableEveryone(disableFor: [:])
                 case .privacyValueAllowContacts:
-                    current = .enableContacts(enableFor: Set(), disableFor: Set())
+                    current = .enableContacts(enableFor: [:], disableFor: [:])
                 case let .privacyValueAllowUsers(users):
-                    enableFor = Set(users.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) })
+                    for id in users {
+                        if let peer = peers[PeerId(namespace: Namespaces.Peer.CloudUser, id: id)] {
+                            enableFor[peer.peer.id] = peer
+                        }
+                    }
                 case .privacyValueDisallowAll:
-                    current = .disableEveryone(enableFor: Set())
+                    current = .disableEveryone(enableFor: [:])
                 case .privacyValueDisallowContacts:
                     break
                 case let .privacyValueDisallowUsers(users):
-                    disableFor = Set(users.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) })
+                    for id in users {
+                        if let peer = peers[PeerId(namespace: Namespaces.Peer.CloudUser, id: id)] {
+                            disableFor[peer.peer.id] = peer
+                        }
+                    }
+                case let .privacyValueAllowChatParticipants(chats):
+                    for id in chats {
+                        for possibleId in [PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)] {
+                            if let peer = peers[possibleId] {
+                                enableFor[peer.peer.id] = peer
+                            }
+                        }
+                    }
+                case let .privacyValueDisallowChatParticipants(chats):
+                    for id in chats {
+                        for possibleId in [PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)] {
+                            if let peer = peers[possibleId] {
+                                disableFor[peer.peer.id] = peer
+                            }
+                        }
+                    }
             }
         }
         
-        self = current.withEnabledPeerIds(enableFor).withDisabledPeerIds(disableFor)
+        self = current.withEnabledPeers(enableFor).withDisabledPeers(disableFor)
     }
 }

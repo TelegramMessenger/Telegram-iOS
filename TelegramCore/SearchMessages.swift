@@ -20,6 +20,7 @@ private struct SearchMessagesPeerState: Equatable {
     let readStates: [PeerId: CombinedPeerReadState]
     let totalCount: Int32
     let completed: Bool
+    let nextRate: Int32?
     
     static func ==(lhs: SearchMessagesPeerState, rhs: SearchMessagesPeerState) -> Bool {
         if lhs.totalCount != rhs.totalCount {
@@ -35,6 +36,9 @@ private struct SearchMessagesPeerState: Equatable {
             if lhs.messages[i].id != rhs.messages[i].id {
                 return false
             }
+        }
+        if lhs.nextRate != rhs.nextRate {
+            return false
         }
         return true
     }
@@ -60,27 +64,32 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
     let chats: [Api.Chat]
     let users: [Api.User]
     let totalCount: Int32
+    let nextRate: Int32?
     switch result {
         case let .channelMessages(_, _, count, apiMessages, apiChats, apiUsers):
             messages = apiMessages
             chats = apiChats
             users = apiUsers
             totalCount = count
+            nextRate = nil
         case let .messages(apiMessages, apiChats, apiUsers):
             messages = apiMessages
             chats = apiChats
             users = apiUsers
             totalCount = Int32(messages.count)
-        case let .messagesSlice(_, count, apiMessages, apiChats, apiUsers):
+            nextRate = nil
+        case let .messagesSlice(_, count, apiNextRate, apiMessages, apiChats, apiUsers):
             messages = apiMessages
             chats = apiChats
             users = apiUsers
             totalCount = count
+            nextRate = apiNextRate
         case .messagesNotModified:
             messages = []
             chats = []
             users = []
             totalCount = 0
+            nextRate = nil
     }
     
     var peers: [PeerId: Peer] = [:]
@@ -139,9 +148,9 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
         mergedMessages.sort(by: { lhs, rhs in
             return lhs.index > rhs.index
         })
-        return SearchMessagesPeerState(messages: mergedMessages, readStates: readStates, totalCount: completed ? Int32(mergedMessages.count) : totalCount, completed: completed)
+        return SearchMessagesPeerState(messages: mergedMessages, readStates: readStates, totalCount: completed ? Int32(mergedMessages.count) : totalCount, completed: completed, nextRate: nextRate)
     } else {
-        return SearchMessagesPeerState(messages: renderedMessages, readStates: readStates, totalCount: completed ? Int32(renderedMessages.count) : totalCount, completed: completed)
+        return SearchMessagesPeerState(messages: renderedMessages, readStates: readStates, totalCount: completed ? Int32(renderedMessages.count) : totalCount, completed: completed, nextRate: nextRate)
     }
 }
 
@@ -181,7 +190,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                         readStates[peerId] = readState
                     }
                     let result = transaction.searchMessages(peerId: peerId, query: query, tags: tags)
-                    return (SearchMessagesResult(messages: result, readStates: readStates, totalCount: Int32(result.count), completed: true), SearchMessagesState(main: SearchMessagesPeerState(messages: [], readStates: [:], totalCount: 0, completed: true), additional: nil))
+                    return (SearchMessagesResult(messages: result, readStates: readStates, totalCount: Int32(result.count), completed: true), SearchMessagesState(main: SearchMessagesPeerState(messages: [], readStates: [:], totalCount: 0, completed: true, nextRate: nil), additional: nil))
                 }
             }
             
@@ -266,19 +275,19 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
             /*remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
                 |> mapError { _ in } |> map(Optional.init)*/
         case .general:
-            remoteSearchResult = account.postbox.transaction { transaction -> (MessageIndex?, Api.InputPeer) in
+            remoteSearchResult = account.postbox.transaction { transaction -> (Int32, MessageIndex?, Api.InputPeer) in
                 var lowerBound: MessageIndex?
                 if let state = state, let message = state.main.messages.last {
                     lowerBound = message.index
                 }
                 if let lowerBound = lowerBound, let peer = transaction.getPeer(lowerBound.id.peerId), let inputPeer = apiInputPeer(peer) {
-                    return (lowerBound, inputPeer)
+                    return (state?.main.nextRate ?? 0, lowerBound, inputPeer)
                 } else {
-                    return (lowerBound, .inputPeerEmpty)
+                    return (0, lowerBound, .inputPeerEmpty)
                 } 
             }
-            |> mapToSignal { (lowerBound, inputPeer) in
-                account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: lowerBound?.timestamp ?? 0, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
+            |> mapToSignal { (nextRate, lowerBound, inputPeer) in
+                account.network.request(Api.functions.messages.searchGlobal(q: query, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
                 |> map { result -> (Api.messages.Messages?, Api.messages.Messages?) in
                     return (result, nil)
                 }
@@ -300,10 +309,10 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                         readStates[message.id.peerId] = readState
                     }
                 }
-                additional = SearchMessagesPeerState(messages: secretMessages, readStates: readStates, totalCount: Int32(secretMessages.count), completed: true)
+                additional = SearchMessagesPeerState(messages: secretMessages, readStates: readStates, totalCount: Int32(secretMessages.count), completed: true, nextRate: nil)
             }
             
-            let updatedState = SearchMessagesState(main: mergedState(transaction: transaction, state: state?.main, result: result) ?? SearchMessagesPeerState(messages: [], readStates: [:], totalCount: 0, completed: true), additional: additional)
+            let updatedState = SearchMessagesState(main: mergedState(transaction: transaction, state: state?.main, result: result) ?? SearchMessagesPeerState(messages: [], readStates: [:], totalCount: 0, completed: true, nextRate: nil), additional: additional)
             return (mergedResult(updatedState), updatedState)
         }
     }
@@ -350,7 +359,7 @@ public func downloadMessage(postbox: Postbox, network: Network, messageId: Messa
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
-                        case let.messagesSlice(_, _, apiMessages, apiChats, apiUsers):
+                        case let.messagesSlice(_, _, _, apiMessages, apiChats, apiUsers):
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
@@ -433,7 +442,7 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
                 messages = apiMessages
                 chats = apiChats
                 users = apiUsers
-            case let .messagesSlice(_, _, apiMessages, apiChats, apiUsers):
+            case let .messagesSlice(_, _, _, apiMessages, apiChats, apiUsers):
                 messages = apiMessages
                 chats = apiChats
                 users = apiUsers
@@ -505,7 +514,7 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
                             messages = apiMessages
                         case let .channelMessages(_, _, _, apiMessages, _, _):
                             messages = apiMessages
-                        case let.messagesSlice(_, _, apiMessages, _, _):
+                        case let.messagesSlice(_, _, _, apiMessages, _, _):
                             messages = apiMessages
                         case .messagesNotModified:
                             messages = []
@@ -529,7 +538,7 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
                         messages = apiMessages
                     case let .channelMessages(_, _, _, apiMessages, _, _):
                         messages = apiMessages
-                    case let.messagesSlice(_, _, apiMessages, _, _):
+                    case let.messagesSlice(_, _, _, apiMessages, _, _):
                         messages = apiMessages
                     case .messagesNotModified:
                         messages = []

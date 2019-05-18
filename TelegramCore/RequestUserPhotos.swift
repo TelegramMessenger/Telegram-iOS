@@ -83,7 +83,7 @@ public func requestPeerPhotos(account:Account, peerId: PeerId) -> Signal<[Telegr
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
-                        case let.messagesSlice(_, _, apiMessages, apiChats, apiUsers):
+                        case let.messagesSlice(_, _, _, apiMessages, apiChats, apiUsers):
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers

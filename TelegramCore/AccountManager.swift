@@ -140,6 +140,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CloudPeerPhotoSizeMediaResource.self, f: { CloudPeerPhotoSizeMediaResource(decoder: $0) })
     declareEncodable(CloudStickerPackThumbnailMediaResource.self, f: { CloudStickerPackThumbnailMediaResource(decoder: $0) })
     declareEncodable(AccountBackupDataAttribute.self, f: { AccountBackupDataAttribute(decoder: $0) })
+    declareEncodable(ContentRequiresValidationMessageAttribute.self, f: { ContentRequiresValidationMessageAttribute(decoder: $0) })
     
     return
 }()
