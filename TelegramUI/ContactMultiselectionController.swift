@@ -7,7 +7,7 @@ import TelegramCore
 
 enum ContactMultiselectionControllerMode {
     case groupCreation
-    case peerSelection(searchChatList: Bool)
+    case peerSelection(searchChatList: Bool, searchGroups: Bool)
     case channelCreation
 }
 
@@ -162,7 +162,7 @@ class ContactMultiselectionController: ViewController {
         }
         
         self.contactsNode.openPeer = { [weak self] peer in
-            if let strongSelf = self, case let .peer(peer, _) = peer {
+            if let strongSelf = self, case let .peer(peer, _, _) = peer {
                 var updatedCount: Int?
                 var addedToken: EditableTokenListToken?
                 var removedTokenId: AnyHashable?

@@ -200,6 +200,8 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     }
                 case .payment:
                     break
+                case .urlAuth:
+                    break
             }
         }
     }

@@ -112,7 +112,7 @@ final class ComposeControllerNode: ASDisplayNode {
         }
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
-            if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch, case let .peer(peer, _) = peer {
+            if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch, case let .peer(peer, _, _) = peer {
                 requestOpenPeerFromSearch(peer.id)
             }
         }), cancel: { [weak self] in

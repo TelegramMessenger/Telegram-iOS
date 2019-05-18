@@ -752,6 +752,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                             }
                                         }
                                     }
+                                    var contentRequiredValidation = false
                                     for attribute in message.attributes {
                                         if attribute is ViewCountMessageAttribute {
                                             if message.id.namespace == Namespaces.Message.Cloud {
@@ -759,12 +760,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                             }
                                         } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
                                             hasUnconsumedContent = true
+                                        } else if let _ = attribute as? ContentRequiresValidationMessageAttribute {
+                                            contentRequiredValidation = true
                                         }
                                     }
                                     for media in message.media {
                                         if let _ = media as? TelegramMediaUnsupported {
-                                            messageIdsWithUnsupportedMedia.append(message.id)
+                                            contentRequiredValidation = true
                                         }
+                                    }
+                                    if contentRequiredValidation {
+                                        messageIdsWithUnsupportedMedia.append(message.id)
                                     }
                                     if hasUnconsumedMention && !hasUnconsumedContent {
                                         messageIdsWithUnseenPersonalMention.append(message.id)

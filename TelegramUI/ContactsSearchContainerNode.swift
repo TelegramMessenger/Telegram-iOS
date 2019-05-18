@@ -70,7 +70,7 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
                 }
             case .global:
                 header = ChatListSearchItemHeader(type: .globalPeers, theme: self.theme, strings: self.strings, actionTitle: nil, action: nil)
-                if case let .peer(peer, _) = self.peer, let _ = peer.addressName {
+                if case let .peer(peer, _, _) = self.peer, let _ = peer.addressName {
                     status = .addressName("")
                 } else {
                     status = .none
@@ -82,7 +82,7 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
         let peer = self.peer
         let peerItem: ContactsPeerItemPeer
         switch peer {
-            case let .peer(peer, _):
+            case let .peer(peer, _, _):
                 peerItem = .peer(peer: peer, chatPeer: peer)
             case let .deviceContact(stableId, contact):
                 peerItem = .deviceContact(stableId: stableId, contact: contact)
@@ -220,7 +220,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                         if onlyWriteable {
                             enabled = canSendMessagesToPeer(peer)
                         }
-                        entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .peer(peer: peer, isGlobal: false), presence: localPeersAndPresences.1[peer.id], group: .contacts, enabled: enabled))
+                        entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .peer(peer: peer, isGlobal: false, participantCount: nil), presence: localPeersAndPresences.1[peer.id], group: .contacts, enabled: enabled))
                         if searchDeviceContacts, let user = peer as? TelegramUser, let phone = user.phone {
                             existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                         }
@@ -239,7 +239,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                                     enabled = canSendMessagesToPeer(peer.peer)
                                 }
                                 
-                                entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .peer(peer: peer.peer, isGlobal: true), presence: nil, group: .global, enabled: enabled))
+                                entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .peer(peer: peer.peer, isGlobal: true, participantCount: peer.subscribers), presence: nil, group: .global, enabled: enabled))
                                 if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
                                     existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                                 }
@@ -258,7 +258,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                                     enabled = canSendMessagesToPeer(peer.peer)
                                 }
                                 
-                                entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .peer(peer: peer.peer, isGlobal: true), presence: nil, group: .global, enabled: enabled))
+                                entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .peer(peer: peer.peer, isGlobal: true, participantCount: peer.subscribers), presence: nil, group: .global, enabled: enabled))
                                 if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
                                     existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                                 }

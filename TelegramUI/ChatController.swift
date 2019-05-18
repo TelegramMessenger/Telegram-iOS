@@ -4545,7 +4545,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let strongSelf = self, let peer = peer {
                 let dataSignal: Signal<(Peer?,  DeviceContactExtendedData?), NoError>
                 switch peer {
-                    case let .peer(contact, _):
+                    case let .peer(contact, _, _):
                         guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
                             return
                         }

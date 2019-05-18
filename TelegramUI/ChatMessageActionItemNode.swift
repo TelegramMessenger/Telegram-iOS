@@ -417,6 +417,8 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                     attributedString = NSAttributedString(string: strings.Notification_PassportValuesSentMessage(message.peers[message.id.peerId]?.compactDisplayTitle ?? "", typesString).0, font: titleFont, textColor: primaryTextColor)
                 case .peerJoined:
                     attributedString = addAttributesToStringWithRanges(strings.Notification_Joined(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                case .phoneNumberRequest:
+                    attributedString = nil
                 case .unknown:
                     attributedString = nil
             }

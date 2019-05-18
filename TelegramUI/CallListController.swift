@@ -198,7 +198,7 @@ public final class CallListController: ViewController {
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak controller, weak self] peer in
             controller?.dismissSearch()
-            if let strongSelf = self, let contactPeer = peer, case let .peer(peer, _) = contactPeer {
+            if let strongSelf = self, let contactPeer = peer, case let .peer(peer, _, _) = contactPeer {
                 strongSelf.call(peer.id, began: {
                     if let strongSelf = self {
                         let _ = (strongSelf.context.sharedContext.hasOngoingCall.get()

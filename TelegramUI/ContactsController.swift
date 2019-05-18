@@ -193,7 +193,7 @@ public class ContactsController: ViewController {
             if let strongSelf = self {
                 strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                 switch peer {
-                    case let .peer(peer, _):
+                    case let .peer(peer, _, _):
                         if let navigationController = strongSelf.navigationController as? NavigationController {
                             navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
                                 if fromSearch {

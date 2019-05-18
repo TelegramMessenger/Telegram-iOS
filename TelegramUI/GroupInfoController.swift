@@ -1492,14 +1492,14 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 let contactsController: ViewController
                 if peerView.peerId.namespace == Namespaces.Peer.CloudGroup {
                     contactsController = ContactSelectionController(context: context, autoDismiss: false, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peer in
-                        if let confirmationImpl = confirmationImpl, case let .peer(peer, _) = peer {
+                        if let confirmationImpl = confirmationImpl, case let .peer(peer, _, _) = peer {
                             return confirmationImpl(peer.id)
                         } else {
                             return .single(false)
                         }
                     })
                 } else {
-                    contactsController = ContactMultiselectionController(context: context, mode: .peerSelection(searchChatList: false), options: options, filters: [.excludeSelf, .disable(recentIds)])
+                    contactsController = ContactMultiselectionController(context: context, mode: .peerSelection(searchChatList: false, searchGroups: false), options: options, filters: [.excludeSelf, .disable(recentIds)])
                 }
                 
                 confirmationImpl = { [weak contactsController] peerId in
@@ -1525,7 +1525,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 }
                 
                 let addMember: (ContactListPeer) -> Signal<Void, NoError> = { memberPeer -> Signal<Void, NoError> in
-                    if case let .peer(selectedPeer, _) = memberPeer {
+                    if case let .peer(selectedPeer, _, _) = memberPeer {
                         let memberId = selectedPeer.id
                         if peerView.peerId.namespace == Namespaces.Peer.CloudChannel {
                             return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: peerView.peerId, memberId: memberId)

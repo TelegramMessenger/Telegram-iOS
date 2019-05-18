@@ -50,8 +50,12 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         let placeholder: String
         switch mode {
-            case .peerSelection:
-                placeholder = self.presentationData.strings.Contacts_SearchLabel
+            case let .peerSelection(_, searchGroups):
+                if searchGroups {
+                    placeholder = self.presentationData.strings.Contacts_SearchUsersAndGroupsLabel
+                } else {
+                    placeholder = self.presentationData.strings.Contacts_SearchLabel
+                }
             default:
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
         }
@@ -96,10 +100,12 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             return state
                         }
                         var searchChatList = false
-                        if case let .peerSelection(value) = mode {
-                            searchChatList = value
+                        var searchGroups = false
+                        if case let .peerSelection(peerSelection) = mode {
+                            searchChatList = peerSelection.searchChatList
+                            searchGroups = peerSelection.searchGroups
                         }
-                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false)), filters: filters, selectionState: selectionState)
+                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups)), filters: filters, selectionState: selectionState)
                         searchResultsNode.openPeer = { peer in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)

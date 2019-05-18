@@ -29,6 +29,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             } else if let action = media as? TelegramMediaAction {
                 if case .phoneCall = action.action {
                     result.append((message, ChatMessageCallBubbleContentNode.self))
+                } else if case .phoneNumberRequest = action.action {
+                    result.append((message, ChatMessagePhoneNumberRequestContentNode.self))
                 } else {
                     result.append((message, ChatMessageActionBubbleContentNode.self))
                 }

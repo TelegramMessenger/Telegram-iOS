@@ -308,6 +308,7 @@
 		D0428200200E6A00009DDE36 /* ChatRecentActionsHistoryTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FF200E6A00009DDE36 /* ChatRecentActionsHistoryTransition.swift */; };
 		D0430B001FF4570500A35ADD /* WebController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0430AFF1FF4570500A35ADD /* WebController.swift */; };
 		D0430B021FF4584100A35ADD /* WebControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0430B011FF4584100A35ADD /* WebControllerNode.swift */; };
+		D0439B5B228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0439B5A228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift */; };
 		D044A0F320BDA05800326FAC /* ThrottledValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044A0F220BDA05800326FAC /* ThrottledValue.swift */; };
 		D044A0FB20BDC40C00326FAC /* CachedChannelAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */; };
 		D045549A21B2F173007A6DD9 /* libturbojpeg.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D045549921B2F173007A6DD9 /* libturbojpeg.a */; };
@@ -1612,6 +1613,7 @@
 		D042C6891E8DAAB000C863B0 /* ChatItemGalleryFooterContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatItemGalleryFooterContentNode.swift; sourceTree = "<group>"; };
 		D0430AFF1FF4570500A35ADD /* WebController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebController.swift; sourceTree = "<group>"; };
 		D0430B011FF4584100A35ADD /* WebControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebControllerNode.swift; sourceTree = "<group>"; };
+		D0439B5A228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessagePhoneNumberRequestContentNode.swift; sourceTree = "<group>"; };
 		D044A0F220BDA05800326FAC /* ThrottledValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThrottledValue.swift; sourceTree = "<group>"; };
 		D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedChannelAdmins.swift; sourceTree = "<group>"; };
 		D045549921B2F173007A6DD9 /* libturbojpeg.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libturbojpeg.a; path = "third-party/libjpeg-turbo/libturbojpeg.a"; sourceTree = "<group>"; };
@@ -4774,6 +4776,7 @@
 				D018BE57218C7BD800C02DDC /* ChatMessageDeliveryFailedNode.swift */,
 				D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */,
 				099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */,
+				D0439B5A228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -5873,6 +5876,7 @@
 				D0E9BA2B1F0557A600F079A4 /* STPFormEncoder.m in Sources */,
 				D01BAA1C1ECC92F700295217 /* CallListViewTransition.swift in Sources */,
 				D0FBE84F2273395C00B33B52 /* ChatListArchiveInfoItem.swift in Sources */,
+				D0439B5B228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift in Sources */,
 				09F664D021EBCFB900AB7E26 /* WallpaperCropNode.swift in Sources */,
 				D097C26C20DD1EA5007BB4B8 /* OverlayStatusController.swift in Sources */,
 				D0EC6D9E1EB9F58900EBF1C3 /* ChatMessageWebpageBubbleContentNode.swift in Sources */,

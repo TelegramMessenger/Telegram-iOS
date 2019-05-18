@@ -24,6 +24,7 @@ private final class UserInfoControllerArguments {
     let displayCopyContextMenu: (UserInfoEntryTag, String) -> Void
     let call: () -> Void
     let openCallMenu: (String) -> Void
+    let requestPhoneNumber: () -> Void
     let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     let displayAboutContextMenu: (String) -> Void
     let openEncryptionKey: (SecretChatKeyFingerprint) -> Void
@@ -34,7 +35,7 @@ private final class UserInfoControllerArguments {
     let botPrivacy: () -> Void
     let report: () -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, shareMyContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void, addBotToGroup: @escaping () -> Void, shareBot: @escaping () -> Void, botSettings: @escaping () -> Void, botHelp: @escaping () -> Void, botPrivacy: @escaping () -> Void, report: @escaping () -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, shareMyContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, requestPhoneNumber: @escaping () -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void, addBotToGroup: @escaping () -> Void, shareBot: @escaping () -> Void, botSettings: @escaping () -> Void, botHelp: @escaping () -> Void, botPrivacy: @escaping () -> Void, report: @escaping () -> Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.updateEditingName = updateEditingName
@@ -54,6 +55,7 @@ private final class UserInfoControllerArguments {
         self.displayCopyContextMenu = displayCopyContextMenu
         self.call = call
         self.openCallMenu = openCallMenu
+        self.requestPhoneNumber = requestPhoneNumber
         self.aboutLinkAction = aboutLinkAction
         self.displayAboutContextMenu = displayAboutContextMenu
         self.openEncryptionKey = openEncryptionKey
@@ -95,6 +97,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
     case calls(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, messages: [Message])
     case about(PresentationTheme, Peer, String, String)
     case phoneNumber(PresentationTheme, Int, String, String, Bool)
+    case requestPhoneNumber(PresentationTheme, String, String)
     case userName(PresentationTheme, String, String)
     case sendMessage(PresentationTheme, String)
     case addContact(PresentationTheme, String)
@@ -115,7 +118,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .info, .calls, .about, .phoneNumber, .userName:
+            case .info, .calls, .about, .phoneNumber, .requestPhoneNumber, .userName:
                 return UserInfoSection.info.rawValue
             case .sendMessage, .addContact, .shareContact, .shareMyContact, .startSecretChat, .botAddToGroup, .botShare:
                 return UserInfoSection.actions.rawValue
@@ -199,6 +202,12 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 }
             case let .phoneNumber(lhsTheme, lhsIndex, lhsLabel, lhsValue, lhsMain):
                 if case let .phoneNumber(rhsTheme, rhsIndex, rhsLabel, rhsValue, rhsMain) = rhs, lhsTheme === rhsTheme, lhsIndex == rhsIndex, lhsLabel == rhsLabel, lhsValue == rhsValue, lhsMain == rhsMain {
+                    return true
+                } else {
+                    return false
+                }
+            case let .requestPhoneNumber(lhsTheme, lhsLabel, lhsValue):
+                if case let .requestPhoneNumber(rhsTheme, rhsLabel, rhsValue) = rhs, lhsTheme === rhsTheme, lhsLabel == rhsLabel, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -316,6 +325,8 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return 1
             case let .phoneNumber(_, index, _, _, _):
                 return 2 + index
+            case .requestPhoneNumber:
+                return 998
             case .about:
                 return 999
             case .userName:
@@ -387,6 +398,10 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 }, longTapAction: {
                     arguments.displayCopyContextMenu(.phoneNumber, value)
                 }, tag: UserInfoEntryTag.phoneNumber)
+            case let .requestPhoneNumber(theme, label, value):
+                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
+                    arguments.requestPhoneNumber()
+                })
             case let .userName(theme, text, value):
                 return ItemListTextWithLabelItem(theme: theme, label: text, text: "@\(value)", textColor: .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.displayUsernameContextMenu("@\(value)")
@@ -602,6 +617,8 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
                 index += 1
             }
         }
+    } else {
+        entries.append(UserInfoEntry.requestPhoneNumber(presentationData.theme, "phone", "Request Number"))
     }
     
     let aboutTitle: String
@@ -988,6 +1005,11 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
             } else {
                 context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
             }
+        })
+    }, requestPhoneNumber: {
+        let _ = (requestPhoneNumber(account: context.account, peerId: peerId)
+        |> deliverOnMainQueue).start(completed: {
+            
         })
     }, aboutLinkAction: { action, itemLink in
         aboutLinkActionImpl?(action, itemLink)

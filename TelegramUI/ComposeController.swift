@@ -104,7 +104,7 @@ public class ComposeController: ViewController {
         }
         
         self.contactsNode.contactListNode.openPeer = { [weak self] peer in
-            if case let .peer(peer, _) = peer {
+            if case let .peer(peer, _, _) = peer {
                 self?.openPeer(peerId: peer.id)
             }
         }
@@ -135,7 +135,7 @@ public class ComposeController: ViewController {
                 strongSelf.createActionDisposable.set((controller.result
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak controller] peer in
-                    if let strongSelf = self, let contactPeer = peer, case let .peer(peer, _) = contactPeer {
+                    if let strongSelf = self, let contactPeer = peer, case let .peer(peer, _, _) = contactPeer {
                         controller?.dismissSearch()
                         controller?.displayNavigationActivity = true
                         strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.context.account, peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in

@@ -1139,7 +1139,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
         if let peer = peer {
             let dataSignal: Signal<(Peer?, DeviceContactStableId?), NoError>
             switch peer {
-                case let .peer(contact, _):
+                case let .peer(contact, _, _):
                     guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
                         return
                     }
