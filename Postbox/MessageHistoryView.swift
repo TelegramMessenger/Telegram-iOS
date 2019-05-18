@@ -253,12 +253,12 @@ final class MutableMessageHistoryView {
         self.topTaggedMessages = topTaggedMessages
         self.additionalDatas = additionalDatas
         
-        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, statistics: self.orderStatistics, limit: count + 2, locations: peerIds)
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds)
         if case let .loading(loadingState) = self.state {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, statistics: self.orderStatistics, limit: count + 2, locations: peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds, postbox: postbox, holes: holes))
                     self.sampledState = self.state.sample(postbox: postbox)
                 case .loadHole:
                     break
@@ -270,12 +270,12 @@ final class MutableMessageHistoryView {
     }
     
     private func reset(postbox: Postbox) {
-        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, statistics: self.orderStatistics, limit: self.fillCount + 2, locations: self.peerIds)
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds)
         if case let .loading(loadingState) = self.state {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, limit: self.fillCount + 2, locations: self.peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
                 case .loadHole:
                     break
             }
@@ -284,7 +284,7 @@ final class MutableMessageHistoryView {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, limit: self.fillCount + 2, locations: self.peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
                 case .loadHole:
                     break
             }
@@ -455,7 +455,7 @@ final class MutableMessageHistoryView {
                 let sampledState = loadingState.checkAndSample(postbox: postbox)
                 switch sampledState {
                     case let .ready(anchor, holes):
-                        self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, limit: self.fillCount + 2, locations: self.peerIds, postbox: postbox, holes: holes))
+                        self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
                     case .loadHole:
                         break
                 }
@@ -745,15 +745,17 @@ public final class MessageHistoryView {
                 assert(Set(entries.map({ $0.message.stableId })).count == entries.count)
                 if !entries.isEmpty {
                     let anchorIndex = binaryIndexOrLower(entries, state.anchor)
-                    let lowerCount = mutableView.fillCount / 2 + 1
-                    let upperCount = mutableView.fillCount / 2
-                    if anchorIndex >= 0 && entries.count - anchorIndex >= upperCount {
+                    let lowerOrEqualThanAnchorCount = anchorIndex + 1
+                    let higherThanAnchorCount = entries.count - anchorIndex - 1
+                    
+                    if higherThanAnchorCount > mutableView.fillCount {
                         self.laterId = entries[entries.count - 1].index
                         entries.removeLast()
                     } else {
                         self.laterId = nil
                     }
-                    if anchorIndex >= lowerCount {
+                    
+                    if lowerOrEqualThanAnchorCount > mutableView.fillCount {
                         self.earlierId = entries[0].index
                         entries.removeFirst()
                     } else {

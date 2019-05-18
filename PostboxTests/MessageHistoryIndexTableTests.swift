@@ -22,7 +22,7 @@ private extension MessageTags {
 }
 
 class MessageHistoryIndexTableTests: XCTestCase {
-    var valueBox: ValueBox?
+    var valueBox: SqliteValueBox?
     var path: String?
     
     var postbox: Postbox?
@@ -45,7 +45,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
             arc4random_buf(bytes, 16)
         })
         
-        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue(), encryptionParameters: ValueBoxEncryptionParameters(key: ValueBoxEncryptionParameters.Key(data: randomKey)!, salt: ValueBoxEncryptionParameters.Salt(data: randomSalt)!))
+        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue(), encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: true, key: ValueBoxEncryptionParameters.Key(data: randomKey)!, salt: ValueBoxEncryptionParameters.Salt(data: randomSalt)!), upgradeProgress: { _ in })
         
         let messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]] = [
             peerId.namespace: [
@@ -53,7 +53,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
             ]
         ]
         
-        let seedConfiguration = SeedConfiguration(globalMessageIdsPeerIdNamespaces: Set(), initializeChatListWithHole: (topLevel: nil, groups: nil), messageHoles: messageHoles, existingMessageTags: [.media], messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], peerSummaryCounterTags: { _ in PeerSummaryCounterTags(rawValue: 0) }, additionalChatListIndexNamespace: nil)
+        let seedConfiguration = SeedConfiguration(globalMessageIdsPeerIdNamespaces: Set(), initializeChatListWithHole: (topLevel: nil, groups: nil), messageHoles: messageHoles, existingMessageTags: [.media], messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], peerSummaryCounterTags: { _ in PeerSummaryCounterTags(rawValue: 0) }, additionalChatListIndexNamespace: nil, messageNamespacesRequiringGroupStatsValidation: Set())
         
         self.postbox = Postbox(queue: Queue.mainQueue(), basePath: path!, seedConfiguration: seedConfiguration, valueBox: self.valueBox!)
     }
