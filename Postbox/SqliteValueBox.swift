@@ -159,6 +159,7 @@ public final class SqliteValueBox: ValueBox {
     private let lock = NSRecursiveLock()
     
     fileprivate let basePath: String
+    private let inMemory: Bool
     private let encryptionParameters: ValueBoxEncryptionParameters?
     private let databasePath: String
     private var database: Database!
@@ -196,8 +197,9 @@ public final class SqliteValueBox: ValueBox {
     
     private let queue: Queue
     
-    public init(basePath: String, queue: Queue, encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void) {
+    public init(basePath: String, queue: Queue, encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void, inMemory: Bool = false) {
         self.basePath = basePath
+        self.inMemory = inMemory
         self.encryptionParameters = encryptionParameters
         self.databasePath = basePath + "/db_sqlite"
         self.queue = queue
@@ -247,7 +249,7 @@ public final class SqliteValueBox: ValueBox {
         #endif
         
         var database: Database
-        if let result = Database(path) {
+        if let result = Database(self.inMemory ? ":memory:" : path) {
             database = result
         } else {
             postboxLog("Couldn't open DB")

@@ -10,42 +10,33 @@ import SwiftSignalKit
 private let peerId = PeerId(namespace: 1, id: 1)
 private let namespace: Int32 = 1
 
-private func extract(from array: [Int32], aroundIndex: Int, limit: Int) -> [Int32] {
+private func extract(from array: [Int32], aroundIndex: Int, halfLimit: Int) -> [Int32] {
     var lower: [Int32] = []
     var higher: [Int32] = []
     
     var i = aroundIndex
-    while i >= 0 && lower.count < limit / 2 + 1 {
+    while i >= 0 && lower.count < halfLimit {
         lower.append(array[i])
         i -= 1
     }
     
     var j = aroundIndex + 1
-    while j < array.count && higher.count < limit - lower.count {
+    while j < array.count && higher.count < halfLimit {
         higher.append(array[j])
         j += 1
-    }
-    
-    if !lower.isEmpty && lower.count + higher.count < limit {
-        var additionalLower: [Int32] = []
-        while i >= 0 && additionalLower.count < limit - lower.count - higher.count {
-            additionalLower.append(array[i])
-            i -= 1
-        }
-        lower.append(contentsOf: additionalLower)
     }
     
     var result: [Int32] = []
     result.append(contentsOf: lower.reversed())
     result.append(contentsOf: higher)
     
-    assert(result.count <= limit)
+    assert(result.count <= halfLimit * 2)
     
     return result
 }
 
 class MessageHistoryViewTests: XCTestCase {
-    var valueBox: ValueBox?
+    var valueBox: SqliteValueBox?
     var path: String?
     
     var postbox: Postbox?
@@ -68,7 +59,7 @@ class MessageHistoryViewTests: XCTestCase {
             arc4random_buf(bytes, 16)
         })
         
-        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue(), encryptionParameters: ValueBoxEncryptionParameters(key: ValueBoxEncryptionParameters.Key(data: randomKey)!, salt: ValueBoxEncryptionParameters.Salt(data: randomSalt)!))
+        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue(), encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: randomKey)!, salt: ValueBoxEncryptionParameters.Salt(data: randomSalt)!), upgradeProgress: { _ in }, inMemory: true)
         
         let messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]] = [
             peerId.namespace: [:
@@ -76,7 +67,7 @@ class MessageHistoryViewTests: XCTestCase {
             ]
         ]
         
-        let seedConfiguration = SeedConfiguration(globalMessageIdsPeerIdNamespaces: Set(), initializeChatListWithHole: (topLevel: nil, groups: nil), messageHoles: messageHoles, existingMessageTags: [], messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], peerSummaryCounterTags: { _ in PeerSummaryCounterTags(rawValue: 0) }, additionalChatListIndexNamespace: nil)
+        let seedConfiguration = SeedConfiguration(globalMessageIdsPeerIdNamespaces: Set(), initializeChatListWithHole: (topLevel: nil, groups: nil), messageHoles: messageHoles, existingMessageTags: [], messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], peerSummaryCounterTags: { _ in PeerSummaryCounterTags(rawValue: 0) }, additionalChatListIndexNamespace: nil, messageNamespacesRequiringGroupStatsValidation: Set())
         
         self.postbox = Postbox(queue: Queue.mainQueue(), basePath: path!, seedConfiguration: seedConfiguration, valueBox: self.valueBox!)
     }
@@ -101,10 +92,14 @@ class MessageHistoryViewTests: XCTestCase {
         }).start()
     }
     
-    private func addMessage(_ id: Int32, _ timestamp: Int32, _ groupingKey: Int64? = nil) {
+    private func addMessage(_ id: Int32, _ timestamp: Int32, _ groupingKey: Int64? = nil) -> UInt32 {
+        var stableId: UInt32?
         let _ = self.postbox!.transaction({ transaction -> Void in
-            let _ = transaction.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributes: [], media: [])], location: .Random)
+            let messageId = MessageId(peerId: peerId, namespace: namespace, id: id)
+            let _ = transaction.addMessages([StoreMessage(id: messageId, globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributes: [], media: [])], location: .Random)
+            stableId = transaction.getMessage(messageId)!.stableId
         }).start()
+        return stableId!
     }
     
     private func removeMessage(_ id: Int32) {
@@ -120,7 +115,7 @@ class MessageHistoryViewTests: XCTestCase {
     }
     
     func testEmpty() {
-        let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .upperBound, tag: nil, limit: 10, locations: .single(peerId))
+        let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .upperBound, tag: nil, statistics: [], halfLimit: 10, locations: .single(peerId))
         switch state {
             case let .loaded(loadedState):
                 let entries = loadedState.completeAndSample(postbox: self.postbox!).entries
@@ -134,10 +129,10 @@ class MessageHistoryViewTests: XCTestCase {
         var testIds: [MessageId.Id] = []
         for i in 1 ..< 11 {
             testIds.append(Int32(i * 10))
-            addMessage(Int32(i * 10), Int32(i * 10))
+            let _ = addMessage(Int32(i * 10), Int32(i * 10))
         }
         for i in 3 ... testIds.count + 10 {
-            let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .upperBound, tag: nil, limit: i, locations: .single(peerId))
+            let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .upperBound, tag: nil, statistics: [], halfLimit: i, locations: .single(peerId))
             switch state {
                 case let .loaded(loadedState):
                     let entries = loadedState.completeAndSample(postbox: self.postbox!).entries
@@ -154,7 +149,7 @@ class MessageHistoryViewTests: XCTestCase {
             }
         }
         for i in 3 ... testIds.count + 10 {
-            let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .lowerBound, tag: nil, limit: i, locations: .single(peerId))
+            let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .lowerBound, tag: nil, statistics: [], halfLimit: i, locations: .single(peerId))
             switch state {
                 case let .loaded(loadedState):
                     let entries = loadedState.completeAndSample(postbox: self.postbox!).entries
@@ -172,11 +167,11 @@ class MessageHistoryViewTests: XCTestCase {
         }
         for i in 3 ... testIds.count + 10 {
             for j in testIds[0] - 10 ... testIds.last! + 10 {
-                let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32(j)), timestamp: Int32(j))), tag: nil, limit: i, locations: .single(peerId))
+                let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32(j)), timestamp: Int32(j))), tag: nil, statistics: [], halfLimit: i, locations: .single(peerId))
                 
                 let clippedTestIds: [Int32]
                 if let index = testIds.firstIndex(where: { $0 > Int32(j) }), index >= 0 {
-                    clippedTestIds = extract(from: testIds, aroundIndex: index - 1, limit: i)
+                    clippedTestIds = extract(from: testIds, aroundIndex: index - 1, halfLimit: i)
                 } else {
                     if i >= testIds.count {
                         clippedTestIds = testIds
@@ -233,12 +228,12 @@ class MessageHistoryViewTests: XCTestCase {
         
         for operationSetIndex in 0 ..< operationSets.count {
             let operations = operationSets[operationSetIndex]
-            for limit in [3, 4, 5, 6, 7, 200] {
+            for halfLimit in [3, 4, 5, 6, 7, 200] {
                 for position in 10 ... 110 {
                     removeAllMessages()
                     
                     var testIds: [MessageId.Id] = []
-                    let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32(position)), timestamp: Int32(position))), tag: nil, limit: limit, locations: .single(peerId))
+                    let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32(position)), timestamp: Int32(position))), tag: nil, statistics: [], halfLimit: halfLimit, locations: .single(peerId))
                     switch state {
                         case let .loaded(loadedState):
                             for operationIndex in 0 ..< operations.count {
@@ -252,20 +247,20 @@ class MessageHistoryViewTests: XCTestCase {
                                 
                                 let attributesData = ReadBuffer(data: Data())
                                 
-                                addMessage(Int32(insertId), Int32(insertId))
-                                let _ = loadedState.add(entry: .IntermediateMessageEntry(IntermediateMessage(stableId: UInt32(insertId), stableVersion: 0, id: MessageId(peerId: peerId, namespace: namespace, id: insertId), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: insertId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
+                                let stableId = addMessage(Int32(insertId), Int32(insertId))
+                                let _ = loadedState.add(entry: .IntermediateMessageEntry(IntermediateMessage(stableId: stableId, stableVersion: 0, id: MessageId(peerId: peerId, namespace: namespace, id: insertId), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: insertId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
                                 
                                 let entries = loadedState.completeAndSample(postbox: self.postbox!).entries
                                 let ids = entries.map({ $0.message.id.id })
                                 
                                 let clippedTestIds: [Int32]
                                 if let index = testIds.firstIndex(where: { $0 > Int32(position) }), index >= 0 {
-                                    clippedTestIds = extract(from: testIds, aroundIndex: index - 1, limit: limit)
+                                    clippedTestIds = extract(from: testIds, aroundIndex: index - 1, halfLimit: halfLimit)
                                 } else {
-                                    if limit >= testIds.count {
+                                    if halfLimit >= testIds.count {
                                         clippedTestIds = testIds
                                     } else {
-                                        clippedTestIds = Array(testIds.dropFirst(testIds.count - limit))
+                                        clippedTestIds = Array(testIds.dropFirst(testIds.count - halfLimit))
                                     }
                                 }
                                 
@@ -310,12 +305,12 @@ class MessageHistoryViewTests: XCTestCase {
         
         for operationSetIndex in 0 ..< operationSets.count {
             let operations = operationSets[operationSetIndex]
-            for limit in [3, 4, 5, 6, 7, 200] {
+            for halfLimit in [3, 4, 5, 6, 7, 200] {
                 for position in 10 ... 110 {
                     removeAllMessages()
                     
                     var testIds: [MessageId.Id] = []
-                    let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32(position)), timestamp: Int32(position))), tag: nil, limit: limit, locations: .single(peerId))
+                    let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32(position)), timestamp: Int32(position))), tag: nil, statistics: [], halfLimit: halfLimit, locations: .single(peerId))
                     switch state {
                     case let .loaded(loadedState):
                         for operationIndex in 0 ..< operations.count {
@@ -337,12 +332,12 @@ class MessageHistoryViewTests: XCTestCase {
                             
                             let messageId = MessageId(peerId: peerId, namespace: namespace, id: itemId)
                             if isAdd {
-                                addMessage(Int32(itemId), Int32(itemId))
+                                let stableId = addMessage(Int32(itemId), Int32(itemId))
                                 let attributesData = ReadBuffer(data: Data())
-                                let _ = loadedState.add(entry: .IntermediateMessageEntry(IntermediateMessage(stableId: UInt32(messageId.id), stableVersion: 0, id: messageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: itemId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
+                                let _ = loadedState.add(entry: .IntermediateMessageEntry(IntermediateMessage(stableId: stableId, stableVersion: 0, id: messageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: itemId, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributesData: attributesData, embeddedMediaData: attributesData, referencedMedia: []), nil, nil))
                             } else {
                                 removeMessage(itemId)
-                                let _ = loadedState.remove(postbox: self.postbox!, index: MessageIndex(id: messageId, timestamp: itemId))
+                                let _ = loadedState.remove(index: MessageIndex(id: messageId, timestamp: itemId))
                             }
                             
                             let entries = loadedState.completeAndSample(postbox: self.postbox!).entries
@@ -350,12 +345,12 @@ class MessageHistoryViewTests: XCTestCase {
                             
                             let clippedTestIds: [Int32]
                             if let index = testIds.firstIndex(where: { $0 > Int32(position) }), index >= 0 {
-                                clippedTestIds = extract(from: testIds, aroundIndex: index - 1, limit: limit)
+                                clippedTestIds = extract(from: testIds, aroundIndex: index - 1, halfLimit: halfLimit)
                             } else {
-                                if limit >= testIds.count {
+                                if halfLimit >= testIds.count {
                                     clippedTestIds = testIds
                                 } else {
-                                    clippedTestIds = Array(testIds.dropFirst(testIds.count - limit))
+                                    clippedTestIds = Array(testIds.dropFirst(testIds.count - halfLimit))
                                 }
                             }
                             
@@ -371,7 +366,7 @@ class MessageHistoryViewTests: XCTestCase {
     
     func testLoadInitialHole() {
         addHole(1 ... 1000, space: .everywhere)
-        var state = HistoryViewState(postbox: self.postbox!, inputAnchor: .message(MessageId(peerId: peerId, namespace: namespace, id: Int32(100))), tag: nil, limit: 10, locations: .single(peerId))
+        var state = HistoryViewState(postbox: self.postbox!, inputAnchor: .message(MessageId(peerId: peerId, namespace: namespace, id: Int32(100))), tag: nil, statistics: [], halfLimit: 10, locations: .single(peerId))
         switch state {
             case .loaded:
                 XCTAssert(false)
@@ -405,7 +400,7 @@ class MessageHistoryViewTests: XCTestCase {
                             default:
                                 XCTAssert(false)
                         }
-                        state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: nil, limit: 10, locations: .single(peerId), postbox: self.postbox!, holes: holes))
+                        state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: nil, statistics: [], halfLimit: 10, locations: .single(peerId), postbox: self.postbox!, holes: holes))
                     case .loadHole:
                         XCTAssert(false)
                 }
@@ -421,13 +416,13 @@ class MessageHistoryViewTests: XCTestCase {
     }
     
     func testEdgeHoles1() {
-        addMessage(100, 100)
-        addMessage(200, 200)
-        addMessage(300, 300)
+        let _ = addMessage(100, 100)
+        let _ = addMessage(200, 200)
+        let _ = addMessage(300, 300)
         
         addHole(1 ... 100, space: .everywhere)
         
-        let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .upperBound, tag: nil, limit: 10, locations: .single(peerId))
+        let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .upperBound, tag: nil, statistics: [], halfLimit: 10, locations: .single(peerId))
         guard case let .loaded(loadedState) = state else {
             XCTAssert(false)
             return
@@ -441,13 +436,13 @@ class MessageHistoryViewTests: XCTestCase {
     }
     
     func testEdgeHoles2() {
-        addMessage(100, 100)
-        addMessage(200, 200)
-        addMessage(300, 300)
+        let _ = addMessage(100, 100)
+        let _ = addMessage(200, 200)
+        let _ = addMessage(300, 300)
         
         addHole(1 ... 99, space: .everywhere)
         
-        let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .upperBound, tag: nil, limit: 10, locations: .single(peerId))
+        let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .upperBound, tag: nil, statistics: [], halfLimit: 10, locations: .single(peerId))
         guard case let .loaded(loadedState) = state else {
             XCTAssert(false)
             return
@@ -461,13 +456,13 @@ class MessageHistoryViewTests: XCTestCase {
     }
     
     func testEdgeHoles3() {
-        addMessage(100, 100)
-        addMessage(200, 200)
-        addMessage(300, 300)
+        let _ = addMessage(100, 100)
+        let _ = addMessage(200, 200)
+        let _ = addMessage(300, 300)
         
         addHole(300 ... 400, space: .everywhere)
         
-        let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .upperBound, tag: nil, limit: 10, locations: .single(peerId))
+        let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .upperBound, tag: nil, statistics: [], halfLimit: 10, locations: .single(peerId))
         guard case let .loaded(loadedState) = state else {
             XCTAssert(false)
             return
@@ -475,19 +470,19 @@ class MessageHistoryViewTests: XCTestCase {
         let sampledState = loadedState.completeAndSample(postbox: self.postbox!)
         let ids = sampledState.entries.map({ $0.message.id.id })
         XCTAssert(ids == [])
-        XCTAssert(sampledState.hole == SampledHistoryViewHole(peerId: peerId, namespace: namespace, tag: nil, indices: IndexSet(integersIn: 300 ... 400), startId: 300, endId: 1))
-        XCTAssert(sampledState.holesToHigher == true)
+        XCTAssert(sampledState.hole == SampledHistoryViewHole(peerId: peerId, namespace: namespace, tag: nil, indices: IndexSet(integersIn: 300 ... 400), startId: 400, endId: 1))
+        XCTAssert(sampledState.holesToHigher == false)
         XCTAssert(sampledState.holesToLower == true)
     }
     
     func testEdgeHoles4() {
-        addMessage(100, 100)
-        addMessage(200, 200)
-        addMessage(300, 300)
+        let _ = addMessage(100, 100)
+        let _ = addMessage(200, 200)
+        let _ = addMessage(300, 300)
         
         addHole(300 ... 400, space: .everywhere)
         
-        let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .message(MessageId(peerId: peerId, namespace: namespace, id: 200)), tag: nil, limit: 10, locations: .single(peerId))
+        let state = HistoryViewState(postbox: self.postbox!, inputAnchor: .message(MessageId(peerId: peerId, namespace: namespace, id: 200)), tag: nil, statistics: [], halfLimit: 10, locations: .single(peerId))
         guard case let .loaded(loadedState) = state else {
             XCTAssert(false)
             return

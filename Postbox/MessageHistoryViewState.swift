@@ -165,13 +165,12 @@ private func binaryIndexOrLower(_ inputArr: [MutableMessageHistoryEntry], _ sear
     return hi
 }
 
-private func sampleEntries(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries], anchor: HistoryViewAnchor, limit: Int) -> [(PeerIdAndNamespace, Int)] {
+private func sampleEntries(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries], anchor: HistoryViewAnchor, halfLimit: Int) -> (lowerOrAtAnchor:[(PeerIdAndNamespace, Int)], higherThanAnchor: [(PeerIdAndNamespace, Int)]) {
     var previousAnchorIndices: [PeerIdAndNamespace: Int] = [:]
     var nextAnchorIndices: [PeerIdAndNamespace: Int] = [:]
     for (space, items) in orderedEntriesBySpace {
-        let index = binaryIndexOrLower(items.entries, anchor)
-        previousAnchorIndices[space] = index
-        nextAnchorIndices[space] = index + 1
+        previousAnchorIndices[space] = items.lowerOrAtAnchor.count - 1
+        nextAnchorIndices[space] = 0
     }
     
     var backwardsResult: [(PeerIdAndNamespace, Int)] = []
@@ -182,7 +181,7 @@ private func sampleEntries(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHi
         for (space, value) in previousAnchorIndices {
             if value != -1 {
                 if let minSpaceValue = minSpace {
-                    if orderedEntriesBySpace[space]!.entries[value].index > orderedEntriesBySpace[minSpaceValue]!.entries[previousAnchorIndices[minSpaceValue]!].index {
+                    if orderedEntriesBySpace[space]!.lowerOrAtAnchor[value].index > orderedEntriesBySpace[minSpaceValue]!.lowerOrAtAnchor[previousAnchorIndices[minSpaceValue]!].index {
                         minSpace = space
                     }
                 } else {
@@ -193,16 +192,22 @@ private func sampleEntries(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHi
         if let minSpace = minSpace {
             backwardsResult.append((minSpace, previousAnchorIndices[minSpace]!))
             previousAnchorIndices[minSpace]! -= 1
-            if (result.count + backwardsResult.count) == limit {
+            if backwardsResult.count == halfLimit {
                 break
             }
         }
         
+        if minSpace == nil {
+            break
+        }
+    }
+    
+    while true {
         var maxSpace: PeerIdAndNamespace?
         for (space, value) in nextAnchorIndices {
-            if value != orderedEntriesBySpace[space]!.entries.count {
+            if value != orderedEntriesBySpace[space]!.higherThanAnchor.count {
                 if let maxSpaceValue = maxSpace {
-                    if orderedEntriesBySpace[space]!.entries[value].index < orderedEntriesBySpace[maxSpaceValue]!.entries[nextAnchorIndices[maxSpaceValue]!].index {
+                    if orderedEntriesBySpace[space]!.higherThanAnchor[value].index < orderedEntriesBySpace[maxSpaceValue]!.higherThanAnchor[nextAnchorIndices[maxSpaceValue]!].index {
                         maxSpace = space
                     }
                 } else {
@@ -213,16 +218,16 @@ private func sampleEntries(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHi
         if let maxSpace = maxSpace {
             result.append((maxSpace, nextAnchorIndices[maxSpace]!))
             nextAnchorIndices[maxSpace]! += 1
-            if (result.count + backwardsResult.count) == limit {
+            if result.count == halfLimit {
                 break
             }
         }
         
-        if minSpace == nil && maxSpace == nil {
+        if maxSpace == nil {
             break
         }
     }
-    return backwardsResult.reversed() + result
+    return (backwardsResult.reversed(), result)
 }
 
 struct SampledHistoryViewHole: Equatable {
@@ -274,9 +279,9 @@ private func isIndex(index: MessageIndex, closerTo anchor: HistoryViewAnchor, th
     }
 }
 
-private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries], holes: HistoryViewHoles, anchor: HistoryViewAnchor, tag: MessageTags?) -> (clipRanges: [ClosedRange<MessageIndex>], sampledHole: SampledHistoryViewHole?) {
+private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries], holes: HistoryViewHoles, anchor: HistoryViewAnchor, tag: MessageTags?, halfLimit: Int) -> (clipRanges: [ClosedRange<MessageIndex>], sampledHole: SampledHistoryViewHole?) {
     var clipRanges: [ClosedRange<MessageIndex>] = []
-    var sampledHole: (itemIndex: Int?, hole: SampledHistoryViewHole)?
+    var sampledHole: (distanceFromAnchor: Int?, hole: SampledHistoryViewHole)?
     
     for (space, indices) in holes.holesBySpace {
         if indices.isEmpty {
@@ -292,7 +297,7 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                     }
                 }
         }
-        guard let items = orderedEntriesBySpace[space], !items.entries.isEmpty else {
+        guard let items = orderedEntriesBySpace[space], (!items.lowerOrAtAnchor.isEmpty || !items.higherThanAnchor.isEmpty) else {
             let holeBounds: (startId: MessageId.Id, endId: MessageId.Id)
             switch anchor {
                 case .lowerBound:
@@ -307,11 +312,176 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                 continue
             }
         }
-        guard let bounds = items.bounds else {
-            assertionFailure("A non-empty entry list should have non-nil bounds")
-            continue
+        
+        for item in items.lowerOrAtAnchor {
+            if item.index.id.id == 76891 {
+                assert(true)
+            }
         }
-        let anchorIndex = binaryIndexOrLower(items.entries, anchor)
+        for item in items.higherThanAnchor {
+            if item.index.id.id == 76891 {
+                assert(true)
+            }
+        }
+        
+        var lowerOrAtAnchorHole: (distanceFromAnchor: Int, hole: SampledHistoryViewHole)?
+        
+        for i in (-1 ..< items.lowerOrAtAnchor.count).reversed() {
+            let startingMessageId: MessageId.Id
+            if items.higherThanAnchor.isEmpty {
+                startingMessageId = Int32.max - 1
+            } else {
+                startingMessageId = items.higherThanAnchor[0].index.id.id
+            }
+            let currentMessageId: MessageId.Id
+            if i == -1 {
+                if items.lowerOrAtAnchor.count >= halfLimit {
+                    break
+                }
+                currentMessageId = 1
+            } else {
+                currentMessageId = items.lowerOrAtAnchor[i].index.id.id
+            }
+            let range: ClosedRange<Int> = Int(currentMessageId) ... Int(startingMessageId)
+            if indices.intersects(integersIn: range) {
+                let holeStartIndex: Int
+                if let value = indices.integerLessThanOrEqualTo(Int(startingMessageId)) {
+                    holeStartIndex = value
+                } else {
+                    holeStartIndex = indices[indices.endIndex]
+                }
+                lowerOrAtAnchorHole = (items.lowerOrAtAnchor.count - i, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: Int32(holeStartIndex), endId: 1))
+                
+                if i == -1 {
+                    if items.lowerOrAtAnchor.count == 0 {
+                        if items.higherThanAnchor.count == 0 {
+                            clipRanges.append(MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound())
+                        } else {
+                            let clipIndex = items.higherThanAnchor[0].index.predecessor()
+                            clipRanges.append(MessageIndex.absoluteLowerBound() ... clipIndex)
+                        }
+                    } else {
+                        let clipIndex = items.lowerOrAtAnchor[0].index.predecessor()
+                        clipRanges.append(MessageIndex.absoluteLowerBound() ... clipIndex)
+                    }
+                } else {
+                    if i == items.lowerOrAtAnchor.count - 1 {
+                        if items.higherThanAnchor.count == 0 {
+                            clipRanges.append(MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound())
+                        } else {
+                            let clipIndex = items.higherThanAnchor[0].index.predecessor()
+                            clipRanges.append(MessageIndex.absoluteLowerBound() ... clipIndex)
+                        }
+                    } else {
+                        let clipIndex: MessageIndex
+                        if indices.contains(Int(items.lowerOrAtAnchor[i + 1].index.id.id)) {
+                            clipIndex = items.lowerOrAtAnchor[i + 1].index
+                        } else {
+                            clipIndex = items.lowerOrAtAnchor[i + 1].index.predecessor()
+                        }
+                        clipRanges.append(MessageIndex.absoluteLowerBound() ... clipIndex)
+                    }
+                }
+                break
+            }
+        }
+        
+        var higherThanAnchorHole: (distanceFromAnchor: Int, hole: SampledHistoryViewHole)?
+        
+        for i in (0 ..< items.higherThanAnchor.count + 1) {
+            let startingMessageId: MessageId.Id
+            if items.lowerOrAtAnchor.isEmpty {
+                startingMessageId = 1
+            } else {
+                startingMessageId = items.lowerOrAtAnchor[items.lowerOrAtAnchor.count - 1].index.id.id
+            }
+            let currentMessageId: MessageId.Id
+            if i == items.higherThanAnchor.count {
+                if items.higherThanAnchor.count >= halfLimit {
+                    break
+                }
+                currentMessageId = Int32.max - 1
+            } else {
+                currentMessageId = items.higherThanAnchor[i].index.id.id
+            }
+            let range: ClosedRange<Int> = Int(startingMessageId) ... Int(currentMessageId)
+            if indices.intersects(integersIn: range) {
+                let holeStartIndex: Int
+                if let value = indices.integerGreaterThanOrEqualTo(Int(startingMessageId)) {
+                    holeStartIndex = value
+                } else {
+                    holeStartIndex = indices[indices.startIndex]
+                }
+                higherThanAnchorHole = (i, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: Int32(holeStartIndex), endId: Int32.max - 1))
+                
+                if i == items.higherThanAnchor.count {
+                    if items.higherThanAnchor.count == 0 {
+                        if items.lowerOrAtAnchor.count == 0 {
+                            clipRanges.append(MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound())
+                        } else {
+                            let clipIndex = items.lowerOrAtAnchor[items.lowerOrAtAnchor.count - 1].index.successor()
+                            clipRanges.append(clipIndex ... MessageIndex.absoluteUpperBound())
+                        }
+                    } else {
+                        let clipIndex = items.higherThanAnchor[items.higherThanAnchor.count - 1].index.successor()
+                        clipRanges.append(clipIndex ... MessageIndex.absoluteUpperBound())
+                    }
+                } else {
+                    if i == 0 {
+                        if items.lowerOrAtAnchor.count == 0 {
+                            clipRanges.append(MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound())
+                        } else {
+                            let clipIndex = items.lowerOrAtAnchor[items.lowerOrAtAnchor.count - 1].index.successor()
+                            clipRanges.append(clipIndex ... MessageIndex.absoluteUpperBound())
+                        }
+                    } else {
+                        let clipIndex: MessageIndex
+                        if indices.contains(Int(items.higherThanAnchor[i - 1].index.id.id)) {
+                            clipIndex = items.higherThanAnchor[i - 1].index
+                        } else {
+                            clipIndex = items.higherThanAnchor[i - 1].index.successor()
+                        }
+                        clipRanges.append(clipIndex ... MessageIndex.absoluteUpperBound())
+                    }
+                }
+                break
+            }
+        }
+        
+        var chosenHole: (distanceFromAnchor: Int, hole: SampledHistoryViewHole)?
+        if let lowerOrAtAnchorHole = lowerOrAtAnchorHole, let higherThanAnchorHole = higherThanAnchorHole {
+            if items.lowerOrAtAnchor.isEmpty != items.higherThanAnchor.isEmpty {
+                if !items.lowerOrAtAnchor.isEmpty {
+                    chosenHole = lowerOrAtAnchorHole
+                } else {
+                    chosenHole = higherThanAnchorHole
+                }
+            } else {
+                if lowerOrAtAnchorHole.distanceFromAnchor < higherThanAnchorHole.distanceFromAnchor {
+                    chosenHole = lowerOrAtAnchorHole
+                } else {
+                    chosenHole = higherThanAnchorHole
+                }
+            }
+        } else if let lowerOrAtAnchorHole = lowerOrAtAnchorHole {
+            chosenHole = lowerOrAtAnchorHole
+        } else if let higherThanAnchorHole = higherThanAnchorHole {
+            chosenHole = higherThanAnchorHole
+        }
+        
+        if let chosenHole = chosenHole {
+            if let current = sampledHole {
+                if let distance = current.distanceFromAnchor {
+                    if chosenHole.distanceFromAnchor < distance {
+                        sampledHole = (chosenHole.distanceFromAnchor, chosenHole.hole)
+                    }
+                }
+            } else {
+                sampledHole = (chosenHole.distanceFromAnchor, chosenHole.hole)
+            }
+        }
+        
+        /*let anchorIndex = binaryIndexOrLower(items.entries, anchor)
         let anchorStartingMessageId: MessageId.Id
         if anchorIndex == -1 {
             anchorStartingMessageId = 1
@@ -406,7 +576,7 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                 }
             }
             higherDirectionIndex += 1
-        }
+        }*/
     }
     return (clipRanges, sampledHole?.hole)
 }
@@ -443,8 +613,61 @@ struct HistoryViewHoles {
 }
 
 struct OrderedHistoryViewEntries {
-    var entries: [MutableMessageHistoryEntry]
-    var bounds: (lower: MessageIndex, upper: MessageIndex)?
+    var lowerOrAtAnchor: [MutableMessageHistoryEntry]
+    var higherThanAnchor: [MutableMessageHistoryEntry]
+    
+    func find(index: MessageIndex) -> MutableMessageHistoryEntry? {
+        if let entryIndex = binarySearch(self.lowerOrAtAnchor, extract: { $0.index }, searchItem: index) {
+            return self.lowerOrAtAnchor[entryIndex]
+        } else if let entryIndex = binarySearch(self.higherThanAnchor, extract: { $0.index }, searchItem: index) {
+            return self.higherThanAnchor[entryIndex]
+        } else {
+            return nil
+        }
+    }
+    
+    mutating func mutableScan(_ f: (MutableMessageHistoryEntry) -> MutableMessageHistoryEntry?) -> Bool {
+        for i in 0 ..< self.lowerOrAtAnchor.count {
+            if let updated = f(self.lowerOrAtAnchor[i]) {
+                self.lowerOrAtAnchor[i] = updated
+                return true
+            }
+        }
+        for i in 0 ..< self.higherThanAnchor.count {
+            if let updated = f(self.higherThanAnchor[i]) {
+                self.higherThanAnchor[i] = updated
+                return true
+            }
+        }
+        return false
+    }
+    
+    mutating func update(index: MessageIndex, _ f: (MutableMessageHistoryEntry) -> MutableMessageHistoryEntry?) -> Bool {
+        if let entryIndex = binarySearch(self.lowerOrAtAnchor, extract: { $0.index }, searchItem: index) {
+            if let updated = f(self.lowerOrAtAnchor[entryIndex]) {
+                self.lowerOrAtAnchor[entryIndex] = updated
+                return true
+            }
+        } else if let entryIndex = binarySearch(self.higherThanAnchor, extract: { $0.index }, searchItem: index) {
+            if let updated = f(self.higherThanAnchor[entryIndex]) {
+                self.higherThanAnchor[entryIndex] = updated
+                return true
+            }
+        }
+        return false
+    }
+    
+    mutating func remove(index: MessageIndex) -> Bool {
+        if let entryIndex = binarySearch(self.lowerOrAtAnchor, extract: { $0.index }, searchItem: index) {
+            self.lowerOrAtAnchor.remove(at: entryIndex)
+            return true
+        } else if let entryIndex = binarySearch(self.higherThanAnchor, extract: { $0.index }, searchItem: index) {
+            self.higherThanAnchor.remove(at: entryIndex)
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 struct HistoryViewLoadedSample {
@@ -459,17 +682,17 @@ final class HistoryViewLoadedState {
     let anchor: HistoryViewAnchor
     let tag: MessageTags?
     let statistics: MessageHistoryViewOrderStatistics
-    let limit: Int
+    let halfLimit: Int
     var orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries]
     var holes: HistoryViewHoles
     var spacesWithRemovals = Set<PeerIdAndNamespace>()
     
-    init(anchor: HistoryViewAnchor, tag: MessageTags?, statistics: MessageHistoryViewOrderStatistics, limit: Int, locations: MessageHistoryViewPeerIds, postbox: Postbox, holes: HistoryViewHoles) {
-        precondition(limit >= 3)
+    init(anchor: HistoryViewAnchor, tag: MessageTags?, statistics: MessageHistoryViewOrderStatistics, halfLimit: Int, locations: MessageHistoryViewPeerIds, postbox: Postbox, holes: HistoryViewHoles) {
+        precondition(halfLimit >= 3)
         self.anchor = anchor
         self.tag = tag
         self.statistics = statistics
-        self.limit = limit
+        self.halfLimit = halfLimit
         self.orderedEntriesBySpace = [:]
         self.holes = holes
         
@@ -509,56 +732,43 @@ final class HistoryViewLoadedState {
                 anchorIndex = upperBound
         }
         
-        var lowerMessages: [MutableMessageHistoryEntry] = []
-        var higherMessages: [MutableMessageHistoryEntry] = []
+        var lowerOrAtAnchorMessages: [MutableMessageHistoryEntry] = []
+        var higherThanAnchorMessages: [MutableMessageHistoryEntry] = []
         
-        if let currentEntries = self.orderedEntriesBySpace[space], !currentEntries.entries.isEmpty {
-            let index = binaryIndexOrLower(currentEntries.entries, self.anchor)
-            if index >= 0 {
-                lowerMessages = Array(currentEntries.entries[0 ... index].reversed())
-            }
-            if index < currentEntries.entries.count {
-                higherMessages = Array(currentEntries.entries[index + 1 ..< currentEntries.entries.count])
-            }
+        if let currentEntries = self.orderedEntriesBySpace[space] {
+            lowerOrAtAnchorMessages = currentEntries.lowerOrAtAnchor.reversed()
+            higherThanAnchorMessages = currentEntries.higherThanAnchor
         }
         
         func mapEntry(_ message: IntermediateMessage) -> MutableMessageHistoryEntry {
             return .IntermediateMessageEntry(message, nil, nil)
         }
         
-        if lowerMessages.count < self.limit / 2 + 1 {
+        if lowerOrAtAnchorMessages.count < self.halfLimit {
             let nextLowerIndex: (index: MessageIndex, includeFrom: Bool)
-            if let lastMessage = lowerMessages.last {
+            if let lastMessage = lowerOrAtAnchorMessages.last {
                 nextLowerIndex = (lastMessage.index, false)
             } else {
                 nextLowerIndex = (anchorIndex, true)
             }
-            lowerMessages.append(contentsOf: postbox.messageHistoryTable.fetch(peerId: space.peerId, namespace: space.namespace, tag: self.tag, from: nextLowerIndex.index, includeFrom: nextLowerIndex.includeFrom, to: lowerBound, limit: self.limit / 2 + 1 - lowerMessages.count).map(mapEntry))
+            lowerOrAtAnchorMessages.append(contentsOf: postbox.messageHistoryTable.fetch(peerId: space.peerId, namespace: space.namespace, tag: self.tag, from: nextLowerIndex.index, includeFrom: nextLowerIndex.includeFrom, to: lowerBound, limit: self.halfLimit - lowerOrAtAnchorMessages.count).map(mapEntry))
         }
-        if higherMessages.count < self.limit - lowerMessages.count {
+        if higherThanAnchorMessages.count < self.halfLimit {
             let nextHigherIndex: MessageIndex
-            if let lastMessage = higherMessages.last {
+            if let lastMessage = higherThanAnchorMessages.last {
                 nextHigherIndex = lastMessage.index
             } else {
                 nextHigherIndex = anchorIndex
             }
-            higherMessages.append(contentsOf: postbox.messageHistoryTable.fetch(peerId: space.peerId, namespace: space.namespace, tag: self.tag, from: nextHigherIndex, includeFrom: false, to: upperBound, limit: self.limit - lowerMessages.count - higherMessages.count).map(mapEntry))
+            higherThanAnchorMessages.append(contentsOf: postbox.messageHistoryTable.fetch(peerId: space.peerId, namespace: space.namespace, tag: self.tag, from: nextHigherIndex, includeFrom: false, to: upperBound, limit: self.halfLimit - higherThanAnchorMessages.count).map(mapEntry))
         }
         
-        if !lowerMessages.isEmpty && lowerMessages.count + higherMessages.count < self.limit {
-            let additionalLowerMessages = postbox.messageHistoryTable.fetch(peerId: space.peerId, namespace: space.namespace, tag: self.tag, from: lowerMessages[lowerMessages.count - 1].index, includeFrom: false, to: lowerBound, limit: self.limit - lowerMessages.count - higherMessages.count).map(mapEntry)
-            lowerMessages.append(contentsOf: additionalLowerMessages)
-        }
+        lowerOrAtAnchorMessages.reverse()
         
-        var messages: [MutableMessageHistoryEntry] = []
-        messages.append(contentsOf: lowerMessages.reversed())
-        messages.append(contentsOf: higherMessages)
+        assert(lowerOrAtAnchorMessages.count <= self.halfLimit)
+        assert(higherThanAnchorMessages.count <= self.halfLimit)
         
-        assert(messages.count <= self.limit)
-        
-        let bounds = postbox.messageHistoryTable.fetchBoundaries(peerId: space.peerId, namespace: space.namespace, tag: self.tag)
-        
-        if let tag = self.tag, self.statistics.contains(.combinedLocation) {
+        /*if let tag = self.tag, self.statistics.contains(.combinedLocation) {
             if let first = messages.first {
                 let messageIndex = first.index
                 let previousCount = postbox.messageHistoryTagsTable.getMessageCountInRange(tag: tag, peerId: space.peerId, namespace: space.namespace, lowerBound: MessageIndex.lowerBound(peerId: space.peerId, namespace: space.namespace), upperBound: messageIndex)
@@ -600,9 +810,9 @@ final class HistoryViewLoadedState {
                     nextLocation.1 = max(0, nextLocation.1 - 1)
                 }
             }
-        }
+        }*/
         
-        self.orderedEntriesBySpace[space] = OrderedHistoryViewEntries(entries: messages, bounds: bounds)
+        self.orderedEntriesBySpace[space] = OrderedHistoryViewEntries(lowerOrAtAnchor: lowerOrAtAnchorMessages, higherThanAnchor: higherThanAnchorMessages)
     }
     
     func insertHole(space: PeerIdAndNamespace, range: ClosedRange<MessageId.Id>) -> Bool {
@@ -618,15 +828,14 @@ final class HistoryViewLoadedState {
         if self.orderedEntriesBySpace[space] == nil {
             return false
         }
-        guard let entryIndex = binarySearch(self.orderedEntriesBySpace[space]!.entries, extract: { $0.index }, searchItem: index) else {
+        guard let entry = self.orderedEntriesBySpace[space]!.find(index: index) else {
             return false
         }
-        let entry = self.orderedEntriesBySpace[space]!.entries[entryIndex]
         var updated = false
-        if self.remove(postbox: postbox, index: index) {
+        if self.remove(index: index) {
             updated = true
         }
-        if self.add(postbox: postbox, entry: entry.updatedTimestamp(timestamp)) {
+        if self.add(entry: entry.updatedTimestamp(timestamp)) {
             updated = true
         }
         return updated
@@ -646,43 +855,46 @@ final class HistoryViewLoadedState {
             if self.orderedEntriesBySpace[space] == nil {
                 continue
             }
-            for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
-                if let groupInfo = spaceMapping[self.orderedEntriesBySpace[space]!.entries[i].index.id.id] {
+            let spaceUpdated = self.orderedEntriesBySpace[space]!.mutableScan({ entry in
+                if let groupInfo = spaceMapping[entry.index.id.id] {
                     updated = true
-                    switch self.orderedEntriesBySpace[space]!.entries[i] {
+                    switch entry {
                         case let .IntermediateMessageEntry(message, location, monthLocation):
-                            self.orderedEntriesBySpace[space]!.entries[i] = .IntermediateMessageEntry(message.withUpdatedGroupInfo(groupInfo), location, monthLocation)
+                            return .IntermediateMessageEntry(message.withUpdatedGroupInfo(groupInfo), location, monthLocation)
                         case let .MessageEntry(messageEntry):
-                            self.orderedEntriesBySpace[space]!.entries[i] = .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message.withUpdatedGroupInfo(groupInfo), location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes))
+                            return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message.withUpdatedGroupInfo(groupInfo), location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes))
                     }
                 }
+                return nil
+            })
+            if spaceUpdated {
+                updated = true
             }
         }
         return updated
     }
     
-    func updateEmbeddedMedia(postbox: Postbox, index: MessageIndex, buffer: ReadBuffer) -> Bool {
+    func updateEmbeddedMedia(index: MessageIndex, buffer: ReadBuffer) -> Bool {
         let space = PeerIdAndNamespace(peerId: index.id.peerId, namespace: index.id.namespace)
         if self.orderedEntriesBySpace[space] == nil {
             return false
         }
-        guard let itemIndex = binarySearch(self.orderedEntriesBySpace[space]!.entries, extract: { $0.index }, searchItem: index) else {
-            return false
-        }
-        switch self.orderedEntriesBySpace[space]!.entries[itemIndex] {
-            case let .IntermediateMessageEntry(message, location, monthLocation):
-                self.orderedEntriesBySpace[space]!.entries[itemIndex] = .IntermediateMessageEntry(message.withUpdatedEmbeddedMedia(buffer), location, monthLocation)
-            case let .MessageEntry(messageEntry):
-                self.orderedEntriesBySpace[space]!.entries[itemIndex] = .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message, location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes))
-        }
-        return true
+        
+        return self.orderedEntriesBySpace[space]!.update(index: index, { entry in
+            switch entry {
+                case let .IntermediateMessageEntry(message, location, monthLocation):
+                    return .IntermediateMessageEntry(message.withUpdatedEmbeddedMedia(buffer), location, monthLocation)
+                case let .MessageEntry(messageEntry):
+                    return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message, location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes))
+            }
+        })
     }
     
     func updateMedia(updatedMedia: [MediaId: Media?]) -> Bool {
-        var hasChanges = false
+        var updated = false
         for space in self.orderedEntriesBySpace.keys {
-            for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
-                switch self.orderedEntriesBySpace[space]!.entries[i] {
+            let spaceUpdated = self.orderedEntriesBySpace[space]!.mutableScan({ entry in
+                switch entry {
                     case let .MessageEntry(value):
                         let message = value.message
                         
@@ -706,41 +918,25 @@ final class HistoryViewLoadedState {
                                 }
                             }
                             let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds)
-                            self.orderedEntriesBySpace[space]!.entries[i] = .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes))
-                            hasChanges = true
+                            return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes))
                         }
-                    case let .IntermediateMessageEntry(message, _, _):
-                        var rebuild = false
-                        for mediaId in message.referencedMedia {
-                            if let media = updatedMedia[mediaId] , media?.id != mediaId {
-                                rebuild = true
-                                break
-                            }
-                        }
-                        if rebuild {
-                            var referencedMedia: [MediaId] = []
-                            for mediaId in message.referencedMedia {
-                                if let media = updatedMedia[mediaId] , media?.id != mediaId {
-                                    if let id = media?.id {
-                                        referencedMedia.append(id)
-                                    }
-                                } else {
-                                    referencedMedia.append(mediaId)
-                                }
-                            }
-                            hasChanges = true
-                        }
+                    case .IntermediateMessageEntry:
+                        break
                 }
+                return nil
+            })
+            if spaceUpdated {
+                updated = true
             }
         }
-        return hasChanges
+        return updated
     }
     
-    func add(postbox: Postbox, entry: MutableMessageHistoryEntry) -> Bool {
+    func add(entry: MutableMessageHistoryEntry) -> Bool {
         let space = PeerIdAndNamespace(peerId: entry.index.id.peerId, namespace: entry.index.id.namespace)
         
         if self.orderedEntriesBySpace[space] == nil {
-            self.orderedEntriesBySpace[space] = OrderedHistoryViewEntries(entries: [], bounds: nil)
+            self.orderedEntriesBySpace[space] = OrderedHistoryViewEntries(lowerOrAtAnchor: [], higherThanAnchor: [])
         }
 
         var updated = false
@@ -763,66 +959,48 @@ final class HistoryViewLoadedState {
             }
         }*/
         
-        let insertionIndex = binaryInsertionIndex(self.orderedEntriesBySpace[space]!.entries, extract: { $0.index }, searchItem: entry.index)
-        
-        if insertionIndex < self.orderedEntriesBySpace[space]!.entries.count {
-            if self.orderedEntriesBySpace[space]!.entries[insertionIndex].index == entry.index {
-                assertionFailure("Inserting an existing index is not allowed")
-                self.orderedEntriesBySpace[space]!.entries[insertionIndex] = entry
-                return true
-            }
-        }
-        
-        var shouldBeAdded = false
-        if insertionIndex == 0 {
-            if let bounds = self.orderedEntriesBySpace[space]!.bounds {
-                if entry.index <= bounds.lower {
-                    shouldBeAdded = true
+        if self.anchor.isEqualOrGreater(than: entry.index) {
+            let insertionIndex = binaryInsertionIndex(self.orderedEntriesBySpace[space]!.lowerOrAtAnchor, extract: { $0.index }, searchItem: entry.index)
+            
+            if insertionIndex < self.orderedEntriesBySpace[space]!.lowerOrAtAnchor.count {
+                if self.orderedEntriesBySpace[space]!.lowerOrAtAnchor[insertionIndex].index == entry.index {
+                    assertionFailure("Inserting an existing index is not allowed")
+                    self.orderedEntriesBySpace[space]!.lowerOrAtAnchor[insertionIndex] = entry
+                    return true
                 }
-            } else {
-                //assert(self.orderedEntriesBySpace[space]!.entries.isEmpty, "A non-empty entry list should have non-nil bounds")
-                shouldBeAdded = true
-            }
-        } else if insertionIndex == self.orderedEntriesBySpace[space]!.entries.count {
-            if let bounds = self.orderedEntriesBySpace[space]!.bounds {
-                if entry.index >= bounds.upper {
-                    shouldBeAdded = true
-                }
-            } else {
-                //assert(self.orderedEntriesBySpace[space]!.entries.isEmpty, "A non-empty entry list should have non-nil bounds")
-                shouldBeAdded = true
-            }
-        } else {
-            shouldBeAdded = true
-        }
-        
-        if shouldBeAdded {
-            self.orderedEntriesBySpace[space]!.entries.insert(entry, at: insertionIndex)
-            if let currentBounds = self.orderedEntriesBySpace[space]!.bounds {
-                if entry.index < currentBounds.lower {
-                    self.orderedEntriesBySpace[space]!.bounds = (lower: entry.index, upper: currentBounds.upper)
-                } else if entry.index > currentBounds.upper {
-                    self.orderedEntriesBySpace[space]!.bounds = (lower: currentBounds.lower, upper: entry.index)
-                }
-            } else {
-                self.orderedEntriesBySpace[space]!.bounds = (lower: entry.index, upper: entry.index)
             }
             
-            if self.orderedEntriesBySpace[space]!.entries.count > self.limit {
-                let anchorIndex = binaryIndexOrLower(self.orderedEntriesBySpace[space]!.entries, self.anchor)
-                if anchorIndex > self.limit / 2 {
-                    self.orderedEntriesBySpace[space]!.entries.removeFirst()
-                } else {
-                    self.orderedEntriesBySpace[space]!.entries.removeLast()
+            if insertionIndex == 0 && self.orderedEntriesBySpace[space]!.lowerOrAtAnchor.count >= self.halfLimit {
+                return updated
+            }
+            self.orderedEntriesBySpace[space]!.lowerOrAtAnchor.insert(entry, at: insertionIndex)
+            if self.orderedEntriesBySpace[space]!.lowerOrAtAnchor.count > self.halfLimit {
+                self.orderedEntriesBySpace[space]!.lowerOrAtAnchor.removeFirst()
+            }
+            return true
+        } else {
+            let insertionIndex = binaryInsertionIndex(self.orderedEntriesBySpace[space]!.higherThanAnchor, extract: { $0.index }, searchItem: entry.index)
+            
+            if insertionIndex < self.orderedEntriesBySpace[space]!.higherThanAnchor.count {
+                if self.orderedEntriesBySpace[space]!.higherThanAnchor[insertionIndex].index == entry.index {
+                    assertionFailure("Inserting an existing index is not allowed")
+                    self.orderedEntriesBySpace[space]!.higherThanAnchor[insertionIndex] = entry
+                    return true
                 }
             }
-            updated = true
+            
+            if insertionIndex == self.orderedEntriesBySpace[space]!.higherThanAnchor.count && self.orderedEntriesBySpace[space]!.higherThanAnchor.count >= self.halfLimit {
+                return updated
+            }
+            self.orderedEntriesBySpace[space]!.higherThanAnchor.insert(entry, at: insertionIndex)
+            if self.orderedEntriesBySpace[space]!.higherThanAnchor.count > self.halfLimit {
+                self.orderedEntriesBySpace[space]!.higherThanAnchor.removeLast()
+            }
+            return true
         }
-        
-        return updated
     }
     
-    func remove(postbox: Postbox, index: MessageIndex) -> Bool {
+    func remove(index: MessageIndex) -> Bool {
         let space = PeerIdAndNamespace(peerId: index.id.peerId, namespace: index.id.namespace)
         if self.orderedEntriesBySpace[space] == nil {
             return false
@@ -842,16 +1020,7 @@ final class HistoryViewLoadedState {
             }
         }*/
         
-        if let itemIndex = binarySearch(self.orderedEntriesBySpace[space]!.entries, extract: { $0.index }, searchItem: index) {
-            if let currentBounds = self.orderedEntriesBySpace[space]!.bounds {
-                if currentBounds.lower == index || currentBounds.upper
-                    == index {
-                    self.orderedEntriesBySpace[space]!.bounds = postbox.messageHistoryTable.fetchBoundaries(peerId: space.peerId, namespace: space.namespace, tag: self.tag)
-                }
-            } else {
-                //assertionFailure("A non-empty entry list should have non-nil bounds")
-            }
-            self.orderedEntriesBySpace[space]!.entries.remove(at: itemIndex)
+        if self.orderedEntriesBySpace[space]!.remove(index: index) {
             self.spacesWithRemovals.insert(space)
             updated = true
         }
@@ -866,48 +1035,62 @@ final class HistoryViewLoadedState {
             }
             self.spacesWithRemovals.removeAll()
         }
-        let combinedSpacesAndIndices = sampleEntries(orderedEntriesBySpace: self.orderedEntriesBySpace, anchor: self.anchor, limit: self.limit)
-        let (clipRanges, sampledHole) = sampleHoleRanges(orderedEntriesBySpace: self.orderedEntriesBySpace, holes: self.holes, anchor: self.anchor, tag: self.tag)
+        let combinedSpacesAndIndicesByDirection = sampleEntries(orderedEntriesBySpace: self.orderedEntriesBySpace, anchor: self.anchor, halfLimit: self.halfLimit)
+        let (clipRanges, sampledHole) = sampleHoleRanges(orderedEntriesBySpace: self.orderedEntriesBySpace, holes: self.holes, anchor: self.anchor, tag: self.tag, halfLimit: self.halfLimit)
         
         var holesToLower = false
         var holesToHigher = false
         var result: [MessageHistoryMessageEntry] = []
-        if combinedSpacesAndIndices.isEmpty {
+        if combinedSpacesAndIndicesByDirection.lowerOrAtAnchor.isEmpty && combinedSpacesAndIndicesByDirection.higherThanAnchor.isEmpty {
             if !clipRanges.isEmpty {
                 holesToLower = true
                 holesToHigher = true
             }
         } else {
-            outer: for i in 0 ..< combinedSpacesAndIndices.count {
-                let (space, index) = combinedSpacesAndIndices[i]
-                
-                if !clipRanges.isEmpty {
-                    let entryIndex = self.orderedEntriesBySpace[space]!.entries[index].index
-                    for range in clipRanges {
-                        if range.contains(entryIndex) {
-                            if i == 0 {
-                                holesToLower = true
+            let directions = [combinedSpacesAndIndicesByDirection.lowerOrAtAnchor, combinedSpacesAndIndicesByDirection.higherThanAnchor]
+            for directionIndex in 0 ..< directions.count {
+                outer: for i in 0 ..< directions[directionIndex].count {
+                    let (space, index) = directions[directionIndex][i]
+                    
+                    let entry: MutableMessageHistoryEntry
+                    if directionIndex == 0 {
+                        entry = self.orderedEntriesBySpace[space]!.lowerOrAtAnchor[index]
+                    } else {
+                        entry = self.orderedEntriesBySpace[space]!.higherThanAnchor[index]
+                    }
+                    
+                    if !clipRanges.isEmpty {
+                        let entryIndex = entry.index
+                        for range in clipRanges {
+                            if range.contains(entryIndex) {
+                                if directionIndex == 0 && i == 0 {
+                                    holesToLower = true
+                                }
+                                if directionIndex == 1 && i == directions[directionIndex].count - 1 {
+                                    holesToHigher = true
+                                }
+                                continue outer
                             }
-                            if i == combinedSpacesAndIndices.count - 1 {
-                                holesToHigher = true
-                            }
-                            continue outer
                         }
                     }
-                }
-                
-                switch self.orderedEntriesBySpace[space]!.entries[index] {
-                    case let .MessageEntry(value):
-                        result.append(value)
-                    case let .IntermediateMessageEntry(message, location, monthLocation):
-                        let renderedMessage = postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable)
-                        var authorIsContact = false
-                        if let author = renderedMessage.author {
-                            authorIsContact = postbox.contactsTable.isContact(peerId: author.id)
-                        }
-                        let entry = MessageHistoryMessageEntry(message: renderedMessage, location: location, monthLocation: monthLocation, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: authorIsContact))
-                        self.orderedEntriesBySpace[space]!.entries[index] = .MessageEntry(entry)
-                        result.append(entry)
+                    
+                    switch entry {
+                        case let .MessageEntry(value):
+                            result.append(value)
+                        case let .IntermediateMessageEntry(message, location, monthLocation):
+                            let renderedMessage = postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable)
+                            var authorIsContact = false
+                            if let author = renderedMessage.author {
+                                authorIsContact = postbox.contactsTable.isContact(peerId: author.id)
+                            }
+                            let entry = MessageHistoryMessageEntry(message: renderedMessage, location: location, monthLocation: monthLocation, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: authorIsContact))
+                            if directionIndex == 0 {
+                                self.orderedEntriesBySpace[space]!.lowerOrAtAnchor[index] = .MessageEntry(entry)
+                            } else {
+                                self.orderedEntriesBySpace[space]!.higherThanAnchor[index] = .MessageEntry(entry)
+                            }
+                            result.append(entry)
+                    }
                 }
             }
         }
@@ -948,13 +1131,13 @@ enum HistoryViewLoadingSample {
 final class HistoryViewLoadingState {
     var messageId: MessageId
     let tag: MessageTags?
-    let limit: Int
+    let halfLimit: Int
     var holes: HistoryViewHoles
     
-    init(postbox: Postbox, locations: MessageHistoryViewPeerIds, tag: MessageTags?, messageId: MessageId, limit: Int) {
+    init(postbox: Postbox, locations: MessageHistoryViewPeerIds, tag: MessageTags?, messageId: MessageId, halfLimit: Int) {
         self.messageId = messageId
         self.tag = tag
-        self.limit = limit
+        self.halfLimit = halfLimit
         self.holes = HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))
     }
     
@@ -995,14 +1178,14 @@ enum HistoryViewState {
     case loaded(HistoryViewLoadedState)
     case loading(HistoryViewLoadingState)
     
-    init(postbox: Postbox, inputAnchor: HistoryViewInputAnchor, tag: MessageTags?, statistics: MessageHistoryViewOrderStatistics, limit: Int, locations: MessageHistoryViewPeerIds) {
+    init(postbox: Postbox, inputAnchor: HistoryViewInputAnchor, tag: MessageTags?, statistics: MessageHistoryViewOrderStatistics, halfLimit: Int, locations: MessageHistoryViewPeerIds) {
         switch inputAnchor {
             case let .index(index):
-                self = .loaded(HistoryViewLoadedState(anchor: .index(index), tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
+                self = .loaded(HistoryViewLoadedState(anchor: .index(index), tag: tag, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
             case .lowerBound:
-                self = .loaded(HistoryViewLoadedState(anchor: .lowerBound, tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
+                self = .loaded(HistoryViewLoadedState(anchor: .lowerBound, tag: tag, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
             case .upperBound:
-                self = .loaded(HistoryViewLoadedState(anchor: .upperBound, tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
+                self = .loaded(HistoryViewLoadedState(anchor: .upperBound, tag: tag, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
             case .unread:
                 let anchorPeerId: PeerId
                 switch locations {
@@ -1035,26 +1218,26 @@ enum HistoryViewState {
                         }
                     }
                     if let messageId = messageId {
-                        let loadingState = HistoryViewLoadingState(postbox: postbox, locations: locations, tag: tag, messageId: messageId, limit: limit)
+                        let loadingState = HistoryViewLoadingState(postbox: postbox, locations: locations, tag: tag, messageId: messageId, halfLimit: halfLimit)
                         let sampledState = loadingState.checkAndSample(postbox: postbox)
                         switch sampledState {
                             case let .ready(anchor, holes):
-                                self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: holes))
+                                self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: holes))
                             case .loadHole:
                                 self = .loading(loadingState)
                         }
                     } else {
-                        self = .loaded(HistoryViewLoadedState(anchor: anchor ?? .upperBound, tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
+                        self = .loaded(HistoryViewLoadedState(anchor: anchor ?? .upperBound, tag: tag, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag))))
                     }
                 } else {
                     preconditionFailure()
                 }
             case let .message(messageId):
-                let loadingState = HistoryViewLoadingState(postbox: postbox, locations: locations, tag: tag, messageId: messageId, limit: limit)
+                let loadingState = HistoryViewLoadingState(postbox: postbox, locations: locations, tag: tag, messageId: messageId, halfLimit: halfLimit)
                 let sampledState = loadingState.checkAndSample(postbox: postbox)
                 switch sampledState {
                     case let .ready(anchor, holes):
-                        self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, statistics: statistics, limit: limit, locations: locations, postbox: postbox, holes: holes))
+                        self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: holes))
                     case .loadHole:
                         self = .loading(loadingState)
                 }
