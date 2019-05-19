@@ -495,7 +495,9 @@ void LOTLayerItem::update(int frameNumber, const VMatrix &parentMatrix,
     }
 
     // 5. if no parent property change and layer is static then nothing to do.
-    if (flag().testFlag(DirtyFlagBit::None) && isStatic()) return;
+    if (!mLayerData->precompLayer() &&
+        flag().testFlag(DirtyFlagBit::None) &&
+        isStatic()) return;
 
     // 6. update the content of the layer
     updateContent();

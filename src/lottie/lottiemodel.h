@@ -378,6 +378,7 @@ public:
     bool autoOrient() const noexcept{return mAutoOrient;}
     int timeRemap(int frameNo) const;
     VSize layerSize() const {return mLayerSize;}
+    bool precompLayer() const {return mLayerType == LayerType::Precomp;}
 public:
     struct SolidLayer {
         int            mWidth{0};
