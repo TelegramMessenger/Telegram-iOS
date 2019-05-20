@@ -303,7 +303,6 @@
 		D073E52222003E1E00742DDD /* Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073E52122003E1E00742DDD /* Data.swift */; };
 		D084023220E1883500065674 /* ApplicationShortcutItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D084023120E1883500065674 /* ApplicationShortcutItem.swift */; };
 		D08410451FABDC5D008FFE92 /* TGItemProviderSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D08410441FABDC5C008FFE92 /* TGItemProviderSignals.m */; };
-		D08410481FABDCF2008FFE92 /* LegacyComponents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08410491FABDCF2008FFE92 /* LegacyComponents.framework */; };
 		D084104E1FABDCFD008FFE92 /* TGContactModel.m in Sources */ = {isa = PBXBuildFile; fileRef = D084104C1FABDCFD008FFE92 /* TGContactModel.m */; };
 		D084104F1FABDCFD008FFE92 /* TGMimeTypeMap.m in Sources */ = {isa = PBXBuildFile; fileRef = D084104D1FABDCFD008FFE92 /* TGMimeTypeMap.m */; };
 		D08410501FABDD54008FFE92 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08410511FABDD54008FFE92 /* MtProtoKitDynamic.framework */; };
@@ -1251,7 +1250,6 @@
 				D0AF322C1FACA1B00097362B /* libc++.tbd in Frameworks */,
 				D0AF32291FACA1920097362B /* Accelerate.framework in Frameworks */,
 				D08410501FABDD54008FFE92 /* MtProtoKitDynamic.framework in Frameworks */,
-				D08410481FABDCF2008FFE92 /* LegacyComponents.framework in Frameworks */,
 				D05F63721EC124D90004BE28 /* TelegramUI.framework in Frameworks */,
 				D03B0E8A1D634B1100955575 /* Display.framework in Frameworks */,
 				D03B0E8B1D634B1100955575 /* SwiftSignalKit.framework in Frameworks */,
