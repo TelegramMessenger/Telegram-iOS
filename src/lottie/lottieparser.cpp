@@ -260,7 +260,7 @@ public:
     void parseShapeProperty(LOTAnimatable<LottieShapeData> &obj);
     void parseDashProperty(LOTDashProperty &dash);
 
-    std::shared_ptr<VInterpolator> interpolator(VPointF inTangent, VPointF outTangent);
+    std::shared_ptr<VInterpolator> interpolator(VPointF, VPointF, std::string);
 
     LottieColor toColor(const char *str);
 
@@ -1840,20 +1840,21 @@ bool LottieParserImpl::parseKeyFrameValue(const char * key,
 }
 
 std::shared_ptr<VInterpolator>
-LottieParserImpl::interpolator(VPointF inTangent, VPointF outTangent)
+LottieParserImpl::interpolator(VPointF inTangent, VPointF outTangent, std::string key)
 {
-    std::array<char, 20> temp;
-    snprintf(temp.data(), temp.size(), "%.2f_%.2f_%.2f_%.2f",
-             inTangent.x(), inTangent.y(), outTangent.x(), outTangent.y());
-
-    std::string key(temp.data());
+    if (key.empty()) {
+        std::array<char, 20> temp;
+        snprintf(temp.data(), temp.size(), "%.2f_%.2f_%.2f_%.2f",
+                 inTangent.x(), inTangent.y(), outTangent.x(), outTangent.y());
+        key = temp.data();
+    }
 
     auto search = mInterpolatorCache.find(key);
     if (search != mInterpolatorCache.end()) {
         return search->second;
     } else {
         auto obj = std::make_shared<VInterpolator>(VInterpolator(outTangent, inTangent));
-        mInterpolatorCache[key] =  obj;
+        mInterpolatorCache[std::move(key)] =  obj;
         return obj;
     }
 }
@@ -1865,6 +1866,7 @@ template <typename T>
 void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
 {
     struct ParsedField {
+        std::string interpolatorKey;
         bool interpolator{false};
         bool value{false};
         bool hold{false};
@@ -1892,6 +1894,23 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
         }  else if (0 == strcmp(key, "e")) {
             parsed.noEndValue = false;
             getValue(keyframe.mValue.mEndValue);
+            continue;
+        } else if (0 == strcmp(key, "n")) {
+            if (PeekType() == kStringType) {
+                parsed.interpolatorKey = GetString();
+            } else {
+                RAPIDJSON_ASSERT(PeekType() == kArrayType);
+                EnterArray();
+                while (NextArrayValue()) {
+                    RAPIDJSON_ASSERT(PeekType() == kStringType);
+                    if (parsed.interpolatorKey.empty()) {
+                        parsed.interpolatorKey = GetString();
+                    } else {
+                        //skip rest of the string
+                        GetString();
+                    }
+                }
+            }
             continue;
         } else if (parseKeyFrameValue(key, keyframe.mValue)) {
             continue;
@@ -1921,7 +1940,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
         keyframe.mEndFrame = keyframe.mStartFrame;
         obj.mKeyFrames.push_back(keyframe);
     } else if (parsed.interpolator) {
-        keyframe.mInterpolator = interpolator(inTangent, outTangent);
+        keyframe.mInterpolator = interpolator(inTangent, outTangent, std::move(parsed.interpolatorKey));
         obj.mKeyFrames.push_back(keyframe);
     } else {
         //its the last frame discard.
