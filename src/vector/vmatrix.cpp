@@ -100,6 +100,7 @@ VMatrix::MatrixType VMatrix::type() const
             mType = MatrixType::Project;
             break;
         }
+        VECTOR_FALLTHROUGH
     case MatrixType::Shear:
     case MatrixType::Rotate:
         if (!vIsZero(m12) || !vIsZero(m21)) {
@@ -110,16 +111,19 @@ VMatrix::MatrixType VMatrix::type() const
                 mType = MatrixType::Shear;
             break;
         }
+        VECTOR_FALLTHROUGH
     case MatrixType::Scale:
         if (!vIsZero(m11 - 1) || !vIsZero(m22 - 1)) {
             mType = MatrixType::Scale;
             break;
         }
+        VECTOR_FALLTHROUGH
     case MatrixType::Translate:
         if (!vIsZero(mtx) || !vIsZero(mty)) {
             mType = MatrixType::Translate;
             break;
         }
+        VECTOR_FALLTHROUGH
     case MatrixType::None:
         mType = MatrixType::None;
         break;
