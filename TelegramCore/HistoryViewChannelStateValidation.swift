@@ -427,7 +427,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                                     ids.insert(id)
                                                 }
                                             }
-                                            return ids
+                                            return Set(maybeRemovedMessageIds).subtracting(ids)
                                         }
                                         |> `catch` { _ -> Signal<Set<MessageId>, NoError> in
                                             return .single(Set(maybeRemovedMessageIds))

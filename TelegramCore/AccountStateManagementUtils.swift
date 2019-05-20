@@ -2209,7 +2209,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     if previousMessage.localTags.contains(.OutgoingLiveLocation) {
                         updatedLocalTags.insert(.OutgoingLiveLocation)
                     }
-                    if message.flags.contains(.Incoming) {
+                    if previousMessage.flags.contains(.Incoming) {
                         updatedFlags.insert(.Incoming)
                     } else {
                         updatedFlags.remove(.Incoming)
