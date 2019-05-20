@@ -418,16 +418,15 @@ public:
     LOTCompositionData():LOTData(LOTData::Type::Composition){}
     const std::vector<LayerInfo> &layerInfoList() const { return  mLayerInfoList;}
     double duration() const {
-        return isStatic() ? startFrame() :
-                            frameDuration() / frameRate(); // in second
+        return frameDuration() / frameRate(); // in second
     }
     size_t frameAtPos(double pos) const {
         if (pos < 0) pos = 0;
         if (pos > 1) pos = 1;
-        return isStatic() ? 0 : pos * frameDuration();
+        return pos * frameDuration();
     }
     long frameAtTime(double timeInSec) const {
-        return isStatic() ? startFrame() : frameAtPos(timeInSec / duration());
+        return frameAtPos(timeInSec / duration());
     }
     size_t totalFrame() const {return mEndFrame - mStartFrame;}
     long frameDuration() const {return mEndFrame - mStartFrame -1;}
