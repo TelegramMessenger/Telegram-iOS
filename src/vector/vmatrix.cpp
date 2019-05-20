@@ -98,8 +98,8 @@ VMatrix::MatrixType VMatrix::type() const
     case MatrixType::Project:
         if (!vIsZero(m13) || !vIsZero(m23) || !vIsZero(m33 - 1)) {
             mType = MatrixType::Project;
+            break;
         }
-        break;
     case MatrixType::Shear:
     case MatrixType::Rotate:
         if (!vIsZero(m12) || !vIsZero(m21)) {
@@ -108,18 +108,18 @@ VMatrix::MatrixType VMatrix::type() const
                 mType = MatrixType::Rotate;
             else
                 mType = MatrixType::Shear;
+            break;
         }
-        break;
     case MatrixType::Scale:
         if (!vIsZero(m11 - 1) || !vIsZero(m22 - 1)) {
             mType = MatrixType::Scale;
+            break;
         }
-        break;
     case MatrixType::Translate:
         if (!vIsZero(mtx) || !vIsZero(mty)) {
             mType = MatrixType::Translate;
+            break;
         }
-        break;
     case MatrixType::None:
         mType = MatrixType::None;
         break;
