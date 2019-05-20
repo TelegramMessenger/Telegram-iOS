@@ -348,9 +348,9 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     if let biometricAuthentication = LocalAuth.biometricAuthentication {
         switch biometricAuthentication {
             case .touchId:
-                entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_PasscodeAndTouchId, true))
+                entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_PasscodeAndTouchId, false))
             case .faceId:
-                entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_PasscodeAndFaceId, false))
+                entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_PasscodeAndFaceId, true))
         }
     } else {
         entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_Passcode, false))
