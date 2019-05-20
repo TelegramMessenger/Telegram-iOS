@@ -72,7 +72,7 @@ public:
         auto player = rlottie::Animation::loadFromFile(fileName);
         if (!player) return help();
 
-        auto buffer = std::make_unique<uint32_t[]>(w * h);
+        auto buffer = std::unique_ptr<uint32_t[]>(new uint32_t[w * h]);
         size_t frameCount = player->totalFrame();
 
         GifBuilder builder(baseName.data(), w, h);
