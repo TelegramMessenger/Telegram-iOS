@@ -4286,6 +4286,7 @@ Sorry for the inconvenience.";
 "UserInfo.BlockConfirmationTitle" = "Do you want to block %@ from messaging and calling you on Telegram?";
 "UserInfo.BlockActionTitle" = "Block %@";
 "ReportSpam.DeleteThisChat" = "Delete this Chat";
+
 "PrivacySettings.BlockedPeersEmpty" = "None";
 
 "Channel.DiscussionGroup" = "Discussion";
@@ -4309,3 +4310,10 @@ Any member of this group will be able to see messages in the channel.";
 
 "Channel.AdminLog.MessageChangedLinkedGroup" = "%1$@ linked %2$@ as the discussion group";
 "Channel.AdminLog.MessageChangedUnlinkedGroup" = "%@ removed discussion group";
+
+
+"Conversation.OpenBotLinkTitle" = "Open Link";
+"Conversation.OpenBotLinkText" = "Do you want to open\n**%@**?";
+"Conversation.OpenBotLinkLogin" = "Log in to **%1$@** as %2$@";
+"Conversation.OpenBotLinkAllowMessages" = "Allow **%@** to send me messages";
+"Conversation.OpenBotLinkOpen" = "Open";
