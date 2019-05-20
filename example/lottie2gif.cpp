@@ -4,14 +4,18 @@
 #include<iostream>
 #include<vector>
 #include<array>
-#include<cstdlib>
+#include<libgen.h>
 
 class GifBuilder {
 public:
-    GifBuilder(const std::string &fileName , const uint32_t width,
-               const uint32_t height, const uint32_t delay = 2)
+    explicit GifBuilder(const std::string &fileName , const uint32_t width,
+                        const uint32_t height, const uint32_t delay = 2)
     {
         GifBegin(&handle, fileName.c_str(), width, height, delay);
+    }
+    ~GifBuilder()
+    {
+        GifEnd(&handle);
     }
     void addFrame(rlottie::Surface &s, uint32_t delay = 2)
     {
@@ -56,10 +60,7 @@ public:
            }
         }
     }
-    void commit()
-    {
-        GifEnd(&handle);
-    }
+
 private:
     GifWriter      handle;
 };
@@ -71,18 +72,15 @@ public:
         auto player = rlottie::Animation::loadFromFile(fileName);
         if (!player) return help();
 
-        uint32_t* buffer = (uint32_t *) malloc(w * h * 4);
+        auto buffer = std::make_unique<uint32_t[]>(w * h);
         size_t frameCount = player->totalFrame();
 
         GifBuilder builder(baseName.data(), w, h);
         for (size_t i = 0; i < frameCount ; i++) {
-            rlottie::Surface surface(buffer, w, h, w * 4);
+            rlottie::Surface surface(buffer.get(), w, h, w * 4);
             player->renderSync(i, surface);
             builder.addFrame(surface);
         }
-        builder.commit();
-
-        free(buffer);
         return result();
     }
 
