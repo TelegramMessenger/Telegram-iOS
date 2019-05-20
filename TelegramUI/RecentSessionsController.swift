@@ -647,5 +647,6 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             controller.present(c, in: .window(.root), with: p)
         }
     }
+    
     return controller
 }

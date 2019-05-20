@@ -128,6 +128,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private let sentMessageEventsDisposable = MetaDisposable()
     private let failedMessageEventsDisposable = MetaDisposable()
     private let messageActionCallbackDisposable = MetaDisposable()
+    private let messageActionUrlAuthDisposable = MetaDisposable()
     private let editMessageDisposable = MetaDisposable()
     private let enqueueMediaMessageDisposable = MetaDisposable()
     private var resolvePeerByNameDisposable: MetaDisposable?
@@ -638,6 +639,121 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     } else {
                                         strongSelf.openUrl(url, concealed: false)
                                     }
+                            }
+                        }
+                    }))
+                }
+            }
+        }, requestMessageActionUrlAuth: { [weak self] defaultUrl, messageId, buttonId in
+            if let strongSelf = self {
+                if let _ = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                        return $0.updatedTitlePanelContext {
+                            if !$0.contains(where: {
+                                switch $0 {
+                                    case .requestInProgress:
+                                        return true
+                                    default:
+                                        return false
+                                }
+                            }) {
+                                var updatedContexts = $0
+                                updatedContexts.append(.requestInProgress)
+                                return updatedContexts.sorted()
+                            }
+                            return $0
+                        }
+                    })
+                    
+                    strongSelf.messageActionUrlAuthDisposable.set(((combineLatest(strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.context.account.peerId), requestMessageActionUrlAuth(account: strongSelf.context.account, messageId: messageId, buttonId: buttonId) |> afterDisposed {
+                        Queue.mainQueue().async {
+                            if let strongSelf = self {
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                    return $0.updatedTitlePanelContext {
+                                        if let index = $0.index(where: {
+                                            switch $0 {
+                                                case .requestInProgress:
+                                                    return true
+                                                default:
+                                                    return false
+                                            }
+                                        }) {
+                                            var updatedContexts = $0
+                                            updatedContexts.remove(at: index)
+                                            return updatedContexts
+                                        }
+                                        return $0
+                                    }
+                                })
+                            }
+                        }
+                    })) |> deliverOnMainQueue).start(next: { peer, result in
+                        if let strongSelf = self {
+                            switch result {
+                                case .default:
+                                    strongSelf.openUrl(defaultUrl, concealed: false)
+                                case let .request(domain, bot, requestWriteAccess):
+                                    let controller = chatMessageActionUrlAuthController(context: strongSelf.context, defaultUrl: defaultUrl, domain: domain, bot: bot, requestWriteAccess: requestWriteAccess, displayName: peer.displayTitle, open: { [weak self] authorize, allowWriteAccess in
+                                        if let strongSelf = self {
+                                            if authorize {
+                                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                                    return $0.updatedTitlePanelContext {
+                                                        if !$0.contains(where: {
+                                                            switch $0 {
+                                                                case .requestInProgress:
+                                                                    return true
+                                                                default:
+                                                                    return false
+                                                            }
+                                                        }) {
+                                                            var updatedContexts = $0
+                                                            updatedContexts.append(.requestInProgress)
+                                                            return updatedContexts.sorted()
+                                                        }
+                                                        return $0
+                                                    }
+                                                })
+                                                
+                                                strongSelf.messageActionUrlAuthDisposable.set(((acceptMessageActionUrlAuth(account: strongSelf.context.account, messageId: messageId, buttonId: buttonId, allowWriteAccess: allowWriteAccess) |> afterDisposed {
+                                                    Queue.mainQueue().async {
+                                                        if let strongSelf = self {
+                                                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                                                return $0.updatedTitlePanelContext {
+                                                                    if let index = $0.index(where: {
+                                                                        switch $0 {
+                                                                            case .requestInProgress:
+                                                                                return true
+                                                                            default:
+                                                                                return false
+                                                                        }
+                                                                    }) {
+                                                                        var updatedContexts = $0
+                                                                        updatedContexts.remove(at: index)
+                                                                        return updatedContexts
+                                                                    }
+                                                                    return $0
+                                                                }
+                                                            })
+                                                        }
+                                                    }
+                                                }) |> deliverOnMainQueue).start(next: { [weak self] result in
+                                                    if let strongSelf = self {
+                                                        switch result {
+                                                            case let .accepted(url):
+                                                                strongSelf.openUrl(url, concealed: false)
+                                                            default:
+                                                                strongSelf.openUrl(defaultUrl, concealed: false)
+                                                        }
+                                                    }
+                                                }))
+                                            } else {
+                                                strongSelf.openUrl(defaultUrl, concealed: false)
+                                            }
+                                        }
+                                    })
+                                    strongSelf.present(controller, in: .window(.root))
+                                case let .accepted(url):
+                                    strongSelf.openUrl(url, concealed: false)
                             }
                         }
                     }))
@@ -1706,6 +1822,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.sentMessageEventsDisposable.dispose()
         self.failedMessageEventsDisposable.dispose()
         self.messageActionCallbackDisposable.dispose()
+        self.messageActionUrlAuthDisposable.dispose()
         self.editMessageDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
         self.resolvePeerByNameDisposable?.dispose()

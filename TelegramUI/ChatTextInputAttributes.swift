@@ -35,6 +35,7 @@ private struct FontAttributes: OptionSet {
     static let bold = FontAttributes(rawValue: 1 << 0)
     static let italic = FontAttributes(rawValue: 1 << 1)
     static let monospace = FontAttributes(rawValue: 1 << 2)
+    static let strikethrough = FontAttributes(rawValue: 1 << 3)
 }
 
 func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor) -> NSAttributedString {

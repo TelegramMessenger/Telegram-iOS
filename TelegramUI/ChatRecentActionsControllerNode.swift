@@ -178,7 +178,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openPeerMention(name)
         }, openMessageContextMenu: { [weak self] message, selectAll, node, frame in
             self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
-        }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _ in
+        }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _ in
             self?.openUrl(url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -607,9 +607,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 if let query = strongSelf.filter.query, hasFilter {
                                     text = strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterQueryText(query).0
                                 } else {
-                                    
                                     text = isSupergroup ? strongSelf.presentationData.strings.Group_AdminLog_EmptyText : strongSelf.presentationData.strings.Broadcast_AdminLog_EmptyText
-                                    
                                 }
                                 strongSelf.emptyNode.setup(title: hasFilter ? strongSelf.presentationData.strings.Channel_AdminLog_EmptyFilterTitle : strongSelf.presentationData.strings.Channel_AdminLog_EmptyTitle, text: text)
                             }

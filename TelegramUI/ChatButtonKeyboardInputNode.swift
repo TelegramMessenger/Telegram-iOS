@@ -160,20 +160,20 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         if let button = button as? ChatButtonKeyboardInputButtonNode, let markupButton = button.button {
             switch markupButton.action {
                 case .text:
-                    controllerInteraction.sendMessage(markupButton.title)
+                    self.controllerInteraction.sendMessage(markupButton.title)
                 case let .url(url):
-                    controllerInteraction.openUrl(url, true, nil)
+                    self.controllerInteraction.openUrl(url, true, nil)
                 case .requestMap:
-                    controllerInteraction.shareCurrentLocation()
+                    self.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:
-                    controllerInteraction.shareAccountContact()
+                    self.controllerInteraction.shareAccountContact()
                 case .openWebApp:
                     if let message = self.message {
-                        controllerInteraction.requestMessageActionCallback(message.id, nil, true)
+                        self.controllerInteraction.requestMessageActionCallback(message.id, nil, true)
                     }
                 case let .callback(data):
                     if let message = self.message {
-                        controllerInteraction.requestMessageActionCallback(message.id, data, false)
+                        self.controllerInteraction.requestMessageActionCallback(message.id, data, false)
                     }
                 case let .switchInline(samePeer, query):
                     if let message = message {
@@ -195,13 +195,15 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                             peerId = message.id.peerId
                         }
                         if let botPeer = botPeer, let addressName = botPeer.addressName {
-                            controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: "@\(addressName) \(query)")), messageId: nil), nil)
+                            self.controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: "@\(addressName) \(query)")), messageId: nil), nil)
                         }
                     }
                 case .payment:
                     break
-                case .urlAuth:
-                    break
+                case let .urlAuth(url, buttonId):
+                    if let message = self.message {
+                        self.controllerInteraction.requestMessageActionUrlAuth(url, message.id, buttonId)
+                    }
             }
         }
     }

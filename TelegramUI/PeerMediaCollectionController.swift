@@ -182,6 +182,7 @@ public class PeerMediaCollectionController: TelegramController {
             },sendSticker: { _, _ in
             }, sendGif: { _ in
             }, requestMessageActionCallback: { _, _, _ in
+            }, requestMessageActionUrlAuth: { _, _, _ in
             }, activateSwitchInline: { _, _ in
             }, openUrl: { [weak self] url, _, external in
                 self?.openUrl(url, external: external ?? false)

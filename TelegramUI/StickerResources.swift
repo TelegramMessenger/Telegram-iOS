@@ -97,7 +97,6 @@ private func chatMessageStickerDatas(postbox: Postbox, file: TelegramMediaFile, 
 
 private func chatMessageStickerPackThumbnailData(postbox: Postbox, representation: TelegramMediaImageRepresentation, synchronousLoad: Bool) -> Signal<Data?, NoError> {
     let resource = representation.resource
-    
     let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedStickerAJpegRepresentation(size: CGSize(width: 160.0, height: 160.0)), complete: false, fetch: false, attemptSynchronously: synchronousLoad)
     
     return maybeFetched
@@ -131,7 +130,21 @@ private func chatMessageStickerPackThumbnailData(postbox: Postbox, representatio
     }
 }
 
-func chatMessageAnimationData(postbox: Postbox, fileReference: FileMediaReference, synchronousLoad: Bool) -> Signal<(Data?, Bool), NoError> {
+func chatMessageAnimationData(postbox: Postbox, fileReference: FileMediaReference, synchronousLoad: Bool) -> Signal<MediaResourceData, NoError> {
+    let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedAnimatedStickerRepresentation(), pathExtension: "mp4", complete: false, fetch: false, attemptSynchronously: synchronousLoad)
+    
+    return maybeFetched
+    |> take(1)
+    |> mapToSignal { maybeData in
+        if maybeData.complete {
+            return .single(maybeData)
+        } else {
+            return postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedAnimatedStickerRepresentation(), pathExtension: "mp4", complete: false)
+        }
+    }
+}
+
+func chatMessageAnimatedStrickerBackingData(postbox: Postbox, fileReference: FileMediaReference, synchronousLoad: Bool) -> Signal<(Data?, Bool), NoError> {
     let resource = fileReference.media.resource
     
     let maybeFetched = postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
@@ -144,8 +157,8 @@ func chatMessageAnimationData(postbox: Postbox, fileReference: FileMediaReferenc
             return .single((loadedData, true))
         } else {
             let fullSizeData = postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
-                |> map { next -> (Data?, Bool) in
-                    return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete)
+            |> map { next -> (Data?, Bool) in
+                return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete)
             }
             return fullSizeData
         }

@@ -570,7 +570,6 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
     }
     
     let controller = ItemListController(context: context, state: signal)
-    
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)
@@ -579,6 +578,6 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }
-    
+
     return controller
 }

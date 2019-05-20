@@ -4,64 +4,165 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import Lottie
+import AVFoundation
+import CoreImage
 
-private final class StickerAnimationNode : ASDisplayNode {
-    private var disposable = MetaDisposable()
-    var loopCount: Int = 0
+private class AlphaFrameFilter: CIFilter {
+    static var kernel: CIColorKernel? = {
+        return CIColorKernel(source: """
+kernel vec4 alphaFrame(__sample s, __sample m) {
+  return vec4( s.rgb, m.r );
+}
+""")
+    }()
+    
+    var inputImage: CIImage?
+    var maskImage: CIImage?
+    
+    override var outputImage: CIImage? {
+        let kernel = AlphaFrameFilter.kernel!
+        guard let inputImage = inputImage, let maskImage = maskImage else {
+            return nil
+        }
+        let args = [inputImage as AnyObject, maskImage as AnyObject]
+        return kernel.apply(extent: inputImage.extent, arguments: args)
+    }
+}
+
+private func createVideoComposition(for playerItem: AVPlayerItem) -> AVVideoComposition? {
+    let videoSize = CGSize(width: playerItem.presentationSize.width, height: playerItem.presentationSize.height / 2.0)
+    if #available(iOSApplicationExtension 9.0, *) {
+        let composition = AVMutableVideoComposition(asset: playerItem.asset, applyingCIFiltersWithHandler: { request in
+            let sourceRect = CGRect(origin: .zero, size: videoSize)
+            let alphaRect = sourceRect.offsetBy(dx: 0, dy: sourceRect.height)
+            let filter = AlphaFrameFilter()
+            filter.inputImage = request.sourceImage.cropped(to: alphaRect)
+                .transformed(by: CGAffineTransform(translationX: 0, y: -sourceRect.height))
+            filter.maskImage = request.sourceImage.cropped(to: sourceRect)
+            return request.finish(with: filter.outputImage!, context: nil)
+        })
+        composition.renderSize = videoSize
+        return composition
+    } else {
+        return nil
+    }
+}
+
+private final class StickerAnimationNode: ASDisplayNode {
+    private var account: Account?
+    private var fileReference: FileMediaReference?
+    private let disposable = MetaDisposable()
+    private let fetchDisposable = MetaDisposable()
+    
+    var playerLayer: AVPlayerLayer {
+        return self.layer as! AVPlayerLayer
+    }
+    
+    var player: AVPlayer? {
+        get {
+            if self.isNodeLoaded {
+                return self.playerLayer.player
+            } else {
+                return nil
+            }
+        }
+        set {
+            if let player = self.playerLayer.player {
+                player.removeObserver(self, forKeyPath: #keyPath(AVPlayer.rate))
+            }
+            self.playerLayer.player = newValue
+            if let newValue = newValue {
+                newValue.addObserver(self, forKeyPath: #keyPath(AVPlayer.rate), options: [], context: nil)
+            }
+        }
+    }
+    
+    private var playerItem: AVPlayerItem? = nil {
+        willSet {
+            self.playerItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
+        }
+        didSet {
+            self.playerItem?.addObserver(self, forKeyPath: #keyPath(AVPlayerItem.status), options: .new, context: nil)
+            self.setupLooping()
+        }
+    }
     
     override init() {
         super.init()
         
-        self.setViewBlock({
-            let view = LOTAnimationView()
-            return view
+        self.setLayerBlock({
+            return AVPlayerLayer()
         })
+        
+        self.playerLayer.isHidden = true
+        if #available(iOSApplicationExtension 9.0, *) {
+            self.playerLayer.pixelBufferAttributes = [(kCVPixelBufferPixelFormatTypeKey as String): kCVPixelFormatType_32BGRA]
+        }
     }
     
     deinit {
+        NotificationCenter.default.removeObserver(self.didPlayToEndTimeObsever as Any)
+        self.player = nil
+        self.playerItem = nil
         self.disposable.dispose()
+        self.fetchDisposable.dispose()
     }
     
-    func setSignal(_ signal: Signal<Data, NoError>) {
-        self.disposable.set((signal |> deliverOnMainQueue).start(next: { [weak self] next in
-            if let object = try? JSONSerialization.jsonObject(with: next, options: []) as? [AnyHashable: Any], let json = object {
-                self?.animationView()?.setAnimation(json: json)
+    func setup(account: Account, fileReference: FileMediaReference) {
+        self.disposable.set(chatMessageAnimationData(postbox: account.postbox, fileReference: fileReference, synchronousLoad: false).start(next: { [weak self] data in
+            if let strongSelf = self, data.complete {
+                let playerItem = AVPlayerItem(url: URL(fileURLWithPath: data.path))
+                strongSelf.player = AVPlayer(playerItem: playerItem)
+                strongSelf.playerItem = playerItem
             }
         }))
+        self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
     }
     
-    func animationView() -> LOTAnimationView? {
-        return self.view as? LOTAnimationView
+    private func setupLooping() {
+        guard let playerItem = self.playerItem, let player = self.player else {
+            return
+        }
+        
+        self.didPlayToEndTimeObsever = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: nil, using: { _ in
+            player.seek(to: kCMTimeZero) { _ in
+                player.play()
+            }
+        })
+    }
+    
+    private var didPlayToEndTimeObsever: NSObjectProtocol? = nil {
+        willSet(newObserver) {
+            if let observer = self.didPlayToEndTimeObsever, self.didPlayToEndTimeObsever !== newObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
+        }
+    }
+    
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+        if let playerItem = object as? AVPlayerItem, playerItem === self.playerItem {
+            if case .readyToPlay = playerItem.status, playerItem.videoComposition == nil {
+                playerItem.videoComposition = createVideoComposition(for: playerItem)
+                playerItem.seekingWaitsForVideoCompositionRendering = true
+            }
+            self.player?.play()
+        } else if let player = object as? AVPlayer, player === self.player {
+            if self.playerLayer.isHidden && player.rate > 0.0 {
+                Queue.mainQueue().after(0.3) {
+                    self.playerLayer.isHidden = false
+                }
+            }
+        } else {
+            return super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
+        }
     }
     
     func play() {
-        DispatchQueue.main.async {
-            if let animationView = self.animationView(), !animationView.isAnimationPlaying {
-                self.loopCount = 2
-
-                var completion: ((Bool) -> Void)!
-                let placeholder: (Bool) -> Void = { [weak animationView] _ in
-                    self.loopCount -= 1
-                    if self.loopCount > 0 {
-                        animationView?.play(completion: completion)
-                    }
-                }
-                completion = placeholder
-                
-                if !animationView.isAnimationPlaying {
-                    animationView.play(completion: completion)
-                }
-            }
-        }
+        
     }
     
     func reset() {
-        DispatchQueue.main.async {
-            if let animationView = self.animationView() {
-                animationView.stop()
-            }
-        }
+        
     }
 }
 
@@ -76,8 +177,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var shareButtonNode: HighlightableButtonNode?
     
     var telegramFile: TelegramMediaFile?
-    
-    private let fetchDisposable = MetaDisposable()
     
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var replyInfoNode: ChatMessageReplyInfoNode?
@@ -102,10 +201,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
-        self.fetchDisposable.dispose()
     }
     
     override func didLoad() {
@@ -141,19 +236,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         for media in item.message.media {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile != telegramFile {
-                    let signal = chatMessageAnimationData(postbox: item.context.account.postbox, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: telegramFile), synchronousLoad: false)
-                    |> mapToSignal { data, completed -> Signal<Data, NoError> in
-                        if completed, let data = data {
-                            return .single(data)
-                        } else {
-                            return .complete()
-                        }
-                    }
+
                     self.telegramFile = telegramFile
-                    self.animationNode.setSignal(signal)
-                    self.fetchDisposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
-                    
-                    self.animationNode.play()
+                    self.animationNode.setup(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile))
                 }
                 
                 break
@@ -454,7 +539,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let item = self.item, self.imageNode.frame.contains(location) {
-                        self.animationNode.play()
+                        //self.animationNode.play()
                         //let _ = item.controllerInteraction.openMessage(item.message, .default)
                         return
                     }

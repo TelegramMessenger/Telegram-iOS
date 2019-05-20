@@ -276,15 +276,16 @@ class ContactListActionItemNode: ListViewItemNode {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    
                     strongSelf.topStripeNode.isHidden = true
                     strongSelf.bottomStripeNode.isHidden = hideBottomStripe
-                    if !hideBottomStripe {
-                        print("")
-                    }
                     
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: titleOffset, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
+                    
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))
                 }
