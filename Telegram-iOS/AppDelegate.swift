@@ -625,31 +625,30 @@ final class SharedApplicationContext {
         let sharedContextSignal = accountManagerSignal
         |> deliverOnMainQueue
         |> take(1)
-        |> mapToSignal { accountManager -> Signal<(SharedApplicationContext, LoggingSettings), NoError> in
-            var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
-            let semaphore = DispatchSemaphore(value: 0)
-            let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
-                initialPresentationDataAndSettings = value
-                semaphore.signal()
-            })
-            semaphore.wait()
-            
-            if let initialPresentationDataAndSettings = initialPresentationDataAndSettings {
-                self.window?.backgroundColor = initialPresentationDataAndSettings.presentationData.theme.chatList.backgroundColor
+        |> deliverOnMainQueue
+        |> take(1)
+        |> mapToSignal { accountManager -> Signal<(AccountManager, InitialPresentationDataAndSettings), NoError> in
+            return currentPresentationDataAndSettings(accountManager: accountManager)
+                |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
+                    return (accountManager, initialPresentationDataAndSettings)
             }
+        }
+        |> deliverOnMainQueue
+        |> mapToSignal { accountManager, initialPresentationDataAndSettings -> Signal<(SharedApplicationContext, LoggingSettings), NoError> in
+            self.window?.backgroundColor = initialPresentationDataAndSettings.presentationData.theme.chatList.backgroundColor
             
             let legacyBasePath = appGroupUrl.path
             let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
-            let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+            let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
                 self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
             }, displayUpgradeProgress: { progress in
                 if let progress = progress {
                     if self.dataImportSplash == nil {
-                        self.dataImportSplash = LegacyDataImportSplash(theme: initialPresentationDataAndSettings?.presentationData.theme, strings: initialPresentationDataAndSettings?.presentationData.strings)
+                        self.dataImportSplash = LegacyDataImportSplash(theme: initialPresentationDataAndSettings.presentationData.theme, strings: initialPresentationDataAndSettings.presentationData.strings)
                         self.dataImportSplash?.serviceAction = {
                             self.debugPressed()
                         }
