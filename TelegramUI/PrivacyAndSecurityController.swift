@@ -66,7 +66,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case groupPrivacy(PresentationTheme, String, String)
     case selectivePrivacyInfo(PresentationTheme, String)
     case passcode(PresentationTheme, String, Bool, String)
-    case twoStepVerification(PresentationTheme, String)
+    case twoStepVerification(PresentationTheme, String, String)
     case activeSessions(PresentationTheme, String, String)
     case accountHeader(PresentationTheme, String)
     case accountTimeout(PresentationTheme, String, String)
@@ -188,8 +188,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .twoStepVerification(lhsTheme, lhsText):
-                if case let .twoStepVerification(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .twoStepVerification(lhsTheme, lhsText, lhsValue):
+                if case let .twoStepVerification(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -275,8 +275,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: UIImage(bundleImageName: hasFaceId ? "Settings/MenuIcons/FaceId" : "Settings/MenuIcons/TouchId")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openPasscode()
                 })
-            case let .twoStepVerification(theme, text):
-                return ItemListDisclosureItem(theme: theme, icon: UIImage(bundleImageName: "Settings/MenuIcons/TwoStepAuth")?.precomposed(), title: text, label: "", sectionId: self.section, style: .blocks, action: {
+            case let .twoStepVerification(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, icon: UIImage(bundleImageName: "Settings/MenuIcons/TwoStepAuth")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openTwoStepVerification()
                 })
             case let .activeSessions(theme, text, value):
@@ -340,7 +340,7 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
     }
 }
 
-private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?, accessChallengeData: PostboxAccessChallengeData, blockedPeerCount: Int?, activeSessionsCount: Int) -> [PrivacyAndSecurityEntry] {
+private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?, accessChallengeData: PostboxAccessChallengeData, blockedPeerCount: Int?, activeSessionsCount: Int, hasTwoStepAuth: Bool) -> [PrivacyAndSecurityEntry] {
     var entries: [PrivacyAndSecurityEntry] = []
     
     entries.append(.blockedPeers(presentationData.theme, presentationData.strings.Settings_BlockedUsers, blockedPeerCount == nil ? "" : "\(blockedPeerCount!)"))
@@ -364,7 +364,7 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     } else {
         entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_Passcode, false, passcodeValue))
     }
-    entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth))
+    entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth, hasTwoStepAuth ? presentationData.strings.PrivacySettings_PasscodeOn : presentationData.strings.PrivacySettings_PasscodeOff))
     
     entries.append(.privacyHeader(presentationData.theme, presentationData.strings.PrivacySettings_PrivacyTitle))
     if let privacySettings = privacySettings {
@@ -429,6 +429,28 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     
     let blockedPeersContext = BlockedPeersContext(account: context.account)
     let activeSessionsContext = ActiveSessionsContext(account: context.account)
+    
+    let updateTwoStepAuthDisposable = MetaDisposable()
+    actionsDisposable.add(updateTwoStepAuthDisposable)
+    
+    let hasTwoStepAuth = ValuePromise<Bool>(false)
+    let updateHasTwoStepAuth: () -> Void = {
+        updateTwoStepAuthDisposable.set(
+            (
+                twoStepAuthData(context.account.network)
+                |> map { value -> Bool in
+                    return value.currentPasswordDerivation != nil
+                }
+                |> `catch` { _ -> Signal<Bool, NoError> in
+                    return .single(false)
+                }
+                |> deliverOnMainQueue
+            ).start(next: { value in
+                hasTwoStepAuth.set(value)
+            })
+        )
+    }
+    updateHasTwoStepAuth()
     
     let arguments = PrivacyAndSecurityControllerArguments(account: context.account, openBlockedUsers: {
         pushControllerImpl?(blockedPeersController(context: context, blockedPeersContext: blockedPeersContext))
@@ -667,8 +689,8 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         updatedSettings?(settings)
     }))
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account), blockedPeersContext.state, activeSessionsContext.state, context.sharedContext.accountManager.accessChallengeData())
-    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeSessionsState, accessChallengeData -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account), blockedPeersContext.state, activeSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), hasTwoStepAuth.get())
+    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeSessionsState, accessChallengeData, hasTwoStepAuth -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
         var rightNavigationButton: ItemListNavigationButton?
         if privacySettings == nil || state.updatingAccountTimeoutValue != nil {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
@@ -676,7 +698,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PrivacySettings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
-        let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, accessChallengeData: accessChallengeData.data, blockedPeerCount: blockedPeersState.totalCount, activeSessionsCount: activeSessionsState.sessions.count), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, accessChallengeData: accessChallengeData.data, blockedPeerCount: blockedPeersState.totalCount, activeSessionsCount: activeSessionsState.sessions.count, hasTwoStepAuth: hasTwoStepAuth), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -693,6 +715,10 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     }
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }
+    
+    controller.didAppear = { _ in
+        updateHasTwoStepAuth()
     }
     
     return controller

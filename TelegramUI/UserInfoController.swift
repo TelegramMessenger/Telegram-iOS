@@ -791,6 +791,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     var aboutLinkActionImpl: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     var displayAboutContextMenuImpl: ((String) -> Void)?
     var displayCopyContextMenuImpl: ((UserInfoEntryTag, String) -> Void)?
+    var popToRootImpl: (() -> Void)?
     
     let cachedAvatarEntries = Atomic<Promise<[AvatarGalleryEntry]>?>(value: nil)
     
@@ -939,15 +940,60 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                     openChatImpl?()
                 }
             } else {
-                let text: String
                 if value {
-                    text = presentationData.strings.UserInfo_BlockConfirmation(peer.displayTitle).0
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                    let dismissAction: () -> Void = { [weak controller] in
+                        controller?.dismissAnimated()
+                    }
+                    var reportSpam = true
+                    var deleteChat = true
+                    controller.setItemGroups([
+                        ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: presentationData.strings.UserInfo_BlockConfirmationTitle(peer.compactDisplayTitle).0),
+                            ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: true, action: { [weak controller] checkValue in
+                                reportSpam = checkValue
+                                controller?.updateItem(groupIndex: 0, itemIndex: 1, { item in
+                                    if let item = item as? ActionSheetCheckboxItem {
+                                        return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
+                                    }
+                                    return item
+                                })
+                            }),
+                            ActionSheetCheckboxItem(title: presentationData.strings.ReportSpam_DeleteThisChat, label: "", value: true, action: { [weak controller] checkValue in
+                                deleteChat = checkValue
+                                controller?.updateItem(groupIndex: 0, itemIndex: 2, { item in
+                                    if let item = item as? ActionSheetCheckboxItem {
+                                        return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
+                                    }
+                                    return item
+                                })
+                            }),
+                            ActionSheetButtonItem(title: presentationData.strings.UserInfo_BlockActionTitle(peer.compactDisplayTitle).0, color: .destructive, action: {
+                                dismissAction()
+                                updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: context.account, peerId: peer.id, isBlocked: true).start())
+                                if deleteChat {
+                                    let _ = removePeerChat(account: context.account, peerId: peerId, reportChatSpam: reportSpam).start()
+                                    popToRootImpl?()
+                                } else if reportSpam {
+                                    let _ = reportPeer(account: context.account, peerId: peerId, reason: .spam).start()
+                                }
+                            })
+                        ]),
+                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                    ])
+                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 } else {
-                    text = presentationData.strings.UserInfo_UnblockConfirmation(peer.displayTitle).0
+                    let text: String
+                    if value {
+                        text = presentationData.strings.UserInfo_BlockConfirmation(peer.displayTitle).0
+                    } else {
+                        text = presentationData.strings.UserInfo_UnblockConfirmation(peer.displayTitle).0
+                    }
+                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Yes, action: {
+                        updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: context.account, peerId: peer.id, isBlocked: value).start())
+                    })]), nil)
                 }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Yes, action: {
-                    updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: context.account, peerId: peer.id, isBlocked: value).start())
-                })]), nil)
             }
         })
     }, deleteContact: {
@@ -1401,6 +1447,10 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                 }))
             }
         }
+    }
+    
+    popToRootImpl = { [weak controller] in
+        (controller?.navigationController as? NavigationController)?.popToRoot(animated: true)
     }
     
     controller.didAppear = { [weak controller] firstTime in

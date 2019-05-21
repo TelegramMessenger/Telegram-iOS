@@ -228,7 +228,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                             } else if let group = peer as? TelegramGroup {
                                 status = .custom(strings.Conversation_StatusMembers(Int32(group.participantCount)))
                             } else if let _ = peer as? TelegramChannel {
-                                if let participantCount = participantCount {
+                                if let participantCount = participantCount, participantCount != 0 {
                                     status = .custom(strings.Conversation_StatusMembers(participantCount))
                                 } else {
                                     status = .custom(strings.Group_Status)
