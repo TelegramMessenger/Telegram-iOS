@@ -4282,3 +4282,7 @@ Sorry for the inconvenience.";
 
 "PrivacySettings.PasscodeOff" = "Off";
 "PrivacySettings.PasscodeOn" = "On";
+
+"UserInfo.BlockConfirmationTitle" = "Do you want to block %@ from messaging and calling you on Telegram?";
+"UserInfo.BlockActionTitle" = "Block %@";
+"ReportSpam.DeleteThisChat" = "Delete this Chat";
