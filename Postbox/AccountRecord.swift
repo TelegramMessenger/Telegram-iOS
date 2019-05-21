@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol AccountRecordAttribute: PostboxCoding {
+public protocol AccountRecordAttribute: class, PostboxCoding {
     func isEqual(to: AccountRecordAttribute) -> Bool
 }
 
@@ -34,7 +34,7 @@ public func generateAccountRecordId() -> AccountRecordId {
     return AccountRecordId(rawValue: id)
 }
 
-public struct AccountRecord: PostboxCoding, Equatable, Codable {
+public final class AccountRecord: PostboxCoding, Equatable, Codable {
     enum CodingKeys: String, CodingKey {
         case id
         case attributes

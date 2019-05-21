@@ -442,7 +442,7 @@ public final class SqliteValueBox: ValueBox {
     private func beginInternal(database: Database) {
         precondition(self.queue.isCurrent())
         let resultCode = database.execute("BEGIN IMMEDIATE")
-        precondition(resultCode)
+        assert(resultCode)
     }
     
     private func commitInternal(database: Database) {

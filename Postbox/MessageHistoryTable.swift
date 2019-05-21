@@ -873,7 +873,9 @@ final class MessageHistoryTable: Table {
         if let lower = lower, let upper = upper, let groupInfo = lower.groupInfo, lower.groupingKey == upper.groupingKey {
             assert(upper.groupInfo != nil)
             if lower.groupInfo != upper.groupInfo {
-                self.updateSameGroupInfosInNamespace(lowerBound: index, from: upper.groupInfo!, to: groupInfo, updatedGroupInfos: &updatedGroupInfos)
+                if let upperGroupInfo = upper.groupInfo {
+                    self.updateSameGroupInfosInNamespace(lowerBound: index, from: groupInfo, to: upperGroupInfo, updatedGroupInfos: &updatedGroupInfos)
+                }
             }
         }
     }
