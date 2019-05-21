@@ -49,8 +49,10 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let placeholder: String
+        var includeChatList = false
         switch mode {
             case let .peerSelection(_, searchGroups):
+                includeChatList = searchGroups
                 if searchGroups {
                     placeholder = self.presentationData.strings.Contacts_SearchUsersAndGroupsLabel
                 } else {
@@ -60,7 +62,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
         }
         
-        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options)), filters: filters, selectionState: ContactListNodeGroupSelectionState())
+        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList)), filters: filters, selectionState: ContactListNodeGroupSelectionState())
         self.tokenListNode = EditableTokenListNode(theme: EditableTokenListNodeTheme(backgroundColor: self.presentationData.theme.rootController.navigationBar.backgroundColor, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, selectedTextColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.chatList.searchBarKeyboardColor), placeholder: placeholder)
         
         super.init()

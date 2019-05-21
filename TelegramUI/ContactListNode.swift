@@ -501,7 +501,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             for i in 0 ..< options.count {
                 entries.append(.option(i, options[i], commonHeader, theme, strings))
             }
-        case let .natural(options):
+        case let .natural(options, _):
             let sortedPeers = peers.sorted(by: { lhs, rhs in
                 let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: sortOrder)
                 if result == .orderedSame {
@@ -698,7 +698,7 @@ public struct ContactListAdditionalOption: Equatable {
 
 enum ContactListPresentation {
     case orderedByPresence(options: [ContactListAdditionalOption])
-    case natural(options: [ContactListAdditionalOption])
+    case natural(options: [ContactListAdditionalOption], includeChatList: Bool)
     case search(signal: Signal<String, NoError>, searchChatList: Bool, searchDeviceContacts: Bool, searchGroups: Bool)
     
     var sortOrder: ContactsSortOrder? {
@@ -937,8 +937,10 @@ final class ContactListNode: ASDisplayNode {
         transition = presentation
         |> mapToSignal { presentation in
             var generateSections = false
-            if case .natural = presentation {
+            var includeChatList = false
+            if case let .natural(natural) = presentation {
                 generateSections = true
+                includeChatList = natural.includeChatList
             }
             
             if case let .search(query, searchChatList, searchDeviceContacts, searchGroups) = presentation {
@@ -1122,10 +1124,45 @@ final class ContactListNode: ASDisplayNode {
                     }
                 }
             } else {
-                return (combineLatest(self.contactPeersViewPromise.get(), selectionStateSignal, themeAndStringsPromise.get(), contactsAuthorization.get(), contactsWarningSuppressed.get())
-                |> mapToQueue { view, selectionState, themeAndStrings, authorizationStatus, warningSuppressed -> Signal<ContactsListNodeTransition, NoError> in
+                let chatListSignal: Signal<[(Peer, Int32)], NoError>
+                if includeChatList {
+                    chatListSignal = self.context.account.viewTracker.tailChatListView(groupId: .root, count: 100)
+                    |> take(1)
+                    |> mapToSignal { view, _ -> Signal<[(Peer, Int32)], NoError> in
+                        return context.account.postbox.transaction { transaction -> [(Peer, Int32)] in
+                            var peers: [(Peer, Int32)] = []
+                            for entry in view.entries {
+                                switch entry {
+                                    case let .MessageEntry(messageEntry):
+                                        if let peer = messageEntry.5.peer {
+                                            if peer is TelegramGroup {
+                                                peers.append((peer, 0))
+                                            } else if let channel = peer as? TelegramChannel, case .group = channel.info {
+                                                var memberCount: Int32 = 0
+                                                if let cachedData = transaction.getPeerCachedData(peerId: peer.id) as? CachedChannelData {
+                                                    memberCount = cachedData.participantsSummary.memberCount ?? 0
+                                                }
+                                                peers.append((peer, memberCount))
+                                            }
+                                        }
+                                    default:
+                                        break
+                                }
+                            }
+                            return peers
+                        }
+                    }
+                } else {
+                    chatListSignal = .single([])
+                }
+                
+                return (combineLatest(self.contactPeersViewPromise.get(), chatListSignal, selectionStateSignal, themeAndStringsPromise.get(), contactsAuthorization.get(), contactsWarningSuppressed.get())
+                |> mapToQueue { view, chatListPeers, selectionState, themeAndStrings, authorizationStatus, warningSuppressed -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
                         var peers = view.peers.map({ ContactListPeer.peer(peer: $0, isGlobal: false, participantCount: nil) })
+                        for (peer, memberCount) in chatListPeers {
+                            peers.append(.peer(peer: peer, isGlobal: false, participantCount: memberCount))
+                        }
                         var existingPeerIds = Set<PeerId>()
                         var disabledPeerIds = Set<PeerId>()
                         for filter in filters {

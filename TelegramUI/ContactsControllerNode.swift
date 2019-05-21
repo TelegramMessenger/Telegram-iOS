@@ -38,7 +38,7 @@ final class ContactsControllerNode: ASDisplayNode {
                 case .presence:
                     return .orderedByPresence(options: options)
                 case .natural:
-                    return .natural(options: options)
+                    return .natural(options: options, includeChatList: false)
             }
         }
         

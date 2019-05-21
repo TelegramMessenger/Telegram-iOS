@@ -39,7 +39,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.displayDeviceContacts = displayDeviceContacts
         
-        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options)))
+        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: false)))
         
         self.dimNode = ASDisplayNode()
         
