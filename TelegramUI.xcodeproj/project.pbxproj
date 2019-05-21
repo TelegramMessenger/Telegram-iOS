@@ -453,6 +453,7 @@
 		D099D74D1EEFEE1500A3128C /* GameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D74C1EEFEE1500A3128C /* GameController.swift */; };
 		D099D74F1EEFEE6A00A3128C /* GameControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D74E1EEFEE6A00A3128C /* GameControllerNode.swift */; };
 		D099D7511EEFF91E00A3128C /* GameControllerTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D7501EEFF91E00A3128C /* GameControllerTitleView.swift */; };
+		D099E220229405BB00561B75 /* Weak.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099E21F229405BB00561B75 /* Weak.swift */; };
 		D09D88711F86D36700BEB4C9 /* CountryList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09D88701F86D36700BEB4C9 /* CountryList.swift */; };
 		D09D88731F86D56B00BEB4C9 /* AuthorizationLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09D88721F86D56B00BEB4C9 /* AuthorizationLayout.swift */; };
 		D09E637C1F0E7C28003444CD /* SharedMediaPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E637B1F0E7C28003444CD /* SharedMediaPlayer.swift */; };
@@ -1926,6 +1927,7 @@
 		D099D74C1EEFEE1500A3128C /* GameController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GameController.swift; sourceTree = "<group>"; };
 		D099D74E1EEFEE6A00A3128C /* GameControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GameControllerNode.swift; sourceTree = "<group>"; };
 		D099D7501EEFF91E00A3128C /* GameControllerTitleView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GameControllerTitleView.swift; sourceTree = "<group>"; };
+		D099E21F229405BB00561B75 /* Weak.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Weak.swift; sourceTree = "<group>"; };
 		D099EA1E1DE7450B001AF5A8 /* HorizontalListContextResultsChatInputContextPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalListContextResultsChatInputContextPanelNode.swift; sourceTree = "<group>"; };
 		D099EA201DE7451D001AF5A8 /* HorizontalListContextResultsChatInputPanelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalListContextResultsChatInputPanelItem.swift; sourceTree = "<group>"; };
 		D099EA261DE765DB001AF5A8 /* ManagedMediaId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedMediaId.swift; sourceTree = "<group>"; };
@@ -4960,6 +4962,7 @@
 				09D96898221DE92600B1458A /* ID3ArtworkReader.swift */,
 				09E4A800223AE1B30038140F /* PeerType.swift */,
 				09E4A806223D4B860038140F /* AccountUtils.swift */,
+				D099E21F229405BB00561B75 /* Weak.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5402,6 +5405,7 @@
 				D09E637F1F0E8C9F003444CD /* PeerMessagesMediaPlaylist.swift in Sources */,
 				D0E412DF206AA00500BEE4A2 /* SecureIdVerificationDocumentsContext.swift in Sources */,
 				D0EC6CCC1EB9F58800EBF1C3 /* ServiceSoundManager.swift in Sources */,
+				D099E220229405BB00561B75 /* Weak.swift in Sources */,
 				D0EC6CCD1EB9F58800EBF1C3 /* DeclareEncodables.swift in Sources */,
 				0958FBBD218B03CA00E0CBD8 /* InstantPageDetailsNode.swift in Sources */,
 				D02D60B1206C189900FEFE1E /* SecureIdPlaintextFormController.swift in Sources */,

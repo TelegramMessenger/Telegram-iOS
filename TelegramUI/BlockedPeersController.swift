@@ -174,15 +174,15 @@ private struct BlockedPeersControllerState: Equatable {
     }
 }
 
-private func blockedPeersControllerEntries(presentationData: PresentationData, state: BlockedPeersControllerState, peers: [Peer]?) -> [BlockedPeersEntry] {
+private func blockedPeersControllerEntries(presentationData: PresentationData, state: BlockedPeersControllerState, blockedPeersState: BlockedPeersContextState) -> [BlockedPeersEntry] {
     var entries: [BlockedPeersEntry] = []
     
-    if let peers = peers {
+    if !blockedPeersState.peers.isEmpty || !blockedPeersState.canLoadMore {
         entries.append(.add(presentationData.theme, presentationData.strings.BlockedUsers_BlockUser))
         
         var index: Int32 = 0
-        for peer in peers {
-            entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != peer.id))
+        for peer in blockedPeersState.peers {
+            entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer.peer!, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.peerId == state.peerIdWithRevealedOptions), state.removingPeerId != peer.peerId))
             index += 1
         }
     }
@@ -190,7 +190,7 @@ private func blockedPeersControllerEntries(presentationData: PresentationData, s
     return entries
 }
 
-public func blockedPeersController(context: AccountContext) -> ViewController {
+public func blockedPeersController(context: AccountContext, blockedPeersContext: BlockedPeersContext) -> ViewController {
     let statePromise = ValuePromise(BlockedPeersControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: BlockedPeersControllerState())
     let updateState: ((BlockedPeersControllerState) -> BlockedPeersControllerState) -> Void = { f in
@@ -219,47 +219,18 @@ public func blockedPeersController(context: AccountContext) -> ViewController {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = PeerSelectionController(context: context, filter: [.onlyPrivateChats, .excludeSavedMessages, .removeSearchHeader, .excludeRecent], title: presentationData.strings.BlockedUsers_SelectUserTitle)
         controller.peerSelected = { [weak controller] peerId in
-            if let strongController = controller {
-                strongController.inProgress = true
-                
-                let _ = (context.account.viewTracker.peerView(peerId)
-                |> take(1)
-                |> map { view -> Peer? in
-                    return peerViewMainPeer(view)
-                }
-                |> deliverOnMainQueue).start(next: { peer in
-                    let applyPeers: Signal<Void, NoError> = peersPromise.get()
-                    |> filter { $0 != nil }
-                    |> take(1)
-                    |> map { peers -> ([Peer]?, Peer?) in
-                        return (peers, peer)
-                    }
-                    |> deliverOnMainQueue
-                    |> mapToSignal { peers, peer -> Signal<Void, NoError> in
-                        if let peers = peers, let peer = peer {
-                            var updatedPeers = peers
-                            for i in 0 ..< updatedPeers.count {
-                                if updatedPeers[i].id == peer.id {
-                                    updatedPeers.remove(at: i)
-                                    break
-                                }
-                            }
-                            updatedPeers.insert(peer, at: 0)
-                            peersPromise.set(.single(updatedPeers))
-                        }
-                        
-                        return .complete()
-                    }
-                    if let peer = peer {
-                        removePeerDisposable.set((requestUpdatePeerIsBlocked(account: context.account, peerId: peer.id, isBlocked: true) |> then(applyPeers) |> deliverOnMainQueue).start(completed: {
-                            if let strongController = controller {
-                                strongController.inProgress = false
-                                strongController.dismiss()
-                            }
-                        }))
-                    }
-                })
+            guard let strongController = controller else {
+                return
             }
+            strongController.inProgress = true
+            removePeerDisposable.set((blockedPeersContext.add(peerId: peerId)
+            |> deliverOnMainQueue).start(completed: {
+                guard let strongController = controller else {
+                    return
+                }
+                strongController.inProgress = false
+                strongController.dismiss()
+            }))
         }
         presentControllerImpl?(controller, nil)
     }, removePeer: { memberId in
@@ -267,25 +238,8 @@ public func blockedPeersController(context: AccountContext) -> ViewController {
             return $0.withUpdatedRemovingPeerId(memberId)
         }
         
-        let applyPeers: Signal<Void, NoError> = peersPromise.get()
-            |> filter { $0 != nil }
-            |> take(1)
-            |> deliverOnMainQueue
-            |> mapToSignal { peers -> Signal<Void, NoError> in
-                if let peers = peers {
-                    var updatedPeers = peers
-                    for i in 0 ..< updatedPeers.count {
-                        if updatedPeers[i].id == memberId {
-                            updatedPeers.remove(at: i)
-                            break
-                        }
-                    }
-                    peersPromise.set(.single(updatedPeers))
-                }
-                return .complete()
-        }
-        
-        removePeerDisposable.set((requestUpdatePeerIsBlocked(account: context.account, peerId: memberId, isBlocked: false) |> then(applyPeers) |> deliverOnMainQueue).start(error: { _ in
+        removePeerDisposable.set((blockedPeersContext.remove(peerId: memberId)
+        |> deliverOnMainQueue).start(error: { _ in
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
             }
@@ -300,50 +254,43 @@ public func blockedPeersController(context: AccountContext) -> ViewController {
         }
     })
     
-    let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(requestBlockedPeers(account: context.account) |> map(Optional.init))
+    var previousState: BlockedPeersContextState?
     
-    peersPromise.set(peersSignal)
-    
-    var previousPeers: [Peer]?
-    
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peersPromise.get())
-        |> deliverOnMainQueue
-        |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<BlockedPeersEntry>, BlockedPeersEntry.ItemGenerationArguments)) in
-            var rightNavigationButton: ItemListNavigationButton?
-            if let peers = peers, !peers.isEmpty {
-                if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                        updateState { state in
-                            return state.withUpdatedEditing(false)
-                        }
-                    })
-                } else {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
-                        updateState { state in
-                            return state.withUpdatedEditing(true)
-                        }
-                    })
-                }
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), blockedPeersContext.state)
+    |> deliverOnMainQueue
+    |> map { presentationData, state, blockedPeersState -> (ItemListControllerState, (ItemListNodeState<BlockedPeersEntry>, BlockedPeersEntry.ItemGenerationArguments)) in
+        var rightNavigationButton: ItemListNavigationButton?
+        if !blockedPeersState.peers.isEmpty {
+            if state.editing {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+                    updateState { state in
+                        return state.withUpdatedEditing(false)
+                    }
+                })
+            } else {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
+                    updateState { state in
+                        return state.withUpdatedEditing(true)
+                    }
+                })
             }
-            
-            var emptyStateItem: ItemListControllerEmptyStateItem?
-            if let peers = peers {
-                if peers.isEmpty {
-                    emptyStateItem = ItemListTextEmptyStateItem(text: presentationData.strings.BlockedUsers_Info)
-                }
-            } else if peers == nil {
-                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
-            }
-            
-            let previous = previousPeers
-            previousPeers = peers
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.BlockedUsers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            let listState = ItemListNodeState(entries: blockedPeersControllerEntries(presentationData: presentationData, state: state, peers: peers), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+        }
+        
+        var emptyStateItem: ItemListControllerEmptyStateItem?
+        if blockedPeersState.peers.isEmpty && !blockedPeersState.canLoadMore {
+            emptyStateItem = ItemListTextEmptyStateItem(text: presentationData.strings.BlockedUsers_Info)
+        }
+        
+        let previousStateValue = previousState
+        previousState = blockedPeersState
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.BlockedUsers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let listState = ItemListNodeState(entries: blockedPeersControllerEntries(presentationData: presentationData, state: state, blockedPeersState: blockedPeersState), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previousStateValue != nil && previousStateValue!.peers.count >= blockedPeersState.peers.count)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal)
@@ -355,6 +302,11 @@ public func blockedPeersController(context: AccountContext) -> ViewController {
     presentControllerImpl = { [weak controller] c, a in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: a)
+        }
+    }
+    controller.visibleBottomContentOffsetChanged = { offset in
+        if case let .known(value) = offset, value < 40.0 {
+            blockedPeersContext.loadMore()
         }
     }
     return controller

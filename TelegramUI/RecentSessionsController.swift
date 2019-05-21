@@ -333,22 +333,22 @@ private struct RecentSessionsControllerState: Equatable {
     }
 }
 
-private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessions: [RecentAccountSession]?) -> [RecentSessionsEntry] {
+private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessionsState: ActiveSessionsContextState) -> [RecentSessionsEntry] {
     var entries: [RecentSessionsEntry] = []
     
-    if let sessions = sessions {
+    if !sessionsState.sessions.isEmpty {
         var existingSessionIds = Set<Int64>()
         entries.append(.currentSessionHeader(presentationData.theme, presentationData.strings.AuthSessions_CurrentSession))
-        if let index = sessions.index(where: { $0.hash == 0 }) {
-            existingSessionIds.insert(sessions[index].hash)
-            entries.append(.currentSession(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, sessions[index]))
+        if let index = sessionsState.sessions.index(where: { $0.hash == 0 }) {
+            existingSessionIds.insert(sessionsState.sessions[index].hash)
+            entries.append(.currentSession(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
         }
         
-        if sessions.count > 1 {
+        if sessionsState.sessions.count > 1 {
             entries.append(.terminateOtherSessions(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessions))
             entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
         
-            let filteredPendingSessions: [RecentAccountSession] = sessions.filter({ $0.flags.contains(.passwordPending) })
+            let filteredPendingSessions: [RecentAccountSession] = sessionsState.sessions.filter({ $0.flags.contains(.passwordPending) })
             if !filteredPendingSessions.isEmpty {
                 entries.append(.pendingSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_IncompleteAttempts))
                 for i in 0 ..< filteredPendingSessions.count {
@@ -362,7 +362,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             
             entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_OtherSessions))
             
-            let filteredSessions: [RecentAccountSession] = sessions.sorted(by: { lhs, rhs in
+            let filteredSessions: [RecentAccountSession] = sessionsState.sessions.sorted(by: { lhs, rhs in
                 return lhs.activityDate > rhs.activityDate
             })
             
@@ -406,7 +406,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
     return entries
 }
 
-public func recentSessionsController(context: AccountContext) -> ViewController {
+public func recentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController {
     let statePromise = ValuePromise(RecentSessionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: RecentSessionsControllerState())
     let updateState: ((RecentSessionsControllerState) -> RecentSessionsControllerState) -> Void = { f in
@@ -424,7 +424,6 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
     actionsDisposable.add(terminateOtherSessionsDisposable)
     
     let mode = ValuePromise<RecentSessionsMode>(.sessions)
-    let sessionsPromise = Promise<[RecentAccountSession]?>(nil)
     let websitesPromise = Promise<([WebAuthorization], [PeerId : Peer])?>(nil)
     
     let arguments = RecentSessionsControllerArguments(account: context.account, setSessionIdWithRevealedOptions: { sessionId, fromSessionId in
@@ -450,26 +449,8 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
                         return $0.withUpdatedRemovingSessionId(sessionId)
                     }
                     
-                    let applySessions: Signal<Void, NoError> = sessionsPromise.get()
-                    |> filter { $0 != nil }
-                    |> take(1)
-                    |> deliverOnMainQueue
-                    |> mapToSignal { sessions -> Signal<Void, NoError> in
-                        if let sessions = sessions {
-                            var updatedSessions = sessions
-                            for i in 0 ..< updatedSessions.count {
-                                if updatedSessions[i].hash == sessionId {
-                                    updatedSessions.remove(at: i)
-                                    break
-                                }
-                            }
-                            sessionsPromise.set(.single(updatedSessions))
-                        }
-                        
-                        return .complete()
-                    }
-                    
-                    removeSessionDisposable.set((terminateAccountSession(account: context.account, hash: sessionId) |> then((applySessions |> mapError { _ in TerminateSessionError.generic })) |> deliverOnMainQueue).start(error: { _ in
+                    removeSessionDisposable.set((activeSessionsContext.remove(hash: sessionId)
+                    |> deliverOnMainQueue).start(error: { _ in
                         updateState {
                             return $0.withUpdatedRemovingSessionId(nil)
                         }
@@ -499,20 +480,8 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
                         return $0.withUpdatedTerminatingOtherSessions(true)
                     }
                     
-                    let applySessions: Signal<Void, NoError> = sessionsPromise.get()
-                        |> filter { $0 != nil }
-                        |> take(1)
-                        |> deliverOnMainQueue
-                        |> mapToSignal { sessions -> Signal<Void, NoError> in
-                            if let sessions = sessions {
-                                let updatedSessions = sessions.filter { $0.isCurrent }
-                                sessionsPromise.set(.single(updatedSessions))
-                            }
-                            
-                            return .complete()
-                    }
-                    
-                    terminateOtherSessionsDisposable.set((terminateOtherAccountSessions(account: context.account) |> then(applySessions) |> deliverOnMainQueue).start(error: { _ in
+                    terminateOtherSessionsDisposable.set((activeSessionsContext.removeOther()
+                    |> deliverOnMainQueue).start(error: { _ in
                         updateState {
                             return $0.withUpdatedTerminatingOtherSessions(false)
                         }
@@ -600,22 +569,19 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let sessionsSignal: Signal<[RecentAccountSession]?, NoError> = .single(nil) |> then(requestRecentAccountSessions(account: context.account) |> map(Optional.init))
-    sessionsPromise.set(sessionsSignal)
-    
     let websitesSignal: Signal<([WebAuthorization], [PeerId : Peer])?, NoError> = .single(nil) |> then(webSessions(network: context.account.network) |> map(Optional.init))
     websitesPromise.set(websitesSignal)
     
     let previousMode = Atomic<RecentSessionsMode>(value: .sessions)
     
-    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), sessionsPromise.get(), websitesPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, websitesPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, mode, state, sessions, websitesAndPeers -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, mode, state, sessionsState, websitesAndPeers -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
         var rightNavigationButton: ItemListNavigationButton?
         let websites = websitesAndPeers?.0
         let peers = websitesAndPeers?.1
         
-        if let sessions = sessions, sessions.count > 1 {
+        if sessionsState.sessions.count > 1 {
             if state.terminatingOtherSessions {
                 rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
             } else if state.editing {
@@ -634,9 +600,9 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
         }
         
         var emptyStateItem: ItemListControllerEmptyStateItem?
-        if sessions == nil {
+        if sessionsState.sessions.isEmpty {
             emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
-        } else if let sessions = sessions, sessions.count == 1 {
+        } else if sessionsState.sessions.count == 1 {
             emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
         }
         
@@ -653,7 +619,7 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
             case (.websites, let websites, let peers):
                 entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, websites: websites, peers: peers)
             default:
-                entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessions: sessions)
+                entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessionsState: sessionsState)
         }
         
         let previousMode = previousMode.swap(mode)

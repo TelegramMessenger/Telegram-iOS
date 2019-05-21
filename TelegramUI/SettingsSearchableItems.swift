@@ -490,7 +490,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             presentPrivacySettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .privacy(1), title: strings.Settings_BlockedUsers, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_BlockedUsers), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            present(.push, blockedPeersController(context: context))
+            present(.push, blockedPeersController(context: context, blockedPeersContext: BlockedPeersContext(account: context.account)))
         }),
         SettingsSearchableItem(id: .privacy(2), title: strings.PrivacySettings_LastSeen, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_LastSeen), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             presentSelectivePrivacySettings(context, .presence, present)
@@ -527,7 +527,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             present(.push, twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: true, data: nil)))
         }),
         SettingsSearchableItem(id: .privacy(9), title: strings.PrivacySettings_AuthSessions, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_AuthSessions), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            present(.push, recentSessionsController(context: context))
+            present(.push, recentSessionsController(context: context, activeSessionsContext: ActiveSessionsContext(account: context.account)))
         }),
         SettingsSearchableItem(id: .privacy(10), title: strings.PrivacySettings_DeleteAccountTitle, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_DeleteAccountIfAwayFor), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             presentPrivacySettings(context, present, .accountTimeout)
