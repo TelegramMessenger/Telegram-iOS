@@ -79,7 +79,7 @@ public final class AccountRecord: PostboxCoding, Equatable, Codable {
         }
         try container.encode(attributesData, forKey: .attributes)
         let temporarySessionIdString: String? = self.temporarySessionId.flatMap({ "\($0)" })
-        try container.encodeIfPresent(temporarySessionIdString, forKey: .attributes)
+        try container.encodeIfPresent(temporarySessionIdString, forKey: .temporarySessionId)
     }
     
     public init(id: AccountRecordId, attributes: [AccountRecordAttribute], temporarySessionId: Int64?) {
