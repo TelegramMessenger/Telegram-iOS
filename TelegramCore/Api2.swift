@@ -1,6 +1,6 @@
 extension Api {
 struct channels {
-    indirect enum ChannelParticipants: TypeConstructorDescription {
+    enum ChannelParticipants: TypeConstructorDescription {
         case channelParticipants(count: Int32, participants: [Api.ChannelParticipant], users: [Api.User])
         case channelParticipantsNotModified
     
@@ -66,7 +66,7 @@ struct channels {
         }
     
     }
-    indirect enum ChannelParticipant: TypeConstructorDescription {
+    enum ChannelParticipant: TypeConstructorDescription {
         case channelParticipant(participant: Api.ChannelParticipant, users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -112,7 +112,7 @@ struct channels {
         }
     
     }
-    indirect enum AdminLogResults: TypeConstructorDescription {
+    enum AdminLogResults: TypeConstructorDescription {
         case adminLogResults(events: [Api.ChannelAdminLogEvent], chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -176,7 +176,7 @@ struct channels {
 }
 extension Api {
 struct payments {
-    indirect enum ValidatedRequestedInfo: TypeConstructorDescription {
+    enum ValidatedRequestedInfo: TypeConstructorDescription {
         case validatedRequestedInfo(flags: Int32, id: String?, shippingOptions: [Api.ShippingOption]?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -224,7 +224,7 @@ struct payments {
         }
     
     }
-    indirect enum PaymentResult: TypeConstructorDescription {
+    enum PaymentResult: TypeConstructorDescription {
         case paymentResult(updates: Api.Updates)
         case paymentVerficationNeeded(url: String)
     
@@ -280,7 +280,7 @@ struct payments {
         }
     
     }
-    indirect enum PaymentForm: TypeConstructorDescription {
+    enum PaymentForm: TypeConstructorDescription {
         case paymentForm(flags: Int32, botId: Int32, invoice: Api.Invoice, providerId: Int32, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: Api.PaymentSavedCredentials?, users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -364,7 +364,7 @@ struct payments {
         }
     
     }
-    indirect enum PaymentReceipt: TypeConstructorDescription {
+    enum PaymentReceipt: TypeConstructorDescription {
         case paymentReceipt(flags: Int32, date: Int32, botId: Int32, invoice: Api.Invoice, providerId: Int32, info: Api.PaymentRequestedInfo?, shipping: Api.ShippingOption?, currency: String, totalAmount: Int64, credentialsTitle: String, users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -450,7 +450,7 @@ struct payments {
         }
     
     }
-    indirect enum SavedInfo: TypeConstructorDescription {
+    enum SavedInfo: TypeConstructorDescription {
         case savedInfo(flags: Int32, savedInfo: Api.PaymentRequestedInfo?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -494,7 +494,7 @@ struct payments {
 }
 extension Api {
 struct auth {
-    indirect enum Authorization: TypeConstructorDescription {
+    enum Authorization: TypeConstructorDescription {
         case authorization(flags: Int32, tmpSessions: Int32?, user: Api.User)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -538,7 +538,7 @@ struct auth {
         }
     
     }
-    indirect enum PasswordRecovery: TypeConstructorDescription {
+    enum PasswordRecovery: TypeConstructorDescription {
         case passwordRecovery(emailPattern: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -572,7 +572,7 @@ struct auth {
         }
     
     }
-    indirect enum ExportedAuthorization: TypeConstructorDescription {
+    enum ExportedAuthorization: TypeConstructorDescription {
         case exportedAuthorization(id: Int32, bytes: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -610,7 +610,7 @@ struct auth {
         }
     
     }
-    indirect enum CheckedPhone: TypeConstructorDescription {
+    enum CheckedPhone: TypeConstructorDescription {
         case checkedPhone(phoneRegistered: Api.Bool)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -646,7 +646,7 @@ struct auth {
         }
     
     }
-    indirect enum SentCode: TypeConstructorDescription {
+    enum SentCode: TypeConstructorDescription {
         case sentCode(flags: Int32, type: Api.auth.SentCodeType, phoneCodeHash: String, nextType: Api.auth.CodeType?, timeout: Int32?, termsOfService: Api.help.TermsOfService?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -706,7 +706,7 @@ struct auth {
         }
     
     }
-    indirect enum CodeType: TypeConstructorDescription {
+    enum CodeType: TypeConstructorDescription {
         case codeTypeSms
         case codeTypeCall
         case codeTypeFlashCall
@@ -756,7 +756,7 @@ struct auth {
         }
     
     }
-    indirect enum SentCodeType: TypeConstructorDescription {
+    enum SentCodeType: TypeConstructorDescription {
         case sentCodeTypeApp(length: Int32)
         case sentCodeTypeSms(length: Int32)
         case sentCodeTypeCall(length: Int32)
@@ -854,7 +854,7 @@ struct auth {
 }
 extension Api {
 struct contacts {
-    indirect enum Blocked: TypeConstructorDescription {
+    enum Blocked: TypeConstructorDescription {
         case blocked(blocked: [Api.ContactBlocked], users: [Api.User])
         case blockedSlice(count: Int32, blocked: [Api.ContactBlocked], users: [Api.User])
     
@@ -944,7 +944,7 @@ struct contacts {
         }
     
     }
-    indirect enum Contacts: TypeConstructorDescription {
+    enum Contacts: TypeConstructorDescription {
         case contactsNotModified
         case contacts(contacts: [Api.Contact], savedCount: Int32, users: [Api.User])
     
@@ -1010,7 +1010,7 @@ struct contacts {
         }
     
     }
-    indirect enum ResolvedPeer: TypeConstructorDescription {
+    enum ResolvedPeer: TypeConstructorDescription {
         case resolvedPeer(peer: Api.Peer, chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1066,7 +1066,7 @@ struct contacts {
         }
     
     }
-    indirect enum Link: TypeConstructorDescription {
+    enum Link: TypeConstructorDescription {
         case link(myLink: Api.ContactLink, foreignLink: Api.ContactLink, user: Api.User)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1114,7 +1114,7 @@ struct contacts {
         }
     
     }
-    indirect enum ImportedContacts: TypeConstructorDescription {
+    enum ImportedContacts: TypeConstructorDescription {
         case importedContacts(imported: [Api.ImportedContact], popularInvites: [Api.PopularContact], retryContacts: [Int64], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1184,7 +1184,7 @@ struct contacts {
         }
     
     }
-    indirect enum Found: TypeConstructorDescription {
+    enum Found: TypeConstructorDescription {
         case found(myResults: [Api.Peer], results: [Api.Peer], chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1254,7 +1254,7 @@ struct contacts {
         }
     
     }
-    indirect enum TopPeers: TypeConstructorDescription {
+    enum TopPeers: TypeConstructorDescription {
         case topPeersNotModified
         case topPeers(categories: [Api.TopPeerCategoryPeers], chats: [Api.Chat], users: [Api.User])
         case topPeersDisabled
@@ -1342,7 +1342,7 @@ struct contacts {
 }
 extension Api {
 struct help {
-    indirect enum AppUpdate: TypeConstructorDescription {
+    enum AppUpdate: TypeConstructorDescription {
         case appUpdate(id: Int32, critical: Api.Bool, url: String, text: String)
         case noAppUpdate
     
@@ -1402,7 +1402,7 @@ struct help {
         }
     
     }
-    indirect enum PassportConfig: TypeConstructorDescription {
+    enum PassportConfig: TypeConstructorDescription {
         case passportConfigNotModified
         case passportConfig(hash: Int32, countriesLangs: Api.DataJSON)
     
@@ -1454,7 +1454,7 @@ struct help {
         }
     
     }
-    indirect enum ProxyData: TypeConstructorDescription {
+    enum ProxyData: TypeConstructorDescription {
         case proxyDataEmpty(expires: Int32)
         case proxyDataPromo(expires: Int32, peer: Api.Peer, chats: [Api.Chat], users: [Api.User])
     
@@ -1534,7 +1534,7 @@ struct help {
         }
     
     }
-    indirect enum DeepLinkInfo: TypeConstructorDescription {
+    enum DeepLinkInfo: TypeConstructorDescription {
         case deepLinkInfoEmpty
         case deepLinkInfo(flags: Int32, message: String, entities: [Api.MessageEntity]?)
     
@@ -1594,7 +1594,7 @@ struct help {
         }
     
     }
-    indirect enum TermsOfService: TypeConstructorDescription {
+    enum TermsOfService: TypeConstructorDescription {
         case termsOfService(flags: Int32, id: Api.DataJSON, text: String, entities: [Api.MessageEntity], minAgeConfirm: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1652,7 +1652,7 @@ struct help {
         }
     
     }
-    indirect enum RecentMeUrls: TypeConstructorDescription {
+    enum RecentMeUrls: TypeConstructorDescription {
         case recentMeUrls(urls: [Api.RecentMeUrl], chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1712,7 +1712,7 @@ struct help {
         }
     
     }
-    indirect enum Support: TypeConstructorDescription {
+    enum Support: TypeConstructorDescription {
         case support(phoneNumber: String, user: Api.User)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1752,7 +1752,7 @@ struct help {
         }
     
     }
-    indirect enum InviteText: TypeConstructorDescription {
+    enum InviteText: TypeConstructorDescription {
         case inviteText(message: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1786,7 +1786,7 @@ struct help {
         }
     
     }
-    indirect enum TermsOfServiceUpdate: TypeConstructorDescription {
+    enum TermsOfServiceUpdate: TypeConstructorDescription {
         case termsOfServiceUpdateEmpty(expires: Int32)
         case termsOfServiceUpdate(expires: Int32, termsOfService: Api.help.TermsOfService)
     
@@ -1850,7 +1850,7 @@ struct help {
 }
 extension Api {
 struct updates {
-    indirect enum Difference: TypeConstructorDescription {
+    enum Difference: TypeConstructorDescription {
         case differenceEmpty(date: Int32, seq: Int32)
         case difference(newMessages: [Api.Message], newEncryptedMessages: [Api.EncryptedMessage], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
         case differenceSlice(newMessages: [Api.Message], newEncryptedMessages: [Api.EncryptedMessage], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User], intermediateState: Api.updates.State)
@@ -2052,7 +2052,7 @@ struct updates {
         }
     
     }
-    indirect enum State: TypeConstructorDescription {
+    enum State: TypeConstructorDescription {
         case state(pts: Int32, qts: Int32, date: Int32, seq: Int32, unreadCount: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2102,7 +2102,7 @@ struct updates {
         }
     
     }
-    indirect enum ChannelDifference: TypeConstructorDescription {
+    enum ChannelDifference: TypeConstructorDescription {
         case channelDifferenceEmpty(flags: Int32, pts: Int32, timeout: Int32?)
         case channelDifference(flags: Int32, pts: Int32, timeout: Int32?, newMessages: [Api.Message], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User])
         case channelDifferenceTooLong(flags: Int32, timeout: Int32?, dialog: Api.Dialog, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])

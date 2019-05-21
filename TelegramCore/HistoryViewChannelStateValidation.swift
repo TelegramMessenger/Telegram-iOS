@@ -342,7 +342,11 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
-                            case let .messagesSlice(_, _, messages: apiMessages, chats: apiChats, users: apiUsers):
+                            case let .messagesSlice(_, _, _, messages: apiMessages, chats: apiChats, users: apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case let .messagesSliceLegacy(_, _, messages: apiMessages, chats: apiChats, users: apiUsers):
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
@@ -416,7 +420,9 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                                     apiMessages = messages
                                                 case let .messages(messages, _, _):
                                                     apiMessages = messages
-                                                case let .messagesSlice(_, _, messages, _, _):
+                                                case let .messagesSlice(_, _, _, messages, _, _):
+                                                    apiMessages = messages
+                                                case let .messagesSliceLegacy(_, _, messages, _, _):
                                                     apiMessages = messages
                                                 case .messagesNotModified:
                                                     return Set()
@@ -427,7 +433,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                                     ids.insert(id)
                                                 }
                                             }
-                                            return ids
+                                            return Set(maybeRemovedMessageIds).subtracting(ids)
                                         }
                                         |> `catch` { _ -> Signal<Set<MessageId>, NoError> in
                                             return .single(Set(maybeRemovedMessageIds))

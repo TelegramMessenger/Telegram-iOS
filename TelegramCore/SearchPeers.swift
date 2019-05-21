@@ -13,7 +13,7 @@ public struct FoundPeer: Equatable {
     public let peer: Peer
     public let subscribers: Int32?
     
-    init(peer: Peer, subscribers: Int32?) {
+    public init(peer: Peer, subscribers: Int32?) {
         self.peer = peer
         self.subscribers = subscribers
     }

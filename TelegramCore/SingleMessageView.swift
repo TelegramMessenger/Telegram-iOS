@@ -56,7 +56,11 @@ private func fetchMessage(transaction: Transaction, account: Account, messageId:
                                 apiMessages = messages
                                 apiChats = chats
                                 apiUsers = users
-                            case let .messagesSlice(_, _, messages, chats, users):
+                            case let .messagesSlice(_, _, _, messages, chats, users):
+                                apiMessages = messages
+                                apiChats = chats
+                                apiUsers = users
+                            case let .messagesSliceLegacy(_, _, messages, chats, users):
                                 apiMessages = messages
                                 apiChats = chats
                                 apiUsers = users

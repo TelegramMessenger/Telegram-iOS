@@ -1,6 +1,6 @@
 extension Api {
 struct upload {
-    indirect enum WebFile: TypeConstructorDescription {
+    enum WebFile: TypeConstructorDescription {
         case webFile(size: Int32, mimeType: String, fileType: Api.storage.FileType, mtime: Int32, bytes: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -52,7 +52,7 @@ struct upload {
         }
     
     }
-    indirect enum File: TypeConstructorDescription {
+    enum File: TypeConstructorDescription {
         case file(type: Api.storage.FileType, mtime: Int32, bytes: Buffer)
         case fileCdnRedirect(dcId: Int32, fileToken: Buffer, encryptionKey: Buffer, encryptionIv: Buffer, fileHashes: [Api.FileHash])
     
@@ -138,7 +138,7 @@ struct upload {
         }
     
     }
-    indirect enum CdnFile: TypeConstructorDescription {
+    enum CdnFile: TypeConstructorDescription {
         case cdnFileReuploadNeeded(requestToken: Buffer)
         case cdnFile(bytes: Buffer)
     
@@ -196,7 +196,7 @@ struct upload {
 }
 extension Api {
 struct storage {
-    indirect enum FileType: TypeConstructorDescription {
+    enum FileType: TypeConstructorDescription {
         case fileUnknown
         case filePartial
         case fileJpeg
@@ -334,7 +334,7 @@ struct storage {
 }
 extension Api {
 struct account {
-    indirect enum TmpPassword: TypeConstructorDescription {
+    enum TmpPassword: TypeConstructorDescription {
         case tmpPassword(tmpPassword: Buffer, validUntil: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -372,7 +372,7 @@ struct account {
         }
     
     }
-    indirect enum PasswordSettings: TypeConstructorDescription {
+    enum PasswordSettings: TypeConstructorDescription {
         case passwordSettings(flags: Int32, email: String?, secureSettings: Api.SecureSecretSettings?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -416,7 +416,7 @@ struct account {
         }
     
     }
-    indirect enum WallPapers: TypeConstructorDescription {
+    enum WallPapers: TypeConstructorDescription {
         case wallPapersNotModified
         case wallPapers(hash: Int32, wallpapers: [Api.WallPaper])
     
@@ -472,7 +472,7 @@ struct account {
         }
     
     }
-    indirect enum PasswordInputSettings: TypeConstructorDescription {
+    enum PasswordInputSettings: TypeConstructorDescription {
         case passwordInputSettings(flags: Int32, newAlgo: Api.PasswordKdfAlgo?, newPasswordHash: Buffer?, hint: String?, email: String?, newSecureSettings: Api.SecureSecretSettings?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -530,7 +530,7 @@ struct account {
         }
     
     }
-    indirect enum WebAuthorizations: TypeConstructorDescription {
+    enum WebAuthorizations: TypeConstructorDescription {
         case webAuthorizations(authorizations: [Api.WebAuthorization], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -580,7 +580,7 @@ struct account {
         }
     
     }
-    indirect enum SentEmailCode: TypeConstructorDescription {
+    enum SentEmailCode: TypeConstructorDescription {
         case sentEmailCode(emailPattern: String, length: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -618,7 +618,7 @@ struct account {
         }
     
     }
-    indirect enum Authorizations: TypeConstructorDescription {
+    enum Authorizations: TypeConstructorDescription {
         case authorizations(authorizations: [Api.Authorization])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -658,7 +658,7 @@ struct account {
         }
     
     }
-    indirect enum AuthorizationForm: TypeConstructorDescription {
+    enum AuthorizationForm: TypeConstructorDescription {
         case authorizationForm(flags: Int32, requiredTypes: [Api.SecureRequiredType], values: [Api.SecureValue], errors: [Api.SecureValueError], users: [Api.User], privacyPolicyUrl: String?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -736,7 +736,7 @@ struct account {
         }
     
     }
-    indirect enum Password: TypeConstructorDescription {
+    enum Password: TypeConstructorDescription {
         case password(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, srpB: Buffer?, srpId: Int64?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -808,18 +808,23 @@ struct account {
         }
     
     }
-    indirect enum PrivacyRules: TypeConstructorDescription {
-        case privacyRules(rules: [Api.PrivacyRule], users: [Api.User])
+    enum PrivacyRules: TypeConstructorDescription {
+        case privacyRules(rules: [Api.PrivacyRule], chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .privacyRules(let rules, let users):
+                case .privacyRules(let rules, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(1430961007)
+                        buffer.appendInt32(1352683077)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(rules.count))
                     for item in rules {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
@@ -833,8 +838,8 @@ struct account {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .privacyRules(let rules, let users):
-                return ("privacyRules", [("rules", rules), ("users", users)])
+                case .privacyRules(let rules, let chats, let users):
+                return ("privacyRules", [("rules", rules), ("chats", chats), ("users", users)])
     }
     }
     
@@ -843,14 +848,19 @@ struct account {
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrivacyRule.self)
             }
-            var _2: [Api.User]?
+            var _2: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.PrivacyRules.privacyRules(rules: _1!, users: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.account.PrivacyRules.privacyRules(rules: _1!, chats: _2!, users: _3!)
             }
             else {
                 return nil
@@ -858,7 +868,7 @@ struct account {
         }
     
     }
-    indirect enum AutoDownloadSettings: TypeConstructorDescription {
+    enum AutoDownloadSettings: TypeConstructorDescription {
         case autoDownloadSettings(low: Api.AutoDownloadSettings, medium: Api.AutoDownloadSettings, high: Api.AutoDownloadSettings)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -910,7 +920,7 @@ struct account {
 }
 extension Api {
 struct photos {
-    indirect enum Photo: TypeConstructorDescription {
+    enum Photo: TypeConstructorDescription {
         case photo(photo: Api.Photo, users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -956,7 +966,7 @@ struct photos {
         }
     
     }
-    indirect enum Photos: TypeConstructorDescription {
+    enum Photos: TypeConstructorDescription {
         case photos(photos: [Api.Photo], users: [Api.User])
         case photosSlice(count: Int32, photos: [Api.Photo], users: [Api.User])
     
@@ -1050,7 +1060,7 @@ struct photos {
 }
 extension Api {
 struct phone {
-    indirect enum PhoneCall: TypeConstructorDescription {
+    enum PhoneCall: TypeConstructorDescription {
         case phoneCall(phoneCall: Api.PhoneCall, users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1728,24 +1738,6 @@ extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
-                static func searchGlobal(q: String, offsetDate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1640190800)
-                    serializeString(q, buffer: buffer, boxed: false)
-                    serializeInt32(offsetDate, buffer: buffer, boxed: false)
-                    offsetPeer.serialize(buffer, true)
-                    serializeInt32(offsetId, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.searchGlobal", parameters: [("q", q), ("offsetDate", offsetDate), ("offsetPeer", offsetPeer), ("offsetId", offsetId), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Messages?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
                         }
                         return result
                     })
@@ -2891,6 +2883,91 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func searchGlobal(q: String, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(259638801)
+                    serializeString(q, buffer: buffer, boxed: false)
+                    serializeInt32(offsetRate, buffer: buffer, boxed: false)
+                    offsetPeer.serialize(buffer, true)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.searchGlobal", parameters: [("q", q), ("offsetRate", offsetRate), ("offsetPeer", offsetPeer), ("offsetId", offsetId), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                        }
+                        return result
+                    })
+                }
+            
+                static func sendPhoneNumberRequest(peer: Api.InputPeer, randomId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1424841719)
+                    peer.serialize(buffer, true)
+                    serializeInt64(randomId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.sendPhoneNumberRequest", parameters: [("peer", peer), ("randomId", randomId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                static func getSearchCounters(peer: Api.InputPeer, filters: [Api.MessagesFilter]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.messages.SearchCounter]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1932455680)
+                    peer.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(filters.count))
+                    for item in filters {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "messages.getSearchCounters", parameters: [("peer", peer), ("filters", filters)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.messages.SearchCounter]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.messages.SearchCounter]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.messages.SearchCounter.self)
+                        }
+                        return result
+                    })
+                }
+            
+                static func requestUrlAuth(peer: Api.InputPeer, msgId: Int32, buttonId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-482388461)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt32(buttonId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.requestUrlAuth", parameters: [("peer", peer), ("msgId", msgId), ("buttonId", buttonId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.UrlAuthResult?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.UrlAuthResult
+                        }
+                        return result
+                    })
+                }
+            
+                static func acceptUrlAuth(flags: Int32, peer: Api.InputPeer, msgId: Int32, buttonId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-148247912)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt32(buttonId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.acceptUrlAuth", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("buttonId", buttonId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.UrlAuthResult?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.UrlAuthResult
+                        }
+                        return result
+                    })
+                }
             }
             struct channels {
                 static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
@@ -3360,6 +3437,24 @@ extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                static func searchPosts(q: String, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1134602210)
+                    serializeString(q, buffer: buffer, boxed: false)
+                    serializeInt32(offsetRate, buffer: buffer, boxed: false)
+                    offsetPeer.serialize(buffer, true)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "channels.searchPosts", parameters: [("q", q), ("offsetRate", offsetRate), ("offsetPeer", offsetPeer), ("offsetId", offsetId), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
                         }
                         return result
                     })

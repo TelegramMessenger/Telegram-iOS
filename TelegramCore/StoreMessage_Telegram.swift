@@ -209,7 +209,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-                case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp:
+                case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionPhoneNumberRequest:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId))
@@ -522,6 +522,10 @@ extension StoreMessage {
                     }
                 }
                 
+                if (flags & (1 << 17)) != 0 {
+                    attributes.append(ContentRequiresValidationMessageAttribute())
+                }
+                
                 var storeFlags = StoreMessageFlags()
                 
                 if let replyMarkup = replyMarkup {
@@ -586,6 +590,10 @@ extension StoreMessage {
                 var attributes: [MessageAttribute] = []
                 if let replyToMsgId = replyToMsgId {
                     attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
+                }
+                
+                if (flags & (1 << 17)) != 0 {
+                    attributes.append(ContentRequiresValidationMessageAttribute())
                 }
                 
                 var storeFlags = StoreMessageFlags()

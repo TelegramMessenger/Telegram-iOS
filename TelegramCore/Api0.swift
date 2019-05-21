@@ -162,6 +162,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[961092808] = { return Api.PrivacyKey.parse_privacyKeyPhoneP2P($0) }
     dict[1777096355] = { return Api.PrivacyKey.parse_privacyKeyForwards($0) }
     dict[-1777000467] = { return Api.PrivacyKey.parse_privacyKeyProfilePhoto($0) }
+    dict[-778378131] = { return Api.PrivacyKey.parse_privacyKeyPhoneNumber($0) }
     dict[522914557] = { return Api.Update.parse_updateNewMessage($0) }
     dict[1318109142] = { return Api.Update.parse_updateMessageID($0) }
     dict[-1576161051] = { return Api.Update.parse_updateDeleteMessages($0) }
@@ -252,6 +253,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[90744648] = { return Api.KeyboardButton.parse_keyboardButtonSwitchInline($0) }
     dict[1358175439] = { return Api.KeyboardButton.parse_keyboardButtonGame($0) }
     dict[-1344716869] = { return Api.KeyboardButton.parse_keyboardButtonBuy($0) }
+    dict[2007189877] = { return Api.KeyboardButton.parse_keyboardButtonUrlAuth($0) }
     dict[-748155807] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[1679398724] = { return Api.SecureFile.parse_secureFileEmpty($0) }
     dict[-534283678] = { return Api.SecureFile.parse_secureFile($0) }
@@ -269,10 +271,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1158290442] = { return Api.messages.FoundGifs.parse_foundGifs($0) }
     dict[-1132476723] = { return Api.FileLocation.parse_fileLocationToBeDeprecated($0) }
     dict[-716006138] = { return Api.Poll.parse_poll($0) }
-    dict[-1195615476] = { return Api.InputNotifyPeer.parse_inputNotifyPeer($0) }
     dict[423314455] = { return Api.InputNotifyPeer.parse_inputNotifyUsers($0) }
     dict[1251338318] = { return Api.InputNotifyPeer.parse_inputNotifyChats($0) }
     dict[-1311015810] = { return Api.InputNotifyPeer.parse_inputNotifyBroadcasts($0) }
+    dict[-1195615476] = { return Api.InputNotifyPeer.parse_inputNotifyPeer($0) }
     dict[-317144808] = { return Api.EncryptedMessage.parse_encryptedMessage($0) }
     dict[594758406] = { return Api.EncryptedMessage.parse_encryptedMessageService($0) }
     dict[-566281095] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsRecent($0) }
@@ -353,6 +355,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[195371015] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowContacts($0) }
     dict[-697604407] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowAll($0) }
     dict[-1877932953] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowUsers($0) }
+    dict[1283572154] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowChatParticipants($0) }
+    dict[-668769361] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowChatParticipants($0) }
     dict[-1058912715] = { return Api.messages.DhConfig.parse_dhConfigNotModified($0) }
     dict[740433629] = { return Api.messages.DhConfig.parse_dhConfig($0) }
     dict[-421545947] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangeTitle($0) }
@@ -422,6 +426,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-610373422] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyPhoneP2P($0) }
     dict[-1529000952] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyForwards($0) }
     dict[1461304012] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyProfilePhoto($0) }
+    dict[55761658] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyPhoneNumber($0) }
     dict[235081943] = { return Api.help.RecentMeUrls.parse_recentMeUrls($0) }
     dict[-1606526075] = { return Api.ReplyMarkup.parse_replyKeyboardHide($0) }
     dict[-200242528] = { return Api.ReplyMarkup.parse_replyKeyboardForceReply($0) }
@@ -434,6 +439,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[411017418] = { return Api.SecureValue.parse_secureValue($0) }
     dict[-316748368] = { return Api.SecureValueHash.parse_secureValueHash($0) }
     dict[1444661369] = { return Api.ContactBlocked.parse_contactBlocked($0) }
+    dict[-398136321] = { return Api.messages.SearchCounter.parse_searchCounter($0) }
     dict[-2128698738] = { return Api.auth.CheckedPhone.parse_checkedPhone($0) }
     dict[-1188055347] = { return Api.PageListItem.parse_pageListItemText($0) }
     dict[635466748] = { return Api.PageListItem.parse_pageListItemBlocks($0) }
@@ -468,8 +474,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1539849235] = { return Api.WallPaper.parse_wallPaper($0) }
     dict[-1938715001] = { return Api.messages.Messages.parse_messages($0) }
     dict[1951620897] = { return Api.messages.Messages.parse_messagesNotModified($0) }
-    dict[-1497072982] = { return Api.messages.Messages.parse_messagesSlice($0) }
     dict[-1725551049] = { return Api.messages.Messages.parse_channelMessages($0) }
+    dict[-923939298] = { return Api.messages.Messages.parse_messagesSlice($0) }
+    dict[-1497072982] = { return Api.messages.Messages.parse_messagesSliceLegacy($0) }
     dict[-1022713000] = { return Api.Invoice.parse_invoice($0) }
     dict[-2122045747] = { return Api.PeerSettings.parse_peerSettings($0) }
     dict[955951967] = { return Api.auth.SentCode.parse_sentCode($0) }
@@ -515,6 +522,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1062645411] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
     dict[1342771681] = { return Api.payments.PaymentReceipt.parse_paymentReceipt($0) }
     dict[863093588] = { return Api.messages.PeerDialogs.parse_peerDialogs($0) }
+    dict[-1831650802] = { return Api.UrlAuthResult.parse_urlAuthResultRequest($0) }
+    dict[-1886646706] = { return Api.UrlAuthResult.parse_urlAuthResultAccepted($0) }
+    dict[-1445536993] = { return Api.UrlAuthResult.parse_urlAuthResultDefault($0) }
     dict[-4838507] = { return Api.InputStickerSet.parse_inputStickerSetEmpty($0) }
     dict[-1645763991] = { return Api.InputStickerSet.parse_inputStickerSetID($0) }
     dict[-2044933984] = { return Api.InputStickerSet.parse_inputStickerSetShortName($0) }
@@ -643,13 +653,15 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-459324] = { return Api.InputBotInlineResult.parse_inputBotInlineResultDocument($0) }
     dict[1336154098] = { return Api.InputBotInlineResult.parse_inputBotInlineResultGame($0) }
     dict[-2000710887] = { return Api.InputBotInlineResult.parse_inputBotInlineResult($0) }
-    dict[1430961007] = { return Api.account.PrivacyRules.parse_privacyRules($0) }
+    dict[1352683077] = { return Api.account.PrivacyRules.parse_privacyRules($0) }
     dict[-123988] = { return Api.PrivacyRule.parse_privacyValueAllowContacts($0) }
     dict[1698855810] = { return Api.PrivacyRule.parse_privacyValueAllowAll($0) }
     dict[1297858060] = { return Api.PrivacyRule.parse_privacyValueAllowUsers($0) }
     dict[-125240806] = { return Api.PrivacyRule.parse_privacyValueDisallowContacts($0) }
     dict[-1955338397] = { return Api.PrivacyRule.parse_privacyValueDisallowAll($0) }
     dict[209668535] = { return Api.PrivacyRule.parse_privacyValueDisallowUsers($0) }
+    dict[415136107] = { return Api.PrivacyRule.parse_privacyValueAllowChatParticipants($0) }
+    dict[-1397881200] = { return Api.PrivacyRule.parse_privacyValueDisallowChatParticipants($0) }
     dict[-1230047312] = { return Api.MessageAction.parse_messageActionEmpty($0) }
     dict[-1503425638] = { return Api.MessageAction.parse_messageActionChatCreate($0) }
     dict[-1247687078] = { return Api.MessageAction.parse_messageActionChatEditTitle($0) }
@@ -673,6 +685,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[455635795] = { return Api.MessageAction.parse_messageActionSecureValuesSentMe($0) }
     dict[-648257196] = { return Api.MessageAction.parse_messageActionSecureValuesSent($0) }
     dict[-202219658] = { return Api.MessageAction.parse_messageActionContactSignUp($0) }
+    dict[29007925] = { return Api.MessageAction.parse_messageActionPhoneNumberRequest($0) }
     dict[1399245077] = { return Api.PhoneCall.parse_phoneCallEmpty($0) }
     dict[462375633] = { return Api.PhoneCall.parse_phoneCallWaiting($0) }
     dict[-2014659757] = { return Api.PhoneCall.parse_phoneCallRequested($0) }
@@ -686,7 +699,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1363483106] = { return Api.DialogPeer.parse_dialogPeerFolder($0) }
     dict[1599050311] = { return Api.ContactLink.parse_contactLinkUnknown($0) }
     dict[-17968211] = { return Api.ContactLink.parse_contactLinkNone($0) }
-    dict[646922073] = { return Api.ContactLink.parse_contactLinkHasPhone($0) }
     dict[-721239344] = { return Api.ContactLink.parse_contactLinkContact($0) }
     dict[-104284986] = { return Api.WebDocument.parse_webDocumentNoProxy($0) }
     dict[475467473] = { return Api.WebDocument.parse_webDocument($0) }
@@ -1061,6 +1073,8 @@ struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ContactBlocked:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.SearchCounter:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.auth.CheckedPhone:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PageListItem:
@@ -1138,6 +1152,8 @@ struct Api {
             case let _1 as Api.payments.PaymentReceipt:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.PeerDialogs:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.UrlAuthResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputStickerSet:
                 _1.serialize(buffer, boxed)
@@ -1315,7 +1331,7 @@ struct Api {
 }
 extension Api {
 struct messages {
-    indirect enum StickerSet: TypeConstructorDescription {
+    enum StickerSet: TypeConstructorDescription {
         case stickerSet(set: Api.StickerSet, packs: [Api.StickerPack], documents: [Api.Document])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1371,7 +1387,7 @@ struct messages {
         }
     
     }
-    indirect enum ArchivedStickers: TypeConstructorDescription {
+    enum ArchivedStickers: TypeConstructorDescription {
         case archivedStickers(count: Int32, sets: [Api.StickerSetCovered])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1415,7 +1431,7 @@ struct messages {
         }
     
     }
-    indirect enum SentEncryptedMessage: TypeConstructorDescription {
+    enum SentEncryptedMessage: TypeConstructorDescription {
         case sentEncryptedMessage(date: Int32)
         case sentEncryptedFile(date: Int32, file: Api.EncryptedFile)
     
@@ -1475,7 +1491,7 @@ struct messages {
         }
     
     }
-    indirect enum Stickers: TypeConstructorDescription {
+    enum Stickers: TypeConstructorDescription {
         case stickersNotModified
         case stickers(hash: Int32, stickers: [Api.Document])
     
@@ -1531,7 +1547,7 @@ struct messages {
         }
     
     }
-    indirect enum FoundStickerSets: TypeConstructorDescription {
+    enum FoundStickerSets: TypeConstructorDescription {
         case foundStickerSetsNotModified
         case foundStickerSets(hash: Int32, sets: [Api.StickerSetCovered])
     
@@ -1587,7 +1603,7 @@ struct messages {
         }
     
     }
-    indirect enum FoundGifs: TypeConstructorDescription {
+    enum FoundGifs: TypeConstructorDescription {
         case foundGifs(nextOffset: Int32, results: [Api.FoundGif])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1631,7 +1647,7 @@ struct messages {
         }
     
     }
-    indirect enum BotResults: TypeConstructorDescription {
+    enum BotResults: TypeConstructorDescription {
         case botResults(flags: Int32, queryId: Int64, nextOffset: String?, switchPm: Api.InlineBotSwitchPM?, results: [Api.BotInlineResult], cacheTime: Int32, users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1703,7 +1719,7 @@ struct messages {
         }
     
     }
-    indirect enum BotCallbackAnswer: TypeConstructorDescription {
+    enum BotCallbackAnswer: TypeConstructorDescription {
         case botCallbackAnswer(flags: Int32, message: String?, url: String?, cacheTime: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1749,7 +1765,7 @@ struct messages {
         }
     
     }
-    indirect enum Chats: TypeConstructorDescription {
+    enum Chats: TypeConstructorDescription {
         case chats(chats: [Api.Chat])
         case chatsSlice(count: Int32, chats: [Api.Chat])
     
@@ -1819,7 +1835,7 @@ struct messages {
         }
     
     }
-    indirect enum DhConfig: TypeConstructorDescription {
+    enum DhConfig: TypeConstructorDescription {
         case dhConfigNotModified(random: Buffer)
         case dhConfig(g: Int32, p: Buffer, version: Int32, random: Buffer)
     
@@ -1885,7 +1901,7 @@ struct messages {
         }
     
     }
-    indirect enum AffectedHistory: TypeConstructorDescription {
+    enum AffectedHistory: TypeConstructorDescription {
         case affectedHistory(pts: Int32, ptsCount: Int32, offset: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1927,7 +1943,7 @@ struct messages {
         }
     
     }
-    indirect enum MessageEditData: TypeConstructorDescription {
+    enum MessageEditData: TypeConstructorDescription {
         case messageEditData(flags: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1961,7 +1977,7 @@ struct messages {
         }
     
     }
-    indirect enum ChatFull: TypeConstructorDescription {
+    enum ChatFull: TypeConstructorDescription {
         case chatFull(fullChat: Api.ChatFull, chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2017,7 +2033,51 @@ struct messages {
         }
     
     }
-    indirect enum StickerSetInstallResult: TypeConstructorDescription {
+    enum SearchCounter: TypeConstructorDescription {
+        case searchCounter(flags: Int32, filter: Api.MessagesFilter, count: Int32)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .searchCounter(let flags, let filter, let count):
+                    if boxed {
+                        buffer.appendInt32(-398136321)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    filter.serialize(buffer, true)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .searchCounter(let flags, let filter, let count):
+                return ("searchCounter", [("flags", flags), ("filter", filter), ("count", count)])
+    }
+    }
+    
+        static func parse_searchCounter(_ reader: BufferReader) -> SearchCounter? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.MessagesFilter?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.MessagesFilter
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.SearchCounter.searchCounter(flags: _1!, filter: _2!, count: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    enum StickerSetInstallResult: TypeConstructorDescription {
         case stickerSetInstallResultSuccess
         case stickerSetInstallResultArchive(sets: [Api.StickerSetCovered])
     
@@ -2069,7 +2129,7 @@ struct messages {
         }
     
     }
-    indirect enum AffectedMessages: TypeConstructorDescription {
+    enum AffectedMessages: TypeConstructorDescription {
         case affectedMessages(pts: Int32, ptsCount: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2107,7 +2167,7 @@ struct messages {
         }
     
     }
-    indirect enum SavedGifs: TypeConstructorDescription {
+    enum SavedGifs: TypeConstructorDescription {
         case savedGifsNotModified
         case savedGifs(hash: Int32, gifs: [Api.Document])
     
@@ -2163,11 +2223,12 @@ struct messages {
         }
     
     }
-    indirect enum Messages: TypeConstructorDescription {
+    enum Messages: TypeConstructorDescription {
         case messages(messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case messagesNotModified(count: Int32)
-        case messagesSlice(flags: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case channelMessages(flags: Int32, pts: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+        case messagesSlice(flags: Int32, count: Int32, nextRate: Int32?, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+        case messagesSliceLegacy(flags: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -2197,11 +2258,12 @@ struct messages {
                     }
                     serializeInt32(count, buffer: buffer, boxed: false)
                     break
-                case .messagesSlice(let flags, let count, let messages, let chats, let users):
+                case .channelMessages(let flags, let pts, let count, let messages, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-1497072982)
+                        buffer.appendInt32(-1725551049)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(messages.count))
@@ -2219,12 +2281,34 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
-                case .channelMessages(let flags, let pts, let count, let messages, let chats, let users):
+                case .messagesSlice(let flags, let count, let nextRate, let messages, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-1725551049)
+                        buffer.appendInt32(-923939298)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(pts, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(nextRate!, buffer: buffer, boxed: false)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .messagesSliceLegacy(let flags, let count, let messages, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-1497072982)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(messages.count))
@@ -2251,10 +2335,12 @@ struct messages {
                 return ("messages", [("messages", messages), ("chats", chats), ("users", users)])
                 case .messagesNotModified(let count):
                 return ("messagesNotModified", [("count", count)])
-                case .messagesSlice(let flags, let count, let messages, let chats, let users):
-                return ("messagesSlice", [("flags", flags), ("count", count), ("messages", messages), ("chats", chats), ("users", users)])
                 case .channelMessages(let flags, let pts, let count, let messages, let chats, let users):
                 return ("channelMessages", [("flags", flags), ("pts", pts), ("count", count), ("messages", messages), ("chats", chats), ("users", users)])
+                case .messagesSlice(let flags, let count, let nextRate, let messages, let chats, let users):
+                return ("messagesSlice", [("flags", flags), ("count", count), ("nextRate", nextRate), ("messages", messages), ("chats", chats), ("users", users)])
+                case .messagesSliceLegacy(let flags, let count, let messages, let chats, let users):
+                return ("messagesSliceLegacy", [("flags", flags), ("count", count), ("messages", messages), ("chats", chats), ("users", users)])
     }
     }
     
@@ -2292,35 +2378,6 @@ struct messages {
                 return nil
             }
         }
-        static func parse_messagesSlice(_ reader: BufferReader) -> Messages? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _4: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.messages.Messages.messagesSlice(flags: _1!, count: _2!, messages: _3!, chats: _4!, users: _5!)
-            }
-            else {
-                return nil
-            }
-        }
         static func parse_channelMessages(_ reader: BufferReader) -> Messages? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -2353,9 +2410,70 @@ struct messages {
                 return nil
             }
         }
+        static func parse_messagesSlice(_ reader: BufferReader) -> Messages? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
+            var _4: [Api.Message]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+            }
+            var _5: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _6: [Api.User]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.messages.Messages.messagesSlice(flags: _1!, count: _2!, nextRate: _3, messages: _4!, chats: _5!, users: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messagesSliceLegacy(_ reader: BufferReader) -> Messages? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.Message]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+            }
+            var _4: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.Messages.messagesSliceLegacy(flags: _1!, count: _2!, messages: _3!, chats: _4!, users: _5!)
+            }
+            else {
+                return nil
+            }
+        }
     
     }
-    indirect enum PeerDialogs: TypeConstructorDescription {
+    enum PeerDialogs: TypeConstructorDescription {
         case peerDialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -2431,7 +2549,7 @@ struct messages {
         }
     
     }
-    indirect enum RecentStickers: TypeConstructorDescription {
+    enum RecentStickers: TypeConstructorDescription {
         case recentStickersNotModified
         case recentStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document], dates: [Int32])
     
@@ -2507,7 +2625,7 @@ struct messages {
         }
     
     }
-    indirect enum FeaturedStickers: TypeConstructorDescription {
+    enum FeaturedStickers: TypeConstructorDescription {
         case featuredStickersNotModified
         case featuredStickers(hash: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
     
@@ -2573,7 +2691,7 @@ struct messages {
         }
     
     }
-    indirect enum Dialogs: TypeConstructorDescription {
+    enum Dialogs: TypeConstructorDescription {
         case dialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case dialogsSlice(count: Int32, dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case dialogsNotModified(count: Int32)
@@ -2723,7 +2841,7 @@ struct messages {
         }
     
     }
-    indirect enum FavedStickers: TypeConstructorDescription {
+    enum FavedStickers: TypeConstructorDescription {
         case favedStickersNotModified
         case favedStickers(hash: Int32, packs: [Api.StickerPack], stickers: [Api.Document])
     
@@ -2789,7 +2907,7 @@ struct messages {
         }
     
     }
-    indirect enum AllStickers: TypeConstructorDescription {
+    enum AllStickers: TypeConstructorDescription {
         case allStickersNotModified
         case allStickers(hash: Int32, sets: [Api.StickerSet])
     
@@ -2845,7 +2963,7 @@ struct messages {
         }
     
     }
-    indirect enum HighScores: TypeConstructorDescription {
+    enum HighScores: TypeConstructorDescription {
         case highScores(scores: [Api.HighScore], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {

@@ -1171,7 +1171,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     }
                     let hasPhone: Bool?
                     switch foreignLink {
-                        case .contactLinkContact, .contactLinkHasPhone:
+                        case .contactLinkContact:
                             hasPhone = true
                         case .contactLinkNone:
                             hasPhone = false
@@ -1367,7 +1367,9 @@ private func resolveAssociatedMessages(network: Network, state: AccountMutableSt
                         switch result {
                             case let .messages(messages, chats, users):
                                 return (messages, chats, users)
-                            case let .messagesSlice(_, _, messages, chats, users):
+                            case let .messagesSlice(_, _, _, messages, chats, users):
+                                return (messages, chats, users)
+                            case let .messagesSliceLegacy(_, _, messages, chats, users):
                                 return (messages, chats, users)
                             case let .channelMessages(_, _, _, messages, chats, users):
                                 return (messages, chats, users)
@@ -2209,7 +2211,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     if previousMessage.localTags.contains(.OutgoingLiveLocation) {
                         updatedLocalTags.insert(.OutgoingLiveLocation)
                     }
-                    if message.flags.contains(.Incoming) {
+                    if previousMessage.flags.contains(.Incoming) {
                         updatedFlags.insert(.Incoming)
                     } else {
                         updatedFlags.remove(.Incoming)
