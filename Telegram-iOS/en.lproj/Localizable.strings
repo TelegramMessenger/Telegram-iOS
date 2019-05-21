@@ -4279,3 +4279,6 @@ Sorry for the inconvenience.";
 "Privacy.PhoneNumber" = "Phone Number";
 "PrivacySettings.PhoneNumber" = "Phone Number";
 "Contacts.SearchUsersAndGroupsLabel" = "Search for users and groups";
+
+"PrivacySettings.PasscodeOff" = "Off";
+"PrivacySettings.PasscodeOn" = "On";
