@@ -55,56 +55,58 @@ func cacheStickerPack(transaction: Transaction, info: StickerPackCollectionInfo,
 }
 
 public func cachedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference, forceRemote: Bool) -> Signal<CachedStickerPackResult, NoError> {
-    return postbox.transaction { transaction -> Signal<CachedStickerPackResult, NoError> in
+    return postbox.transaction { transaction -> CachedStickerPackResult? in
         if let (info, items, local) = cachedStickerPack(transaction: transaction, reference: reference) {
             if local {
-                return .single(.result(info, items, true))
+                return .result(info, items, true)
             }
         }
-        let current: Signal<CachedStickerPackResult, NoError>
-        var loadRemote = false
-        let namespace = Namespaces.ItemCollection.CloudStickerPacks
-        
-        var previousHash: Int32?
-        
-        if case let .id(id, _) = reference, let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id)))) as? CachedStickerPack, let info = cached.info {
-            previousHash = cached.hash
-            current = .single(.result(info, cached.items, false))
-            if cached.hash != info.hash {
-                loadRemote = true
-            }
+        return nil
+    } |> mapToSignal { value -> Signal<CachedStickerPackResult, NoError> in
+        if let value = value {
+            return .single(value)
         } else {
-            current = .single(.fetching)
-            loadRemote = true
-        }
-        
-        var signal = current
-        if loadRemote || forceRemote {
-            let appliedRemote = updatedRemoteStickerPack(postbox: postbox, network: network, reference: reference)
-            |> mapToSignal { result -> Signal<CachedStickerPackResult, NoError> in
-                if let result = result, result.0.hash == previousHash {
-                    return .complete()
-                }
-                return postbox.transaction { transaction -> CachedStickerPackResult in
-                    if let result = result {
-                        cacheStickerPack(transaction: transaction, info: result.0, items: result.1)
-                        
-                        let currentInfo = transaction.getItemCollectionInfo(collectionId: result.0.id) as? StickerPackCollectionInfo
-                        
-                        return .result(result.0, result.1, currentInfo != nil)
+            return postbox.transaction { transaction -> (CachedStickerPackResult, Bool, Int32?) in
+                var loadRemote = false
+                let namespace = Namespaces.ItemCollection.CloudStickerPacks
+                var previousHash: Int32?
+                if case let .id(id, _) = reference, let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id)))) as? CachedStickerPack, let info = cached.info {
+                    previousHash = cached.hash
+                    let current: CachedStickerPackResult = .result(info, cached.items, false)
+                    if cached.hash != info.hash {
+                        return (current, true, previousHash)
                     } else {
-                        return .none
+                        return (current, false, previousHash)
                     }
+                } else {
+                    return (.fetching, true, nil)
+                }
+            } |> mapToSignal { result, loadRemote, previousHash in
+                if loadRemote || forceRemote {
+                    let appliedRemote = updatedRemoteStickerPack(postbox: postbox, network: network, reference: reference)
+                        |> mapToSignal { result -> Signal<CachedStickerPackResult, NoError> in
+                            if let result = result, result.0.hash == previousHash {
+                                return .complete()
+                            }
+                            return postbox.transaction { transaction -> CachedStickerPackResult in
+                                if let result = result {
+                                    cacheStickerPack(transaction: transaction, info: result.0, items: result.1)
+                                    
+                                    let currentInfo = transaction.getItemCollectionInfo(collectionId: result.0.id) as? StickerPackCollectionInfo
+                                    
+                                    return .result(result.0, result.1, currentInfo != nil)
+                                } else {
+                                    return .none
+                                }
+                            }
+                    }
+                    return .single(result) |> then(appliedRemote)
+                } else {
+                    return .single(result)
                 }
             }
-            
-            signal = signal
-            |> then(appliedRemote)
         }
-        
-        return signal
     }
-    |> switchToLatest
 }
     
 func cachedStickerPack(transaction: Transaction, reference: StickerPackReference) -> (StickerPackCollectionInfo, [ItemCollectionItem], Bool)? {

@@ -73,3 +73,4 @@ public func actualizedPeer(postbox: Postbox, network: Network, peer: Peer) -> Si
         return (signal |> then(updatedView)) |> distinctUntilChanged(isEqual: { $0.isEqual($1) })
     } |> switchToLatest
 }
+

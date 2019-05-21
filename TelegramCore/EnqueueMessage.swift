@@ -206,14 +206,19 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
                 if let message = transaction.getMessage(id), !message.flags.contains(.Incoming) {
                     removeMessageIds.append(id)
                     
+                    var filteredAttributes: [MessageAttribute] = []
                     var replyToMessageId: MessageId?
-                    for attribute in message.attributes {
+                    inner: for attribute in message.attributes {
                         if let attribute = attribute as? ReplyMessageAttribute {
                             replyToMessageId = attribute.messageId
+                        } else if attribute is OutgoingMessageInfoAttribute {
+                            continue inner
+                        } else {
+                            filteredAttributes.append(attribute)
                         }
                     }
                     
-                    messages.append(.message(text: message.text, attributes: message.attributes, mediaReference: message.media.first.flatMap(AnyMediaReference.standalone), replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey))
+                    messages.append(.message(text: message.text, attributes: filteredAttributes, mediaReference: message.media.first.flatMap(AnyMediaReference.standalone), replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey))
                 }
             }
             let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages.map { (false, $0) })
