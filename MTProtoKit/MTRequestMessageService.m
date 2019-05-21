@@ -590,6 +590,15 @@
                         {
                             rpcError = [[MTRpcError alloc] initWithErrorCode:500 errorDescription:@"TL_PARSING_ERROR"];
                         }
+                        [_context performBatchUpdates:^{
+                            MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:mtProto.datacenterId];
+                            
+                            NSMutableDictionary *authKeyAttributes = [[NSMutableDictionary alloc] initWithDictionary:authInfo.authKeyAttributes];
+                            authKeyAttributes[@"apiInitializationHash"] = @"";
+                            
+                            authInfo = [authInfo withUpdatedAuthKeyAttributes:authKeyAttributes];
+                            [_context updateAuthInfoForDatacenterWithId:mtProto.datacenterId authInfo:authInfo];
+                        }];
                     }
                     
                     if (rpcResult != nil)
