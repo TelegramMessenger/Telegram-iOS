@@ -1,6 +1,6 @@
 import Foundation
 
-struct AccountManagerAtomicState: Codable {
+final class AccountManagerAtomicState: Codable {
     var records: [AccountRecordId: AccountRecord]
     var currentRecordId: AccountRecordId?
     var currentAuthRecord: AuthAccountRecord?
