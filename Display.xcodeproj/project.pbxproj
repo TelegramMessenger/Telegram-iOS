@@ -17,33 +17,10 @@
 		D0076F2221ACA5020059500A /* Toolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0076F2121ACA5020059500A /* Toolbar.swift */; };
 		D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0078A671C92B21400DF6D92 /* StatusBar.swift */; };
 		D00C7CD21E3657570080C3D5 /* TextFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */; };
-		D01159BB1F40E96C0039383E /* DisplayMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D01159B91F40E96C0039383E /* DisplayMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D015F7521D1AE08D00E269B5 /* ContainableController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7511D1AE08D00E269B5 /* ContainableController.swift */; };
 		D015F7581D1B467200E269B5 /* ActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7571D1B467200E269B5 /* ActionSheetController.swift */; };
 		D015F75A1D1B46B600E269B5 /* ActionSheetControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7591D1B46B600E269B5 /* ActionSheetControllerNode.swift */; };
-		D01847611FFA703B00075256 /* UIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01847601FFA703B00075256 /* UIKit.swift */; };
-		D01847631FFA70FC00075256 /* UIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01847621FFA70FC00075256 /* UIView.swift */; };
-		D01847641FFA723600075256 /* CAAnimationUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2E41B69555800E235A3 /* CAAnimationUtils.swift */; };
 		D01847661FFA72E000075256 /* ContainedViewLayoutTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01847651FFA72E000075256 /* ContainedViewLayoutTransition.swift */; };
-		D01847671FFA72E000075256 /* ContainedViewLayoutTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01847651FFA72E000075256 /* ContainedViewLayoutTransition.swift */; };
-		D01847681FFA749F00075256 /* ListViewAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC01CC4431D0044FF83 /* ListViewAnimation.swift */; };
-		D01847691FFA756600075256 /* ListViewAccessoryItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC51CC4431D0044FF83 /* ListViewAccessoryItemNode.swift */; };
-		D018476A1FFA75EE00075256 /* Spring.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBD1CC4431D0044FF83 /* Spring.swift */; };
-		D018476D1FFA765D00075256 /* NSValueAdditions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018476B1FFA765D00075256 /* NSValueAdditions.swift */; };
-		D018476E1FFA76DC00075256 /* ListViewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBF1CC4431D0044FF83 /* ListViewItem.swift */; };
-		D018476F1FFA76FD00075256 /* ListViewAccessoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC31CC4431D0044FF83 /* ListViewAccessoryItem.swift */; };
-		D01847701FFA773100075256 /* ListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBE1CC4431D0044FF83 /* ListView.swift */; };
-		D01847711FFA778100075256 /* ListViewIntermediateState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02383851DE0E3B4004018B6 /* ListViewIntermediateState.swift */; };
-		D01847741FFA780400075256 /* UIScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01847721FFA780400075256 /* UIScrollView.swift */; };
-		D01847751FFA78B200075256 /* ListViewScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC41CC4431D0044FF83 /* ListViewScroller.swift */; };
-		D01847771FFA78C100075256 /* UIGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01847761FFA78C100075256 /* UIGestureRecognizer.swift */; };
-		D01847791FFA7A4E00075256 /* UITouch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01847781FFA7A4E00075256 /* UITouch.swift */; };
-		D018477A1FFA7A8800075256 /* ListViewOverscrollBackgroundNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA840F1FED2887005C6E91 /* ListViewOverscrollBackgroundNode.swift */; };
-		D018477C1FFA7ABF00075256 /* UISlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018477B1FFA7ABF00075256 /* UISlider.swift */; };
-		D01C06C21FC254F8001561AB /* ASDisplayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06C11FC254F8001561AB /* ASDisplayNode.swift */; };
-		D01C06C31FC2552C001561AB /* ListViewItemHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */; };
-		D01C06C41FC25561001561AB /* ListViewItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBC1CC4431D0044FF83 /* ListViewItemNode.swift */; };
-		D01C06C51FC2558F001561AB /* SwiftSignalKitMac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01C06C61FC2558F001561AB /* SwiftSignalKitMac.framework */; };
 		D01E2BDE1D9049620066BF65 /* GridNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E2BDD1D9049620066BF65 /* GridNode.swift */; };
 		D01E2BE01D90498E0066BF65 /* GridNodeScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E2BDF1D90498E0066BF65 /* GridNodeScroller.swift */; };
 		D01E2BE21D9049F60066BF65 /* GridItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E2BE11D9049F60066BF65 /* GridItemNode.swift */; };
@@ -178,8 +155,6 @@
 		D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */; };
 		D0E1D6721CBC201E00B04029 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */; };
 		D0E35A031DE473B900BC6096 /* HighlightableButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E35A021DE473B900BC6096 /* HighlightableButton.swift */; };
-		D0E8175E2014ED7D00B82BBB /* CADisplayLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8175C2014ED7D00B82BBB /* CADisplayLink.swift */; };
-		D0E8175F2014F18F00B82BBB /* ListViewTransactionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC21CC4431D0044FF83 /* ListViewTransactionQueue.swift */; };
 		D0F1132F1D6F3C20008C3597 /* ContextMenuActionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */; };
 		D0F7AB371DCFF6F8009AD9A1 /* ListViewItemHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */; };
 		D0F8C3932014FB7C00236FC5 /* ListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBE1CC4431D0044FF83 /* ListView.swift */; };
@@ -210,21 +185,10 @@
 		D0076F2121ACA5020059500A /* Toolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toolbar.swift; sourceTree = "<group>"; };
 		D0078A671C92B21400DF6D92 /* StatusBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBar.swift; sourceTree = "<group>"; };
 		D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextFieldNode.swift; sourceTree = "<group>"; };
-		D01159B71F40E96B0039383E /* DisplayMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DisplayMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D01159B91F40E96C0039383E /* DisplayMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DisplayMac.h; sourceTree = "<group>"; };
-		D01159BA1F40E96C0039383E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D015F7511D1AE08D00E269B5 /* ContainableController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainableController.swift; sourceTree = "<group>"; };
 		D015F7571D1B467200E269B5 /* ActionSheetController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetController.swift; sourceTree = "<group>"; };
 		D015F7591D1B46B600E269B5 /* ActionSheetControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetControllerNode.swift; sourceTree = "<group>"; };
-		D01847601FFA703B00075256 /* UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIKit.swift; sourceTree = "<group>"; };
-		D01847621FFA70FC00075256 /* UIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIView.swift; sourceTree = "<group>"; };
 		D01847651FFA72E000075256 /* ContainedViewLayoutTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainedViewLayoutTransition.swift; sourceTree = "<group>"; };
-		D018476B1FFA765D00075256 /* NSValueAdditions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NSValueAdditions.swift; sourceTree = "<group>"; };
-		D01847721FFA780400075256 /* UIScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIScrollView.swift; sourceTree = "<group>"; };
-		D01847761FFA78C100075256 /* UIGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIGestureRecognizer.swift; sourceTree = "<group>"; };
-		D01847781FFA7A4E00075256 /* UITouch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITouch.swift; sourceTree = "<group>"; };
-		D018477B1FFA7ABF00075256 /* UISlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UISlider.swift; sourceTree = "<group>"; };
-		D01C06C11FC254F8001561AB /* ASDisplayNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASDisplayNode.swift; sourceTree = "<group>"; };
 		D01C06C61FC2558F001561AB /* SwiftSignalKitMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKitMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01E2BDD1D9049620066BF65 /* GridNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GridNode.swift; sourceTree = "<group>"; };
 		D01E2BDF1D90498E0066BF65 /* GridNodeScroller.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GridNodeScroller.swift; sourceTree = "<group>"; };
@@ -365,7 +329,6 @@
 		D0E1D6351CBC159C00B04029 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E35A021DE473B900BC6096 /* HighlightableButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HighlightableButton.swift; sourceTree = "<group>"; };
-		D0E8175C2014ED7D00B82BBB /* CADisplayLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CADisplayLink.swift; sourceTree = "<group>"; };
 		D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuActionNode.swift; sourceTree = "<group>"; };
 		D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewItemHeader.swift; sourceTree = "<group>"; };
 		D0FA08C120487A8600DD23FC /* HapticFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
@@ -375,14 +338,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		D01159B31F40E96B0039383E /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D01C06C51FC2558F001561AB /* SwiftSignalKitMac.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D05CC25F1B69316F00E235A3 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -419,24 +374,6 @@
 				D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */,
 			);
 			name = Tooltip;
-			sourceTree = "<group>";
-		};
-		D01159B81F40E96C0039383E /* DisplayMac */ = {
-			isa = PBXGroup;
-			children = (
-				D01159B91F40E96C0039383E /* DisplayMac.h */,
-				D01159BA1F40E96C0039383E /* Info.plist */,
-				D01C06C11FC254F8001561AB /* ASDisplayNode.swift */,
-				D01847601FFA703B00075256 /* UIKit.swift */,
-				D01847621FFA70FC00075256 /* UIView.swift */,
-				D01847721FFA780400075256 /* UIScrollView.swift */,
-				D018476B1FFA765D00075256 /* NSValueAdditions.swift */,
-				D01847761FFA78C100075256 /* UIGestureRecognizer.swift */,
-				D01847781FFA7A4E00075256 /* UITouch.swift */,
-				D018477B1FFA7ABF00075256 /* UISlider.swift */,
-				D0E8175C2014ED7D00B82BBB /* CADisplayLink.swift */,
-			);
-			path = DisplayMac;
 			sourceTree = "<group>";
 		};
 		D015F7501D1ADC6800E269B5 /* Window */ = {
@@ -576,7 +513,6 @@
 		D05CC2591B69316F00E235A3 = {
 			isa = PBXGroup;
 			children = (
-				D01159B81F40E96C0039383E /* DisplayMac */,
 				D05CC2A31B6932D500E235A3 /* Frameworks */,
 				D05CC2651B69316F00E235A3 /* Display */,
 				D05CC2711B69316F00E235A3 /* DisplayTests */,
@@ -589,7 +525,6 @@
 			children = (
 				D05CC2631B69316F00E235A3 /* Display.framework */,
 				D05CC26D1B69316F00E235A3 /* DisplayTests.xctest */,
-				D01159B71F40E96B0039383E /* DisplayMac.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -800,14 +735,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		D01159B41F40E96B0039383E /* Headers */ = {
-			isa = PBXHeadersBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D01159BB1F40E96C0039383E /* DisplayMac.h in Headers */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D05CC2601B69316F00E235A3 /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
@@ -833,24 +760,6 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		D01159B61F40E96B0039383E /* DisplayMac */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D01159C01F40E96C0039383E /* Build configuration list for PBXNativeTarget "DisplayMac" */;
-			buildPhases = (
-				D01159B21F40E96B0039383E /* Sources */,
-				D01159B31F40E96B0039383E /* Frameworks */,
-				D01159B41F40E96B0039383E /* Headers */,
-				D01159B51F40E96B0039383E /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = DisplayMac;
-			productName = DisplayMac;
-			productReference = D01159B71F40E96B0039383E /* DisplayMac.framework */;
-			productType = "com.apple.product-type.framework";
-		};
 		D05CC2621B69316F00E235A3 /* Display */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D05CC2771B69316F00E235A3 /* Build configuration list for PBXNativeTarget "Display" */;
@@ -897,12 +806,6 @@
 				LastUpgradeCheck = 0800;
 				ORGANIZATIONNAME = Telegram;
 				TargetAttributes = {
-					D01159B61F40E96B0039383E = {
-						CreatedOnToolsVersion = 8.3.2;
-						DevelopmentTeam = X834Q8SBVP;
-						LastSwiftMigration = 0830;
-						ProvisioningStyle = Automatic;
-					};
 					D05CC2621B69316F00E235A3 = {
 						CreatedOnToolsVersion = 7.0;
 						ProvisioningStyle = Manual;
@@ -926,19 +829,11 @@
 			targets = (
 				D05CC2621B69316F00E235A3 /* Display */,
 				D05CC26C1B69316F00E235A3 /* DisplayTests */,
-				D01159B61F40E96B0039383E /* DisplayMac */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		D01159B51F40E96B0039383E /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D05CC2611B69316F00E235A3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -958,36 +853,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D01159B21F40E96B0039383E /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D01847691FFA756600075256 /* ListViewAccessoryItemNode.swift in Sources */,
-				D01847611FFA703B00075256 /* UIKit.swift in Sources */,
-				D01847701FFA773100075256 /* ListView.swift in Sources */,
-				D0E8175F2014F18F00B82BBB /* ListViewTransactionQueue.swift in Sources */,
-				D01847771FFA78C100075256 /* UIGestureRecognizer.swift in Sources */,
-				D01C06C21FC254F8001561AB /* ASDisplayNode.swift in Sources */,
-				D01847631FFA70FC00075256 /* UIView.swift in Sources */,
-				D01847791FFA7A4E00075256 /* UITouch.swift in Sources */,
-				D01C06C41FC25561001561AB /* ListViewItemNode.swift in Sources */,
-				D018476D1FFA765D00075256 /* NSValueAdditions.swift in Sources */,
-				D01847641FFA723600075256 /* CAAnimationUtils.swift in Sources */,
-				D018476A1FFA75EE00075256 /* Spring.swift in Sources */,
-				D01C06C31FC2552C001561AB /* ListViewItemHeader.swift in Sources */,
-				D018477C1FFA7ABF00075256 /* UISlider.swift in Sources */,
-				D01847671FFA72E000075256 /* ContainedViewLayoutTransition.swift in Sources */,
-				D018476E1FFA76DC00075256 /* ListViewItem.swift in Sources */,
-				D01847751FFA78B200075256 /* ListViewScroller.swift in Sources */,
-				D01847711FFA778100075256 /* ListViewIntermediateState.swift in Sources */,
-				D018476F1FFA76FD00075256 /* ListViewAccessoryItem.swift in Sources */,
-				D018477A1FFA7A8800075256 /* ListViewOverscrollBackgroundNode.swift in Sources */,
-				D01847741FFA780400075256 /* UIScrollView.swift in Sources */,
-				D0E8175E2014ED7D00B82BBB /* CADisplayLink.swift in Sources */,
-				D01847681FFA749F00075256 /* ListViewAnimation.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D05CC25E1B69316F00E235A3 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1148,254 +1013,6 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		D01159BC1F40E96C0039383E /* DebugHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				FRAMEWORK_VERSION = A;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = DisplayMac/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.DisplayMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.0;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = DebugHockeyapp;
-		};
-		D01159BD1F40E96C0039383E /* DebugAppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				FRAMEWORK_VERSION = A;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = DisplayMac/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.DisplayMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.0;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = DebugAppStore;
-		};
-		D01159BE1F40E96C0039383E /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_VERSION = A;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = DisplayMac/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.DisplayMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.0;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = ReleaseHockeyapp;
-		};
-		D01159BF1F40E96C0039383E /* ReleaseAppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_VERSION = A;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = DisplayMac/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.DisplayMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.0;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = ReleaseAppStore;
-		};
 		D021D4F4219CB1AD0064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1482,72 +1099,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.DisplayTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
-			};
-			name = DebugFork;
-		};
-		D021D4F7219CB1AD0064BEBA /* DebugFork */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				FRAMEWORK_VERSION = A;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = DisplayMac/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.DisplayMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.0;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
 			};
 			name = DebugFork;
 		};
@@ -1978,64 +1529,6 @@
 			};
 			name = ReleaseHockeyappInternal;
 		};
-		D0924FD71FE52BE9003F693F /* ReleaseHockeyappInternal */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_VERSION = A;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = DisplayMac/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.DisplayMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.0;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = ReleaseHockeyappInternal;
-		};
 		D0ADF920212B3ABC00310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2125,72 +1618,6 @@
 			};
 			name = DebugAppStoreLLC;
 		};
-		D0ADF923212B3ABC00310BBC /* DebugAppStoreLLC */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				FRAMEWORK_VERSION = A;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = DisplayMac/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.DisplayMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.0;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = DebugAppStoreLLC;
-		};
 		D0CE6EE1213DB54B00BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2273,82 +1700,9 @@
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EE4213DB54B00BCD44B /* ReleaseAppStoreLLC */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				FRAMEWORK_VERSION = A;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = DisplayMac/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = org.Telegram.DisplayMac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.0;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = ReleaseAppStoreLLC;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D01159C01F40E96C0039383E /* Build configuration list for PBXNativeTarget "DisplayMac" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D01159BC1F40E96C0039383E /* DebugHockeyapp */,
-				D021D4F7219CB1AD0064BEBA /* DebugFork */,
-				D01159BD1F40E96C0039383E /* DebugAppStore */,
-				D0ADF923212B3ABC00310BBC /* DebugAppStoreLLC */,
-				D01159BE1F40E96C0039383E /* ReleaseHockeyapp */,
-				D0924FD71FE52BE9003F693F /* ReleaseHockeyappInternal */,
-				D01159BF1F40E96C0039383E /* ReleaseAppStore */,
-				D0CE6EE4213DB54B00BCD44B /* ReleaseAppStoreLLC */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = ReleaseHockeyapp;
-		};
 		D05CC25D1B69316F00E235A3 /* Build configuration list for PBXProject "Display" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
