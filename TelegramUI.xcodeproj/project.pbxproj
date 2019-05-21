@@ -449,6 +449,7 @@
 		D0955FB521912B6000F89427 /* PresentationStrings.mapping in Resources */ = {isa = PBXBuildFile; fileRef = D0955FB32191278C00F89427 /* PresentationStrings.mapping */; };
 		D097C26820DD0A1D007BB4B8 /* PeerReportController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D097C26720DD0A1D007BB4B8 /* PeerReportController.swift */; };
 		D097C26C20DD1EA5007BB4B8 /* OverlayStatusController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D097C26B20DD1EA5007BB4B8 /* OverlayStatusController.swift */; };
+		D098908222943AE70053F151 /* Weak.swift in Sources */ = {isa = PBXBuildFile; fileRef = D098908122943AE70053F151 /* Weak.swift */; };
 		D099D74D1EEFEE1500A3128C /* GameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D74C1EEFEE1500A3128C /* GameController.swift */; };
 		D099D74F1EEFEE6A00A3128C /* GameControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D74E1EEFEE6A00A3128C /* GameControllerNode.swift */; };
 		D099D7511EEFF91E00A3128C /* GameControllerTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D7501EEFF91E00A3128C /* GameControllerTitleView.swift */; };
@@ -1920,6 +1921,7 @@
 		D096A47A1EA6A2F00000A7AE /* PresentationStrings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationStrings.swift; sourceTree = "<group>"; };
 		D097C26720DD0A1D007BB4B8 /* PeerReportController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerReportController.swift; sourceTree = "<group>"; };
 		D097C26B20DD1EA5007BB4B8 /* OverlayStatusController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayStatusController.swift; sourceTree = "<group>"; };
+		D098908122943AE70053F151 /* Weak.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Weak.swift; sourceTree = "<group>"; };
 		D099261E1E69791E00D95539 /* GroupsInCommonController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupsInCommonController.swift; sourceTree = "<group>"; };
 		D099D74C1EEFEE1500A3128C /* GameController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GameController.swift; sourceTree = "<group>"; };
 		D099D74E1EEFEE6A00A3128C /* GameControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GameControllerNode.swift; sourceTree = "<group>"; };
@@ -4957,6 +4959,7 @@
 				09D96898221DE92600B1458A /* ID3ArtworkReader.swift */,
 				09E4A800223AE1B30038140F /* PeerType.swift */,
 				09E4A806223D4B860038140F /* AccountUtils.swift */,
+				D098908122943AE70053F151 /* Weak.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5503,6 +5506,7 @@
 				0962E66521B3631100245FD9 /* WebSearchNavigationContentNode.swift in Sources */,
 				096C98BF21787C6700C211FF /* TGBridgeAudioEncoder.m in Sources */,
 				D01776B81F1D6FB30044446D /* RadialProgressContentNode.swift in Sources */,
+				D098908222943AE70053F151 /* Weak.swift in Sources */,
 				D05D8B762195CD930064586F /* SetupTwoStepVerificationControllerNode.swift in Sources */,
 				D0EC6CFA1EB9F58800EBF1C3 /* ManagedAudioSession.swift in Sources */,
 				D0EB5ADF1F798033004E89B6 /* PeerMediaCollectionEmptyNode.swift in Sources */,

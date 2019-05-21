@@ -5,7 +5,7 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 
-private let historyMessageCount: Int = 200
+private let historyMessageCount: Int = 100
 
 public enum ChatHistoryListMode: Equatable {
     case bubbles
