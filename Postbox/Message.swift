@@ -443,7 +443,7 @@ public struct MessageForwardInfo: Equatable {
     }
 }
 
-public protocol MessageAttribute: PostboxCoding {
+public protocol MessageAttribute: class, PostboxCoding {
     var associatedPeerIds: [PeerId] { get }
     var associatedMessageIds: [MessageId] { get }
 }

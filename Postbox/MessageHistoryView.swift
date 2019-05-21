@@ -377,6 +377,21 @@ final class MutableMessageHistoryView {
                 }
             case let .loaded(loadedState):
                 for operationSet in operations {
+                    var addCount = 0
+                    var removeCount = 0
+                    for operation in operationSet {
+                        switch operation {
+                            case .InsertMessage:
+                                addCount += 1
+                            case .Remove:
+                                removeCount += 1
+                            default:
+                                break
+                        }
+                    }
+                    if addCount == 2 && removeCount == 2 {
+                        assert(true)
+                    }
                     for operation in operationSet {
                         switch operation {
                             case let .InsertMessage(message):

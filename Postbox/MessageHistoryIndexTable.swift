@@ -146,6 +146,10 @@ final class MessageHistoryIndexTable: Table {
                             operations.append(.Update(previousIndex, message))
                         case let .InsertMessage(insertMessage) where insertMessage.index == message.index:
                             break
+                        case let .InsertExistingMessage(insertMessage) where insertMessage.index == message.index:
+                            operations.removeAll()
+                            operations.append(.Remove(index: previousIndex))
+                            operations.append(.Update(insertMessage.index, message))
                         default:
                             operations.append(operation)
                     }
