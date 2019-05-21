@@ -393,12 +393,12 @@ public final class SqliteValueBox: ValueBox {
         
         if result < 3 {
             resultCode = database.execute("CREATE TABLE __meta_fulltext_tables (name INTEGER)")
-            precondition(resultCode)
+            assert(resultCode)
         }
         
         if result < 4 {
             resultCode = database.execute("PRAGMA user_version=4")
-            precondition(resultCode)
+            assert(resultCode)
         }
         
         for table in self.listTables(database) {
@@ -424,13 +424,13 @@ public final class SqliteValueBox: ValueBox {
     public func begin() {
         precondition(self.queue.isCurrent())
         let resultCode = self.database.execute("BEGIN IMMEDIATE")
-        precondition(resultCode)
+        assert(resultCode)
     }
     
     public func commit() {
         precondition(self.queue.isCurrent())
         let resultCode = self.database.execute("COMMIT")
-        precondition(resultCode)
+        assert(resultCode)
     }
     
     public func checkpoint() {
@@ -448,7 +448,7 @@ public final class SqliteValueBox: ValueBox {
     private func commitInternal(database: Database) {
         precondition(self.queue.isCurrent())
         let resultCode = database.execute("COMMIT")
-        precondition(resultCode)
+        assert(resultCode)
     }
     
     private func isEncrypted(_ database: Database) -> Bool {
