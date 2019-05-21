@@ -76,6 +76,7 @@ final class AccountManagerImpl {
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath))
             do {
+                
                 let atomicState = try JSONDecoder().decode(AccountManagerAtomicState.self, from: data)
                 self.currentAtomicState = atomicState
             } catch let e {

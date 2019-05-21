@@ -47,7 +47,12 @@ public final class AccountRecord: PostboxCoding, Equatable, Codable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(AccountRecordId.self, forKey: .id)
+        if let idString = try? container.decode(String.self, forKey: .id), let idValue = Int64(idString) {
+            self.id = AccountRecordId(rawValue: idValue)
+        } else {
+            self.id = try container.decode(AccountRecordId.self, forKey: .id)
+        }
+        
         let attributesData = try container.decode(Array<Data>.self, forKey: .attributes)
         var attributes: [AccountRecordAttribute] = []
         for data in attributesData {
@@ -56,12 +61,17 @@ public final class AccountRecord: PostboxCoding, Equatable, Codable {
             }
         }
         self.attributes = attributes
-        self.temporarySessionId = try container.decodeIfPresent(Int64.self, forKey: .temporarySessionId)
+        
+        if let temporarySessionIdString = try container.decodeIfPresent(String.self, forKey: .temporarySessionId), let temporarySessionIdValue = Int64(temporarySessionIdString) {
+            self.temporarySessionId = temporarySessionIdValue
+        } else {
+            self.temporarySessionId = nil
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.id, forKey: .id)
+        try container.encode(String("\(self.id.rawValue)"), forKey: .id)
         let attributesData: [Data] = self.attributes.map { attribute in
             let encoder = PostboxEncoder()
             encoder.encodeRootObject(attribute)
