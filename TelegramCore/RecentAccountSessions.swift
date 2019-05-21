@@ -36,7 +36,7 @@ public func terminateAccountSession(account: Account, hash: Int64) -> Signal<Voi
         return .generic
     }
     |> mapToSignal { _ -> Signal<Void, TerminateSessionError> in
-        return .complete()
+        return .single(Void())
     }
 }
 
@@ -44,6 +44,6 @@ public func terminateOtherAccountSessions(account: Account) -> Signal<Void, NoEr
     return account.network.request(Api.functions.auth.resetAuthorizations())
     |> retryRequest
     |> mapToSignal { _ -> Signal<Void, NoError> in
-        return .complete()
+        return .single(Void())
     }
 }
