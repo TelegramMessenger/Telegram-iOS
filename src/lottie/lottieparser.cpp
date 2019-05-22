@@ -1685,8 +1685,10 @@ void LottieParserImpl::getValue(float &val)
 {
     if (PeekType() == kArrayType) {
         EnterArray();
+        if (NextArrayValue()) val = GetDouble();
+        //discard rest
         while (NextArrayValue()) {
-            val = GetDouble();
+            GetDouble();
         }
     } else if (PeekType() == kNumberType) {
         val = GetDouble();
