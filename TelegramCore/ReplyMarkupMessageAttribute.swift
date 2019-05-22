@@ -181,6 +181,8 @@ extension ReplyMarkupButton {
                 self.init(title: text, action: .payment)
             case let .keyboardButtonUrlAuth(text, url, buttonId):
                 self.init(title: text, action: .urlAuth(url: url, buttonId: buttonId))
+            case let .inputKeyboardButtonUrlAuth(_, text, url, _):
+                self.init(title: text, action: .urlAuth(url: url, buttonId: 0))
         }
     }
 }

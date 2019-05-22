@@ -10,7 +10,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-206066487] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
     dict[461151667] = { return Api.ChatFull.parse_chatFull($0) }
-    dict[56920439] = { return Api.ChatFull.parse_channelFull($0) }
+    dict[430407729] = { return Api.ChatFull.parse_channelFull($0) }
     dict[1465219162] = { return Api.PollResults.parse_pollResults($0) }
     dict[-925415106] = { return Api.ChatParticipant.parse_chatParticipant($0) }
     dict[-636267638] = { return Api.ChatParticipant.parse_chatParticipantCreator($0) }
@@ -254,6 +254,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1358175439] = { return Api.KeyboardButton.parse_keyboardButtonGame($0) }
     dict[-1344716869] = { return Api.KeyboardButton.parse_keyboardButtonBuy($0) }
     dict[2007189877] = { return Api.KeyboardButton.parse_keyboardButtonUrlAuth($0) }
+    dict[-1356547212] = { return Api.KeyboardButton.parse_inputKeyboardButtonUrlAuth($0) }
     dict[-748155807] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[1679398724] = { return Api.SecureFile.parse_secureFileEmpty($0) }
     dict[-534283678] = { return Api.SecureFile.parse_secureFile($0) }
@@ -305,6 +306,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1122524854] = { return Api.TopPeerCategory.parse_topPeerCategoryGroups($0) }
     dict[371037736] = { return Api.TopPeerCategory.parse_topPeerCategoryChannels($0) }
     dict[511092620] = { return Api.TopPeerCategory.parse_topPeerCategoryPhoneCalls($0) }
+    dict[-1472172887] = { return Api.TopPeerCategory.parse_topPeerCategoryForwardUsers($0) }
+    dict[-68239120] = { return Api.TopPeerCategory.parse_topPeerCategoryForwardChats($0) }
     dict[-1219778094] = { return Api.contacts.Contacts.parse_contactsNotModified($0) }
     dict[-353862078] = { return Api.contacts.Contacts.parse_contacts($0) }
     dict[-1798033689] = { return Api.ChannelMessagesFilter.parse_channelMessagesFilterEmpty($0) }
@@ -377,6 +380,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[771095562] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionDefaultBannedRights($0) }
     dict[-1895328189] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionStopPoll($0) }
     dict[1129042607] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangePhoto($0) }
+    dict[-1569748965] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionChangeLinkedChat($0) }
     dict[-526508104] = { return Api.help.ProxyData.parse_proxyDataEmpty($0) }
     dict[737668643] = { return Api.help.ProxyData.parse_proxyDataPromo($0) }
     dict[-543777747] = { return Api.auth.ExportedAuthorization.parse_exportedAuthorization($0) }
@@ -476,7 +480,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1951620897] = { return Api.messages.Messages.parse_messagesNotModified($0) }
     dict[-1725551049] = { return Api.messages.Messages.parse_channelMessages($0) }
     dict[-923939298] = { return Api.messages.Messages.parse_messagesSlice($0) }
-    dict[-1497072982] = { return Api.messages.Messages.parse_messagesSliceLegacy($0) }
     dict[-1022713000] = { return Api.Invoice.parse_invoice($0) }
     dict[-2122045747] = { return Api.PeerSettings.parse_peerSettings($0) }
     dict[955951967] = { return Api.auth.SentCode.parse_sentCode($0) }
@@ -685,7 +688,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[455635795] = { return Api.MessageAction.parse_messageActionSecureValuesSentMe($0) }
     dict[-648257196] = { return Api.MessageAction.parse_messageActionSecureValuesSent($0) }
     dict[-202219658] = { return Api.MessageAction.parse_messageActionContactSignUp($0) }
-    dict[29007925] = { return Api.MessageAction.parse_messageActionPhoneNumberRequest($0) }
     dict[1399245077] = { return Api.PhoneCall.parse_phoneCallEmpty($0) }
     dict[462375633] = { return Api.PhoneCall.parse_phoneCallWaiting($0) }
     dict[-2014659757] = { return Api.PhoneCall.parse_phoneCallRequested($0) }
@@ -2228,7 +2230,6 @@ struct messages {
         case messagesNotModified(count: Int32)
         case channelMessages(flags: Int32, pts: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case messagesSlice(flags: Int32, count: Int32, nextRate: Int32?, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
-        case messagesSliceLegacy(flags: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -2304,28 +2305,6 @@ struct messages {
                         item.serialize(buffer, true)
                     }
                     break
-                case .messagesSliceLegacy(let flags, let count, let messages, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(-1497072982)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(messages.count))
-                    for item in messages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
     }
     }
     
@@ -2339,8 +2318,6 @@ struct messages {
                 return ("channelMessages", [("flags", flags), ("pts", pts), ("count", count), ("messages", messages), ("chats", chats), ("users", users)])
                 case .messagesSlice(let flags, let count, let nextRate, let messages, let chats, let users):
                 return ("messagesSlice", [("flags", flags), ("count", count), ("nextRate", nextRate), ("messages", messages), ("chats", chats), ("users", users)])
-                case .messagesSliceLegacy(let flags, let count, let messages, let chats, let users):
-                return ("messagesSliceLegacy", [("flags", flags), ("count", count), ("messages", messages), ("chats", chats), ("users", users)])
     }
     }
     
@@ -2437,35 +2414,6 @@ struct messages {
             let _c6 = _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.messages.Messages.messagesSlice(flags: _1!, count: _2!, nextRate: _3, messages: _4!, chats: _5!, users: _6!)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_messagesSliceLegacy(_ reader: BufferReader) -> Messages? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _4: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.messages.Messages.messagesSliceLegacy(flags: _1!, count: _2!, messages: _3!, chats: _4!, users: _5!)
             }
             else {
                 return nil

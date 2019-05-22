@@ -78,8 +78,6 @@ func withResolvedAssociatedMessages(postbox: Postbox, source: FetchMessageHistor
                                     return (messages, chats, users)
                                 case let .messagesSlice(_, _, _, messages, chats, users):
                                     return (messages, chats, users)
-                                case let .messagesSliceLegacy(_, _, messages, chats, users):
-                                    return (messages, chats, users)
                                 case let .channelMessages(_, _, _, messages, chats, users):
                                     return (messages, chats, users)
                                 case .messagesNotModified:
@@ -324,10 +322,6 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
-                        case let .messagesSliceLegacy(_, _, messages: apiMessages, chats: apiChats, users: apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
                         case let .channelMessages(_, pts, _, apiMessages, apiChats, apiUsers):
                             messages = apiMessages
                             chats = apiChats
@@ -513,10 +507,6 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
                     chats = apiChats
                     users = apiUsers
                 case let .messagesSlice(_, _, _, messages: apiMessages, chats: apiChats, users: apiUsers):
-                    messages = apiMessages
-                    chats = apiChats
-                    users = apiUsers
-                case let .messagesSliceLegacy(_, _, messages: apiMessages, chats: apiChats, users: apiUsers):
                     messages = apiMessages
                     chats = apiChats
                     users = apiUsers

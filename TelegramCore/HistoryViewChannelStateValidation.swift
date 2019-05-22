@@ -346,10 +346,6 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
-                            case let .messagesSliceLegacy(_, _, messages: apiMessages, chats: apiChats, users: apiUsers):
-                                messages = apiMessages
-                                chats = apiChats
-                                users = apiUsers
                             case let .channelMessages(_, pts, _, apiMessages, apiChats, apiUsers):
                                 messages = apiMessages
                                 chats = apiChats
@@ -421,8 +417,6 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                                 case let .messages(messages, _, _):
                                                     apiMessages = messages
                                                 case let .messagesSlice(_, _, _, messages, _, _):
-                                                    apiMessages = messages
-                                                case let .messagesSliceLegacy(_, _, messages, _, _):
                                                     apiMessages = messages
                                                 case .messagesNotModified:
                                                     return Set()

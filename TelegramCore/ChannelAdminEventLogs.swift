@@ -207,6 +207,8 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                         if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                             action = .pollStopped(rendered)
                                         }
+                                    case let .channelAdminLogEventActionChangeLinkedChat(prevValue, newValue):
+                                        break
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {

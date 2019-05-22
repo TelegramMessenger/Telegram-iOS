@@ -2902,21 +2902,6 @@ extension Api {
                     })
                 }
             
-                static func sendPhoneNumberRequest(peer: Api.InputPeer, randomId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1424841719)
-                    peer.serialize(buffer, true)
-                    serializeInt64(randomId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.sendPhoneNumberRequest", parameters: [("peer", peer), ("randomId", randomId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
                 static func getSearchCounters(peer: Api.InputPeer, filters: [Api.MessagesFilter]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.messages.SearchCounter]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1932455680)
@@ -3442,19 +3427,44 @@ extension Api {
                     })
                 }
             
-                static func searchPosts(q: String, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                static func getPublicGroupsForDiscussion() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1134602210)
-                    serializeString(q, buffer: buffer, boxed: false)
-                    serializeInt32(offsetRate, buffer: buffer, boxed: false)
-                    offsetPeer.serialize(buffer, true)
-                    serializeInt32(offsetId, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "channels.searchPosts", parameters: [("q", q), ("offsetRate", offsetRate), ("offsetPeer", offsetPeer), ("offsetId", offsetId), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                    buffer.appendInt32(982265528)
+                    
+                    return (FunctionDescription(name: "channels.getPublicGroupsForDiscussion", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
                         let reader = BufferReader(buffer)
-                        var result: Api.messages.Messages?
+                        var result: Api.messages.Chats?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Chats
+                        }
+                        return result
+                    })
+                }
+            
+                static func getPublicBroadcastsForDiscussion() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(921491570)
+                    
+                    return (FunctionDescription(name: "channels.getPublicBroadcastsForDiscussion", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Chats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Chats
+                        }
+                        return result
+                    })
+                }
+            
+                static func setDiscussionGroup(broadcast: Api.InputChannel, group: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1079520178)
+                    broadcast.serialize(buffer, true)
+                    group.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.setDiscussionGroup", parameters: [("broadcast", broadcast), ("group", group)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

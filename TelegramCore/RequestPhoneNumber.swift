@@ -8,7 +8,8 @@ import SwiftSignalKit
 #endif
 
 public func requestPhoneNumber(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputPeer? in
+    return .never()
+    /*return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
     |> mapToSignal { inputPeer -> Signal<Never, NoError> in
@@ -26,6 +27,6 @@ public func requestPhoneNumber(account: Account, peerId: PeerId) -> Signal<Never
             }
             return .complete()
         }
-    }
+    }*/
 }
 

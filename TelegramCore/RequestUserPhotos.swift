@@ -87,10 +87,6 @@ public func requestPeerPhotos(account:Account, peerId: PeerId) -> Signal<[Telegr
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
-                        case let .messagesSliceLegacy(_, _, apiMessages, apiChats, apiUsers):
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
                         case .messagesNotModified:
                             messages = []
                             chats = []

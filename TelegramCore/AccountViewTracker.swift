@@ -92,10 +92,6 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                         messages = apiMessages
                         chats = apiChats
                         users = apiUsers
-                    case let .messagesSliceLegacy(_, _, messages: apiMessages, chats: apiChats, users: apiUsers):
-                        messages = apiMessages
-                        chats = apiChats
-                        users = apiUsers
                     case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
                         messages = apiMessages
                         chats = apiChats
@@ -615,8 +611,6 @@ public final class AccountViewTracker {
                                     case let .messages(messages, chats, users):
                                         return (messages, chats, users)
                                     case let .messagesSlice(_, _, _, messages, chats, users):
-                                        return (messages, chats, users)
-                                    case let .messagesSliceLegacy(_, _, messages, chats, users):
                                         return (messages, chats, users)
                                     case let .channelMessages(_, _, _, messages, chats, users):
                                         return (messages, chats, users)

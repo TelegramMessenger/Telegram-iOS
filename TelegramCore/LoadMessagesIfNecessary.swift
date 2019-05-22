@@ -63,8 +63,6 @@ public func getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Postb
                                     return (messages, chats, users)
                                 case let .messagesSlice(_, _, _, messages, chats, users):
                                     return (messages, chats, users)
-                                case let .messagesSliceLegacy(_, _, messages, chats, users):
-                                    return (messages, chats, users)
                                 case let .channelMessages(_, _, _, messages, chats, users):
                                     return (messages, chats, users)
                                 case .messagesNotModified:

@@ -138,8 +138,6 @@ private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox
                     return .single([])
                 case let .messagesSlice(messagesSlice):
                     return .single(messagesSlice.messages.compactMap({ $0.id }))
-                case let .messagesSliceLegacy(messagesSlice):
-                    return .single(messagesSlice.messages.compactMap({ $0.id }))
             }
         }
         |> mapToSignal { ids -> Signal<Int32?, MTRpcError> in
