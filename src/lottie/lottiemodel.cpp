@@ -41,6 +41,10 @@ public:
             auto child = (*i).get();
             if (child->type() == LOTData::Type::Repeater) {
                 LOTRepeaterData *repeater = static_cast<LOTRepeaterData *>(child);
+                // check if this repeater is already processed
+                // can happen if the layer is an asset and referenced by multiple layer.
+                if (!repeater->mChildren.empty()) continue;
+
                 auto sharedShapeGroup = std::make_shared<LOTShapeGroupData>();
                 LOTShapeGroupData *shapeGroup = sharedShapeGroup.get();
                 // 1. increment the reverse iterator to point to the
