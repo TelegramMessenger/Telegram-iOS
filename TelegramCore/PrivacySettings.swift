@@ -119,7 +119,8 @@ extension SelectivePrivacySettings {
                 case let .privacyValueAllowUsers(users):
                     enableFor = Set(users.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) })
                 case .privacyValueDisallowAll:
-                    current = .disableEveryone(enableFor: Set())
+                    //current = .disableEveryone(enableFor: Set())
+                    break
                 case .privacyValueDisallowContacts:
                     break
                 case let .privacyValueDisallowUsers(users):
