@@ -1316,6 +1316,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     public func transaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, additionalScrollDistance: CGFloat = 0.0, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, updateOpaqueState: Any?, completion: @escaping (ListViewDisplayedItemRange) -> Void = { _ in }) {
         if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil && updateSizeAndInsets == nil && additionalScrollDistance.isZero {
+            if let updateOpaqueState = updateOpaqueState {
+                self.opaqueTransactionState = updateOpaqueState
+            }
             completion(self.immediateDisplayedItemRange())
             return
         }
@@ -1350,6 +1353,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.ignoreScrollingEvents = wasIgnoringScrollingEvents
                 
                 self.updateScroller(transition: .immediate)
+                
+                if let updateOpaqueState = updateOpaqueState {
+                    self.opaqueTransactionState = updateOpaqueState
+                }
                 
                 completion()
                 return
