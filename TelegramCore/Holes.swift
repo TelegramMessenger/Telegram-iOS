@@ -160,14 +160,28 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                     maxId = end.id
                                     minId = start.id - 1
                                     
-                                    minMaxRange = start.id ... min(end.id, Int32.max - 1)
+                                    let rangeStartId = start.id
+                                    let rangeEndId = min(end.id, Int32.max - 1)
+                                    if rangeStartId <= rangeEndId {
+                                        minMaxRange = rangeStartId ... rangeEndId
+                                    } else {
+                                        minMaxRange = rangeStartId ... rangeStartId
+                                        assertionFailure()
+                                    }
                                 } else {
                                     offsetId = start.id == Int32.max ? start.id : (start.id + 1)
                                     addOffset = 0
                                     maxId = start.id == Int32.max ? start.id : (start.id + 1)
                                     minId = end.id
                                     
-                                    minMaxRange = end.id ... min(start.id, Int32.max - 1)
+                                    let rangeStartId = end.id
+                                    let rangeEndId = min(start.id, Int32.max - 1)
+                                    if rangeStartId <= rangeEndId {
+                                        minMaxRange = rangeStartId ... rangeEndId
+                                    } else {
+                                        minMaxRange = rangeStartId ... rangeStartId
+                                        assertionFailure()
+                                    }
                                 }
                             case let .aroundId(id):
                                 offsetId = id.id
@@ -195,14 +209,28 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                         maxId = end.id
                                         minId = start.id - 1
                                         
-                                        minMaxRange = start.id ... min(end.id, Int32.max - 1)
+                                        let rangeStartId = start.id
+                                        let rangeEndId = min(end.id, Int32.max - 1)
+                                        if rangeStartId <= rangeEndId {
+                                            minMaxRange = rangeStartId ... rangeEndId
+                                        } else {
+                                            minMaxRange = rangeStartId ... rangeStartId
+                                            assertionFailure()
+                                        }
                                     } else {
                                         offsetId = start.id == Int32.max ? start.id : (start.id + 1)
                                         addOffset = 0
                                         maxId = start.id == Int32.max ? start.id : (start.id + 1)
                                         minId = end.id
                                         
-                                        minMaxRange = end.id ... min(start.id, Int32.max - 1)
+                                        let rangeStartId = end.id
+                                        let rangeEndId = min(start.id, Int32.max - 1)
+                                        if rangeStartId <= rangeEndId {
+                                            minMaxRange = rangeStartId ... rangeEndId
+                                        } else {
+                                            minMaxRange = rangeStartId ... rangeStartId
+                                            assertionFailure()
+                                        }
                                     }
                                 case let .aroundId(id):
                                     offsetId = id.id
@@ -238,14 +266,28 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                         maxId = end.id
                                         minId = start.id - 1
                                         
-                                        minMaxRange = start.id ... min(end.id, Int32.max - 1)
+                                        let rangeStartId = start.id
+                                        let rangeEndId = min(end.id, Int32.max - 1)
+                                        if rangeStartId <= rangeEndId {
+                                            minMaxRange = rangeStartId ... rangeEndId
+                                        } else {
+                                            minMaxRange = rangeStartId ... rangeStartId
+                                            assertionFailure()
+                                        }
                                     } else {
                                         offsetId = start.id == Int32.max ? start.id : (start.id + 1)
                                         addOffset = 0
                                         maxId = start.id == Int32.max ? start.id : (start.id + 1)
                                         minId = end.id
                                         
-                                        minMaxRange = end.id ... min(start.id, Int32.max - 1)
+                                        let rangeStartId = end.id
+                                        let rangeEndId = min(start.id, Int32.max - 1)
+                                        if rangeStartId <= rangeEndId {
+                                            minMaxRange = rangeStartId ... rangeEndId
+                                        } else {
+                                            minMaxRange = rangeStartId ... rangeStartId
+                                            assertionFailure()
+                                        }
                                     }
                                 case let .aroundId(id):
                                     offsetId = id.id
