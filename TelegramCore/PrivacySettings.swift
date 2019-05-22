@@ -158,7 +158,7 @@ extension SelectivePrivacySettings {
                         }
                     }
                 case .privacyValueDisallowAll:
-                    current = .disableEveryone(enableFor: [:])
+                    break
                 case .privacyValueDisallowContacts:
                     break
                 case let .privacyValueDisallowUsers(users):
