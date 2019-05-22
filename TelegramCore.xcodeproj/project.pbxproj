@@ -516,6 +516,8 @@
 		D0AB262721C2F991008F6685 /* TelegramMediaPoll.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB262521C2F991008F6685 /* TelegramMediaPoll.swift */; };
 		D0AB262B21C3CE80008F6685 /* Polls.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB262A21C3CE80008F6685 /* Polls.swift */; };
 		D0AB262C21C3CE80008F6685 /* Polls.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB262A21C3CE80008F6685 /* Polls.swift */; };
+		D0ACFA9422946D29007E4A8B /* SynchronizeEmojiKeywordsOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093857A72243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift */; };
+		D0ACFA9522946D29007E4A8B /* ManagedSynchronizeEmojiKeywordsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093857A62243D87800EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift */; };
 		D0AD02E31FFFA14800C1DCFF /* PeerLiveLocationsContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD02E21FFFA14800C1DCFF /* PeerLiveLocationsContext.swift */; };
 		D0AD02E41FFFA14800C1DCFF /* PeerLiveLocationsContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD02E21FFFA14800C1DCFF /* PeerLiveLocationsContext.swift */; };
 		D0ADF911212B00DD00310BBC /* SecureIdConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF910212B00DD00310BBC /* SecureIdConfiguration.swift */; };
@@ -2586,6 +2588,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0ACFA9422946D29007E4A8B /* SynchronizeEmojiKeywordsOperation.swift in Sources */,
+				D0ACFA9522946D29007E4A8B /* ManagedSynchronizeEmojiKeywordsOperations.swift in Sources */,
 				9F7D42262223FF49007B68BB /* AutodownloadSettings.swift in Sources */,
 				9F7D42272223FF49007B68BB /* ManagedAutodownloadSettingsUpdates.swift in Sources */,
 				9F153D1021E8E0A200B95D82 /* Wallpaper.swift in Sources */,
