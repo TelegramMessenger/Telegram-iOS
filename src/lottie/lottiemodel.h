@@ -768,44 +768,43 @@ public:
         if (vCompare(diff, 0.0f)) return Segment(0, 0);
         if (vCompare(diff, 1.0f)) return Segment(0, 1);
 
-        // no offset case
-        if (vCompare(fabs(offset), 0.0f)) {
-            return noloop(start, end);
-        } else {
-            if (offset > 0) {
-                start += offset;
-                end += offset;
-                if (start <= 1 && end <=1) {
-                    return noloop(start, end);
-                } else if (start > 1 && end > 1) {
-                    return noloop(start - 1, end - 1);
-                } else {
-                    if (start > 1) return loop(start - 1 , end);
-                    else return loop(start , end - 1);
-                }
+        if (offset > 0) {
+            start += offset;
+            end += offset;
+            if (start <= 1 && end <=1) {
+                return noloop(start, end);
+            } else if (start > 1 && end > 1) {
+                return noloop(start - 1, end - 1);
             } else {
-                start += offset;
-                end   += offset;
-                if (start >= 0 && end >= 0) {
-                    return noloop(start, end);
-                } else if (start < 0 && end < 0) {
-                    return noloop(-start, -end);
-                } else {
-                    if (start < 0) return loop(1 + start, end);
-                    else return loop(start , 1 + end);
-                }
+                if (start > 1) return loop(start - 1 , end);
+                else return loop(start , end - 1);
+            }
+        } else {
+            start += offset;
+            end   += offset;
+            if (start >= 0 && end >= 0) {
+                return noloop(start, end);
+            } else if (start < 0 && end < 0) {
+                return noloop(1 + start, 1 + end);
+            } else {
+                if (start < 0) return loop(1 + start, end);
+                else return loop(start , 1 + end);
             }
         }
     }
     LOTTrimData::TrimType type() const {return mTrimType;}
 private:
     Segment noloop(float start, float end) const{
+        assert(start >= 0);
+        assert(end >= 0);
         Segment s;
         s.start = std::min(start, end);
         s.end = std::max(start, end);
         return s;
     }
     Segment loop(float start, float end) const{
+        assert(start >= 0);
+        assert(end >= 0);
         Segment s;
         s.start = std::max(start, end);
         s.end = std::min(start, end);
