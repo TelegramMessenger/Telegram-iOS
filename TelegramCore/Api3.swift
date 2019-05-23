@@ -3427,11 +3427,11 @@ extension Api {
                     })
                 }
             
-                static func getPublicGroupsForDiscussion() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
+                static func getGroupsForDiscussion() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(982265528)
+                    buffer.appendInt32(-170208392)
                     
-                    return (FunctionDescription(name: "channels.getPublicGroupsForDiscussion", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
+                    return (FunctionDescription(name: "channels.getGroupsForDiscussion", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.Chats?
                         if let signature = reader.readInt32() {
@@ -3441,11 +3441,11 @@ extension Api {
                     })
                 }
             
-                static func getPublicBroadcastsForDiscussion() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
+                static func getBroadcastsForDiscussion() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(921491570)
+                    buffer.appendInt32(445117188)
                     
-                    return (FunctionDescription(name: "channels.getPublicBroadcastsForDiscussion", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
+                    return (FunctionDescription(name: "channels.getBroadcastsForDiscussion", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.Chats?
                         if let signature = reader.readInt32() {

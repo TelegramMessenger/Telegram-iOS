@@ -18199,6 +18199,9 @@ extension Api {
         case inputMessageEntityMentionName(offset: Int32, length: Int32, userId: Api.InputUser)
         case messageEntityPhone(offset: Int32, length: Int32)
         case messageEntityCashtag(offset: Int32, length: Int32)
+        case messageEntityUnderline(offset: Int32, length: Int32)
+        case messageEntityStrike(offset: Int32, length: Int32)
+        case messageEntityBlockquote(offset: Int32, length: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -18311,6 +18314,27 @@ extension Api {
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
                     break
+                case .messageEntityUnderline(let offset, let length):
+                    if boxed {
+                        buffer.appendInt32(-1672577397)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    break
+                case .messageEntityStrike(let offset, let length):
+                    if boxed {
+                        buffer.appendInt32(-1090087980)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    break
+                case .messageEntityBlockquote(let offset, let length):
+                    if boxed {
+                        buffer.appendInt32(34469328)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -18346,6 +18370,12 @@ extension Api {
                 return ("messageEntityPhone", [("offset", offset), ("length", length)])
                 case .messageEntityCashtag(let offset, let length):
                 return ("messageEntityCashtag", [("offset", offset), ("length", length)])
+                case .messageEntityUnderline(let offset, let length):
+                return ("messageEntityUnderline", [("offset", offset), ("length", length)])
+                case .messageEntityStrike(let offset, let length):
+                return ("messageEntityStrike", [("offset", offset), ("length", length)])
+                case .messageEntityBlockquote(let offset, let length):
+                return ("messageEntityBlockquote", [("offset", offset), ("length", length)])
     }
     }
     
@@ -18568,6 +18598,48 @@ extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageEntity.messageEntityCashtag(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messageEntityUnderline(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityUnderline(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messageEntityStrike(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityStrike(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messageEntityBlockquote(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityBlockquote(offset: _1!, length: _2!)
             }
             else {
                 return nil
