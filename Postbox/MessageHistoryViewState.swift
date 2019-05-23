@@ -342,7 +342,13 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
             } else {
                 currentMessageId = items.lowerOrAtAnchor[i].index.id.id
             }
-            let range: ClosedRange<Int> = Int(currentMessageId) ... Int(startingMessageId)
+            let range: ClosedRange<Int>
+            if currentMessageId <= startingMessageId {
+                range = Int(currentMessageId) ... Int(startingMessageId)
+            } else {
+                assertionFailure()
+                range = Int(startingMessageId) ... Int(currentMessageId)
+            }
             if indices.intersects(integersIn: range) {
                 let holeStartIndex: Int
                 if let value = indices.integerLessThanOrEqualTo(Int(startingMessageId)) {
@@ -404,7 +410,13 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
             } else {
                 currentMessageId = items.higherThanAnchor[i].index.id.id
             }
-            let range: ClosedRange<Int> = Int(startingMessageId) ... Int(currentMessageId)
+            let range: ClosedRange<Int>
+            if startingMessageId <= currentMessageId {
+                range = Int(startingMessageId) ... Int(currentMessageId)
+            } else {
+                assertionFailure()
+                range = Int(currentMessageId) ... Int(startingMessageId)
+            }
             if indices.intersects(integersIn: range) {
                 let holeStartIndex: Int
                 if let value = indices.integerGreaterThanOrEqualTo(Int(startingMessageId)) {
@@ -616,6 +628,31 @@ struct OrderedHistoryViewEntries {
     var lowerOrAtAnchor: [MutableMessageHistoryEntry]
     var higherThanAnchor: [MutableMessageHistoryEntry]
     
+    mutating func fixMonotonity() {
+        var fix = false
+        if self.lowerOrAtAnchor.count > 1 {
+            for i in 1 ..< self.lowerOrAtAnchor.count {
+                if self.lowerOrAtAnchor[i].index.id.id < self.lowerOrAtAnchor[i - 1].index.id.id {
+                    fix = true
+                    break
+                }
+            }
+        }
+        if !fix && self.higherThanAnchor.count > 1 {
+            for i in 1 ..< self.higherThanAnchor.count {
+                if self.higherThanAnchor[i].index.id.id < self.higherThanAnchor[i - 1].index.id.id {
+                    fix = true
+                    break
+                }
+            }
+        }
+        if fix {
+            assertionFailure()
+            self.lowerOrAtAnchor.sort(by: { $0.index.id.id < $1.index.id.id })
+            self.higherThanAnchor.sort(by: { $0.index.id.id < $1.index.id.id })
+        }
+    }
+    
     func find(index: MessageIndex) -> MutableMessageHistoryEntry? {
         if let entryIndex = binarySearch(self.lowerOrAtAnchor, extract: { $0.index }, searchItem: index) {
             return self.lowerOrAtAnchor[entryIndex]
@@ -626,20 +663,25 @@ struct OrderedHistoryViewEntries {
         }
     }
     
+    var first: MutableMessageHistoryEntry? {
+        return self.lowerOrAtAnchor.first ?? self.higherThanAnchor.first
+    }
+    
     mutating func mutableScan(_ f: (MutableMessageHistoryEntry) -> MutableMessageHistoryEntry?) -> Bool {
+        var anyUpdated = false
         for i in 0 ..< self.lowerOrAtAnchor.count {
             if let updated = f(self.lowerOrAtAnchor[i]) {
                 self.lowerOrAtAnchor[i] = updated
-                return true
+                anyUpdated = true
             }
         }
         for i in 0 ..< self.higherThanAnchor.count {
             if let updated = f(self.higherThanAnchor[i]) {
                 self.higherThanAnchor[i] = updated
-                return true
+                anyUpdated = true
             }
         }
-        return false
+        return anyUpdated
     }
     
     mutating func update(index: MessageIndex, _ f: (MutableMessageHistoryEntry) -> MutableMessageHistoryEntry?) -> Bool {
@@ -768,51 +810,53 @@ final class HistoryViewLoadedState {
         assert(lowerOrAtAnchorMessages.count <= self.halfLimit)
         assert(higherThanAnchorMessages.count <= self.halfLimit)
         
-        /*if let tag = self.tag, self.statistics.contains(.combinedLocation) {
-            if let first = messages.first {
-                let messageIndex = first.index
-                let previousCount = postbox.messageHistoryTagsTable.getMessageCountInRange(tag: tag, peerId: space.peerId, namespace: space.namespace, lowerBound: MessageIndex.lowerBound(peerId: space.peerId, namespace: space.namespace), upperBound: messageIndex)
-                let nextCount = postbox.messageHistoryTagsTable.getMessageCountInRange(tag: tag, peerId: space.peerId, namespace: space.namespace, lowerBound: messageIndex, upperBound: MessageIndex.upperBound(peerId: space.peerId, namespace: space.namespace))
-                let initialLocation = MessageHistoryEntryLocation(index: previousCount - 1, count: previousCount + nextCount - 1)
-                    var nextLocation = initialLocation
-                for i in 0 ..< messages.count {
-                    switch messages[i] {
-                        case let .IntermediateMessageEntry(message, _, monthLocation):
-                            messages[i] = .IntermediateMessageEntry(message, nextLocation, monthLocation)
-                        case let .MessageEntry(entry):
-                            messages[i] = .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: nextLocation, monthLocation: entry.monthLocation, attributes: entry.attributes))
-                    }
-                    nextLocation = nextLocation.successor
+        var entries = OrderedHistoryViewEntries(lowerOrAtAnchor: lowerOrAtAnchorMessages, higherThanAnchor: higherThanAnchorMessages)
+        
+        if let tag = self.tag, self.statistics.contains(.combinedLocation), let first = entries.first {
+            let messageIndex = first.index
+            let previousCount = postbox.messageHistoryTagsTable.getMessageCountInRange(tag: tag, peerId: space.peerId, namespace: space.namespace, lowerBound: MessageIndex.lowerBound(peerId: space.peerId, namespace: space.namespace), upperBound: messageIndex)
+            let nextCount = postbox.messageHistoryTagsTable.getMessageCountInRange(tag: tag, peerId: space.peerId, namespace: space.namespace, lowerBound: messageIndex, upperBound: MessageIndex.upperBound(peerId: space.peerId, namespace: space.namespace))
+            let initialLocation = MessageHistoryEntryLocation(index: previousCount - 1, count: previousCount + nextCount - 1)
+            var nextLocation = initialLocation
+            
+            let _ = entries.mutableScan { entry in
+                let currentLocation = nextLocation
+                nextLocation = nextLocation.successor
+                switch entry {
+                    case let .IntermediateMessageEntry(message, _, monthLocation):
+                        return .IntermediateMessageEntry(message, currentLocation, monthLocation)
+                    case let .MessageEntry(entry):
+                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: currentLocation, monthLocation: entry.monthLocation, attributes: entry.attributes))
                 }
             }
         }
         
-        if let tag = self.tag, self.statistics.contains(.locationWithinMonth) {
-            if let first = messages.first {
-                let messageIndex = first.index
-                let monthIndex = MessageMonthIndex(timestamp: messageIndex.timestamp)
-                let count = postbox.messageHistoryTagsTable.getMessageCountInRange(tag: tag, peerId: space.peerId, namespace: space.namespace, lowerBound: messageIndex, upperBound: monthUpperBoundIndex(peerId: space.peerId, namespace: space.namespace, index: monthIndex))
+        if let tag = self.tag, self.statistics.contains(.locationWithinMonth), let first = entries.first {
+            let messageIndex = first.index
+            let monthIndex = MessageMonthIndex(timestamp: messageIndex.timestamp)
+            let count = postbox.messageHistoryTagsTable.getMessageCountInRange(tag: tag, peerId: space.peerId, namespace: space.namespace, lowerBound: messageIndex, upperBound: monthUpperBoundIndex(peerId: space.peerId, namespace: space.namespace, index: monthIndex))
+            
+            var nextLocation: (MessageMonthIndex, Int) = (monthIndex, count - 1)
+            
+            let _ = entries.mutableScan { entry in
+                let messageMonthIndex = MessageMonthIndex(timestamp: entry.index.timestamp)
+                if messageMonthIndex != nextLocation.0 {
+                    nextLocation = (messageMonthIndex, 0)
+                }
                 
-                var nextLocation: (MessageMonthIndex, Int) = (monthIndex, count - 1)
-                
-                for i in 0 ..< messages.count {
-                    let messageMonthIndex = MessageMonthIndex(timestamp: messages[i].index.timestamp)
-                    if messageMonthIndex != nextLocation.0 {
-                        nextLocation = (messageMonthIndex, 0)
-                    }
-                    
-                    switch messages[i] {
-                        case let .IntermediateMessageEntry(message, location, _):
-                            messages[i] = .IntermediateMessageEntry(message, location, MessageHistoryEntryMonthLocation(indexInMonth: Int32(nextLocation.1)))
-                        case let .MessageEntry(entry):
-                            messages[i] = .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: entry.location, monthLocation: MessageHistoryEntryMonthLocation(indexInMonth: Int32(nextLocation.1)), attributes: entry.attributes))
-                    }
-                    nextLocation.1 = max(0, nextLocation.1 - 1)
+                let currentIndexInMonth = nextLocation.1
+                nextLocation.1 = max(0, nextLocation.1 - 1)
+                switch entry {
+                    case let .IntermediateMessageEntry(message, location, _):
+                        return .IntermediateMessageEntry(message, location, MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)))
+                    case let .MessageEntry(entry):
+                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: entry.location, monthLocation: MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)), attributes: entry.attributes))
                 }
             }
-        }*/
+        }
         
-        self.orderedEntriesBySpace[space] = OrderedHistoryViewEntries(lowerOrAtAnchor: lowerOrAtAnchorMessages, higherThanAnchor: higherThanAnchorMessages)
+        entries.fixMonotonity()
+        self.orderedEntriesBySpace[space] = entries
     }
     
     func insertHole(space: PeerIdAndNamespace, range: ClosedRange<MessageId.Id>) -> Bool {
