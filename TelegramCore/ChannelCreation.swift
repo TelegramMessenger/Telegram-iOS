@@ -9,9 +9,9 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func createChannel(account: Account, title: String, description: String?) -> Signal<PeerId?, NoError> {
+private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool) -> Signal<PeerId?, NoError> {
     return account.postbox.transaction { transaction -> Signal<PeerId?, NoError> in
-        return account.network.request(Api.functions.channels.createChannel(flags: 1 << 0, title: title, about: description ?? ""), automaticFloodWait: false)
+        return account.network.request(Api.functions.channels.createChannel(flags: isSupergroup ? 1 << 1 : 1 << 0, title: title, about: description ?? ""), automaticFloodWait: false)
         |> map(Optional.init)
         |> `catch` { _ in
             return Signal<Api.Updates?, NoError>.single(nil)
@@ -36,6 +36,14 @@ public func createChannel(account: Account, title: String, description: String?)
             }
         }
     } |> switchToLatest
+}
+
+public func createChannel(account: Account, title: String, description: String?) -> Signal<PeerId?, NoError> {
+    return createChannel(account: account, title: title, description: description, isSupergroup: false)
+}
+
+public func createSupergroup(account: Account, title: String, description: String?) -> Signal<PeerId?, NoError> {
+    return createChannel(account: account, title: title, description: description, isSupergroup: true)
 }
 
 public enum DeleteChannelError {

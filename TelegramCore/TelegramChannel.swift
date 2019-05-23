@@ -47,11 +47,12 @@ public struct TelegramChannelBroadcastFlags: OptionSet {
     }
     
     public static let messagesShouldHaveSignatures = TelegramChannelBroadcastFlags(rawValue: 1 << 0)
+    public static let hasDiscussionGroup = TelegramChannelBroadcastFlags(rawValue: 1 << 1)
+
 }
 
 public struct TelegramChannelBroadcastInfo: Equatable {
     public let flags: TelegramChannelBroadcastFlags
-    
     public init(flags: TelegramChannelBroadcastFlags) {
         self.flags = flags
     }

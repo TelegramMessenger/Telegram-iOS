@@ -270,6 +270,15 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                             if (flags & (1 << 7)) != 0 {
                                                 channelFlags.insert(.canSetStickerSet)
                                             }
+                                            
+                                            let associatedPeerId: PeerId?
+                                            
+                                            if let linkedChatId = linkedChatId {
+                                                associatedPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: linkedChatId)
+                                            } else {
+                                                associatedPeerId = nil
+                                            }
+                                            
                                             var botInfos: [CachedPeerBotInfo] = []
                                             for botInfo in apiBotInfos {
                                                 switch botInfo {
@@ -356,6 +365,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     .withUpdatedStickerPack(stickerPack)
                                                     .withUpdatedMinAvailableMessageId(minAvailableMessageId)
                                                     .withUpdatedMigrationReference(migrationReference)
+                                                    .withUpdatedAssociatedPeerId(associatedPeerId)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
