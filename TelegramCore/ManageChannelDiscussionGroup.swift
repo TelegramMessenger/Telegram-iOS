@@ -58,19 +58,23 @@ public enum ChannelDiscussionGroupError {
 
 
 //channels.setDiscussionGroup broadcast:InputChannel group:InputChannel = Bool;
-public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, channelId: PeerId, groupId: PeerId) -> Signal<Bool, ChannelDiscussionGroupError> {
+public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, channelId: PeerId, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {
     
     return postbox.transaction { transaction -> (channel: Peer?, group: Peer?) in
-        return (channel: transaction.getPeer(channelId), group: transaction.getPeer(groupId))
+        return (channel: transaction.getPeer(channelId), group: groupId != nil ? transaction.getPeer(groupId!) : nil)
     }
     |> mapError { _ in ChannelDiscussionGroupError.generic }
     |> mapToSignal { peers -> Signal<Bool, ChannelDiscussionGroupError> in
-        guard let channel = peers.channel, let group = peers.group else {
+        guard let channel = peers.channel else {
             return .fail(.generic)
         }
-        guard let apiChannel = apiInputChannel(channel), let apiGroup = apiInputChannel(group) else {
+        
+        let tempGroupApi = peers.group != nil ? apiInputChannel(peers.group!) : Api.InputChannel.inputChannelEmpty
+        
+        guard let apiChannel = apiInputChannel(channel), let apiGroup = tempGroupApi else {
             return .fail(.generic)
         }
+        
         return network.request(Api.functions.channels.setDiscussionGroup(broadcast: apiChannel, group: apiGroup))
             |> mapError { error in
                 return .generic
