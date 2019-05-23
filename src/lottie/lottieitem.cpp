@@ -1512,14 +1512,12 @@ void LOTTrimItem::addPathItems(std::vector<LOTPathDataItem *> &list, int startOf
 
 LOTRepeaterItem::LOTRepeaterItem(LOTRepeaterData *data) : mData(data)
 {
-    assert(mData->mChildren.size() == 1);
-    LOTGroupData *root = reinterpret_cast<LOTGroupData *>(mData->mChildren[0].get());
-    assert(root);
+    assert(mData->content());
 
     mCopies = mData->maxCopies();
 
     for (int i= 0; i < mCopies; i++) {
-        auto content = std::make_unique<LOTContentGroupItem>(static_cast<LOTGroupData *>(root));
+        auto content = std::make_unique<LOTContentGroupItem>(mData->content());
         content->setParent(this);
         mContents.push_back(std::move(content));
     }
@@ -1540,13 +1538,11 @@ void LOTRepeaterItem::update(int frameNo, const VMatrix &parentMatrix, float par
         mHidden = false;
     }
 
-    if (mData->hasMtrixChange(frameNo)) {
-        newFlag |= DirtyFlagBit::Matrix;
-    }
+    if (!mData->isStatic()) newFlag |= DirtyFlagBit::Matrix;
 
     float offset = mData->offset(frameNo);
-    float startOpacity = mData->mTransform->startOpacity(frameNo);
-    float endOpacity = mData->mTransform->endOpacity(frameNo);
+    float startOpacity = mData->mTransform.startOpacity(frameNo);
+    float endOpacity = mData->mTransform.endOpacity(frameNo);
 
     newFlag |= DirtyFlagBit::Alpha;
 
@@ -1556,7 +1552,7 @@ void LOTRepeaterItem::update(int frameNo, const VMatrix &parentMatrix, float par
         // hide rest of the copies , @TODO find a better solution.
         if ( i >= visibleCopies) newAlpha = 0;
 
-        VMatrix result = mData->mTransform->matrixForRepeater(frameNo, i + offset) * parentMatrix;
+        VMatrix result = mData->mTransform.matrix(frameNo, i + offset) * parentMatrix;
         mContents[i]->update(frameNo, result, newAlpha, newFlag);
     }
 }

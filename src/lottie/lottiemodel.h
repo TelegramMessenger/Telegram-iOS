@@ -488,10 +488,7 @@ class LOTTransformData : public LOTData
 public:
     LOTTransformData():LOTData(LOTData::Type::Transform),mScale({100, 100}){}
     VMatrix matrix(int frameNo, bool autoOrient = false) const;
-    VMatrix matrixForRepeater(int frameNo, float multiplier) const;
     float opacity(int frameNo) const { return mOpacity.value(frameNo)/100;}
-    float startOpacity(int frameNo) const { return mStartOpacity.value(frameNo)/100;}
-    float endOpacity(int frameNo) const { return mEndOpacity.value(frameNo)/100;}
     void cacheMatrix();
     bool staticMatrix() const {return mStaticMatrix;}
     bool ddd() const {return m3D ? true : false;}
@@ -508,8 +505,6 @@ public:
     LOTAnimatable<float>          mOpacity{100};   /* "o" */
     LOTAnimatable<float>          mSkew{0};      /* "sk" */
     LOTAnimatable<float>          mSkewAxis{0};  /* "sa" */
-    LOTAnimatable<float>          mStartOpacity{100}; /* "so" */
-    LOTAnimatable<float>          mEndOpacity{100};   /* "eo" */
     bool                          mStaticMatrix{true};
     bool                          mSeparate{false};
     VMatrix                       mCachedMatrix;
@@ -817,20 +812,45 @@ public:
     LOTTrimData::TrimType            mTrimType{TrimType::Simultaneously};
 };
 
-class LOTRepeaterData : public LOTGroupData
+class LOTRepeaterTransform
 {
 public:
-    LOTRepeaterData():LOTGroupData(LOTData::Type::Repeater){}
-    bool hasMtrixChange(int /*frameNo*/) const {
-        return !(mTransform->isStatic() && mOffset.isStatic());
+    VMatrix matrix(int frameNo, float multiplier) const;
+    float startOpacity(int frameNo) const { return mStartOpacity.value(frameNo)/100;}
+    float endOpacity(int frameNo) const { return mEndOpacity.value(frameNo)/100;}
+    bool isStatic() const
+    {
+        return mRotation.isStatic() &&
+               mScale.isStatic() &&
+               mPosition.isStatic() &&
+               mAnchor.isStatic() &&
+               mStartOpacity.isStatic() &&
+               mEndOpacity.isStatic();
     }
+public:
+    LOTAnimatable<float>          mRotation{0};  /* "r" */
+    LOTAnimatable<VPointF>        mScale{{100, 100}};     /* "s" */
+    LOTAnimatable<VPointF>        mPosition;  /* "p" */
+    LOTAnimatable<VPointF>        mAnchor;    /* "a" */
+    LOTAnimatable<float>          mStartOpacity{100}; /* "so" */
+    LOTAnimatable<float>          mEndOpacity{100};   /* "eo" */
+};
+
+class LOTRepeaterData : public LOTData
+{
+public:
+    LOTRepeaterData():LOTData(LOTData::Type::Repeater){}
+    LOTShapeGroupData *content() const { return mContent ? mContent.get() : nullptr; }
+    void setContent(std::shared_ptr<LOTShapeGroupData> content) {mContent = std::move(content);}
     int maxCopies() const { return int(mMaxCopies);}
     float copies(int frameNo) const {return mCopies.value(frameNo);}
     float offset(int frameNo) const {return mOffset.value(frameNo);}
 public:
-    LOTAnimatable<float>             mCopies{0};
-    LOTAnimatable<float>             mOffset{0};
-    float                            mMaxCopies{0.0};
+    std::shared_ptr<LOTShapeGroupData>      mContent{nullptr};
+    LOTRepeaterTransform                    mTransform;
+    LOTAnimatable<float>                    mCopies{0};
+    LOTAnimatable<float>                    mOffset{0};
+    float                                   mMaxCopies{0.0};
 };
 
 class LOTModel

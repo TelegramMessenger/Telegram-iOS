@@ -246,6 +246,7 @@ public:
     void getValue(LottieShapeData &shape);
     void getValue(LottieGradient &gradient);
     void getValue(std::vector<VPointF> &v);
+    void getValue(LOTRepeaterTransform &);
 
     template <typename T>
     bool parseKeyFrameValue(const char *key, LOTKeyFrameValue<T> &value);
@@ -1287,6 +1288,30 @@ std::shared_ptr<LOTData> LottieParserImpl::parseTrimObject()
     return sharedTrim;
 }
 
+void LottieParserImpl::getValue(LOTRepeaterTransform &obj)
+{
+    EnterObject();
+
+    while (const char *key = NextObjectKey()) {
+        if (0 == strcmp(key, "a")) {
+            parseProperty(obj.mAnchor);
+        } else if (0 == strcmp(key, "p")) {
+            parseProperty(obj.mPosition);
+        } else if (0 == strcmp(key, "r")) {
+            parseProperty(obj.mRotation);
+        } else if (0 == strcmp(key, "s")) {
+            parseProperty(obj.mScale);
+        } else if (0 == strcmp(key, "so")) {
+            parseProperty(obj.mStartOpacity);
+        } else if (0 == strcmp(key, "eo")) {
+            parseProperty(obj.mEndOpacity);
+        } else {
+            Skip(key);
+        }
+    }
+}
+
+
 std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
 {
     std::shared_ptr<LOTRepeaterData> sharedRepeater =
@@ -1313,8 +1338,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
         } else if (0 == strcmp(key, "o")) {
             parseProperty(obj->mOffset);
         } else if (0 == strcmp(key, "tr")) {
-            EnterObject();
-            obj->mTransform = parseTransformObject();
+            getValue(obj->mTransform);
         } else if (0 == strcmp(key, "hd")) {
             obj->mHidden = GetBool();
         } else {
@@ -1325,7 +1349,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
         }
     }
     obj->setStatic(obj->mCopies.isStatic() && obj->mOffset.isStatic() &&
-                   obj->mTransform->isStatic());
+                   obj->mTransform.isStatic());
 
     return sharedRepeater;
 }
@@ -1371,11 +1395,7 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(bool dd
             parseProperty(obj->mSkewAxis);
         } else if (0 == strcmp(key, "o")) {
             parseProperty(obj->mOpacity);
-        } else if (0 == strcmp(key, "so")) {
-            parseProperty(obj->mStartOpacity);
-        } else if (0 == strcmp(key, "eo")) {
-            parseProperty(obj->mEndOpacity);
-        }  else if (0 == strcmp(key, "hd")) {
+        } else if (0 == strcmp(key, "hd")) {
             obj->mHidden = GetBool();
         } else if (0 == strcmp(key, "rx")) {
             parseProperty(obj->m3D->mRx);

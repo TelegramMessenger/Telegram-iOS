@@ -43,24 +43,22 @@ public:
                 LOTRepeaterData *repeater = static_cast<LOTRepeaterData *>(child);
                 // check if this repeater is already processed
                 // can happen if the layer is an asset and referenced by multiple layer.
-                if (!repeater->mChildren.empty()) continue;
+                if (repeater->content()) continue;
 
-                auto sharedShapeGroup = std::make_shared<LOTShapeGroupData>();
-                LOTShapeGroupData *shapeGroup = sharedShapeGroup.get();
+                repeater->setContent(std::make_shared<LOTShapeGroupData>());
+                LOTShapeGroupData *content = repeater->content();
                 // 1. increment the reverse iterator to point to the
                 //   object before the repeater
                 ++i;
                 // 2. move all the children till repater to the group
                 std::move(obj->mChildren.begin(),
-                          i.base(), back_inserter(shapeGroup->mChildren));
+                          i.base(), back_inserter(content->mChildren));
                 // 3. erase the objects from the original children list
                 obj->mChildren.erase(obj->mChildren.begin(),
                                      i.base());
-                // 4. Add the newly created group to the repeater object.
-                repeater->mChildren.push_back(sharedShapeGroup);
 
                 // 5. visit newly created group to process remaining repeater object.
-                visitChildren(shapeGroup);
+                visitChildren(content);
                 // 6. exit the loop as the current iterators are invalid
                 break;
             } else {
@@ -91,7 +89,7 @@ void LOTCompositionData::processRepeaterObjects()
     visitor.visit(mRootLayer.get());
 }
 
-VMatrix LOTTransformData::matrixForRepeater(int frameNo, float multiplier) const
+VMatrix LOTRepeaterTransform::matrix(int frameNo, float multiplier) const
 {
     VPointF scale = mScale.value(frameNo) / 100.f;
     scale.setX(std::pow(scale.x(), multiplier));
@@ -105,7 +103,6 @@ VMatrix LOTTransformData::matrixForRepeater(int frameNo, float multiplier) const
 
     return m;
 }
-
 
 VMatrix LOTTransformData::matrix(int frameNo, bool autoOrient) const
 {
