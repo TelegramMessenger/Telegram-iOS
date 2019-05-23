@@ -13,7 +13,7 @@ public enum AvailableChannelDiscussionGroupError {
 }
 
 public func availableGroupsForChannelDiscussion(network: Network) -> Signal<[Peer], AvailableChannelDiscussionGroupError> {
-    return network.request(Api.functions.channels.getPublicGroupsForDiscussion()) |> mapError { error in
+    return network.request(Api.functions.channels.getGroupsForDiscussion()) |> mapError { error in
         return .generic
     } |> map { result in
         let chats:[Api.Chat]
@@ -33,7 +33,7 @@ public func availableGroupsForChannelDiscussion(network: Network) -> Signal<[Pee
 }
 
 public func availableChannelsForGroupDiscussion(network: Network) -> Signal<[Peer], AvailableChannelDiscussionGroupError> {
-    return network.request(Api.functions.channels.getPublicBroadcastsForDiscussion()) |> mapError { _ in
+    return network.request(Api.functions.channels.getBroadcastsForDiscussion()) |> mapError { _ in
         return .generic
         } |> map { result in
             let chats:[Api.Chat]
@@ -72,7 +72,7 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
             return .fail(.generic)
         }
         return network.request(Api.functions.channels.setDiscussionGroup(broadcast: apiChannel, group: apiGroup))
-            |> mapError { _ in
+            |> mapError { error in
                 return .generic
             }
             |> map { result in
@@ -83,6 +83,20 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
                     return false
                 }
             }
+    } |> mapToSignal { result in
+        if result {
+            return postbox.transaction { transaction in
+                transaction.updatePeerCachedData(peerIds: Set([channelId]), update: { (_, current) -> CachedPeerData? in
+                    return (current as? CachedChannelData ?? CachedChannelData()).withUpdatedAssociatedPeerId(groupId)
+                })
+            }
+            |> introduceError(ChannelDiscussionGroupError.self)
+            |> map { _ in
+                return result
+            }
+        } else {
+            return .single(result)
+        }
     }
     
 }
