@@ -245,7 +245,7 @@ public:
         return 0;
     }
 
-    bool changed(int prevFrame, int curFrame) {
+    bool changed(int prevFrame, int curFrame) const {
         int first = mKeyFrames.front().mStartFrame;
         int last = mKeyFrames.back().mEndFrame;
 
@@ -265,22 +265,71 @@ template<typename T>
 class LOTAnimatable
 {
 public:
-    LOTAnimatable():mValue(),mAnimInfo(nullptr){}
-    LOTAnimatable(const T &value): mValue(value){}
-    bool isStatic() const {if (mAnimInfo) return false; else return true;}
+    LOTAnimatable() { construct(impl.mValue, {}); }
+    LOTAnimatable(T value) { construct(impl.mValue, std::move(value)); }
+
+    const LOTAnimInfo<T>& animation() const {return *(impl.mAnimInfo.get());}
+    const T& value() const {return impl.mValue;}
+
+    LOTAnimInfo<T>& animation()
+    {
+        if (mStatic) {
+            destroy();
+            construct(impl.mAnimInfo, std::make_unique<LOTAnimInfo<T>>());
+            mStatic = false;
+        }
+        return *(impl.mAnimInfo.get());
+    }
+
+    T& value()
+    {
+        assert(mStatic);
+        return impl.mValue;
+    }
+
+    // delete special member functions
+    LOTAnimatable(const LOTAnimatable &) = delete;
+    LOTAnimatable(LOTAnimatable &&) = delete;
+    LOTAnimatable& operator=(const LOTAnimatable&) = delete;
+    LOTAnimatable& operator=(LOTAnimatable&&) = delete;
+
+    ~LOTAnimatable() {destroy();}
+
+    bool isStatic() const {return mStatic;}
+
     T value(int frameNo) const {
-        return isStatic() ? mValue : mAnimInfo->value(frameNo);
+        return isStatic() ? value() : animation().value(frameNo);
     }
+
     float angle(int frameNo) const {
-        return isStatic() ? 0 : mAnimInfo->angle(frameNo);
+        return isStatic() ? 0 : animation().angle(frameNo);
     }
-    bool changed(int prevFrame, int curFrame) {
-        return isStatic() ? false : mAnimInfo->changed(prevFrame, curFrame);
+
+    bool changed(int prevFrame, int curFrame) const {
+        return isStatic() ? false : animation().changed(prevFrame, curFrame);
     }
-public:
-    T                                 mValue;
-    int                               mPropertyIndex{0}; /* "ix" */
-    std::unique_ptr<LOTAnimInfo<T>>   mAnimInfo;
+private:
+    template <typename Tp>
+    void construct(Tp& member, Tp&& val)
+    {
+        new (&member) Tp(std::move(val));
+    }
+
+    void destroy() {
+        if (mStatic) {
+            impl.mValue.~T();
+        } else {
+            using std::unique_ptr;
+            impl.mAnimInfo.~unique_ptr<LOTAnimInfo<T>>();
+        }
+    }
+    union details {
+        std::unique_ptr<LOTAnimInfo<T>>   mAnimInfo;
+        T                                 mValue;
+        details(){}
+        ~details(){}
+    }impl;
+    bool                                 mStatic{true};
 };
 
 enum class LottieBlendMode

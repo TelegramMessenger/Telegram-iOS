@@ -1325,14 +1325,14 @@ std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
             parseProperty(obj->mCopies);
             float maxCopy= 0.0;
             if (!obj->mCopies.isStatic()) {
-                for(auto &keyFrame : obj->mCopies.mAnimInfo->mKeyFrames) {
+                for(auto &keyFrame : obj->mCopies.animation().mKeyFrames) {
                     if (maxCopy < keyFrame.mValue.mStartValue)
                         maxCopy = keyFrame.mValue.mStartValue;
                     if (maxCopy < keyFrame.mValue.mEndValue)
                         maxCopy = keyFrame.mValue.mEndValue;
                 }
             } else {
-                maxCopy = obj->mCopies.mValue;
+                maxCopy = obj->mCopies.value();
             }
             obj->mMaxCopies = maxCopy;
         } else if (0 == strcmp(key, "o")) {
@@ -1985,13 +1985,10 @@ void LottieParserImpl::parseShapeProperty(LOTAnimatable<LottieShapeData> &obj)
                 EnterArray();
                 while (NextArrayValue()) {
                     RAPIDJSON_ASSERT(PeekType() == kObjectType);
-                    if (!obj.mAnimInfo)
-                        obj.mAnimInfo =
-                            std::make_unique<LOTAnimInfo<LottieShapeData>>();
-                    parseKeyFrame(*obj.mAnimInfo.get());
+                    parseKeyFrame(obj.animation());
                 }
             } else {
-                getValue(obj.mValue);
+                getValue(obj.value());
             }
         } else {
 #ifdef DEBUG_PARSER
@@ -2007,16 +2004,14 @@ void LottieParserImpl::parsePropertyHelper(LOTAnimatable<T> &obj)
 {
     if (PeekType() == kNumberType) {
         /*single value property with no animation*/
-        getValue(obj.mValue);
+        getValue(obj.value());
     } else {
         RAPIDJSON_ASSERT(PeekType() == kArrayType);
         EnterArray();
         while (NextArrayValue()) {
             /* property with keyframe info*/
             if (PeekType() == kObjectType) {
-                if (!obj.mAnimInfo)
-                    obj.mAnimInfo = std::make_unique<LOTAnimInfo<T>>();
-                parseKeyFrame(*obj.mAnimInfo.get());
+                parseKeyFrame(obj.animation());
             } else {
                 /* Read before modifying.
                  * as there is no way of knowing if the
@@ -2026,7 +2021,7 @@ void LottieParserImpl::parsePropertyHelper(LOTAnimatable<T> &obj)
                  */
                 RAPIDJSON_ASSERT(PeekType() == kNumberType);
                 /*multi value property with no animation*/
-                getValue(obj.mValue);
+                getValue(obj.value());
                 /*break here as we already reached end of array*/
                 break;
             }
