@@ -696,7 +696,8 @@ final class ChatMediaInputNode: ChatInputNode {
         |> distinctUntilChanged
         
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
-        let transitions = combineLatest(itemCollectionsView, peerSpecificPack, hasUnreadTrending, self.themeAndStringsPromise.get())
+        let transitionQueue = Queue()
+        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, hasUnreadTrending, self.themeAndStringsPromise.get())
         |> map { viewAndUpdate, peerSpecificPack, hasUnreadTrending, themeAndStrings -> (ItemCollectionsView, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
             let (view, viewUpdate) = viewAndUpdate
             let previous = previousView.swap(view)
