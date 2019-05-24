@@ -648,7 +648,7 @@ public final class MediaBox {
         }
     }
     
-    public func cachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, complete: Bool, fetch: Bool = true, attemptSynchronously: Bool = false) -> Signal<MediaResourceData, NoError> {
+    public func cachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, pathExtension: String? = nil, complete: Bool, fetch: Bool = true, attemptSynchronously: Bool = false) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -658,8 +658,18 @@ public final class MediaBox {
                     self.timeBasedCleanup.touch(paths: [
                         path
                     ])
-                    subscriber.putNext(MediaResourceData(path: path, offset: 0, size: size, complete: true))
-                    subscriber.putCompletion()
+                    
+                    if let pathExtension = pathExtension {
+                        let symlinkPath = path + ".\(pathExtension)"
+                        if fileSize(symlinkPath) == nil {
+                            let _ = try? FileManager.default.linkItem(atPath: path, toPath: symlinkPath)
+                        }
+                        subscriber.putNext(MediaResourceData(path: symlinkPath, offset: 0, size: size, complete: true))
+                        subscriber.putCompletion()
+                    } else {
+                        subscriber.putNext(MediaResourceData(path: path, offset: 0, size: size, complete: true))
+                        subscriber.putCompletion()
+                    }
                 } else if fetch {
                     if attemptSynchronously && complete {
                         subscriber.putNext(MediaResourceData(path: path, offset: 0, size: 0, complete: false))
@@ -674,14 +684,22 @@ public final class MediaBox {
                             self.cachedRepresentationContexts[key] = context
                         }
                         
-                        let index = context.dataSubscribers.add({ data in
+                        let index = context.dataSubscribers.add(({ data in
                             if !complete || data.complete {
-                                subscriber.putNext(data)
+                                if let pathExtension = pathExtension, data.complete {
+                                    let symlinkPath = data.path + ".\(pathExtension)"
+                                    if fileSize(symlinkPath) == nil {
+                                        let _ = try? FileManager.default.linkItem(atPath: data.path, toPath: symlinkPath)
+                                    }
+                                    subscriber.putNext(MediaResourceData(path: symlinkPath, offset: data.offset, size: data.size, complete: data.complete))
+                                } else {
+                                    subscriber.putNext(data)
+                                }
                             }
                             if data.complete {
                                 subscriber.putCompletion()
                             }
-                        })
+                        }))
                         if let currentData = context.currentData {
                             if !complete || currentData.complete {
                                 subscriber.putNext(currentData)
