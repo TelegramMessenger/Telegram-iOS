@@ -55,6 +55,7 @@ public enum AdminLogEventAction {
     case updateDefaultBannedRights(prev: TelegramChatBannedRights, new: TelegramChatBannedRights
     )
     case pollStopped(Message)
+    case linkedPeerUpdated(previous: Peer?, updated: Peer?)
 }
 
 public enum ChannelAdminLogEventError {
@@ -208,7 +209,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                             action = .pollStopped(rendered)
                                         }
                                     case let .channelAdminLogEventActionChangeLinkedChat(prevValue, newValue):
-                                        break
+                                        action = .linkedPeerUpdated(previous: prevValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: prevValue)], updated: newValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: newValue)])
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {

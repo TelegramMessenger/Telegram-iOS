@@ -271,12 +271,12 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                 channelFlags.insert(.canSetStickerSet)
                                             }
                                             
-                                            let associatedPeerId: PeerId?
+                                            let linkedDiscussionPeerId: PeerId?
                                             
                                             if let linkedChatId = linkedChatId {
-                                                associatedPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: linkedChatId)
+                                                linkedDiscussionPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: linkedChatId)
                                             } else {
-                                                associatedPeerId = nil
+                                                linkedDiscussionPeerId = nil
                                             }
                                             
                                             var botInfos: [CachedPeerBotInfo] = []
@@ -365,7 +365,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     .withUpdatedStickerPack(stickerPack)
                                                     .withUpdatedMinAvailableMessageId(minAvailableMessageId)
                                                     .withUpdatedMigrationReference(migrationReference)
-                                                    .withUpdatedAssociatedPeerId(associatedPeerId)
+                                                    .withUpdatedLinkedDiscussionPeerId(linkedDiscussionPeerId)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

@@ -223,6 +223,9 @@ final class ChatHistoryPreloadManager {
             guard let strongSelf = self else {
                 return
             }
+            #if DEBUG
+            return;
+            #endif
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
             for entry in view.0.entries {
                 if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _) = entry {

@@ -742,7 +742,6 @@ public final class AccountViewTracker {
     func forceUpdateCachedPeerData(peerId: PeerId) {
         self.queue.async {
             let context: PeerCachedDataContext
-            var dataUpdated = false
             if let existingContext = self.cachedDataContexts[peerId] {
                 context = existingContext
             } else {
@@ -928,7 +927,14 @@ public final class AccountViewTracker {
         }
     }
     
-    func wrappedPeerViewSignal(peerId: PeerId, signal: Signal<PeerView, NoError>) -> Signal<PeerView, NoError> {
+    func wrappedPeerViewSignal(peerId: PeerId, signal: Signal<PeerView, NoError>, updateData: Bool) -> Signal<PeerView, NoError> {
+        if updateData {
+            self.queue.async {
+                if let existingContext = self.cachedDataContexts[peerId] {
+                    existingContext.timestamp = nil
+                }
+            }
+        }
         return withState(signal, { [weak self] () -> Int32 in
             if let strongSelf = self {
                 return OSAtomicIncrement32(&strongSelf.nextViewId)
@@ -946,9 +952,9 @@ public final class AccountViewTracker {
         })
     }
     
-    public func peerView(_ peerId: PeerId) -> Signal<PeerView, NoError> {
+    public func peerView(_ peerId: PeerId, updateData: Bool = false) -> Signal<PeerView, NoError> {
         if let account = self.account {
-            return wrappedPeerViewSignal(peerId: peerId, signal: account.postbox.peerView(id: peerId))
+            return wrappedPeerViewSignal(peerId: peerId, signal: account.postbox.peerView(id: peerId), updateData: updateData)
         } else {
             return .never()
         }

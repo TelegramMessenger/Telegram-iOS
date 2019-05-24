@@ -56,8 +56,6 @@ public enum ChannelDiscussionGroupError {
     case generic
 }
 
-
-//channels.setDiscussionGroup broadcast:InputChannel group:InputChannel = Bool;
 public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, channelId: PeerId, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {
     
     return postbox.transaction { transaction -> (channel: Peer?, group: Peer?) in
@@ -81,18 +79,31 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
             }
             |> map { result in
                 switch result {
-                case .boolTrue:
-                    return true
-                case .boolFalse:
-                    return false
+                    case .boolTrue:
+                        return true
+                    case .boolFalse:
+                        return false
                 }
             }
     } |> mapToSignal { result in
         if result {
             return postbox.transaction { transaction in
+                var previousGroupId: PeerId?
                 transaction.updatePeerCachedData(peerIds: Set([channelId]), update: { (_, current) -> CachedPeerData? in
-                    return (current as? CachedChannelData ?? CachedChannelData()).withUpdatedAssociatedPeerId(groupId)
+                    let current: CachedChannelData = current as? CachedChannelData ?? CachedChannelData()
+                    previousGroupId = current.linkedDiscussionPeerId
+                    return current.withUpdatedLinkedDiscussionPeerId(groupId)
                 })
+                if let previousGroupId = previousGroupId {
+                    transaction.updatePeerCachedData(peerIds: Set([previousGroupId]), update: { (_, current) -> CachedPeerData? in
+                        return (current as? CachedChannelData ?? CachedChannelData()).withUpdatedLinkedDiscussionPeerId(nil)
+                    })
+                }
+                if let groupId = groupId {
+                    transaction.updatePeerCachedData(peerIds: Set([groupId]), update: { (_, current) -> CachedPeerData? in
+                        return (current as? CachedChannelData ?? CachedChannelData()).withUpdatedLinkedDiscussionPeerId(channelId)
+                    })
+                }
             }
             |> introduceError(ChannelDiscussionGroupError.self)
             |> map { _ in
