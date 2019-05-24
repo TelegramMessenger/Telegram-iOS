@@ -90,9 +90,18 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
     } |> mapToSignal { result in
         if result {
             return postbox.transaction { transaction in
+                var previousAssociatedId: PeerId? = nil
                 transaction.updatePeerCachedData(peerIds: Set([channelId]), update: { (_, current) -> CachedPeerData? in
-                    return (current as? CachedChannelData ?? CachedChannelData()).withUpdatedAssociatedPeerId(groupId)
+                    let cachedData = (current as? CachedChannelData ?? CachedChannelData())
+                    previousAssociatedId = cachedData.associatedPeerId
+                    return cachedData.withUpdatedAssociatedPeerId(groupId)
                 })
+                if let associatedId = previousAssociatedId ?? groupId  {
+                    transaction.updatePeerCachedData(peerIds: Set([associatedId]), update: { (_, current) -> CachedPeerData? in
+                        let cachedData = (current as? CachedChannelData ?? CachedChannelData())
+                        return cachedData.withUpdatedAssociatedPeerId(groupId == nil ? nil : channelId)
+                    })
+                }
             }
             |> introduceError(ChannelDiscussionGroupError.self)
             |> map { _ in
