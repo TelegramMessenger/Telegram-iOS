@@ -97,7 +97,7 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
                 if let associatedId = previousGroupId ?? groupId  {
                     transaction.updatePeerCachedData(peerIds: Set([associatedId]), update: { (_, current) -> CachedPeerData? in
                         let cachedData = (current as? CachedChannelData ?? CachedChannelData())
-                        return cachedData.withUpdatedAssociatedPeerId(groupId == nil ? nil : channelId)
+                        return cachedData.withUpdatedLinkedDiscussionPeerId(groupId == nil ? nil : channelId)
                     })
                 }
             }
