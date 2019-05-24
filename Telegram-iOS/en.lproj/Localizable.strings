@@ -4275,7 +4275,7 @@ Sorry for the inconvenience.";
 
 "Privacy.AddNewPeer" = "Add Users or Groups";
 "PrivacyPhoneNumberSettings.WhoCanSeeMyPhoneNumber" = "WHO CAN SEE MY PHONE NUMBER";
-"PrivacyLastSeenSettings.CustomHelp" = "Users who already have your number saved in the contacts will also see it on Telegram.";
+"PrivacyPhoneNumberSettings.CustomHelp" = "Users who already have your number saved in the contacts will also see it on Telegram.";
 "Privacy.PhoneNumber" = "Phone Number";
 "PrivacySettings.PhoneNumber" = "Phone Number";
 "Contacts.SearchUsersAndGroupsLabel" = "Search for users and groups";
@@ -4286,3 +4286,26 @@ Sorry for the inconvenience.";
 "UserInfo.BlockConfirmationTitle" = "Do you want to block %@ from messaging and calling you on Telegram?";
 "UserInfo.BlockActionTitle" = "Block %@";
 "ReportSpam.DeleteThisChat" = "Delete this Chat";
+"PrivacySettings.BlockedPeersEmpty" = "None";
+
+"Channel.DiscussionGroup" = "Discussion";
+"Group.LinkedChannel" = "Linked Channel";
+"Channel.DiscussionGroupAdd" = "Add";
+"Channel.DiscussionGroupInfo" = "Add group chat for comments.";
+"Channel.DiscussionGroup.Header" = "Select a group chat for discussion that will be displayed in your channel.";
+"Channel.DiscussionGroup.HeaderSet" = "A link to %@ is shown to all subscrbers in the bottom panel.";
+"Channel.DiscussionGroup.HeaderGroupSet" = "%@ is linking the group as it's discussion board.";
+"Channel.DiscussionGroup.HeaderLabel" = "Discuss";
+"Channel.DiscussionGroup.Create" = "Create New Group";
+"Channel.DiscussionGroup.PrivateGroup" = "private group";
+"Channel.DiscussionGroup.Info" = "Everything you post in the channel will be forwarded to this group.";
+"Channel.DiscussionGroup.LinkGroup" = "Link Group";
+"Channel.DiscussionGroup.UnlinkGroup" = "Unlink Group";
+"Channel.DiscussionGroup.UnlinkChannel" = "Unlink Channel";
+"Channel.DiscussionGroup.PublicChannelLink" = "Do you want to make %1$@ the discussion board for %2$@?";
+"Channel.DiscussionGroup.PrivateChannelLink" = "Do you want to make %1$@ the discussion board for %2$@?
+
+Any member of this group will be able to see messages in the channel.";
+
+"Channel.AdminLog.MessageChangedLinkedGroup" = "%1$@ linked %2$@ as the discussion group";
+"Channel.AdminLog.MessageChangedUnlinkedGroup" = "%@ removed discussion group";
