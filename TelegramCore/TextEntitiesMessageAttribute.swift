@@ -21,6 +21,9 @@ public enum MessageTextEntityType: Equatable {
     case TextUrl(url: String)
     case TextMention(peerId: PeerId)
     case PhoneNumber
+    case Strikethrough
+    case BlockQuote
+    case Underline
     case Custom(type: CustomEntityType)
     
     public static func ==(lhs: MessageTextEntityType, rhs: MessageTextEntityType) -> Bool {
@@ -103,6 +106,24 @@ public enum MessageTextEntityType: Equatable {
                 } else {
                     return false
                 }
+            case .Strikethrough:
+                if case .Strikethrough = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .BlockQuote:
+                if case .BlockQuote = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Underline:
+                if case .Underline = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .Custom(type):
                 if case .Custom(type) = rhs {
                     return true
@@ -150,6 +171,12 @@ public struct MessageTextEntity: PostboxCoding, Equatable {
                 self.type = .TextMention(peerId: PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0)))
             case 12:
                 self.type = .PhoneNumber
+            case 13:
+                self.type = .Strikethrough
+            case 14:
+                self.type = .BlockQuote
+            case 15:
+                self.type = .Underline
             case Int32.max:
                 self.type = .Custom(type: decoder.decodeInt32ForKey("type", orElse: 0))
             default:
@@ -189,6 +216,12 @@ public struct MessageTextEntity: PostboxCoding, Equatable {
                 encoder.encodeInt64(peerId.toInt64(), forKey: "peerId")
             case .PhoneNumber:
                 encoder.encodeInt32(12, forKey: "_rawValue")
+            case .Strikethrough:
+                encoder.encodeInt32(13, forKey: "_rawValue")
+            case .BlockQuote:
+                encoder.encodeInt32(14, forKey: "_rawValue")
+            case .Underline:
+                encoder.encodeInt32(15, forKey: "_rawValue")
             case let .Custom(type):
                 encoder.encodeInt32(Int32.max, forKey: "_rawValue")
                 encoder.encodeInt32(type, forKey: "type")
@@ -268,6 +301,12 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
                 }
             case .PhoneNumber:
                 break
+            case .Strikethrough:
+                apiEntities.append(.messageEntityStrike(offset: offset, length: length))
+            case .BlockQuote:
+                apiEntities.append(.messageEntityBlockquote(offset: offset, length: length))
+            case .Underline:
+                apiEntities.append(.messageEntityUnderline(offset: offset, length: length))
             case .Custom:
                 break
         }
