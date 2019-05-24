@@ -302,7 +302,7 @@ main(int argc, char **argv)
         printf("Usage: efl_animview [input_file]\n");
         return 0;
      }
-   else snprintf(path, sizeof(path), "%s/%s", DEMO_DIR, "heart.json");
+   else snprintf(path, sizeof(path), "%s", argv[1]);
 
    Eo *content = anim_view_test(win, path);
 
