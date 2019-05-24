@@ -306,6 +306,8 @@
 		D0DA44481E4C7D1E005FDCA7 /* PostboxAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA44471E4C7D1E005FDCA7 /* PostboxAccess.swift */; };
 		D0DA44491E4C7D1E005FDCA7 /* PostboxAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA44471E4C7D1E005FDCA7 /* PostboxAccess.swift */; };
 		D0DF0C8F1D81A350008AEB01 /* PeerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C8E1D81A350008AEB01 /* PeerView.swift */; };
+		D0E119A0229834BC008CAE3A /* MutablePeerChatInclusionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1199F229834BC008CAE3A /* MutablePeerChatInclusionView.swift */; };
+		D0E119A1229834BC008CAE3A /* MutablePeerChatInclusionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1199F229834BC008CAE3A /* MutablePeerChatInclusionView.swift */; };
 		D0E1D30C1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1D30B1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift */; };
 		D0E1D30D1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1D30B1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift */; };
 		D0E1D30F1ECA53F900FCEEF1 /* GlobalMessageTagsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1D30E1ECA53F900FCEEF1 /* GlobalMessageTagsView.swift */; };
@@ -570,6 +572,7 @@
 		D0DA1D2E1F70419D0034E892 /* PendingPeerNotificationSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPeerNotificationSettingsView.swift; sourceTree = "<group>"; };
 		D0DA44471E4C7D1E005FDCA7 /* PostboxAccess.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxAccess.swift; sourceTree = "<group>"; };
 		D0DF0C8E1D81A350008AEB01 /* PeerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerView.swift; sourceTree = "<group>"; };
+		D0E1199F229834BC008CAE3A /* MutablePeerChatInclusionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MutablePeerChatInclusionView.swift; sourceTree = "<group>"; };
 		D0E1D30B1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalMessageHistoryTagsTable.swift; sourceTree = "<group>"; };
 		D0E1D30E1ECA53F900FCEEF1 /* GlobalMessageTagsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalMessageTagsView.swift; sourceTree = "<group>"; };
 		D0E1DE141C5E1C6900C7826E /* ViewTracker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewTracker.swift; sourceTree = "<group>"; };
@@ -926,6 +929,7 @@
 				D039FB1A21714D9800BD1BAD /* PeerPresencesView.swift */,
 				D0CA8E47227208FE008A74C3 /* SynchronizeGroupMessageStatsView.swift */,
 				D06CA13122772DE40094E707 /* PeerNotificationSettingsBehaviorTimestampView.swift */,
+				D0E1199F229834BC008CAE3A /* MutablePeerChatInclusionView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1297,6 +1301,7 @@
 				D0E1D30D1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift in Sources */,
 				D06CA12D227715E70094E707 /* PeerNotificationSettingsBehaviorTable.swift in Sources */,
 				D073CE7C1DCBF3B4007511FD /* CachedPeerData.swift in Sources */,
+				D0E119A1229834BC008CAE3A /* MutablePeerChatInclusionView.swift in Sources */,
 				D0F7B1DA1E045C6A007EB8A5 /* RatingTable.swift in Sources */,
 				D0BEAF711E54BC1E00BD963D /* AccountRecordsView.swift in Sources */,
 				D073CE9F1DCBF3C1007511FD /* InitialMessageHistoryData.swift in Sources */,
@@ -1494,6 +1499,7 @@
 				D0B844511DAC04FE005F29E1 /* PeerPresence.swift in Sources */,
 				D07827C11E0079CB00071108 /* StringIndexTokens.swift in Sources */,
 				D0F3CC721DDE1CDC008148FA /* ItemCacheTable.swift in Sources */,
+				D0E119A0229834BC008CAE3A /* MutablePeerChatInclusionView.swift in Sources */,
 				D08C713C1C51283C00779C0F /* MessageHistoryIndexTable.swift in Sources */,
 				D0FC195220208E8800FEDBB2 /* Crc32.m in Sources */,
 				D019B1CF1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift in Sources */,

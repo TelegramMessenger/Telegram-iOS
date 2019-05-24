@@ -629,6 +629,23 @@ struct OrderedHistoryViewEntries {
     var higherThanAnchor: [MutableMessageHistoryEntry]
     
     mutating func fixMonotonity() {
+        if self.lowerOrAtAnchor.count > 1 {
+            for i in 1 ..< self.lowerOrAtAnchor.count {
+                if self.lowerOrAtAnchor[i].index < self.lowerOrAtAnchor[i - 1].index {
+                    assertionFailure()
+                    break
+                }
+            }
+        }
+        if self.higherThanAnchor.count > 1 {
+            for i in 1 ..< self.higherThanAnchor.count {
+                if self.higherThanAnchor[i].index < self.higherThanAnchor[i - 1].index {
+                    assertionFailure()
+                    break
+                }
+            }
+        }
+        
         var fix = false
         if self.lowerOrAtAnchor.count > 1 {
             for i in 1 ..< self.lowerOrAtAnchor.count {
