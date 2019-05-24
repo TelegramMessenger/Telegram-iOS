@@ -1143,9 +1143,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         } else if let itemHighlightOverlayBackground = self.itemHighlightOverlayBackground {
             self.itemHighlightOverlayBackground = nil
             for (_, headerNode) in self.itemHeaderNodes {
-                self.view.bringSubview(toFront: headerNode.view)
+                //self.view.bringSubview(toFront: headerNode.view)
             }
-            self.view.bringSubview(toFront: itemHighlightOverlayBackground.view)
+            //self.view.bringSubview(toFront: itemHighlightOverlayBackground.view)
+            for itemNode in self.itemNodes {
+                //self.view.bringSubview(toFront: itemNode.view)
+            }
             transition.updateAlpha(node: itemHighlightOverlayBackground, alpha: 0.0, completion: { [weak itemHighlightOverlayBackground] _ in
                 itemHighlightOverlayBackground?.removeFromSupernode()
             })
