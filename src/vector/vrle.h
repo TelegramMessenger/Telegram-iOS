@@ -58,6 +58,10 @@ public:
 
     static VRle toRle(const VRect &rect);
 
+    bool unique() const {return d.unique();}
+    int refCount() const { return d.refCount();}
+    void clone(const VRle &o);
+
 private:
     struct VRleData {
         enum class OpCode {
@@ -78,6 +82,7 @@ private:
         void  opSubstract(const VRle::VRleData &, const VRle::VRleData &);
         void  opIntersect(const VRle::VRleData &, const VRle::VRleData &);
         void  addRect(const VRect &rect);
+        void  clone(const VRle::VRleData &);
         std::vector<VRle::Span> mSpans;
         VPoint                  mOffset;
         mutable VRect           mBbox;
@@ -165,6 +170,11 @@ inline VRle VRle::operator-(const VRle &o) const
 inline void VRle::reset()
 {
     d.write().reset();
+}
+
+inline void VRle::clone(const VRle &o)
+{
+    d.write().clone(o.d.read());
 }
 
 inline void VRle::translate(const VPoint &p)

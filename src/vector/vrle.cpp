@@ -83,6 +83,11 @@ void VRle::VRleData::reset()
     mBboxDirty = false;
 }
 
+void VRle::VRleData::clone(const VRle::VRleData &o)
+{
+    *this = o;
+}
+
 void VRle::VRleData::translate(const VPoint &p)
 {
     // take care of last offset if applied
