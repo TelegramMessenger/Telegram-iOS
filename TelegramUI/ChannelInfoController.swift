@@ -13,6 +13,7 @@ private final class ChannelInfoControllerArguments {
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updateEditingDescriptionText: (String) -> Void
     let openChannelTypeSetup: () -> Void
+    let openDiscussionGroupSetup: () -> Void
     let changeNotificationMuteSettings: () -> Void
     let openSharedMedia: () -> Void
     let openStats: () -> Void
@@ -26,7 +27,7 @@ private final class ChannelInfoControllerArguments {
     let displayContextMenu: (ChannelInfoEntryTag, String) -> Void
     let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     let toggleSignatures:(Bool) -> Void
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openStats: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void, displayContextMenu: @escaping (ChannelInfoEntryTag, String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, toggleSignatures: @escaping(Bool)->Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, openDiscussionGroupSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openStats: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void, displayContextMenu: @escaping (ChannelInfoEntryTag, String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, toggleSignatures: @escaping(Bool)->Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
@@ -34,6 +35,7 @@ private final class ChannelInfoControllerArguments {
         self.updateEditingName = updateEditingName
         self.updateEditingDescriptionText = updateEditingDescriptionText
         self.openChannelTypeSetup = openChannelTypeSetup
+        self.openDiscussionGroupSetup = openDiscussionGroupSetup
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
         self.openSharedMedia = openSharedMedia
         self.openStats = openStats
@@ -54,6 +56,7 @@ private enum ChannelInfoSection: ItemListSectionId {
     case info
     case discriptionAndType
     case sharedMediaAndNotifications
+    case sign
     case members
     case reportOrLeave
 }
@@ -69,6 +72,8 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     case addressName(theme: PresentationTheme, text: String, value: String)
     case channelPhotoSetup(theme: PresentationTheme, text: String)
     case channelTypeSetup(theme: PresentationTheme, text: String, value: String)
+    case discussionGroupSetup(theme: PresentationTheme, text: String, value: String)
+    case discussionGroupSetupInfo(theme: PresentationTheme, text: String)
     case channelDescriptionSetup(theme: PresentationTheme, placeholder: String, value: String)
     case admins(theme: PresentationTheme, text: String, value: String)
     case members(theme: PresentationTheme, text: String, value: String)
@@ -86,8 +91,10 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
         switch self {
             case .info, .about, .addressName, .channelPhotoSetup, .channelDescriptionSetup:
                 return ChannelInfoSection.info.rawValue
-            case .channelTypeSetup, .signMessages, .signInfo:
+            case .channelTypeSetup, .discussionGroupSetup, .discussionGroupSetupInfo:
                 return ChannelInfoSection.discriptionAndType.rawValue
+            case .signMessages, .signInfo:
+                return ChannelInfoSection.sign.rawValue
             case .admins, .members, .banned:
                 return ChannelInfoSection.members.rawValue
             case .sharedMedia, .notifications, .stats:
@@ -111,18 +118,22 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 return 4
             case .channelTypeSetup:
                 return 5
-            case .signMessages:
+            case .discussionGroupSetup:
                 return 6
-            case .signInfo:
+            case .discussionGroupSetupInfo:
                 return 7
-            case .admins:
+            case .signMessages:
                 return 8
-            case .members:
+            case .signInfo:
                 return 9
-            case .banned:
+            case .admins:
                 return 10
-            case .notifications:
+            case .members:
+                return 11
+            case .banned:
                 return 12
+            case .notifications:
+                return 13
             case .sharedMedia:
                 return 14
             case .stats:
@@ -194,6 +205,18 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 }
             case let .channelTypeSetup(lhsTheme, lhsText, lhsValue):
                 if case let .channelTypeSetup(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .discussionGroupSetup(lhsTheme, lhsText, lhsValue):
+                if case let .discussionGroupSetup(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .discussionGroupSetupInfo(lhsTheme, lhsText):
+                if case let .discussionGroupSetupInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -305,6 +328,12 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openChannelTypeSetup()
                 })
+            case let .discussionGroupSetup(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
+                    arguments.openDiscussionGroupSetup()
+                })
+            case let .discussionGroupSetupInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .channelDescriptionSetup(theme, placeholder, value):
                 return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .plain, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
@@ -442,6 +471,23 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                 linkText = presentationData.strings.Channel_Setup_TypePrivate
             }
             entries.append(.channelTypeSetup(theme: presentationData.theme, text: presentationData.strings.Channel_TypeSetup_Title, value: linkText))
+            let discussionGroupTitle: String
+            if let cachedData = view.cachedData as? CachedChannelData {
+                if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
+                    if let addressName = peer.addressName, !addressName.isEmpty {
+                        discussionGroupTitle = "@\(addressName)"
+                    } else {
+                        discussionGroupTitle = peer.displayTitle
+                    }
+                } else {
+                    discussionGroupTitle = presentationData.strings.Channel_DiscussionGroupAdd
+                }
+            } else {
+                discussionGroupTitle = "..."
+            }
+            entries.append(.discussionGroupSetup(theme: presentationData.theme, text: presentationData.strings.Channel_DiscussionGroup, value: discussionGroupTitle))
+            entries.append(.discussionGroupSetupInfo(theme: presentationData.theme, text: presentationData.strings.Channel_DiscussionGroupInfo))
+            
             let messagesShouldHaveSignatures:Bool
             switch peer.info {
                 case let .broadcast(info):
@@ -715,6 +761,8 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         }
     }, openChannelTypeSetup: {
         presentControllerImpl?(channelVisibilityController(context: context, peerId: peerId, mode: .generic, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+    }, openDiscussionGroupSetup: {
+        pushControllerImpl?(channelDiscussionGroupSetupController(context: context, peerId: peerId))
     }, changeNotificationMuteSettings: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = (context.account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
@@ -854,7 +902,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     let hapticFeedback = HapticFeedback()
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId), context.account.postbox.combinedView(keys: [globalNotificationsKey]))
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId, updateData: true), context.account.postbox.combinedView(keys: [globalNotificationsKey]))
         |> map { presentationData, state, view, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             

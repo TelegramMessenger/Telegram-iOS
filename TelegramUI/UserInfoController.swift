@@ -618,7 +618,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
             }
         }
     } else {
-        entries.append(UserInfoEntry.requestPhoneNumber(presentationData.theme, "phone", "Request Number"))
+        //entries.append(UserInfoEntry.requestPhoneNumber(presentationData.theme, "phone", "Request Number"))
     }
     
     let aboutTitle: String
@@ -796,7 +796,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     let cachedAvatarEntries = Atomic<Promise<[AvatarGalleryEntry]>?>(value: nil)
     
     let peerView = Promise<(PeerView, CachedPeerData?)>()
-    peerView.set(context.account.viewTracker.peerView(peerId) |> mapToSignal({ view -> Signal<(PeerView, CachedPeerData?), NoError> in
+    peerView.set(context.account.viewTracker.peerView(peerId, updateData: true) |> mapToSignal({ view -> Signal<(PeerView, CachedPeerData?), NoError> in
         if peerId.namespace == Namespaces.Peer.SecretChat {
             if let peer = peerViewMainPeer(view) {
                 return context.account.viewTracker.peerView(peer.id) |> map({ secretChatView -> (PeerView, CachedPeerData?) in

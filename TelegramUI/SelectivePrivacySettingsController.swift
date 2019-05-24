@@ -499,7 +499,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
         case .phoneNumber:
             settingTitle = presentationData.strings.PrivacyPhoneNumberSettings_WhoCanSeeMyPhoneNumber
-            settingInfoText = presentationData.strings.PrivacyLastSeenSettings_CustomHelp
+            settingInfoText = presentationData.strings.PrivacyPhoneNumberSettings_CustomHelp
             disableForText = presentationData.strings.PrivacyLastSeenSettings_NeverShareWith
             enableForText = presentationData.strings.PrivacyLastSeenSettings_AlwaysShareWith
     }

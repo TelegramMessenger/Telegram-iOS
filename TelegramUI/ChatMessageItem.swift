@@ -91,6 +91,19 @@ private func mediaMergeableStyle(_ media: Media) -> ChatMessageMerge {
 private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs: Message) -> ChatMessageMerge {
     var lhsEffectiveAuthor: Peer? = lhs.author
     var rhsEffectiveAuthor: Peer? = rhs.author
+    for attribute in lhs.attributes {
+        if let attribute = attribute as? SourceReferenceMessageAttribute {
+            lhsEffectiveAuthor = lhs.peers[attribute.messageId.peerId]
+            break
+        }
+    }
+    for attribute in rhs.attributes {
+        if let attribute = attribute as? SourceReferenceMessageAttribute {
+            rhsEffectiveAuthor = rhs.peers[attribute.messageId.peerId]
+            break
+        }
+    }
+    
     if lhs.id.peerId == accountPeerId {
         if let forwardInfo = lhs.forwardInfo {
             lhsEffectiveAuthor = forwardInfo.author
@@ -277,6 +290,12 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     displayAuthorInfo = incoming && effectiveAuthor != nil
                 } else {
                     effectiveAuthor = content.firstMessage.author
+                    for attribute in content.firstMessage.attributes {
+                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                            effectiveAuthor = content.firstMessage.peers[attribute.messageId.peerId]
+                            break
+                        }
+                    }
                     displayAuthorInfo = incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
                 }
             /*case .group:

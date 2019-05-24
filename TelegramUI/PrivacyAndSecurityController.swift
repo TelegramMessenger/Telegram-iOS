@@ -343,7 +343,7 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
 private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?, accessChallengeData: PostboxAccessChallengeData, blockedPeerCount: Int?, activeSessionsCount: Int, hasTwoStepAuth: Bool) -> [PrivacyAndSecurityEntry] {
     var entries: [PrivacyAndSecurityEntry] = []
     
-    entries.append(.blockedPeers(presentationData.theme, presentationData.strings.Settings_BlockedUsers, blockedPeerCount == nil ? "" : "\(blockedPeerCount!)"))
+    entries.append(.blockedPeers(presentationData.theme, presentationData.strings.Settings_BlockedUsers, blockedPeerCount == nil ? "" : (blockedPeerCount == 0 ? presentationData.strings.PrivacySettings_BlockedPeersEmpty : "\(blockedPeerCount!)")))
     entries.append(.activeSessions(presentationData.theme, presentationData.strings.PrivacySettings_AuthSessions, activeSessionsCount == 0 ? "" : "\(activeSessionsCount)"))
     
     let passcodeValue: String
@@ -617,7 +617,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             }
         })
     }, openTwoStepVerification: {
-        pushControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: true, data: nil)))
+        pushControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: nil)))
     }, openActiveSessions: {
         pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext))
     }, setupAccountAutoremove: {

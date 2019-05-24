@@ -277,7 +277,8 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
             } else {
                 dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: nil))
                 |> then(remoteDataPromise.get()))
-                remoteDataPromise.set(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil)) })
+                remoteDataPromise.set(twoStepVerificationConfiguration(account: context.account)
+                |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: nil)) })
             }
         case let .manage(password, email, pendingEmail, hasSecureValues):
             dataPromise.set(.single(.manage(password: password, emailSet: !email.isEmpty, pendingEmail: pendingEmail, hasSecureValues: hasSecureValues)))

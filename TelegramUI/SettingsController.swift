@@ -274,8 +274,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .privacyAndSecurity(lhsTheme, lhsImage, lhsText, _):
-                if case let .privacyAndSecurity(rhsTheme, rhsImage, rhsText, _) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
+            case let .privacyAndSecurity(lhsTheme, lhsImage, lhsText, lhsSettings):
+                if case let .privacyAndSecurity(rhsTheme, rhsImage, rhsText, rhsSettings) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsSettings == rhsSettings {
                     return true
                 } else {
                     return false

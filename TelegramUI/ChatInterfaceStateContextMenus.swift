@@ -695,7 +695,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         if message.flags.contains(.Incoming) {
                             optionsMap[id]!.insert(.report)
                         }
-                        if channel.hasPermission(.banMembers), case .group = channel.info {
+                        if channel.hasPermission(.banMembers), case .group = channel.info, message.author is TelegramUser {
                             if message.flags.contains(.Incoming) {
                                 if !hadBanPeerId {
                                     hadBanPeerId = true

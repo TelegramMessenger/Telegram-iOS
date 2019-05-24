@@ -631,7 +631,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 }
                         }
                     }
-                    
                     return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators)
                     |> map({
                         mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, transition: $0)
@@ -724,204 +723,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         
         self.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
-            if let strongSelf = self {
-                if let historyView = (opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
-                    if let visible = displayedRange.visibleRange {
-                        let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
-                        
-                        let readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
-                        
-                        let toEarlierRange = (0, historyView.filteredEntries.count - 1 - visible.lastIndex - 1)
-                        let toLaterRange = (historyView.filteredEntries.count - 1 - (visible.firstIndex - 1), historyView.filteredEntries.count - 1)
-                        
-                        var messageIdsWithViewCount: [MessageId] = []
-                        var messageIdsWithUnsupportedMedia: [MessageId] = []
-                        var messageIdsWithUnseenPersonalMention: [MessageId] = []
-                        var messagesWithPreloadableMediaToEarlier: [(Message, Media)] = []
-                        var messagesWithPreloadableMediaToLater: [(Message, Media)] = []
-                        
-                        for i in (indexRange.0 ... indexRange.1) {
-                            switch historyView.filteredEntries[i] {
-                                case let .MessageEntry(message, _, _, _, _, _):
-                                    var hasUnconsumedMention = false
-                                    var hasUnconsumedContent = false
-                                    if message.tags.contains(.unseenPersonalMessage) {
-                                        for attribute in message.attributes {
-                                            if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
-                                                hasUnconsumedMention = true
-                                            }
-                                        }
-                                    }
-                                    var contentRequiredValidation = false
-                                    for attribute in message.attributes {
-                                        if attribute is ViewCountMessageAttribute {
-                                            if message.id.namespace == Namespaces.Message.Cloud {
-                                                messageIdsWithViewCount.append(message.id)
-                                            }
-                                        } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
-                                            hasUnconsumedContent = true
-                                        } else if let _ = attribute as? ContentRequiresValidationMessageAttribute {
-                                            contentRequiredValidation = true
-                                        }
-                                    }
-                                    for media in message.media {
-                                        if let _ = media as? TelegramMediaUnsupported {
-                                            contentRequiredValidation = true
-                                        }
-                                    }
-                                    if contentRequiredValidation {
-                                        messageIdsWithUnsupportedMedia.append(message.id)
-                                    }
-                                    if hasUnconsumedMention && !hasUnconsumedContent {
-                                        messageIdsWithUnseenPersonalMention.append(message.id)
-                                    }
-                                case let .MessageGroupEntry(_, messages, _):
-                                    for (message, _, _, _) in messages {
-                                        var hasUnconsumedMention = false
-                                        var hasUnconsumedContent = false
-                                        if message.tags.contains(.unseenPersonalMessage) {
-                                            for attribute in message.attributes {
-                                                if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
-                                                    hasUnconsumedMention = true
-                                                }
-                                            }
-                                        }
-                                        for attribute in message.attributes {
-                                            if attribute is ViewCountMessageAttribute {
-                                                if message.id.namespace == Namespaces.Message.Cloud {
-                                                    messageIdsWithViewCount.append(message.id)
-                                                }
-                                            } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
-                                                hasUnconsumedContent = true
-                                            }
-                                        }
-                                        if hasUnconsumedMention && !hasUnconsumedContent {
-                                            messageIdsWithUnseenPersonalMention.append(message.id)
-                                        }
-                                    }
-                                default:
-                                    break
-                            }
-                        }
-                        
-                        func addMediaToPrefetch(_ message: Message, _ media: Media, _ messages: inout [(Message, Media)]) -> Bool {
-                            if media is TelegramMediaImage || media is TelegramMediaFile {
-                                messages.append((message, media))
-                            }
-                            if messages.count >= 3 {
-                                return false
-                            } else {
-                                return true
-                            }
-                        }
-                        
-                        var toEarlierMediaMessages: [(Message, Media)] = []
-                        if toEarlierRange.0 <= toEarlierRange.1 {
-                            outer: for i in (toEarlierRange.0 ... toEarlierRange.1).reversed() {
-                                switch historyView.filteredEntries[i] {
-                                    case let .MessageEntry(message, _, _, _, _, _):
-                                        for media in message.media {
-                                            if !addMediaToPrefetch(message, media, &toEarlierMediaMessages) {
-                                                break outer
-                                            }
-                                        }
-                                    case let .MessageGroupEntry(_, messages, _):
-                                        for (message, _, _, _) in messages {
-                                            var stop = false
-                                            for media in message.media {
-                                                if !addMediaToPrefetch(message, media, &toEarlierMediaMessages) {
-                                                    stop = true
-                                                }
-                                            }
-                                            if stop {
-                                                break outer
-                                            }
-                                        }
-                                    default:
-                                        break
-                                }
-                            }
-                        }
-                        
-                        var toLaterMediaMessages: [(Message, Media)] = []
-                        if toLaterRange.0 <= toLaterRange.1 {
-                            outer: for i in (toLaterRange.0 ... toLaterRange.1) {
-                                switch historyView.filteredEntries[i] {
-                                    case let .MessageEntry(message, _, _, _, _, _):
-                                        for media in message.media {
-                                            if !addMediaToPrefetch(message, media, &toLaterMediaMessages) {
-                                                break outer
-                                            }
-                                        }
-                                    case let .MessageGroupEntry(_, messages, _):
-                                        for (message, _, _, _) in messages {
-                                            for media in message.media {
-                                                if !addMediaToPrefetch(message, media, &toLaterMediaMessages) {
-                                                    break outer
-                                                }
-                                            }
-                                        }
-                                    default:
-                                        break
-                                }
-                            }
-                        }
-                        
-                        if !messageIdsWithViewCount.isEmpty {
-                            strongSelf.messageProcessingManager.add(messageIdsWithViewCount)
-                        }
-                        if !messageIdsWithUnsupportedMedia.isEmpty {
-                            strongSelf.unsupportedMessageProcessingManager.add(messageIdsWithUnsupportedMedia)
-                        }
-                        if !messageIdsWithUnseenPersonalMention.isEmpty {
-                            strongSelf.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
-                        }
-                        
-                        strongSelf.currentEarlierPrefetchMessages = toEarlierMediaMessages
-                        strongSelf.currentLaterPrefetchMessages = toLaterMediaMessages
-                        if strongSelf.currentPrefetchDirectionIsToLater {
-                            strongSelf.prefetchManager.updateMessages(toLaterMediaMessages, directionIsToLater: strongSelf.currentPrefetchDirectionIsToLater)
-                        } else {
-                            strongSelf.prefetchManager.updateMessages(toEarlierMediaMessages, directionIsToLater: strongSelf.currentPrefetchDirectionIsToLater)
-                        }
-                        
-                        if readIndexRange.0 <= readIndexRange.1 {
-                            let (maxIncomingIndex, maxOverallIndex) = maxMessageIndexForEntries(historyView, indexRange: readIndexRange)
-                            
-                            if let maxIncomingIndex = maxIncomingIndex {
-                                strongSelf.updateMaxVisibleReadIncomingMessageIndex(maxIncomingIndex)
-                            }
-                            
-                            if let maxOverallIndex = maxOverallIndex, maxOverallIndex != strongSelf.maxVisibleMessageIndexReported {
-                                strongSelf.maxVisibleMessageIndexReported = maxOverallIndex
-                                strongSelf.maxVisibleMessageIndexUpdated?(maxOverallIndex)
-                            }
-                        }
-                    }
-                    
-                    if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
-                        if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {
-                            strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: 0)
-                        } else if loaded.firstIndex < 5, historyView.originalView.laterId == nil, !historyView.originalView.holeLater, let chatHistoryLocationValue = strongSelf.chatHistoryLocationValue, !chatHistoryLocationValue.isAtUpperBound, historyView.originalView.anchorIndex != .upperBound {
-                            strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .upperBound, anchorIndex: .upperBound, count: historyMessageCount), id: 0)
-                        } else if loaded.lastIndex >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
-                            strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount), id: 0)
-                        }
-                    }
-                    
-                    var containsPlayableWithSoundItemNode = false
-                    strongSelf.forEachVisibleItemNode { itemNode in
-                        if let chatItemView = itemNode as? ChatMessageItemView, chatItemView.playMediaWithSound() != nil {
-                            containsPlayableWithSoundItemNode = true
-                        }
-                    }
-                    strongSelf.hasVisiblePlayableItemNodesPromise.set(containsPlayableWithSoundItemNode)
-                    
-                    if containsPlayableWithSoundItemNode && !strongSelf.isInteractivelyScrollingValue {
-                        strongSelf.isInteractivelyScrollingPromise.set(true)
-                        strongSelf.isInteractivelyScrollingPromise.set(false)
-                    }
-                }
+            if let strongSelf = self, let transactionState = opaqueTransactionState as? ChatHistoryTransactionOpaqueState {
+                self?.processDisplayedItemRangeChanged(displayedRange: displayedRange, transactionState: transactionState)
             }
         }
         
@@ -1010,6 +813,205 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {
         self.loadStateUpdated = f
+    }
+    
+    private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
+        let historyView = transactionState.historyView
+        if let visible = displayedRange.visibleRange {
+            let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
+            
+            let readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
+            
+            let toEarlierRange = (0, historyView.filteredEntries.count - 1 - visible.lastIndex - 1)
+            let toLaterRange = (historyView.filteredEntries.count - 1 - (visible.firstIndex - 1), historyView.filteredEntries.count - 1)
+            
+            var messageIdsWithViewCount: [MessageId] = []
+            var messageIdsWithUnsupportedMedia: [MessageId] = []
+            var messageIdsWithUnseenPersonalMention: [MessageId] = []
+            var messagesWithPreloadableMediaToEarlier: [(Message, Media)] = []
+            var messagesWithPreloadableMediaToLater: [(Message, Media)] = []
+            
+            for i in (indexRange.0 ... indexRange.1) {
+                switch historyView.filteredEntries[i] {
+                case let .MessageEntry(message, _, _, _, _, _):
+                    var hasUnconsumedMention = false
+                    var hasUnconsumedContent = false
+                    if message.tags.contains(.unseenPersonalMessage) {
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
+                                hasUnconsumedMention = true
+                            }
+                        }
+                    }
+                    var contentRequiredValidation = false
+                    for attribute in message.attributes {
+                        if attribute is ViewCountMessageAttribute {
+                            if message.id.namespace == Namespaces.Message.Cloud {
+                                messageIdsWithViewCount.append(message.id)
+                            }
+                        } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
+                            hasUnconsumedContent = true
+                        } else if let _ = attribute as? ContentRequiresValidationMessageAttribute {
+                            contentRequiredValidation = true
+                        }
+                    }
+                    for media in message.media {
+                        if let _ = media as? TelegramMediaUnsupported {
+                            contentRequiredValidation = true
+                        }
+                    }
+                    if contentRequiredValidation {
+                        messageIdsWithUnsupportedMedia.append(message.id)
+                    }
+                    if hasUnconsumedMention && !hasUnconsumedContent {
+                        messageIdsWithUnseenPersonalMention.append(message.id)
+                    }
+                case let .MessageGroupEntry(_, messages, _):
+                    for (message, _, _, _) in messages {
+                        var hasUnconsumedMention = false
+                        var hasUnconsumedContent = false
+                        if message.tags.contains(.unseenPersonalMessage) {
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
+                                    hasUnconsumedMention = true
+                                }
+                            }
+                        }
+                        for attribute in message.attributes {
+                            if attribute is ViewCountMessageAttribute {
+                                if message.id.namespace == Namespaces.Message.Cloud {
+                                    messageIdsWithViewCount.append(message.id)
+                                }
+                            } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
+                                hasUnconsumedContent = true
+                            }
+                        }
+                        if hasUnconsumedMention && !hasUnconsumedContent {
+                            messageIdsWithUnseenPersonalMention.append(message.id)
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+            
+            func addMediaToPrefetch(_ message: Message, _ media: Media, _ messages: inout [(Message, Media)]) -> Bool {
+                if media is TelegramMediaImage || media is TelegramMediaFile {
+                    messages.append((message, media))
+                }
+                if messages.count >= 3 {
+                    return false
+                } else {
+                    return true
+                }
+            }
+            
+            var toEarlierMediaMessages: [(Message, Media)] = []
+            if toEarlierRange.0 <= toEarlierRange.1 {
+                outer: for i in (toEarlierRange.0 ... toEarlierRange.1).reversed() {
+                    switch historyView.filteredEntries[i] {
+                    case let .MessageEntry(message, _, _, _, _, _):
+                        for media in message.media {
+                            if !addMediaToPrefetch(message, media, &toEarlierMediaMessages) {
+                                break outer
+                            }
+                        }
+                    case let .MessageGroupEntry(_, messages, _):
+                        for (message, _, _, _) in messages {
+                            var stop = false
+                            for media in message.media {
+                                if !addMediaToPrefetch(message, media, &toEarlierMediaMessages) {
+                                    stop = true
+                                }
+                            }
+                            if stop {
+                                break outer
+                            }
+                        }
+                    default:
+                        break
+                    }
+                }
+            }
+            
+            var toLaterMediaMessages: [(Message, Media)] = []
+            if toLaterRange.0 <= toLaterRange.1 {
+                outer: for i in (toLaterRange.0 ... toLaterRange.1) {
+                    switch historyView.filteredEntries[i] {
+                    case let .MessageEntry(message, _, _, _, _, _):
+                        for media in message.media {
+                            if !addMediaToPrefetch(message, media, &toLaterMediaMessages) {
+                                break outer
+                            }
+                        }
+                    case let .MessageGroupEntry(_, messages, _):
+                        for (message, _, _, _) in messages {
+                            for media in message.media {
+                                if !addMediaToPrefetch(message, media, &toLaterMediaMessages) {
+                                    break outer
+                                }
+                            }
+                        }
+                    default:
+                        break
+                    }
+                }
+            }
+            
+            if !messageIdsWithViewCount.isEmpty {
+                self.messageProcessingManager.add(messageIdsWithViewCount)
+            }
+            if !messageIdsWithUnsupportedMedia.isEmpty {
+                self.unsupportedMessageProcessingManager.add(messageIdsWithUnsupportedMedia)
+            }
+            if !messageIdsWithUnseenPersonalMention.isEmpty {
+                self.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
+            }
+            
+            self.currentEarlierPrefetchMessages = toEarlierMediaMessages
+            self.currentLaterPrefetchMessages = toLaterMediaMessages
+            if self.currentPrefetchDirectionIsToLater {
+                self.prefetchManager.updateMessages(toLaterMediaMessages, directionIsToLater: self.currentPrefetchDirectionIsToLater)
+            } else {
+                self.prefetchManager.updateMessages(toEarlierMediaMessages, directionIsToLater: self.currentPrefetchDirectionIsToLater)
+            }
+            
+            if readIndexRange.0 <= readIndexRange.1 {
+                let (maxIncomingIndex, maxOverallIndex) = maxMessageIndexForEntries(historyView, indexRange: readIndexRange)
+                
+                if let maxIncomingIndex = maxIncomingIndex {
+                    self.updateMaxVisibleReadIncomingMessageIndex(maxIncomingIndex)
+                }
+                
+                if let maxOverallIndex = maxOverallIndex, maxOverallIndex != self.maxVisibleMessageIndexReported {
+                    self.maxVisibleMessageIndexReported = maxOverallIndex
+                    self.maxVisibleMessageIndexUpdated?(maxOverallIndex)
+                }
+            }
+        }
+        
+        if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
+            if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: 0)
+            } else if loaded.firstIndex < 5, historyView.originalView.laterId == nil, !historyView.originalView.holeLater, let chatHistoryLocationValue = self.chatHistoryLocationValue, !chatHistoryLocationValue.isAtUpperBound, historyView.originalView.anchorIndex != .upperBound {
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .upperBound, anchorIndex: .upperBound, count: historyMessageCount), id: 0)
+            } else if loaded.lastIndex >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount), id: 0)
+            }
+        }
+        
+        var containsPlayableWithSoundItemNode = false
+        self.forEachVisibleItemNode { itemNode in
+            if let chatItemView = itemNode as? ChatMessageItemView, chatItemView.playMediaWithSound() != nil {
+                containsPlayableWithSoundItemNode = true
+            }
+        }
+        self.hasVisiblePlayableItemNodesPromise.set(containsPlayableWithSoundItemNode)
+        
+        if containsPlayableWithSoundItemNode && !self.isInteractivelyScrollingValue {
+            self.isInteractivelyScrollingPromise.set(true)
+            self.isInteractivelyScrollingPromise.set(false)
+        }
     }
     
     public func scrollScreenToTop() {

@@ -1377,6 +1377,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     peerIsMuted = true
                                 }
                             }
+                            var peerDiscussionId: PeerId?
+                            if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, case .broadcast = peer.info, let cachedData = peerView.cachedData as? CachedChannelData {
+                                peerDiscussionId = cachedData.linkedDiscussionPeerId
+                            }
                             var renderedPeer: RenderedPeer?
                             var isContact: Bool = false
                             if let peer = peerView.peers[peerView.peerId] {
@@ -1422,7 +1426,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             }
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                                 return $0.updatedPeer { _ in return renderedPeer
-                                }.updatedIsNotAccessible(isNotAccessible).updatedIsContact(isContact).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
+                                }.updatedIsNotAccessible(isNotAccessible).updatedIsContact(isContact).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
                             })
                             if !strongSelf.didSetChatLocationInfoReady {
                                 strongSelf.didSetChatLocationInfoReady = true
@@ -2591,6 +2595,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }, navigateToMessage: { [weak self] messageId in
             self?.navigateToMessage(from: nil, to: .id(messageId))
+        }, navigateToChat: { [weak self] peerId in
+            guard let strongSelf = self else {
+                return
+            }
+            if let navigationController = strongSelf.navigationController as? NavigationController {
+                navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: nil, keepStack: .always)
+            }
         }, openPeerInfo: { [weak self] in
             self?.navigationButtonAction(.openChatInfo)
         }, togglePeerNotifications: { [weak self] in
@@ -5446,11 +5457,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     })
                                     |> deliverOnMainQueue).start(completed: { [weak self] in
                                         if let strongSelf = self {
-                                            (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId), messageId: nil))
+                                            (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId))
                                         }
                                     })
                                 } else {
-                                    (self.navigationController as? NavigationController)?.pushViewController(ChatController(context: self.context, chatLocation: .peer(peerId), messageId: nil))
+                                    (self.navigationController as? NavigationController)?.pushViewController(ChatController(context: self.context, chatLocation: .peer(peerId), messageId: messageId))
                                 }
                             case let .withBotStartPayload(botStart):
                                 (self.navigationController as? NavigationController)?.pushViewController(ChatController(context: self.context, chatLocation: .peer(peerId), messageId: nil, botStart: botStart))

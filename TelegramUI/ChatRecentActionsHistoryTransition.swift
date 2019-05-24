@@ -857,6 +857,67 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: message.author, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                         return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: filterOriginalMessageFlags(message), read: true, selection: .none, attributes: ChatMessageEntryAttributes(isAdmin: false, isContact: false)), additionalContent: nil)
                 }
+            case let .linkedPeerUpdated(_, updated):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                if let updated = updated {
+                    appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedLinkedGroup(author?.displayTitle ?? "", updated.displayTitle), generateEntities: { index in
+                        if index == 0, let author = author {
+                            return [.TextMention(peerId: author.id)]
+                        } else if index == 1 {
+                            return [.TextMention(peerId: updated.id)]
+                        }
+                        return []
+                    }, to: &text, entities: &entities)
+                } else {
+                    appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedUnlinkedGroup(author?.displayTitle ?? ""), generateEntities: { index in
+                        if index == 0, let author = author {
+                            return [.TextMention(peerId: author.id)]
+                        }
+                        return []
+                    }, to: &text, entities: &entities)
+                }
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(isAdmin: false, isContact: false)))
+        case let .togglePreHistoryHidden(value):
+            var peers = SimpleDictionary<PeerId, Peer>()
+            var author: Peer?
+            if let peer = self.entry.peers[self.entry.event.peerId] {
+                author = peer
+                peers[peer.id] = peer
+            }
+            
+            var text: String = ""
+            var entities: [MessageTextEntity] = []
+            
+            if !value {
+                appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageGroupPreHistoryVisible(author?.displayTitle ?? ""), generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+            } else {
+                appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageGroupPreHistoryHidden(author?.displayTitle ?? ""), generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+            }
+            let action = TelegramMediaActionType.customText(text: text, entities: entities)
+            
+            let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+            return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(isAdmin: false, isContact: false)))
         }
     }
 }

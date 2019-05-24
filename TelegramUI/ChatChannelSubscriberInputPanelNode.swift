@@ -44,13 +44,19 @@ private func actionForPeer(peer: Peer, isMuted: Bool) -> SubscriberAction? {
     }
 }
 
+private let badgeFont = Font.regular(14.0)
+
 final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     private let button: UIButton
+    private let discussButton: UIButton
+    private let badgeBackground: ASImageNode
+    private let badgeText: ImmediateTextNode
     private let activityIndicator: UIActivityIndicatorView
     
     private var action: SubscriberAction?
     
     private let actionDisposable = MetaDisposable()
+    private let badgeDisposable = MetaDisposable()
     
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     
@@ -58,22 +64,40 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     
     override init() {
         self.button = UIButton()
+        self.discussButton = UIButton()
         self.activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .gray)
         self.activityIndicator.isHidden = true
+        
+        self.badgeBackground = ASImageNode()
+        self.badgeBackground.displaysAsynchronously = false
+        self.badgeBackground.displayWithoutProcessing = true
+        self.badgeBackground.isHidden = true
+        
+        self.badgeText = ImmediateTextNode()
+        self.badgeText.displaysAsynchronously = false
+        self.badgeText.isHidden = true
+        
+        self.discussButton.addSubnode(self.badgeBackground)
+        self.discussButton.addSubnode(self.badgeText)
         
         super.init()
         
         self.view.addSubview(self.button)
+        self.view.addSubview(self.discussButton)
         self.view.addSubview(self.activityIndicator)
         
-        button.addTarget(self, action: #selector(self.buttonPressed), for: [.touchUpInside])
+        self.button.addTarget(self, action: #selector(self.buttonPressed), for: [.touchUpInside])
+        self.discussButton.addTarget(self, action: #selector(self.discussPressed), for: [.touchUpInside])
     }
     
     deinit {
         self.actionDisposable.dispose()
+        self.badgeDisposable.dispose()
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        return super.hitTest(point, with: event)
+        
         if self.bounds.contains(point) {
             return self.button
         } else {
@@ -108,6 +132,12 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         }
     }
     
+    @objc private func discussPressed() {
+        if let presentationInterfaceState = self.presentationInterfaceState, let peerDiscussionId = presentationInterfaceState.peerDiscussionId {
+            self.interfaceInteraction?.navigateToChat(peerDiscussionId)
+        }
+    }
+    
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         self.layoutData = (width, leftInset, rightInset)
         
@@ -115,7 +145,57 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
             
-            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted {
+            if previousState?.theme !== interfaceState.theme {
+                self.badgeBackground.image = PresentationResourcesChatList.badgeBackgroundActive(interfaceState.theme)
+            }
+            
+            if previousState?.peerDiscussionId != interfaceState.peerDiscussionId {
+                let signal: Signal<Int?, NoError>
+                if let peerDiscussionId = interfaceState.peerDiscussionId, let context = self.context {
+                    let key = PostboxViewKey.unreadCounts(items: [.peer(peerDiscussionId)])
+                    let inclusionKey = PostboxViewKey.peerChatInclusion(peerDiscussionId)
+                    signal = context.account.postbox.combinedView(keys: [key, inclusionKey])
+                    |> map { view -> Int? in
+                        guard let inclusionView = view.views[inclusionKey] as? PeerChatInclusionView, let countsView = view.views[key] as? UnreadMessageCountsView else {
+                            return nil
+                        }
+                        if !inclusionView.inclusion {
+                            return nil
+                        }
+                        if let count = countsView.count(for: .peer(peerDiscussionId)), count != 0 {
+                            return Int(count)
+                        } else {
+                            return nil
+                        }
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    signal = .single(nil)
+                }
+                self.badgeDisposable.set((signal
+                |> deliverOnMainQueue).start(next: { [weak self] value in
+                    guard let strongSelf = self, let interfaceState = strongSelf.presentationInterfaceState, let image = strongSelf.badgeBackground.image else {
+                        return
+                    }
+                    let text = "\(value ?? 0)"
+                    
+                    strongSelf.badgeText.attributedText = NSAttributedString(string: text, font: badgeFont, textColor: interfaceState.theme.chatList.unreadBadgeActiveTextColor)
+                    let textSize = strongSelf.badgeText.updateLayout(CGSize(width: 100.0, height: 100.0))
+                    let badgeSize = CGSize(width: max(image.size.width, textSize.width + 4.0), height: image.size.height)
+                    let badgeFrame = CGRect(origin: CGPoint(x: strongSelf.discussButton.bounds.width + 5.0, y: floor((strongSelf.discussButton.bounds.height - badgeSize.height) / 2.0)), size: badgeSize)
+                    strongSelf.badgeBackground.frame = badgeFrame
+                    strongSelf.badgeText.frame = CGRect(origin: CGPoint(x: badgeFrame.minX + floor((badgeSize.width - textSize.width) / 2.0), y: badgeFrame.minY + floor((badgeSize.height - textSize.height) / 2.0)), size: textSize)
+                    if value == nil || value == 0 {
+                        strongSelf.badgeBackground.isHidden = true
+                        strongSelf.badgeText.isHidden = true
+                    } else {
+                        strongSelf.badgeBackground.isHidden = false
+                        strongSelf.badgeText.isHidden = false
+                    }
+                }))
+            }
+            
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted || previousState?.peerDiscussionId != interfaceState.peerDiscussionId {
                 if let action = actionForPeer(peer: peer, isMuted: interfaceState.peerIsMuted) {
                     self.action = action
                     let (title, color) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)
@@ -126,13 +206,33 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 } else {
                     self.action = nil
                 }
+                
+                if interfaceState.peerDiscussionId != nil {
+                    self.discussButton.setTitle(interfaceState.strings.Channel_DiscussionGroup_HeaderLabel, for: [])
+                    self.discussButton.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlAccentColor, for: [.normal])
+                    self.discussButton.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlAccentColor.withAlphaComponent(0.5), for: [.highlighted])
+                    self.discussButton.sizeToFit()
+                    self.discussButton.isHidden = false
+                } else {
+                    self.discussButton.isHidden = true
+                }
             }
         }
         
         let panelHeight = defaultHeight(metrics: metrics)
         
         let buttonSize = self.button.bounds.size
-        self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+        let discussSize = self.discussButton.bounds.size
+        if self.discussButton.isHidden {
+            self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+        } else {
+            let availableWidth = floor((width - leftInset - rightInset) / 2.0)
+            self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((availableWidth - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+            self.discussButton.frame = CGRect(origin: CGPoint(x: leftInset + availableWidth + floor((availableWidth - discussSize.width) / 2.0), y: floor((panelHeight - discussSize.height) / 2.0)), size: discussSize)
+            let badgeOffset = self.discussButton.bounds.width + 5.0 - self.badgeBackground.frame.minX
+            self.badgeBackground.frame = self.badgeBackground.frame.offsetBy(dx: badgeOffset, dy: 0.0)
+            self.badgeText.frame = self.badgeText.frame.offsetBy(dx: badgeOffset, dy: 0.0)
+        }
         
         let indicatorSize = self.activityIndicator.bounds.size
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - rightInset - indicatorSize.width - 12.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)

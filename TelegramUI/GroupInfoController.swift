@@ -34,8 +34,9 @@ private final class GroupInfoArguments {
     let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     let openStickerPackSetup: () -> Void
     let openGroupTypeSetup: () -> Void
+    let openLinkedChannelSetup: () -> Void
     
-    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void) {
+    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void, openLinkedChannelSetup: @escaping () -> Void) {
         self.context = context
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
@@ -61,6 +62,7 @@ private final class GroupInfoArguments {
         self.aboutLinkAction = aboutLinkAction
         self.openStickerPackSetup = openStickerPackSetup
         self.openGroupTypeSetup = openGroupTypeSetup
+        self.openLinkedChannelSetup = openLinkedChannelSetup
     }
 }
 
@@ -138,6 +140,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     case notifications(PresentationTheme, String, String)
     case stickerPack(PresentationTheme, String, String)
     case groupTypeSetup(PresentationTheme, String, String)
+    case linkedChannelSetup(PresentationTheme, String, String)
     case preHistory(PresentationTheme, String, String)
     case administrators(PresentationTheme, String, String)
     case permissions(PresentationTheme, String, String)
@@ -151,7 +154,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return GroupInfoSection.info.rawValue
             case .aboutHeader, .about, .link:
                 return GroupInfoSection.about.rawValue
-            case .groupTypeSetup, .preHistory, .stickerPack:
+            case .groupTypeSetup, .linkedChannelSetup, .preHistory, .stickerPack:
                 return GroupInfoSection.infoManagement.rawValue
             case .sharedMedia, .notifications:
                 return GroupInfoSection.sharedMediaAndNotifications.rawValue
@@ -285,6 +288,12 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .linkedChannelSetup(lhsTheme, lhsTitle, lhsText):
+                if case let .linkedChannelSetup(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .permissions(lhsTheme, lhsTitle, lhsText):
                 if case let .permissions(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
                     return true
@@ -383,12 +392,14 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return 6
             case .groupTypeSetup:
                 return 8
-            case .preHistory:
+            case .linkedChannelSetup:
                 return 9
-            case .stickerPack:
+            case .preHistory:
                 return 10
-            case .notifications:
+            case .stickerPack:
                 return 11
+            case .notifications:
+                return 12
             case .sharedMedia:
                 return 13
             case .permissions:
@@ -457,6 +468,10 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case let .groupTypeSetup(theme, title, text):
                 return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.openGroupTypeSetup()
+                })
+            case let .linkedChannelSetup(theme, title, text):
+                return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
+                    arguments.openLinkedChannelSetup()
                 })
             case let .groupDescriptionSetup(theme, placeholder, text):
                 return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
@@ -766,6 +781,15 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             if isCreator {
                 if cachedChannelData.flags.contains(.canChangeUsername) {
                     entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
+                    if let linkedDiscussionPeerId = cachedChannelData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
+                        let peerTitle: String
+                        if let addressName = peer.addressName, !addressName.isEmpty {
+                            peerTitle = "@\(addressName)"
+                        } else {
+                            peerTitle = peer.displayTitle
+                        }
+                        entries.append(GroupInfoEntry.linkedChannelSetup(presentationData.theme, presentationData.strings.Group_LinkedChannel, peerTitle))
+                    }
                 }
                 if !isPublic {
                     entries.append(GroupInfoEntry.preHistory(presentationData.theme, presentationData.strings.GroupInfo_GroupHistory, cachedChannelData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden))
@@ -1239,7 +1263,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     let peerViewSignal = actualPeerId.get()
     |> distinctUntilChanged
     |> mapToSignal { peerId -> Signal<PeerView, NoError> in
-        return context.account.viewTracker.peerView(peerId)
+        return context.account.viewTracker.peerView(peerId, updateData: true)
     }
     peerView.set(peerViewSignal)
     
@@ -1856,6 +1880,12 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             presentControllerImpl?(channelVisibilityController(context: context, peerId: peerView.peerId, mode: .generic, upgradedToSupergroup: { updatedPeerId, f in
                 upgradedToSupergroupImpl?(updatedPeerId, f)
             }), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+        })
+    }, openLinkedChannelSetup: {
+        let _ = (peerView.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peerView in
+            pushControllerImpl?(channelDiscussionGroupSetupController(context: context, peerId: peerView.peerId))
         })
     })
     

@@ -379,6 +379,21 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let firstMessage = content.firstMessage
         let incoming = item.content.effectivelyIncoming(item.context.account.peerId)
         
+        var sourceReference: SourceReferenceMessageAttribute?
+        for attribute in item.content.firstMessage.attributes {
+            if let attribute = attribute as? SourceReferenceMessageAttribute {
+                sourceReference = attribute
+                break
+            }
+        }
+        
+        var isCrosspostFromChannel = false
+        if let _ = sourceReference {
+            if firstMessage.id.peerId != item.context.account.peerId {
+                isCrosspostFromChannel = true
+            }
+        }
+        
         var effectiveAuthor: Peer?
         var ignoreForward = false
         let displayAuthorInfo: Bool
@@ -397,6 +412,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: Int32(clamping: authorSignature.persistentHashValue)), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
                         }
                     }
+                    displayAuthorInfo = !mergedTop.merged && incoming && effectiveAuthor != nil
+                } else if isCrosspostFromChannel, let sourceReference = sourceReference, let source = firstMessage.peers[sourceReference.messageId.peerId] {
+                    if firstMessage.forwardInfo?.author?.id == source.id {
+                        ignoreForward = true
+                    }
+                    effectiveAuthor = source
                     displayAuthorInfo = !mergedTop.merged && incoming && effectiveAuthor != nil
                 } else {
                     effectiveAuthor = firstMessage.author
@@ -443,13 +464,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if item.message.flags.contains(.Failed) {
             needShareButton = false
         } else if item.message.id.peerId == item.context.account.peerId {
-            for attribute in item.content.firstMessage.attributes {
-                if let _ = attribute as? SourceReferenceMessageAttribute {
-                    needShareButton = true
-                    break
-                }
+            if let _ = sourceReference {
+                needShareButton = true
             }
         } else if item.message.effectivelyIncoming(item.context.account.peerId) {
+            if let _ = sourceReference {
+                needShareButton = true
+            }
+            
             if let peer = item.message.peers[item.message.id.peerId] {
                 if let channel = peer as? TelegramChannel {
                     if case .broadcast = channel.info {
@@ -536,11 +558,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         
         var authorNameString: String?
         let authorIsAdmin: Bool
+        var authorIsChannel: Bool = false
         switch content {
             case let .message(message, _, _, attributes):
-                if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                    authorIsAdmin = false
+                if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                    if case .broadcast = peer.info {
+                        authorIsAdmin = false
+                    } else {
+                        if isCrosspostFromChannel, let sourceReference = sourceReference, let _ = firstMessage.peers[sourceReference.messageId.peerId] as? TelegramChannel {
+                            authorIsChannel = true
+                        }
+                        authorIsAdmin = attributes.isAdmin
+                    }
                 } else {
+                    if isCrosspostFromChannel, let _ = firstMessage.forwardInfo?.source as? TelegramChannel {
+                        authorIsChannel = true
+                    }
                     authorIsAdmin = attributes.isAdmin
                 }
             case .group:
@@ -823,6 +856,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 var adminBadgeString: NSAttributedString?
                 if authorIsAdmin {
                     adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Conversation_Admin)", font: inlineBotPrefixFont, textColor: incoming ? item.presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor)
+                } else if authorIsChannel {
+                    adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Channel_Status)", font: inlineBotPrefixFont, textColor: incoming ? item.presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor)
                 }
                 if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
                     let mutableString = NSMutableAttributedString(string: "\(authorNameString) ", attributes: [NSAttributedStringKey.font: nameFont, NSAttributedStringKey.foregroundColor: authorNameColor])
@@ -1777,11 +1812,20 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         case .tap:
                             if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {    
                                 if let item = self.item, let author = item.content.firstMessage.author {
-                                    let navigate: ChatControllerInteractionNavigateToPeer
+                                    var openPeerId = item.effectiveAuthorId ?? author.id
+                                    var navigate: ChatControllerInteractionNavigateToPeer
+                                    
                                     if item.content.firstMessage.id.peerId == item.context.account.peerId {
                                         navigate = .chat(textInputState: nil, messageId: nil)
                                     } else {
                                         navigate = .info
+                                    }
+                                    
+                                    for attribute in item.content.firstMessage.attributes {
+                                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                                            openPeerId = attribute.messageId.peerId
+                                            navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                        }
                                     }
                                     
                                     if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
@@ -1794,7 +1838,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                                 return
                                             }
                                         }
-                                        item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
+                                        item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
                                     }
                                 }
                                 return
