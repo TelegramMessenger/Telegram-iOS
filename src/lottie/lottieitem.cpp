@@ -214,7 +214,9 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
 
     if (!mRleFuture) mRleFuture = std::make_shared<VSharedState<VRle>>();
 
+    if (mRleFuture->valid()) mRle = mRleFuture->get();
     mRleFuture->reuse();
+
     VRaster::generateFillInfo(mRleFuture, std::move(tmp), std::move(mRle));
     mRle = VRle();
 }
@@ -402,7 +404,11 @@ VRle LOTLayerMaskItem::maskRle(const VRect &clipRect)
         }
     }
 
-    mRle = rle;
+    if (!rle.empty() && !rle.unique()) {
+        mRle.clone(rle);
+    } else {
+        mRle = rle;
+    }
     mDirty = false;
     return mRle;
 }
@@ -702,7 +708,9 @@ void LOTClipperItem::update(const VMatrix &matrix)
 
     if (!mRleFuture) mRleFuture = std::make_shared<VSharedState<VRle>>();
 
+    if (mRleFuture->valid()) mRle = mRleFuture->get();
     mRleFuture->reuse();
+
     VRaster::generateFillInfo(mRleFuture, std::move(tmp), std::move(mRle));
     mRle = VRle();
 }

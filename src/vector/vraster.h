@@ -56,7 +56,7 @@ private:
     std::mutex               _mutex;
     std::condition_variable  _cv;
     bool                     _ready{false};
-    bool                     _valid{true};
+    bool                     _valid{false};
 };
 
 using RleShare = std::shared_ptr<VSharedState<VRle>>;

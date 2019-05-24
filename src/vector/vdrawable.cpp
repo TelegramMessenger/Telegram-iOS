@@ -26,6 +26,7 @@ void VDrawable::preprocess(const VRect &clip)
 
         if (!mRleFuture) mRleFuture = std::make_shared<VSharedState<VRle>>();
 
+        if (mRleFuture->valid()) mRle = mRleFuture->get();
         mRleFuture->reuse();
 
         if (mStroke.enable) {
