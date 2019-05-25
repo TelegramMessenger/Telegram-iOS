@@ -9,12 +9,22 @@ private final class TextNodeLine {
     let frame: CGRect
     let range: NSRange
     let isRTL: Bool
+    let strikethroughs: [TextNodeStrikethrough]
     
-    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool) {
+    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool, strikethroughs: [TextNodeStrikethrough]) {
         self.line = line
         self.frame = frame
         self.range = range
         self.isRTL = isRTL
+        self.strikethroughs = strikethroughs
+    }
+}
+
+private final class TextNodeStrikethrough {
+    let frame: CGRect
+    
+    init(frame: CGRect) {
+        self.frame = frame
     }
 }
 
@@ -615,6 +625,8 @@ public class TextNode: ASDisplayNode {
             var truncated = false
             var first = true
             while true {
+                var strikethroughs: [TextNodeStrikethrough] = []
+                
                 var lineConstrainedWidth = constrainedSize.width
                 var lineOriginY = floorToScreenPixels(layoutSize.height + fontAscent)
                 if !first {
@@ -648,13 +660,11 @@ public class TextNode: ASDisplayNode {
                     }
                     
                     let lineRange = CFRange(location: lastLineCharacterIndex, length: stringLength - lastLineCharacterIndex)
-                    
                     if lineRange.length == 0 {
                         break
                     }
                     
                     let coreTextLine: CTLine
-                    
                     let originalLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 0.0)
                     
                     if CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) < Double(constrainedSize.width) {
@@ -685,7 +695,15 @@ public class TextNode: ASDisplayNode {
                         }
                     }
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL))
+                    attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
+                        if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
+                            let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                            let x = lowerX < upperX ? lowerX : upperX
+                            strikethroughs.append(TextNodeStrikethrough(frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                        }
+                    }
+                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs))
                     
                     break
                 } else {
@@ -714,7 +732,15 @@ public class TextNode: ASDisplayNode {
                             }
                         }
                         
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL))
+                        attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
+                            if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
+                                let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
+                                let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                                let x = lowerX < upperX ? lowerX : upperX
+                                strikethroughs.append(TextNodeStrikethrough(frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                            }
+                        }
+                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs))
                     } else {
                         if !lines.isEmpty {
                             layoutSize.height += fontLineSpacing
@@ -796,6 +822,13 @@ public class TextNode: ASDisplayNode {
                 }
                 context.textPosition = CGPoint(x: lineFrame.minX, y: lineFrame.minY)
                 CTLineDraw(line.line, context)
+                
+                if !line.strikethroughs.isEmpty {
+                    for strikethrough in line.strikethroughs {
+                        let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                        context.fill(CGRect(x: frame.minX, y: frame.minY - 5.0, width: frame.width, height: 1.0))
+                    }
+                }
             }
             
             //CGContextRestoreGState(context)

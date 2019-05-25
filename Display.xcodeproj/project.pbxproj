@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09167E20229803DC005734A7 /* UIMenuItem+Icons.h in Headers */ = {isa = PBXBuildFile; fileRef = 09167E1E229803DC005734A7 /* UIMenuItem+Icons.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		09167E21229803DC005734A7 /* UIMenuItem+Icons.m in Sources */ = {isa = PBXBuildFile; fileRef = 09167E1F229803DC005734A7 /* UIMenuItem+Icons.m */; };
 		09C147D8216CCEF700390252 /* KeyShortcutsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C147D7216CCEF700390252 /* KeyShortcutsController.swift */; };
 		09C147DA216CD7E500390252 /* KeyShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C147D9216CD7E500390252 /* KeyShortcut.swift */; };
 		09DD88EB21BCA5E0000766BC /* EditableTextNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88EA21BCA5E0000766BC /* EditableTextNode.swift */; };
@@ -175,6 +177,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		09167E1E229803DC005734A7 /* UIMenuItem+Icons.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UIMenuItem+Icons.h"; sourceTree = "<group>"; };
+		09167E1F229803DC005734A7 /* UIMenuItem+Icons.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "UIMenuItem+Icons.m"; sourceTree = "<group>"; };
 		09C147D7216CCEF700390252 /* KeyShortcutsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcutsController.swift; sourceTree = "<group>"; };
 		09C147D9216CD7E500390252 /* KeyShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcut.swift; sourceTree = "<group>"; };
 		09DD88EA21BCA5E0000766BC /* EditableTextNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableTextNode.swift; sourceTree = "<group>"; };
@@ -611,6 +615,8 @@
 				D0C0D28E1C997110001D2851 /* FBAnimationPerformanceTracker.mm */,
 				D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */,
 				D01F728121F13891006AB634 /* Accessibility.swift */,
+				09167E1E229803DC005734A7 /* UIMenuItem+Icons.h */,
+				09167E1F229803DC005734A7 /* UIMenuItem+Icons.m */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -751,6 +757,7 @@
 				D05CC2FD1B6955D000E235A3 /* UIKitUtils.h in Headers */,
 				D05174B31EAA833200A1BF36 /* CASeeThroughTracingLayer.h in Headers */,
 				D05CC3081B69575900E235A3 /* NSBag.h in Headers */,
+				09167E20229803DC005734A7 /* UIMenuItem+Icons.h in Headers */,
 				D0C0D28F1C997110001D2851 /* FBAnimationPerformanceTracker.h in Headers */,
 				D05CC2671B69316F00E235A3 /* Display.h in Headers */,
 				D05CC2F91B6955D000E235A3 /* UIViewController+Navigation.h in Headers */,
@@ -820,6 +827,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = D05CC2591B69316F00E235A3;
@@ -877,6 +885,7 @@
 				D06D37A220779C82009219B6 /* VolumeControlStatusBar.swift in Sources */,
 				D05CC2A01B69326400E235A3 /* NavigationController.swift in Sources */,
 				D06EE8451B7140FF00837186 /* Font.swift in Sources */,
+				09167E21229803DC005734A7 /* UIMenuItem+Icons.m in Sources */,
 				D0CA3F8A2073F7650042D2B6 /* LinkHighlightingNode.swift in Sources */,
 				D0C2DFCB1CC4431D0044FF83 /* ListViewAnimation.swift in Sources */,
 				D0BE93191E8ED71100DCC1E6 /* NativeWindowHostView.swift in Sources */,
