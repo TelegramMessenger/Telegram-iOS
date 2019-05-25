@@ -34,6 +34,7 @@ FOUNDATION_EXPORT const unsigned char LottieVersionString[];
 #endif
 
 #import <Lottie/LOTAnimationView.h>
+#import <Lottie/LOTAnimationLayerContainer.h>
 #import <Lottie/LOTAnimationCache.h>
 #import <Lottie/LOTComposition.h>
 #import <Lottie/LOTBlockCallback.h>
