@@ -273,7 +273,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                             
                                             let linkedDiscussionPeerId: PeerId?
                                             
-                                            if let linkedChatId = linkedChatId {
+                                            if let linkedChatId = linkedChatId, linkedChatId != 0 {
                                                 linkedDiscussionPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: linkedChatId)
                                             } else {
                                                 linkedDiscussionPeerId = nil

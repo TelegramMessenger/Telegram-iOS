@@ -71,7 +71,7 @@ func managedSynchronizeGroupMessageStats(network: Network, postbox: Postbox, sta
 }
 
 private func synchronizeGroupMessageStats(postbox: Postbox, network: Network, groupId: PeerGroupId, namespace: MessageId.Namespace) -> Signal<Void, NoError> {
-    if namespace != Namespaces.Message.Cloud {
+    if namespace != Namespaces.Message.Cloud || groupId == .root {
         return postbox.transaction { transaction in
             transaction.confirmSynchronizedPeerGroupMessageStats(groupId: groupId, namespace: namespace)
         }
