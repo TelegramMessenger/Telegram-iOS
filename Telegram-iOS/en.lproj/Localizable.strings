@@ -4317,3 +4317,5 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.OpenBotLinkLogin" = "Log in to **%1$@** as %2$@";
 "Conversation.OpenBotLinkAllowMessages" = "Allow **%@** to send me messages";
 "Conversation.OpenBotLinkOpen" = "Open";
+
+"TextFormat.Link" = "Link";
