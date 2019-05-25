@@ -941,7 +941,11 @@ typedef enum
 
 - (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation
 {
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || _context.safeAreaInset.bottom > FLT_EPSILON;
+    
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     if (safeAreaInset.bottom > FLT_EPSILON)
         safeAreaInset.bottom -= 12.0f;
     

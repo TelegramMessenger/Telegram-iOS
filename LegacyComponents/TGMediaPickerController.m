@@ -96,10 +96,14 @@
 {
     [super viewDidLoad];
     
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    
     UIInterfaceOrientation orientation = UIInterfaceOrientationPortrait;
     if (self.view.frame.size.width > self.view.frame.size.height)
         orientation = UIInterfaceOrientationLandscapeLeft;
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     
     CGSize frameSize = self.view.frame.size;
     CGRect collectionViewFrame = CGRectMake(safeAreaInset.left, 0.0f, frameSize.width - safeAreaInset.left - safeAreaInset.right, frameSize.height);
@@ -285,7 +289,12 @@
     UIInterfaceOrientation orientation = UIInterfaceOrientationPortrait;
     if (size.width > size.height)
         orientation = UIInterfaceOrientationLandscapeLeft;
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     
     CGRect frame = CGRectMake(safeAreaInset.left, 0, size.width - safeAreaInset.left - safeAreaInset.right, size.height);
     _collectionViewWidth = frame.size.width;

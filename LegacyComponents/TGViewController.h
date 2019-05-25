@@ -158,7 +158,7 @@ typedef enum {
 - (void)localizationUpdated;
 
 - (UIEdgeInsets)calculatedSafeAreaInset;
-+ (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation;
++ (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation hasOnScreenNavigation:(bool)hasOnScreenNavigation;
 + (int)preferredAnimationCurve;
 
 - (CGSize)referenceViewSizeForOrientation:(UIInterfaceOrientation)orientation;

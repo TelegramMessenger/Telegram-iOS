@@ -1087,20 +1087,31 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     if (self.view.frame.size.width > self.view.frame.size.height)
         orientation = UIInterfaceOrientationLandscapeLeft;
     
-    return [TGViewController safeAreaInsetForOrientation:orientation];
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || _context.safeAreaInset.bottom > FLT_EPSILON;
+    
+    return [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation: hasOnScreenNavigation];
 }
 
-+ (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation
++ (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation hasOnScreenNavigation:(bool)hasOnScreenNavigation
 {
-    if (TGIsPad() || ((int)TGScreenSize().height != 812 && (int)TGScreenSize().height != 896))
+    int height = (int)TGScreenSize().height;
+    if (!TGIsPad() && (height != 812 && height != 896))
         return UIEdgeInsetsZero;
-        
+    
+    if (TGIsPad()) {
+        if (height == 1194 || hasOnScreenNavigation) {
+            return UIEdgeInsetsMake(24.0f, 0.0f, 21.0f, 0.0f);
+        } else {
+            return UIEdgeInsetsZero;
+        }
+    }
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
         case UIInterfaceOrientationLandscapeRight:
             return UIEdgeInsetsMake(0.0f, 44.0f, 21.0f, 44.0f);
-            
         
         default:
             return UIEdgeInsetsMake(44.0f, 0.0f, 34.0f, 0.0f);
@@ -1109,7 +1120,11 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (bool)_updateControllerInsetForOrientation:(UIInterfaceOrientation)orientation statusBarHeight:(CGFloat)statusBarHeight keyboardHeight:(CGFloat)keyboardHeight force:(bool)force notify:(bool)notify
 {
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || _context.safeAreaInset.bottom > FLT_EPSILON;
+    
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     CGFloat navigationBarHeight = ([self navigationBarShouldBeHidden] || [self shouldIgnoreNavigationBar]) ? 0 : [self navigationBarHeightForInterfaceOrientation:orientation];
     
     statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : statusBarHeight;

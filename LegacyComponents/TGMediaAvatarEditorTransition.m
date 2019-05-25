@@ -1,5 +1,7 @@
 #import "TGMediaAvatarEditorTransition.h"
 
+#import "LegacyComponentsInternal.h"
+
 #import <LegacyComponents/LegacyComponents.h>
 
 #import <LegacyComponents/TGPhotoEditorController.h>
@@ -73,8 +75,12 @@
     if ([_controller inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
         orientation = UIInterfaceOrientationPortrait;
     
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = _controller.view.safeAreaInsets.bottom > FLT_EPSILON;
+    
     CGSize referenceViewSize = [_controller referenceViewSizeForOrientation:orientation];
-    CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceViewSize.width, referenceViewSize.height) toolbarLandscapeSize:_controller.toolbarLandscapeSize orientation:orientation panelSize:0.0f];
+    CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceViewSize.width, referenceViewSize.height) toolbarLandscapeSize:_controller.toolbarLandscapeSize orientation:orientation panelSize:0.0f hasOnScreenNavigation:hasOnScreenNavigation];
     
     CGFloat shortSide = MIN(referenceViewSize.width, referenceViewSize.height);
     CGFloat diameter = shortSide - [TGPhotoAvatarCropView areaInsetSize].width * 2;

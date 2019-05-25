@@ -381,7 +381,11 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
         orientation = UIInterfaceOrientationPortrait;
     
-    CGRect containerFrame = [TGPhotoCropController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation hasArbitraryRotation:_cropView.hasArbitraryRotation];
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || _context.safeAreaInset.bottom > FLT_EPSILON;
+    
+    CGRect containerFrame = [TGPhotoCropController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation hasArbitraryRotation:_cropView.hasArbitraryRotation hasOnScreenNavigation:hasOnScreenNavigation];
     containerFrame = CGRectInset(containerFrame, TGPhotoCropAreaInsetSize.width, TGPhotoCropAreaInsetSize.height);
     
     CGSize fittedSize = TGScaleToSize(fromFrame.size, containerFrame.size);
@@ -732,7 +736,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
 
 #pragma mark - Layout
 
-+ (CGRect)photoContainerFrameForParentViewFrame:(CGRect)parentViewFrame toolbarLandscapeSize:(CGFloat)toolbarLandscapeSize orientation:(UIInterfaceOrientation)orientation hasArbitraryRotation:(bool)hasArbitraryRotation
++ (CGRect)photoContainerFrameForParentViewFrame:(CGRect)parentViewFrame toolbarLandscapeSize:(CGFloat)toolbarLandscapeSize orientation:(UIInterfaceOrientation)orientation hasArbitraryRotation:(bool)hasArbitraryRotation hasOnScreenNavigation:(bool)hasOnScreenNavigation
 {
     CGFloat panelToolbarPortraitSize = TGPhotoEditorToolbarSize;
     CGFloat panelToolbarLandscapeSize = toolbarLandscapeSize;
@@ -748,7 +752,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
         panelToolbarLandscapeSize += TGPhotoEditorPanelSize - 55;
     }
     
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
@@ -800,7 +804,11 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     CGFloat screenSide = MAX(referenceSize.width, referenceSize.height) + 2 * TGPhotoEditorPanelSize;
     _wrapperView.frame = CGRectMake((referenceSize.width - screenSide) / 2, (referenceSize.height - screenSide) / 2, screenSide, screenSide);
     
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || _context.safeAreaInset.bottom > FLT_EPSILON;
+    
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2 , (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
     
     UIEdgeInsets initialScreenEdges = screenEdges;
@@ -892,8 +900,8 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
                 break;
         }
     }];
-    
-    CGRect containerFrame = [TGPhotoCropController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation hasArbitraryRotation:_cropView.hasArbitraryRotation];
+        
+    CGRect containerFrame = [TGPhotoCropController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation hasArbitraryRotation:_cropView.hasArbitraryRotation hasOnScreenNavigation:hasOnScreenNavigation];
     containerFrame = CGRectOffset(containerFrame, initialScreenEdges.left, initialScreenEdges.top);
     _cropView.interfaceOrientation = orientation;
     _cropView.frame = CGRectInset(containerFrame, TGPhotoCropAreaInsetSize.width, TGPhotoCropAreaInsetSize.height);

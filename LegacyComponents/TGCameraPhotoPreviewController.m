@@ -1126,8 +1126,12 @@
         orientation = UIInterfaceOrientationPortrait;
     }
     
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || _context.safeAreaInset.bottom > FLT_EPSILON;
+    
     CGSize referenceSize = [self referenceViewSizeForOrientation:originalOrientation];
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation];
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     
     [_captionMixin setContentAreaHeight:self.view.frame.size.height];
     
