@@ -363,12 +363,12 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .PhoneNumber))
             case let .messageEntityCashtag(offset, length):
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Hashtag))
-            case let .messageEntityUnderline(offset, length):
+            /*case let .messageEntityUnderline(offset, length):
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
             case let .messageEntityStrike(offset, length):
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
             case let .messageEntityBlockquote(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))*/
         }
     }
     return result

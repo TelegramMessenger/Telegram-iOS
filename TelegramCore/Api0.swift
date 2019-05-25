@@ -10,7 +10,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-206066487] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
     dict[461151667] = { return Api.ChatFull.parse_chatFull($0) }
-    dict[430407729] = { return Api.ChatFull.parse_channelFull($0) }
+    dict[-1736252138] = { return Api.ChatFull.parse_channelFull($0) }
     dict[1465219162] = { return Api.PollResults.parse_pollResults($0) }
     dict[-925415106] = { return Api.ChatParticipant.parse_chatParticipant($0) }
     dict[-636267638] = { return Api.ChatParticipant.parse_chatParticipantCreator($0) }
@@ -475,6 +475,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1160215659] = { return Api.InputMessage.parse_inputMessageReplyTo($0) }
     dict[-2037963464] = { return Api.InputMessage.parse_inputMessagePinned($0) }
     dict[-1564789301] = { return Api.PhoneCallProtocol.parse_phoneCallProtocol($0) }
+    dict[-1567175714] = { return Api.MessageFwdAuthor.parse_messageFwdAuthor($0) }
     dict[-1539849235] = { return Api.WallPaper.parse_wallPaper($0) }
     dict[-1938715001] = { return Api.messages.Messages.parse_messages($0) }
     dict[1951620897] = { return Api.messages.Messages.parse_messagesNotModified($0) }
@@ -735,9 +736,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[546203849] = { return Api.MessageEntity.parse_inputMessageEntityMentionName($0) }
     dict[-1687559349] = { return Api.MessageEntity.parse_messageEntityPhone($0) }
     dict[1280209983] = { return Api.MessageEntity.parse_messageEntityCashtag($0) }
-    dict[-1672577397] = { return Api.MessageEntity.parse_messageEntityUnderline($0) }
-    dict[-1090087980] = { return Api.MessageEntity.parse_messageEntityStrike($0) }
-    dict[34469328] = { return Api.MessageEntity.parse_messageEntityBlockquote($0) }
     dict[483901197] = { return Api.InputPhoto.parse_inputPhotoEmpty($0) }
     dict[1001634122] = { return Api.InputPhoto.parse_inputPhoto($0) }
     dict[-567906571] = { return Api.contacts.TopPeers.parse_topPeersNotModified($0) }
@@ -1119,6 +1117,8 @@ struct Api {
             case let _1 as Api.InputMessage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneCallProtocol:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.MessageFwdAuthor:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.WallPaper:
                 _1.serialize(buffer, boxed)
