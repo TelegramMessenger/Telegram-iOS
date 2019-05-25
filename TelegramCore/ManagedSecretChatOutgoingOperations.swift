@@ -593,6 +593,12 @@ private func decryptedEntities73(_ entities: [MessageTextEntity]?) -> [SecretApi
                 break
             case .PhoneNumber:
                 break
+            case .Strikethrough:
+                break
+            case .BlockQuote:
+                break
+            case .Underline:
+                break
             case .Custom:
                 break
         }
