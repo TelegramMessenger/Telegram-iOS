@@ -86,6 +86,7 @@
   BOOL _initializedPrimaryInputLanguage;
 }
 
+@property (nonatomic, copy) bool (^shouldCopy)();
 @property (nonatomic, copy) bool (^shouldPaste)();
 @property (nonatomic, copy) ASEditableTextNodeTargetForAction *(^targetForActionImpl)(SEL);
 @property (nonatomic, copy) bool (^shouldReturn)();
@@ -161,6 +162,12 @@
     }
   }
   return [super targetForAction:action withSender:sender];
+}
+  
+- (void)copy:(id)sender {
+  if (_shouldCopy == nil || _shouldCopy()) {
+    [super copy:sender];
+  }
 }
 
 - (void)paste:(id)sender
@@ -336,6 +343,15 @@
   ASPanningOverriddenUITextView *textView = [[ASPanningOverriddenUITextView alloc] initWithFrame:CGRectZero textContainer:_textKitComponents.textContainer];
   textView.initialPrimaryLanguage = _initialPrimaryLanguage;
   __weak ASEditableTextNode *weakSelf = self;
+  textView.shouldCopy = ^bool{
+    __strong ASEditableTextNode *strongSelf = weakSelf;
+    if (strongSelf != nil) {
+      if ([strongSelf->_delegate respondsToSelector:@selector(editableTextNodeShouldCopy:)]) {
+        return [strongSelf->_delegate editableTextNodeShouldCopy:self];
+      }
+    }
+    return true;
+  };
   textView.shouldPaste = ^bool{
     __strong ASEditableTextNode *strongSelf = weakSelf;
     if (strongSelf != nil) {
