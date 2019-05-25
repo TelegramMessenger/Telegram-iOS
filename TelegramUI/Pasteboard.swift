@@ -5,9 +5,9 @@ import TelegramCore
 import MobileCoreServices
 
 private func rtfStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> String {
-    var string: String = #"""
-    {\rtf1\ansi\ansicpg1252{\fonttbl\f0\fnil\fcharset0 .SFUIText;\f1\fnil\fcharset0 .SFUIText-Semibold;\f2\fnil\fcharset0 .SFUIText-Italic;\f3\fnil\fcharset0 Menlo-Regular;}
-    """#
+    var string: String = """
+    {\\rtf1\\ansi\\ansicpg1252{\\fonttbl\\f0\\fnil\\fcharset0 .SFUIText;\\f1\\fnil\\fcharset0 .SFUIText-Semibold;\\f2\\fnil\\fcharset0 .SFUIText-Italic;\\f3\\fnil\\fcharset0 Menlo-Regular;}
+    """
     
     string.append("\\f0 ")
     
