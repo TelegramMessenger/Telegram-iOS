@@ -73,7 +73,7 @@ func convertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<St
                                 let container = LOTAnimationLayerContainer(model: model, size: size)
                                 
                                 let singleContext = DrawingContext(size: size, scale: 1.0, clear: true)
-                                let context = DrawingContext(size: size, scale: 1.0, clear: false)
+                                let context = DrawingContext(size: videoSize, scale: 1.0, clear: false)
                                 
                                 let fps: Int32 = model.framerate?.int32Value ?? 30
                                 let frameDuration = CMTimeMake(1, fps)

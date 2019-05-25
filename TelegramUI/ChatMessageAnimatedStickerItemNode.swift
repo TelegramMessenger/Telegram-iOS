@@ -58,6 +58,8 @@ private final class StickerAnimationNode: ASDisplayNode {
         return self.layer as! AVPlayerLayer
     }
     
+    var started: () -> Void = {}
+    
     var player: AVPlayer? {
         get {
             if self.isNodeLoaded {
@@ -91,13 +93,13 @@ private final class StickerAnimationNode: ASDisplayNode {
         super.init()
         
         self.setLayerBlock({
-            return AVPlayerLayer()
+            let layer = AVPlayerLayer()
+            layer.isHidden = true
+            if #available(iOSApplicationExtension 9.0, *) {
+                layer.pixelBufferAttributes = [(kCVPixelBufferPixelFormatTypeKey as String): kCVPixelFormatType_32BGRA]
+            }
+            return layer
         })
-        
-        self.playerLayer.isHidden = true
-        if #available(iOSApplicationExtension 9.0, *) {
-            self.playerLayer.pixelBufferAttributes = [(kCVPixelBufferPixelFormatTypeKey as String): kCVPixelFormatType_32BGRA]
-        }
     }
     
     deinit {
@@ -112,8 +114,10 @@ private final class StickerAnimationNode: ASDisplayNode {
         self.disposable.set(chatMessageAnimationData(postbox: account.postbox, fileReference: fileReference, synchronousLoad: false).start(next: { [weak self] data in
             if let strongSelf = self, data.complete {
                 let playerItem = AVPlayerItem(url: URL(fileURLWithPath: data.path))
-                strongSelf.player = AVPlayer(playerItem: playerItem)
-                strongSelf.playerItem = playerItem
+                Queue.mainQueue().async {
+                    strongSelf.player = AVPlayer(playerItem: playerItem)
+                    strongSelf.playerItem = playerItem
+                }
             }
         }))
         self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
@@ -148,8 +152,9 @@ private final class StickerAnimationNode: ASDisplayNode {
             self.player?.play()
         } else if let player = object as? AVPlayer, player === self.player {
             if self.playerLayer.isHidden && player.rate > 0.0 {
-                Queue.mainQueue().after(0.3) {
+                Queue.mainQueue().after(0.2) {
                     self.playerLayer.isHidden = false
+                    self.started()
                 }
             }
         } else {
@@ -192,6 +197,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         super.init(layerBacked: false)
+        
+        self.animationNode.started = { [weak self] in
+            self?.animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self?.imageNode.alpha = 0.0
+            self?.imageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+        }
         
         self.imageNode.displaysAsynchronously = false
         self.addSubnode(self.imageNode)
@@ -238,9 +249,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if self.telegramFile != telegramFile {
 
                     self.telegramFile = telegramFile
+                    self.imageNode.setSignal(chatMessageSticker(account: item.context.account, file: telegramFile, small: false, thumbnail: true))
                     self.animationNode.setup(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile))
                 }
-                
                 break
             }
         }
@@ -438,7 +449,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
                     
                     strongSelf.imageNode.frame = updatedImageFrame
-                    strongSelf.animationNode.frame = updatedImageFrame
+                    strongSelf.animationNode.frame = updatedImageFrame.insetBy(dx: imageInset, dy: imageInset)
                     imageApply()
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {

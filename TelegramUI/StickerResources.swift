@@ -95,6 +95,43 @@ private func chatMessageStickerDatas(postbox: Postbox, file: TelegramMediaFile, 
     }
 }
 
+private func chatMessageStickerThumbnailData(postbox: Postbox, file: TelegramMediaFile, synchronousLoad: Bool) -> Signal<Data?, NoError> {
+    let thumbnailResource = chatMessageStickerResource(file: file, small: true)
+    
+    let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(thumbnailResource, representation: CachedStickerAJpegRepresentation(size: nil), complete: false, fetch: false, attemptSynchronously: synchronousLoad)
+    
+    return maybeFetched
+    |> take(1)
+    |> mapToSignal { maybeData in
+        if maybeData.complete {
+            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+            return .single(loadedData)
+        } else {
+            let thumbnailData = postbox.mediaBox.cachedResourceRepresentation(thumbnailResource, representation: CachedStickerAJpegRepresentation(size: nil), complete: false)
+            
+            return Signal { subscriber in
+                var fetchThumbnail = fetchedMediaResource(postbox: postbox, reference: stickerPackFileReference(file).resourceReference(thumbnailResource)).start()
+                
+                let disposable = (thumbnailData
+                |> map { thumbnailData -> Data? in
+                    return thumbnailData.complete ? try? Data(contentsOf: URL(fileURLWithPath: thumbnailData.path)) : nil
+                }).start(next: { next in
+                    subscriber.putNext(next)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                })
+                
+                return ActionDisposable {
+                    fetchThumbnail.dispose()
+                    disposable.dispose()
+                }
+            }
+        }
+    }
+}
+
 private func chatMessageStickerPackThumbnailData(postbox: Postbox, representation: TelegramMediaImageRepresentation, synchronousLoad: Bool) -> Signal<Data?, NoError> {
     let resource = representation.resource
     let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedStickerAJpegRepresentation(size: CGSize(width: 160.0, height: 160.0)), complete: false, fetch: false, attemptSynchronously: synchronousLoad)
@@ -229,8 +266,8 @@ func chatMessageLegacySticker(account: Account, file: TelegramMediaFile, small: 
     }
 }
 
-public func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return chatMessageSticker(postbox: account.postbox, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize, synchronousLoad: synchronousLoad)
+public func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false, thumbnail: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return chatMessageSticker(postbox: account.postbox, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize, thumbnail: thumbnail, synchronousLoad: synchronousLoad)
 }
 
 public func chatMessageStickerPackThumbnail(postbox: Postbox, representation: TelegramMediaImageRepresentation, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
@@ -276,9 +313,16 @@ public func chatMessageStickerPackThumbnail(postbox: Postbox, representation: Te
     }
 }
 
-public func chatMessageSticker(postbox: Postbox, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMessageStickerDatas(postbox: postbox, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize, synchronousLoad: synchronousLoad)
-    
+public func chatMessageSticker(postbox: Postbox, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false, thumbnail: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal: Signal<(Data?, Data?, Bool), NoError>
+    if thumbnail {
+        signal = chatMessageStickerThumbnailData(postbox: postbox, file: file, synchronousLoad: synchronousLoad)
+        |> map { data -> (Data?, Data?, Bool) in
+            return (data, nil, false)
+        }
+    } else {
+        signal = chatMessageStickerDatas(postbox: postbox, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize, synchronousLoad: synchronousLoad)
+    }
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)

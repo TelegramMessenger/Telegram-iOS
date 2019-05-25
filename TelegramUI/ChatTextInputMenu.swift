@@ -54,6 +54,7 @@ final class ChatTextInputMenu {
         self.stringBold = strings.TextFormat_Bold
         self.stringItalic = strings.TextFormat_Italic
         self.stringMonospace = strings.TextFormat_Monospace
+        self.stringLink = strings.TextFormat_Link
     }
     
     func activate() {
