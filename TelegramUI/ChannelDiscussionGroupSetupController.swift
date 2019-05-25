@@ -145,7 +145,7 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
 }
 
 private func channelDiscussionGroupSetupControllerEntries(presentationData: PresentationData, view: PeerView, groups: [Peer]?) -> [ChannelDiscussionGroupSetupControllerEntry] {
-    guard let groups = groups, let peer = view.peers[view.peerId] as? TelegramChannel, let cachedData = view.cachedData as? CachedChannelData else {
+    guard let peer = view.peers[view.peerId] as? TelegramChannel, let cachedData = view.cachedData as? CachedChannelData else {
         return []
     }
     
@@ -170,15 +170,17 @@ private func channelDiscussionGroupSetupControllerEntries(presentationData: Pres
             entries.append(.unlink(presentationData.theme, unlinkText))
         }
     } else if case .broadcast = peer.info {
-        entries.append(.header(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_Header, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
-        
-        entries.append(.create(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_Create))
-        var index = 0
-        for group in groups {
-            entries.append(.group(index, presentationData.theme, presentationData.strings, group, presentationData.nameDisplayOrder))
-            index += 1
+        if let groups = groups {
+            entries.append(.header(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_Header, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
+            
+            entries.append(.create(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_Create))
+            var index = 0
+            for group in groups {
+                entries.append(.group(index, presentationData.theme, presentationData.strings, group, presentationData.nameDisplayOrder))
+                index += 1
+            }
+            entries.append(.groupsInfo(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_Info))
         }
-        entries.append(.groupsInfo(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_Info))
     }
     
     return entries
