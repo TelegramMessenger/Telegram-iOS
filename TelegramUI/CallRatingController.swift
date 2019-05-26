@@ -45,16 +45,16 @@ private final class CallRatingContentActionNode: HighlightableButtonNode {
         var font = Font.regular(17.0)
         var color = theme.accentColor
         switch self.action.type {
-        case .defaultAction, .genericAction:
-            break
-        case .destructiveAction:
-            color = theme.destructiveColor
+            case .defaultAction, .genericAction:
+                break
+            case .destructiveAction:
+                color = theme.destructiveColor
         }
         switch self.action.type {
-        case .defaultAction:
-            font = Font.semibold(17.0)
-        case .destructiveAction, .genericAction:
-            break
+            case .defaultAction:
+                font = Font.semibold(17.0)
+            case .destructiveAction, .genericAction:
+                break
         }
         self.setAttributedTitle(NSAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
     }
@@ -364,4 +364,3 @@ func callRatingController(sharedContext: SharedAccountContext, account: Account,
     }
     return controller
 }
-

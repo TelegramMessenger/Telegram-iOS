@@ -599,6 +599,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var removePeerChatImpl: ((Peer, Bool) -> Void)?
     var endEditingImpl: (() -> Void)?
+    var errorImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -898,9 +899,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     }, toggleSignatures: { enabled in
         actionsDisposable.add(toggleShouldChannelMessagesSignatures(account: context.account, peerId: peerId, enabled: enabled).start())
     })
-    
-    let hapticFeedback = HapticFeedback()
-    
+
     var wasEditing: Bool?
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
@@ -968,7 +967,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         }
                         
                         guard !failed else {
-                            hapticFeedback.error()
+                            errorImpl?()
                             return
                         }
                         
@@ -1120,6 +1119,16 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     endEditingImpl = {
         [weak controller] in
         controller?.view.endEditing(true)
+    }
+    
+    let hapticFeedback = HapticFeedback()
+    errorImpl = { [weak controller] in
+        hapticFeedback.error()
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListMultilineInputItemNode {
+                itemNode.animateError()
+            }
+        }
     }
     return controller
 }

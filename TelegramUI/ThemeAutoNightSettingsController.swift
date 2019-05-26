@@ -267,7 +267,11 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
             }
             entries.append(.timeBasedAutomaticLocation(theme, strings.AutoNightTheme_UseSunsetSunrise, automaticLocation))
             switch setting {
-                case let .automatic(_, _, sunset, sunrise, localizedName):
+                case let .automatic(latitude, longitude, localizedName):
+                    let calculator = EDSunriseSet(date: Date(), timezone: TimeZone.current, latitude: latitude, longitude: longitude)!
+                    let sunset = roundTimeToDay(Int32(calculator.sunset.timeIntervalSince1970))
+                    let sunrise = roundTimeToDay(Int32(calculator.sunrise.timeIntervalSince1970))
+                    
                     entries.append(.timeBasedAutomaticLocationValue(theme, strings.AutoNightTheme_UpdateLocation, localizedName))
                     if sunset != 0 || sunrise != 0 {
                         entries.append(.settingInfo(theme, strings.AutoNightTheme_LocationHelp(stringForMessageTimestamp(timestamp: sunset, dateTimeFormat: dateTimeFormat, local: false), stringForMessageTimestamp(timestamp: sunrise, dateTimeFormat: dateTimeFormat, local: false)).0))
@@ -307,7 +311,7 @@ private func areSettingsValid(_ settings: AutomaticThemeSwitchSetting) -> Bool {
             return true
         case let .timeBased(setting):
             switch setting {
-                case let .automatic(latitude, longitude, _, _, _):
+                case let .automatic(latitude, longitude, _):
                     if !latitude.isZero || !longitude.isZero {
                         return true
                     } else {
@@ -371,11 +375,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
             updateSettings { settings in
                 var settings = settings
                 if case let .timeBased(setting) = settings.trigger, case .automatic = setting {
-                    let calculator = EDSunriseSet(date: Date(), timezone: TimeZone.current, latitude: location.0, longitude: location.1)!
-                    let sunset = roundTimeToDay(Int32(calculator.sunset.timeIntervalSince1970))
-                    let sunrise = roundTimeToDay(Int32(calculator.sunrise.timeIntervalSince1970))
-                    
-                    settings.trigger = .timeBased(setting: .automatic(latitude: location.0, longitude: location.1, sunset: sunset, sunrise: sunrise, localizedName: location.2))
+                    settings.trigger = .timeBased(setting: .automatic(latitude: location.0, longitude: location.1, localizedName: location.2))
                 }
                 return settings
             }
@@ -393,7 +393,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
                 case .timeBased:
                     if case .timeBased = settings.trigger {
                     } else {
-                        settings.trigger = .timeBased(setting: .automatic(latitude: 0.0, longitude: 0.0, sunset: 0, sunrise: 0, localizedName: ""))
+                        settings.trigger = .timeBased(setting: .automatic(latitude: 0.0, longitude: 0.0, localizedName: ""))
                         updateLocation = true
                     }
                 case .brightness:
@@ -419,7 +419,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
                         }
                     case .manual:
                         if value {
-                            settings.trigger = .timeBased(setting: .automatic(latitude: 0.0, longitude: 0.0, sunset: 0, sunrise: 0, localizedName: ""))
+                            settings.trigger = .timeBased(setting: .automatic(latitude: 0.0, longitude: 0.0, localizedName: ""))
                             updateLocation = true
                         }
                 }

@@ -21,7 +21,7 @@ func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageT
             range.length = stringLength - range.location
         }
         switch entity.type {
-            case .Url, .Email, .PhoneNumber, .TextUrl, .Mention, .Hashtag, .BotCommand:
+            case .Url, .Email, .PhoneNumber, .Mention, .Hashtag, .BotCommand:
                 break
             case .Bold:
                 string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
@@ -29,6 +29,8 @@ func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageT
                 string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
             case let .TextMention(peerId):
                 string.addAttribute(ChatTextInputAttributes.textMention, value: ChatTextInputTextMentionAttribute(peerId: peerId), range: range)
+            case let .TextUrl(url):
+                string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
             case .Code, .Pre:
                 string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
             default:

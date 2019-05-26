@@ -131,7 +131,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
     
     func setFile(context: AccountContext, fileReference: FileMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
-            let signal = chatMessageAnimationData(postbox: context.account.postbox, fileReference: fileReference, synchronousLoad: false)
+            let signal = chatMessageAnimatedStrickerBackingData(postbox: context.account.postbox, fileReference: fileReference, synchronousLoad: false)
             |> mapToSignal { data, completed -> Signal<Data, NoError> in
                 if completed, let data = data {
                     return .single(data)

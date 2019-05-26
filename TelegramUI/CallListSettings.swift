@@ -6,7 +6,7 @@ public struct CallListSettings: PreferencesEntry, Equatable {
     public var showTab: Bool
     
     public static var defaultSettings: CallListSettings {
-        return CallListSettings(showTab: true)
+        return CallListSettings(showTab: false)
     }
     
     public init(showTab: Bool) {

@@ -245,6 +245,13 @@ public class ContactsController: ViewController {
             openPeer(peer, false)
         }
         
+        self.contactsNode.openPeopleNearby = { [weak self] in
+            if let strongSelf = self {
+                //let controller = peopleNearbyController(context: strongSelf.context)
+                //(strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+            }
+        }
+        
         self.contactsNode.openInvite = { [weak self] in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(InviteContactsController(context: strongSelf.context))

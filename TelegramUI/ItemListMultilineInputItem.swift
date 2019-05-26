@@ -321,4 +321,8 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
             self.textNode.textView.becomeFirstResponder()
         }
     }
+    
+    func animateError() {
+        self.textNode.layer.addShakeAnimation()
+    }
 }

@@ -132,9 +132,8 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     
     func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         if media == self.media {
-            let videoNode = self.videoNode
-            return (self.videoNode, { [weak videoNode] in
-                return (videoNode?.view.snapshotContentTree(unhide: true), nil)
+            return (self, { [weak self] in
+                return (self?.view.snapshotContentTree(unhide: true), nil)
             })
         } else {
             return nil

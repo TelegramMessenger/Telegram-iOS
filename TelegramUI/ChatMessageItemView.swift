@@ -749,8 +749,8 @@ public class ChatMessageItemView: ListViewItemNode {
                     }
                 case .payment:
                     item.controllerInteraction.openCheckoutOrReceipt(item.message.id)
-                case .urlAuth:
-                    break
+                case let .urlAuth(url, buttonId):
+                    item.controllerInteraction.requestMessageActionUrlAuth(url, item.message.id, buttonId)
             }
         }
     }

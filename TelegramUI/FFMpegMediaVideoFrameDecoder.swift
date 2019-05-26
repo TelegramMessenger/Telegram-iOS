@@ -49,7 +49,7 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
     }
     
     func decode(frame: MediaTrackDecodableFrame, ptsOffset: CMTime?) -> MediaTrackFrame? {
-        var status = frame.packet.send(toDecoder: self.codecContext)
+        let status = frame.packet.send(toDecoder: self.codecContext)
         if status == 0 {
             if self.codecContext.receive(into: self.videoFrame) {
                 var pts = CMTimeMake(self.videoFrame.pts, frame.pts.timescale)

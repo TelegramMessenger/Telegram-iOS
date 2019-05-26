@@ -197,14 +197,7 @@ final public class PasscodeEntryController: ViewController {
         
         self.controllerNode.activateInput()
         if self.arguments.animated {
-            let iconFrame = self.arguments.lockIconInitialFrame()
-            if !iconFrame.isEmpty {
-                Queue.mainQueue().after(0.5) {
-                    serviceSoundManager.playLockSound()
-                }
-            }
-            
-            self.controllerNode.animateIn(iconFrame: iconFrame, completion: { [weak self] in
+            self.controllerNode.animateIn(iconFrame: self.arguments.lockIconInitialFrame(), completion: { [weak self] in
                 self?.presentationCompleted?()
             })
         } else {

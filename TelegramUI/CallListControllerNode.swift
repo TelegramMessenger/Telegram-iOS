@@ -251,6 +251,10 @@ final class CallListControllerNode: ASDisplayNode {
                 let _ = updateCallListSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, {
                     $0.withUpdatedShowTab(value)
                 }).start()
+                
+                if value {
+                    let _ = ApplicationSpecificNotice.incrementCallsTabTips(accountManager: strongSelf.context.sharedContext.accountManager, count: 4).start()
+                }
             }
         })
         

@@ -27,23 +27,21 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         }
                     }
                 case let fileMedia as TelegramMediaFile:
-                    if message.text.isEmpty {
-                        if let fileName = fileMedia.fileName {
-                            messageText = fileName
-                        } else {
-                            messageText = strings.Message_File
-                        }
-                    }
-                    var isAnimated = false
-                    var isVideo = false
+                    var processed = false
                     inner: for attribute in fileMedia.attributes {
                         switch attribute {
                             case .Animated:
-                                isAnimated = true
+                                messageText = strings.Message_Animation
+                                processed = true
                                 break inner
                             case let .Audio(isVoice, _, title, performer, _):
                                 if isVoice {
-                                    messageText = strings.Message_Audio
+                                    if message.text.isEmpty {
+                                        messageText = strings.Message_Audio
+                                    } else {
+                                        messageText = "🎤 \(messageText)"
+                                    }
+                                    processed = true
                                     break inner
                                 } else {
                                     let descriptionString: String
@@ -59,42 +57,50 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                         descriptionString = strings.Message_Audio
                                     }
                                     messageText = descriptionString
+                                    processed = true
                                     break inner
                                 }
                             case let .Sticker(displayText, _, _):
                                 if displayText.isEmpty {
                                     messageText = strings.Message_Sticker
+                                    processed = true
                                     break inner
                                 } else {
                                     messageText = strings.Message_StickerText(displayText).0
+                                    processed = true
                                     break inner
                                 }
                             case let .Video(_, _, flags):
                                 if flags.contains(.instantRoundVideo) {
                                     messageText = strings.Message_VideoMessage
+                                    processed = true
                                     break inner
                                 } else {
                                     if message.text.isEmpty {
-                                        isVideo = true
+                                        messageText = strings.Message_Video
+                                        processed = true
                                     } else if #available(iOSApplicationExtension 9.0, *) {
                                         if !fileMedia.isAnimated && enableMediaEmoji {
                                             messageText = "📹 \(messageText)"
+                                            processed = true
                                         }
                                         break inner
                                     }
                                 }
                             default:
-                                if !message.text.isEmpty {
-                                    messageText = "📎 \(messageText)"
-                                    break inner
-                                }
                                 break
                         }
                     }
-                    if isAnimated {
-                        messageText = strings.Message_Animation
-                    } else if isVideo {
-                        messageText = strings.Message_Video
+                    if !processed {
+                        if !message.text.isEmpty {
+                            messageText = "📎 \(messageText)"
+                        } else {
+                            if let fileName = fileMedia.fileName {
+                                messageText = fileName
+                            } else {
+                                messageText = strings.Message_File
+                            }
+                        }
                     }
                 case let location as TelegramMediaMap:
                     if location.liveBroadcastingTimeout != nil {

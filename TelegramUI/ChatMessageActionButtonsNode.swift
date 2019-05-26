@@ -79,7 +79,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             switch button.action {
                 case .text:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingMessageIconImage : graphics.chatBubbleActionButtonOutgoingMessageIconImage
-                case .url:
+                case .url, .urlAuth:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLinkIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
                 case .requestPhone:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPhoneIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage

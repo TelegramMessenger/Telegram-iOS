@@ -147,6 +147,7 @@ class InstantPageGalleryController: ViewController {
     
     private let centralItemTitle = Promise<String>()
     private let centralItemTitleView = Promise<UIView?>()
+    private let centralItemRightBarButtonItem = Promise<UIBarButtonItem?>()
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
     private let centralItemFooterContentNode = Promise<GalleryFooterContentNode?>()
     private let centralItemAttributesDisposable = DisposableSet();
@@ -215,6 +216,10 @@ class InstantPageGalleryController: ViewController {
         
         self.centralItemAttributesDisposable.add(self.centralItemTitleView.get().start(next: { [weak self] titleView in
             self?.navigationItem.titleView = titleView
+        }))
+        
+        self.centralItemAttributesDisposable.add(self.centralItemRightBarButtonItem.get().start(next: { [weak self] rightBarButtonItem in
+            self?.navigationItem.rightBarButtonItem = rightBarButtonItem
         }))
         
         self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode in
@@ -349,6 +354,7 @@ class InstantPageGalleryController: ViewController {
                     if let node = strongSelf.galleryNode.pager.centralItemNode() {
                         strongSelf.centralItemTitle.set(node.title())
                         strongSelf.centralItemTitleView.set(node.titleView())
+                        strongSelf.centralItemRightBarButtonItem.set(node.rightBarButtonItem())
                         strongSelf.centralItemNavigationStyle.set(node.navigationStyle())
                         strongSelf.centralItemFooterContentNode.set(node.footerContent())
                     }
@@ -373,6 +379,7 @@ class InstantPageGalleryController: ViewController {
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? InstantPageGalleryControllerPresentationArguments {
             self.centralItemTitle.set(centralItemNode.title())
             self.centralItemTitleView.set(centralItemNode.titleView())
+            self.centralItemRightBarButtonItem.set(centralItemNode.rightBarButtonItem())
             self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
             self.centralItemFooterContentNode.set(centralItemNode.footerContent())
             

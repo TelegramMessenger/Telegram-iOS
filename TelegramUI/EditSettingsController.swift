@@ -305,6 +305,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
+    var errorImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -329,8 +330,6 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     
     var getNavigationController: (() -> NavigationController?)?
     
-    let hapticFeedback = HapticFeedback()
-        
     let arguments = EditSettingsItemArguments(context: context, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
         updateState {
@@ -380,7 +379,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
         }
         
         guard !failed else {
-            hapticFeedback.error()
+            errorImpl?()
             return
         }
         
@@ -583,6 +582,16 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 }
             }
         })
+    }
+    
+    let hapticFeedback = HapticFeedback()
+    errorImpl = { [weak controller] in
+        hapticFeedback.error()
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListMultilineInputItemNode {
+                itemNode.animateError()
+            }
+        }
     }
     
     getNavigationController = { [weak controller] in

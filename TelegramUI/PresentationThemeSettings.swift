@@ -82,14 +82,14 @@ public enum PresentationFontSize: Int32 {
 
 public enum AutomaticThemeSwitchTimeBasedSetting: PostboxCoding, Equatable {
     case manual(fromSeconds: Int32, toSeconds: Int32)
-    case automatic(latitude: Double, longitude: Double, sunset: Int32, sunrise: Int32, localizedName: String)
+    case automatic(latitude: Double, longitude: Double, localizedName: String)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_t", orElse: 0) {
             case 0:
                 self = .manual(fromSeconds: decoder.decodeInt32ForKey("fromSeconds", orElse: 0), toSeconds: decoder.decodeInt32ForKey("toSeconds", orElse: 0))
             case 1:
-                self = .automatic(latitude: decoder.decodeDoubleForKey("latitude", orElse: 0.0), longitude: decoder.decodeDoubleForKey("longitude", orElse: 0.0), sunset: decoder.decodeInt32ForKey("sunset", orElse: 0), sunrise: decoder.decodeInt32ForKey("sunrise", orElse: 0), localizedName: decoder.decodeStringForKey("localizedName", orElse: ""))
+                self = .automatic(latitude: decoder.decodeDoubleForKey("latitude", orElse: 0.0), longitude: decoder.decodeDoubleForKey("longitude", orElse: 0.0), localizedName: decoder.decodeStringForKey("localizedName", orElse: ""))
             default:
                 assertionFailure()
                 self = .manual(fromSeconds: 0, toSeconds: 1)
@@ -102,12 +102,10 @@ public enum AutomaticThemeSwitchTimeBasedSetting: PostboxCoding, Equatable {
                 encoder.encodeInt32(0, forKey: "_t")
                 encoder.encodeInt32(fromSeconds, forKey: "fromSeconds")
                 encoder.encodeInt32(toSeconds, forKey: "toSeconds")
-        case let .automatic(latitude, longitude, sunset, sunrise, localizedName):
+        case let .automatic(latitude, longitude, localizedName):
                 encoder.encodeInt32(1, forKey: "_t")
                 encoder.encodeDouble(latitude, forKey: "latitude")
                 encoder.encodeDouble(longitude, forKey: "longitude")
-                encoder.encodeInt32(sunset, forKey: "sunset")
-                encoder.encodeInt32(sunrise, forKey: "sunrise")
                 encoder.encodeString(localizedName, forKey: "localizedName")
         }
     }

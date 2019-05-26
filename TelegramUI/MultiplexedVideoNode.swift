@@ -142,7 +142,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     deinit {
         self.displayLink.invalidate()
         self.displayLink.isPaused = true
-        for(_, disposable) in statusDisposable {
+        for(_, disposable) in self.statusDisposable {
             disposable.dispose()
         }
         for (_, value) in self.visibleLayers {

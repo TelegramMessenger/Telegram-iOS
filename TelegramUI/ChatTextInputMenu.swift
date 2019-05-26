@@ -11,6 +11,7 @@ final class ChatTextInputMenu {
     private var stringBold: String = "Bold"
     private var stringItalic: String = "Italic"
     private var stringMonospace: String = "Monospace"
+    private var stringLink: String = "Link"
     
     private(set) var state: ChatTextInputMenuState = .inactive {
         didSet {
@@ -24,7 +25,8 @@ final class ChatTextInputMenu {
                         UIMenuController.shared.menuItems = [
                             UIMenuItem(title: self.stringBold, action: Selector(("formatAttributesBold:"))),
                             UIMenuItem(title: self.stringItalic, action: Selector(("formatAttributesItalic:"))),
-                            UIMenuItem(title: self.stringMonospace, action: Selector(("formatAttributesMonospace:")))
+                            UIMenuItem(title: self.stringMonospace, action: Selector(("formatAttributesMonospace:"))),
+                            UIMenuItem(title: self.stringLink, action: Selector(("formatAttributesLink:")))
                         ]
                         UIMenuController.shared.isMenuVisible = true
                         UIMenuController.shared.update()
@@ -52,6 +54,7 @@ final class ChatTextInputMenu {
         self.stringBold = strings.TextFormat_Bold
         self.stringItalic = strings.TextFormat_Italic
         self.stringMonospace = strings.TextFormat_Monospace
+        self.stringLink = strings.TextFormat_Link
     }
     
     func activate() {

@@ -61,7 +61,14 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     private let accessoryButtonsWidth: CGFloat = 10.0
     
     var text: String {
-        return self.textInputNode.attributedText?.string ?? ""
+        get {
+            return self.textInputNode.attributedText?.string ?? ""
+        }
+        set {
+            self.textInputNode.attributedText = NSAttributedString(string: newValue, font: Font.regular(17.0), textColor: self.theme.textColor)
+            self.placeholderNode.isHidden = !newValue.isEmpty
+            self.clearButton.isHidden = newValue.isEmpty
+        }
     }
     
     var placeholder: String = "" {
@@ -132,6 +139,10 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
         transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - accessoryButtonsWidth, height: backgroundFrame.size.height)))
         
         return panelHeight
+    }
+    
+    func activateInput() {
+        self.textInputNode.becomeFirstResponder()
     }
     
     func deactivateInput() {

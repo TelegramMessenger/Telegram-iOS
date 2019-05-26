@@ -19,7 +19,7 @@ private func generateArrowImage(color: UIColor) -> UIImage? {
 
 final class InstantPageSettingsNode: ASDisplayNode {
     private var settings: InstantPagePresentationSettings
-    private var currentThemeType: InstantPageThemeType
+    private var currentThemeType: (InstantPageThemeType, Bool)
     private var theme: InstantPageSettingsItemTheme
     
     private let applySettings: (InstantPagePresentationSettings) -> Void
@@ -35,10 +35,10 @@ final class InstantPageSettingsNode: ASDisplayNode {
     private let arrowNode: ASImageNode
     private let itemContainerNode: ASDisplayNode
     
-    init(strings: PresentationStrings, settings: InstantPagePresentationSettings, currentThemeType: InstantPageThemeType, applySettings: @escaping (InstantPagePresentationSettings) -> Void, openInSafari: @escaping () -> Void) {
+    init(strings: PresentationStrings, settings: InstantPagePresentationSettings, currentThemeType: (InstantPageThemeType, Bool), applySettings: @escaping (InstantPagePresentationSettings) -> Void, openInSafari: @escaping () -> Void) {
         self.settings = settings
         self.currentThemeType = currentThemeType
-        self.theme = InstantPageSettingsItemTheme.themeFor(currentThemeType)
+        self.theme = InstantPageSettingsItemTheme.themeFor(currentThemeType.0)
         
         self.applySettings = applySettings
         self.openInSafari = openInSafari
@@ -119,8 +119,14 @@ final class InstantPageSettingsNode: ASDisplayNode {
         
         updateThemeTypeImpl = { [weak self] value in
             if let strongSelf = self {
+                let disableAutoNightMode = strongSelf.currentThemeType.1
                 strongSelf.updateSettings {
-                    return $0.withUpdatedThemeType(value)
+                    if disableAutoNightMode {
+                        let currentTime: Int32 = 0
+                        return $0.withUpdatedThemeType(value).withUpdatedIgnoreAutoNightModeUntil(currentTime)
+                    } else {
+                        return $0.withUpdatedThemeType(value)
+                    }
                 }
             }
         }
@@ -128,7 +134,7 @@ final class InstantPageSettingsNode: ASDisplayNode {
         updateAutoNightImpl = { [weak self] value in
             if let strongSelf = self {
                 strongSelf.updateSettings {
-                    return $0.withUpdatedAutoNightMode(value)
+                    return $0.withUpdatedAutoNightMode(value).withUpdatedIgnoreAutoNightModeUntil(0)
                 }
             }
         }
@@ -225,7 +231,7 @@ final class InstantPageSettingsNode: ASDisplayNode {
         }
     }
     
-    func updateSettingsAndCurrentThemeType(settings: InstantPagePresentationSettings, type: InstantPageThemeType) {
+    func updateSettingsAndCurrentThemeType(settings: InstantPagePresentationSettings, type: (InstantPageThemeType, Bool)) {
         self.currentThemeType = type
         
         self.sansFamilyNode.checked = !self.settings.forceSerif
@@ -233,7 +239,7 @@ final class InstantPageSettingsNode: ASDisplayNode {
         self.themeItemNode.themeType = self.settings.themeType
         self.autoNightItemNode.isEnabled = self.settings.themeType != .dark
         
-        let theme = InstantPageSettingsItemTheme.themeFor(self.currentThemeType)
+        let theme = InstantPageSettingsItemTheme.themeFor(self.currentThemeType.0)
         if theme != self.theme {
             self.theme = theme
             

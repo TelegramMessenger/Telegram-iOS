@@ -551,4 +551,10 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         
         return nil
     }
+    
+    func clearHighlightAnimated(_ animated: Bool) {
+        if let listView = self.historyNode as? ListView {
+            listView.clearHighlightAnimated(animated)
+        }
+    }
 }

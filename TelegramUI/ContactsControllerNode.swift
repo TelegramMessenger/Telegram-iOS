@@ -17,6 +17,7 @@ final class ContactsControllerNode: ASDisplayNode {
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
+    var openPeopleNearby: (() -> Void)?
     var openInvite: (() -> Void)?
     
     private var presentationData: PresentationData
@@ -27,7 +28,11 @@ final class ContactsControllerNode: ASDisplayNode {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
+        var addNearbyImpl: (() -> Void)?
         var inviteImpl: (() -> Void)?
+        //ContactListAdditionalOption(title: presentationData.strings.Contacts_AddPeopleNearby, icon: .generic(UIImage(bundleImageName: "Contact List/PeopleNearbyIcon")!), action: {
+       // addNearbyImpl?()
+    //}),
         let options = [ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
             inviteImpl?()
         })]
@@ -67,6 +72,12 @@ final class ContactsControllerNode: ASDisplayNode {
                 }
             }
         })
+        
+        addNearbyImpl = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.openPeopleNearby?()
+            }
+        }
         
         inviteImpl = { [weak self] in
             let _ = (DeviceAccess.authorizationStatus(context: context, subject: .contacts)

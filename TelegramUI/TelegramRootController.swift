@@ -83,8 +83,6 @@ public final class TelegramRootController: NavigationController {
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
-        
-        
     }
     
     public func updateRootControllers(showCallsTab: Bool) {

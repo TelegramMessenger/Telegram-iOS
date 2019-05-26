@@ -182,6 +182,7 @@ public class PeerMediaCollectionController: TelegramController {
             },sendSticker: { _, _ in
             }, sendGif: { _ in
             }, requestMessageActionCallback: { _, _, _ in
+            }, requestMessageActionUrlAuth: { _, _, _ in
             }, activateSwitchInline: { _, _ in
             }, openUrl: { [weak self] url, _, external in
                 self?.openUrl(url, external: external ?? false)
@@ -368,6 +369,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, requestStopPollInMessage: { _ in
         }, updateInputLanguage: { _ in
         }, unarchiveChat: {
+        }, openLinkEditing: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })
@@ -469,6 +471,12 @@ public class PeerMediaCollectionController: TelegramController {
         super.viewDidAppear(animated)
         
         self.mediaCollectionDisplayNode.historyNode.preloadPages = true
+    }
+    
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.mediaCollectionDisplayNode.clearHighlightAnimated(true)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

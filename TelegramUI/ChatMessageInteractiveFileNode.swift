@@ -51,6 +51,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private let fetchControls = Atomic<FetchControls?>(value: nil)
     private var resourceStatus: FileMediaResourceStatus?
+    private var actualFetchStatus: MediaResourceStatus?
     private let fetchDisposable = MetaDisposable()
     
     var activateLocalContent: () -> Void = { }
@@ -189,12 +190,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         
         let currentMessage = self.message
-        let currentTheme = self.themeAndStrings?.0
         
         return { context, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-                var updatedStatusSignal: Signal<FileMediaResourceStatus, NoError>?
+                var updatedStatusSignal: Signal<(FileMediaResourceStatus, MediaResourceStatus?), NoError>?
                 var updatedPlaybackStatusSignal: Signal<MediaPlayerStatus, NoError>?
                 var updatedFetchControls: FetchControls?
                 
@@ -227,7 +227,17 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = messageFileMediaResourceStatus(context: context, file: file, message: message, isRecentActions: isRecentActions)
+                    if message.flags.isSending {
+                        updatedStatusSignal = combineLatest(messageFileMediaResourceStatus(context: context, file: file, message: message, isRecentActions: isRecentActions), messageMediaFileStatus(context: context, messageId: message.id, file: file))
+                        |> map { resourceStatus, actualFetchStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
+                            return (resourceStatus, actualFetchStatus)
+                        }
+                    } else {
+                        updatedStatusSignal = messageFileMediaResourceStatus(context: context, file: file, message: message, isRecentActions: isRecentActions)
+                        |> map { resourceStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
+                            return (resourceStatus, nil)
+                        }
+                    }
                     updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions)
                 }
                 
@@ -287,16 +297,16 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         isAudio = true
                         if let currentUpdatedStatusSignal = updatedStatusSignal {
                             updatedStatusSignal = currentUpdatedStatusSignal
-                            |> map { status in
+                            |> map { status, _ in
                                 switch status.mediaStatus {
                                     case let .fetchStatus(fetchStatus):
                                         if !voice && !message.flags.isSending {
-                                            return FileMediaResourceStatus(mediaStatus: .fetchStatus(.Local), fetchStatus: status.fetchStatus)
+                                            return (FileMediaResourceStatus(mediaStatus: .fetchStatus(.Local), fetchStatus: status.fetchStatus), nil)
                                         } else {
-                                            return FileMediaResourceStatus(mediaStatus: .fetchStatus(fetchStatus), fetchStatus: status.fetchStatus)
+                                            return (FileMediaResourceStatus(mediaStatus: .fetchStatus(fetchStatus), fetchStatus: status.fetchStatus), nil)
                                         }
                                     case .playbackStatus:
-                                        return status
+                                        return (status, nil)
                                 }
                             }
                         }
@@ -474,7 +484,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     
                     if isAudio && !isVoice {
-                        streamingCacheStatusFrame = CGRect(origin: CGPoint(x: fittedLayoutSize.width + 6.0, y: 8.0), size: CGSize(width: streamingProgressDiameter, height: streamingProgressDiameter))
+                        streamingCacheStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - streamingProgressDiameter + 1.0, y: 8.0), size: CGSize(width: streamingProgressDiameter, height: streamingProgressDiameter))
                         if hasStreamingProgress {
                             fittedLayoutSize.width += streamingProgressDiameter + 6.0
                         }
@@ -577,31 +587,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             }
                             
                             if let updatedStatusSignal = updatedStatusSignal {
-                                strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
+                                strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status, actualFetchStatus in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
-                                            /*var previousHadCacheStatus = false
-                                            if let resourceStatus = strongSelf.resourceStatus {
-                                                switch resourceStatus.fetchStatus {
-                                                    case .Fetching, .Remote:
-                                                        previousHadCacheStatus = true
-                                                    case .Local:
-                                                        previousHadCacheStatus = false
-                                                }
-                                            }
-                                            var hasCacheStatus = false
-                                            switch status.fetchStatus {
-                                                case .Fetching, .Remote:
-                                                    hasCacheStatus = true
-                                                case .Local:
-                                                    hasCacheStatus = false
-                                            }*/
                                             strongSelf.resourceStatus = status
-                                            /*if isAudio && !isVoice && previousHadCacheStatus != hasCacheStatus {
-                                                strongSelf.requestUpdateLayout(false)
-                                            } else {*/
-                                                strongSelf.updateStatus()
-                                            //}
+                                            strongSelf.actualFetchStatus = actualFetchStatus
+                                            strongSelf.updateStatus()
                                         }
                                     }
                                 }))
@@ -684,19 +675,23 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         var downloadingStrings: (String, String, UIFont)?
         
         if !isAudio {
-            switch resourceStatus.mediaStatus {
-                case let .fetchStatus(fetchStatus):
-                    switch fetchStatus {
-                        case let .Fetching(_, progress):
-                            if let size = file.size {
-                                let compactString = dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: decimalSeparator)
-                                downloadingStrings = ("\(compactString) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: decimalSeparator))", compactString, descriptionFont)
-                            }
-                        default:
-                            break
-                    }
-                default:
-                    break
+            var fetchStatus: MediaResourceStatus?
+            if let actualFetchStatus = self.actualFetchStatus, message.forwardInfo != nil {
+                fetchStatus = actualFetchStatus
+            } else if case let .fetchStatus(status) = resourceStatus.mediaStatus {
+                fetchStatus = status
+            }
+
+            if let fetchStatus = fetchStatus {
+                switch fetchStatus {
+                    case let .Fetching(_, progress):
+                        if let size = file.size {
+                            let compactString = dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: decimalSeparator)
+                            downloadingStrings = ("\(compactString) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: decimalSeparator))", compactString, descriptionFont)
+                        }
+                    default:
+                        break
+                }
             }
         } else if isVoice {
             if let playerStatus = self.playerStatus {

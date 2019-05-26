@@ -31,11 +31,14 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
     private let shadowNode: ASImageNode
     private let foregroundContainerNode: ASDisplayNode
     private let controlsNode: PictureInPictureVideoControlsNode
+    private let statusNode: RadialStatusNode
     private var minimizedBlurView: UIVisualEffectView?
     private var minimizedArrowView: TGEmbedPIPPullArrowView?
     private var minimizedEdge: OverlayMediaItemMinimizationEdge?
     
     private var contentNode: (ASDisplayNode & UniversalVideoContentNode)?
+    
+    private let statusDisposable = MetaDisposable()
     
     private var validLayoutSize: CGSize?
     
@@ -58,11 +61,17 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
         })
         self.controlsNode.alpha = 0.0
         
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+        self.statusNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 30.0, height: 30.0))
+        
         self.foregroundContainerNode = ASDisplayNode()
         self.foregroundContainerNode.addSubnode(self.controlsNode)
+        self.foregroundContainerNode.addSubnode(self.statusNode)
         self.foregroundNode = self.foregroundContainerNode
-        
-        //self.controlsNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(controlsNodeTapGesture(_:))))
+    }
+    
+    deinit {
+        self.statusDisposable.dispose()
     }
     
     func updateContentNode(_ contentNode: (UniversalVideoContentNode & ASDisplayNode)?) {
@@ -111,6 +120,10 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
         }
         
         transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: CGPoint(), size: size))
+        
+        let progressSize = CGSize(width: 30.0, height: 30.0)
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressSize.width) / 2.0), y: floorToScreenPixels((size.height - progressSize.height) / 2.0)), size: progressSize))
+        
         if let contentNode = self.contentNode {
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(), size: size))
             contentNode.updateLayout(size: size, transition: transition)
@@ -139,6 +152,17 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
                 return MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true)
             }
         }
+        
+        self.statusDisposable.set((status |> deliverOnMainQueue).start(next: { [weak self] status in
+            guard let strongSelf = self else {
+                return
+            }
+            if let status = status, case .buffering = status.status {
+                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false))
+            } else {
+                strongSelf.statusNode.transitionToState(.none)
+            }
+        }))
     }
     
     func updateMinimizedEdge(_ edge: OverlayMediaItemMinimizationEdge?, adjusting: Bool) {
