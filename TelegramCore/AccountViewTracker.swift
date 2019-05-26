@@ -275,16 +275,31 @@ public final class AccountViewTracker {
         return self.chatHistoryPreloadManager.orderedMedia
     }
     
+    private let externallyUpdatedPeerIdDisposable = MetaDisposable()
+    
     init(account: Account) {
         self.account = account
         
         self.historyViewStateValidationContexts = HistoryViewStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network, accountPeerId: account.peerId)
         
         self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, networkState: account.networkState)
+        
+        self.externallyUpdatedPeerIdDisposable.set((account.stateManager.externallyUpdatedPeerIds
+        |> deliverOn(self.queue)).start(next: { [weak self] peerIds in
+            guard let strongSelf = self else {
+                return
+            }
+            for (peerId, _) in strongSelf.cachedDataContexts {
+                if peerIds.contains(peerId) {
+                    strongSelf.forceUpdateCachedPeerData(peerId: peerId)
+                }
+            }
+        }))
     }
     
     deinit {
         self.updatedViewCountDisposables.dispose()
+        self.externallyUpdatedPeerIdDisposable.dispose()
     }
     
     private func updatePendingWebpages(viewId: Int32, messageIds: Set<MessageId>, localWebpages: [MessageId: (MediaId, String)]) {

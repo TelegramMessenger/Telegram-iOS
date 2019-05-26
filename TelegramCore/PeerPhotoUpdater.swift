@@ -53,6 +53,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
     |> mapToSignal { peer -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
         if let photo = photo {
             return photo
+            |> take(1)
             |> mapError { _ -> UploadPeerPhotoError in return .generic }
             |> mapToSignal { result -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
                 switch result.content {

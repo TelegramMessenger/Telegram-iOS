@@ -106,6 +106,11 @@ public final class AccountStateManager {
         return self.displayAlertsPipe.signal()
     }
     
+    private let externallyUpdatedPeerIdsPipe = ValuePipe<[PeerId]>()
+    var externallyUpdatedPeerIds: Signal<[PeerId], NoError> {
+        return self.externallyUpdatedPeerIdsPipe.signal()
+    }
+    
     private let termsOfServiceUpdateValue = Atomic<TermsOfServiceUpdate?>(value: nil)
     private let termsOfServiceUpdatePromise = Promise<TermsOfServiceUpdate?>(nil)
     public var termsOfServiceUpdate: Signal<TermsOfServiceUpdate?, NoError> {
@@ -672,6 +677,10 @@ public final class AccountStateManager {
             
                 if !events.displayAlerts.isEmpty {
                     self.displayAlertsPipe.putNext(events.displayAlerts)
+                }
+            
+                if !events.externallyUpdatedPeerId.isEmpty {
+                    self.externallyUpdatedPeerIdsPipe.putNext(Array(events.externallyUpdatedPeerId))
                 }
             case let .pollCompletion(pollId, preMessageIds, preSubscribers):
                 if self.operations.count > 1 {

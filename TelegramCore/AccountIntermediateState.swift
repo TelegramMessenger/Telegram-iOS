@@ -123,6 +123,8 @@ struct AccountMutableState {
     var updatedMaxMessageId: Int32?
     var updatedQts: Int32?
     
+    var externallyUpdatedPeerId = Set<PeerId>()
+    
     init(initialState: AccountInitialState, initialPeers: [PeerId: Peer], initialReferencedMessageIds: Set<MessageId>, initialStoredMessages: Set<MessageId>, initialReadInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]) {
         self.initialState = initialState
         self.state = initialState.state
@@ -166,6 +168,7 @@ struct AccountMutableState {
             self.peers[peer.id] = peer
         }
         self.preCachedResources.append(contentsOf: other.preCachedResources)
+        self.externallyUpdatedPeerId.formUnion(other.externallyUpdatedPeerId)
         for (peerId, namespaces) in other.namespacesWithHolesFromPreviousState {
             if self.namespacesWithHolesFromPreviousState[peerId] == nil {
                 self.namespacesWithHolesFromPreviousState[peerId] = Set()
@@ -179,6 +182,10 @@ struct AccountMutableState {
     
     mutating func addPreCachedResource(_ resource: MediaResource, data: Data) {
         self.preCachedResources.append((resource, data))
+    }
+    
+    mutating func addExternallyUpdatedPeerId(_ peerId: PeerId) {
+        self.externallyUpdatedPeerId.insert(peerId)
     }
     
     mutating func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) {
@@ -474,12 +481,13 @@ struct AccountFinalStateEvents {
     let delayNotificatonsUntil: Int32?
     let updatedMaxMessageId: Int32?
     let updatedQts: Int32?
+    let externallyUpdatedPeerId: Set<PeerId>
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil
+        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty
     }
     
-    init(addedIncomingMessageIds: [MessageId] = [], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]] = [:], updatedWebpages: [MediaId: TelegramMediaWebpage] = [:], updatedCalls: [Api.PhoneCall] = [], isContactUpdates: [(PeerId, Bool)] = [], displayAlerts: [(text: String, isDropAuth: Bool)] = [], delayNotificatonsUntil: Int32? = nil, updatedMaxMessageId: Int32? = nil, updatedQts: Int32? = nil) {
+    init(addedIncomingMessageIds: [MessageId] = [], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]] = [:], updatedWebpages: [MediaId: TelegramMediaWebpage] = [:], updatedCalls: [Api.PhoneCall] = [], isContactUpdates: [(PeerId, Bool)] = [], displayAlerts: [(text: String, isDropAuth: Bool)] = [], delayNotificatonsUntil: Int32? = nil, updatedMaxMessageId: Int32? = nil, updatedQts: Int32? = nil, externallyUpdatedPeerId: Set<PeerId> = Set()) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.updatedTypingActivities = updatedTypingActivities
         self.updatedWebpages = updatedWebpages
@@ -489,6 +497,7 @@ struct AccountFinalStateEvents {
         self.delayNotificatonsUntil = delayNotificatonsUntil
         self.updatedMaxMessageId = updatedMaxMessageId
         self.updatedQts = updatedQts
+        self.externallyUpdatedPeerId = externallyUpdatedPeerId
     }
     
     init(state: AccountReplayedFinalState) {
@@ -501,6 +510,7 @@ struct AccountFinalStateEvents {
         self.delayNotificatonsUntil = state.delayNotificatonsUntil
         self.updatedMaxMessageId = state.state.state.updatedMaxMessageId
         self.updatedQts = state.state.state.updatedQts
+        self.externallyUpdatedPeerId = state.state.state.externallyUpdatedPeerId
     }
     
     func union(with other: AccountFinalStateEvents) -> AccountFinalStateEvents {
@@ -523,6 +533,8 @@ struct AccountFinalStateEvents {
             updatedQts = self.updatedQts ?? other.updatedQts
         }
         
-        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, isContactUpdates: self.isContactUpdates + other.isContactUpdates, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil, updatedMaxMessageId: updatedMaxMessageId, updatedQts: updatedQts)
+        let externallyUpdatedPeerId = self.externallyUpdatedPeerId.union(other.externallyUpdatedPeerId)
+        
+        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, isContactUpdates: self.isContactUpdates + other.isContactUpdates, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil, updatedMaxMessageId: updatedMaxMessageId, updatedQts: updatedQts, externallyUpdatedPeerId: externallyUpdatedPeerId)
     }
 }

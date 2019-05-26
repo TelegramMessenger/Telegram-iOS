@@ -74,18 +74,22 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
         }
         
         return network.request(Api.functions.channels.setDiscussionGroup(broadcast: apiChannel, group: apiGroup))
-            |> mapError { error in
-                return .generic
+        |> map { result in
+            switch result {
+                case .boolTrue:
+                    return true
+                case .boolFalse:
+                    return false
             }
-            |> map { result in
-                switch result {
-                    case .boolTrue:
-                        return true
-                    case .boolFalse:
-                        return false
-                }
+        }
+        |> `catch` { error -> Signal<Bool, ChannelDiscussionGroupError> in
+            if error.errorDescription == "LINK_NOT_MODIFIED" {
+                return .single(true)
             }
-    } |> mapToSignal { result in
+            return .fail(.generic)
+        }
+    }
+    |> mapToSignal { result in
         if result {
             return postbox.transaction { transaction in
                 var previousGroupId: PeerId?
