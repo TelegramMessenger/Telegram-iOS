@@ -76,6 +76,15 @@ public extension Message {
         }
         return false
     }
+    
+    public var sourceReference: SourceReferenceMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? SourceReferenceMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
 }
 
 func messagesIdsGroupedByPeerId(_ ids: Set<MessageId>) -> [PeerId: [MessageId]] {

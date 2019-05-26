@@ -1033,7 +1033,7 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     var resultMessages: [Message] = [message]
     
     var messageGroup: [Message]?
-    if message.forwardInfo != nil {
+    if message.forwardInfo != nil && message.sourceReference == nil {
         messageGroup = transaction.getMessageForwardedGroup(message.id)
     } else if message.groupingKey != nil {
         messageGroup = transaction.getMessageGroup(message.id)
