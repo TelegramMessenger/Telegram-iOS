@@ -2062,12 +2062,14 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var delayNotificatonsUntil: Int32?
     var peerActivityTimestamps: [PeerId: Int32] = [:]
     
+    var holesFromPreviousStateMeessageIds: [MessageId] = []
+    
     for (peerId, namespaces) in finalState.state.namespacesWithHolesFromPreviousState {
         for namespace in namespaces {
             if let id = transaction.getTopPeerMessageId(peerId: peerId, namespace: namespace) {
-                transaction.addHole(peerId: peerId, namespace: namespace, space: .everywhere, range: (id.id + 1) ... Int32.max)
+                holesFromPreviousStateMeessageIds.append(MessageId(peerId: id.peerId, namespace: id.namespace, id: id.id + 1))
             } else {
-                transaction.addHole(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... Int32.max)
+                holesFromPreviousStateMeessageIds.append(MessageId(peerId: peerId, namespace: namespace, id: 1))
             }
         }
     }
@@ -2102,6 +2104,13 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     
     var invalidateGroupStats = Set<PeerGroupId>()
     
+    struct PeerIdAndMessageNamespace: Hashable {
+        let peerId: PeerId
+        let namespace: MessageId.Namespace
+    }
+    
+    var topUpperHistoryBlockMessages: [PeerIdAndMessageNamespace: MessageId.Id] = [:]
+    
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
             case let .AddMessages(messages, location):
@@ -2119,6 +2128,16 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         }
                         
                         if case let .Id(id) = message.id {
+                            let peerIdAndMessageNamespace = PeerIdAndMessageNamespace(peerId: id.peerId, namespace: id.namespace)
+                            
+                            if let currentId = topUpperHistoryBlockMessages[peerIdAndMessageNamespace] {
+                                if currentId < id.id {
+                                    topUpperHistoryBlockMessages[peerIdAndMessageNamespace] = id.id
+                                }
+                            } else {
+                                topUpperHistoryBlockMessages[peerIdAndMessageNamespace] = id.id
+                            }
+                            
                             for media in message.media {
                                 if let action = media as? TelegramMediaAction {
                                     if message.id.peerId.namespace == Namespaces.Peer.CloudGroup, case let .groupMigratedToChannel(channelId) = action.action {
@@ -2518,6 +2537,13 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 }
             case let .UpdateIsContact(peerId, value):
                 isContactUpdates.append((peerId, value))
+        }
+    }
+    
+    for messageId in holesFromPreviousStateMeessageIds {
+        let upperId = topUpperHistoryBlockMessages[PeerIdAndMessageNamespace(peerId: messageId.peerId, namespace: messageId.namespace)] ?? Int32.max
+        if upperId >= messageId.id {
+            transaction.addHole(peerId: messageId.peerId, namespace: messageId.namespace, space: .everywhere, range: messageId.id ... upperId)
         }
     }
     
