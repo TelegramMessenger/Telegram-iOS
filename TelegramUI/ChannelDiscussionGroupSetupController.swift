@@ -227,7 +227,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             guard let peer = peer else {
                 return
             }
-            pushControllerImpl?(createGroupController(context: context, peerIds: [], initialTitle: peer.displayTitle + " Chat", supergroup: true, completion: { groupId in
+            pushControllerImpl?(createGroupController(context: context, peerIds: [], initialTitle: peer.displayTitle + " Chat", supergroup: true, completion: { groupId, dismiss in
                 var applySignal = updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: groupId)
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
@@ -260,7 +260,9 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                 |> deliverOnMainQueue).start(error: { _ in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    dismiss()
                 }, completed: {
+                    dismiss()
                     /*let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                      let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success)
                      presentControllerImpl?(controller, nil)*/

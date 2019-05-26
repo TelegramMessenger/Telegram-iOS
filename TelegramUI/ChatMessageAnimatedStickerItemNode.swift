@@ -294,7 +294,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 //  }
             }
             
-            let dateText = stringForMessageTimestampStatus(message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .minimal)
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .minimal)
             
             let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
             
@@ -419,11 +419,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 case .tap:
                     if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
                         if let item = self.item, let author = item.content.firstMessage.author {
-                            let navigate: ChatControllerInteractionNavigateToPeer
+                            var openPeerId = item.effectiveAuthorId ?? author.id
+                            var navigate: ChatControllerInteractionNavigateToPeer
+                            
                             if item.content.firstMessage.id.peerId == item.context.account.peerId {
                                 navigate = .chat(textInputState: nil, messageId: nil)
                             } else {
                                 navigate = .info
+                            }
+                            
+                            for attribute in item.content.firstMessage.attributes {
+                                if let attribute = attribute as? SourceReferenceMessageAttribute {
+                                    openPeerId = attribute.messageId.peerId
+                                    navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                }
                             }
                             
                             if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
@@ -436,7 +445,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                         return
                                     }
                                 }
-                                item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
+                                item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
                             }
                         }
                         return

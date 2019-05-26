@@ -265,7 +265,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         sentViaBot = true
                     }
                     
-                    let dateText = stringForMessageTimestampStatus(message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
+                    let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
                     
                     let (size, apply) = statusLayout(presentationData, edited && !sentViaBot, viewCount, dateText, statusType, constrainedSize)
                     statusSize = size

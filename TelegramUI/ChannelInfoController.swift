@@ -901,8 +901,10 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     
     let hapticFeedback = HapticFeedback()
     
+    var wasEditing: Bool?
+    
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId, updateData: true), context.account.postbox.combinedView(keys: [globalNotificationsKey]))
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId, updateData: true), context.account.postbox.combinedView(keys: [globalNotificationsKey]))
         |> map { presentationData, state, view, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             
@@ -1013,8 +1015,16 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 })
             }
             
+            let wasEditingValue = wasEditing
+            wasEditing = state.editingState != nil
+            
+            var crossfadeState = false
+            if let wasEditingValue = wasEditingValue, wasEditingValue != (state.editingState != nil) {
+                crossfadeState = true
+            }
+            
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: channelInfoEntries(account: context.account, presentationData: presentationData, view: view, globalNotificationSettings: globalNotificationSettings, state: state), style: .plain)
+            let listState = ItemListNodeState(entries: channelInfoEntries(account: context.account, presentationData: presentationData, view: view, globalNotificationSettings: globalNotificationSettings, state: state), style: .plain, crossfadeState: crossfadeState, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

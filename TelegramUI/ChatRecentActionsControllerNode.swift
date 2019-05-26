@@ -650,8 +650,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }
         self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self, let peer = peer {
-                if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
-                    strongSelf.pushController(infoController)
+                if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
+                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true)
+                } else {
+                    if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
+                        strongSelf.pushController(infoController)
+                    }
                 }
             }
         }))

@@ -202,6 +202,24 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - videoLayout.contentSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
             
+            var ignoreForward = false
+            var ignoreSource = false
+            
+            if let forwardInfo = item.message.forwardInfo {
+                if item.message.id.peerId != item.context.account.peerId {
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                            if attribute.messageId.peerId == forwardInfo.author?.id {
+                                ignoreForward = true
+                            } else {
+                                ignoreSource = true
+                            }
+                            break
+                        }
+                    }
+                }
+            }
+            
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
                     var inlineBotNameString: String?
@@ -221,6 +239,21 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     }
                 }
+                
+                if !ignoreSource, item.message.id.peerId != item.context.account.peerId {
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                            if let sourcePeer = item.message.peers[attribute.messageId.peerId] {
+                                let inlineBotNameColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+                                
+                                let nameString = NSAttributedString(string: sourcePeer.displayTitle, font: inlineBotPrefixFont, textColor: inlineBotNameColor)
+                                
+                                viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: nameString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                            }
+                        }
+                    }
+                }
+                
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 } else if let attribute = attribute as? InlineBotMessageAttribute {
@@ -281,7 +314,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             var forwardInfoSizeApply: (CGSize, () -> ChatMessageForwardInfoNode)?
             var updatedForwardBackgroundNode: ASImageNode?
             var forwardBackgroundImage: UIImage?
-            if let forwardInfo = item.message.forwardInfo {
+            
+            if !ignoreForward, let forwardInfo = item.message.forwardInfo {
                 if let source = forwardInfo.source {
                     forwardSource = source
                     if let authorSignature = forwardInfo.authorSignature {
@@ -524,11 +558,20 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     case .tap:
                         if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
                             if let item = self.item, let author = item.content.firstMessage.author {
-                                let navigate: ChatControllerInteractionNavigateToPeer
+                                var openPeerId = item.effectiveAuthorId ?? author.id
+                                var navigate: ChatControllerInteractionNavigateToPeer
+                                
                                 if item.content.firstMessage.id.peerId == item.context.account.peerId {
                                     navigate = .chat(textInputState: nil, messageId: nil)
                                 } else {
                                     navigate = .info
+                                }
+                                
+                                for attribute in item.content.firstMessage.attributes {
+                                    if let attribute = attribute as? SourceReferenceMessageAttribute {
+                                        openPeerId = attribute.messageId.peerId
+                                        navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                    }
                                 }
                                 
                                 if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
@@ -537,11 +580,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                     if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
                                         if case .member = channel.participationStatus {
                                         } else {
-                                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
                                             return
                                         }
                                     }
-                                    item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
+                                    item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
                                 }
                             }
                             return

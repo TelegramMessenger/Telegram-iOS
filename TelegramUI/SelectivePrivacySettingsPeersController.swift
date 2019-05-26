@@ -10,12 +10,14 @@ private final class SelectivePrivacyPeersControllerArguments {
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let removePeer: (PeerId) -> Void
     let addPeer: () -> Void
+    let openPeer: (PeerId) -> Void
     
-    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, addPeer: @escaping () -> Void) {
+    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, addPeer: @escaping () -> Void, openPeer: @escaping (PeerId) -> Void) {
         self.account = account
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
         self.addPeer = addPeer
+        self.openPeer = openPeer
     }
 }
 
@@ -150,7 +152,9 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
                         }
                     }
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
+                    arguments.openPeer(peer.peer.id)
+                }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -218,6 +222,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
     }
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -311,6 +316,16 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             controller?.dismiss()
         }))
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }, openPeer: { peerId in
+        let _ = (context.account.postbox.transaction { transaction -> Peer? in
+            return transaction.getPeer(peerId)
+        }
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer, let controller = peerInfoController(context: context, peer: peer) else {
+                return
+            }
+            pushControllerImpl?(controller)
+        })
     })
     
     var previousPeers: [SelectivePrivacyPeer]?
@@ -351,6 +366,11 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
+        }
+    }
+    pushControllerImpl = { [weak controller] c in
+        if let navigationController = controller?.navigationController as? NavigationController {
+            navigationController.pushViewController(c)
         }
     }
     return controller

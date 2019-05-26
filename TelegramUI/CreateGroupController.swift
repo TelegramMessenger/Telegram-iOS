@@ -219,7 +219,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     return entries
 }
 
-public func createGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String? = nil, supergroup: Bool = false, completion: ((PeerId) -> Void)? = nil) -> ViewController {
+public func createGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String? = nil, supergroup: Bool = false, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
     let initialState = CreateGroupState(creating: false, editingName: .title(title: initialTitle ?? "", type: .group), avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -266,6 +266,29 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
             }
             
             actionsDisposable.add((createSignal
+            |> mapToSignal { peerId -> Signal<PeerId?, CreateGroupError> in
+                guard let peerId = peerId else {
+                    return .single(nil)
+                }
+                let updatingAvatar = stateValue.with {
+                    return $0.avatar
+                }
+                if let _ = updatingAvatar {
+                    return updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
+                    })
+                    |> ignoreValues
+                    |> `catch` { _ -> Signal<Never, CreateGroupError> in
+                        return .complete()
+                    }
+                    |> mapToSignal { _ -> Signal<PeerId?, CreateGroupError> in
+                        return .complete()
+                    }
+                    |> then(.single(peerId))
+                } else {
+                    return .single(peerId)
+                }
+            }
             |> deliverOnMainQueue
             |> afterDisposed {
                 Queue.mainQueue().async {
@@ -277,18 +300,10 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                 }
             }).start(next: { peerId in
                 if let peerId = peerId {
-                    let updatingAvatar = stateValue.with {
-                        return $0.avatar
-                    }
-                    if let _ = updatingAvatar {
-                        let _ = updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
-                            return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
-                        }).start()
-                    }
-                    
                     if let completion = completion {
-                        dismissImpl?()
-                        completion(peerId)
+                        completion(peerId, {
+                            dismissImpl?()
+                        })
                     } else {
                         let controller = ChatController(context: context, chatLocation: .peer(peerId))
                         replaceControllerImpl?(controller)

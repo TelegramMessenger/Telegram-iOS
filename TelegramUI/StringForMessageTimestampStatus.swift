@@ -7,7 +7,7 @@ enum MessageTimestampStatusFormat {
     case minimal
 }
 
-func stringForMessageTimestampStatus(message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
+func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
     var dateText = stringForMessageTimestamp(timestamp: message.timestamp, dateTimeFormat: dateTimeFormat)
     
     var authorTitle: String?
@@ -20,6 +20,21 @@ func stringForMessageTimestampStatus(message: Message, dateTimeFormat: Presentat
             for attribute in message.attributes {
                 if let attribute = attribute as? AuthorSignatureMessageAttribute {
                     authorTitle = attribute.signature
+                    break
+                }
+            }
+        }
+        
+        if message.id.peerId != accountPeerId {
+            for attribute in message.attributes {
+                if let attribute = attribute as? SourceReferenceMessageAttribute {
+                    if let forwardInfo = message.forwardInfo {
+                        if forwardInfo.author?.id == attribute.messageId.peerId {
+                            if authorTitle == nil {
+                                authorTitle = forwardInfo.authorSignature
+                            }
+                        }
+                    }
                     break
                 }
             }
