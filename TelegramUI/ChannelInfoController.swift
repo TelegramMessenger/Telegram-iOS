@@ -471,6 +471,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                 linkText = presentationData.strings.Channel_Setup_TypePrivate
             }
             entries.append(.channelTypeSetup(theme: presentationData.theme, text: presentationData.strings.Channel_TypeSetup_Title, value: linkText))
+            
             let discussionGroupTitle: String
             if let cachedData = view.cachedData as? CachedChannelData {
                 if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
@@ -498,11 +499,43 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             
             entries.append(.signMessages(theme: presentationData.theme, text: presentationData.strings.Channel_SignMessages, value: messagesShouldHaveSignatures))
             entries.append(.signInfo(theme: presentationData.theme, text: presentationData.strings.Channel_SignMessages_Help))
-        } else if let username = peer.username, !username.isEmpty, state.editingState == nil {
-            entries.append(.addressName(theme: presentationData.theme, text: presentationData.strings.Channel_LinkItem, value: username))
+        } else {
+            if state.editingState == nil || !peer.flags.contains(.isCreator) {
+                if let username = peer.username, !username.isEmpty, state.editingState == nil {
+                    entries.append(.addressName(theme: presentationData.theme, text: presentationData.strings.Channel_LinkItem, value: username))
+                }
+            }
+            
+            if let _ = state.editingState, let adminRights = peer.adminRights, !adminRights.isEmpty {
+                let discussionGroupTitle: String?
+                if let cachedData = view.cachedData as? CachedChannelData {
+                    if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
+                        if let addressName = peer.addressName, !addressName.isEmpty {
+                            discussionGroupTitle = "@\(addressName)"
+                        } else {
+                            discussionGroupTitle = peer.displayTitle
+                        }
+                    } else if canEditChannel {
+                        discussionGroupTitle = presentationData.strings.Channel_DiscussionGroupAdd
+                    } else {
+                        discussionGroupTitle = nil
+                    }
+                } else if canEditChannel {
+                    discussionGroupTitle = "..."
+                } else {
+                    discussionGroupTitle = nil
+                }
+                
+                if let discussionGroupTitle = discussionGroupTitle {
+                    entries.append(.discussionGroupSetup(theme: presentationData.theme, text: presentationData.strings.Channel_DiscussionGroup, value: discussionGroupTitle))
+                    if canEditChannel {
+                        entries.append(.discussionGroupSetupInfo(theme: presentationData.theme, text: presentationData.strings.Channel_DiscussionGroupInfo))
+                    }
+                }
+            }
         }
         
-        if let _ = state.editingState, canEditChannel {
+        if let _ = state.editingState, let adminRights = peer.adminRights, !adminRights.isEmpty {
         } else {
             if peer.isScam {
                 entries.append(.about(theme: presentationData.theme, text: presentationData.strings.Channel_AboutItem, value: presentationData.strings.ChannelInfo_ScamChannelWarning))
@@ -924,8 +957,16 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             }
             
             var canEditChannel = false
+            var hasSomethingToEdit = false
             if let peer = view.peers[view.peerId] as? TelegramChannel {
                 canEditChannel = peer.hasPermission(.changeInfo)
+                if canEditChannel {
+                    hasSomethingToEdit = true
+                } else if let adminRights = peer.adminRights, !adminRights.isEmpty {
+                    if let cachedData = view.cachedData as? CachedChannelData, let _ = cachedData.linkedDiscussionPeerId {
+                        hasSomethingToEdit = true
+                    }
+                }
             }
             
             var leftNavigationButton: ItemListNavigationButton?
@@ -1000,7 +1041,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         }))
                     })
                 }
-            } else if canEditChannel {
+            } else if hasSomethingToEdit {
                 rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         var text = ""

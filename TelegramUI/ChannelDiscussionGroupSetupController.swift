@@ -149,6 +149,8 @@ private func channelDiscussionGroupSetupControllerEntries(presentationData: Pres
         return []
     }
     
+    let canEditChannel = peer.hasPermission(.changeInfo)
+    
     var entries: [ChannelDiscussionGroupSetupControllerEntry] = []
     
     if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
@@ -161,15 +163,17 @@ private func channelDiscussionGroupSetupControllerEntries(presentationData: Pres
             
             entries.append(.group(0, presentationData.theme, presentationData.strings, group, presentationData.nameDisplayOrder))
             entries.append(.groupsInfo(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_Info))
-            let unlinkText: String
-            if case .group = peer.info {
-                unlinkText = presentationData.strings.Channel_DiscussionGroup_UnlinkChannel
-            } else {
-                unlinkText = presentationData.strings.Channel_DiscussionGroup_UnlinkGroup
+            if canEditChannel {
+                let unlinkText: String
+                if case .group = peer.info {
+                    unlinkText = presentationData.strings.Channel_DiscussionGroup_UnlinkChannel
+                } else {
+                    unlinkText = presentationData.strings.Channel_DiscussionGroup_UnlinkGroup
+                }
+                entries.append(.unlink(presentationData.theme, unlinkText))
             }
-            entries.append(.unlink(presentationData.theme, unlinkText))
         }
-    } else if case .broadcast = peer.info {
+    } else if case .broadcast = peer.info, canEditChannel {
         if let groups = groups {
             entries.append(.header(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_Header, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
             
@@ -193,9 +197,9 @@ private struct ChannelDiscussionGroupSetupControllerState: Equatable {
 public func channelDiscussionGroupSetupController(context: AccountContext, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(ChannelDiscussionGroupSetupControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelDiscussionGroupSetupControllerState())
-    let updateState: ((ChannelDiscussionGroupSetupControllerState) -> ChannelDiscussionGroupSetupControllerState) -> Void = { f in
+    /*let updateState: ((ChannelDiscussionGroupSetupControllerState) -> ChannelDiscussionGroupSetupControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
-    }
+    }*/
     
     let groupPeers = Promise<[Peer]?>()
     groupPeers.set(.single(nil)

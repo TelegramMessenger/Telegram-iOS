@@ -81,6 +81,7 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     
     init(theme: PresentationTheme, strings: PresentationStrings, type: OverlayStatusControllerType, dismissed: @escaping () -> Void) {
         self.dismissed = dismissed
+        var isUserInteractionEnabled = true
         switch type {
             case let .loading(cancelled):
                 let controller = TGProgressWindowController(light: theme.actionSheet.backgroundType == .light)!
@@ -93,7 +94,9 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
             case let .shieldSuccess(text, increasedDelay):
                 self.contentController = .shieldSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: true, star: false), increasedDelay)
             case let .genericSuccess(text, increasedDelay):
-                self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: false), increasedDelay)
+                let controller = TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: false)!
+                self.contentController = .genericSuccess(controller, increasedDelay)
+                isUserInteractionEnabled = false
             case let .starSuccess(text):
                 self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: true), false)
         }
@@ -102,6 +105,7 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
         
         self.backgroundColor = nil
         self.isOpaque = false
+        self.isUserInteractionEnabled = isUserInteractionEnabled
         
         self.view.addSubview(self.contentController.view)
     }

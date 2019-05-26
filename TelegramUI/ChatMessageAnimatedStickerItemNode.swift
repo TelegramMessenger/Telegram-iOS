@@ -116,6 +116,7 @@ private final class StickerAnimationNode: ASDisplayNode {
                 let playerItem = AVPlayerItem(url: URL(fileURLWithPath: data.path))
                 Queue.mainQueue().async {
                     strongSelf.player = AVPlayer(playerItem: playerItem)
+                    strongSelf.player?.isMuted = true
                     strongSelf.playerItem = playerItem
                 }
             }
