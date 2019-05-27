@@ -270,7 +270,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                     arguments.removeSession(id)
                 })
             case let .website(_, theme, strings, dateTimeFormat, nameDisplayOrder, website, peer, enabled, editing, revealed):
-                return ItemListWebsiteItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, website: website, peer: peer, enabled: enabled, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
+                return ItemListWebsiteItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, website: website, peer: peer, enabled: enabled, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
                     arguments.setSessionIdWithRevealedOptions(previousId, id)
                 }, removeSession: { id in
                     arguments.removeWebSession(id)
@@ -602,7 +602,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if sessionsState.sessions.isEmpty {
             emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
-        } else if sessionsState.sessions.count == 1 {
+        } else if sessionsState.sessions.count == 1 && mode == .sessions {
             emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
         }
         

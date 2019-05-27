@@ -3,7 +3,7 @@ import Postbox
 import Display
 import TelegramCore
 
-private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 
 final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
     private let context: AccountContext

@@ -1430,6 +1430,7 @@ final class ContactListNode: ASDisplayNode {
                     self.indexNode.frame = indexNodeFrame
 
                     self.indexNode.update(size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom), color: self.presentationData.theme.list.itemAccentColor, sections: transition.indexSections, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    self.indexNode.isUserInteractionEnabled = !transition.indexSections.isEmpty
                 }
                 
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: transition.scrollToItem, updateOpaqueState: nil, completion: { [weak self] _ in

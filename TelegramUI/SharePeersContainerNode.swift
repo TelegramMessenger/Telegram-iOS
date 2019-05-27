@@ -51,7 +51,7 @@ private struct ShareGridTransaction {
     let animated: Bool
 }
 
-private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 17.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 17.0)!
 
 private func preparedGridEntryTransition(account: Account, from fromEntries: [SharePeerEntry], to toEntries: [SharePeerEntry], interfaceInteraction: ShareControllerInteraction) -> ShareGridTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)

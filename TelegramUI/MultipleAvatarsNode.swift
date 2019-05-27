@@ -4,7 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 
-private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
 
 final class MultipleAvatarsNode: ASDisplayNode {
     private var nodes: [(Peer, AvatarNode)] = []

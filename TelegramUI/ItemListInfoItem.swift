@@ -180,8 +180,11 @@ class InfoItemNode: ListViewItemNode {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.tapActionAtPoint = { _ in
-            return .waitForSingleTap
+        recognizer.tapActionAtPoint = { [weak self] point in
+            if let strongSelf = self, !strongSelf.closeButton.frame.contains(point) {
+                return .waitForSingleTap
+            }
+            return .fail
         }
         recognizer.highlight = { [weak self] point in
             if let strongSelf = self {

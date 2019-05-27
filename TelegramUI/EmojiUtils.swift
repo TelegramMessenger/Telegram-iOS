@@ -11,12 +11,15 @@ extension UnicodeScalar {
             0xE0020...0xE007F, // Tags
             0xFE00...0xFE0F, // Variation Selectors
             0x1F900...0x1F9FF, // Supplemental Symbols and Pictographs
-            127000...127600, // Various asian characters
+            0x1F018...0x1F0F5,
+            0x1F200...0x1F270, // Various asian characters
             65024...65039, // Variation selector
             9100...9300, // Misc items
             8400...8447: // Combining Diacritical Marks for Symbols
                 return true
-            case 0x270b:
+            case 0x1f004:
+                return true
+            case 0x270b, 0x2728:
                 return true
             default:
                 return false
@@ -26,7 +29,8 @@ extension UnicodeScalar {
     var maybeEmoji: Bool {
         switch self.value {
             case 0x2600...0x26FF, // Misc symbols
-            0x2700...0x27BF: // Dingbats
+            0x2700...0x27BF, // Dingbats
+            0x1F100...0x1F1FF: //Enclosed Alphanumeric
                 return true
             default:
                 return false

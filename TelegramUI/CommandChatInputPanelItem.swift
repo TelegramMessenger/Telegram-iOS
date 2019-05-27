@@ -72,7 +72,7 @@ final class CommandChatInputPanelItem: ListViewItem {
     }
 }
 
-private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 private let textFont = Font.medium(14.0)
 private let descriptionFont = Font.regular(14.0)
 

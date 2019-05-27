@@ -524,10 +524,12 @@ public final class PresentationThemeChatBubble {
     public let incomingSecondaryTextColor: UIColor
     public let incomingLinkTextColor: UIColor
     public let incomingLinkHighlightColor: UIColor
+    public let incomingScamColor: UIColor
     public let outgoingPrimaryTextColor: UIColor
     public let outgoingSecondaryTextColor: UIColor
     public let outgoingLinkTextColor: UIColor
     public let outgoingLinkHighlightColor: UIColor
+    public let outgoingScamColor: UIColor
     public let infoPrimaryTextColor: UIColor
     public let infoLinkTextColor: UIColor
     public let incomingTextHighlightColor: UIColor
@@ -587,7 +589,7 @@ public final class PresentationThemeChatBubble {
     public let incomingPolls: PresentationThemeChatBubblePolls
     public let outgoingPolls: PresentationThemeChatBubblePolls
     
-    public init(incoming: PresentationThemeBubbleColor, outgoing: PresentationThemeBubbleColor, freeform: PresentationThemeBubbleColor, incomingPrimaryTextColor: UIColor, incomingSecondaryTextColor: UIColor, incomingLinkTextColor: UIColor, incomingLinkHighlightColor: UIColor, outgoingPrimaryTextColor: UIColor, outgoingSecondaryTextColor: UIColor, outgoingLinkTextColor: UIColor, outgoingLinkHighlightColor: UIColor, infoPrimaryTextColor: UIColor, infoLinkTextColor: UIColor, incomingTextHighlightColor: UIColor, outgoingTextHighlightColor: UIColor, incomingAccentTextColor: UIColor, outgoingAccentTextColor: UIColor, incomingAccentControlColor: UIColor, outgoingAccentControlColor: UIColor, incomingMediaActiveControlColor: UIColor, outgoingMediaActiveControlColor: UIColor, incomingMediaInactiveControlColor: UIColor, outgoingMediaInactiveControlColor: UIColor, outgoingCheckColor: UIColor, incomingPendingActivityColor: UIColor, outgoingPendingActivityColor: UIColor, mediaDateAndStatusFillColor: UIColor, mediaDateAndStatusTextColor: UIColor, incomingFileTitleColor: UIColor, outgoingFileTitleColor: UIColor, incomingFileDescriptionColor: UIColor, outgoingFileDescriptionColor: UIColor, incomingFileDurationColor: UIColor, outgoingFileDurationColor: UIColor, shareButtonFillColor: PresentationThemeVariableColor, shareButtonStrokeColor: PresentationThemeVariableColor, shareButtonForegroundColor: PresentationThemeVariableColor, mediaOverlayControlBackgroundColor: UIColor, mediaOverlayControlForegroundColor: UIColor, actionButtonsIncomingFillColor: PresentationThemeVariableColor, actionButtonsIncomingStrokeColor: PresentationThemeVariableColor, actionButtonsIncomingTextColor: PresentationThemeVariableColor, actionButtonsOutgoingFillColor: PresentationThemeVariableColor, actionButtonsOutgoingStrokeColor: PresentationThemeVariableColor, actionButtonsOutgoingTextColor: PresentationThemeVariableColor, selectionControlBorderColor: UIColor, selectionControlFillColor: UIColor, selectionControlForegroundColor: UIColor, mediaHighlightOverlayColor: UIColor, deliveryFailedFillColor: UIColor, deliveryFailedForegroundColor: UIColor, incomingMediaPlaceholderColor: UIColor, outgoingMediaPlaceholderColor: UIColor, incomingPolls: PresentationThemeChatBubblePolls, outgoingPolls: PresentationThemeChatBubblePolls) {
+    public init(incoming: PresentationThemeBubbleColor, outgoing: PresentationThemeBubbleColor, freeform: PresentationThemeBubbleColor, incomingPrimaryTextColor: UIColor, incomingSecondaryTextColor: UIColor, incomingLinkTextColor: UIColor, incomingLinkHighlightColor: UIColor, incomingScamColor: UIColor, outgoingPrimaryTextColor: UIColor, outgoingSecondaryTextColor: UIColor, outgoingLinkTextColor: UIColor, outgoingLinkHighlightColor: UIColor, outgoingScamColor: UIColor, infoPrimaryTextColor: UIColor, infoLinkTextColor: UIColor, incomingTextHighlightColor: UIColor, outgoingTextHighlightColor: UIColor, incomingAccentTextColor: UIColor, outgoingAccentTextColor: UIColor, incomingAccentControlColor: UIColor, outgoingAccentControlColor: UIColor, incomingMediaActiveControlColor: UIColor, outgoingMediaActiveControlColor: UIColor, incomingMediaInactiveControlColor: UIColor, outgoingMediaInactiveControlColor: UIColor, outgoingCheckColor: UIColor, incomingPendingActivityColor: UIColor, outgoingPendingActivityColor: UIColor, mediaDateAndStatusFillColor: UIColor, mediaDateAndStatusTextColor: UIColor, incomingFileTitleColor: UIColor, outgoingFileTitleColor: UIColor, incomingFileDescriptionColor: UIColor, outgoingFileDescriptionColor: UIColor, incomingFileDurationColor: UIColor, outgoingFileDurationColor: UIColor, shareButtonFillColor: PresentationThemeVariableColor, shareButtonStrokeColor: PresentationThemeVariableColor, shareButtonForegroundColor: PresentationThemeVariableColor, mediaOverlayControlBackgroundColor: UIColor, mediaOverlayControlForegroundColor: UIColor, actionButtonsIncomingFillColor: PresentationThemeVariableColor, actionButtonsIncomingStrokeColor: PresentationThemeVariableColor, actionButtonsIncomingTextColor: PresentationThemeVariableColor, actionButtonsOutgoingFillColor: PresentationThemeVariableColor, actionButtonsOutgoingStrokeColor: PresentationThemeVariableColor, actionButtonsOutgoingTextColor: PresentationThemeVariableColor, selectionControlBorderColor: UIColor, selectionControlFillColor: UIColor, selectionControlForegroundColor: UIColor, mediaHighlightOverlayColor: UIColor, deliveryFailedFillColor: UIColor, deliveryFailedForegroundColor: UIColor, incomingMediaPlaceholderColor: UIColor, outgoingMediaPlaceholderColor: UIColor, incomingPolls: PresentationThemeChatBubblePolls, outgoingPolls: PresentationThemeChatBubblePolls) {
         self.incoming = incoming
         self.outgoing = outgoing
         self.freeform = freeform
@@ -596,10 +598,12 @@ public final class PresentationThemeChatBubble {
         self.incomingSecondaryTextColor = incomingSecondaryTextColor
         self.incomingLinkTextColor = incomingLinkTextColor
         self.incomingLinkHighlightColor = incomingLinkHighlightColor
+        self.incomingScamColor = incomingScamColor
         self.outgoingPrimaryTextColor = outgoingPrimaryTextColor
         self.outgoingSecondaryTextColor = outgoingSecondaryTextColor
         self.outgoingLinkTextColor = outgoingLinkTextColor
         self.outgoingLinkHighlightColor = outgoingLinkHighlightColor
+        self.outgoingScamColor = outgoingScamColor
         self.infoPrimaryTextColor = infoPrimaryTextColor
         self.infoLinkTextColor = infoLinkTextColor
         self.incomingTextHighlightColor = incomingTextHighlightColor
@@ -664,14 +668,16 @@ public final class PresentationThemeServiceMessageColorComponents {
     public let fill: UIColor
     public let primaryText: UIColor
     public let linkHighlight: UIColor
+    public let scam: UIColor
     
     public let dateFillStatic: UIColor
     public let dateFillFloating: UIColor
     
-    public init(fill: UIColor, primaryText: UIColor, linkHighlight: UIColor, dateFillStatic: UIColor, dateFillFloating: UIColor) {
+    public init(fill: UIColor, primaryText: UIColor, linkHighlight: UIColor, scam: UIColor, dateFillStatic: UIColor, dateFillFloating: UIColor) {
         self.fill = fill
         self.primaryText = primaryText
         self.linkHighlight = linkHighlight
+        self.scam = scam
         self.dateFillStatic = dateFillStatic
         self.dateFillFloating = dateFillFloating
     }

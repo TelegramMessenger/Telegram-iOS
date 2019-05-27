@@ -60,7 +60,16 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                     }
                 }
                 
-                currentCredibilityIconImage = peer.isScam ? PresentationResourcesChatList.scamIcon(presentationData.theme.theme) : nil
+                if peer.isScam {
+                    switch type {
+                        case let .bubble(incoming):
+                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme.theme, type: incoming ? .regular : .outgoing)
+                        case .standalone:
+                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme.theme, type: .service)
+                    }
+                } else {
+                    currentCredibilityIconImage = nil
+                }
             } else {
                 highlight = false
             }

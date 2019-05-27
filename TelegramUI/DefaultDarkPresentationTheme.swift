@@ -161,10 +161,12 @@ private let bubble = PresentationThemeChatBubble(
     incomingSecondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
     incomingLinkTextColor: accentColor,
     incomingLinkHighlightColor: accentColor.withAlphaComponent(0.5),
+    incomingScamColor: destructiveColor,
     outgoingPrimaryTextColor: UIColor(rgb: 0xffffff),
     outgoingSecondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
     outgoingLinkTextColor: accentColor,
     outgoingLinkHighlightColor: accentColor.withAlphaComponent(0.5),
+    outgoingScamColor: destructiveColor,
     infoPrimaryTextColor: UIColor(rgb: 0xffffff),
     infoLinkTextColor: accentColor,
     incomingTextHighlightColor: UIColor(rgb: 0xffe438),
@@ -212,7 +214,7 @@ private let bubble = PresentationThemeChatBubble(
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(
-    components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x1f1f1f, alpha: 1.0), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), dateFillStatic: UIColor(rgb: 0x1f1f1f, alpha: 1.0), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.2)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x1f1f1f, alpha: 1.0), primaryText: .white, linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), dateFillStatic: UIColor(rgb: 0x1f1f1f, alpha: 1.0), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.2))),
+    components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x1f1f1f, alpha: 1.0), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), scam: destructiveColor, dateFillStatic: UIColor(rgb: 0x1f1f1f, alpha: 1.0), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.2)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x1f1f1f, alpha: 1.0), primaryText: .white, linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), scam: destructiveColor, dateFillStatic: UIColor(rgb: 0x1f1f1f, alpha: 1.0), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.2))),
     unreadBarFillColor: UIColor(rgb: 0x1b1b1b), //!!!
     unreadBarStrokeColor: UIColor(rgb: 0x000000),
     unreadBarTextColor: UIColor(rgb: 0xb2b2b2), //!!!

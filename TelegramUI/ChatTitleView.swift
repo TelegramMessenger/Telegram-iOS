@@ -211,7 +211,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 
                 if titleScamIcon != self.titleScamIcon {
                     self.titleScamIcon = titleScamIcon
-                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(self.theme) : nil
+                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(self.theme, type: .regular) : nil
                     self.setNeedsLayout()
                 }
                 

@@ -4,7 +4,7 @@ import Display
 import Postbox
 import TelegramCore
 
-private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 
 private protocol AbstractSwitchAccountItemNode {
     func updateLayout(maxWidth: CGFloat) -> (CGFloat, CGFloat, (CGFloat) -> Void)

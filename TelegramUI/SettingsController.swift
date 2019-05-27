@@ -8,7 +8,7 @@ import MtProtoKitDynamic
 
 private let maximumNumberOfAccounts = 3
 
-private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
 
 private enum SettingsEntryTag: Equatable, ItemListItemTag {
     case account(AccountRecordId)
