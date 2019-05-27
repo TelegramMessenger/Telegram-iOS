@@ -113,7 +113,7 @@ public final class CollectionIndexNode: ASDisplayNode {
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.bounds.insetBy(dx: -5.0, dy: 0.0).contains(point) {
+        if self.isUserInteractionEnabled, self.bounds.insetBy(dx: -5.0, dy: 0.0).contains(point) {
             return self.view
         } else {
             return nil
