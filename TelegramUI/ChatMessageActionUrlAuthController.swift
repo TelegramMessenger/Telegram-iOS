@@ -110,6 +110,9 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
     var authorize: Bool = true {
         didSet {
             self.authorizeCheckNode.setIsChecked(self.authorize, animated: true)
+            self.allowWriteCheckNode.isUserInteractionEnabled = self.authorize
+            self.allowWriteCheckNode.alpha = self.authorize ? 1.0 : 0.4
+            self.allowWriteLabelNode.alpha = self.authorize ? 1.0 : 0.4
             if !self.authorize && self.allowWriteAccess {
                 self.allowWriteAccess = false
             }
@@ -119,9 +122,6 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
     var allowWriteAccess: Bool = true {
         didSet {
             self.allowWriteCheckNode.setIsChecked(self.allowWriteAccess, animated: true)
-            if !self.authorize && self.allowWriteAccess {
-                self.authorize = true
-            }
         }
     }
     

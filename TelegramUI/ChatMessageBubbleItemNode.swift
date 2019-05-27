@@ -732,7 +732,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 authorNameString = effectiveAuthor.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 authorNameColor = chatMessagePeerIdColors[Int(effectiveAuthor.id.id % 7)]
                 
-                currentCredibilityIconImage = effectiveAuthor.isScam ? PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme) : nil
+                var isScam = effectiveAuthor.isScam
+                if case let .peer(peerId) = item.chatLocation, let authorPeerId = item.message.author?.id, authorPeerId == peerId {
+                    isScam = false
+                }
+                currentCredibilityIconImage = isScam ? PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme, type: incoming ? .regular : .outgoing) : nil
             }
             if let rawAuthorNameColor = authorNameColor {
                 var dimColors = false

@@ -262,7 +262,7 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
 
 private let separatorHeight = 1.0 / UIScreen.main.scale
 
-private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
 
 class ChatListItemNode: ItemListRevealOptionsItemNode {
     var item: ChatListItem?
@@ -940,7 +940,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var credibilityIconOffset: CGFloat = 0.0
             if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
                 if peer.isScam {
-                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme)
+                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
                     credibilityIconOffset = 2.0
                 } else if peer.isVerified {
                     currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)

@@ -40,7 +40,7 @@ func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageT
     return string
 }
 
-func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, fixedFont: UIFont, underlineLinks: Bool = true) -> NSAttributedString {
+func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, fixedFont: UIFont, underlineLinks: Bool = true, external: Bool = false) -> NSAttributedString {
     var nsString: NSString?
     let string = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.font: baseFont, NSAttributedStringKey.foregroundColor: baseColor])
     var skipEntity = false
@@ -99,7 +99,11 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if underlineLinks && underlineAllLinks {
                     string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
-                string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: url, range: range)
+                if external {
+                    string.addAttribute(NSAttributedStringKey.link, value: url, range: range)
+                } else {
+                    string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: url, range: range)
+                }
             case .Bold:
                 string.addAttribute(NSAttributedStringKey.font, value: boldFont, range: range)
             case .Italic:

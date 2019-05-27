@@ -24,7 +24,7 @@ final class ChannelDiscussionGroupActionSheetItem: ActionSheetItem {
     }
 }
 
-private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
 
 private final class ChannelDiscussionGroupActionSheetItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme

@@ -5,61 +5,21 @@ import TelegramCore
 import MobileCoreServices
 
 private func rtfStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> String {
-    var string: String = """
-    {\\rtf1\\ansi\\ansicpg1252{\\fonttbl\\f0\\fnil\\fcharset0 .SFUIText;\\f1\\fnil\\fcharset0 .SFUIText-Semibold;\\f2\\fnil\\fcharset0 .SFUIText-Italic;\\f3\\fnil\\fcharset0 Menlo-Regular;}
-    """
-    
-    string.append("\\f0 ")
-    
-    let nsString = text as NSString
-    
-    var remainingRange = NSMakeRange(0, text.count)
-    for i in 0 ..< entities.count {
-        let entity = entities[i]
-        var range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-        if range.location + range.length > text.count {
-            range.location = max(0, text.count - range.length)
-            range.length = text.count - range.location
+    let test = stringWithAppliedEntities(text, entities: entities, baseColor: .black, linkColor: .black, baseFont: Font.regular(14.0), linkFont: Font.regular(14.0), boldFont: Font.semibold(14.0), italicFont: Font.italic(14.0), fixedFont: Font.monospace(14.0), underlineLinks: false, external: true)
+
+    if let data = try? test.data(from: NSRange(location: 0, length: test.length), documentAttributes: [NSAttributedString.DocumentAttributeKey.documentType: NSAttributedString.DocumentType.rtf]) {
+        if var rtf = String(data: data, encoding: .windowsCP1252) {
+            rtf = rtf.replacingOccurrences(of: "\\fs28", with: "")
+            rtf = rtf.replacingOccurrences(of: "\n{\\colortbl;\\red255\\green255\\blue255;}", with: "")
+            rtf = rtf.replacingOccurrences(of: "\n{\\*\\expandedcolortbl;;}", with: "")
+            rtf = rtf.replacingOccurrences(of: "\n\\pard\\tx560\\tx1120\\tx1680\\tx2240\\tx2800\\tx3360\\tx3920\\tx4480\\tx5040\\tx5600\\tx6160\\tx6720\\pardirnatural\\partightenfactor0\n", with: "")
+            return rtf
+        } else {
+            return text
         }
-        
-        if range.location != remainingRange.location {
-            string.append(nsString.substring(with: NSMakeRange(remainingRange.location, range.location - remainingRange.location)))
-            remainingRange = NSMakeRange(range.location, remainingRange.location + remainingRange.length - range.location)
-        }
-        
-        switch entity.type {
-            case let .TextUrl(url):
-                string.append("{\\field{\\*\\fldinst HYPERLINK \"\(url)\"}{\\fldrslt ")
-                string.append(nsString.substring(with: range))
-                string.append("}}")
-            case .Bold:
-                string.append("\\f1\\b ")
-                string.append(nsString.substring(with: range))
-                string.append("\\b0\\f0 ")
-            case .Italic:
-                string.append("\\f2\\i ")
-                string.append(nsString.substring(with: range))
-                string.append("\\i0\\f0 ")
-            case .Code, .Pre:
-                string.append("\\f3 ")
-                string.append(nsString.substring(with: range))
-                string.append("\\f0 ")
-            default:
-                string.append(nsString.substring(with: range))
-                break
-        }
-        remainingRange = NSMakeRange(range.location + range.length, remainingRange.location + remainingRange.length - (range.location + range.length))
+    } else {
+        return text
     }
-    
-    if remainingRange.length > 0 {
-        string.append(nsString.substring(with: NSMakeRange(remainingRange.location, remainingRange.length)))
-    }
-    
-    string.append("}")
-    
-    string = string.replacingOccurrences(of: "\n", with: "\\line")
-    
-    return string
 }
 
 func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.DocumentType) -> NSAttributedString? {
@@ -76,7 +36,7 @@ func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.Document
                     string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
                 } else if fontName.contains("italic") {
                     string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
-                } else if fontName.contains("menlo") {
+                } else if fontName.contains("menlo") || fontName.contains("courier") || fontName.contains("sfmono") {
                     string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
                 }
             }

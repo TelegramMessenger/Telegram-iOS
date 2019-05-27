@@ -5,9 +5,9 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
-private let titleFont: UIFont = Font.semibold(14.0)
-private let textFont: UIFont = Font.regular(14.0)
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
+private let titleFont = Font.semibold(14.0)
+private let textFont = Font.regular(14.0)
 
 final class SecureIdAuthHeaderNode: ASDisplayNode {
     private let account: Account

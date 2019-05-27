@@ -60,6 +60,12 @@ enum RecentStatusOnlineIconState {
     case panel
 }
 
+enum ScamIconType {
+    case regular
+    case outgoing
+    case service
+}
+
 struct PresentationResourcesChatList {
     static func pendingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListPending.rawValue, { theme in
@@ -203,14 +209,27 @@ struct PresentationResourcesChatList {
         })
     }
 
-    static func scamIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatListScamIcon.rawValue, { theme in
+    static func scamIcon(_ theme: PresentationTheme, type: ScamIconType) -> UIImage? {
+        let key: PresentationResourceKey
+        let color: UIColor
+        switch type {
+            case .regular:
+                key = PresentationResourceKey.chatListScamRegularIcon
+                color = theme.chat.bubble.incomingScamColor
+            case .outgoing:
+                key = PresentationResourceKey.chatListScamOutgoingIcon
+                color = theme.chat.bubble.outgoingScamColor
+            case .service:
+                key = PresentationResourceKey.chatListScamServiceIcon
+                color = theme.chat.serviceMessage.components.withDefaultWallpaper.scam
+        }
+        return theme.image(key.rawValue, { theme in
             return generateImage(CGSize(width: 37.0, height: 16.0), contextGenerator: { size, context in
                 let bounds = CGRect(origin: CGPoint(), size: size)
                 context.clear(bounds)
                 
-                context.setFillColor(theme.list.itemDestructiveColor.cgColor)
-                context.setStrokeColor(theme.list.itemDestructiveColor.cgColor)
+                context.setFillColor(color.cgColor)
+                context.setStrokeColor(color.cgColor)
                 context.setLineWidth(1.0)
                 
                 context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 2.0).cgPath)
@@ -218,7 +237,7 @@ struct PresentationResourcesChatList {
                 
                 let titlePath = CGMutablePath()
                 titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -2.0 + UIScreenPixel))
-                let titleString = NSAttributedString(string: "SCAM", font: Font.bold(10.0), textColor: theme.list.itemDestructiveColor, paragraphAlignment: .center)
+                let titleString = NSAttributedString(string: "SCAM", font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
                 let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
                 let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
                 CTFrameDraw(titleFrame, context)

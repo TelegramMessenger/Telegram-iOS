@@ -9,6 +9,11 @@ import SwiftSignalKit
 private let savedMessagesIcon = UIImage(bundleImageName: "Avatar/SavedMessagesIcon")?.precomposed()
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 
+public enum AvatarNodeClipStyle {
+    case none
+    case round
+}
+
 private class AvatarNodeParameters: NSObject {
     let theme: PresentationTheme?
     let accountPeerId: PeerId?
@@ -18,8 +23,9 @@ private class AvatarNodeParameters: NSObject {
     let icon: AvatarNodeIcon
     let explicitColorIndex: Int?
     let hasImage: Bool
+    let clipStyle: AvatarNodeClipStyle
     
-    init(theme: PresentationTheme?, accountPeerId: PeerId?, peerId: PeerId?, letters: [String], font: UIFont, icon: AvatarNodeIcon, explicitColorIndex: Int?, hasImage: Bool) {
+    init(theme: PresentationTheme?, accountPeerId: PeerId?, peerId: PeerId?, letters: [String], font: UIFont, icon: AvatarNodeIcon, explicitColorIndex: Int?, hasImage: Bool, clipStyle: AvatarNodeClipStyle) {
         self.theme = theme
         self.accountPeerId = accountPeerId
         self.peerId = peerId
@@ -28,12 +34,13 @@ private class AvatarNodeParameters: NSObject {
         self.icon = icon
         self.explicitColorIndex = explicitColorIndex
         self.hasImage = hasImage
+        self.clipStyle = clipStyle
         
         super.init()
     }
     
     func withUpdatedHasImage(_ hasImage: Bool) -> AvatarNodeParameters {
-        return AvatarNodeParameters(theme: self.theme, accountPeerId: self.accountPeerId, peerId: self.peerId, letters: self.letters, font: self.font, icon: self.icon, explicitColorIndex: self.explicitColorIndex, hasImage: hasImage)
+        return AvatarNodeParameters(theme: self.theme, accountPeerId: self.accountPeerId, peerId: self.peerId, letters: self.letters, font: self.font, icon: self.icon, explicitColorIndex: self.explicitColorIndex, hasImage: hasImage, clipStyle: self.clipStyle)
     }
 }
 
@@ -152,7 +159,7 @@ public final class AvatarNode: ASDisplayNode {
         didSet {
             if oldValue !== font {
                 if let parameters = self.parameters {
-                    self.parameters = AvatarNodeParameters(theme: parameters.theme, accountPeerId: parameters.accountPeerId, peerId: parameters.peerId, letters: parameters.letters, font: self.font, icon: parameters.icon, explicitColorIndex: parameters.explicitColorIndex, hasImage: parameters.hasImage)
+                    self.parameters = AvatarNodeParameters(theme: parameters.theme, accountPeerId: parameters.accountPeerId, peerId: parameters.peerId, letters: parameters.letters, font: self.font, icon: parameters.icon, explicitColorIndex: parameters.explicitColorIndex, hasImage: parameters.hasImage, clipStyle: parameters.clipStyle)
                 }
                 
                 if !self.displaySuspended {
@@ -264,7 +271,7 @@ public final class AvatarNode: ASDisplayNode {
         self.imageNode.isHidden = true
     }
     
-    public func setPeer(account: Account, theme: PresentationTheme, peer: Peer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, synchronousLoad: Bool = false) {
+    public func setPeer(account: Account, theme: PresentationTheme, peer: Peer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false) {
         var synchronousLoad = synchronousLoad
         var representation: TelegramMediaImageRepresentation?
         var icon = AvatarNodeIcon.none
@@ -315,7 +322,7 @@ public final class AvatarNode: ASDisplayNode {
                     self.editOverlayNode?.isHidden = true
                 }
                 
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
             } else {
                 self.imageReady.set(.single(true))
                 self.displaySuspended = false
@@ -324,7 +331,7 @@ public final class AvatarNode: ASDisplayNode {
                 }
                 
                 self.editOverlayNode?.isHidden = true
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer?.id ?? PeerId(namespace: 0, id: 0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer?.id ?? PeerId(namespace: 0, id: 0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false, clipStyle: clipStyle)
             }
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters
@@ -345,7 +352,7 @@ public final class AvatarNode: ASDisplayNode {
         if updatedState != self.state {
             self.state = updatedState
             
-            let parameters = AvatarNodeParameters(theme: nil, accountPeerId: nil, peerId: nil, letters: letters, font: self.font, icon: .none, explicitColorIndex: explicitIndex, hasImage: false)
+            let parameters = AvatarNodeParameters(theme: nil, accountPeerId: nil, peerId: nil, letters: letters, font: self.font, icon: .none, explicitColorIndex: explicitIndex, hasImage: false, clipStyle: .round)
             
             self.displaySuspended = true
             self.contents = nil
@@ -375,14 +382,14 @@ public final class AvatarNode: ASDisplayNode {
             context.fill(bounds)
         }
         
-        
-        
         let colorIndex: Int
         if let parameters = parameters as? AvatarNodeParameters {
-            context.beginPath()
-            context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height:
-                bounds.size.height))
-            context.clip()
+            if case .round = parameters.clipStyle {
+                context.beginPath()
+                context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height:
+                    bounds.size.height))
+                context.clip()
+            }
             
             if let explicitColorIndex = parameters.explicitColorIndex {
                 colorIndex = explicitColorIndex

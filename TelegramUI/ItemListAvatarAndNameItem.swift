@@ -242,7 +242,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     }
 }
 
-private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 28.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 28.0)!
 private let nameFont = Font.medium(19.0)
 private let statusFont = Font.regular(15.0)
 
@@ -375,7 +375,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
             var credibilityIconOffset: CGFloat = 4.0
             if let peer = item.peer {
                 if peer.isScam {
-                    credibilityIconImage = PresentationResourcesChatList.scamIcon(item.theme)
+                    credibilityIconImage = PresentationResourcesChatList.scamIcon(item.theme, type: .regular)
                     credibilityIconOffset = 6.0
                 } else if peer.isVerified {
                     credibilityIconImage = PresentationResourcesItemList.verifiedPeerIcon(item.theme)

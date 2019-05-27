@@ -207,6 +207,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
     
     private let titleNode: ASTextNode
+    private let textNode: ASTextNode
     private let inputFieldNode: ChatTextLinkEditInputFieldNode
     
     private let actionNodesSeparator: ASDisplayNode
@@ -226,6 +227,8 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
+        self.textNode = ASTextNode()
+        self.textNode.maximumNumberOfLines = 2
         
         self.inputFieldNode = ChatTextLinkEditInputFieldNode(theme: ptheme, placeholder: "")
         self.inputFieldNode.text = link ?? ""
@@ -416,7 +419,7 @@ func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Ac
     var contentNode: ChatTextLinkEditAlertContentNode?
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Done, action: {
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Done, action: {
         dismissImpl?(true)
         apply(contentNode?.link ?? "")
     })]
