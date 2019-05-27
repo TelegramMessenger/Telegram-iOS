@@ -23,7 +23,16 @@ add_library(rlottie::rlottie ALIAS rlottie)
 target_compile_options(rlottie
                     PUBLIC
                     PRIVATE
-                    -std=c++14 -O2 -Wall -Werror -Wextra -Wnon-virtual-dtor -Woverloaded-virtual -Wno-unused-parameter -fvisibility=hidden)
+                        -std=c++14
+                        -O2
+                        -Wall
+                        -Werror
+                        -Wextra
+                        -Wnon-virtual-dtor
+                        -Woverloaded-virtual
+                        -Wno-unused-parameter
+                        -fvisibility=hidden
+                    )
 
 #declare dependancy
 set( CMAKE_THREAD_PREFER_PTHREAD TRUE )
@@ -44,6 +53,10 @@ target_link_libraries(rlottie
                          "-Wl,--no-undefined"
                       )
 
+if (NOT LIB_INSTALL_DIR)
+    set (LIB_INSTALL_DIR "/usr/lib")
+endif (NOT LIB_INSTALL_DIR)
+
 #declare source and include files
 add_subdirectory(inc)
 add_subdirectory(src)
@@ -53,6 +66,7 @@ SET(PREFIX ${CMAKE_INSTALL_PREFIX})
 SET(EXEC_DIR ${PREFIX})
 SET(LIBDIR ${LIB_INSTALL_DIR})
 SET(INCDIR ${PREFIX}/include)
+
 CONFIGURE_FILE(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
