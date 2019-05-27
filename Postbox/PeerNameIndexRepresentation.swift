@@ -70,7 +70,7 @@ extension PeerIndexNameRepresentation {
         return foundAtLeastOne
     }
     
-    var indexTokens: [ValueBoxKey] {
+    public var indexTokens: [ValueBoxKey] {
         switch self {
             case let .title(title, addressName):
                 var tokens: [ValueBoxKey] = stringIndexTokens(title, transliteration: .combined)
