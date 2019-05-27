@@ -51,11 +51,11 @@ mkdir build
 Run cmake command inside build directory to configure rlottie.
 ```
 cd build
-cmake -DLIB_INSTALL_DIR=/usr/lib ..
+cmake ..
 
-# install to a different prefix. eg ~/test/lib
+# install in a different path. eg ~/test/usr/lib
 
-cmake -DCMAKE_INSTALL_PREFIX=~/test -DLIB_INSTALL_DIR=lib ..
+cmake -DCMAKE_INSTALL_PREFIX=~/test ..
 
 ```
 Run make to build rlottie
