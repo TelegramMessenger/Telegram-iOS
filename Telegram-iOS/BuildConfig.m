@@ -566,7 +566,7 @@ API_AVAILABLE(ios(10))
         [resultData writeToFile:filePath atomically:false];
     }
     
-    if (@available(iOS 11, *)) {
+    /*if (@available(iOS 11, *)) {
         NSData *currentEncryptedData = [NSData dataWithContentsOfFile:encryptedPath];
         
         LocalPrivateKey *localPrivateKey = [self getLocalPrivateKey:baseAppBundleId];
@@ -589,7 +589,7 @@ API_AVAILABLE(ios(10))
                 [encryptedData writeToFile:encryptedPath atomically:false];
             }
         }
-    }
+    }*/
     
     CFAbsoluteTime endTime = CFAbsoluteTimeGetCurrent();
     NSLog(@"deviceSpecificEncryptionParameters took %f ms", (endTime - startTime) * 1000.0);
