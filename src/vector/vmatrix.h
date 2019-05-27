@@ -46,6 +46,18 @@ public:
     MatrixType   type() const;
     inline float determinant() const;
 
+    float        m_11() const { return m11;}
+    float        m_12() const { return m12;}
+    float        m_13() const { return m13;}
+
+    float        m_21() const { return m21;}
+    float        m_22() const { return m22;}
+    float        m_23() const { return m23;}
+
+    float        m_tx() const { return mtx;}
+    float        m_ty() const { return mty;}
+    float        m_33() const { return m33;}
+
     VMatrix &translate(VPointF pos) { return translate(pos.x(), pos.y()); };
     VMatrix &translate(float dx, float dy);
     VMatrix &scale(VPointF s) { return scale(s.x(), s.y()); };
