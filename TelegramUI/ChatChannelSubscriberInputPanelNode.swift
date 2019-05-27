@@ -47,8 +47,9 @@ private func actionForPeer(peer: Peer, isMuted: Bool) -> SubscriberAction? {
 private let badgeFont = Font.regular(14.0)
 
 final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
-    private let button: UIButton
-    private let discussButton: UIButton
+    private let button: HighlightableButtonNode
+    private let discussButton: HighlightableButtonNode
+    private let discussButtonText: ImmediateTextNode
     private let badgeBackground: ASImageNode
     private let badgeText: ImmediateTextNode
     private let activityIndicator: UIActivityIndicatorView
@@ -63,10 +64,13 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     private var layoutData: (CGFloat, CGFloat, CGFloat)?
     
     override init() {
-        self.button = UIButton()
-        self.discussButton = UIButton()
+        self.button = HighlightableButtonNode()
+        self.discussButton = HighlightableButtonNode()
         self.activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .gray)
         self.activityIndicator.isHidden = true
+        
+        self.discussButtonText = ImmediateTextNode()
+        self.discussButtonText.displaysAsynchronously = false
         
         self.badgeBackground = ASImageNode()
         self.badgeBackground.displaysAsynchronously = false
@@ -77,17 +81,18 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         self.badgeText.displaysAsynchronously = false
         self.badgeText.isHidden = true
         
+        self.discussButton.addSubnode(self.discussButtonText)
         self.discussButton.addSubnode(self.badgeBackground)
         self.discussButton.addSubnode(self.badgeText)
         
         super.init()
         
-        self.view.addSubview(self.button)
-        self.view.addSubview(self.discussButton)
+        self.addSubnode(self.button)
+        self.addSubnode(self.discussButton)
         self.view.addSubview(self.activityIndicator)
         
-        self.button.addTarget(self, action: #selector(self.buttonPressed), for: [.touchUpInside])
-        self.discussButton.addTarget(self, action: #selector(self.discussPressed), for: [.touchUpInside])
+        self.button.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.discussButton.addTarget(self, action: #selector(self.discussPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -99,15 +104,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         if !self.bounds.contains(point) {
             return nil
         }
-        if !self.discussButton.isHidden {
-            if point.x < self.bounds.width / 2.0 {
-                return self.button
-            } else {
-                return self.discussButton
-            }
-        } else {
-            return self.button
-        }
+        return super.hitTest(point, with: event)
     }
     
     @objc func buttonPressed() {
@@ -187,7 +184,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     strongSelf.badgeText.attributedText = NSAttributedString(string: text, font: badgeFont, textColor: interfaceState.theme.chatList.unreadBadgeActiveTextColor)
                     let textSize = strongSelf.badgeText.updateLayout(CGSize(width: 100.0, height: 100.0))
                     let badgeSize = CGSize(width: max(image.size.width, textSize.width + 4.0), height: image.size.height)
-                    let badgeFrame = CGRect(origin: CGPoint(x: strongSelf.discussButton.bounds.width + 5.0, y: floor((strongSelf.discussButton.bounds.height - badgeSize.height) / 2.0)), size: badgeSize)
+                    let badgeFrame = CGRect(origin: CGPoint(x: strongSelf.discussButtonText.frame.maxX + 5.0, y: floor((strongSelf.discussButton.bounds.height - badgeSize.height) / 2.0)), size: badgeSize)
                     strongSelf.badgeBackground.frame = badgeFrame
                     strongSelf.badgeText.frame = CGRect(origin: CGPoint(x: badgeFrame.minX + floor((badgeSize.width - textSize.width) / 2.0), y: badgeFrame.minY + floor((badgeSize.height - textSize.height) / 2.0)), size: textSize)
                     if value == nil || value == 0 {
@@ -204,19 +201,13 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 if let action = actionForPeer(peer: peer, isMuted: interfaceState.peerIsMuted) {
                     self.action = action
                     let (title, color) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)
-                    self.button.setTitle(title, for: [])
-                    self.button.setTitleColor(color, for: [.normal])
-                    self.button.setTitleColor(color.withAlphaComponent(0.5), for: [.highlighted])
-                    self.button.sizeToFit()
+                    self.button.setTitle(title, with: Font.regular(17.0), with: color, for: [])
                 } else {
                     self.action = nil
                 }
                 
                 if interfaceState.peerDiscussionId != nil {
-                    self.discussButton.setTitle(interfaceState.strings.Channel_DiscussionGroup_HeaderLabel, for: [])
-                    self.discussButton.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlAccentColor, for: [.normal])
-                    self.discussButton.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlAccentColor.withAlphaComponent(0.5), for: [.highlighted])
-                    self.discussButton.sizeToFit()
+                    self.discussButtonText.attributedText = NSAttributedString(string: interfaceState.strings.Channel_DiscussionGroup_HeaderLabel, font: Font.regular(17.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
                     self.discussButton.isHidden = false
                 } else {
                     self.discussButton.isHidden = true
@@ -226,15 +217,19 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         
         let panelHeight = defaultHeight(metrics: metrics)
         
-        let buttonSize = self.button.bounds.size
-        let discussSize = self.discussButton.bounds.size
         if self.discussButton.isHidden {
-            self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+            self.button.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: panelHeight))
         } else {
-            let availableWidth = floor((width - leftInset - rightInset) / 2.0)
-            self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((availableWidth - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
-            self.discussButton.frame = CGRect(origin: CGPoint(x: leftInset + availableWidth + floor((availableWidth - discussSize.width) / 2.0), y: floor((panelHeight - discussSize.height) / 2.0)), size: discussSize)
-            let badgeOffset = self.discussButton.bounds.width + 5.0 - self.badgeBackground.frame.minX
+            let availableWidth = min(600.0, width - leftInset - rightInset)
+            let leftOffset = floor((width - availableWidth) / 2.0)
+            self.button.frame = CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: CGSize(width: floor(availableWidth / 2.0), height: panelHeight))
+            self.discussButton.frame = CGRect(origin: CGPoint(x: leftOffset + floor(availableWidth / 2.0), y: 0.0), size: CGSize(width: floor(availableWidth / 2.0), height: panelHeight))
+            
+            let discussButtonSize = self.discussButton.bounds.size
+            let discussTextSize = self.discussButtonText.updateLayout(discussButtonSize)
+            self.discussButtonText.frame = CGRect(origin: CGPoint(x: floor((discussButtonSize.width - discussTextSize.width) / 2.0), y: floor((discussButtonSize.height - discussTextSize.height) / 2.0)), size: discussTextSize)
+            
+            let badgeOffset = self.discussButtonText.frame.maxX + 5.0 - self.badgeBackground.frame.minX
             self.badgeBackground.frame = self.badgeBackground.frame.offsetBy(dx: badgeOffset, dy: 0.0)
             self.badgeText.frame = self.badgeText.frame.offsetBy(dx: badgeOffset, dy: 0.0)
         }
