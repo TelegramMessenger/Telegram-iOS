@@ -4308,9 +4308,12 @@ Sorry for the inconvenience.";
 
 Any member of this group will be able to see messages in the channel.";
 
-"Channel.AdminLog.MessageChangedLinkedGroup" = "%1$@ linked %2$@ as the discussion group";
-"Channel.AdminLog.MessageChangedUnlinkedGroup" = "%@ removed discussion group";
+"Channel.DiscussionGroup.SearchPlaceholder" = "Search";
 
+"Channel.AdminLog.MessageChangedLinkedGroup" = "%1$@ linked %2$@ as the discussion group";
+"Channel.AdminLog.MessageChangedLinkedChannel" = "%1$@ linked this group to %2$@";
+"Channel.AdminLog.MessageChangedUnlinkedGroup" = "%@ removed discussion group";
+"Channel.AdminLog.MessageChangedUnlinkedChannel" = "%1$@ unlinked this group from %2$@";
 
 "Conversation.OpenBotLinkTitle" = "Open Link";
 "Conversation.OpenBotLinkText" = "Do you want to open\n**%@**?";
@@ -4319,3 +4322,4 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.OpenBotLinkOpen" = "Open";
 
 "TextFormat.Link" = "Link";
+
