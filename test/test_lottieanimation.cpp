@@ -26,7 +26,7 @@ TEST_F(AnimationTest, loadFromFile_N) {
 
 TEST_F(AnimationTest, loadFromFile) {
     ASSERT_TRUE(animation != nullptr);
-    ASSERT_EQ(animation->totalFrame(), 29);
+    ASSERT_EQ(animation->totalFrame(), 30);
     size_t width, height;
     animation->size(width, height);
     ASSERT_EQ(width, 500);

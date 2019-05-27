@@ -26,7 +26,7 @@ TEST_F(AnimationCApiTest, loadFromFile_N) {
 
 TEST_F(AnimationCApiTest, loadFromFile) {
     ASSERT_TRUE(animation);
-    ASSERT_EQ(lottie_animation_get_totalframe(animation), 29);
+    ASSERT_EQ(lottie_animation_get_totalframe(animation), 30);
     size_t width, height;
     lottie_animation_get_size(animation, &width, &height);
     ASSERT_EQ(width, 500);
