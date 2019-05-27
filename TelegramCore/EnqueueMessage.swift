@@ -409,6 +409,43 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             }
                             
                             attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes))
+                            
+                            var sourceReplyMarkup: ReplyMarkupMessageAttribute? = nil
+                            var sourceSentViaBot = false
+                            for attribute in attributes {
+                                if let attribute = attribute as? ReplyMarkupMessageAttribute {
+                                    sourceReplyMarkup = attribute
+                                } else if let _ = attribute as? InlineBotMessageAttribute {
+                                    sourceSentViaBot = true
+                                }
+                            }
+                            
+                            if let sourceReplyMarkup = sourceReplyMarkup {
+                                var rows: [ReplyMarkupRow] = []
+                                loop: for row in sourceReplyMarkup.rows {
+                                    var buttons: [ReplyMarkupButton] = []
+                                    for button in row.buttons {
+                                        if case .url = button.action {
+                                            buttons.append(button)
+                                        } else if case .urlAuth = button.action {
+                                            buttons.append(button)
+                                        } else if case let .switchInline(samePeer, query) = button.action, sourceSentViaBot {
+                                            let samePeer = samePeer && peerId == sourceMessage.id.peerId
+                                            let updatedButton = ReplyMarkupButton(title: button.title, action: .switchInline(samePeer: samePeer, query: query))
+                                            buttons.append(updatedButton)
+                                        } else {
+                                            rows.removeAll()
+                                            break loop
+                                        }
+                                    }
+                                    rows.append(ReplyMarkupRow(buttons: buttons))
+                                }
+                                
+                                if !rows.isEmpty {
+                                    attributes.append(ReplyMarkupMessageAttribute(rows: rows, flags: sourceReplyMarkup.flags))
+                                }
+                            }
+                            
                             if let sourceForwardInfo = sourceMessage.forwardInfo {
                                 forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author?.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature)
                             } else {
