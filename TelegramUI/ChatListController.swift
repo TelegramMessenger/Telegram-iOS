@@ -1606,6 +1606,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
             if shouldCommit {
                 strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                if let channel = chatPeer as? TelegramChannel {
+                    strongSelf.context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: channel.id, memberId: strongSelf.context.account.peerId)
+                }
                 let _ = removePeerChat(account: strongSelf.context.account, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
                     guard let strongSelf = self else {
                         return

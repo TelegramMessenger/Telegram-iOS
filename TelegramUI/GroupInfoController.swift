@@ -778,7 +778,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 entries.append(.administrators(presentationData.theme, presentationData.strings.GroupInfo_Administrators, ""))
             }
         } else if let channel = view.peers[view.peerId] as? TelegramChannel, let cachedChannelData = view.cachedData as? CachedChannelData {
-            if isCreator {
+            if isCreator || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
                 if cachedChannelData.flags.contains(.canChangeUsername) {
                     entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
                     if let linkedDiscussionPeerId = cachedChannelData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {

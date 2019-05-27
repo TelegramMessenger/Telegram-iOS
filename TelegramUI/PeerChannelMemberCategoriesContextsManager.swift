@@ -159,6 +159,16 @@ final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
+    func externallyRemoved(peerId: PeerId, memberId: PeerId) {
+        self.impl.with { impl in
+            for (contextPeerId, context) in impl.contexts {
+                if contextPeerId == peerId {
+                    context.replayUpdates([(.member(id: memberId, invitedAt: 0, adminInfo: nil, banInfo: nil), nil, nil)])
+                }
+            }
+        }
+    }
+    
     func recent(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, searchQuery: String? = nil, requestUpdate: Bool = true, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
         let key: PeerChannelMemberContextKey
         if let searchQuery = searchQuery {
