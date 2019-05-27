@@ -212,9 +212,9 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
     _activityIndicator.alpha = 0.0f;
     [self setIsLoading:true];
     
-    if (self.controllerSafeAreaInset.bottom > FLT_EPSILON)
+    if (self.safeAreaInsetBottom > FLT_EPSILON)
     {
-        _safeAreaCurtainView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, _tableView.frame.size.width, self.controllerSafeAreaInset.bottom)];
+        _safeAreaCurtainView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, _tableView.frame.size.width, self.safeAreaInsetBottom)];
         _safeAreaCurtainView.backgroundColor = self.pallete != nil ? self.pallete.sectionHeaderBackgroundColor :  UIColorRGB(0xf7f7f7);
     }
     
@@ -680,7 +680,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
     void (^changeBlock)(void) = ^
     {
         _tableView.contentOffset = CGPointMake(0, -_tableView.contentInset.top);
-        _tableView.frame = CGRectMake(_tableView.frame.origin.x, self.view.frame.size.height - [self mapHeight] - TGLocationCurrentLocationCellHeight - self.controllerInset.top - self.controllerSafeAreaInset.bottom, _tableView.frame.size.width, _tableView.frame.size.height);
+        _tableView.frame = CGRectMake(_tableView.frame.origin.x, self.view.frame.size.height - [self mapHeight] - TGLocationCurrentLocationCellHeight - self.controllerInset.top - self.safeAreaInsetBottom, _tableView.frame.size.width, _tableView.frame.size.height);
         
         _mapViewWrapper.frame = CGRectMake(0, TGLocationMapClipHeight - self.view.frame.size.height + self.controllerInset.top + 20, _mapViewWrapper.frame.size.width, self.view.frame.size.height - self.controllerInset.top - 10.0f);
         _mapView.center = CGPointMake(_mapView.center.x, _mapViewWrapper.frame.size.height / 2);
@@ -1298,7 +1298,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
 
 - (CGFloat)visibleContentHeight
 {
-    return (_allowLiveLocationSharing ? 165.0f : 97.0f) + self.controllerSafeAreaInset.bottom;
+    return (_allowLiveLocationSharing ? 165.0f : 97.0f) + self.safeAreaInsetBottom;
 }
 
 @end

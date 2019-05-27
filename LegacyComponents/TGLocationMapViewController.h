@@ -65,6 +65,7 @@
 
 - (CGFloat)visibleContentHeight;
 - (CGFloat)mapHeight;
+- (CGFloat)safeAreaInsetBottom;
 
 - (bool)hasUserLocation;
 - (SSignal *)userLocationSignal;

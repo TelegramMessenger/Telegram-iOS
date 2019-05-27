@@ -1089,9 +1089,9 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || _context.safeAreaInset.bottom > FLT_EPSILON;
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
     
-    return [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation: hasOnScreenNavigation];
+    return [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
 }
 
 + (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation hasOnScreenNavigation:(bool)hasOnScreenNavigation
@@ -1122,7 +1122,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 {
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || _context.safeAreaInset.bottom > FLT_EPSILON;
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     CGFloat navigationBarHeight = ([self navigationBarShouldBeHidden] || [self shouldIgnoreNavigationBar]) ? 0 : [self navigationBarHeightForInterfaceOrientation:orientation];

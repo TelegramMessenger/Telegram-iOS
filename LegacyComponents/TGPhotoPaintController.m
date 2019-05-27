@@ -1569,7 +1569,11 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
         orientation = UIInterfaceOrientationPortrait;
     
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize];
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    
+    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     
     CGSize fittedSize = TGScaleToSize(fromFrame.size, containerFrame.size);
     CGRect toFrame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
@@ -1650,7 +1654,11 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (CGRect)transitionOutSourceFrameForReferenceFrame:(CGRect)referenceFrame orientation:(UIInterfaceOrientation)orientation
 {
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize];
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    
+    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     
     CGSize fittedSize = TGScaleToSize(referenceFrame.size, containerFrame.size);
     return CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
@@ -1666,11 +1674,15 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGPhotoEditorPreviewView *previewView = self.previewView;
     [previewView prepareForTransitionOut];
     
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    
     UIInterfaceOrientation orientation = self.interfaceOrientation;
     if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
         orientation = UIInterfaceOrientationPortrait;
     
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize];
+    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     CGRect referenceFrame = CGRectMake(0, 0, self.photoEditor.rotatedCropSize.width, self.photoEditor.rotatedCropSize.height);
     CGRect rect = CGRectOffset([self transitionOutSourceFrameForReferenceFrame:referenceFrame orientation:orientation], -containerFrame.origin.x, -containerFrame.origin.y);
     previewView.frame = rect;
@@ -1896,7 +1908,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || _context.safeAreaInset.bottom > FLT_EPSILON;
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2, (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
@@ -1905,7 +1917,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     screenEdges.bottom -= safeAreaInset.bottom;
     screenEdges.right -= safeAreaInset.right;
     
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize];
+    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     
     _settingsViewWrapper.frame = self.parentViewController.view.bounds;
     
@@ -2077,10 +2089,14 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
         orientation = UIInterfaceOrientationPortrait;
     
+    bool hasOnScreenNavigation = false;
+    if (iosMajorVersion() >= 11)
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    
     CGSize referenceSize = [self referenceViewSize];
     CGFloat screenSide = MAX(referenceSize.width, referenceSize.height) + 2 * TGPhotoPaintBottomPanelSize;
     
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize];
+    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     
     CGFloat visibleArea = self.view.frame.size.height - height;
     CGFloat yCenter = visibleArea / 2.0f;

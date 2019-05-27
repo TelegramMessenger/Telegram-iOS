@@ -443,7 +443,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
 {
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || self.context.safeAreaInset.bottom > FLT_EPSILON;
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
     
     CGRect containerFrame = [TGPhotoQualityController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorQualityPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(referenceFrame.size, containerFrame.size);
@@ -462,7 +462,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || self.context.safeAreaInset.bottom > FLT_EPSILON;
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
     
     CGRect containerFrame = [TGPhotoQualityController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorQualityPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(fromFrame.size, containerFrame.size);
@@ -516,7 +516,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || self.context.safeAreaInset.bottom > FLT_EPSILON;
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2 , (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);

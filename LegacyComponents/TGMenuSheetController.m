@@ -943,7 +943,7 @@ typedef enum
 {
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || _context.safeAreaInset.bottom > FLT_EPSILON;
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     if (safeAreaInset.bottom > FLT_EPSILON)

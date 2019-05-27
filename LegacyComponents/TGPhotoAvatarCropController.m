@@ -310,7 +310,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         
         bool hasOnScreenNavigation = false;
         if (iosMajorVersion() >= 11)
-            hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || self.context.safeAreaInset.bottom > FLT_EPSILON;
+            hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
         
         CGRect cropRectFrame = [_cropView cropRectFrameForView:self.view];
         CGSize referenceSize = [self referenceViewSizeForOrientation:orientation];
@@ -319,7 +319,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         
         if (self.switchingToTab == TGPhotoEditorPaintTab)
         {
-            containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize];
+            containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
         }
         
         CGSize fittedSize = TGScaleToSize(cropRectFrame.size, containerFrame.size);
@@ -435,7 +435,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || self.context.safeAreaInset.bottom > FLT_EPSILON;
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
     
     if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
         orientation = UIInterfaceOrientationPortrait;
@@ -527,7 +527,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = self.view.safeAreaInsets.bottom > FLT_EPSILON || self.context.safeAreaInset.bottom > FLT_EPSILON;
+        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - self.view.frame.size.height) / 2, (screenSide - self.view.frame.size.width) / 2, (screenSide + self.view.frame.size.height) / 2, (screenSide + self.view.frame.size.width) / 2);

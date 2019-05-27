@@ -330,6 +330,10 @@ const CGFloat TGLocationMapInset = 100.0f;
     return 0.0f;
 }
 
+- (CGFloat)safeAreaInsetBottom {
+    return MAX(self.context.safeAreaInset.bottom, self.controllerSafeAreaInset.bottom);
+}
+
 #pragma mark -
 
 - (void)setMapCenterCoordinate:(CLLocationCoordinate2D)coordinate offset:(CGPoint)offset animated:(bool)animated

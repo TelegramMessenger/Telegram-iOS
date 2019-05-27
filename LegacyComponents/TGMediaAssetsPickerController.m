@@ -149,8 +149,6 @@
 {
     [super viewDidLoad];
     
-    [self setRightBarButtonItem:[(TGMediaAssetsController *)self.navigationController rightBarButtonItem]];
-    
     SSignal *groupSignal = nil;
     if (_assetGroup != nil)
         groupSignal = [SSignal single:_assetGroup];
@@ -219,6 +217,7 @@
     [super viewWillAppear:animated];
     
     [self setup3DTouch];
+    [self setRightBarButtonItem:[(TGMediaAssetsController *)self.navigationController rightBarButtonItem]];
 }
 
 #pragma mark -
@@ -448,6 +447,11 @@
         return;
     
     _checked3dTouch = true;
+    
+    if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent) {
+        return;
+    }
+    
     if (iosMajorVersion() >= 9)
     {
         if (self.traitCollection.forceTouchCapability == UIForceTouchCapabilityAvailable)
