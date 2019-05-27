@@ -69,6 +69,7 @@ TEST_F(VPathTest, reserve) {
 TEST_F(VPathTest, clone) {
     VPath pathClone;
     pathClone.clone(pathOval);
+    ASSERT_TRUE(pathClone.unique());
     ASSERT_EQ(pathClone.segments(), pathOval.segments());
     ASSERT_EQ(pathClone.points().size(), pathOval.points().size());
     ASSERT_NE(pathClone.points().data(), pathOval.points().data());

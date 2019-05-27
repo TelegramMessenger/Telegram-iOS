@@ -99,6 +99,7 @@ private:
                          float startAngle, float cx, float cy,
                          VPath::Direction dir = Direction::CW);
         void  addPath(const VPathData &path);
+        void  clone(const VPath::VPathData &o) { *this = o;}
         const std::vector<VPath::Element> &elements() const
         {
             return m_elements;
@@ -262,10 +263,9 @@ inline const std::vector<VPointF> &VPath::points() const
     return d->points();
 }
 
-inline void VPath::clone(const VPath &srcPath)
+inline void VPath::clone(const VPath &o)
 {
-   reset();
-   addPath(srcPath);
+   d.write().clone(o.d.read());
 }
 
 V_END_NAMESPACE
