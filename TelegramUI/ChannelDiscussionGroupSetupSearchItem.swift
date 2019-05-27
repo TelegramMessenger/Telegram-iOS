@@ -9,12 +9,14 @@ final class ChannelDiscussionGroupSetupSearchItem: ItemListControllerSearch {
     let context: AccountContext
     let peers: [Peer]
     let cancel: () -> Void
+    let dismissInput: () -> Void
     let openPeer: (Peer) -> Void
     
-    init(context: AccountContext, peers: [Peer], cancel: @escaping () -> Void, openPeer: @escaping (Peer) -> Void) {
+    init(context: AccountContext, peers: [Peer], cancel: @escaping () -> Void, dismissInput: @escaping () -> Void, openPeer: @escaping (Peer) -> Void) {
         self.context = context
         self.peers = peers
         self.cancel = cancel
+        self.dismissInput = dismissInput
         self.openPeer = openPeer
     }
     
@@ -45,17 +47,20 @@ final class ChannelDiscussionGroupSetupSearchItem: ItemListControllerSearch {
     
     func node(current: ItemListControllerSearchNode?, titleContentNode: (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)?) -> ItemListControllerSearchNode {
         return ChannelDiscussionGroupSetupSearchItemNode(context: self.context, peers: self.peers, openPeer: self.openPeer, cancel: self.cancel, updateActivity: { _ in
-        })
+        }, dismissInput: self.dismissInput)
     }
 }
 
 private final class ChannelDiscussionGroupSetupSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: ChannelDiscussionGroupSearchContainerNode
     
-    init(context: AccountContext, peers: [Peer], openPeer: @escaping (Peer) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void) {
+    init(context: AccountContext, peers: [Peer], openPeer: @escaping (Peer) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping (Bool) -> Void, dismissInput: @escaping () -> Void) {
         self.containerNode = ChannelDiscussionGroupSearchContainerNode(context: context, peers: peers, openPeer: { peer in
             openPeer(peer)
         })
+        self.containerNode.dismissInput = {
+            dismissInput()
+        }
         self.containerNode.cancel = {
             cancel()
         }

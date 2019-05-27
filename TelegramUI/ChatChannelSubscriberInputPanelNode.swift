@@ -96,12 +96,17 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        return super.hitTest(point, with: event)
-        
-        if self.bounds.contains(point) {
-            return self.button
-        } else {
+        if !self.bounds.contains(point) {
             return nil
+        }
+        if !self.discussButton.isHidden {
+            if point.x < self.bounds.width / 2.0 {
+                return self.button
+            } else {
+                return self.discussButton
+            }
+        } else {
+            return self.button
         }
     }
     

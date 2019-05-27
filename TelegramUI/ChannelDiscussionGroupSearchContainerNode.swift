@@ -94,6 +94,7 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
     private let context: AccountContext
     private let openPeer: (Peer) -> Void
     
+    private let dimNode: ASDisplayNode
     private let listNode: ListView
     
     private var enqueuedTransitions: [(ChannelDiscussionGroupSearchContainerTransition, Bool)] = []
@@ -114,18 +115,21 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.dateTimeFormat))
         
+        self.dimNode = ASDisplayNode()
         self.listNode = ListView()
         
         super.init()
         
+        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         self.listNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.listNode.isHidden = true
         
+        self.addSubnode(self.dimNode)
         self.addSubnode(self.listNode)
         
-        let statePromise = ValuePromise(ChannelDiscussionGroupSearchContainerState(), ignoreRepeated: true)
+        /*let statePromise = ValuePromise(ChannelDiscussionGroupSearchContainerState(), ignoreRepeated: true)
         let stateValue = Atomic(value: ChannelDiscussionGroupSearchContainerState())
-        /*let updateState: ((ChannelDiscussionGroupSearchContainerState) -> ChannelDiscussionGroupSearchContainerState) -> Void = { f in
+        let updateState: ((ChannelDiscussionGroupSearchContainerState) -> ChannelDiscussionGroupSearchContainerState) -> Void = { f in
             statePromise.set(stateValue.modify { f($0) })
         }*/
         
@@ -210,6 +214,8 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
     
     override func didLoad() {
         super.didLoad()
+        
+        self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
     }
     
     private func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
@@ -245,6 +251,7 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
             let isSearching = transition.isSearching
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 self?.listNode.isHidden = !isSearching
+                self?.dimNode.isHidden = isSearching
             })
         }
     }
@@ -279,6 +286,7 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
         
+        self.dimNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         

@@ -946,12 +946,12 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
                     }
-                    var reportSpam = true
+                    var reportSpam = false
                     var deleteChat = true
                     controller.setItemGroups([
                         ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: presentationData.strings.UserInfo_BlockConfirmationTitle(peer.compactDisplayTitle).0),
-                            ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: true, action: { [weak controller] checkValue in
+                            ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: reportSpam, action: { [weak controller] checkValue in
                                 reportSpam = checkValue
                                 controller?.updateItem(groupIndex: 0, itemIndex: 1, { item in
                                     if let item = item as? ActionSheetCheckboxItem {
@@ -960,7 +960,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                                     return item
                                 })
                             }),
-                            ActionSheetCheckboxItem(title: presentationData.strings.ReportSpam_DeleteThisChat, label: "", value: true, action: { [weak controller] checkValue in
+                            ActionSheetCheckboxItem(title: presentationData.strings.ReportSpam_DeleteThisChat, label: "", value: deleteChat, action: { [weak controller] checkValue in
                                 deleteChat = checkValue
                                 controller?.updateItem(groupIndex: 0, itemIndex: 2, { item in
                                     if let item = item as? ActionSheetCheckboxItem {

@@ -204,7 +204,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
     let groupPeers = Promise<[Peer]?>()
     groupPeers.set(.single(nil)
     |> then(
-        availableGroupsForChannelDiscussion(network: context.account.network)
+        availableGroupsForChannelDiscussion(postbox: context.account.postbox, network: context.account.network)
         |> map(Optional.init)
         |> `catch` { _ -> Signal<[Peer]?, NoError> in
             return .single(nil)
@@ -214,6 +214,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
     let peerView = context.account.viewTracker.peerView(peerId)
     
     var dismissImpl: (() -> Void)?
+    var dismissInputImpl: (() -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var navigateToGroupImpl: ((PeerId) -> Void)?
@@ -274,6 +275,8 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             }))
         })
     }, selectGroup: { groupId in
+        dismissInputImpl?()
+        
         let _ = (context.account.postbox.transaction { transaction -> (CachedChannelData?, Peer?, Peer?) in
             return (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, transaction.getPeer(peerId), transaction.getPeer(groupId))
         }
@@ -490,6 +493,8 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                         state.searching = false
                         return state
                     }
+                }, dismissInput: {
+                    dismissInputImpl?()
                 }, openPeer: { peer in
                     arguments.selectGroup(peer.id)
                 })
@@ -518,6 +523,9 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.filterController(controller, animated: true)
         }
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)

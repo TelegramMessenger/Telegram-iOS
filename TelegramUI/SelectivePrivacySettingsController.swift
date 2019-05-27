@@ -764,6 +764,14 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         actionsDisposable.dispose()
     }
     
+    struct AppliedSettings: Equatable {
+        let settings: SelectivePrivacySettings
+        let callP2PSettings: SelectivePrivacySettings?
+        let callDataSaving: VoiceCallDataSaving?
+        let callIntegrationEnabled: Bool?
+    }
+    
+    var appliedSettings: AppliedSettings?
     
     let update: (Bool) -> Void = { save in
         var wasSaving = false
@@ -799,6 +807,12 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         }
         
         if let settings = settings, !wasSaving {
+            let settingsToApply = AppliedSettings(settings: settings, callP2PSettings: callP2PSettings, callDataSaving: callDataSaving, callIntegrationEnabled: callIntegrationEnabled)
+            if appliedSettings == settingsToApply {
+                return
+            }
+            appliedSettings = settingsToApply
+            
             let type: UpdateSelectiveAccountPrivacySettingsType
             switch kind {
                 case .presence:
@@ -821,8 +835,8 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                 updateCallP2PSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: .voiceCallsP2P, settings: callP2PSettings)
             }
             
-            updateSettingsDisposable.set((combineLatest(updateSettingsSignal, updateCallP2PSettingsSignal) |> deliverOnMainQueue).start(completed: {
-            }))
+            let _ = (combineLatest(updateSettingsSignal, updateCallP2PSettingsSignal) |> deliverOnMainQueue).start(completed: {
+            })
             
             if case .voiceCalls = kind, let dataSaving = callDataSaving, let callP2PSettings = callP2PSettings, let systemIntegrationEnabled = callIntegrationEnabled {
                 updated(settings, (callP2PSettings, VoiceCallSettings(dataSaving: dataSaving, enableSystemIntegration: systemIntegrationEnabled)))
@@ -834,13 +848,16 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
     
     let controller = ItemListController(context: context, state: signal)
     controller.willDisappear = { [weak controller] _ in
-        if let controller = controller, controller.navigationController?.viewControllers.firstIndex(of: controller) == nil {
-            update(false)
+        if let controller = controller, let navigationController = controller.navigationController {
+            let index = navigationController.viewControllers.firstIndex(of: controller)
+            if index == nil || index == navigationController.viewControllers.count - 1 {
+                update(true)
+            }
         }
     }
     controller.didDisappear = { [weak controller] _ in
         if let controller = controller, controller.navigationController?.viewControllers.firstIndex(of: controller) == nil {
-            update(true)
+            //update(true)
         }
     }
     
