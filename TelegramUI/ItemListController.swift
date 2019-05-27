@@ -447,6 +447,9 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, PresentableC
         displayNode.searchActivated = self.searchActivated
         displayNode.reorderEntry = self.reorderEntry
         displayNode.listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
+        displayNode.requestLayout = { [weak self] transition in
+            self?.requestLayout(transition: transition)
+        }
         self.displayNode = displayNode
         super.displayNodeDidLoad()
         self._ready.set((self.displayNode as! ItemListControllerNode<Entry>).ready)

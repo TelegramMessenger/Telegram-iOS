@@ -857,7 +857,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: message.author, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                         return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: filterOriginalMessageFlags(message), read: true, selection: .none, attributes: ChatMessageEntryAttributes(isAdmin: false, isContact: false)), additionalContent: nil)
                 }
-            case let .linkedPeerUpdated(_, updated):
+            case let .linkedPeerUpdated(previous, updated):
                 var peers = SimpleDictionary<PeerId, Peer>()
                 var author: Peer?
                 if let peer = self.entry.peers[self.entry.event.peerId] {
@@ -868,21 +868,43 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var entities: [MessageTextEntity] = []
                 
                 if let updated = updated {
-                    appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedLinkedGroup(author?.displayTitle ?? "", updated.displayTitle), generateEntities: { index in
-                        if index == 0, let author = author {
-                            return [.TextMention(peerId: author.id)]
-                        } else if index == 1 {
-                            return [.TextMention(peerId: updated.id)]
-                        }
-                        return []
-                    }, to: &text, entities: &entities)
+                    if let peer = peer as? TelegramChannel, case .group = peer.info {
+                        appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedLinkedChannel(author?.displayTitle ?? "", updated.displayTitle), generateEntities: { index in
+                            if index == 0, let author = author {
+                                return [.TextMention(peerId: author.id)]
+                            } else if index == 1 {
+                                return [.TextMention(peerId: updated.id)]
+                            }
+                            return []
+                        }, to: &text, entities: &entities)
+                    } else {
+                        appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedLinkedGroup(author?.displayTitle ?? "", updated.displayTitle), generateEntities: { index in
+                            if index == 0, let author = author {
+                                return [.TextMention(peerId: author.id)]
+                            } else if index == 1 {
+                                return [.TextMention(peerId: updated.id)]
+                            }
+                            return []
+                        }, to: &text, entities: &entities)
+                    }
                 } else {
-                    appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedUnlinkedGroup(author?.displayTitle ?? ""), generateEntities: { index in
-                        if index == 0, let author = author {
-                            return [.TextMention(peerId: author.id)]
-                        }
-                        return []
-                    }, to: &text, entities: &entities)
+                    if let peer = peer as? TelegramChannel, case .group = peer.info {
+                        appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedUnlinkedChannel(author?.displayTitle ?? "", previous?.displayTitle ?? ""), generateEntities: { index in
+                            if index == 0, let author = author {
+                                return [.TextMention(peerId: author.id)]
+                            } else if index == 1, let previous = previous {
+                                return [.TextMention(peerId: previous.id)]
+                            }
+                            return []
+                        }, to: &text, entities: &entities)
+                    } else {
+                        appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedUnlinkedGroup(author?.displayTitle ?? ""), generateEntities: { index in
+                            if index == 0, let author = author {
+                                return [.TextMention(peerId: author.id)]
+                            }
+                            return []
+                        }, to: &text, entities: &entities)
+                    }
                 }
                 let action = TelegramMediaActionType.customText(text: text, entities: entities)
                 

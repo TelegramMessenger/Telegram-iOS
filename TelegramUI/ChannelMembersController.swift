@@ -415,65 +415,66 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     
     var previousPeers: [RenderedChannelParticipant]?
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerView, peersPromise.get())
-        |> deliverOnMainQueue
-        |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelMembersEntry>, ChannelMembersEntry.ItemGenerationArguments)) in
-            var rightNavigationButton: ItemListNavigationButton?
-            var secondaryRightNavigationButton: ItemListNavigationButton?
-            if let peers = peers, !peers.isEmpty {
-                if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                        updateState { state in
-                            return state.withUpdatedEditing(false)
-                        }
-                    })
-                } else {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
-                        updateState { state in
-                            return state.withUpdatedEditing(true)
-                        }
-                    })
-                    if let cachedData = view.cachedData as? CachedChannelData, cachedData.participantsSummary.memberCount ?? 0 >= 200 {
-                        secondaryRightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
-                            updateState { state in
-                                return state.withUpdatedSearchingMembers(true)
-                            }
-                        })
-                    }
-                    
-                }
-            }
-            
-            var searchItem: ItemListControllerSearch?
-            if state.searchingMembers {
-                searchItem = ChannelMembersSearchItem(context: context, peerId: peerId, searchContext: nil, cancel: {
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView, peersPromise.get())
+    |> deliverOnMainQueue
+    |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelMembersEntry>, ChannelMembersEntry.ItemGenerationArguments)) in
+        var rightNavigationButton: ItemListNavigationButton?
+        var secondaryRightNavigationButton: ItemListNavigationButton?
+        if let peers = peers, !peers.isEmpty {
+            if state.editing {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                     updateState { state in
-                        return state.withUpdatedSearchingMembers(false)
+                        return state.withUpdatedEditing(false)
                     }
-                }, openPeer: { peer, _ in
-                    if let infoController = peerInfoController(context: context, peer: peer) {
-                        pushControllerImpl?(infoController)
-                       // arguments.pushController(infoController)
-                    }
-                }, present: { c, a in
-                    presentControllerImpl?(c, a)
                 })
+            } else {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
+                    updateState { state in
+                        return state.withUpdatedEditing(true)
+                    }
+                })
+                if let cachedData = view.cachedData as? CachedChannelData, cachedData.participantsSummary.memberCount ?? 0 >= 200 {
+                    secondaryRightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
+                        updateState { state in
+                            return state.withUpdatedSearchingMembers(true)
+                        }
+                    })
+                }
+                
             }
-            
-            var emptyStateItem: ItemListControllerEmptyStateItem?
-            if peers == nil || peers?.count == 0 {
-                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
-            }
-            
-            let previous = previousPeers
-            previousPeers = peers
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_Subscribers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            let listState = ItemListNodeState(entries: ChannelMembersControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+        }
+        
+        var searchItem: ItemListControllerSearch?
+        if state.searchingMembers {
+            searchItem = ChannelMembersSearchItem(context: context, peerId: peerId, searchContext: nil, cancel: {
+                updateState { state in
+                    return state.withUpdatedSearchingMembers(false)
+                }
+            }, openPeer: { peer, _ in
+                if let infoController = peerInfoController(context: context, peer: peer) {
+                    pushControllerImpl?(infoController)
+                   // arguments.pushController(infoController)
+                }
+            }, present: { c, a in
+                presentControllerImpl?(c, a)
+            })
+        }
+        
+        var emptyStateItem: ItemListControllerEmptyStateItem?
+        if peers == nil || peers?.count == 0 {
+            emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
+        }
+        
+        let previous = previousPeers
+        previousPeers = peers
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_Subscribers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let listState = ItemListNodeState(entries: ChannelMembersControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal)

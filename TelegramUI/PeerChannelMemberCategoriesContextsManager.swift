@@ -237,6 +237,28 @@ final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
+    func join(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+        return joinChannel(account: account, peerId: peerId)
+        |> `catch` { _ -> Signal<RenderedChannelParticipant?, NoError> in
+            return .single(nil)
+        }
+        |> deliverOnMainQueue
+        |> beforeNext { [weak self] result in
+            if let strongSelf = self, let updated = result {
+                strongSelf.impl.with { impl in
+                    for (contextPeerId, context) in impl.contexts {
+                        if peerId == contextPeerId {
+                            context.replayUpdates([(nil, updated, nil)])
+                        }
+                    }
+                }
+            }
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
+    }
+    
     func addMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {
         return addChannelMember(account: account, peerId: peerId, memberId: memberId)
         |> map(Optional.init)

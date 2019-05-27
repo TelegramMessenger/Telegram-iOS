@@ -191,15 +191,15 @@ private func channelDiscussionGroupSetupControllerEntries(presentationData: Pres
 }
 
 private struct ChannelDiscussionGroupSetupControllerState: Equatable {
-    
+    var searching: Bool = false
 }
 
 public func channelDiscussionGroupSetupController(context: AccountContext, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(ChannelDiscussionGroupSetupControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelDiscussionGroupSetupControllerState())
-    /*let updateState: ((ChannelDiscussionGroupSetupControllerState) -> ChannelDiscussionGroupSetupControllerState) -> Void = { f in
+    let updateState: ((ChannelDiscussionGroupSetupControllerState) -> ChannelDiscussionGroupSetupControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
-    }*/
+    }
     
     let groupPeers = Promise<[Peer]?>()
     groupPeers.set(.single(nil)
@@ -294,7 +294,39 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                 ActionSheetButtonItem(title: presentationData.strings.Channel_DiscussionGroup_LinkGroup, color: .accent, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
-                    var applySignal = updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: groupId)
+                    var applySignal: Signal<Bool, ChannelDiscussionGroupError>
+                    if let legacyGroup = groupPeer as? TelegramGroup {
+                        applySignal = convertGroupToSupergroup(account: context.account, peerId: legacyGroup.id)
+                        |> mapError { _ -> ChannelDiscussionGroupError in
+                            return .generic
+                        }
+                        |> mapToSignal { resultPeerId -> Signal<Bool, ChannelDiscussionGroupError> in
+                            return context.account.postbox.transaction { transaction -> Signal<Bool, ChannelDiscussionGroupError> in
+                                if let groupPeer = transaction.getPeer(resultPeerId) {
+                                    let _ = (groupPeers.get()
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { groups in
+                                        guard var groups = groups else {
+                                            return
+                                        }
+                                        for i in 0 ..< groups.count {
+                                            if groups[i].id == groupId {
+                                                groups[i] = groupPeer
+                                                break
+                                            }
+                                        }
+                                        groupPeers.set(.single(groups))
+                                    })
+                                }
+                                
+                                return updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: resultPeerId)
+                            }
+                            |> introduceError(ChannelDiscussionGroupError.self)
+                            |> switchToLatest
+                        }
+                    } else {
+                        applySignal = updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: groupId)
+                    }
                     var cancelImpl: (() -> Void)?
                     let progressSignal = Signal<Never, NoError> { subscriber in
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -326,10 +358,18 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     |> deliverOnMainQueue).start(error: { _ in
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                        
+                        updateState { state in
+                            var state = state
+                            state.searching = false
+                            return state
+                        }
                     }, completed: {
-                        /*let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success)
-                        presentControllerImpl?(controller, nil)*/
+                        updateState { state in
+                            var state = state
+                            state.searching = false
+                            return state
+                        }
                     }))
                 })
             ]), ActionSheetItemGroup(items: [
@@ -390,7 +430,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }, completed: {
-                if let channel = peer as? TelegramChannel, case .group = channel.info {
+                if case .group = peer.info {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success)
                     presentControllerImpl?(controller, nil)
@@ -415,11 +455,16 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
         
         var crossfade = false
         var isEmptyState = false
+        var displayGroupList = false
         if let cachedData = view.cachedData as? CachedChannelData {
             let isEmpty = cachedData.linkedDiscussionPeerId == nil
-            if cachedData.linkedDiscussionPeerId == nil, let peer = view.peers[view.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                if groups == nil {
-                    isEmptyState = true
+            if let peer = view.peers[view.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                if cachedData.linkedDiscussionPeerId == nil {
+                    if groups == nil {
+                        isEmptyState = true
+                    } else {
+                        displayGroupList = true
+                    }
                 }
             }
             if let wasEmpty = wasEmpty, wasEmpty != isEmpty {
@@ -435,8 +480,32 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
         }
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: channelDiscussionGroupSetupControllerEntries(presentationData: presentationData, view: view, groups: groups), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: crossfade, animateChanges: false)
+        var rightNavigationButton: ItemListNavigationButton?
+        var searchItem: ItemListControllerSearch?
+        if let groups = groups, !groups.isEmpty, displayGroupList {
+            if state.searching {
+                searchItem = ChannelDiscussionGroupSetupSearchItem(context: context, peers: groups, cancel: {
+                    updateState { state in
+                        var state = state
+                        state.searching = false
+                        return state
+                    }
+                }, openPeer: { peer in
+                    arguments.selectGroup(peer.id)
+                })
+            } else {
+                rightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
+                    updateState { state in
+                        var state = state
+                        state.searching = true
+                        return state
+                    }
+                })
+            }
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(entries: channelDiscussionGroupSetupControllerEntries(presentationData: presentationData, view: view, groups: groups), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

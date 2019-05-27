@@ -186,6 +186,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
     var contentScrollingEnded: ((ListView) -> Bool)?
     var searchActivated: ((Bool) -> Void)?
     var reorderEntry: ((Int, Int, [Entry]) -> Void)?
+    var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
     
     var enableInteractiveDismiss = false {
         didSet {
@@ -590,6 +591,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                 }
             }
             self.listNode.isUserInteractionEnabled = transition.userInteractionEnabled
+            
+            if updateSearchItem {
+                self.requestLayout?(.animated(duration: 0.3, curve: .spring))
+            }
         }
     }
     
