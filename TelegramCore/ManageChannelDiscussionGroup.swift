@@ -12,23 +12,26 @@ public enum AvailableChannelDiscussionGroupError {
     case generic
 }
 
-public func availableGroupsForChannelDiscussion(network: Network) -> Signal<[Peer], AvailableChannelDiscussionGroupError> {
-    return network.request(Api.functions.channels.getGroupsForDiscussion()) |> mapError { error in
+public func availableGroupsForChannelDiscussion(postbox: Postbox, network: Network) -> Signal<[Peer], AvailableChannelDiscussionGroupError> {
+    return network.request(Api.functions.channels.getGroupsForDiscussion())
+    |> mapError { error in
         return .generic
-    } |> map { result in
-        let chats:[Api.Chat]
+    }
+    |> mapToSignal { result -> Signal<[Peer], AvailableChannelDiscussionGroupError> in
+        let chats: [Api.Chat]
         switch result {
-        case let .chats(c):
-            chats = c
-        case let .chatsSlice(_, c):
-            chats = c
+            case let .chats(c):
+                chats = c
+            case let .chatsSlice(_, c):
+                chats = c
         }
         
-        let peers = chats.compactMap {
-            return parseTelegramGroupOrChannel(chat: $0)
+        let peers = chats.compactMap(parseTelegramGroupOrChannel)
+        return postbox.transaction { transation -> [Peer] in
+            updatePeers(transaction: transation, peers: peers, update: { _, updated in updated })
+            return peers
         }
-        
-        return peers
+        |> introduceError(AvailableChannelDiscussionGroupError.self)
     }
 }
 
