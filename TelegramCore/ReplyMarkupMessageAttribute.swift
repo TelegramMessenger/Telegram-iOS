@@ -73,20 +73,28 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
 
 public struct ReplyMarkupButton: PostboxCoding, Equatable {
     public let title: String
+    public let titleWhenForwarded: String?
     public let action: ReplyMarkupButtonAction
     
-    init(title: String, action: ReplyMarkupButtonAction) {
+    init(title: String, titleWhenForwarded: String?, action: ReplyMarkupButtonAction) {
         self.title = title
+        self.titleWhenForwarded = titleWhenForwarded
         self.action = action
     }
     
     public init(decoder: PostboxDecoder) {
         self.title = decoder.decodeStringForKey(".t", orElse: "")
+        self.titleWhenForwarded = decoder.decodeOptionalStringForKey(".tf")
         self.action = ReplyMarkupButtonAction(decoder: decoder)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.title, forKey: ".t")
+        if let titleWhenForwarded = self.titleWhenForwarded {
+            encoder.encodeString(titleWhenForwarded, forKey: ".tf")
+        } else {
+            encoder.encodeNil(forKey: ".tf")
+        }
         self.action.encode(encoder)
     }
     
@@ -161,28 +169,28 @@ extension ReplyMarkupButton {
     init(apiButton: Api.KeyboardButton) {
         switch apiButton {
             case let .keyboardButton(text):
-                self.init(title: text, action: .text)
+                self.init(title: text, titleWhenForwarded: nil, action: .text)
             case let .keyboardButtonCallback(text, data):
                 let memory = malloc(data.size)!
                 memcpy(memory, data.data, data.size)
                 let dataBuffer = MemoryBuffer(memory: memory, capacity: data.size, length: data.size, freeWhenDone: true)
-                self.init(title: text, action: .callback(dataBuffer))
+                self.init(title: text, titleWhenForwarded: nil, action: .callback(dataBuffer))
             case let .keyboardButtonRequestGeoLocation(text):
-                self.init(title: text, action: .requestMap)
+                self.init(title: text, titleWhenForwarded: nil, action: .requestMap)
             case let .keyboardButtonRequestPhone(text):
-                self.init(title: text, action: .requestPhone)
+                self.init(title: text, titleWhenForwarded: nil, action: .requestPhone)
             case let .keyboardButtonSwitchInline(flags, text, query):
-                self.init(title: text, action: .switchInline(samePeer: (flags & (1 << 0)) != 0, query: query))
+                self.init(title: text, titleWhenForwarded: nil, action: .switchInline(samePeer: (flags & (1 << 0)) != 0, query: query))
             case let .keyboardButtonUrl(text, url):
-                self.init(title: text, action: .url(url))
+                self.init(title: text, titleWhenForwarded: nil, action: .url(url))
             case let .keyboardButtonGame(text):
-                self.init(title: text, action: .openWebApp)
+                self.init(title: text, titleWhenForwarded: nil, action: .openWebApp)
             case let .keyboardButtonBuy(text):
-                self.init(title: text, action: .payment)
-            case let .keyboardButtonUrlAuth(text, url, buttonId):
-                self.init(title: text, action: .urlAuth(url: url, buttonId: buttonId))
-            case let .inputKeyboardButtonUrlAuth(_, text, url, _):
-                self.init(title: text, action: .urlAuth(url: url, buttonId: 0))
+                self.init(title: text, titleWhenForwarded: nil, action: .payment)
+            case let .keyboardButtonUrlAuth(_, text, fwdText, url, buttonId):
+                self.init(title: text, titleWhenForwarded: fwdText, action: .urlAuth(url: url, buttonId: buttonId))
+            case let .inputKeyboardButtonUrlAuth(_, text, fwdText, url, _):
+                self.init(title: text, titleWhenForwarded: fwdText, action: .urlAuth(url: url, buttonId: 0))
         }
     }
 }

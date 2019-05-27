@@ -14,6 +14,7 @@ public struct RenderedChannelParticipant: Equatable {
     public let peer: Peer
     public let peers: [PeerId: Peer]
     public let presences: [PeerId: PeerPresence]
+    
     public init(participant: ChannelParticipant, peer: Peer, peers: [PeerId: Peer] = [:], presences: [PeerId: PeerPresence] = [:]) {
         self.participant = participant
         self.peer = peer

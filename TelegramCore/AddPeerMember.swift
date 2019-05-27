@@ -26,7 +26,6 @@ public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -
                         default:
                             return .generic
                     }
-                    return .generic
                 }
                 |> mapToSignal { result -> Signal<Void, AddGroupMemberError> in
                     account.stateManager.addUpdates(result)
@@ -79,7 +78,7 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
             if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
                 if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                     let updatedParticipant: ChannelParticipant
-                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, adminInfo, banInfo) = currentParticipant {
+                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, adminInfo, _) = currentParticipant {
                         updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil)
                     } else {
                         updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: nil)

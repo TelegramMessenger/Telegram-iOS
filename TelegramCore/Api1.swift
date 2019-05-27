@@ -6294,8 +6294,8 @@ extension Api {
         case keyboardButtonSwitchInline(flags: Int32, text: String, query: String)
         case keyboardButtonGame(text: String)
         case keyboardButtonBuy(text: String)
-        case keyboardButtonUrlAuth(text: String, url: String, buttonId: Int32)
-        case inputKeyboardButtonUrlAuth(flags: Int32, text: String, url: String, bot: Api.InputUser)
+        case keyboardButtonUrlAuth(flags: Int32, text: String, fwdText: String?, url: String, buttonId: Int32)
+        case inputKeyboardButtonUrlAuth(flags: Int32, text: String, fwdText: String?, url: String, bot: Api.InputUser)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6351,20 +6351,23 @@ extension Api {
                     }
                     serializeString(text, buffer: buffer, boxed: false)
                     break
-                case .keyboardButtonUrlAuth(let text, let url, let buttonId):
+                case .keyboardButtonUrlAuth(let flags, let text, let fwdText, let url, let buttonId):
                     if boxed {
-                        buffer.appendInt32(2007189877)
-                    }
-                    serializeString(text, buffer: buffer, boxed: false)
-                    serializeString(url, buffer: buffer, boxed: false)
-                    serializeInt32(buttonId, buffer: buffer, boxed: false)
-                    break
-                case .inputKeyboardButtonUrlAuth(let flags, let text, let url, let bot):
-                    if boxed {
-                        buffer.appendInt32(-1356547212)
+                        buffer.appendInt32(280464681)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(text, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(fwdText!, buffer: buffer, boxed: false)}
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeInt32(buttonId, buffer: buffer, boxed: false)
+                    break
+                case .inputKeyboardButtonUrlAuth(let flags, let text, let fwdText, let url, let bot):
+                    if boxed {
+                        buffer.appendInt32(-802258988)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(fwdText!, buffer: buffer, boxed: false)}
                     serializeString(url, buffer: buffer, boxed: false)
                     bot.serialize(buffer, true)
                     break
@@ -6389,10 +6392,10 @@ extension Api {
                 return ("keyboardButtonGame", [("text", text)])
                 case .keyboardButtonBuy(let text):
                 return ("keyboardButtonBuy", [("text", text)])
-                case .keyboardButtonUrlAuth(let text, let url, let buttonId):
-                return ("keyboardButtonUrlAuth", [("text", text), ("url", url), ("buttonId", buttonId)])
-                case .inputKeyboardButtonUrlAuth(let flags, let text, let url, let bot):
-                return ("inputKeyboardButtonUrlAuth", [("flags", flags), ("text", text), ("url", url), ("bot", bot)])
+                case .keyboardButtonUrlAuth(let flags, let text, let fwdText, let url, let buttonId):
+                return ("keyboardButtonUrlAuth", [("flags", flags), ("text", text), ("fwdText", fwdText), ("url", url), ("buttonId", buttonId)])
+                case .inputKeyboardButtonUrlAuth(let flags, let text, let fwdText, let url, let bot):
+                return ("inputKeyboardButtonUrlAuth", [("flags", flags), ("text", text), ("fwdText", fwdText), ("url", url), ("bot", bot)])
     }
     }
     
@@ -6497,17 +6500,23 @@ extension Api {
             }
         }
         static func parse_keyboardButtonUrlAuth(_ reader: BufferReader) -> KeyboardButton? {
-            var _1: String?
-            _1 = parseString(reader)
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: String?
             _2 = parseString(reader)
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int32?
+            _5 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.KeyboardButton.keyboardButtonUrlAuth(text: _1!, url: _2!, buttonId: _3!)
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.KeyboardButton.keyboardButtonUrlAuth(flags: _1!, text: _2!, fwdText: _3, url: _4!, buttonId: _5!)
             }
             else {
                 return nil
@@ -6519,17 +6528,20 @@ extension Api {
             var _2: String?
             _2 = parseString(reader)
             var _3: String?
-            _3 = parseString(reader)
-            var _4: Api.InputUser?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Api.InputUser?
             if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.InputUser
+                _5 = Api.parse(reader, signature: signature) as? Api.InputUser
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.KeyboardButton.inputKeyboardButtonUrlAuth(flags: _1!, text: _2!, url: _3!, bot: _4!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.KeyboardButton.inputKeyboardButtonUrlAuth(flags: _1!, text: _2!, fwdText: _3, url: _4!, bot: _5!)
             }
             else {
                 return nil

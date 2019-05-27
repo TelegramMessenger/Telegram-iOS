@@ -1466,11 +1466,15 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                                     if chat.peerId == peerId {
                                         if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                             if let group = groupOrChannel as? TelegramGroup {
-                                                switch group.membership {
-                                                    case .Member:
-                                                        break
-                                                    default:
-                                                        isExcludedFromChatList = true
+                                                if group.flags.contains(.deactivated) {
+                                                    isExcludedFromChatList = true
+                                                } else {
+                                                    switch group.membership {
+                                                        case .Member:
+                                                            break
+                                                        default:
+                                                            isExcludedFromChatList = true
+                                                    }
                                                 }
                                             } else if let channel = groupOrChannel as? TelegramChannel {
                                                 switch channel.participationStatus {
