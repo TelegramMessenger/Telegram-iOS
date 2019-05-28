@@ -962,7 +962,7 @@ open class NavigationBar: ASDisplayNode {
             titleView.frame = titleFrame
             
             if let titleView = titleView as? NavigationBarTitleView {
-                let titleWidth = size.width - leftTitleInset - rightTitleInset
+                let titleWidth = size.width - (leftTitleInset > 0.0 ? leftTitleInset : rightTitleInset) - (rightTitleInset > 0.0 ? rightTitleInset : leftTitleInset)
                 
                 titleView.updateLayout(size: titleFrame.size, clearBounds: CGRect(origin: CGPoint(x: leftTitleInset - titleFrame.minX, y: 0.0), size: CGSize(width: titleWidth, height: titleFrame.height)), transition: transition)
             }
