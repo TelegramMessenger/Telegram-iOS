@@ -4323,3 +4323,6 @@ Any member of this group will be able to see messages in the channel.";
 
 "TextFormat.Link" = "Link";
 
+"TextFormat.AddLinkTitle" = "Add Link";
+"TextFormat.AddLinkText" = "The link will be displayed as \"%@\".";
+"TextFormat.AddLinkPlaceholder" = "URL";
