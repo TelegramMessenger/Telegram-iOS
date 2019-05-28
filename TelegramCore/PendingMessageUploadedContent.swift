@@ -108,7 +108,7 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
                         return .generic
                     }
                     |> mapToSignal { validatedResource -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
-                        if let validatedResource = validatedResource as? TelegramCloudMediaResourceWithFileReference, let reference = validatedResource.fileReference {
+                        if let validatedResource = validatedResource.updatedResource as? TelegramCloudMediaResourceWithFileReference, let reference = validatedResource.fileReference {
                             return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(Api.InputMedia.inputMediaDocument(flags: 0, id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: reference)), ttlSeconds: nil), text), reuploadInfo: nil)))
                         } else {
                             return .fail(.generic)
