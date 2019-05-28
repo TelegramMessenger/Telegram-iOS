@@ -4310,9 +4310,9 @@ Any member of this group will be able to see messages in the channel.";
 
 "Channel.DiscussionGroup.SearchPlaceholder" = "Search";
 
-"Channel.AdminLog.MessageChangedLinkedGroup" = "%1$@ linked %2$@ as the discussion group";
+"Channel.AdminLog.MessageChangedLinkedGroup" = "%1$@ made %2$@ the discussion group for this channel.";
 "Channel.AdminLog.MessageChangedLinkedChannel" = "%1$@ linked this group to %2$@";
-"Channel.AdminLog.MessageChangedUnlinkedGroup" = "%@ removed discussion group";
+"Channel.AdminLog.MessageChangedUnlinkedGroup" = "%1$@ removed the discussion group %2$@";
 "Channel.AdminLog.MessageChangedUnlinkedChannel" = "%1$@ unlinked this group from %2$@";
 
 "Conversation.OpenBotLinkTitle" = "Open Link";
