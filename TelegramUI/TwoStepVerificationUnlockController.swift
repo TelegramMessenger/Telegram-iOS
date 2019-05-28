@@ -839,7 +839,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
         |> deliverOnMainQueue).start(next: { data in
             if case let .access(configuration) = data, let config = configuration, case let .notSet(pendingEmail) = config, pendingEmail == nil {
                 let controller = PrivacyIntroController(context: context, mode: .twoStepVerification, arguments: PrivacyIntroControllerPresentationArguments(fadeIn: true), proceedAction: {
-                        arguments.openSetupPassword()
+                    arguments.openSetupPassword()
                 })
                 replaceControllerImpl?(controller, false)
                 replaceControllerImpl = { [weak controller] c, animated in

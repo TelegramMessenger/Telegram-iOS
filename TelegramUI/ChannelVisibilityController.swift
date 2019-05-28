@@ -1187,7 +1187,13 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         } else {
                             selectionController.displayProgress = true
                             let _ = (addChannelMembers(account: context.account, peerId: peerId, memberIds: filteredPeerIds)
-                            |> deliverOnMainQueue).start(completed: { [weak selectionController] in
+                            |> deliverOnMainQueue).start(error: { [weak selectionController] _ in
+                                guard let selectionController = selectionController, let navigationController = selectionController.navigationController as? NavigationController else {
+                                    return
+                                }
+                                
+                                navigateToChatController(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true)
+                            }, completed: { [weak selectionController] in
                                 guard let selectionController = selectionController, let navigationController = selectionController.navigationController as? NavigationController else {
                                     return
                                 }

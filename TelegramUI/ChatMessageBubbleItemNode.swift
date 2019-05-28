@@ -1486,15 +1486,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             if let removedContentNodeIndices = removedContentNodeIndices {
                 for index in removedContentNodeIndices.reversed() {
-                    let node = updatedContentNodes[index]
-                    if animation.isAnimated {
-                        node.animateRemovalFromBubble(0.2, completion: { [weak node] in
-                            node?.removeFromSupernode()
-                        })
-                    } else {
-                        node.removeFromSupernode()
+                    if index >= 0 && index < updatedContentNodes.count {
+                        let node = updatedContentNodes[index]
+                        if animation.isAnimated {
+                            node.animateRemovalFromBubble(0.2, completion: { [weak node] in
+                                node?.removeFromSupernode()
+                            })
+                        } else {
+                            node.removeFromSupernode()
+                        }
+                        let _ = updatedContentNodes.remove(at: index)
                     }
-                    let _ = updatedContentNodes.remove(at: index)
                 }
             }
             

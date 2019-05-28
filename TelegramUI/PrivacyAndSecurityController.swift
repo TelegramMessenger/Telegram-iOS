@@ -439,7 +439,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             (
                 twoStepAuthData(context.account.network)
                 |> map { value -> Bool in
-                    return value.currentPasswordDerivation != nil
+                    return value.currentPasswordDerivation != nil || value.unconfirmedEmailPattern != nil
                 }
                 |> `catch` { _ -> Signal<Bool, NoError> in
                     return .single(false)
