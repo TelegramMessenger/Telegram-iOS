@@ -89,6 +89,8 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                         switch error.errorDescription {
                             case "USERS_TOO_MUCH":
                                 return .fail(.limitExceeded)
+                            case "USER_PRIVACY_RESTRICTED":
+                                return .fail(.restricted)
                             default:
                                 return .fail(.generic)
                         }

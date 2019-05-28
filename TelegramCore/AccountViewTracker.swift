@@ -754,7 +754,7 @@ public final class AccountViewTracker {
         }
     }
     
-    func forceUpdateCachedPeerData(peerId: PeerId) {
+    public func forceUpdateCachedPeerData(peerId: PeerId) {
         self.queue.async {
             let context: PeerCachedDataContext
             if let existingContext = self.cachedDataContexts[peerId] {
