@@ -94,7 +94,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
             entries.append(entry)
             index += 1
         }
-        self.prepareTransition(from: self.currentEntries ?? [], to: entries)
+        self.prepareTransition(from: self.currentEntries, to: entries)
     }
     
     private func prepareTransition(from: [HashtagChatInputContextPanelEntry]? , to: [HashtagChatInputContextPanelEntry]) {

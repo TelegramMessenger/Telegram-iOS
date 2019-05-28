@@ -3,44 +3,59 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import Display
+import SwiftSignalKit
 
 private struct StickersChatInputContextPanelEntryStableId: Hashable {
-    let text: String
+    let ids: [MediaId]
     
     var hashValue: Int {
-        return self.text.hashValue
+        var hash: Int = 0
+        for i in 0 ..< self.ids.count {
+            if i == 0 {
+                hash = self.ids[i].hashValue
+            } else {
+                hash = hash &* 31 &+ self.ids[i].hashValue
+            }
+        }
+        return hash
     }
     
     static func ==(lhs: StickersChatInputContextPanelEntryStableId, rhs: StickersChatInputContextPanelEntryStableId) -> Bool {
-        return lhs.text == rhs.text
+        return lhs.ids == rhs.ids
     }
 }
 
-private struct StickersChatInputContextPanelEntry: Comparable, Identifiable {
+final class StickersChatInputContextPanelInteraction {
+    var previewedStickerItem: StickerPackItem?
+}
+
+private struct StickersChatInputContextPanelEntry: Identifiable, Comparable {
     let index: Int
     let theme: PresentationTheme
-    let text: String
+    let files: [TelegramMediaFile]
+    let itemsInRow: Int
     
     var stableId: StickersChatInputContextPanelEntryStableId {
-        return StickersChatInputContextPanelEntryStableId(text: self.text)
+        return StickersChatInputContextPanelEntryStableId(ids: files.compactMap { $0.id })
     }
-    
-    func withUpdatedTheme(_ theme: PresentationTheme) -> StickersChatInputContextPanelEntry {
-        return StickersChatInputContextPanelEntry(index: self.index, theme: theme, text: self.text)
-    }
-    
+
     static func ==(lhs: StickersChatInputContextPanelEntry, rhs: StickersChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.text == rhs.text && lhs.theme === rhs.theme
+        return lhs.index == rhs.index && lhs.stableId == rhs.stableId
     }
-    
+
     static func <(lhs: StickersChatInputContextPanelEntry, rhs: StickersChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, hashtagSelected: @escaping (String) -> Void) -> ListViewItem {
-        return StickersChatInputPanelItem(theme: self.theme, text: self.text, hashtagSelected: hashtagSelected)
+    func withUpdatedTheme(_ theme: PresentationTheme) -> StickersChatInputContextPanelEntry {
+        return StickersChatInputContextPanelEntry(index: self.index, theme: theme, files: self.files, itemsInRow: itemsInRow)
+    }
+
+    func item(account: Account, stickersInteraction: StickersChatInputContextPanelInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) -> ListViewItem {
+        return StickersChatInputContextPanelItem(account: account, theme: self.theme, index: self.index, files: self.files, itemsInRow: self.itemsInRow, stickersInteraction: stickersInteraction, interfaceInteraction: interfaceInteraction)
     }
 }
+
 
 private struct StickersChatInputContextPanelTransition {
     let deletions: [ListViewDeleteItem]
@@ -48,30 +63,44 @@ private struct StickersChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [StickersChatInputContextPanelEntry], to toEntries: [StickersChatInputContextPanelEntry], account: Account, hashtagSelected: @escaping (String) -> Void) -> StickersChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [StickersChatInputContextPanelEntry], to toEntries: [StickersChatInputContextPanelEntry], account: Account, stickersInteraction: StickersChatInputContextPanelInteraction, interfaceInteraction: ChatPanelInterfaceInteraction) -> StickersChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, stickersInteraction: stickersInteraction, interfaceInteraction: interfaceInteraction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, stickersInteraction: stickersInteraction, interfaceInteraction: interfaceInteraction), directionHint: nil) }
     
     return StickersChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
+private let itemSize = CGSize(width: 66.0, height: 66.0)
+
 final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
+    private let strings: PresentationStrings
+    
     private let listView: ListView
+    private var results: [TelegramMediaFile] = []
     private var currentEntries: [StickersChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(StickersChatInputContextPanelTransition, Bool)] = []
-    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, ChatPresentationInterfaceState)?
+    
+    public var controllerInteraction: ChatControllerInteraction?
+    private let stickersInteraction: StickersChatInputContextPanelInteraction
+    
+    private var stickerPreviewController: StickerPreviewController?
     
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+        self.strings = strings
+        
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
         self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
+        
+        self.stickersInteraction = StickersChatInputContextPanelInteraction()
         
         super.init(context: context, theme: theme, strings: strings)
         
@@ -81,27 +110,152 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         self.addSubnode(self.listView)
     }
     
-    func updateResults(_ results: [String]) {
-        var entries: [StickersChatInputContextPanelEntry] = []
-        var index = 0
-        var stableIds = Set<StickersChatInputContextPanelEntryStableId>()
-        for text in results {
-            let entry = StickersChatInputContextPanelEntry(index: index, theme: self.theme, text: text)
-            if stableIds.contains(entry.stableId) {
-                continue
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
+            if let strongSelf = self {
+                let convertedPoint = strongSelf.listView.view.convert(point, from: strongSelf.view)
+                guard strongSelf.listView.bounds.contains(convertedPoint) else {
+                    return nil
+                }
+                
+                var stickersNode: StickersChatInputContextPanelItemNode?
+                strongSelf.listView.forEachVisibleItemNode({ itemNode in
+                    if itemNode.frame.contains(convertedPoint), let node = itemNode as? StickersChatInputContextPanelItemNode {
+                        stickersNode = node
+                    }
+                })
+                
+                if let stickersNode = stickersNode {
+                    let point = strongSelf.listView.view.convert(point, to: stickersNode.view)
+                    if let (item, itemNode) = stickersNode.stickerItem(at: point) {
+                        return strongSelf.context.account.postbox.transaction { transaction -> Bool in
+                            return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
+                        }
+                        |> deliverOnMainQueue
+                        |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                                var menuItems: [PeekControllerMenuItem] = []
+                                menuItems = [
+                                    PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
+                                        controllerInteraction.sendSticker(.standalone(media: item.file), true)
+                                    }),
+                                    PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                        if let strongSelf = self {
+                                            if isStarred {
+                                                let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
+                                            } else {
+                                                let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
+                                            }
+                                        }
+                                    }),
+                                    PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
+                                        if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                                            loop: for attribute in item.file.attributes {
+                                                switch attribute {
+                                                case let .Sticker(_, packReference, _):
+                                                    if let packReference = packReference {
+                                                        let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: controllerInteraction.navigationController())
+                                                        controller.sendSticker = { file in
+                                                            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                                                                controllerInteraction.sendSticker(file, true)
+                                                            }
+                                                        }
+                                                        
+                                                        controllerInteraction.navigationController()?.view.window?.endEditing(true)
+                                                        controllerInteraction.presentController(controller, nil)
+                                                    }
+                                                    break loop
+                                                default:
+                                                    break
+                                                }
+                                            }
+                                        }
+                                    }),
+                                    PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
+                                ]
+                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
+                            } else {
+                                return nil
+                            }
+                        }
+                    }
+                }
             }
-            stableIds.insert(entry.stableId)
-            entries.append(entry)
-            index += 1
+            return nil
+        }, present: { [weak self] content, sourceNode in
+            if let strongSelf = self {
+                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
+                    return sourceNode
+                })
+                strongSelf.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
+                return controller
+            }
+            return nil
+        }, updateContent: { [weak self] content in
+            if let strongSelf = self {
+                var item: StickerPackItem?
+                if let content = content as? StickerPreviewPeekContent, case let .pack(contentItem) = content.item {
+                    item = contentItem
+                }
+                strongSelf.updatePreviewingItem(item: item, animated: true)
+            }
+        }))
+    }
+    
+    private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
+        if self.stickersInteraction.previewedStickerItem != item {
+            self.stickersInteraction.previewedStickerItem = item
+            
+            self.listView.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? StickersChatInputContextPanelItemNode {
+                    itemNode.updatePreviewing(animated: animated)
+                }
+            }
         }
-        self.prepareTransition(from: self.currentEntries ?? [], to: entries)
+    }
+    
+    func updateResults(_ results: [TelegramMediaFile]) {
+        self.results = results
+
+        self.commitResults(updateLayout: true)
+    }
+    
+    private func commitResults(updateLayout: Bool = false) {
+        guard let validLayout = self.validLayout else {
+            return
+        }
+        
+        var entries: [StickersChatInputContextPanelEntry] = []
+        
+        let itemsInRow = Int(floor((validLayout.0.width - validLayout.1 - validLayout.2) / itemSize.width))
+        
+        var files: [TelegramMediaFile] = []
+        var index = entries.count
+        for i in 0 ..< self.results.count {
+            files.append(results[i])
+            if files.count == itemsInRow {
+                entries.append(StickersChatInputContextPanelEntry(index: index, theme: self.theme, files: files, itemsInRow: itemsInRow))
+                index += 1
+                files.removeAll()
+            }
+        }
+        
+        if !files.isEmpty {
+            entries.append(StickersChatInputContextPanelEntry(index: index, theme: self.theme, files: files, itemsInRow: itemsInRow))
+        }
+        
+        if updateLayout {
+            self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: .immediate, interfaceState: validLayout.3)
+        }
+        
+        self.prepareTransition(from: self.currentEntries, to: entries)
     }
     
     private func prepareTransition(from: [StickersChatInputContextPanelEntry]? , to: [StickersChatInputContextPanelEntry]) {
         let firstTime = from == nil
-        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, hashtagSelected: { [weak self] text in
-          
-        })
+        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, stickersInteraction: self.stickersInteraction, interfaceInteraction: self.interfaceInteraction!)
         self.currentEntries = to
         self.enqueueTransition(transition, firstTime: firstTime)
     }
@@ -155,14 +309,14 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func topInsetForLayout(size: CGSize) -> CGFloat {
-        let minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
+        let minimumItemHeights: CGFloat = floor(itemSize.height * 1.5)
         
         return max(size.height - minimumItemHeights, 0.0)
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         let hadValidLayout = self.validLayout != nil
-        self.validLayout = (size, leftInset, rightInset)
+        self.validLayout = (size, leftInset, rightInset, interfaceState)
         
         var insets = UIEdgeInsets()
         insets.top = self.topInsetForLayout(size: size)
@@ -174,16 +328,16 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
-        case .immediate:
-            break
-        case let .animated(animationDuration, animationCurve):
-            duration = animationDuration
-            switch animationCurve {
-                case .easeInOut, .custom:
-                    break
-                case .spring:
-                    curve = 7
-            }
+            case .immediate:
+                break
+            case let .animated(animationDuration, animationCurve):
+                duration = animationDuration
+                switch animationCurve {
+                    case .easeInOut, .custom:
+                        break
+                    case .spring:
+                        curve = 7
+                }
         }
         
         let listViewCurve: ListViewAnimationCurve
@@ -196,6 +350,8 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: listViewCurve)
         
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        
+        self.commitResults(updateLayout: false)
         
         if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {
@@ -235,4 +391,3 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         return self.listView.hitTest(CGPoint(x: point.x - listViewFrame.minX, y: point.y - listViewFrame.minY), with: event)
     }
 }
-
