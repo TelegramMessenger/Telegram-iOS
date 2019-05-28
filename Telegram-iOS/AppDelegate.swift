@@ -319,33 +319,6 @@ final class SharedApplicationContext {
         })
         self.clearNotificationsManager = clearNotificationsManager
         
-        #if DEBUG
-        for argument in ProcessInfo.processInfo.arguments {
-            if argument.hasPrefix("snapshot:") {
-                GlobalExperimentalSettings.isAppStoreBuild = true
-                
-                guard let dataPath = ProcessInfo.processInfo.environment["snapshot-data-path"] else {
-                    preconditionFailure()
-                }
-                setupSnapshotData(dataPath)
-                switch String(argument[argument.index(argument.startIndex, offsetBy: "snapshot:".count)...]) {
-                    case "chat-list":
-                        snapshotChatList(application: application, mainWindow: self.window!, window: self.mainWindow, statusBarHost: statusBarHost)
-                    case "secret-chat":
-                        snapshotSecretChat(application: application, mainWindow: self.window!, window: self.mainWindow, statusBarHost: statusBarHost)
-                    case "settings":
-                        snapshotSettings(application: application, mainWindow: self.window!, window: self.mainWindow, statusBarHost: statusBarHost)
-                    case "appearance-settings":
-                        snapshotAppearanceSettings(application: application, mainWindow: self.window!, window: self.mainWindow, statusBarHost: statusBarHost)
-                    default:
-                        break
-                }
-                self.window?.makeKeyAndVisible()
-                return true
-            }
-        }
-        #endif
-        
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
         let baseAppBundleId = Bundle.main.bundleIdentifier!
