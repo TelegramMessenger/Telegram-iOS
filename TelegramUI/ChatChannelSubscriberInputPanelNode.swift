@@ -125,10 +125,15 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                         }
                     }
                 }).start(error: { [weak self] _ in
-                    guard let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState else {
+                    guard let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
                         return
                     }
-                    let text = presentationInterfaceState.strings.Login_UnknownError
+                    let text: String
+                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                        text = presentationInterfaceState.strings.Channel_ErrorAccessDenied
+                    } else {
+                        text = presentationInterfaceState.strings.Group_ErrorAccessDenied
+                    }
                     strongSelf.interfaceInteraction?.presentController(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationInterfaceState.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationInterfaceState.strings.Common_OK, action: {})]), nil)
                 }))
             case .kicked:

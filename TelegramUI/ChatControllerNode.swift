@@ -1383,7 +1383,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let peer = chatPresentationInterfaceState.renderedPeer?.peer, let restrictionTextValue = peer.restrictionText, !restrictionTextValue.isEmpty {
                 restrictionText = restrictionTextValue
             } else if chatPresentationInterfaceState.isNotAccessible {
-                restrictionText = chatPresentationInterfaceState.strings.Channel_ErrorAccessDenied
+                if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info {
+                    restrictionText = chatPresentationInterfaceState.strings.Channel_ErrorAccessDenied
+                } else {
+                    restrictionText = chatPresentationInterfaceState.strings.Group_ErrorAccessDenied
+                }
             }
             
             if let restrictionText = restrictionText {

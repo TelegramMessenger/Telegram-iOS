@@ -1611,6 +1611,26 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                                         return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
                                     }
                                     return .complete()
+                                case .privacy:
+                                    let _ = (context.account.postbox.loadedPeerWithId(memberId)
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    })
+                                
+                                    updateState { state in
+                                        var temporaryParticipants = state.temporaryParticipants
+                                        for i in 0 ..< temporaryParticipants.count {
+                                            if temporaryParticipants[i].peer.id == memberId {
+                                                temporaryParticipants.remove(at: i)
+                                                break
+                                            }
+                                        }
+                                        var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
+                                        successfullyAddedParticipantIds.remove(memberId)
+                                        
+                                        return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
+                                    }
+                                    return .complete()
                                 case .groupFull:
                                     let signal = convertGroupToSupergroup(account: context.account, peerId: peerView.peerId)
                                     |> map(Optional.init)
@@ -1709,9 +1729,9 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                         
                         contactsController?.displayProgress = true
                         addMemberDisposable.set((addMember(memberPeer)
-                            |> deliverOnMainQueue).start(completed: {
-                                contactsController?.dismiss()
-                            }))
+                        |> deliverOnMainQueue).start(completed: {
+                            contactsController?.dismiss()
+                        }))
                     }))
                     contactsController.dismissed = {
                         selectAddMemberDisposable.set(nil)
@@ -1727,7 +1747,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                             if peers.count == 1, error == .restricted {
                                 switch peers[0] {
                                 case let .peer(peerId):
-                                    _ = (context.account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { peer in
+                                    let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                                    |> deliverOnMainQueue).start(next: { peer in
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     })
                                 default:
