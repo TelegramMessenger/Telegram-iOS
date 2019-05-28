@@ -368,6 +368,12 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                     |> ignoreValues
                     |> then(
                         context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: peerId, memberId: memberId)
+                        |> map { _ -> Void in
+                            return Void()
+                        }
+                        |> `catch` { _ -> Signal<Void, NoError> in
+                            return .complete()
+                        }
                         |> ignoreValues
                     )
                     removePeerDisposable.set((signal |> deliverOnMainQueue).start(error: { _ in

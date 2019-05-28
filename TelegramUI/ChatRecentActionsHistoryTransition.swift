@@ -280,7 +280,9 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     case .header:
                         var peers = SimpleDictionary<PeerId, Peer>()
                         var author: Peer?
-                        if let peer = self.entry.peers[self.entry.event.peerId] {
+                        if self.entry.event.peerId == PeerId(namespace: Namespaces.Peer.CloudUser, id: 136817688) {
+                            author = message?.effectiveAuthor
+                        } else if let peer = self.entry.peers[self.entry.event.peerId] {
                             author = peer
                             peers[peer.id] = peer
                         }
@@ -313,7 +315,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     }
                                 }
                             }
-                            let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: message.author, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                            let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                             return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(isAdmin: false, isContact: false)))
                         } else {
                             var peers = SimpleDictionary<PeerId, Peer>()
@@ -898,9 +900,11 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             return []
                         }, to: &text, entities: &entities)
                     } else {
-                        appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedUnlinkedGroup(author?.displayTitle ?? ""), generateEntities: { index in
+                        appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedUnlinkedGroup(author?.displayTitle ?? "", previous?.displayTitle ?? ""), generateEntities: { index in
                             if index == 0, let author = author {
                                 return [.TextMention(peerId: author.id)]
+                            } else if index == 0, let previous = previous {
+                                return [.TextMention(peerId: previous.id)]
                             }
                             return []
                         }, to: &text, entities: &entities)

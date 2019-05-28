@@ -1556,6 +1556,12 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                         let memberId = selectedPeer.id
                         if peerView.peerId.namespace == Namespaces.Peer.CloudChannel {
                             return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: peerView.peerId, memberId: memberId)
+                            |> map { _ -> Void in
+                                return Void()
+                            }
+                            |> `catch` { _ -> Signal<Void, NoError> in
+                                return .complete()
+                            }
                         }
                         
                         if let peer = peerView.peers[memberId] {
@@ -1616,6 +1622,9 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                                             return .single(nil)
                                         }
                                         return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: upgradedPeerId, memberId: memberId)
+                                        |> `catch` { _ -> Signal<Never, NoError> in
+                                            return .complete()
+                                        }
                                         |> mapToSignal { _ -> Signal<PeerId?, NoError> in
                                             return .complete()
                                         }
@@ -1650,27 +1659,33 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     |> deliverOnMainQueue
                     |> mapError { _ in return .generic}
                     |> mapToSignal { view -> Signal<Void, AddChannelMemberError> in
-                        return context.peerChannelMemberCategoriesContextsManager.addMembers(account: context.account, peerId: peerView.peerId, memberIds: memberIds) |> map { _ in
-                            updateState { state in
-                                var state = state
-                                for (memberId, peer) in view.peers {
-                                    var found = false
-                                    for participant in state.temporaryParticipants {
-                                        if participant.peer.id == memberId {
-                                            found = true
-                                            break
+                        if memberIds.count == 1 {
+                            return context.peerChannelMemberCategoriesContextsManager.addMember(account: context.account, peerId: peerView.peerId, memberId: memberIds[0])
+                            |> map { _ -> Void in
+                                return Void()
+                            }
+                        } else {
+                            return context.peerChannelMemberCategoriesContextsManager.addMembers(account: context.account, peerId: peerView.peerId, memberIds: memberIds) |> map { _ in
+                                updateState { state in
+                                    var state = state
+                                    for (memberId, peer) in view.peers {
+                                        var found = false
+                                        for participant in state.temporaryParticipants {
+                                            if participant.peer.id == memberId {
+                                                found = true
+                                                break
+                                            }
+                                        }
+                                        if !found {
+                                            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                                            var temporaryParticipants = state.temporaryParticipants
+                                            temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.presences[memberId], timestamp: timestamp))
+                                            state = state.withUpdatedTemporaryParticipants(temporaryParticipants)
                                         }
                                     }
-                                    if !found {
-                                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                                        var temporaryParticipants = state.temporaryParticipants
-                                        temporaryParticipants.append(TemporaryParticipant(peer: peer, presence: view.presences[memberId], timestamp: timestamp))
-                                        state = state.withUpdatedTemporaryParticipants(temporaryParticipants)
-                                    }
+                                    
+                                    return state
                                 }
-                                
-                                return state
-                                
                             }
                         }
                     }
@@ -1708,23 +1723,23 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     |> deliverOnMainQueue).start(next: { [weak contactsController] peers in
                         contactsController?.displayProgress = true
                         addMemberDisposable.set((addMembers(peers)
-                            |> deliverOnMainQueue).start(error: { error in
-                                if peers.count == 1, error == .restricted {
-                                    switch peers[0] {
-                                    case let .peer(peerId):
-                                        _ = (context.account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { peer in
-                                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                                        })
-                                    default:
-                                        break
-                                    }
+                        |> deliverOnMainQueue).start(error: { error in
+                            if peers.count == 1, error == .restricted {
+                                switch peers[0] {
+                                case let .peer(peerId):
+                                    _ = (context.account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { peer in
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    })
+                                default:
+                                    break
                                 }
-                                
-                                contactsController?.dismiss()
-                            },completed: {
-                                contactsController?.dismiss()
-                            }))
+                            }
+                            
+                            contactsController?.dismiss()
+                        },completed: {
+                            contactsController?.dismiss()
                         }))
+                    }))
                     contactsController.dismissed = {
                         selectAddMemberDisposable.set(nil)
                         addMemberDisposable.set(nil)

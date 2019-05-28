@@ -124,7 +124,13 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                             strongSelf.activityIndicator.stopAnimating()
                         }
                     }
-                }).start())
+                }).start(error: { [weak self] _ in
+                    guard let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState else {
+                        return
+                    }
+                    let text = presentationInterfaceState.strings.Login_UnknownError
+                    strongSelf.interfaceInteraction?.presentController(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationInterfaceState.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationInterfaceState.strings.Common_OK, action: {})]), nil)
+                }))
             case .kicked:
                 break
             case .muteNotifications, .unmuteNotifications:
@@ -183,7 +189,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     
                     strongSelf.badgeText.attributedText = NSAttributedString(string: text, font: badgeFont, textColor: interfaceState.theme.chatList.unreadBadgeActiveTextColor)
                     let textSize = strongSelf.badgeText.updateLayout(CGSize(width: 100.0, height: 100.0))
-                    let badgeSize = CGSize(width: max(image.size.width, textSize.width + 4.0), height: image.size.height)
+                    let badgeSize = CGSize(width: max(image.size.width, textSize.width + 10.0), height: image.size.height)
                     let badgeFrame = CGRect(origin: CGPoint(x: strongSelf.discussButtonText.frame.maxX + 5.0, y: floor((strongSelf.discussButton.bounds.height - badgeSize.height) / 2.0)), size: badgeSize)
                     strongSelf.badgeBackground.frame = badgeFrame
                     strongSelf.badgeText.frame = CGRect(origin: CGPoint(x: badgeFrame.minX + floor((badgeSize.width - textSize.width) / 2.0), y: badgeFrame.minY + floor((badgeSize.height - textSize.height) / 2.0)), size: textSize)

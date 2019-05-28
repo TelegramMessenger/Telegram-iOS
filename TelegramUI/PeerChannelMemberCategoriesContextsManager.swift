@@ -247,11 +247,8 @@ final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    func join(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    func join(account: Account, peerId: PeerId) -> Signal<Never, JoinChannelError> {
         return joinChannel(account: account, peerId: peerId)
-        |> `catch` { _ -> Signal<RenderedChannelParticipant?, NoError> in
-            return .single(nil)
-        }
         |> deliverOnMainQueue
         |> beforeNext { [weak self] result in
             if let strongSelf = self, let updated = result {
@@ -264,20 +261,15 @@ final class PeerChannelMemberCategoriesContextsManager {
                 }
             }
         }
-        |> mapToSignal { _ -> Signal<Void, NoError> in
-            return .complete()
-        }
+        |> ignoreValues
     }
     
-    func addMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {
+    func addMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Never, AddChannelMemberError> {
         return addChannelMember(account: account, peerId: peerId, memberId: memberId)
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, NoError> in
-            return .single(nil)
-        }
         |> deliverOnMainQueue
         |> beforeNext { [weak self] result in
-            if let strongSelf = self, let (previous, updated) = result {
+            if let strongSelf = self {
+                let (previous, updated) = result
                 strongSelf.impl.with { impl in
                     for (contextPeerId, context) in impl.contexts {
                         if peerId == contextPeerId {
@@ -287,9 +279,7 @@ final class PeerChannelMemberCategoriesContextsManager {
                 }
             }
         }
-        |> mapToSignal { _ -> Signal<Void, NoError> in
-            return .complete()
-        }
+        |> ignoreValues
     }
     
     func addMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {

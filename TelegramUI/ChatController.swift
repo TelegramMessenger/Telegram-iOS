@@ -1471,6 +1471,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     isGroupChannel = false
                                 }
                             }
+                            let firstTime = strongSelf.peerView == nil
                             strongSelf.peerView = peerView
                             if wasGroupChannel != isGroupChannel {
                                 if let isGroupChannel = isGroupChannel, isGroupChannel {
@@ -1512,6 +1513,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             var isNotAccessible: Bool = false
                             if let cachedChannelData = peerView.cachedData as? CachedChannelData {
                                 isNotAccessible = cachedChannelData.isNotAccessible
+                            }
+                            
+                            if firstTime && isNotAccessible {
+                                strongSelf.context.account.viewTracker.forceUpdateCachedPeerData(peerId: peerView.peerId)
                             }
                             
                             var hasBots: Bool = false
