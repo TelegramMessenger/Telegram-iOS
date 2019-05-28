@@ -104,6 +104,7 @@ private final class StickerAnimationNode: ASDisplayNode {
     
     deinit {
         NotificationCenter.default.removeObserver(self.didPlayToEndTimeObsever as Any)
+        self.playerItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
         self.player = nil
         self.playerItem = nil
         self.disposable.dispose()
@@ -147,16 +148,19 @@ private final class StickerAnimationNode: ASDisplayNode {
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if let playerItem = object as? AVPlayerItem, playerItem === self.playerItem {
             if case .readyToPlay = playerItem.status, playerItem.videoComposition == nil {
-                playerItem.videoComposition = createVideoComposition(for: playerItem)
                 playerItem.seekingWaitsForVideoCompositionRendering = true
+                let composition = createVideoComposition(for: playerItem)
+                playerItem.videoComposition = composition
+                //playerItem.videoComposition = nil
+                //playerItem.videoComposition = composition
+                self.player?.play()
             }
-            self.player?.play()
         } else if let player = object as? AVPlayer, player === self.player {
             if self.playerLayer.isHidden && player.rate > 0.0 {
-                Queue.mainQueue().after(0.2) {
+                //Queue.mainQueue().after(0.2) {
                     self.playerLayer.isHidden = false
                     self.started()
-                }
+                //}
             }
         } else {
             return super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
@@ -200,9 +204,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         super.init(layerBacked: false)
         
         self.animationNode.started = { [weak self] in
-            self?.animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self?.imageNode.alpha = 0.0
-            self?.imageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
         }
         
         self.imageNode.displaysAsynchronously = false

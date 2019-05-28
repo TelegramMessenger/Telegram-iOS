@@ -44,6 +44,7 @@ public enum ChatControllerInteractionOpenMessageMode {
     case automaticPlayback
     case landscape
     case timecode(Double)
+    case link
 }
 
 struct ChatInterfacePollActionState: Equatable {

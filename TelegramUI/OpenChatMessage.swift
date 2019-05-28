@@ -47,7 +47,8 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
             if let file = content.file {
                 galleryMedia = file
             } else if let image = content.image {
-                if ["photo", "document", "video", "gif", "telegram_album"].contains(content.type) {
+                if case .link = mode {
+                } else if ["photo", "document", "video", "gif", "telegram_album"].contains(content.type) {
                     galleryMedia = image
                 }
             }

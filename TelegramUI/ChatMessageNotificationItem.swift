@@ -127,7 +127,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         var updatedMedia: Media?
         var imageDimensions: CGSize?
         var isRound = false
-        let messageText: String
+        var messageText: String
         if item.messages.first?.id.peerId.namespace == Namespaces.Peer.SecretChat {
             titleIcon = PresentationResourcesRootController.inAppNotificationSecretChatIcon(presentationData.theme)
             messageText = item.strings.PUSH_ENCRYPTED_MESSAGE("").0
@@ -279,6 +279,8 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         } else {
             messageText = ""
         }
+        
+        messageText = messageText.replacingOccurrences(of: "\n\n", with: " ")
         
         self.titleAttributedText = NSAttributedString(string: title ?? "", font: compact ? Font.semibold(15.0) : Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
         

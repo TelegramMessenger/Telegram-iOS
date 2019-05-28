@@ -1544,7 +1544,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             let mutedIconFrame = self.mutedIconNode.frame
-            transition.updateFrame(node: self.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: contentRect.origin.y + 6.0), size: mutedIconFrame.size))
+            transition.updateFrame(node: self.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: contentRect.origin.y + 5.0), size: mutedIconFrame.size))
             nextTitleIconOrigin += mutedIconFrame.size.width + 3.0
             
             let badgeFrame = self.badgeNode.frame

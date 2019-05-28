@@ -12,9 +12,10 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
     private let placeholderNode: ASTextNode
     
     var updateHeight: (() -> Void)?
+    var complete: (() -> Void)?
     
-    private let backgroundInsets = UIEdgeInsets(top: 16.0, left: 16.0, bottom: 1.0, right: 16.0)
-    private let inputInsets = UIEdgeInsets(top: 10.0, left: 8.0, bottom: 10.0, right: 16.0)
+    private let backgroundInsets = UIEdgeInsets(top: 8.0, left: 16.0, bottom: 15.0, right: 16.0)
+    private let inputInsets = UIEdgeInsets(top: 5.0, left: 12.0, bottom: 5.0, right: 12.0)
     private let accessoryButtonsWidth: CGFloat = 10.0
     
     var text: String {
@@ -40,7 +41,7 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 16.0, color: theme.actionSheet.inputBackgroundColor)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: theme.actionSheet.itemBackgroundColor.withAlphaComponent(1.0), strokeColor: theme.actionSheet.inputBackgroundColor, strokeWidth: 1.0)
         
         self.textInputNode = EditableTextNode()
         self.textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: theme.actionSheet.inputTextColor]
@@ -50,6 +51,7 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
         self.textInputNode.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
         self.textInputNode.keyboardType = .URL
         self.textInputNode.autocapitalizationType = .none
+        self.textInputNode.returnKeyType = .done
         
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false
@@ -104,6 +106,14 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
         self.placeholderNode.isHidden = !(editableTextNode.textView.text ?? "").isEmpty
     }
     
+    func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        if text == "\n" {
+            self.complete?()
+            return false
+        }
+        return true
+    }
+    
     private func calculateTextFieldMetrics(width: CGFloat) -> CGFloat {
         let backgroundInsets = self.backgroundInsets
         let inputInsets = self.inputInsets
@@ -111,7 +121,7 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
         
         let unboundTextFieldHeight = max(33.0, ceil(self.textInputNode.measure(CGSize(width: width - backgroundInsets.left - backgroundInsets.right - inputInsets.left - inputInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude)).height))
         
-        return min(61.0, max(41.0, unboundTextFieldHeight))
+        return min(61.0, max(33.0, unboundTextFieldHeight))
     }
     
     private func updateTextNodeText(animated: Bool) {
@@ -205,6 +215,7 @@ private final class ChatTextLinkEditContentActionNode: HighlightableButtonNode {
 
 private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
+    private let text: String
     
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
@@ -218,12 +229,21 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     
     private var validLayout: CGSize?
     
+    private let hapticFeedback = HapticFeedback()
+    
+    var complete: (() -> Void)? {
+        didSet {
+            self.inputFieldNode.complete = self.complete
+        }
+    }
+    
     override var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], link: String?) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, link: String?) {
         self.strings = strings
+        self.text = text
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
@@ -232,6 +252,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         
         self.inputFieldNode = ChatTextLinkEditInputFieldNode(theme: ptheme, placeholder: "")
         self.inputFieldNode.text = link ?? ""
+        self.inputFieldNode.placeholder = strings.TextFormat_AddLinkPlaceholder
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -253,6 +274,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         super.init()
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.textNode)
         
         self.addSubnode(self.inputFieldNode)
 
@@ -286,7 +308,8 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     }
     
     override func updateTheme(_ theme: AlertControllerTheme) {
-        self.titleNode.attributedText = NSAttributedString(string: "Add Link", font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.titleNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkText(self.text).0, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
 
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -304,6 +327,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var size = size
         size.width = min(size.width , 270.0)
+        let measureSize = CGSize(width: size.width - 16.0 * 2.0, height: CGFloat.greatestFiniteMagnitude)
         
         let hadValidLayout = self.validLayout != nil
         
@@ -311,9 +335,13 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         
         var origin: CGPoint = CGPoint(x: 0.0, y: 20.0)
         
-        let titleSize = self.titleNode.measure(size)
+        let titleSize = self.titleNode.measure(measureSize)
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
-        origin.y += titleSize.height + 6.0
+        origin.y += titleSize.height + 4.0
+        
+        let textSize = self.textNode.measure(measureSize)
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
+        origin.y += textSize.height + 6.0
         
         let actionButtonHeight: CGFloat = 44.0
         var minActionsWidth: CGFloat = 0.0
@@ -355,7 +383,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(x: 0.0, y: origin.y, width: resultWidth, height: inputFieldHeight))
         transition.updateAlpha(node: self.inputFieldNode, alpha: inputHeight > 0.0 ? 1.0 : 0.0)
         
-        let resultSize = CGSize(width: resultWidth, height: titleSize.height + actionsHeight + inputHeight + insets.top + insets.bottom)
+        let resultSize = CGSize(width: resultWidth, height: titleSize.height + textSize.height + actionsHeight + inputHeight + insets.top + insets.bottom)
         
         transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
         
@@ -408,25 +436,56 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         
         return resultSize
     }
+    
+    func animateError() {
+        self.inputFieldNode.layer.addShakeAnimation()
+        self.hapticFeedback.error()
+    }
 }
 
-func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Account, link: String?, apply: @escaping (String) -> Void) -> AlertController {
+func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Account, text: String, link: String?, apply: @escaping (String?) -> Void) -> AlertController {
     let presentationData = sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
     
     var dismissImpl: ((Bool) -> Void)?
-    var contentNode: ChatTextLinkEditAlertContentNode?
+    var applyImpl: (() -> Void)?
+    
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
+        apply(nil)
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Done, action: {
-        dismissImpl?(true)
-        apply(contentNode?.link ?? "")
+        applyImpl?()
     })]
     
-    contentNode = ChatTextLinkEditAlertContentNode(theme: AlertControllerTheme(presentationTheme: theme), ptheme: theme, strings: strings, actions: actions, link: link)
+    let contentNode = ChatTextLinkEditAlertContentNode(theme: AlertControllerTheme(presentationTheme: theme), ptheme: theme, strings: strings, actions: actions, text: text, link: link)
+    contentNode.complete = {
+        applyImpl?()
+    }
+    applyImpl = { [weak contentNode] in
+        guard let contentNode = contentNode else {
+            return
+        }
+        var updatedLink = contentNode.link
+        if !updatedLink.hasPrefix("http") && !updatedLink.hasPrefix("https") {
+            updatedLink = "http://\(updatedLink)"
+        }
+        if updatedLink.isEmpty {
+            if let _ = link {
+                dismissImpl?(true)
+                apply(updatedLink)
+            } else {
+                contentNode.animateError()
+            }
+        } else if isValidUrl(updatedLink) {
+            dismissImpl?(true)
+            apply(updatedLink)
+        } else {
+            contentNode.animateError()
+        }
+    }
     
-    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: theme), contentNode: contentNode!)
+    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: theme), contentNode: contentNode)
     dismissImpl = { [weak controller] animated in
         if animated {
             controller?.dismissAnimated()

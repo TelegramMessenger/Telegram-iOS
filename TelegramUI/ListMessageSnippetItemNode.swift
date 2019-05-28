@@ -490,7 +490,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         item.controllerInteraction.openInstantPage(item.message, nil)
                     }
                 } else {
-                    if isTelegramMeLink(content.url) || !item.controllerInteraction.openMessage(item.message, .default) {
+                    if isTelegramMeLink(content.url) || !item.controllerInteraction.openMessage(item.message, .link) {
                         item.controllerInteraction.openUrl(currentPrimaryUrl, false, false)
                     }
                 }

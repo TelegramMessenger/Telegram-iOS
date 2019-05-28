@@ -275,10 +275,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             var availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
             if isEmoji {
-                availableWidth -= 10.0
-                if incoming {
-                    availableWidth -= dateAndStatusSize.width
-                }
+                availableWidth -= 10.0 + 14.0
+                //if incoming {
+                //    availableWidth -= dateAndStatusSize.width
+                //}
             }
             
             for attribute in item.message.attributes {
@@ -403,7 +403,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             dateOffset.y = 12.0
                         }
                     }
-                    let dateAndStatusFrame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateOffset.x), y: updatedImageFrame.maxY - dateOffset.y), size: dateAndStatusSize)
+                    let dateAndStatusFrame = CGRect(origin: CGPoint(x: min(layoutSize.width - dateAndStatusSize.width - 14.0, max(displayLeftInset, updatedImageFrame.maxX - dateOffset.x)), y: updatedImageFrame.maxY - dateOffset.y), size: dateAndStatusSize)
                     transition.updateFrame(node: strongSelf.dateAndStatusNode, frame: dateAndStatusFrame)
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
@@ -450,7 +450,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.viaBotNode = viaBotNode
                             strongSelf.addSubnode(viaBotNode)
                         }
-                        let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 15.0) : (params.width - params.rightInset - viaBotLayout.size.width - layoutConstants.bubble.edgeInset - 15.0)), y: 8.0), size: viaBotLayout.size)
+                        let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 15.0) : (params.width - params.rightInset - viaBotLayout.size.width - layoutConstants.bubble.edgeInset - 14.0)), y: 8.0), size: viaBotLayout.size)
                         viaBotNode.frame = viaBotFrame
                         strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 6.0, y: viaBotFrame.minY - 2.0 - UIScreenPixel), size: CGSize(width: viaBotFrame.size.width + 11.0, height: viaBotFrame.size.height + 5.0))
                     } else if let viaBotNode = strongSelf.viaBotNode {
