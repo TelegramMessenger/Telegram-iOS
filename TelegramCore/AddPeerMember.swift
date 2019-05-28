@@ -12,6 +12,7 @@ import Foundation
 public enum AddGroupMemberError {
     case generic
     case groupFull
+    case privacy
 }
 
 public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, AddGroupMemberError> {
@@ -23,6 +24,8 @@ public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -
                     switch error.errorDescription {
                         case "USERS_TOO_MUCH":
                             return .groupFull
+                        case "USER_PRIVACY_RESTRICTED":
+                            return .privacy
                         default:
                             return .generic
                     }
