@@ -2545,7 +2545,12 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     }
     
     for messageId in holesFromPreviousStateMeessageIds {
-        let upperId = topUpperHistoryBlockMessages[PeerIdAndMessageNamespace(peerId: messageId.peerId, namespace: messageId.namespace)] ?? Int32.max
+        let upperId: MessageId.Id
+        if let value = topUpperHistoryBlockMessages[PeerIdAndMessageNamespace(peerId: messageId.peerId, namespace: messageId.namespace)], value < Int32.max {
+            upperId = value - 1
+        } else {
+            upperId = Int32.max
+        }
         if upperId > messageId.id {
             transaction.addHole(peerId: messageId.peerId, namespace: messageId.namespace, space: .everywhere, range: messageId.id ... upperId)
         }

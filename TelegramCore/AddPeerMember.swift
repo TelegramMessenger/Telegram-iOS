@@ -194,8 +194,9 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
             return .single(Void())
         }
         
-    } |> introduceError(AddChannelMemberError.self)
+    }
+    |> introduceError(AddChannelMemberError.self)
     
-    return signal |> switchToLatest
-    
+    return signal
+    |> switchToLatest
 }
