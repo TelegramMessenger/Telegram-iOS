@@ -566,7 +566,8 @@ void LottieParserImpl::resolveLayerRefs()
             if (layer->mLayerType == LayerType::Image) {
                 layer->mAsset = search->second;
             } else if (layer->mLayerType == LayerType::Precomp) {
-                layer->mChildren = search->second.get()->mLayers;
+                layer->mChildren = search->second->mLayers;
+                layer->setStatic(layer->isStatic() && search->second->isStatic());
             }
         }
     }
@@ -721,10 +722,13 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
             asset->mAssetType = LOTAsset::Type::Precomp;
             RAPIDJSON_ASSERT(PeekType() == kArrayType);
             EnterArray();
+            bool staticFlag = true;
             while (NextArrayValue()) {
                 std::shared_ptr<LOTData> layer = parseLayer();
+                staticFlag = staticFlag && layer->isStatic();
                 asset->mLayers.push_back(layer);
             }
+            asset->setStatic(staticFlag);
         } else {
 #ifdef DEBUG_PARSER
             vWarning << "Asset Attribute Skipped : " << key;
@@ -756,7 +760,7 @@ void LottieParserImpl::parseLayers(LOTCompositionData *comp)
     EnterArray();
     while (NextArrayValue()) {
         std::shared_ptr<LOTData> layer = parseLayer(true);
-        staticFlag &= layer->isStatic();
+        staticFlag = staticFlag && layer->isStatic();
         comp->mRootLayer->mChildren.push_back(layer);
     }
     comp->mRootLayer->setStatic(staticFlag);
@@ -851,7 +855,6 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
         std::make_shared<LOTLayerData>();
     LOTLayerData *layer = sharedLayer.get();
     curLayerRef = layer;
-    bool hasLayerRef = false;
     bool ddd = true;
     std::string layerName;
     EnterObject();
@@ -876,7 +879,6 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
             layer->mPreCompRefId = std::string(GetString());
             layer->mHasGradient = true;
             mLayersToUpdate.push_back(sharedLayer);
-            hasLayerRef = true;
         } else if (0 == strcmp(key, "sr")) {  // "Layer Time Stretching"
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
             layer->mTimeStreatch = GetDouble();
@@ -937,8 +939,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
         staticFlag &= mask->isStatic();
     }
 
-    layer->setStatic(staticFlag && layer->mTransform->isStatic() &&
-                     !hasLayerRef);
+    layer->setStatic(staticFlag && layer->mTransform->isStatic());
     layer->mCompRef = compRef;
 
     if (record) {

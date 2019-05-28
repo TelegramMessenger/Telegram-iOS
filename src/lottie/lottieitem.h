@@ -95,11 +95,9 @@ public:
    int id() const {return mLayerData->id();}
    int parentId() const {return mLayerData->parentId();}
    void setParentLayer(LOTLayerItem *parent){mParentLayer = parent;}
-   void setPrecompLayer(LOTLayerItem *precomp){mPrecompLayer = precomp;}
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha);
    VMatrix matrix(int frameNo) const;
    virtual void renderList(std::vector<VDrawable *> &){}
-   virtual void updateStaticProperty();
    virtual void render(VPainter *painter, const VRle &mask, const VRle &matteRle);
    bool hasMatte() { if (mLayerData->mMatteType == MatteType::None) return false; return true; }
    MatteType matteType() const { return mLayerData->mMatteType;}
@@ -113,7 +111,7 @@ protected:
    inline VMatrix combinedMatrix() const {return mCombinedMatrix;}
    inline int frameNo() const {return mFrameNo;}
    inline float combinedAlpha() const {return mCombinedAlpha;}
-   inline bool isStatic() const {return mStatic;}
+   inline bool isStatic() const {return mLayerData->isStatic();}
    float opacity(int frameNo) const;
    inline DirtyFlag flag() const {return mDirtyFlag;}
 protected:
@@ -123,12 +121,10 @@ protected:
    std::unique_ptr<LOTLayerMaskItem>           mLayerMask;
    LOTLayerData                               *mLayerData{nullptr};
    LOTLayerItem                               *mParentLayer{nullptr};
-   LOTLayerItem                               *mPrecompLayer{nullptr};
    VMatrix                                     mCombinedMatrix;
    float                                       mCombinedAlpha{0.0};
    int                                         mFrameNo{-1};
    DirtyFlag                                   mDirtyFlag{DirtyFlagBit::All};
-   bool                                        mStatic{false};
 };
 
 class LOTCompLayerItem: public LOTLayerItem
@@ -136,7 +132,6 @@ class LOTCompLayerItem: public LOTLayerItem
 public:
    LOTCompLayerItem(LOTLayerData *layerData);
    void renderList(std::vector<VDrawable *> &list)final;
-   void updateStaticProperty() final;
    void render(VPainter *painter, const VRle &mask, const VRle &matteRle) final;
    void buildLayerNode() final;
    bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value) override;

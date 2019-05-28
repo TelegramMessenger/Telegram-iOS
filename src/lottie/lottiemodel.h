@@ -396,8 +396,11 @@ struct LOTAsset
         Image,
         Char
     };
+    bool isStatic() const {return mStatic;}
+    void setStatic(bool value) {mStatic = value;}
     VBitmap  bitmap() const;
     Type                                      mAssetType{Type::Precomp};
+    bool                                      mStatic{true};
     std::string                               mRefId; // ref id
     std::vector<std::shared_ptr<LOTData>>     mLayers;
     // image asset data

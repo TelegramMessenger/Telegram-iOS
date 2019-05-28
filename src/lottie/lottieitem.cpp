@@ -77,7 +77,6 @@ LOTCompItem::LOTCompItem(LOTModel *model)
 {
     mCompData = model->mRoot.get();
     mRootLayer = createLayerItem(mCompData->mRootLayer.get());
-    mRootLayer->updateStaticProperty();
     mViewSize = mCompData->size();
 }
 
@@ -464,15 +463,6 @@ bool LOTCompLayerItem::resolveKeyPath(LOTKeyPath &keyPath, uint depth,
     return false;
 }
 
-void LOTLayerItem::updateStaticProperty()
-{
-    if (mParentLayer) mParentLayer->updateStaticProperty();
-
-    mStatic = mLayerData->isStatic();
-    mStatic = mParentLayer ? (mStatic & mParentLayer->isStatic()) : mStatic;
-    mStatic = mPrecompLayer ? (mStatic & mPrecompLayer->isStatic()) : mStatic;
-}
-
 void LOTLayerItem::update(int frameNumber, const VMatrix &parentMatrix,
                           float parentAlpha)
 {
@@ -553,8 +543,6 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
                             [id](const auto& val){ return val->id() == id;});
             if (search != mLayers.end()) layer->setParentLayer((*search).get());
         }
-        // update the precomp layer if its not the root layer.
-        if (!layerModel->root()) layer->setPrecompLayer(this);
     }
 
     // 3. keep the layer in back-to-front order.
@@ -564,15 +552,6 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
     // 4. check if its a nested composition
     if (!layerModel->layerSize().empty()) {
         mClipper = std::make_unique<LOTClipperItem>(layerModel->layerSize());
-    }
-}
-
-void LOTCompLayerItem::updateStaticProperty()
-{
-    LOTLayerItem::updateStaticProperty();
-
-    for (const auto &layer : mLayers) {
-        layer->updateStaticProperty();
     }
 }
 
