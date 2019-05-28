@@ -29,7 +29,7 @@ kernel vec4 alphaFrame(__sample s, __sample m) {
     }
 }
 
-private func createVideoComposition(for playerItem: AVPlayerItem) -> AVVideoComposition? {
+private func createVideoComposition(for playerItem: AVPlayerItem, ready: @escaping () -> Void) -> AVVideoComposition? {
     let videoSize = CGSize(width: playerItem.presentationSize.width, height: playerItem.presentationSize.height / 2.0)
     if #available(iOSApplicationExtension 9.0, *) {
         let composition = AVMutableVideoComposition(asset: playerItem.asset, applyingCIFiltersWithHandler: { request in
@@ -39,7 +39,8 @@ private func createVideoComposition(for playerItem: AVPlayerItem) -> AVVideoComp
             filter.inputImage = request.sourceImage.cropped(to: alphaRect)
                 .transformed(by: CGAffineTransform(translationX: 0, y: -sourceRect.height))
             filter.maskImage = request.sourceImage.cropped(to: sourceRect)
-            return request.finish(with: filter.outputImage!, context: nil)
+            request.finish(with: filter.outputImage!, context: nil)
+            ready()
         })
         composition.renderSize = videoSize
         return composition
@@ -60,6 +61,19 @@ private final class StickerAnimationNode: ASDisplayNode {
     
     var started: () -> Void = {}
     
+    var ready = false
+    var visibility = false {
+        didSet {
+            if self.visibility {
+                if self.ready {
+                    self.player?.play()
+                }
+            } else{
+                self.player?.pause()
+            }
+        }
+    }
+    
     var player: AVPlayer? {
         get {
             if self.isNodeLoaded {
@@ -69,13 +83,7 @@ private final class StickerAnimationNode: ASDisplayNode {
             }
         }
         set {
-            if let player = self.playerLayer.player {
-                player.removeObserver(self, forKeyPath: #keyPath(AVPlayer.rate))
-            }
             self.playerLayer.player = newValue
-            if let newValue = newValue {
-                newValue.addObserver(self, forKeyPath: #keyPath(AVPlayer.rate), options: [], context: nil)
-            }
         }
     }
     
@@ -95,6 +103,7 @@ private final class StickerAnimationNode: ASDisplayNode {
         self.setLayerBlock({
             let layer = AVPlayerLayer()
             layer.isHidden = true
+            layer.videoGravity = .resize
             if #available(iOSApplicationExtension 9.0, *) {
                 layer.pixelBufferAttributes = [(kCVPixelBufferPixelFormatTypeKey as String): kCVPixelFormatType_32BGRA]
             }
@@ -149,30 +158,21 @@ private final class StickerAnimationNode: ASDisplayNode {
         if let playerItem = object as? AVPlayerItem, playerItem === self.playerItem {
             if case .readyToPlay = playerItem.status, playerItem.videoComposition == nil {
                 playerItem.seekingWaitsForVideoCompositionRendering = true
-                let composition = createVideoComposition(for: playerItem)
+                let composition = createVideoComposition(for: playerItem, ready: { [weak self] in
+                    Queue.mainQueue().async {
+                        self?.playerLayer.isHidden = false
+                        self?.started()
+                    }
+                })
                 playerItem.videoComposition = composition
-                //playerItem.videoComposition = nil
-                //playerItem.videoComposition = composition
-                self.player?.play()
-            }
-        } else if let player = object as? AVPlayer, player === self.player {
-            if self.playerLayer.isHidden && player.rate > 0.0 {
-                //Queue.mainQueue().after(0.2) {
-                    self.playerLayer.isHidden = false
-                    self.started()
-                //}
+                ready = true
+                if self.visibility {
+                    self.player?.play()
+                }
             }
         } else {
             return super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
         }
-    }
-    
-    func play() {
-        
-    }
-    
-    func reset() {
-        
     }
 }
 
@@ -244,13 +244,25 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.view.addGestureRecognizer(replyRecognizer)
     }
     
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            if self.visibility != oldValue {
+                switch self.visibility {
+                    case .visible:
+                        self.animationNode.visibility = true
+                    case .none:
+                        self.animationNode.visibility = false
+                }
+            }
+        }
+    }
+    
     override func setupItem(_ item: ChatMessageItem) {
         super.setupItem(item)
         
         for media in item.message.media {
             if let telegramFile = media as? TelegramMediaFile {
-                if self.telegramFile != telegramFile {
-
+                if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
                     self.imageNode.setSignal(chatMessageSticker(account: item.context.account, file: telegramFile, small: false, thumbnail: true))
                     self.animationNode.setup(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile))

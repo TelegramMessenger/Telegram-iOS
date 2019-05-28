@@ -310,6 +310,8 @@ private let actionSheet = PresentationThemeActionSheet(
     secondaryTextColor: UIColor(white: 1.0, alpha: 0.5), //!!!
     controlAccentColor: accentColor,
     inputBackgroundColor: UIColor(rgb: 0x182330), //!!!
+    inputHollowBackgroundColor: UIColor(rgb: 0x182330),
+    inputBorderColor: UIColor(rgb: 0x182330),
     inputPlaceholderColor: UIColor(rgb: 0x8B9197), //!!!
     inputTextColor: .white,
     inputClearButtonColor: UIColor(rgb: 0x8B9197),

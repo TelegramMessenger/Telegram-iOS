@@ -216,50 +216,50 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             
             let chatPeer = peer
             let contextBot = resolvePeerByName(account: context.account, name: addressName)
-                |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                    if let peerId = peerId {
-                        return context.account.postbox.loadedPeerWithId(peerId)
-                        |> map { peer -> Peer? in
-                            return peer
-                        }
-                        |> take(1)
-                    } else {
-                        return .single(nil)
+            |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+                if let peerId = peerId {
+                    return context.account.postbox.loadedPeerWithId(peerId)
+                    |> map { peer -> Peer? in
+                        return peer
                     }
+                    |> take(1)
+                } else {
+                    return .single(nil)
                 }
-                |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
-                    if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                        let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, offset: "")
-                            |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                                return { _ in
-                                    return .contextRequestResult(user, results)
+            }
+            |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
+                if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
+                    let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, offset: "")
+                    |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                        return { _ in
+                            return .contextRequestResult(user, results)
+                        }
+                    }
+                    
+                    let botResult: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .single({ previousResult in
+                        var passthroughPreviousResult: ChatContextResultCollection?
+                        if let previousResult = previousResult {
+                            if case let .contextRequestResult(previousUser, previousResults) = previousResult {
+                                if previousUser?.id == user.id {
+                                    passthroughPreviousResult = previousResults
                                 }
                             }
-                        
-                        let botResult: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .single({ previousResult in
-                            var passthroughPreviousResult: ChatContextResultCollection?
-                            if let previousResult = previousResult {
-                                if case let .contextRequestResult(previousUser, previousResults) = previousResult {
-                                    if previousUser?.id == user.id {
-                                        passthroughPreviousResult = previousResults
-                                    }
-                                }
-                            }
-                            return .contextRequestResult(user, passthroughPreviousResult)
-                        })
-                        
-                        let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>
-                        if delayRequest {
-                            maybeDelayedContextResults = contextResults |> delay(0.4, queue: Queue.concurrentDefaultQueue())
-                        } else {
-                            maybeDelayedContextResults = contextResults
                         }
-                        
-                        return botResult |> then(maybeDelayedContextResults)
+                        return .contextRequestResult(user, passthroughPreviousResult)
+                    })
+                    
+                    let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>
+                    if delayRequest {
+                        maybeDelayedContextResults = contextResults |> delay(0.4, queue: Queue.concurrentDefaultQueue())
                     } else {
-                        return .single({ _ in return nil })
+                        maybeDelayedContextResults = contextResults
                     }
+                    
+                    return botResult |> then(maybeDelayedContextResults)
+                } else {
+                    return .single({ _ in return nil })
                 }
+            }
             
             return signal |> then(contextBot)
         case let .emojiSearch(query, languageCode):

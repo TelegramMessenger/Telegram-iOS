@@ -199,12 +199,14 @@ public final class PresentationThemeActionSheet {
     public let secondaryTextColor: UIColor
     public let controlAccentColor: UIColor
     public let inputBackgroundColor: UIColor
+    public let inputHollowBackgroundColor: UIColor
+    public let inputBorderColor: UIColor
     public let inputPlaceholderColor: UIColor
     public let inputTextColor: UIColor
     public let inputClearButtonColor: UIColor
     public let checkContentColor: UIColor
     
-    init(dimColor: UIColor, backgroundType: PresentationThemeActionSheetBackgroundType, opaqueItemBackgroundColor: UIColor, itemBackgroundColor: UIColor, opaqueItemHighlightedBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, standardActionTextColor: UIColor, opaqueItemSeparatorColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor, inputBackgroundColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputClearButtonColor: UIColor, checkContentColor: UIColor) {
+    init(dimColor: UIColor, backgroundType: PresentationThemeActionSheetBackgroundType, opaqueItemBackgroundColor: UIColor, itemBackgroundColor: UIColor, opaqueItemHighlightedBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, standardActionTextColor: UIColor, opaqueItemSeparatorColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor, inputBackgroundColor: UIColor, inputHollowBackgroundColor: UIColor, inputBorderColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputClearButtonColor: UIColor, checkContentColor: UIColor) {
         self.dimColor = dimColor
         self.backgroundType = backgroundType
         self.opaqueItemBackgroundColor = opaqueItemBackgroundColor
@@ -219,6 +221,8 @@ public final class PresentationThemeActionSheet {
         self.secondaryTextColor = secondaryTextColor
         self.controlAccentColor = controlAccentColor
         self.inputBackgroundColor = inputBackgroundColor
+        self.inputHollowBackgroundColor = inputHollowBackgroundColor
+        self.inputBorderColor = inputBorderColor
         self.inputPlaceholderColor = inputPlaceholderColor
         self.inputTextColor = inputTextColor
         self.inputClearButtonColor = inputClearButtonColor
