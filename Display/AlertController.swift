@@ -9,8 +9,9 @@ public final class AlertControllerTheme: Equatable {
     public let secondaryColor: UIColor
     public let accentColor: UIColor
     public let destructiveColor: UIColor
+    public let disabledColor: UIColor
     
-    public init(backgroundColor: UIColor, separatorColor: UIColor, highlightedItemColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, accentColor: UIColor, destructiveColor: UIColor) {
+    public init(backgroundColor: UIColor, separatorColor: UIColor, highlightedItemColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disabledColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
         self.highlightedItemColor = highlightedItemColor
@@ -18,6 +19,7 @@ public final class AlertControllerTheme: Equatable {
         self.secondaryColor = secondaryColor
         self.accentColor = accentColor
         self.destructiveColor = destructiveColor
+        self.disabledColor = disabledColor
     }
     
     public static func ==(lhs: AlertControllerTheme, rhs: AlertControllerTheme) -> Bool {
@@ -40,6 +42,9 @@ public final class AlertControllerTheme: Equatable {
             return false
         }
         if lhs.destructiveColor != rhs.destructiveColor {
+            return false
+        }
+        if lhs.disabledColor != rhs.disabledColor {
             return false
         }
         return true

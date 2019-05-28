@@ -14,17 +14,20 @@ public enum DeviceMetrics: CaseIterable {
     case iPadPro3rdGen
 
     public static func forScreenSize(_ size: CGSize, hintHasOnScreenNavigation: Bool = false) -> DeviceMetrics? {
+        let additionalSize = CGSize(width: size.width, height: size.height + 20.0)
         for device in DeviceMetrics.allCases {
             let width = device.screenSize.width
             let height = device.screenSize.height
             
-            if (size.width.isEqual(to: width) && size.height.isEqual(to: height)) || size.height.isEqual(to: width) && size.width.isEqual(to: height) {
+            if ((size.width.isEqual(to: width) && size.height.isEqual(to: height)) || size.height.isEqual(to: width) && size.width.isEqual(to: height)) || ((additionalSize.width.isEqual(to: width) && additionalSize.height.isEqual(to: height)) || additionalSize.height.isEqual(to: width) && additionalSize.width.isEqual(to: height)) {
                 if hintHasOnScreenNavigation && device.onScreenNavigationHeight(inLandscape: false) == nil {
                     continue
                 }
                 return device
             }
         }
+        
+        
         return nil
     }
     
