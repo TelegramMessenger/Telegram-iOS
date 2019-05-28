@@ -573,7 +573,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         
         if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
             panelHeight += 10.0
-            if isLandscape {
+            if isLandscape, case .compact = metrics.widthClass {
                 panelHeight += 14.0
             } else {
                 panelHeight += 34.0

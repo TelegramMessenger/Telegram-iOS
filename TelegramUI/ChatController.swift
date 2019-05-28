@@ -3345,19 +3345,36 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }, openLinkEditing: { [weak self] in
             if let strongSelf = self {
                 var selectionRange: Range<Int>?
+                var text: String?
+                var inputMode: ChatInputMode?
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
                     selectionRange = state.interfaceState.effectiveInputState.selectionRange
+                    if let selectionRange = selectionRange {
+                        text = state.interfaceState.effectiveInputState.inputText.attributedSubstring(from: NSRange(location: selectionRange.startIndex, length: selectionRange.count)).string
+                    }
+                    inputMode = state.inputMode
                     return state
                 })
                 
-                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, link: nil, apply: { [weak self] link in
-                    if let strongSelf = self {
-                        strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-                            return (chatTextInputAddLinkAttribute(current, url: link), inputMode)
+                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, text: text ?? "", link: nil, apply: { [weak self] link in
+                    if let strongSelf = self, let inputMode = inputMode, let selectionRange = selectionRange {
+                        if let link = link {
+                            strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                                return (chatTextInputAddLinkAttribute(current, url: link), inputMode)
+                            }
+                        } else {
+                            
                         }
+                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, {
+                            return $0.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
+                                $0.withUpdatedEffectiveInputState(ChatTextInputState(inputText: $0.effectiveInputState.inputText, selectionRange: selectionRange.endIndex ..< selectionRange.endIndex))
+                            })
+                        })
                     }
                 })
                 strongSelf.present(controller, in: .window(.root))
+                
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInputMode({ _ in return .none }) })
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         

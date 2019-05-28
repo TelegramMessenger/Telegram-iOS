@@ -102,8 +102,9 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
         var possibleQueryRange: NSRange?
         
         let string = (inputString as String)
-        if string.count < 3, string.trimmingTrailingSpaces().isSingleEmoji {
-            return [(NSRange(location: 0, length: inputLength), [.emoji], nil)]
+        let trimmedString = string.trimmingTrailingSpaces()
+        if string.count < 3, trimmedString.isSingleEmoji {
+            return [(NSRange(location: 0, length: inputString.length - (string.count - trimmedString.count)), [.emoji], nil)]
         }
         
         var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag, .emojiSearch])

@@ -527,6 +527,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
+        var clearBounds = clearBounds
         self.validLayout = (size, clearBounds)
         
         let transition: ContainedViewLayoutTransition = .immediate

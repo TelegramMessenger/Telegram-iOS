@@ -31,10 +31,10 @@ extension CharacterSet {
     }()
 }
 
-//func isValidUrl(_ url: String) -> Bool {
-//    if let url = URL(string: url) {
-//        return url.
-//    } elsee {
-//        return false
-//    }
-//}
+func isValidUrl(_ url: String) -> Bool {
+    if let url = URL(string: url), ["http", "https"].contains(url.scheme), let host = url.host, host.contains(".") {
+        return true
+    } else {
+        return false
+    }
+}
