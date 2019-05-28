@@ -33,8 +33,23 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
 
 func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
-        let messageId = result.rawMessageIds.first
-        let apiMessage = result.messages.first
+        let messageId: Int32?
+        var apiMessage: Api.Message?
+        
+        for resultMessage in result.messages {
+            if let id = resultMessage.id {
+                if id.peerId == message.id.peerId {
+                    apiMessage = resultMessage
+                    break
+                }
+            }
+        }
+        
+        if let apiMessage = apiMessage, let id = apiMessage.id {
+            messageId = id.id
+        } else {
+            messageId = result.rawMessageIds.first
+        }
         
         var updatedTimestamp: Int32?
         if let apiMessage = apiMessage {
