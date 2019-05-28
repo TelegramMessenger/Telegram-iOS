@@ -94,8 +94,7 @@ _animator_cb(void *data)
          float pos = info->view->getPos();
          _update_frame_info(info, pos);
          elm_slider_value_set(info->slider, (double)pos);
-         info->view->render();
-
+         evas_object_image_pixels_dirty_set(info->view->getImage(), EINA_TRUE);
          if (pos >= 1.0)
            _toggle_start_button(info);
       }
@@ -113,7 +112,7 @@ _slider_cb(void *data, Evas_Object *obj, void *event_info EINA_UNUSED)
    if (!info->autoPlaying)
      {
         info->view->seek(val);
-        info->view->render();
+        evas_object_image_pixels_dirty_set(info->view->getImage(), EINA_TRUE);
      }
 }
 
@@ -123,6 +122,13 @@ _button_clicked_cb(void *data, Evas_Object */*obj*/, void */*event_info*/)
    AppInfo *info = (AppInfo *)data;
 
    _toggle_start_button(info);
+}
+
+static void
+_image_update_cb(void *data, Evas_Object *obj EINA_UNUSED)
+{
+   AppInfo *info = (AppInfo *)data;
+   info->view->render();
 }
 
 Evas_Object *
@@ -151,6 +157,7 @@ create_layout(Evas_Object *parent, const char *file)
    //IMAGE from LOTTIEVIEW
    image = view->getImage();
    evas_object_show(image);
+   evas_object_image_pixels_get_callback_set(image, _image_update_cb, info);
    elm_object_part_content_set(layout, "lottie", image);
 
    //SLIDER
