@@ -35,7 +35,7 @@ struct _AppInfo {
    Evas_Object *layout;
    Evas_Object *slider;
    Evas_Object *button;
-   Ecore_Evas *ee;
+   Ecore_Animator *animator;
    Eina_Bool autoPlaying;
 };
 
@@ -53,10 +53,7 @@ _layout_del_cb(void *data, Evas *, Evas_Object *, void *)
 {
    AppInfo *info = (AppInfo *)data;
    if (info->view) delete info->view;
-   info->view = NULL;
-
-   ecore_evas_data_set(info->ee, "AppInfo", NULL);
-
+   ecore_animator_del(info->animator);
    free(info);
 }
 
@@ -87,10 +84,10 @@ _toggle_start_button(AppInfo *info)
      }
 }
 
-static void
-_ee_pre_render_cb(Ecore_Evas *ee)
+static Eina_Bool
+_animator_cb(void *data)
 {
-    AppInfo *info = (AppInfo *)ecore_evas_data_get(ee, "AppInfo");
+    AppInfo *info = (AppInfo *)data;
 
     if (info && info->autoPlaying && info->view)
       {
@@ -102,6 +99,7 @@ _ee_pre_render_cb(Ecore_Evas *ee)
          if (pos >= 1.0)
            _toggle_start_button(info);
       }
+    return ECORE_CALLBACK_RENEW;
 }
 
 static void
@@ -131,8 +129,7 @@ Evas_Object *
 create_layout(Evas_Object *parent, const char *file)
 {
    Evas_Object *layout, *slider, *image, *button;
-   Evas *e;
-   Ecore_Evas *ee;
+   Ecore_Animator *animator;
    char buf[64];
    AppInfo *info = (AppInfo *)calloc(sizeof(AppInfo), 1);
 
@@ -154,7 +151,6 @@ create_layout(Evas_Object *parent, const char *file)
    //IMAGE from LOTTIEVIEW
    image = view->getImage();
    evas_object_show(image);
-   evas_object_size_hint_min_set(image, 500, 500);
    elm_object_part_content_set(layout, "lottie", image);
 
    //SLIDER
@@ -167,16 +163,13 @@ create_layout(Evas_Object *parent, const char *file)
    elm_object_part_content_set(layout, "button", button);
    evas_object_smart_callback_add(button, "clicked", _button_clicked_cb, (void *)info);
 
-   e = evas_object_evas_get(layout);
-   ee = ecore_evas_ecore_evas_get(e);
-   ecore_evas_data_set(ee, "AppInfo", info);
-   ecore_evas_callback_pre_render_set(ee, _ee_pre_render_cb);
+   animator = ecore_animator_add(_animator_cb, info);
 
    info->view = view;
    info->layout = layout;
    info->slider = slider;
    info->button = button;
-   info->ee = ee;
+   info->animator = animator;
    evas_object_event_callback_add(layout, EVAS_CALLBACK_DEL, _layout_del_cb, (void *)info);
 
    sprintf(buf, "%d / %ld", 0, view->getTotalFrame());

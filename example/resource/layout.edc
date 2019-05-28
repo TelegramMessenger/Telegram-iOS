@@ -1,13 +1,13 @@
 collections {
-   group { name: "layout";
+   group { "layout";
       parts {
          rect { "bg";
-            desc { state: "default" 0.0;
+            desc { "default";
                color: 225 225 225 225;
             }
          }
          spacer { "lottie_base";
-            desc { state: "default" 0.0;
+            desc { "default";
                rel1.to_y: "text";
                rel1.relative: 0.0 1.0;
                rel2.to_y: "slider";
@@ -15,15 +15,13 @@ collections {
             }
          }
          swallow { "lottie";
-            desc { state: "default" 0.0;
+            desc { "default";
                rel1.to: "lottie_base";
-               rel1.relative: 0.5 0.5;
                rel2.to: "lottie_base";
-               rel2.relative: 0.5 0.5;
             }
          }
          text { "text";
-            desc { state: "default" 0.0;
+            desc { "default";
                rel1.relative: 1.0 0.0;
                rel2.relative: 1.0 0.0;
                rel1.offset: -20 20;
@@ -39,7 +37,7 @@ collections {
             }
          }
          swallow { "slider";
-            desc { state: "default" 0.0;
+            desc { "default";
                min: 0 100;
                max: -1 100;
                align: 0.5 1.0;
@@ -51,7 +49,7 @@ collections {
             }
          }
          spacer { "left_pad";
-            desc { state: "default" 0.0;
+            desc { "default";
                fixed: 1 0;
                min: 20 0;
                align: 0.0 0.5;
@@ -59,7 +57,7 @@ collections {
             }
          }
          spacer { "right_pad";
-            desc { state: "default" 0.0;
+            desc { "default";
                fixed: 1 0;
                min: 20 0;
                align: 1.0 0.5;
@@ -67,7 +65,7 @@ collections {
             }
          }
          swallow { "button";
-            desc { state: "default" 0.0;
+            desc { "default";
                fixed: 1 1;
                min: 80 55;
                align: 1.0 0.5;
@@ -80,7 +78,7 @@ collections {
             }
          }
          spacer { "button_left_pad";
-            desc { state: "default" 0.0;
+            desc { "default";
                fixed: 1 0;
                min: 20 0;
                align: 1.0 0.5;
