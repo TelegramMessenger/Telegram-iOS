@@ -485,7 +485,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
         
         var rightNavigationButton: ItemListNavigationButton?
         var searchItem: ItemListControllerSearch?
-        if let groups = groups, !groups.isEmpty, displayGroupList {
+        if let groups = groups, groups.count >= 10, displayGroupList {
             if state.searching {
                 searchItem = ChannelDiscussionGroupSetupSearchItem(context: context, peers: groups, cancel: {
                     updateState { state in
