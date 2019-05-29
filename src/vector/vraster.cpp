@@ -463,7 +463,8 @@ void VRaster::generateFillInfo(RleShare &promise, VPath &&path, VRle &&rle,
                                             FillRule fillRule, const VRect &clip)
 {
     if (path.empty()) {
-        promise->set_value(VRle());
+        rle.reset();
+        promise->set_value(rle);
         return;
     }
     return RleTaskScheduler::instance().process(RleTask(promise, std::move(path), std::move(rle), fillRule, clip));
@@ -473,8 +474,9 @@ void VRaster::generateStrokeInfo(RleShare &promise, VPath &&path, VRle &&rle, Ca
                                  JoinStyle join, float width,
                                  float meterLimit, const VRect &clip)
 {
-    if (path.empty()) {
-        promise->set_value(VRle());
+    if (path.empty() || vCompare(width, 0.0f)) {
+        rle.reset();
+        promise->set_value(rle);
         return;
     }
     return RleTaskScheduler::instance().process(RleTask(promise, std::move(path), std::move(rle), cap, join, width, meterLimit, clip));
