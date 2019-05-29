@@ -779,9 +779,6 @@ void LOTImageLayerItem::updateContent()
         mRenderNode = std::make_unique<LOTDrawable>();
         mRenderNode->mType = VDrawable::Type::Fill;
         mRenderNode->mFlag |= VDrawable::DirtyState::All;
-        // load image
-        //@TODO find a better way to load
-        // so that can be shared by multiple layers
         VBrush brush(mLayerData->mAsset->bitmap());
         mRenderNode->setBrush(brush);
     }

@@ -398,7 +398,9 @@ struct LOTAsset
     };
     bool isStatic() const {return mStatic;}
     void setStatic(bool value) {mStatic = value;}
-    VBitmap  bitmap() const;
+    VBitmap  bitmap() const {return mBitmap;}
+    void loadImageData(std::string data);
+    void loadImagePath(std::string Path);
     Type                                      mAssetType{Type::Precomp};
     bool                                      mStatic{true};
     std::string                               mRefId; // ref id
@@ -406,8 +408,7 @@ struct LOTAsset
     // image asset data
     int                                       mWidth{0};
     int                                       mHeight{0};
-    std::string                               mImagePath;
-    std::string                               mImageData;
+    VBitmap                                   mBitmap;
 };
 
 struct LOT3DData

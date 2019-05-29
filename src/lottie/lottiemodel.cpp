@@ -323,14 +323,12 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
     }
 }
 
-VBitmap
-LOTAsset::bitmap() const
+void LOTAsset::loadImageData(std::string data)
 {
-    if (!mImageData.empty()) {
-        return VImageLoader::instance().load(mImageData.c_str(), mImageData.length());
-    } else if (!mImagePath.empty()) {
-        return VImageLoader::instance().load(mImagePath.c_str());
-    } else {
-        return VBitmap();
-    }
+    if (!data.empty()) mBitmap = VImageLoader::instance().load(data.c_str(), data.length());
+}
+
+void LOTAsset::loadImagePath(std::string path)
+{
+    if (!path.empty()) mBitmap = VImageLoader::instance().load(path.c_str());
 }

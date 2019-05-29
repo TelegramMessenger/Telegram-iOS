@@ -712,14 +712,17 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
         }
     }
 
-    if (embededResource) {
-        // embeder resource should start with "data:"
-        if (filename.find("data:", 0) == 0) {
-            asset->mImageData = convertFromBase64(filename);
+    if (asset->mAssetType == LOTAsset::Type::Image) {
+        if (embededResource) {
+            // embeder resource should start with "data:"
+            if (filename.find("data:", 0) == 0) {
+                asset->loadImageData(convertFromBase64(filename));
+            }
+        } else {
+            asset->loadImagePath(mDirPath + relativePath + filename);
         }
-    } else {
-        asset->mImagePath = mDirPath + relativePath + filename;
     }
+
     return sharedAsset;
 }
 
