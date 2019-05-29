@@ -25,6 +25,7 @@ target_compile_options(rlottie
                     PRIVATE
                         -std=c++14
                         -O2
+                        -fno-exceptions
                         -Wall
                         -Werror
                         -Wextra
