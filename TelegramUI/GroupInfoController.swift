@@ -791,7 +791,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                         entries.append(GroupInfoEntry.linkedChannelSetup(presentationData.theme, presentationData.strings.Group_LinkedChannel, peerTitle))
                     }
                 }
-                if !isPublic {
+                if !isPublic && cachedChannelData.linkedDiscussionPeerId == nil {
                     entries.append(GroupInfoEntry.preHistory(presentationData.theme, presentationData.strings.GroupInfo_GroupHistory, cachedChannelData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden))
                 }
             }
