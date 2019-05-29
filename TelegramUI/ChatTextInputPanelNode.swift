@@ -1331,7 +1331,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
        if action == Selector(("_showTextStyleOptions:")) {
             if case .general = self.inputMenu.state {
-                if let textInputNode = self.textInputNode, textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 {
+                if let textInputNode = self.textInputNode, textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 || textInputNode.selectedRange.length == 0 {
                     return ASEditableTextNodeTargetForAction(target: nil)
                 }
                 return ASEditableTextNodeTargetForAction(target: self)
