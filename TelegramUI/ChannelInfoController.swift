@@ -535,7 +535,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             }
         }
         
-        if let _ = state.editingState, let adminRights = peer.adminRights, !adminRights.isEmpty {
+        if let _ = state.editingState {
         } else {
             if peer.isScam {
                 entries.append(.about(theme: presentationData.theme, text: presentationData.strings.Channel_AboutItem, value: presentationData.strings.ChannelInfo_ScamChannelWarning))
