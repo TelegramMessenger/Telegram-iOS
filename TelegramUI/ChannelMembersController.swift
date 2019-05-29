@@ -371,6 +371,33 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                         text = presentationData.strings.Login_UnknownError
                     case .restricted:
                         text = presentationData.strings.Channel_ErrorAddBlocked
+                    case let .bot(memberId):
+                        let _ = (context.account.postbox.transaction { transaction in
+                            return transaction.getPeer(peerId)
+                        }
+                        |> deliverOnMainQueue).start(next: { peer in
+                            guard let peer = peer as? TelegramChannel else {
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                contactsController?.dismiss()
+                                
+                                return
+                            }
+                            
+                            if peer.hasPermission(.addAdmins) {
+                                contactsController?.displayProgress = false
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_AddBotErrorHaveRights, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_AddBotAsAdmin, action: {
+                                    contactsController?.dismiss()
+                                    
+                                    presentControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: memberId, initialParticipant: nil, updated: { _ in
+                                    }, upgradedToSupergroup: { _, f in f () }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                })]), nil)
+                            } else {
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_AddBotErrorHaveRights, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            }
+                            
+                            contactsController?.dismiss()
+                        })
+                        return
                 }
                 presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 contactsController?.dismiss()

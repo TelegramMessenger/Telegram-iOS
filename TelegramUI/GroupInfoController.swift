@@ -1744,7 +1744,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                         contactsController?.displayProgress = true
                         addMemberDisposable.set((addMembers(peers)
                         |> deliverOnMainQueue).start(error: { error in
-                            if peers.count == 1, error == .restricted {
+                            if peers.count == 1, case .restricted = error {
                                 switch peers[0] {
                                 case let .peer(peerId):
                                     let _ = (context.account.postbox.loadedPeerWithId(peerId)
