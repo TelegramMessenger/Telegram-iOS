@@ -22,13 +22,13 @@ private final class SelectivePrivacyPeersControllerArguments {
 }
 
 private enum SelectivePrivacyPeersSection: Int32 {
-    case peers
     case add
+    case peers
 }
 
 private enum SelectivePrivacyPeersEntryStableId: Hashable {
-    case peer(PeerId)
     case add
+    case peer(PeerId)
     
     var hashValue: Int {
         switch self {
@@ -127,10 +127,15 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
                     case let .peerItem(rhsIndex, _, _, _, _, _, _, _):
                         return index < rhsIndex
                     case .addItem:
-                        return true
+                        return false
                 }
             case .addItem:
-                return false
+                switch rhs {
+                    case .peerItem:
+                        return true
+                    default:
+                        return false
+                }
         }
     }
     
@@ -203,13 +208,13 @@ private struct SelectivePrivacyPeersControllerState: Equatable {
 private func selectivePrivacyPeersControllerEntries(presentationData: PresentationData, state: SelectivePrivacyPeersControllerState, peers: [SelectivePrivacyPeer]) -> [SelectivePrivacyPeersEntry] {
     var entries: [SelectivePrivacyPeersEntry] = []
     
+    entries.append(.addItem(presentationData.theme, presentationData.strings.Privacy_AddNewPeer, state.editing))
+    
     var index: Int32 = 0
     for peer in peers {
         entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.peer.id == state.peerIdWithRevealedOptions), true))
         index += 1
     }
-    
-    entries.append(.addItem(presentationData.theme, presentationData.strings.Privacy_AddNewPeer, state.editing))
     
     return entries
 }
@@ -221,6 +226,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
         statePromise.set(stateValue.modify { f($0) })
     }
     
+    var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     
@@ -264,6 +270,10 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
                 updatedPeerDict[peer.peer.id] = peer
             }
             updated(updatedPeerDict)
+            
+            if updatedPeerDict.isEmpty {
+                dismissImpl?()
+            }
             
             return .complete()
         }
@@ -363,6 +373,11 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
     }
     
     let controller = ItemListController(context: context, state: signal)
+    dismissImpl = { [weak controller] in
+        if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+            navigationController.filterController(controller, animated: true)
+        }
+    }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

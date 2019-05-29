@@ -46,6 +46,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case reimport(PresentationTheme)
     case resetData(PresentationTheme)
     case resetDatabase(PresentationTheme)
+    case resetHoles(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case animatedStickers(PresentationTheme)
@@ -63,7 +64,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .resetDatabase, .resetBiometricsData, .optimizeDatabase, .animatedStickers, .photoPreview, .alternateIcon:
+            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .animatedStickers, .photoPreview, .alternateIcon:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -104,18 +105,20 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 14
             case .resetDatabase:
                 return 15
-            case .resetBiometricsData:
+            case .resetHoles:
                 return 16
-            case .optimizeDatabase:
+            case .resetBiometricsData:
                 return 17
-            case .animatedStickers:
+            case .optimizeDatabase:
                 return 18
-            case .photoPreview:
+            case .animatedStickers:
                 return 19
-            case .alternateIcon:
+            case .photoPreview:
                 return 20
-            case .versionInfo:
+            case .alternateIcon:
                 return 21
+            case .versionInfo:
+                return 22
         }
     }
     
@@ -415,6 +418,21 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     ])])
                     arguments.presentController(actionSheet, nil)
                 })
+            case let .resetHoles(theme):
+                return ItemListActionItem(theme: theme, title: "Reset Holes", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    guard let context = arguments.context else {
+                        return
+                    }
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                    arguments.presentController(controller, nil)
+                    let _ = (context.account.postbox.transaction { transaction -> Void in
+                        transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)
+                    }
+                    |> deliverOnMainQueue).start(completed: {
+                        controller.dismiss()
+                    })
+                })
             case let .resetBiometricsData(theme):
                 return ItemListActionItem(theme: theme, title: "Reset Biometrics Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     let _ = updatePresentationPasscodeSettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
@@ -494,6 +512,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     }
     entries.append(.resetData(presentationData.theme))
     entries.append(.resetDatabase(presentationData.theme))
+    entries.append(.resetHoles(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.alternateIcon(presentationData.theme))
