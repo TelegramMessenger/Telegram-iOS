@@ -437,7 +437,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         
         var authorNameText: String?
         
-        if let author = message.author {
+        if let author = message.effectiveAuthor {
             authorNameText = author.displayTitle
         } else if let peer = message.peers[message.id.peerId] {
             authorNameText = peer.displayTitle
