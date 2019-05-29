@@ -4308,6 +4308,8 @@ Sorry for the inconvenience.";
 "Channel.DiscussionGroup.PrivateChannelLink" = "Do you want to make %1$@ the discussion board for %2$@?
 
 Any member of this group will be able to see messages in the channel.";
+"Channel.DiscussionGroup.MakeHistoryPublic" = "Warning: If you set this private group as the disccussion group for your channel, all channel subscribers will be able to access the group. \"Chat history for new members\" will be switched to Visible.";
+"Channel.DiscussionGroup.MakeHistoryPublicProceed" = "Proceed";
 
 "Channel.DiscussionGroup.SearchPlaceholder" = "Search";
 
