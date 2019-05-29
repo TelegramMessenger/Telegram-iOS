@@ -177,6 +177,7 @@ public final class PresentationCall {
     private var receptionDisposable: Disposable?
     private var reportedIncomingCall = false
     
+    private var callWasActive = false
     private var shouldPresentCallRating = false
     
     private var sessionStateDisposable: Disposable?
@@ -423,14 +424,16 @@ public final class PresentationCall {
                     }
                 }
             case .accepting:
+                self.callWasActive = true
                 presentationState = .connecting(nil)
             case .dropping:
                 presentationState = .terminating
             case let .terminated(id, reason, options):
-                presentationState = .terminated(id, reason, options.contains(.reportRating) || self.shouldPresentCallRating)
+                presentationState = .terminated(id, reason, self.callWasActive && (options.contains(.reportRating) || self.shouldPresentCallRating))
             case let .requesting(ringing):
                 presentationState = .requesting(ringing)
             case let .active(_, _, keyVisualHash, _, _, _):
+                self.callWasActive = true
                 if let callContextState = callContextState {
                     switch callContextState {
                         case .initializing:
