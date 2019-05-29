@@ -115,7 +115,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                 var uniquePeerIds = Set<PeerId>()
                 var text = ""
                 for message in messages {
-                    if let author = message.author, !uniquePeerIds.contains(author.id) {
+                    if let author = message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
                         uniquePeerIds.insert(author.id)
                         if !authors.isEmpty {
                             authors.append(", ")

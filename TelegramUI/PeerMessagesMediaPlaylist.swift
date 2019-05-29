@@ -108,7 +108,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                 switch attribute {
                     case let .Audio(isVoice, _, title, performer, _):
                         if isVoice {
-                            return SharedMediaPlaybackDisplayData.voice(author: self.message.author, peer: self.message.peers[self.message.id.peerId])
+                            return SharedMediaPlaybackDisplayData.voice(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId])
                         } else {
                             var updatedTitle = title
                             let updatedPerformer = performer
@@ -119,7 +119,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                         }
                     case let .Video(_, _, flags):
                         if flags.contains(.instantRoundVideo) {
-                            return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.author, peer: self.message.peers[self.message.id.peerId], timestamp: self.message.timestamp)
+                            return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId], timestamp: self.message.timestamp)
                         } else {
                             return nil
                         }
@@ -128,7 +128,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                 }
             }
             
-            return SharedMediaPlaybackDisplayData.music(title: file.fileName ?? "", performer: self.message.author?.displayTitle ?? "", albumArt: nil)
+            return SharedMediaPlaybackDisplayData.music(title: file.fileName ?? "", performer: self.message.effectiveAuthor?.displayTitle ?? "", albumArt: nil)
         }
         return nil
     }

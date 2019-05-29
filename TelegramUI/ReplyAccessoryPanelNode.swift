@@ -67,7 +67,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
             if let strongSelf = self {
                 var authorName = ""
                 var text = ""
-                if let author = message?.author {
+                if let author = message?.effectiveAuthor {
                     authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
                 if let message = message {
