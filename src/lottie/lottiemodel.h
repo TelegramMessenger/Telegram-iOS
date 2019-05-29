@@ -480,7 +480,6 @@ public:
     };
 
     MatteType            mMatteType{MatteType::None};
-    VRect                mBound;
     LayerType            mLayerType{LayerType::Null}; //lottie layer type  (solid/shape/precomp)
     int                  mParentId{-1}; // Lottie the id of the parent in the composition
     int                  mId{-1};  // Lottie the group id  used for parenting.

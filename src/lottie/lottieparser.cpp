@@ -198,7 +198,6 @@ public:
     bool IsValid() { return st_ != kError; }
 
     void                  Skip(const char *key);
-    VRect                 getRect();
     LottieBlendMode       getBlendMode();
     CapStyle              getLineCap();
     JoinStyle             getLineJoin();
@@ -531,30 +530,6 @@ LottieBlendMode LottieParserImpl::getBlendMode()
         break;
     }
     return mode;
-}
-VRect LottieParserImpl::getRect()
-{
-    VRect r;
-    RAPIDJSON_ASSERT(PeekType() == kObjectType);
-    EnterObject();
-    while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "l")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
-            r.setLeft(GetInt());
-        } else if (0 == strcmp(key, "r")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
-            r.setRight(GetInt());
-        } else if (0 == strcmp(key, "t")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
-            r.setTop(GetInt());
-        } else if (0 == strcmp(key, "b")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
-            r.setBottom(GetInt());
-        } else {
-            RAPIDJSON_ASSERT(false);
-        }
-    }
-    return r;
 }
 
 void LottieParserImpl::resolveLayerRefs()
@@ -891,8 +866,6 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
         } else if (0 == strcmp(key, "st")) {
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
             layer->mStartFrame = GetDouble();
-        } else if (0 == strcmp(key, "bounds")) {
-            layer->mBound = getRect();
         } else if (0 == strcmp(key, "bm")) {
             layer->mBlendMode = getBlendMode();
         } else if (0 == strcmp(key, "ks")) {
