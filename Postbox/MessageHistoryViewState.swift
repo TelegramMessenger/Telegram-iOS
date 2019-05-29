@@ -664,7 +664,7 @@ struct OrderedHistoryViewEntries {
             }
         }
         if fix {
-            assertionFailure()
+            //assertionFailure()
             self.lowerOrAtAnchor.sort(by: { $0.index.id.id < $1.index.id.id })
             self.higherThanAnchor.sort(by: { $0.index.id.id < $1.index.id.id })
         }
