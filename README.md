@@ -9,7 +9,7 @@ Lottie loads and renders animations and vectors exported in the bodymovin JSON f
 
 For the first time, designers can create and ship beautiful animations without an engineer painstakingly recreating it by hand. Since the animation is backed by JSON they are extremely small in size but can be large in complexity! 
 
-Here is just a small sampling of the power of Lottie
+Here are small samples of the power of Lottie.
 
 ![Example1](.Gifs/1.gif)
 ![Example2](.Gifs/2.gif)
