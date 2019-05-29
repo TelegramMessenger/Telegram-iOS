@@ -69,6 +69,7 @@ public enum AddChannelMemberError {
     case generic
     case restricted
     case limitExceeded
+    case bot(PeerId)
 }
 
 public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
@@ -94,6 +95,8 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                                 return .fail(.limitExceeded)
                             case "USER_PRIVACY_RESTRICTED":
                                 return .fail(.restricted)
+                            case "USER_BOT":
+                                return .fail(.bot(memberId))
                             default:
                                 return .fail(.generic)
                         }
