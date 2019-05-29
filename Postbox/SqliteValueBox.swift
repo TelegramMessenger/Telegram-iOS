@@ -1598,6 +1598,24 @@ public final class SqliteValueBox: ValueBox {
         }
     }
     
+    public func scanInt64(_ table: ValueBoxTable, keys: (Int64) -> Bool) {
+        precondition(self.queue.isCurrent())
+        
+        if let _ = self.tables[table.id] {
+            let statement: SqlitePreparedStatement = self.scanKeysStatement(table)
+            
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
+                let key = statement.int64KeyValueAt(0)
+                
+                if !keys(key) {
+                    break
+                }
+            }
+            
+            statement.reset()
+        }
+    }
+    
     public func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) {
         precondition(self.queue.isCurrent())
         let sqliteTable = self.checkTable(table)

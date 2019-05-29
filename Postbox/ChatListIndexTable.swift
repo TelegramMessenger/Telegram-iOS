@@ -161,6 +161,15 @@ final class ChatListIndexTable: Table {
         }
     }
     
+    func getAllPeerIds() -> [PeerId] {
+        var peerIds: [PeerId] = []
+        self.valueBox.scanInt64(self.table, keys: { key in
+            peerIds.append(PeerId(key))
+            return true
+        })
+        return peerIds
+    }
+    
     override func clearMemoryCache() {
         self.cachedPeerIndices.removeAll()
         assert(self.updatedPreviousPeerCachedIndices.isEmpty)

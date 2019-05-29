@@ -70,6 +70,7 @@ public protocol ValueBox {
     func scan(_ table: ValueBoxTable, values: (ValueBoxKey, ReadBuffer) -> Bool)
     func scan(_ table: ValueBoxTable, keys: (ValueBoxKey) -> Bool)
     func scanInt64(_ table: ValueBoxTable, values: (Int64, ReadBuffer) -> Bool)
+    func scanInt64(_ table: ValueBoxTable, keys: (Int64) -> Bool)
     func get(_ table: ValueBoxTable, key: ValueBoxKey) -> ReadBuffer?
     func read(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void) -> Void)
     func readWrite(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void, (UnsafeRawPointer, Int, Int) -> Void) -> Void)
