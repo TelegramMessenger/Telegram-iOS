@@ -11,7 +11,9 @@ For the first time, designers can create and ship beautiful animations without a
 
 Here is just a small sampling of the power of Lottie
 
-![Example1](https://github.com/airbnb/lottie-ios/blob/master/_Gifs/Examples1.gif)
+![Example1](.Gifs/1.gif)
+![Example2](.Gifs/2.gif)
+![Example2](https://github.com/airbnb/lottie-ios/blob/master/_Gifs/Examples1.gif)
 
 ## Contents
 - [Building Lottie](#building-lottie)
