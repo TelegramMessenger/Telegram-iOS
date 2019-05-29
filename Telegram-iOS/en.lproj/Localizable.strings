@@ -4327,3 +4327,7 @@ Any member of this group will be able to see messages in the channel.";
 "TextFormat.AddLinkTitle" = "Add Link";
 "TextFormat.AddLinkText" = "The link will be displayed as \"%@\".";
 "TextFormat.AddLinkPlaceholder" = "URL";
+
+"Channel.AddBotErrorHaveRights" = "Bots can only be added as administrators.";
+"Channel.AddBotAsAdmin" = "Make Admin";
+"Channel.AddBotErrorNoRights" = "Sorry, bots can only be added to channels as administrators.";
