@@ -80,7 +80,7 @@ struct PresentationResourcesItemList {
             }
             return generateImage(image.size, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(UIColor.white.cgColor)
+                context.setFillColor(theme.rootController.tabBar.badgeTextColor.cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: 2, y: 2), size: CGSize(width: size.width - 4.0, height: size.height - 4.0)))
                 context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
             })
@@ -119,7 +119,7 @@ struct PresentationResourcesItemList {
             }
             return generateImage(image.size, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(UIColor.white.cgColor)
+                context.setFillColor(theme.rootController.tabBar.badgeTextColor.cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: 2, y: 2), size: CGSize(width: size.width - 4.0, height: size.height - 4.0)))
                 context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
             })

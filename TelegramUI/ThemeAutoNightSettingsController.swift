@@ -509,8 +509,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         }
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, sharedData, stagingSettingsPromise.get())
-    |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData |> deliverOnMainQueue, sharedData |> deliverOnMainQueue, stagingSettingsPromise.get() |> deliverOnMainQueue)
     |> map { presentationData, sharedData, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         

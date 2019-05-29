@@ -150,10 +150,6 @@ final class StickersChatInputContextPanelItemNode: ListViewItemNode {
         return nil
     }
     
-//    func transitionNode() -> ASDisplayNode? {
-//        return self.imageNode
-//    }
-//    
     func updatePreviewing(animated: Bool) {
         guard let item = self.item else {
             return
