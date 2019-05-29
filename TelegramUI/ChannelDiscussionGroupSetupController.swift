@@ -298,12 +298,16 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     actionSheet?.dismissAnimated()
                     
                     var applySignal: Signal<Bool, ChannelDiscussionGroupError>
+                    var updatedPeerId: PeerId? = nil
                     if let legacyGroup = groupPeer as? TelegramGroup {
                         applySignal = convertGroupToSupergroup(account: context.account, peerId: legacyGroup.id)
                         |> mapError { _ -> ChannelDiscussionGroupError in
                             return .generic
                         }
+                        |> deliverOnMainQueue
                         |> mapToSignal { resultPeerId -> Signal<Bool, ChannelDiscussionGroupError> in
+                            updatedPeerId = resultPeerId
+                            
                             return context.account.postbox.transaction { transaction -> Signal<Bool, ChannelDiscussionGroupError> in
                                 if let groupPeer = transaction.getPeer(resultPeerId) {
                                     let _ = (groupPeers.get()
@@ -358,14 +362,75 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     }
                     
                     applyGroupDisposable.set((applySignal
-                    |> deliverOnMainQueue).start(error: { _ in
-                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                        
-                        updateState { state in
-                            var state = state
-                            state.searching = false
-                            return state
+                    |> deliverOnMainQueue).start(error: { error in
+                        switch error {
+                            case .generic:
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                
+                                updateState { state in
+                                    var state = state
+                                    state.searching = false
+                                    return state
+                                }
+                            case .groupHistoryIsCurrentlyPrivate:
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_DiscussionGroup_MakeHistoryPublic, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_DiscussionGroup_MakeHistoryPublicProceed, action: {
+                                    var applySignal: Signal<Bool, ChannelDiscussionGroupError> = updateChannelHistoryAvailabilitySettingsInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: updatedPeerId ?? groupId, historyAvailableForNewMembers: true)
+                                    |> mapError { _ -> ChannelDiscussionGroupError in
+                                        return .generic
+                                    }
+                                    |> mapToSignal { _ -> Signal<Bool, ChannelDiscussionGroupError> in
+                                        return .complete()
+                                    }
+                                    |> then(
+                                        updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: updatedPeerId ?? groupId)
+                                    )
+                                    var cancelImpl: (() -> Void)?
+                                    let progressSignal = Signal<Never, NoError> { subscriber in
+                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                                            cancelImpl?()
+                                        }))
+                                        presentControllerImpl?(controller, nil)
+                                        return ActionDisposable { [weak controller] in
+                                            Queue.mainQueue().async() {
+                                                controller?.dismiss()
+                                            }
+                                        }
+                                    }
+                                    |> runOn(Queue.mainQueue())
+                                    |> delay(0.15, queue: Queue.mainQueue())
+                                    let progressDisposable = progressSignal.start()
+                                    
+                                    applySignal = applySignal
+                                    |> afterDisposed {
+                                        Queue.mainQueue().async {
+                                            progressDisposable.dispose()
+                                        }
+                                    }
+                                    cancelImpl = {
+                                        applyGroupDisposable.set(nil)
+                                    }
+                                    
+                                    applyGroupDisposable.set((applySignal
+                                    |> deliverOnMainQueue).start(error: { _ in
+                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        
+                                        updateState { state in
+                                            var state = state
+                                            state.searching = false
+                                            return state
+                                        }
+                                    }, completed: {
+                                        updateState { state in
+                                            var state = state
+                                            state.searching = false
+                                            return state
+                                        }
+                                    }))
+                                })]), nil)
                         }
                     }, completed: {
                         updateState { state in
