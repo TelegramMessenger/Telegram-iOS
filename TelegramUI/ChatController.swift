@@ -664,7 +664,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             return $0
                         }
                     })
-                    
                     strongSelf.messageActionUrlAuthDisposable.set(((combineLatest(strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.context.account.peerId), requestMessageActionUrlAuth(account: strongSelf.context.account, messageId: messageId, buttonId: buttonId) |> afterDisposed {
                         Queue.mainQueue().async {
                             if let strongSelf = self {
@@ -751,6 +750,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                             }
                                         }
                                     })
+                                    strongSelf.chatDisplayNode.dismissInput()
                                     strongSelf.present(controller, in: .window(.root))
                                 case let .accepted(url):
                                     strongSelf.openUrl(url, concealed: false)

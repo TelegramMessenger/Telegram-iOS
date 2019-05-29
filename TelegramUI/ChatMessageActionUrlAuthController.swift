@@ -142,11 +142,13 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         self.authorizeCheckNode.setIsChecked(true, animated: false)
         self.authorizeLabelNode = ASTextNode()
         self.authorizeLabelNode.maximumNumberOfLines = 2
+        self.authorizeLabelNode.isUserInteractionEnabled = true
         
         self.allowWriteCheckNode = CheckNode(strokeColor: theme.separatorColor, fillColor: theme.accentColor, foregroundColor: .white, style: .plain)
         self.allowWriteCheckNode.setIsChecked(true, animated: false)
         self.allowWriteLabelNode = ASTextNode()
         self.allowWriteLabelNode.maximumNumberOfLines = 2
+        self.allowWriteLabelNode.isUserInteractionEnabled = true
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -193,8 +195,25 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         self.updateTheme(theme)
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.authorizeLabelNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.authorizeTap(_:))))
+        self.allowWriteLabelNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.allowWriteTap(_:))))
+    }
+    
     @objc private func authorizePressed() {
         self.authorize = !self.authorize
+    }
+    
+    @objc private func authorizeTap(_ gestureRecognizer: UITapGestureRecognizer) {
+         self.authorize = !self.authorize
+    }
+    
+    @objc private func allowWriteTap(_ gestureRecognizer: UITapGestureRecognizer) {
+        if self.allowWriteCheckNode.isUserInteractionEnabled {
+            self.allowWriteAccess = !self.allowWriteAccess
+        }
     }
     
     @objc private func allowWritePressed() {

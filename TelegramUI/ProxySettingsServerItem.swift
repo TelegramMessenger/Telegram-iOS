@@ -395,7 +395,7 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                         transition.updateFrame(node: strongSelf.infoIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - params.rightInset - 55.0 + floor((55.0 - infoImage.size.width) / 2.0), y: floor((layout.contentSize.height - infoImage.size.height) / 2.0)), size: infoImage.size))
                     }
                     
-                    strongSelf.infoButtonNode.isUserInteractionEnabled = revealOffset.isZero
+                    strongSelf.infoButtonNode.isUserInteractionEnabled = revealOffset.isZero && !item.editing.editing
                     strongSelf.infoButtonNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 55.0, y: 0.0), size: CGSize(width: 55.0, height: layout.contentSize.height))
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 64.0 + UIScreenPixel + UIScreenPixel))
