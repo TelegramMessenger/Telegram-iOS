@@ -9,9 +9,12 @@
 class GifBuilder {
 public:
     explicit GifBuilder(const std::string &fileName , const uint32_t width,
-                        const uint32_t height, const uint32_t delay = 2)
+                        const uint32_t height, const int bgColor=0xffffffff, const uint32_t delay = 2)
     {
         GifBegin(&handle, fileName.c_str(), width, height, delay);
+        bgColorR = (uint8_t) ((bgColor & 0xff0000) >> 16);
+        bgColorG = (uint8_t) ((bgColor & 0x00ff00) >> 8);
+        bgColorB = (uint8_t) ((bgColor & 0x0000ff));
     }
     ~GifBuilder()
     {
@@ -40,13 +43,12 @@ public:
                unsigned char b = buffer[i];
 
                if (a != 255) { //un premultiply
-                  r = (r * 255) / a;
-                  g = (g * 255) / a;
-                  b = (b * 255) / a;
-
-                  buffer[i] = r;
-                  buffer[i+1] = g;
-                  buffer[i+2] = b;
+                   unsigned char r2 = (unsigned char) ((float) bgColorR * ((float) (255 - a) / 255));
+                   unsigned char g2 = (unsigned char) ((float) bgColorG * ((float) (255 - a) / 255));
+                   unsigned char b2 = (unsigned char) ((float) bgColorB * ((float) (255 - a) / 255));
+                   buffer[i] = r + r2;
+                   buffer[i+1] = g + g2;
+                   buffer[i+2] = b + b2;
 
                } else {
                  // only swizzle r and b
@@ -54,15 +56,16 @@ public:
                  buffer[i+2] = b;
                }
            } else {
-               buffer[i+2] = 255;
-               buffer[i+1] = 255;
-               buffer[i] = 255;
+               buffer[i+2] = bgColorB;
+               buffer[i+1] = bgColorG;
+               buffer[i] = bgColorR;
            }
         }
     }
 
 private:
     GifWriter      handle;
+    uint8_t bgColorR, bgColorG, bgColorB;
 };
 
 class App {
@@ -75,7 +78,7 @@ public:
         auto buffer = std::unique_ptr<uint32_t[]>(new uint32_t[w * h]);
         size_t frameCount = player->totalFrame();
 
-        GifBuilder builder(baseName.data(), w, h);
+        GifBuilder builder(baseName.data(), w, h, bgColor);
         for (size_t i = 0; i < frameCount ; i++) {
             rlottie::Surface surface(buffer.get(), w, h, w * 4);
             player->renderSync(i, surface);
@@ -87,6 +90,7 @@ public:
     int setup(int argc, char **argv)
     {
         if (argc > 1) fileName = argv[1];
+        if (argc > 2) bgColor = strtol(argv[2], NULL, 16);
 
         if (!fileName) return help();
 
@@ -114,12 +118,13 @@ private:
     }
 
     int help() {
-        std::cout<<"Usage: \n   lottie2gif [lottieFileName]\n";
+        std::cout<<"Usage: \n   lottie2gif [lottieFileName] [bgColor]\n\nExamples: \n    $ lottie2gif input.json\n    $ lottie2gif input.json ff00ff\n\n";
         return 1;
     }
 
 private:
     char *fileName{nullptr};
+    int bgColor = 0xffffffff;
     std::array<char, 5000> absoloutePath;
     std::array<char, 5000> baseName;
 };
