@@ -2,6 +2,7 @@
 #import "TGWatchCommon.h"
 #import "TGStringUtils.h"
 
+#import "TGBridgeContext.h"
 #import "TGBridgeBotSignals.h"
 #import "TGBridgeUserInfoSignals.h"
 #import "TGBridgePeerSettingsSignals.h"
@@ -318,6 +319,10 @@ NSString *const TGUserInfoControllerIdentifier = @"TGUserInfoController";
 
 - (void)updateMenuItems
 {
+    if (_context.userId == _context.context.userId) {
+        return;
+    }
+    
     [_menu clearItems];
     
     if (_menu == nil)
