@@ -78,8 +78,7 @@
 		096C98C021787C6700C211FF /* TGBridgeAudioEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */; };
 		096C98C121787C6700C211FF /* TGBridgeAudioDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BD21787C6700C211FF /* TGBridgeAudioDecoder.h */; };
 		096C98C221787C6700C211FF /* TGBridgeAudioDecoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 096C98BE21787C6700C211FF /* TGBridgeAudioDecoder.mm */; };
-		09749BC321F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC221F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift */; };
-		09749BC521F0E024008FDDE9 /* StickersChatInputPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC421F0E024008FDDE9 /* StickersChatInputPanelItem.swift */; };
+		09749BC521F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC421F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift */; };
 		09749BC921F1BBA1008FDDE9 /* CallFeedbackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC821F1BBA1008FDDE9 /* CallFeedbackController.swift */; };
 		09749BCD21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BCC21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift */; };
 		09749BCF21F236F2008FDDE9 /* ModernCheckNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BCE21F236F2008FDDE9 /* ModernCheckNode.swift */; };
@@ -989,8 +988,7 @@
 		D0EC6DCB1EB9F58900EBF1C3 /* ChatMediaInputTrendingPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AEC1E9FF1AD006F2541 /* ChatMediaInputTrendingPane.swift */; };
 		D0EC6DCC1EB9F58900EBF1C3 /* ChatButtonKeyboardInputNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C932351E0988C60074F044 /* ChatButtonKeyboardInputNode.swift */; };
 		D0EC6DCD1EB9F58900EBF1C3 /* ChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C991D81FF3F008AEB01 /* ChatInputContextPanelNode.swift */; };
-		D0EC6DCE1EB9F58900EBF1C3 /* HorizontalStickersChatContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAE11E447AD500A2CD3A /* HorizontalStickersChatContextPanelNode.swift */; };
-		D0EC6DCF1EB9F58900EBF1C3 /* HorizontalStickerGridItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAE31E44949F00A2CD3A /* HorizontalStickerGridItem.swift */; };
+		D0EC6DCE1EB9F58900EBF1C3 /* StickersChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAE11E447AD500A2CD3A /* StickersChatInputContextPanelNode.swift */; };
 		D0EC6DD01EB9F58900EBF1C3 /* HashtagChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C971D81FF28008AEB01 /* HashtagChatInputContextPanelNode.swift */; };
 		D0EC6DD11EB9F58900EBF1C3 /* HashtagChatInputPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0CA01D821B28008AEB01 /* HashtagChatInputPanelItem.swift */; };
 		D0EC6DD21EB9F58900EBF1C3 /* MentionChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0CA31D82BCD0008AEB01 /* MentionChatInputContextPanelNode.swift */; };
@@ -1283,8 +1281,7 @@
 		096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioEncoder.h; sourceTree = "<group>"; };
 		096C98BD21787C6700C211FF /* TGBridgeAudioDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioDecoder.h; sourceTree = "<group>"; };
 		096C98BE21787C6700C211FF /* TGBridgeAudioDecoder.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGBridgeAudioDecoder.mm; sourceTree = "<group>"; };
-		09749BC221F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickersChatInputContextPanelNode.swift; sourceTree = "<group>"; };
-		09749BC421F0E024008FDDE9 /* StickersChatInputPanelItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickersChatInputPanelItem.swift; sourceTree = "<group>"; };
+		09749BC421F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickersChatInputContextPanelItem.swift; sourceTree = "<group>"; };
 		09749BC821F1BBA1008FDDE9 /* CallFeedbackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallFeedbackController.swift; sourceTree = "<group>"; };
 		09749BCC21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryDecorationNode.swift; sourceTree = "<group>"; };
 		09749BCE21F236F2008FDDE9 /* ModernCheckNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModernCheckNode.swift; sourceTree = "<group>"; };
@@ -1679,8 +1676,7 @@
 		D048EA8A1F4F298A00188713 /* InstantPageSettingsThemeItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsThemeItemNode.swift; sourceTree = "<group>"; };
 		D048EA8C1F4F299A00188713 /* InstantPageSettingsSwitchItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsSwitchItemNode.swift; sourceTree = "<group>"; };
 		D048EA8E1F4F2A9C00188713 /* InstantPageSettingsItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsItemNode.swift; sourceTree = "<group>"; };
-		D049EAE11E447AD500A2CD3A /* HorizontalStickersChatContextPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalStickersChatContextPanelNode.swift; sourceTree = "<group>"; };
-		D049EAE31E44949F00A2CD3A /* HorizontalStickerGridItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalStickerGridItem.swift; sourceTree = "<group>"; };
+		D049EAE11E447AD500A2CD3A /* StickersChatInputContextPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickersChatInputContextPanelNode.swift; sourceTree = "<group>"; };
 		D049EAE51E44AD5600A2CD3A /* ChatMediaInputMetaSectionItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMediaInputMetaSectionItemNode.swift; sourceTree = "<group>"; };
 		D049EAED1E44BB3200A2CD3A /* ChatListRecentPeersListItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListRecentPeersListItem.swift; sourceTree = "<group>"; };
 		D049EAF21E44DE2500A2CD3A /* AuthorizationSequenceController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceController.swift; sourceTree = "<group>"; };
@@ -3196,10 +3192,8 @@
 		D049EAE01E447AB700A2CD3A /* Stickers */ = {
 			isa = PBXGroup;
 			children = (
-				D049EAE11E447AD500A2CD3A /* HorizontalStickersChatContextPanelNode.swift */,
-				D049EAE31E44949F00A2CD3A /* HorizontalStickerGridItem.swift */,
-				09749BC221F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift */,
-				09749BC421F0E024008FDDE9 /* StickersChatInputPanelItem.swift */,
+				D049EAE11E447AD500A2CD3A /* StickersChatInputContextPanelNode.swift */,
+				09749BC421F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift */,
 			);
 			name = Stickers;
 			sourceTree = "<group>";
@@ -5458,7 +5452,6 @@
 				092F36902157AB46001A9F49 /* ItemListCallListItem.swift in Sources */,
 				D0EC6CC61EB9F58800EBF1C3 /* PresenceStrings.swift in Sources */,
 				D0EC6CC71EB9F58800EBF1C3 /* PeerNotificationSoundStrings.swift in Sources */,
-				09749BC321F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift in Sources */,
 				D01C06C01FBF118A001561AB /* MessageUtils.swift in Sources */,
 				D0104F281F47171F004E4881 /* InstantPageGalleryController.swift in Sources */,
 				D0EC6CC81EB9F58800EBF1C3 /* ProgressiveImage.swift in Sources */,
@@ -6057,10 +6050,9 @@
 				D0EC6DCD1EB9F58900EBF1C3 /* ChatInputContextPanelNode.swift in Sources */,
 				D0F8C399201774AF00236FC5 /* FeedGroupingControllerNode.swift in Sources */,
 				D0EEE9A12165585F001292A6 /* DocumentPreviewController.swift in Sources */,
-				D0EC6DCE1EB9F58900EBF1C3 /* HorizontalStickersChatContextPanelNode.swift in Sources */,
+				D0EC6DCE1EB9F58900EBF1C3 /* StickersChatInputContextPanelNode.swift in Sources */,
 				D0BCC3D2203F0A6C008126C2 /* StringForMessageTimestampStatus.swift in Sources */,
-				09749BC521F0E024008FDDE9 /* StickersChatInputPanelItem.swift in Sources */,
-				D0EC6DCF1EB9F58900EBF1C3 /* HorizontalStickerGridItem.swift in Sources */,
+				09749BC521F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift in Sources */,
 				D0EC6DD01EB9F58900EBF1C3 /* HashtagChatInputContextPanelNode.swift in Sources */,
 				09B4EE5621A8149C00847FA6 /* ItemListInfoItem.swift in Sources */,
 				D0EC6DD11EB9F58900EBF1C3 /* HashtagChatInputPanelItem.swift in Sources */,

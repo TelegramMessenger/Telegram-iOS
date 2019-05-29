@@ -656,8 +656,6 @@ func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttributedStri
                 
                 let substring = string.substring(with: match.range(at: 1)) + text + string.substring(with: match.range(at: 5))
                 result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.monospace: true as NSNumber]))
-                //newText.append()
-                //attributes.append(.pre(matchIndex + match.range(at: 1).length ..< matchIndex + match.range(at: 1).length + text.length))
                 offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 1).length, text.count), 6))
             }
             
@@ -690,7 +688,7 @@ func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttributedStri
         }
         
         if string.length > 0 {
-            result.append(text.attributedSubstring(from: NSMakeRange(stringOffset, string.length - stringOffset)))
+            result.append(text.attributedSubstring(from: NSMakeRange(text.length - string.length, string.length)))
         }
             
         return result

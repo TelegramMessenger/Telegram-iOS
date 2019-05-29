@@ -32,7 +32,12 @@ extension CharacterSet {
 }
 
 func isValidUrl(_ url: String) -> Bool {
-    if let url = URL(string: url), ["http", "https"].contains(url.scheme), let host = url.host, host.contains(".") {
+    if let url = URL(string: url), ["http", "https"].contains(url.scheme), let host = url.host, host.contains(".") && url.user == nil {
+        let components = host.components(separatedBy: ".")
+        let domain = (components.first ?? "")
+        if domain.isEmpty {
+            return false
+        }
         return true
     } else {
         return false

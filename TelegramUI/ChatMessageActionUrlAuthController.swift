@@ -224,16 +224,17 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var size = size
         size.width = min(size.width, 270.0)
+        let measureSize = CGSize(width: size.width - 16.0 * 2.0, height: CGFloat.greatestFiniteMagnitude)
         
         self.validLayout = size
         
         var origin: CGPoint = CGPoint(x: 0.0, y: 20.0)
         
-        let titleSize = self.titleNode.measure(size)
+        let titleSize = self.titleNode.measure(measureSize)
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
         origin.y += titleSize.height + 9.0
         
-        let textSize = self.textNode.measure(size)
+        let textSize = self.textNode.measure(measureSize)
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
         origin.y += textSize.height + 16.0
         
