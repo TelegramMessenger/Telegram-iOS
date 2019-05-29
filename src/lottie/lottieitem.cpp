@@ -502,18 +502,11 @@ void LOTLayerItem::update(int frameNumber, const VMatrix &parentMatrix,
     mDirtyFlag = DirtyFlagBit::None;
 }
 
-float LOTLayerItem::opacity(int frameNo) const
-{
-    return mLayerData->mTransform->opacity(frameNo);
-}
-
 VMatrix LOTLayerItem::matrix(int frameNo) const
 {
-    if (mParentLayer)
-        return mLayerData->mTransform->matrix(frameNo, mLayerData->autoOrient()) *
-               mParentLayer->matrix(frameNo);
-    else
-        return mLayerData->mTransform->matrix(frameNo, mLayerData->autoOrient());
+    return mParentLayer ?
+               (mLayerData->matrix(frameNo) * mParentLayer->matrix(frameNo)) :
+                mLayerData->matrix(frameNo);
 }
 
 bool LOTLayerItem::visible() const

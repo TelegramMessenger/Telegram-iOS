@@ -410,6 +410,40 @@ struct LOTAsset
     std::string                               mImageData;
 };
 
+struct LOT3DData
+{
+    LOTAnimatable<float>     mRx{0};
+    LOTAnimatable<float>     mRy{0};
+    LOTAnimatable<float>     mRz{0};
+};
+
+class LOTTransformData : public LOTData
+{
+public:
+    LOTTransformData():LOTData(LOTData::Type::Transform),mScale({100, 100}){}
+    VMatrix matrix(int frameNo, bool autoOrient = false) const;
+    float opacity(int frameNo) const { return mOpacity.value(frameNo)/100;}
+    void cacheMatrix();
+    bool staticMatrix() const {return mStaticMatrix;}
+    bool ddd() const {return m3D ? true : false;}
+private:
+    VMatrix computeMatrix(int frameNo, bool autoOrient = false) const;
+public:
+    std::unique_ptr<LOT3DData>    m3D;
+    LOTAnimatable<float>          mRotation{0};  /* "r" */
+    LOTAnimatable<VPointF>        mScale;     /* "s" */
+    LOTAnimatable<VPointF>        mPosition;  /* "p" */
+    LOTAnimatable<float>          mX{0};
+    LOTAnimatable<float>          mY{0};
+    LOTAnimatable<VPointF>        mAnchor;    /* "a" */
+    LOTAnimatable<float>          mOpacity{100};   /* "o" */
+    LOTAnimatable<float>          mSkew{0};      /* "sk" */
+    LOTAnimatable<float>          mSkewAxis{0};  /* "sa" */
+    bool                          mStaticMatrix{true};
+    bool                          mSeparate{false};
+    VMatrix                       mCachedMatrix;
+};
+
 class LOTLayerData : public LOTGroupData
 {
 public:
@@ -418,7 +452,6 @@ public:
     bool hasGradient() const noexcept {return mHasGradient;}
     bool hasMask() const noexcept {return mHasMask;}
     bool hasRepeater() const noexcept {return mHasRepeater;}
-    bool root() const noexcept {return mRoot;}
     int id() const noexcept{ return mId;}
     int parentId() const noexcept{ return mParentId;}
     int inFrame() const noexcept{return mInFrame;}
@@ -431,6 +464,14 @@ public:
     int timeRemap(int frameNo) const;
     VSize layerSize() const {return mLayerSize;}
     bool precompLayer() const {return mLayerType == LayerType::Precomp;}
+    VMatrix matrix(int frameNo) const
+    {
+        return mTransform ? mTransform->matrix(frameNo, autoOrient()) : VMatrix{};
+    }
+    float opacity(int frameNo) const
+    {
+        return mTransform ? mTransform->opacity(frameNo) : 1.0f;
+    }
 public:
     struct SolidLayer {
         int            mWidth{0};
@@ -456,7 +497,6 @@ public:
     bool                 mHasMask{false};
     bool                 mHasRepeater{false};
     bool                 mHasGradient{false};
-    bool                 mRoot{false};
     bool                 mAutoOrient{false};
     std::vector<std::shared_ptr<LOTMaskData>>  mMasks;
     LOTCompositionData   *mCompRef{nullptr};
@@ -527,40 +567,6 @@ inline int LOTLayerData::timeRemap(int frameNo) const
      * child layers or not. */
     return frameNo / mTimeStreatch;
 }
-
-struct LOT3DData
-{
-    LOTAnimatable<float>     mRx{0};
-    LOTAnimatable<float>     mRy{0};
-    LOTAnimatable<float>     mRz{0};
-};
-
-class LOTTransformData : public LOTData
-{
-public:
-    LOTTransformData():LOTData(LOTData::Type::Transform),mScale({100, 100}){}
-    VMatrix matrix(int frameNo, bool autoOrient = false) const;
-    float opacity(int frameNo) const { return mOpacity.value(frameNo)/100;}
-    void cacheMatrix();
-    bool staticMatrix() const {return mStaticMatrix;}
-    bool ddd() const {return m3D ? true : false;}
-private:
-    VMatrix computeMatrix(int frameNo, bool autoOrient = false) const;
-public:
-    std::unique_ptr<LOT3DData>    m3D;
-    LOTAnimatable<float>          mRotation{0};  /* "r" */
-    LOTAnimatable<VPointF>        mScale;     /* "s" */
-    LOTAnimatable<VPointF>        mPosition;  /* "p" */
-    LOTAnimatable<float>          mX{0};
-    LOTAnimatable<float>          mY{0};
-    LOTAnimatable<VPointF>        mAnchor;    /* "a" */
-    LOTAnimatable<float>          mOpacity{100};   /* "o" */
-    LOTAnimatable<float>          mSkew{0};      /* "sk" */
-    LOTAnimatable<float>          mSkewAxis{0};  /* "sa" */
-    bool                          mStaticMatrix{true};
-    bool                          mSeparate{false};
-    VMatrix                       mCachedMatrix;
-};
 
 class LOTFillData : public LOTData
 {

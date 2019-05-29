@@ -112,7 +112,7 @@ protected:
    inline int frameNo() const {return mFrameNo;}
    inline float combinedAlpha() const {return mCombinedAlpha;}
    inline bool isStatic() const {return mLayerData->isStatic();}
-   float opacity(int frameNo) const;
+   float opacity(int frameNo) const {return mLayerData->opacity(frameNo);}
    inline DirtyFlag flag() const {return mDirtyFlag;}
 protected:
    std::vector<LOTMask>                        mMasksCNode;
