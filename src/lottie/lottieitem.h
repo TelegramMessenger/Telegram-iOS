@@ -247,24 +247,35 @@ class LOTPathDataItem;
 class LOTPaintDataItem;
 class LOTTrimItem;
 
+enum class ContentType
+{
+    Unknown,
+    Group,
+    Path,
+    Paint,
+    Trim
+};
+
 class LOTContentItem
 {
 public:
    virtual ~LOTContentItem() = default;
+   LOTContentItem(ContentType type=ContentType::Unknown):mType(type) {}
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) = 0;
    virtual void renderList(std::vector<VDrawable *> &){}
    void setParent(LOTContentItem *parent) {mParent = parent;}
    LOTContentItem *parent() const {return mParent;}
    virtual bool resolveKeyPath(LOTKeyPath &, uint, LOTVariant &) {return false;}
+   ContentType type() const {return mType;}
 private:
+   ContentType     mType{ContentType::Unknown};
    LOTContentItem *mParent{nullptr};
 };
 
 class LOTContentGroupItem: public LOTContentItem
 {
 public:
-    LOTContentGroupItem(){}
-   LOTContentGroupItem(LOTGroupData *data);
+   LOTContentGroupItem(LOTGroupData *data=nullptr);
    void addChildren(LOTGroupData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) override;
    void applyTrim();
@@ -287,7 +298,7 @@ protected:
 class LOTPathDataItem : public LOTContentItem
 {
 public:
-   LOTPathDataItem(bool staticPath): mStaticPath(staticPath){}
+   LOTPathDataItem(bool staticPath): LOTContentItem(ContentType::Path), mStaticPath(staticPath){}
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
    bool dirty() const {return mPathChanged;}
    const VPath &localPath() const {return mTemp;}

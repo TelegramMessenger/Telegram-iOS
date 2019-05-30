@@ -997,7 +997,9 @@ bool LOTStrokeItem::resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &
     return false;
 }
 
-LOTContentGroupItem::LOTContentGroupItem(LOTGroupData *data) : mData(data)
+LOTContentGroupItem::LOTContentGroupItem(LOTGroupData *data) :
+    LOTContentItem(ContentType::Group),
+    mData(data)
 {
     addChildren(mData);
 }
@@ -1051,10 +1053,17 @@ void LOTContentGroupItem::applyTrim()
 {
     for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
         auto content = (*i).get();
-        if (auto trim = dynamic_cast<LOTTrimItem *>(content)) {
-            trim->update();
-        } else if (auto group = dynamic_cast<LOTContentGroupItem *>(content)) {
-            group->applyTrim();
+        switch (content->type()) {
+        case ContentType::Trim: {
+            static_cast<LOTTrimItem *>(content)->update();
+            break;
+        }
+        case ContentType::Group: {
+            static_cast<LOTContentGroupItem *>(content)->applyTrim();
+            break;
+        }
+        default:
+            break;
         }
     }
 }
@@ -1072,16 +1081,21 @@ void LOTContentGroupItem::processPaintItems(
     int curOpCount = list.size();
     for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
         auto content = (*i).get();
-        if (auto pathNode = dynamic_cast<LOTPathDataItem *>(content)) {
-            // add it to the list
-            list.push_back(pathNode);
-        } else if (auto paintNode = dynamic_cast<LOTPaintDataItem *>(content)) {
-            // the node is a paint data node update the path list of the paint item.
-            paintNode->addPathItems(list, curOpCount);
-        } else if (auto groupNode =
-                       dynamic_cast<LOTContentGroupItem *>(content)) {
-            // update the groups node with current list
-            groupNode->processPaintItems(list);
+        switch (content->type()) {
+        case ContentType::Path: {
+            list.push_back(static_cast<LOTPathDataItem *>(content));
+            break;
+        }
+        case ContentType::Paint: {
+            static_cast<LOTPaintDataItem *>(content)->addPathItems(list, curOpCount);
+            break;
+        }
+        case ContentType::Group: {
+            static_cast<LOTContentGroupItem *>(content)->processPaintItems(list);
+            break;
+        }
+        default:
+            break;
         }
     }
 }
@@ -1092,16 +1106,22 @@ void LOTContentGroupItem::processTrimItems(
     int curOpCount = list.size();
     for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
         auto content = (*i).get();
-        if (auto pathNode = dynamic_cast<LOTPathDataItem *>(content)) {
-            // add it to the list
-            list.push_back(pathNode);
-        } else if (auto trimNode = dynamic_cast<LOTTrimItem *>(content)) {
-            // the node is a paint data node update the path list of the paint item.
-            trimNode->addPathItems(list, curOpCount);
-        } else if (auto groupNode =
-                       dynamic_cast<LOTContentGroupItem *>(content)) {
-            // update the groups node with current list
-            groupNode->processTrimItems(list);
+
+        switch (content->type()) {
+        case ContentType::Path: {
+            list.push_back(static_cast<LOTPathDataItem *>(content));
+            break;
+        }
+        case ContentType::Trim: {
+            static_cast<LOTTrimItem *>(content)->addPathItems(list, curOpCount);
+            break;
+        }
+        case ContentType::Group: {
+            static_cast<LOTContentGroupItem *>(content)->processTrimItems(list);
+            break;
+        }
+        default:
+            break;
         }
     }
 }
@@ -1231,8 +1251,10 @@ void LOTPolystarItem::updatePath(VPath& path, int frameNo)
  * PaintData Node handling
  *
  */
-LOTPaintDataItem::LOTPaintDataItem(bool staticContent):mDrawable(std::make_unique<LOTDrawable>()),
-                                                       mStaticContent(staticContent){}
+LOTPaintDataItem::LOTPaintDataItem(bool staticContent):
+    LOTContentItem(ContentType::Paint),
+    mDrawable(std::make_unique<LOTDrawable>()),
+    mStaticContent(staticContent){}
 
 void LOTPaintDataItem::update(int frameNo, const VMatrix &/*parentMatrix*/,
                               float parentAlpha, const DirtyFlag &flag)
@@ -1407,7 +1429,9 @@ void LOTGStrokeItem::updateRenderNode()
     }
 }
 
-LOTTrimItem::LOTTrimItem(LOTTrimData *data) : mData(data) {}
+LOTTrimItem::LOTTrimItem(LOTTrimData *data):
+    LOTContentItem(ContentType::Trim),
+    mData(data) {}
 
 void LOTTrimItem::update(int frameNo, const VMatrix &/*parentMatrix*/,
                          float /*parentAlpha*/, const DirtyFlag &/*flag*/)
