@@ -189,22 +189,20 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                     switch navigation {
                         case .info:
                             let _ = (context.account.postbox.loadedPeerWithId(peerId)
-                                |> deliverOnMainQueue).start(next: { peer in
-                                    if let infoController = peerInfoController(context: context, peer: peer) {
-                                        if let navigationController = navigationController {
-                                            navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                        }
-                                        navigationController?.pushViewController(infoController)
-                                    }
-                                })
+                            |> deliverOnMainQueue).start(next: { peer in
+                                if let infoController = peerInfoController(context: context, peer: peer) {
+                                    context.sharedContext.applicationBindings.dismissNativeController()
+                                    navigationController?.pushViewController(infoController)
+                                }
+                            })
                         case let .chat(_, messageId):
+                            context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                 navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId), messageId: messageId)
                             }
                         case let .withBotStartPayload(payload):
+                            context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                 navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId), botStart: payload)
                             }
                         default:
