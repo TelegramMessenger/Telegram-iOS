@@ -57,7 +57,7 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
         case let .update(media):
             let generateUploadSignal: (Bool) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>? = { forceReupload in
                 let augmentedMedia = augmentMediaWithReference(media)
-                return mediaContentToUpload(network: account.network, postbox: account.postbox, auxiliaryMethods: account.auxiliaryMethods, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, forceReupload: forceReupload, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveAttribute: nil, messageId: nil, attributes: [])
+                return mediaContentToUpload(network: account.network, postbox: account.postbox, auxiliaryMethods: account.auxiliaryMethods, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, forceReupload: forceReupload, isGrouped: false, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveAttribute: nil, messageId: nil, attributes: [])
             }
             if let uploadSignal = generateUploadSignal(forceReupload) {
                 uploadedMedia = .single(.progress(0.027))

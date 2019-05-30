@@ -360,7 +360,7 @@ public final class PendingMessageManager {
                     return lhs.1.index < rhs.1.index
                 }) {
                     if case let .collectingInfo(message) = messageContext.state {
-                        let (contentUploadSignal, contentType) = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, message: message)
+                        let (contentUploadSignal, contentType) = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, isGrouped: message.groupingKey != nil, message: message)
                         messageContext.contentType = contentType
                         
                         if strongSelf.canBeginUploadingMessage(id: message.id, type: contentType) {
