@@ -56,20 +56,20 @@ public:
     void addRenderPostCb(appCb renderPostcb, void *data) {mRenderPostCb = renderPostcb; mRenderPostData = data;}
     static std::vector<std::string> jsonFiles(const std::string &dir, bool recurse=false);
 public:
-    int           mw;
-    int           mh;
-    Ecore_Evas   *mEcoreEvas;
-    Evas         *mEvas;
-    Evas_Object  *mBackground;
-    appCb        mResizeCb;
-    void        *mResizeData;
-    appCb        mExitCb;
-    void        *mExitData;
-    appCb        mKeyCb;
-    void        *mKeyData;
-    appCb        mRenderPreCb;
-    void        *mRenderPreData;
-    appCb        mRenderPostCb;
-    void        *mRenderPostData;
+    int           mw{0};
+    int           mh{0};
+    Ecore_Evas   *mEcoreEvas{nullptr};
+    Evas         *mEvas{nullptr};
+    Evas_Object  *mBackground{nullptr};
+    appCb        mResizeCb{nullptr};
+    void        *mResizeData{nullptr};
+    appCb        mExitCb{nullptr};
+    void        *mExitData{nullptr};
+    appCb        mKeyCb{nullptr};
+    void        *mKeyData{nullptr};
+    appCb        mRenderPreCb{nullptr};
+    void        *mRenderPreData{nullptr};
+    appCb        mRenderPostCb{nullptr};
+    void        *mRenderPostData{nullptr};
 };
 #endif //EVASAPP_H
