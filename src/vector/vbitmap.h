@@ -20,6 +20,7 @@
 #define VBITMAP_H
 
 #include "vrect.h"
+#include <memory>
 
 V_BEGIN_NAMESPACE
 

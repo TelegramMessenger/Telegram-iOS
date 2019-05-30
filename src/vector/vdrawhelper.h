@@ -20,6 +20,7 @@
 #define VDRAWHELPER_H
 
 #include <cstring>
+#include <memory>
 #include "assert.h"
 #include "vbitmap.h"
 #include "vbrush.h"

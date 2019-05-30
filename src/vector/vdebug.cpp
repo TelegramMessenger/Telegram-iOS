@@ -17,7 +17,9 @@
  */
 
 #include "vdebug.h"
-#include "config.h"
+
+#ifdef LOTTIE_LOGGING_SUPPORT
+
 #include <atomic>
 #include <chrono>
 #include <cstring>
@@ -740,19 +742,10 @@ void set_log_level(LogLevel level)
     loglevel.store(static_cast<unsigned int>(level), std::memory_order_release);
 }
 
-#ifdef LOTTIE_LOGGING_SUPPORT
-
 bool is_logged(LogLevel level)
 {
     return static_cast<unsigned int>(level) >=
            loglevel.load(std::memory_order_relaxed);
 }
 
-#else
-
-bool is_logged(LogLevel)
-{
-    return false;
-}
-
-#endif
+#endif //LOTTIE_LOGGING_SUPPORT

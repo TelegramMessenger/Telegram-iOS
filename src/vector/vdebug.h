@@ -18,6 +18,11 @@
 
 #ifndef VDEBUG_H
 #define VDEBUG_H
+
+#include "config.h"
+
+#ifdef LOTTIE_LOGGING_SUPPORT
+
 #include <cstdint>
 #include <iosfwd>
 #include <memory>
@@ -160,5 +165,19 @@ void initialize(NonGuaranteedLogger ngl, std::string const& log_directory,
 #define vDebug is_logged(LogLevel::INFO) && VDEBUG_LOG(LogLevel::INFO)
 #define vWarning is_logged(LogLevel::WARN) && VDEBUG_LOG(LogLevel::WARN)
 #define vCritical is_logged(LogLevel::CRIT) && VDEBUG_LOG(LogLevel::CRIT)
+
+#else
+
+struct VDebug
+{
+    template<typename Args>
+    VDebug& operator<<(const Args &){return *this;}
+};
+
+#define vDebug VDebug()
+#define vWarning VDebug()
+#define vCritical VDebug()
+
+#endif //LOTTIE_LOGGING_SUPPORT
 
 #endif  // VDEBUG_H
