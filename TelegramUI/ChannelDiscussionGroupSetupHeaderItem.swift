@@ -5,15 +5,19 @@ import SwiftSignalKit
 
 class ChannelDiscussionGroupSetupHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
-    let text: String
+    let strings: PresentationStrings
+    let title: String?
+    let isGroup: Bool
     let label: String
     let sectionId: ItemListSectionId
     
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, text: String, label: String, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, strings: PresentationStrings, title: String?, isGroup: Bool, label: String, sectionId: ItemListSectionId) {
         self.theme = theme
-        self.text = text
+        self.strings = strings
+        self.title = title
+        self.isGroup = isGroup
         self.label = label
         self.sectionId = sectionId
     }
@@ -57,6 +61,7 @@ class ChannelDiscussionGroupSetupHeaderItem: ListViewItem, ItemListItem {
 
 private let iconFont = Font.medium(12.0)
 private let titleFont = Font.regular(14.0)
+private let titleBoldFont = Font.semibold(14.0)
 
 class ChannelDiscussionGroupSetupHeaderItemNode: ListViewItemNode {
     private let imageNode: ASImageNode
@@ -116,7 +121,16 @@ class ChannelDiscussionGroupSetupHeaderItemNode: ListViewItemNode {
                 iconImage = currentIconImage
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let body = MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.sectionHeaderTextColor)
+            let bold = MarkdownAttributeSet(font: titleBoldFont, textColor: item.theme.list.sectionHeaderTextColor)
+            let string: NSAttributedString
+            if let title = item.title {
+                string = addAttributesToStringWithRanges(item.isGroup ? item.strings.Channel_DiscussionGroup_HeaderGroupSet(title) : item.strings.Channel_DiscussionGroup_HeaderSet(title), body: body, argumentAttributes: [0: bold])
+            } else {
+                string = NSAttributedString(string: item.strings.Channel_DiscussionGroup_Header, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor)
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: iconFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             

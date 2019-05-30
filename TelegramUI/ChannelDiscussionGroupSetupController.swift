@@ -30,7 +30,7 @@ private enum ChannelDiscussionGroupSetupControllerEntryStableId: Hashable {
 }
 
 private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
-    case header(PresentationTheme, String, String)
+    case header(PresentationTheme, PresentationStrings, String?, Bool, String)
     case create(PresentationTheme, String)
     case group(Int, PresentationTheme, PresentationStrings, Peer, PresentationPersonNameOrder)
     case groupsInfo(PresentationTheme, String)
@@ -64,8 +64,8 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
     
     static func ==(lhs: ChannelDiscussionGroupSetupControllerEntry, rhs: ChannelDiscussionGroupSetupControllerEntry) -> Bool {
         switch lhs {
-            case let .header(lhsTheme, lhsTitle, lhsLabel):
-                if case let .header(rhsTheme, rhsTitle, rhsLabel) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsLabel == rhsLabel {
+            case let .header(lhsTheme, lhsStrings, lhsTitle, lhsIsGroup, lhsLabel):
+                if case let .header(rhsTheme, rhsStrings, rhsTitle, rhsIsGroup, rhsLabel) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsTitle == rhsTitle, lhsIsGroup == rhsIsGroup, lhsLabel == rhsLabel {
                     return true
                 } else {
                     return false
@@ -118,8 +118,8 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
     
     func item(_ arguments: ChannelDiscussionGroupSetupControllerArguments) -> ListViewItem {
         switch self {
-            case let .header(theme, title, label):
-                return ChannelDiscussionGroupSetupHeaderItem(theme: theme, text: title, label: label, sectionId: self.section)
+            case let .header(theme, strings, title, isGroup, label):
+                return ChannelDiscussionGroupSetupHeaderItem(theme: theme, strings: strings, title: title, isGroup: isGroup, label: label, sectionId: self.section)
             case let .create(theme, text):
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.createGroup()
@@ -156,9 +156,9 @@ private func channelDiscussionGroupSetupControllerEntries(presentationData: Pres
     if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
         if let group = view.peers[linkedDiscussionPeerId] {
             if case .group = peer.info {
-                entries.append(.header(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_HeaderSet(group.displayTitle).0, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
+                entries.append(.header(presentationData.theme, presentationData.strings, group.displayTitle, true, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
             } else {
-                entries.append(.header(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_HeaderSet(group.displayTitle).0, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
+                entries.append(.header(presentationData.theme, presentationData.strings, group.displayTitle, false, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
             }
             
             entries.append(.group(0, presentationData.theme, presentationData.strings, group, presentationData.nameDisplayOrder))
@@ -175,7 +175,7 @@ private func channelDiscussionGroupSetupControllerEntries(presentationData: Pres
         }
     } else if case .broadcast = peer.info, canEditChannel {
         if let groups = groups {
-            entries.append(.header(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_Header, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
+            entries.append(.header(presentationData.theme, presentationData.strings, nil, true, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
             
             entries.append(.create(presentationData.theme, presentationData.strings.Channel_DiscussionGroup_Create))
             var index = 0
