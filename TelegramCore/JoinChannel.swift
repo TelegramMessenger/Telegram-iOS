@@ -7,24 +7,31 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChannelParticipant?, NoError> {
+public enum JoinChannelError {
+    case generic
+}
+
+public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChannelParticipant?, JoinChannelError> {
     return account.postbox.loadedPeerWithId(peerId)
     |> take(1)
-    |> mapToSignal { peer -> Signal<RenderedChannelParticipant?, NoError> in
+    |> introduceError(JoinChannelError.self)
+    |> mapToSignal { peer -> Signal<RenderedChannelParticipant?, JoinChannelError> in
         if let inputChannel = apiInputChannel(peer) {
             return account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
-            |> retryRequest
-            |> mapToSignal { updates -> Signal<RenderedChannelParticipant?, NoError> in
+            |> mapError { _ -> JoinChannelError in
+                return .generic
+            }
+            |> mapToSignal { updates -> Signal<RenderedChannelParticipant?, JoinChannelError> in
                 account.stateManager.addUpdates(updates)
                 
                 return account.network.request(Api.functions.channels.getParticipant(channel: inputChannel, userId: .inputUserSelf))
                 |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.channels.ChannelParticipant?, NoError> in
+                |> `catch` { _ -> Signal<Api.channels.ChannelParticipant?, JoinChannelError> in
                     return .single(nil)
                 }
-                |> mapToSignal { result -> Signal<RenderedChannelParticipant?, NoError> in
+                |> mapToSignal { result -> Signal<RenderedChannelParticipant?, JoinChannelError> in
                     guard let result = result else {
-                        return .single(nil)
+                        return .fail(.generic)
                     }
                     return account.postbox.transaction { transaction -> RenderedChannelParticipant? in
                         var peers: [PeerId: Peer] = [:]
@@ -50,12 +57,11 @@ public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChan
                         }
                         return RenderedChannelParticipant(participant: updatedParticipant, peer: peer, peers: peers, presences: presences)
                     }
+                    |> introduceError(JoinChannelError.self)
                 }
-                
-                return .complete()
             }
         } else {
-            return .complete()
+            return .fail(.generic)
         }
     }
 }

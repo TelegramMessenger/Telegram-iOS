@@ -35,11 +35,9 @@ public func availableGroupsForChannelDiscussion(postbox: Postbox, network: Netwo
     }
 }
 
-
 public enum ChannelDiscussionGroupError {
     case generic
-    case preHistoryHidden
-    case hasNotPermissions
+    case groupHistoryIsCurrentlyPrivate
 }
 
 public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, channelId: PeerId, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {
@@ -71,12 +69,8 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
         |> `catch` { error -> Signal<Bool, ChannelDiscussionGroupError> in
             if error.errorDescription == "LINK_NOT_MODIFIED" {
                 return .single(true)
-            }
-            if error.errorDescription == "MEGAGROUP_PREHISTORY_HIDDEN" {
-                return .fail(.preHistoryHidden)
-            }
-            if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
-                return .fail(.hasNotPermissions)
+            } else if error.errorDescription == "MEGAGROUP_PREHISTORY_HIDDEN" {
+                return .fail(.groupHistoryIsCurrentlyPrivate)
             }
             return .fail(.generic)
         }

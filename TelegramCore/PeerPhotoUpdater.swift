@@ -49,11 +49,17 @@ public func updatePeerPhoto(postbox: Postbox, network: Network, stateManager: Ac
     
 public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateManager: AccountStateManager?, accountPeerId: PeerId, peer: Signal<Peer, NoError>, photo: Signal<UploadedPeerPhotoData, NoError>?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
     return peer
-    |> mapError {_ in return .generic}
+    |> mapError { _ in return .generic }
     |> mapToSignal { peer -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
         if let photo = photo {
             return photo
-            |> take(1)
+            |> take(until: { value in
+                if case let .result(resultData) = value.content, case .inputFile = resultData {
+                    return SignalTakeAction(passthrough: true, complete: true)
+                } else {
+                    return SignalTakeAction(passthrough: true, complete: false)
+                }
+            })
             |> mapError { _ -> UploadPeerPhotoError in return .generic }
             |> mapToSignal { result -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
                 switch result.content {
