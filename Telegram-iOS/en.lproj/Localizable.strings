@@ -4295,7 +4295,7 @@ Sorry for the inconvenience.";
 "Channel.DiscussionGroupAdd" = "Add";
 "Channel.DiscussionGroupInfo" = "Add group chat for comments.";
 "Channel.DiscussionGroup.Header" = "Select a group chat for discussion that will be displayed in your channel.";
-"Channel.DiscussionGroup.HeaderSet" = "A link to %@ is shown to all subscrbers in the bottom panel.";
+"Channel.DiscussionGroup.HeaderSet" = "A link to %@ is shown to all subscribers in the bottom panel.";
 "Channel.DiscussionGroup.HeaderGroupSet" = "%@ is linking the group as it's discussion board.";
 "Channel.DiscussionGroup.HeaderLabel" = "Discuss";
 "Channel.DiscussionGroup.Create" = "Create New Group";
