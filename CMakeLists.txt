@@ -26,6 +26,8 @@ target_compile_options(rlottie
                         -std=c++14
                         -O2
                         -fno-exceptions
+                        -fno-unwind-tables
+                        -fno-asynchronous-unwind-tables
                         -fno-rtti
                         -Wall
                         -Werror
