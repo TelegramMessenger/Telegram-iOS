@@ -6,7 +6,7 @@ rlottie_lib_version = '0.0.1'
 
 add_global_arguments('-DDEMO_DIR="@0@/example/resource/"'.format(meson.current_source_dir()), language : 'cpp')
 
-compiler_flags = ['-std=c++14', '-O2', '-Wall', '-Werror', '-Wextra', '-fno-exceptions',
+compiler_flags = ['-std=c++14', '-O2', '-Wall', '-Werror', '-Wextra', '-fno-exceptions', '-fno-rtti',
                   '-Wnon-virtual-dtor', '-Woverloaded-virtual', '-Wno-unused-parameter', '-fvisibility=hidden']
 
 if get_option('asan') == true
