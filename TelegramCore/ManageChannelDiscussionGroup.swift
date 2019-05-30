@@ -35,28 +35,11 @@ public func availableGroupsForChannelDiscussion(postbox: Postbox, network: Netwo
     }
 }
 
-public func availableChannelsForGroupDiscussion(network: Network) -> Signal<[Peer], AvailableChannelDiscussionGroupError> {
-    return network.request(Api.functions.channels.getBroadcastsForDiscussion()) |> mapError { _ in
-        return .generic
-        } |> map { result in
-            let chats:[Api.Chat]
-            switch result {
-            case let .chats(c):
-                chats = c
-            case let .chatsSlice(_, c):
-                chats = c
-            }
-            
-            let peers = chats.compactMap {
-                return parseTelegramGroupOrChannel(chat: $0)
-            }
-            
-            return peers
-    }
-}
 
 public enum ChannelDiscussionGroupError {
     case generic
+    case preHistoryHidden
+    case hasNotPermissions
 }
 
 public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, channelId: PeerId, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {
@@ -88,6 +71,12 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
         |> `catch` { error -> Signal<Bool, ChannelDiscussionGroupError> in
             if error.errorDescription == "LINK_NOT_MODIFIED" {
                 return .single(true)
+            }
+            if error.errorDescription == "MEGAGROUP_PREHISTORY_HIDDEN" {
+                return .fail(.preHistoryHidden)
+            }
+            if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
+                return .fail(.hasNotPermissions)
             }
             return .fail(.generic)
         }

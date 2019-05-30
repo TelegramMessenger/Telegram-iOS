@@ -6,18 +6,31 @@
     import SwiftSignalKit
 #endif
 
-public func updateChannelHistoryAvailabilitySettingsInteractively(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, peerId: PeerId, historyAvailableForNewMembers: Bool) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-            return network.request(Api.functions.channels.togglePreHistoryHidden(channel: inputChannel, enabled: historyAvailableForNewMembers ? .boolFalse : .boolTrue))
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-                return .single(nil)
-            }
-            |> mapToSignal { updates -> Signal<Void, NoError> in
-                if let updates = updates {
-                    accountStateManager.addUpdates(updates)
+public enum ChannelHistoryAvailabilityError {
+    case generic
+    case hasNotPermissions
+}
+
+public func updateChannelHistoryAvailabilitySettingsInteractively(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, peerId: PeerId, historyAvailableForNewMembers: Bool) -> Signal<Void, ChannelHistoryAvailabilityError> {
+    return postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(peerId)
+    }
+    |> introduceError(ChannelHistoryAvailabilityError.self)
+    |> mapToSignal { peer in
+        
+        guard let peer = peer, let inputChannel = apiInputChannel(peer) else {
+            return .fail(.generic)
+        }
+        
+        return network.request(Api.functions.channels.togglePreHistoryHidden(channel: inputChannel, enabled: historyAvailableForNewMembers ? .boolFalse : .boolTrue))
+            |> `catch` { error -> Signal<Api.Updates, ChannelHistoryAvailabilityError> in
+                if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
+                    return .fail(.hasNotPermissions)
                 }
+                return .fail(.generic)
+            }
+            |> mapToSignal { updates -> Signal<Void, ChannelHistoryAvailabilityError> in
+                accountStateManager.addUpdates(updates)
                 return postbox.transaction { transaction -> Void in
                     transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, currentData in
                         if let currentData = currentData as? CachedChannelData {
@@ -32,11 +45,8 @@ public func updateChannelHistoryAvailabilitySettingsInteractively(postbox: Postb
                             return currentData
                         }
                     })
-                }
-            }
-        } else {
-            return .complete()
+                } |> introduceError(ChannelHistoryAvailabilityError.self)
         }
+        
     }
-    |> switchToLatest
 }
