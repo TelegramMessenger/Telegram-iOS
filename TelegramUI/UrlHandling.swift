@@ -53,6 +53,10 @@ enum ResolvedUrl {
 }
 
 func parseInternalUrl(query: String) -> ParsedInternalUrl? {
+    var query = query
+    if query.hasPrefix("s/") {
+        query = String(query[query.index(query.startIndex, offsetBy: 2)...])
+    }
     if let components = URLComponents(string: "/" + query) {
         var pathComponents = components.path.components(separatedBy: "/")
         if !pathComponents.isEmpty {
