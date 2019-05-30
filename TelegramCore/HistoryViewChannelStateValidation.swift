@@ -423,8 +423,14 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                             }
                                             var ids = Set<MessageId>()
                                             for message in apiMessages {
-                                                if let id = message.id {
-                                                    ids.insert(id)
+                                                if let parsedMessage = StoreMessage(apiMessage: message), case let .Id(id) = parsedMessage.id {
+                                                    if let tag = tag {
+                                                        if parsedMessage.tags.contains(tag) {
+                                                            ids.insert(id)
+                                                        }
+                                                    } else {
+                                                        ids.insert(id)
+                                                    }
                                                 }
                                             }
                                             return Set(maybeRemovedMessageIds).subtracting(ids)
@@ -501,6 +507,35 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                     }
                                 }
                             }
+                            
+                            if let tag = tag {
+                                for (_, previousMessage) in previous {
+                                    if !validMessageIds.contains(previousMessage.id) {
+                                        transaction.updateMessage(previousMessage.id, update: { currentMessage in
+                                            var updatedTags = currentMessage.tags
+                                            updatedTags.remove(tag)
+                                            var storeForwardInfo: StoreMessageForwardInfo?
+                                            if let forwardInfo = currentMessage.forwardInfo {
+                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                            }
+                                            var attributes = currentMessage.attributes
+                                            for i in (0 ..< attributes.count).reversed() {
+                                                switch historyState {
+                                                case .channel:
+                                                    if let _ = attributes[i] as? ChannelMessageStateVersionAttribute {
+                                                        attributes.remove(at: i)
+                                                    }
+                                                }
+                                            }
+                                            switch historyState {
+                                            case let .channel(_, channelState):
+                                                attributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
+                                            }
+                                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                        })
+                                    }
+                                }
+                            }
                         
                             for id in removedMessageIds {
                                 if !validMessageIds.contains(id) {
@@ -512,7 +547,20 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                             if let forwardInfo = currentMessage.forwardInfo {
                                                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                                             }
-                                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                                            var attributes = currentMessage.attributes
+                                            for i in (0 ..< attributes.count).reversed() {
+                                                switch historyState {
+                                                case .channel:
+                                                    if let _ = attributes[i] as? ChannelMessageStateVersionAttribute {
+                                                        attributes.remove(at: i)
+                                                    }
+                                                }
+                                            }
+                                            switch historyState {
+                                            case let .channel(_, channelState):
+                                                attributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
+                                            }
+                                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                         })
                                     } else {
                                         switch historyState {
