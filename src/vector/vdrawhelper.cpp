@@ -63,72 +63,74 @@ public:
         inline CacheInfo(VGradientStops s) : stops(std::move(s)) {}
         VGradientStops stops;
     };
-
-    using VGradientColorTableHash = std::unordered_multimap<uint64_t, std::shared_ptr<const CacheInfo>>;
+    using VCacheData = std::shared_ptr<const CacheInfo>;
+    using VCacheKey = int64_t;
+    using VGradientColorTableHash = std::unordered_multimap<VCacheKey, VCacheData>;
 
     bool generateGradientColorTable(const VGradientStops &stops, float alpha,
                                     uint32_t *colorTable, int size);
-    inline const std::shared_ptr<const VColorTable> getBuffer(
-        const VGradient &gradient)
+    VCacheData getBuffer(const VGradient &gradient)
     {
-        uint64_t                         hash_val = 0;
-        std::shared_ptr<const CacheInfo> info;
+        VCacheKey   hash_val = 0;
+        VCacheData info;
         const VGradientStops &stops = gradient.mStops;
         for (uint i = 0; i < stops.size() && i <= 2; i++)
             hash_val += (stops[i].second.premulARGB() * gradient.alpha());
 
-        cacheAccess.lock();
+        {
+            std::lock_guard<std::mutex> guard(mMutex);
 
-        int count = cache.count(hash_val);
-        if (!count) {
-            // key is not present in the hash
-            info = addCacheElement(hash_val, gradient);
-        } else if (count == 1) {
-            VGradientColorTableHash::const_iterator it = cache.find(hash_val);
-            if (it->second->stops == stops) {
-                info = it->second;
-            } else {
-                // didn't find an exact match
+            size_t count = mCache.count(hash_val);
+            if (!count) {
+                // key is not present in the hash
                 info = addCacheElement(hash_val, gradient);
-            }
-        } else {
-            // we have a multiple data with same key
-            auto range = cache.equal_range(hash_val);
-            for (auto i = range.first; i != range.second; ++i) {
-                if (i->second->stops == stops) {
-                    info = i->second;
-                    break;
+            } else if (count == 1) {
+                auto search = mCache.find(hash_val);
+                if (search->second->stops == stops) {
+                    info = search->second;
+                } else {
+                    // didn't find an exact match
+                    info = addCacheElement(hash_val, gradient);
+                }
+            } else {
+                // we have a multiple data with same key
+                auto range = mCache.equal_range(hash_val);
+                for (auto it = range.first; it != range.second; ++it) {
+                    if (it->second->stops == stops) {
+                        info = it->second;
+                        break;
+                    }
+                }
+                if (!info) {
+                    // didn't find an exact match
+                    info = addCacheElement(hash_val, gradient);
                 }
             }
-            if (!info) {
-                // didn't find an exact match
-                info = addCacheElement(hash_val, gradient);
-            }
         }
-        cacheAccess.unlock();
         return info;
     }
 
 protected:
-    inline uint                            maxCacheSize() const { return 60; }
-    const std::shared_ptr<const CacheInfo> addCacheElement(
-        uint64_t hash_val, const VGradient &gradient)
+    uint maxCacheSize() const { return 60; }
+    VCacheData addCacheElement(VCacheKey hash_val, const VGradient &gradient)
     {
-        if (cache.size() == maxCacheSize()) {
-            int count = rand() % maxCacheSize();
+        if (mCache.size() == maxCacheSize()) {
+            uint count = maxCacheSize()/10;
             while (count--) {
-                cache.erase(cache.begin());
+                mCache.erase(mCache.begin());
             }
         }
         auto cache_entry = std::make_shared<CacheInfo>(gradient.mStops);
-        cache_entry->alpha = generateGradientColorTable(
-            gradient.mStops, gradient.alpha(), cache_entry->buffer32, VGradient::colorTableSize);
-        cache.insert(std::make_pair(hash_val, cache_entry));
+        cache_entry->alpha = generateGradientColorTable(gradient.mStops,
+                                                        gradient.alpha(),
+                                                        cache_entry->buffer32,
+                                                        VGradient::colorTableSize);
+        mCache.insert(std::make_pair(hash_val, cache_entry));
         return cache_entry;
     }
 
-    VGradientColorTableHash cache;
-    std::mutex              cacheAccess;
+    VGradientColorTableHash mCache;
+    std::mutex              mMutex;
 };
 
 bool VGradientCache::generateGradientColorTable(const VGradientStops &stops, float opacity,
