@@ -138,11 +138,13 @@ struct VBitmapData
     int const_alpha;
 };
 
+struct VColorTable
+{
+    uint32_t buffer32[VGradient::colorTableSize];
+    bool     alpha{true};
+};
+
 struct VSpanData {
-    class Pinnable {
-    protected:
-        ~Pinnable() = default;
-    };
     enum class Type { None, Solid, LinearGradient, RadialGradient, Texture };
 
     void  updateSpanFunc();
@@ -174,7 +176,7 @@ struct VSpanData {
     ProcessRleSpan                       mBlendFunc;
     ProcessRleSpan                       mUnclippedBlendFunc;
     VSpanData::Type                      mType;
-    std::shared_ptr<VSpanData::Pinnable> mCachedGradient;
+    std::shared_ptr<const VColorTable>   mColorTable{nullptr};
     VPoint                               mOffset; // offset to the subsurface
     VSize                                mDrawableSize;// suburface size
     union {

@@ -59,18 +59,16 @@
 
 class VGradientCache {
 public:
-    struct CacheInfo : public VSpanData::Pinnable {
+    struct CacheInfo : public VColorTable {
         inline CacheInfo(VGradientStops s) : stops(std::move(s)) {}
-        uint32_t       buffer32[VGradient::colorTableSize];
         VGradientStops stops;
-        bool           alpha{true};
     };
 
-    typedef std::unordered_multimap<uint64_t, std::shared_ptr<const CacheInfo>>
-         VGradientColorTableHash;
+    using VGradientColorTableHash = std::unordered_multimap<uint64_t, std::shared_ptr<const CacheInfo>>;
+
     bool generateGradientColorTable(const VGradientStops &stops, float alpha,
                                     uint32_t *colorTable, int size);
-    inline const std::shared_ptr<const CacheInfo> getBuffer(
+    inline const std::shared_ptr<const VColorTable> getBuffer(
         const VGradient &gradient)
     {
         uint64_t                         hash_val = 0;
@@ -748,9 +746,9 @@ void VSpanData::setup(const VBrush &brush, VPainter::CompositionMode /*mode*/,
         break;
     case VBrush::Type::LinearGradient: {
         mType = VSpanData::Type::LinearGradient;
-        auto cacheInfo = VGradientCacheInstance.getBuffer(*brush.mGradient);
-        mGradient.mColorTable = cacheInfo->buffer32;
-        mGradient.mColorTableAlpha = cacheInfo->alpha;
+        mColorTable = VGradientCacheInstance.getBuffer(*brush.mGradient);
+        mGradient.mColorTable = mColorTable->buffer32;
+        mGradient.mColorTableAlpha = mColorTable->alpha;
         mGradient.linear.x1 = brush.mGradient->linear.x1;
         mGradient.linear.y1 = brush.mGradient->linear.y1;
         mGradient.linear.x2 = brush.mGradient->linear.x2;
@@ -761,9 +759,9 @@ void VSpanData::setup(const VBrush &brush, VPainter::CompositionMode /*mode*/,
     }
     case VBrush::Type::RadialGradient: {
         mType = VSpanData::Type::RadialGradient;
-        auto cacheInfo = VGradientCacheInstance.getBuffer(*brush.mGradient);
-        mGradient.mColorTable = cacheInfo->buffer32;
-        mGradient.mColorTableAlpha = cacheInfo->alpha;
+        mColorTable = VGradientCacheInstance.getBuffer(*brush.mGradient);
+        mGradient.mColorTable = mColorTable->buffer32;
+        mGradient.mColorTableAlpha = mColorTable->alpha;
         mGradient.radial.cx = brush.mGradient->radial.cx;
         mGradient.radial.cy = brush.mGradient->radial.cy;
         mGradient.radial.fx = brush.mGradient->radial.fx;
