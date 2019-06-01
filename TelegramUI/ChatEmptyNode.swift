@@ -402,7 +402,8 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
         
         var lineOffset = titleFrame.maxY + titleSpacing
         for (textSize, textNode) in lineNodes {
-            transition.updateFrame(node: textNode, frame: CGRect(origin: CGPoint(x: contentRect.minX, y: lineOffset), size: textSize))
+            let isRTL = textNode.cachedLayout?.hasRTL ?? false
+            transition.updateFrame(node: textNode, frame: CGRect(origin: CGPoint(x: isRTL ? contentRect.maxX - textSize.width : contentRect.minX, y: lineOffset), size: textSize))
             lineOffset += textSize.height + 4.0
         }
         

@@ -141,13 +141,13 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         self.authorizeCheckNode = CheckNode(strokeColor: theme.separatorColor, fillColor: theme.accentColor, foregroundColor: .white, style: .plain)
         self.authorizeCheckNode.setIsChecked(true, animated: false)
         self.authorizeLabelNode = ASTextNode()
-        self.authorizeLabelNode.maximumNumberOfLines = 2
+        self.authorizeLabelNode.maximumNumberOfLines = 4
         self.authorizeLabelNode.isUserInteractionEnabled = true
         
         self.allowWriteCheckNode = CheckNode(strokeColor: theme.separatorColor, fillColor: theme.accentColor, foregroundColor: .white, style: .plain)
         self.allowWriteCheckNode.setIsChecked(true, animated: false)
         self.allowWriteLabelNode = ASTextNode()
-        self.allowWriteLabelNode.maximumNumberOfLines = 2
+        self.allowWriteLabelNode.maximumNumberOfLines = 4
         self.allowWriteLabelNode.isUserInteractionEnabled = true
         
         self.actionNodesSeparator = ASDisplayNode()

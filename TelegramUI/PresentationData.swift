@@ -24,6 +24,18 @@ public struct PresentationVolumeControlStatusBarIcons: Equatable {
     }
 }
 
+public struct PresentationAppIcon: Equatable {
+    let name: String
+    let imageName: String
+    let isDefault: Bool
+    
+    public init(name: String, imageName: String, isDefault: Bool) {
+        self.name = name
+        self.imageName = imageName
+        self.isDefault = isDefault
+    }
+}
+
 public enum PresentationTimeFormat {
     case regular
     case military

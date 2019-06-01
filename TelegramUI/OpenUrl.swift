@@ -141,19 +141,19 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
     }
     
     var parsedUrlValue: URL?
-    if let parsed = URL(string: url) {
+    var urlWithScheme = url
+    if !url.contains("://") && !url.hasPrefix("mailto:") {
+        urlWithScheme = "http://" + url
+    }
+    if let parsed = URL(string: urlWithScheme) {
         parsedUrlValue = parsed
-    } else if let encoded = (url as NSString).addingPercentEscapes(using: String.Encoding.utf8.rawValue), let parsed = URL(string: encoded) {
+    } else if let encoded = (urlWithScheme as NSString).addingPercentEscapes(using: String.Encoding.utf8.rawValue), let parsed = URL(string: encoded) {
         parsedUrlValue = parsed
     }
     
     if let parsedUrlValue = parsedUrlValue, parsedUrlValue.scheme == "mailto" {
         context.sharedContext.applicationBindings.openUrl(url)
         return
-    }
-    
-    if let parsed = parsedUrlValue, parsed.scheme == nil {
-        parsedUrlValue = URL(string: "https://" + parsed.absoluteString)
     }
     
     guard let parsedUrl = parsedUrlValue else {

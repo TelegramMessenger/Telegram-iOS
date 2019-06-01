@@ -262,8 +262,8 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             }
             
             return signal |> then(contextBot)
-        case let .emojiSearch(query, languageCode):
-            let foundEmojis = searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: languageCode, query: query, completeMatch: query.count < 3)
+        case let .emojiSearch(query, languageCode, range):
+            return searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: languageCode, query: query, completeMatch: query.count < 3)
             |> map { keywords -> [(String, String)] in
                 var result: [(String, String)] = []
                 for keyword in keywords {
@@ -273,12 +273,9 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 }
                 return result
             }
-            
-            let emojis: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = foundEmojis |> map { result -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                return { _ in return .emojis(result) }
+            |> map { result -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                return { _ in return .emojis(result, range) }
             }
-            
-            return emojis
     }
 }
 

@@ -28,7 +28,7 @@ enum ChatPresentationInputQuery: Hashable, Equatable {
     case hashtag(String)
     case mention(query: String, types: ChatInputQueryMentionTypes)
     case command(String)
-    case emojiSearch(query: String, languageCode: String)
+    case emojiSearch(query: String, languageCode: String, range: NSRange)
     case contextRequest(addressName: String, query: String)
     
     var kind: ChatPresentationInputQueryKind {
@@ -60,8 +60,11 @@ enum ChatPresentationInputQuery: Hashable, Equatable {
                 return 4 &+ value.hashValue
             case let .contextRequest(addressName, query):
                 return 5 &+ addressName.hashValue &* 31 &+ query.hashValue
-            case let .emojiSearch(value, languageCode):
-                return 6 &+ value.hashValue &* 31 &+ languageCode.hashValue
+            case let .emojiSearch(value, languageCode, range):
+                var hash = value.hashValue
+                hash = hash &* 31 &+ languageCode.hashValue
+                hash = hash &* 31 &+ range.hashValue
+                return 6 &+ hash
         }
     }
 }
@@ -71,7 +74,7 @@ enum ChatPresentationInputQueryResult: Equatable {
     case hashtags([String])
     case mentions([Peer])
     case commands([PeerCommand])
-    case emojis([(String, String)])
+    case emojis([(String, String)], NSRange)
     case contextRequestResult(Peer?, ChatContextResultCollection?)
     
     static func ==(lhs: ChatPresentationInputQueryResult, rhs: ChatPresentationInputQueryResult) -> Bool {
@@ -112,8 +115,11 @@ enum ChatPresentationInputQueryResult: Equatable {
                 } else {
                     return false
                 }
-            case let .emojis(lhsValue):
-                if case let .emojis(rhsValue) = rhs {
+            case let .emojis(lhsValue, lhsRange):
+                if case let .emojis(rhsValue, rhsRange) = rhs {
+                    if lhsRange != rhsRange {
+                        return false
+                    }
                     if lhsValue.count != rhsValue.count {
                         return false
                     }

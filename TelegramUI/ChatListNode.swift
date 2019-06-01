@@ -24,6 +24,8 @@ public struct ChatListNodePeersFilter: OptionSet {
     
     public static let doNotSearchMessages = ChatListNodePeersFilter(rawValue: 1 << 8)
     public static let removeSearchHeader = ChatListNodePeersFilter(rawValue: 1 << 9)
+    
+    public static let excludeDisabled = ChatListNodePeersFilter(rawValue: 1 << 10)
 
 }
 
@@ -562,6 +564,16 @@ final class ChatListNode: ListView {
                             if filter.contains(.onlyChannels) {
                                 if let peer = peer.chatMainPeer as? TelegramChannel, case .broadcast = peer.info {
                                     return true
+                                } else {
+                                    return false
+                                }
+                            }
+                            
+                            if filter.contains(.onlyWriteable) && filter.contains(.excludeDisabled) {
+                                if let peer = peer.peers[peer.peerId] {
+                                    if !canSendMessagesToPeer(peer) {
+                                        return false
+                                    }
                                 } else {
                                     return false
                                 }

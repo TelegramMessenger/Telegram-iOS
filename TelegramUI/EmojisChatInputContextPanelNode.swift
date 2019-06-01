@@ -8,6 +8,41 @@ private struct EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
     let symbol: String
 }
 
+private func backgroundCenterImage(_ theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 55.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
+        context.setFillColor(theme.list.plainBackgroundColor.cgColor)
+        let lineWidth = UIScreenPixel
+        context.setLineWidth(lineWidth)
+        
+        context.translateBy(x: 460.5, y: 364.0 - 27.0)
+        let path: StaticString = "M-490.476836,-365 L-394.167708,-365 L-394.167708,-291.918214 C-394.167708,-291.918214 -383.538396,-291.918214 -397.691655,-291.918214 C-402.778486,-291.918214 -424.555168,-291.918214 -434.037301,-291.918214 C-440.297129,-291.918214 -440.780682,-283.5 -445.999879,-283.5 C-450.393041,-283.5 -452.491241,-291.918214 -456.502636,-291.918214 C-465.083339,-291.918214 -476.209155,-291.918214 -483.779021,-291.918214 C-503.033963,-291.918214 -490.476836,-291.918214 -490.476836,-291.918214 L-490.476836,-365 "
+        let _ = try? drawSvgPath(context, path: path)
+        context.fillPath()
+        context.translateBy(x: 0.0, y: lineWidth / 2.0)
+        let _ = try? drawSvgPath(context, path: path)
+        context.strokePath()
+        context.translateBy(x: -460.5, y: -lineWidth / 2.0 - 364.0 + 27.0)
+        context.move(to: CGPoint(x: 0.0, y: lineWidth / 2.0))
+        context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
+        context.strokePath()
+    })
+}
+
+private func backgroundLeftImage(_ theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 8.0, height: 16.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
+        context.setFillColor(theme.list.plainBackgroundColor.cgColor)
+        let lineWidth = UIScreenPixel
+        context.setLineWidth(lineWidth)
+        
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.height, height: size.height)))
+        context.strokeEllipse(in: CGRect(origin: CGPoint(x: lineWidth / 2.0, y: lineWidth / 2.0), size: CGSize(width: size.height - lineWidth, height: size.height - lineWidth)))
+    })?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
+}
+
 private struct EmojisChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let theme: PresentationTheme
@@ -30,8 +65,8 @@ private struct EmojisChatInputContextPanelEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, hashtagSelected: @escaping (String) -> Void) -> ListViewItem {
-        return EmojisChatInputPanelItem(theme: self.theme, symbol: self.symbol, text: self.text, hashtagSelected: hashtagSelected)
+    func item(account: Account, emojiSelected: @escaping (String) -> Void) -> ListViewItem {
+        return EmojisChatInputPanelItem(theme: self.theme, symbol: self.symbol, text: self.text, emojiSelected: emojiSelected)
     }
 }
 
@@ -41,38 +76,64 @@ private struct EmojisChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [EmojisChatInputContextPanelEntry], to toEntries: [EmojisChatInputContextPanelEntry], account: Account, hashtagSelected: @escaping (String) -> Void) -> EmojisChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [EmojisChatInputContextPanelEntry], to toEntries: [EmojisChatInputContextPanelEntry], account: Account, emojiSelected: @escaping (String) -> Void) -> EmojisChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, emojiSelected: emojiSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, emojiSelected: emojiSelected), directionHint: nil) }
     
     return EmojisChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
 final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
-    
+    private let backgroundLeftNode: ASImageNode
+    private let backgroundNode: ASImageNode
+    private let backgroundRightNode: ASImageNode
+    private let clippingNode: ASDisplayNode
     private let listView: ListView
+    
     private var currentEntries: [EmojisChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(EmojisChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+        self.backgroundNode = ASImageNode()
+        self.backgroundNode.displayWithoutProcessing = true
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.image = backgroundCenterImage(theme)
+        
+        self.backgroundLeftNode = ASImageNode()
+        self.backgroundLeftNode.displayWithoutProcessing = true
+        self.backgroundLeftNode.displaysAsynchronously = false
+        self.backgroundLeftNode.image = backgroundLeftImage(theme)
+        
+        self.backgroundRightNode = ASImageNode()
+        self.backgroundRightNode.displayWithoutProcessing = true
+        self.backgroundRightNode.displaysAsynchronously = false
+        self.backgroundRightNode.image = backgroundLeftImage(theme)
+        self.backgroundRightNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+        
+        self.clippingNode = ASDisplayNode()
+        self.clippingNode.clipsToBounds = true
+        
         self.listView = ListView()
         self.listView.isOpaque = false
-        self.listView.stackFromBottom = true
-        self.listView.keepBottomItemOverscrollBackground = theme.list.plainBackgroundColor
-        self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.listView.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         super.init(context: context, theme: theme, strings: strings)
         
+        self.placement = .overTextInput
         self.isOpaque = false
-        self.clipsToBounds = true
         
-        self.addSubnode(self.listView)
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.backgroundLeftNode)
+        self.addSubnode(self.backgroundRightNode)
+        
+        self.addSubnode(self.clippingNode)
+        self.clippingNode.addSubnode(self.listView)
     }
     
     func updateResults(_ results: [(String, String)]) {
@@ -88,13 +149,12 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
             entries.append(entry)
             index += 1
         }
-        prepareTransition(from: self.currentEntries, to: entries)
-        
+        self.prepareTransition(from: self.currentEntries, to: entries)
     }
     
     private func prepareTransition(from: [EmojisChatInputContextPanelEntry]? , to: [EmojisChatInputContextPanelEntry]) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, hashtagSelected: { [weak self] text in
+        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, emojiSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                     var hashtagQueryRange: NSRange?
@@ -146,114 +206,77 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
                 //options.insert(.Synchronous)
                 //options.insert(.LowLatency)
             } else {
-                options.insert(.AnimateTopItemPosition)
                 options.insert(.AnimateCrossfade)
             }
             
-            var insets = UIEdgeInsets()
-            insets.top = topInsetForLayout(size: validLayout.0)
-            insets.left = validLayout.1
-            insets.right = validLayout.2
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: validLayout.0, insets: UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0), duration: 0.0, curve: .Default(duration: nil))
             
-            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: validLayout.0, insets: insets, duration: 0.0, curve: .Default(duration: nil))
-            
-            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { [weak self] _ in
-                if let strongSelf = self, firstTime {
-                    var topItemOffset: CGFloat?
-                    strongSelf.listView.forEachItemNode { itemNode in
-                        if topItemOffset == nil {
-                            topItemOffset = itemNode.frame.minY
-                        }
-                    }
-                    
-                    if let topItemOffset = topItemOffset {
-                        let position = strongSelf.listView.layer.position
-                        strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                    }
-                }
-            })
+            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil)
         }
-    }
-    
-    private func topInsetForLayout(size: CGSize) -> CGFloat {
-        var minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
-        
-        return max(size.height - minimumItemHeights, 0.0)
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         let hadValidLayout = self.validLayout != nil
         self.validLayout = (size, leftInset, rightInset)
         
-        var insets = UIEdgeInsets()
-        insets.top = self.topInsetForLayout(size: size)
-        insets.left = leftInset
-        insets.right = rightInset
         
-        transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+        let sideInsets: CGFloat = 10.0 + leftInset
+        let contentWidth = min(size.width - sideInsets - sideInsets, max(24.0, CGFloat(self.currentEntries?.count ?? 0) * 45.0))
         
-        var duration: Double = 0.0
-        var curve: UInt = 0
-        switch transition {
-        case .immediate:
-            break
-        case let .animated(animationDuration, animationCurve):
-            duration = animationDuration
-            switch animationCurve {
-                case .easeInOut, .custom:
-                    break
-                case .spring:
-                    curve = 7
-            }
+        var contentLeftInset: CGFloat = 40.0
+        var leftOffset: CGFloat = 0.0
+        if sideInsets + floor(contentWidth / 2.0) < sideInsets + contentLeftInset + 15.0 {
+            let updatedLeftInset = sideInsets + floor(contentWidth / 2.0) - 15.0 - sideInsets
+            leftOffset = contentLeftInset - updatedLeftInset
+            contentLeftInset = updatedLeftInset
         }
         
-        let listViewCurve: ListViewAnimationCurve
-        if curve == 7 {
-            listViewCurve = .Spring(duration: duration)
-        } else {
-            listViewCurve = .Default(duration: duration)
-        }
+        let backgroundFrame = CGRect(origin: CGPoint(x: sideInsets + leftOffset, y: size.height - 55.0 + 4.0), size: CGSize(width: contentWidth, height: 55.0))
+        let backgroundLeftFrame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: contentLeftInset, height: backgroundFrame.size.height - 10.0 + UIScreenPixel))
+        let backgroundCenterFrame = CGRect(origin: CGPoint(x: backgroundLeftFrame.maxX, y: backgroundFrame.minY), size: CGSize(width: 30.0, height: 55.0))
+        let backgroundRightFrame = CGRect(origin: CGPoint(x: backgroundCenterFrame.maxX, y: backgroundFrame.minY), size: CGSize(width: max(0.0, backgroundFrame.minX + backgroundFrame.size.width - backgroundCenterFrame.maxX), height: backgroundFrame.size.height - 10.0 + UIScreenPixel))
+        transition.updateFrame(node: self.backgroundLeftNode, frame: backgroundLeftFrame)
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundCenterFrame)
+        transition.updateFrame(node: self.backgroundRightNode, frame: backgroundRightFrame)
         
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: listViewCurve)
+        let gridFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY + 2.0), size: CGSize(width: backgroundFrame.size.width, height: 45.0))
+        transition.updateFrame(node: self.clippingNode, frame: gridFrame)
+        self.listView.frame = CGRect(origin: CGPoint(), size: CGSize(width: gridFrame.size.height, height: gridFrame.size.width))
         
+        let gridBounds = self.listView.bounds
+        self.listView.bounds = CGRect(x: gridBounds.minX, y: gridBounds.minY, width: gridFrame.size.height, height: gridFrame.size.width)
+        self.listView.position = CGPoint(x: gridFrame.size.width / 2.0, y: gridFrame.size.height / 2.0)
+        
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: gridFrame.size.height, height: gridFrame.size.width), insets: UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0), duration: 0.0, curve: .Default(duration: 0.0))
+
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
+            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         
         if self.theme !== interfaceState.theme {
             self.theme = interfaceState.theme
-            self.listView.keepBottomItemOverscrollBackground = self.theme.list.plainBackgroundColor
-            
-            let new = self.currentEntries?.map({$0.withUpdatedTheme(interfaceState.theme)}) ?? []
-            prepareTransition(from: self.currentEntries, to: new)
+
+            let updatedEntries = self.currentEntries?.map({$0.withUpdatedTheme(interfaceState.theme)}) ?? []
+            self.prepareTransition(from: self.currentEntries, to: updatedEntries)
         }
     }
     
     override func animateOut(completion: @escaping () -> Void) {
-        var topItemOffset: CGFloat?
-        self.listView.forEachItemNode { itemNode in
-            if topItemOffset == nil {
-                topItemOffset = itemNode.frame.minY
-            }
-        }
-        
-        if let topItemOffset = topItemOffset {
-            let position = self.listView.layer.position
-            self.listView.layer.animatePosition(from: position, to: CGPoint(x: position.x, y: position.y + (self.listView.bounds.size.height - topItemOffset)), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-                completion()
-            })
-        } else {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
             completion()
-        }
+        })
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        let listViewFrame = self.listView.frame
-        return self.listView.hitTest(CGPoint(x: point.x - listViewFrame.minX, y: point.y - listViewFrame.minY), with: event)
+        if !self.clippingNode.frame.contains(point) {
+            return nil
+        }
+        return super.hitTest(point, with: event)
     }
 }
 

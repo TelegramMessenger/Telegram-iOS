@@ -20,6 +20,15 @@ enum WebEmbedType {
     case youtube(videoId: String, timestamp: Int)
     case vimeo(videoId: String, timestamp: Int)
     case iframe(url: String)
+    
+    var supportsSeeking: Bool {
+        switch self {
+            case .youtube, .vimeo:
+                return true
+            default:
+                return false
+        }
+    }
 }
 
 func webEmbedType(content: TelegramMediaWebpageLoadedContent) -> WebEmbedType {
