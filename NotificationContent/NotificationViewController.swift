@@ -122,6 +122,8 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                 return nil
             }, presentNativeController: { _ in
             }, dismissNativeController: {
+            }, getAvailableAlternateIcons: {
+                return []
             }, getAlternateIconName: {
                 return nil
             }, requestSetAlternateIconName: { _, f in

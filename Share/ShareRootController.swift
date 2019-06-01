@@ -145,6 +145,8 @@ class ShareRootController: UIViewController {
                 return nil
             }, presentNativeController: { _ in
             }, dismissNativeController: {
+            }, getAvailableAlternateIcons: {
+                return []
             }, getAlternateIconName: {
                 return nil
             }, requestSetAlternateIconName: { _, f in

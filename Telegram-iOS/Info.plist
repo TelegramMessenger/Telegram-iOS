@@ -23,6 +23,33 @@
 				<key>UIPrerenderedIcon</key>
 				<true/>
 			</dict>
+            <key>Blue</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlueIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlackFilled</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlackFilledIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlueFilled</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlueFilledIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
 		</dict>
 		<key>CFBundlePrimaryIcon</key>
 		<dict>

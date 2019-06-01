@@ -555,6 +555,15 @@ final class SharedApplicationContext {
             self.window?.rootViewController?.present(controller, animated: true, completion: nil)
         }, dismissNativeController: {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
+        }, getAvailableAlternateIcons: {
+            if #available(iOS 10.3, *) {
+                return [PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: false),
+                        PresentationAppIcon(name: "Black", imageName: "BlackIcon", isDefault: false),
+                        PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon", isDefault: false),
+                        PresentationAppIcon(name: "BlackFilled", imageName: "BlackFilledIcon", isDefault: false)]
+            } else {
+                return []
+            }
         }, getAlternateIconName: {
             if #available(iOS 10.3, *) {
                 return application.alternateIconName
