@@ -26,7 +26,7 @@ private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult
                 nonEmpty = true
             }
             return (4, nonEmpty)
-        case let .emojis(items):
+        case let .emojis(items, _):
             return (5, !items.isEmpty)
     }
 }
@@ -100,7 +100,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                     return panel
                 }
             }
-        case let .emojis(results):
+        case let .emojis(results, range):
             if !results.isEmpty {
                 if let currentPanel = currentPanel as? EmojisChatInputContextPanelNode {
                     currentPanel.updateResults(results)

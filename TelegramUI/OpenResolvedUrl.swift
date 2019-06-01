@@ -182,7 +182,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                     }
                 })
             } else {
-                let controller = PeerSelectionController(context: context)
+                let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
                 controller.peerSelected = { [weak controller] peerId in
                     if let strongController = controller {
                         strongController.dismiss()

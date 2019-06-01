@@ -1804,6 +1804,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                                 forceOpen = true
                                                 break
                                             }
+                                            if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, webEmbedType(content: content).supportsSeeking {
+                                                mediaMessage = replyMessage
+                                                forceOpen = true
+                                                break
+                                            }
                                         }
                                     }
                                 }

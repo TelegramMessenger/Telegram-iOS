@@ -8,6 +8,7 @@ import SwiftSignalKit
 final class HorizontalStickersChatContextPanelInteraction {
     var previewedStickerItem: StickerPackItem?
 }
+
 private func backgroundCenterImage(_ theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 82.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -95,7 +96,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     
     private var validLayout: (CGSize, CGFloat, CGFloat, ChatPresentationInterfaceState)?
     private var currentEntries: [StickerEntry] = []
-    private var queuedTransitions: [StickerEntryTransition] = []
+    private var enqueuedTransitions: [StickerEntryTransition] = []
     
     public var controllerInteraction: ChatControllerInteraction?
     private let stickersInteraction: HorizontalStickersChatContextPanelInteraction
@@ -243,15 +244,15 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func enqueueTransition(_ transition: StickerEntryTransition) {
-        self.queuedTransitions.append(transition)
+        self.enqueuedTransitions.append(transition)
         if self.validLayout != nil {
-            self.dequeueTransitions()
+            self.dequeueTransition()
         }
     }
     
-    private func dequeueTransitions() {
-        while !self.queuedTransitions.isEmpty {
-            let transition = self.queuedTransitions.removeFirst()
+    private func dequeueTransition() {
+        while !self.enqueuedTransitions.isEmpty {
+            let transition = self.enqueuedTransitions.removeFirst()
             self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in })
         }
     }
@@ -291,7 +292,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         
         if dequeue {
             self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.dequeueTransitions()
+            self.dequeueTransition()
         }
         
         if self.theme !== interfaceState.theme {

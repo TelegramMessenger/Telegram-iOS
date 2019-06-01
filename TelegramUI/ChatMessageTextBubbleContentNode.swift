@@ -140,10 +140,14 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var messageEntities: [MessageTextEntity]?
                 
                 var mediaDuration: Double? = nil
+                var isSeekableWebMedia = false
                 var isUnsupportedMedia = false
                 for media in item.message.media {
                     if let file = media as? TelegramMediaFile, let duration = file.duration {
                         mediaDuration = Double(duration)
+                    }
+                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, webEmbedType(content: content).supportsSeeking {
+                        isSeekableWebMedia = true
                     }
                     else if media is TelegramMediaUnsupported {
                         isUnsupportedMedia = true
@@ -164,7 +168,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 for media in replyMessage.media {
                                     if let file = media as? TelegramMediaFile, let duration = file.duration {
                                         mediaDuration = Double(duration)
-                                        break
+                                    }
+                                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, webEmbedType(content: content).supportsSeeking {
+                                        isSeekableWebMedia = true
                                     }
                                 }
                             }
@@ -180,14 +186,17 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     entities = messageEntities
                     
-                    if entities == nil && mediaDuration != nil {
+                    if entities == nil && (mediaDuration != nil || isSeekableWebMedia) {
                         entities = []
                     }
                     
                     if let entitiesValue = entities {
                         var enabledTypes: EnabledEntityTypes = .all
-                        if mediaDuration != nil {
+                        if mediaDuration != nil || isSeekableWebMedia {
                             enabledTypes.insert(.timecode)
+                            if mediaDuration == nil {
+                                mediaDuration = 60.0 * 60.0 * 3.0
+                            }
                         }
                         if let result = addLocallyGeneratedEntities(rawText, enabledTypes: enabledTypes, entities: entitiesValue, mediaDuration: mediaDuration) {
                             entities = result

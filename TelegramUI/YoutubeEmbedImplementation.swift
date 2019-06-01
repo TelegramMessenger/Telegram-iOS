@@ -87,7 +87,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     private var onPlaybackStarted: (() -> Void)?
     
     private let videoId: String
-    private let timestamp: Int
+    private var timestamp: Int
     private var ignoreEarlierTimestamps = false
     private var status : MediaPlayerStatus
     
@@ -150,7 +150,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                                                        "showinfo": 0,
                                                        "rel": 0,
                                                        "modestbranding": 1,
-                                                       "start": timestamp ] ]
+                                                       "start": self.timestamp ] ]
         
         guard let paramsJsonData = try? JSONSerialization.data(withJSONObject: params, options: .prettyPrinted), let paramsJson = String(data: paramsJsonData, encoding: .utf8) else {
             return
@@ -169,7 +169,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     }
     
     func play() {
-        guard ready else {
+        guard self.ready else {
             self.playbackDelay = .afterPositionUpdates(count: 2)
             return
         }
@@ -196,6 +196,11 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     }
     
     func seek(timestamp: Double) {
+        if !self.ready {
+            self.timestamp = Int(timestamp)
+            self.ignoreEarlierTimestamps = true
+        }
+        
         if let eval = evalImpl {
             eval("seek(\(timestamp));")
         }

@@ -142,6 +142,9 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     }
     
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
+        if case let .timecode(time) = seek {
+            self.playerNode.seek(timestamp: time)
+        }
     }
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {

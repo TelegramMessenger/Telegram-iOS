@@ -5493,7 +5493,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func forwardMessages(messageIds: [MessageId], resetCurrent: Bool = false) {
-        let controller = PeerSelectionController(context: self.context, filter: .onlyWriteable)
+        let controller = PeerSelectionController(context: self.context, filter: [.onlyWriteable, .excludeDisabled])
         controller.peerSelected = { [weak self, weak controller] peerId in
             guard let strongSelf = self, let strongController = controller else {
                 return

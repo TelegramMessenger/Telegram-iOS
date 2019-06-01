@@ -142,7 +142,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 
-                                let controller = PeerSelectionController(context: context)
+                                let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
                                 controller.peerSelected = { [weak controller] peerId in
                                     if let strongController = controller {
                                         strongController.dismiss()
@@ -191,7 +191,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 
-                                let controller = PeerSelectionController(context: context)
+                                let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
                                 controller.peerSelected = { [weak controller] peerId in
                                     if let strongController = controller {
                                         strongController.dismiss()
@@ -236,7 +236,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         guard let context = arguments.context else {
                             return
                         }
-                        let controller = PeerSelectionController(context: context)
+                        let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
                         controller.peerSelected = { [weak controller] peerId in
                             if let strongController = controller {
                                 strongController.dismiss()
@@ -266,7 +266,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 
-                                let controller = PeerSelectionController(context: context)
+                                let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
                                 controller.peerSelected = { [weak controller] peerId in
                                     if let strongController = controller {
                                         strongController.dismiss()

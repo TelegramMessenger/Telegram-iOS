@@ -631,10 +631,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             var isAnimated = false
             var seek = MediaPlayerSeek.start
-            if let item = self.item, let content = item.content as? NativeVideoContent {
-                isAnimated = content.fileReference.media.isAnimated
-                if let time = item.timecode {
-                    seek = .timecode(time)
+            if let item = self.item {
+                if let content = item.content as? NativeVideoContent {
+                    isAnimated = content.fileReference.media.isAnimated
+                    if let time = item.timecode {
+                        seek = .timecode(time)
+                    }
+                } else if let _ = item.content as? WebEmbedVideoContent {
+                    if let time = item.timecode {
+                        seek = .timecode(time)
+                    }
                 }
             }
             if isAnimated {
