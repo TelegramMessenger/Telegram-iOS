@@ -264,7 +264,7 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
         } else {
             return [.regularChatsAndPrivateGroups]
         }
-    }, additionalChatListIndexNamespace: Namespaces.Message.Cloud, messageNamespacesRequiringGroupStatsValidation: [Namespaces.Message.Cloud])
+    }, additionalChatListIndexNamespace: Namespaces.Message.Cloud, messageNamespacesRequiringGroupStatsValidation: [Namespaces.Message.Cloud], defaultMessageNamespaceReadStates: [Namespaces.Message.Local: .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false)])
 }()
 
 public enum AccountPreferenceEntriesResult {

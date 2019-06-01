@@ -2066,14 +2066,14 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var delayNotificatonsUntil: Int32?
     var peerActivityTimestamps: [PeerId: Int32] = [:]
     
-    var holesFromPreviousStateMeessageIds: [MessageId] = []
+    var holesFromPreviousStateMessageIds: [MessageId] = []
     
     for (peerId, namespaces) in finalState.state.namespacesWithHolesFromPreviousState {
         for namespace in namespaces {
             if let id = transaction.getTopPeerMessageId(peerId: peerId, namespace: namespace) {
-                holesFromPreviousStateMeessageIds.append(MessageId(peerId: id.peerId, namespace: id.namespace, id: id.id + 1))
+                holesFromPreviousStateMessageIds.append(MessageId(peerId: id.peerId, namespace: id.namespace, id: id.id + 1))
             } else {
-                holesFromPreviousStateMeessageIds.append(MessageId(peerId: peerId, namespace: namespace, id: 1))
+                holesFromPreviousStateMessageIds.append(MessageId(peerId: peerId, namespace: namespace, id: 1))
             }
         }
     }
@@ -2544,7 +2544,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         }
     }
     
-    for messageId in holesFromPreviousStateMeessageIds {
+    for messageId in holesFromPreviousStateMessageIds {
         let upperId: MessageId.Id
         if let value = topUpperHistoryBlockMessages[PeerIdAndMessageNamespace(peerId: messageId.peerId, namespace: messageId.namespace)], value < Int32.max {
             upperId = value - 1
@@ -2553,6 +2553,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         }
         if upperId > messageId.id {
             transaction.addHole(peerId: messageId.peerId, namespace: messageId.namespace, space: .everywhere, range: messageId.id ... upperId)
+            Logger.shared.log("State", "adding hole for peer \(messageId.peerId), \(messageId.id) ... \(upperId)")
+        } else {
+            Logger.shared.log("State", "not adding hole for peer \(messageId.peerId), \(upperId) > \(messageId.id) = false")
         }
     }
     
