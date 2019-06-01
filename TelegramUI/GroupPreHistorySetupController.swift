@@ -162,7 +162,11 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
                             guard let upgradedPeerId = upgradedPeerId else {
                                 return .single(nil)
                             }
+                            //TODO process error
                             return updateChannelHistoryAvailabilitySettingsInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, historyAvailableForNewMembers: value)
+                            |> `catch` { _ -> Signal<Void, NoError> in
+                                return .single(Void())
+                            }
                             |> mapToSignal { _ -> Signal<PeerId?, NoError> in
                                 return .complete()
                             }
