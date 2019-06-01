@@ -3,7 +3,7 @@
     {
       "size" : "20x20",
       "idiom" : "iphone",
-      "filename" : "Icon1@40x40-1.png",
+      "filename" : "Icon1@40x40-2.png",
       "scale" : "2x"
     },
     {
@@ -15,7 +15,7 @@
     {
       "size" : "29x29",
       "idiom" : "iphone",
-      "filename" : "Icon1@58x58.png",
+      "filename" : "Icon1@58x58-1.png",
       "scale" : "2x"
     },
     {
@@ -27,7 +27,7 @@
     {
       "size" : "40x40",
       "idiom" : "iphone",
-      "filename" : "Icon1@80x80.png",
+      "filename" : "Icon1@80x80-1.png",
       "scale" : "2x"
     },
     {
@@ -69,19 +69,19 @@
     {
       "size" : "29x29",
       "idiom" : "ipad",
-      "filename" : "Icon1@58x58-1.png",
+      "filename" : "Icon1@58x58.png",
       "scale" : "2x"
     },
     {
       "size" : "40x40",
       "idiom" : "ipad",
-      "filename" : "Icon1@40x40-2.png",
+      "filename" : "Icon1@40x40-1.png",
       "scale" : "1x"
     },
     {
       "size" : "40x40",
       "idiom" : "ipad",
-      "filename" : "Icon1@80x80-1.png",
+      "filename" : "Icon1@80x80.png",
       "scale" : "2x"
     },
     {
@@ -103,17 +103,13 @@
       "scale" : "2x"
     },
     {
-      "size" : "1024x1024",
       "idiom" : "ios-marketing",
-      "filename" : "Icon1-iTunesArtwork.png",
+      "size" : "1024x1024",
       "scale" : "1x"
     }
   ],
   "info" : {
     "version" : 1,
     "author" : "xcode"
-  },
-  "properties" : {
-    "pre-rendered" : true
   }
 }

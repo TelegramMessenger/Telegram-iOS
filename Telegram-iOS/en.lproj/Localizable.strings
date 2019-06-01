@@ -4333,3 +4333,14 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.AddBotErrorHaveRights" = "Bots can only be added as administrators.";
 "Channel.AddBotAsAdmin" = "Make Admin";
 "Channel.AddBotErrorNoRights" = "Sorry, bots can only be added to channels as administrators.";
+
+"Appearance.AppIcon" = "App Icon";
+"Appearance.AppIconDefault" = "Default";
+"Appearance.AppIconDefaultX" = "Default X";
+"Appearance.AppIconFilled" = "Filled";
+"Appearance.AppIconFilledX" = "Filled X";
+
+"Appearance.ThemeCarouselClassic" = "Classic";
+"Appearance.ThemeCarouselDay" = "Filled";
+"Appearance.ThemeCarouselNightBlue" = "Dark";
+"Appearance.ThemeCarouselNight" = "Monochrome";

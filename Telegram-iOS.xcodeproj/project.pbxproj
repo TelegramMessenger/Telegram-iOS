@@ -12,6 +12,12 @@
 		0956AF2F217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0956AF2E217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m */; };
 		0972C6E021791D950069E98A /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0972C6DF21791D950069E98A /* UserNotifications.framework */; };
 		0972C6E421792D130069E98A /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0972C6E221792D120069E98A /* InfoPlist.strings */; };
+		09A218EE22A1570A00DE6898 /* BlueFilledIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A218E822A1570900DE6898 /* BlueFilledIcon@3x.png */; };
+		09A218EF22A1570A00DE6898 /* BlueIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A218E922A1570900DE6898 /* BlueIcon@2x.png */; };
+		09A218F022A1570A00DE6898 /* BlackFilledIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A218EA22A1570900DE6898 /* BlackFilledIcon@2x.png */; };
+		09A218F122A1570A00DE6898 /* BlackFilledIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A218EB22A1570900DE6898 /* BlackFilledIcon@3x.png */; };
+		09A218F222A1570A00DE6898 /* BlueFilledIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A218EC22A1570900DE6898 /* BlueFilledIcon@2x.png */; };
+		09A218F322A1570A00DE6898 /* BlueIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A218ED22A1570900DE6898 /* BlueIcon@3x.png */; };
 		09C50DE721729D7C009E676F /* TGBridgeAudioSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572C1217292BA00BDF00F /* TGBridgeAudioSignals.m */; };
 		09C50DE821729D7C009E676F /* TGBridgeBotSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572BB217292B900BDF00F /* TGBridgeBotSignals.m */; };
 		09C50DE921729D7C009E676F /* TGBridgeChatListSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572AF217292B900BDF00F /* TGBridgeChatListSignals.m */; };
@@ -564,6 +570,13 @@
 		0956AF2E217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGNeoUnsupportedMessageViewModel.m; sourceTree = "<group>"; };
 		0972C6DF21791D950069E98A /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS5.0.sdk/System/Library/Frameworks/UserNotifications.framework; sourceTree = DEVELOPER_DIR; };
 		0972C6E321792D120069E98A /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = InfoPlist.strings; sourceTree = "<group>"; };
+		09A218E622A151A100DE6898 /* AppIcons.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppIcons.xcassets; sourceTree = "<group>"; };
+		09A218E822A1570900DE6898 /* BlueFilledIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueFilledIcon@3x.png"; sourceTree = "<group>"; };
+		09A218E922A1570900DE6898 /* BlueIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueIcon@2x.png"; sourceTree = "<group>"; };
+		09A218EA22A1570900DE6898 /* BlackFilledIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackFilledIcon@2x.png"; sourceTree = "<group>"; };
+		09A218EB22A1570900DE6898 /* BlackFilledIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackFilledIcon@3x.png"; sourceTree = "<group>"; };
+		09A218EC22A1570900DE6898 /* BlueFilledIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueFilledIcon@2x.png"; sourceTree = "<group>"; };
+		09A218ED22A1570900DE6898 /* BlueIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueIcon@3x.png"; sourceTree = "<group>"; };
 		09C50E7921738178009E676F /* TGBridgeServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeServer.h; sourceTree = "<group>"; };
 		09C50E7A21738178009E676F /* TGBridgeServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeServer.m; sourceTree = "<group>"; };
 		09C50E852173854D009E676F /* WatchKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchKit.framework; path = System/Library/Frameworks/WatchKit.framework; sourceTree = SDKROOT; };
@@ -1313,6 +1326,22 @@
 			path = ru.lproj;
 			sourceTree = "<group>";
 		};
+		09A218E122A14E5600DE6898 /* App Icons */ = {
+			isa = PBXGroup;
+			children = (
+				09A218EA22A1570900DE6898 /* BlackFilledIcon@2x.png */,
+				09A218EB22A1570900DE6898 /* BlackFilledIcon@3x.png */,
+				09A218EC22A1570900DE6898 /* BlueFilledIcon@2x.png */,
+				09A218E822A1570900DE6898 /* BlueFilledIcon@3x.png */,
+				09A218E922A1570900DE6898 /* BlueIcon@2x.png */,
+				09A218ED22A1570900DE6898 /* BlueIcon@3x.png */,
+				D0E8C2DD2285EA55009F26E8 /* BlackIcon@2x.png */,
+				D0E8C2DF2285EA6A009F26E8 /* BlackIcon@3x.png */,
+				09A218E622A151A100DE6898 /* AppIcons.xcassets */,
+			);
+			name = "App Icons";
+			sourceTree = "<group>";
+		};
 		09C50E7821738150009E676F /* Watch */ = {
 			isa = PBXGroup;
 			children = (
@@ -1948,8 +1977,7 @@
 		D008599E1B28189D00EAF753 /* Telegram-iOS */ = {
 			isa = PBXGroup;
 			children = (
-				D0E8C2DD2285EA55009F26E8 /* BlackIcon@2x.png */,
-				D0E8C2DF2285EA6A009F26E8 /* BlackIcon@3x.png */,
+				09A218E122A14E5600DE6898 /* App Icons */,
 				D0338729223A8347007A2CE4 /* Config */,
 				09C50E7821738150009E676F /* Watch */,
 				D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */,
@@ -2868,6 +2896,7 @@
 				D08DB0B0213F4D1D00F2ADBF /* ic_pin@2x.png in Resources */,
 				D04DCC211F71C80000B021D7 /* 0.m4a in Resources */,
 				D04DCC261F71C80000B021D7 /* 103.m4a in Resources */,
+				09A218F222A1570A00DE6898 /* BlueFilledIcon@2x.png in Resources */,
 				D0CE6F69213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D0338736223A9A9A007A2CE4 /* Config-Hockeyapp-Internal.xcconfig in Resources */,
 				D08DB0C0213F4D1D00F2ADBF /* telegram_sphere@2x.png in Resources */,
@@ -2881,6 +2910,7 @@
 				D04DCC301F71C80000B021D7 /* 3.m4a in Resources */,
 				D0E8B8AE2044496C00605593 /* voip_end.caf in Resources */,
 				D0CE6F68213EDA4400BCD44B /* InfoPlist.strings in Resources */,
+				09A218EE22A1570A00DE6898 /* BlueFilledIcon@3x.png in Resources */,
 				D0CE6F6A213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D0E8C2DE2285EA55009F26E8 /* BlackIcon@2x.png in Resources */,
 				D09DCBB71D0C856B00F51FFE /* Localizable.strings in Resources */,
@@ -2898,6 +2928,7 @@
 				D0CE6F64213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D0CE6F6C213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D04DCC231F71C80000B021D7 /* 100.m4a in Resources */,
+				09A218EF22A1570A00DE6898 /* BlueIcon@2x.png in Resources */,
 				D04DCC281F71C80000B021D7 /* 105.m4a in Resources */,
 				D08DB0BB213F4D1D00F2ADBF /* private_screw@2x.png in Resources */,
 				D0CE6F5F213EDA4400BCD44B /* InfoPlist.strings in Resources */,
@@ -2916,9 +2947,12 @@
 				D0CE6F59213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D08DB0B9213F4D1D00F2ADBF /* powerful_star@2x.png in Resources */,
 				D04DCC271F71C80000B021D7 /* 104.m4a in Resources */,
+				09A218F122A1570A00DE6898 /* BlackFilledIcon@3x.png in Resources */,
 				D04DCC2A1F71C80000B021D7 /* 107.m4a in Resources */,
 				D08DB0BA213F4D1D00F2ADBF /* private_door@2x.png in Resources */,
+				09A218F022A1570A00DE6898 /* BlackFilledIcon@2x.png in Resources */,
 				D08DB0AE213F4D1D00F2ADBF /* ic_cam_lens@2x.png in Resources */,
+				09A218F322A1570A00DE6898 /* BlueIcon@3x.png in Resources */,
 				D04DCC2F1F71C80000B021D7 /* 2.m4a in Resources */,
 				D0CE6F58213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D08DB0AF213F4D1D00F2ADBF /* ic_pencil@2x.png in Resources */,
