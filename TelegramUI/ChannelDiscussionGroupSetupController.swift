@@ -364,7 +364,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     applyGroupDisposable.set((applySignal
                     |> deliverOnMainQueue).start(error: { error in
                         switch error {
-                            case .generic:
+                            case .generic, .hasNotPermissions:
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 

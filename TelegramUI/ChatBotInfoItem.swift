@@ -69,6 +69,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     
     let offsetContainer: ASDisplayNode
     let backgroundNode: ASImageNode
+    let titleNode: TextNode
     let textNode: TextNode
     private var linkHighlightingNode: LinkHighlightingNode?
     
@@ -85,6 +86,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
         self.textNode = TextNode()
+        self.titleNode = TextNode()
         
         super.init(layerBacked: false, dynamicBounce: true, rotated: true)
         
@@ -92,6 +94,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         
         self.addSubnode(self.offsetContainer)
         self.offsetContainer.addSubnode(self.backgroundNode)
+        self.offsetContainer.addSubnode(self.titleNode)
         self.offsetContainer.addSubnode(self.textNode)
         self.wantsTrailingItemSpaceUpdates = true
     }
@@ -124,6 +127,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     }
     
     func asyncLayout() -> (_ item: ChatBotInfoItem, _ width: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let currentTextAndEntities = self.currentTextAndEntities
         let currentTheme = self.theme
@@ -153,10 +157,16 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             let verticalItemInset: CGFloat = 10.0
             let verticalContentInset: CGFloat = 8.0
             
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Bot_DescriptionTitle, font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.bubble.infoPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.size.width - horizontalContentInset * 2.0) / 2.0), y: verticalItemInset + 4.0), size: CGSize(width: textLayout.size.width + horizontalContentInset * 2.0, height: textLayout.size.height + verticalContentInset * 2.0))
-            let textFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + verticalContentInset), size: textLayout.size)
+            let textSpacing: CGFloat = 1.0
+            let textSize = CGSize(width: max(titleLayout.size.width, textLayout.size.width), height: (titleLayout.size.height + textSpacing + textLayout.size.height))
+            
+            let backgroundFrame = CGRect(origin: CGPoint(x: floor((params.width - textSize.width - horizontalContentInset * 2.0) / 2.0), y: verticalItemInset + 4.0), size: CGSize(width: textSize.width + horizontalContentInset * 2.0, height: textSize.height + verticalContentInset * 2.0))
+            let titleFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + verticalContentInset), size: titleLayout.size)
+            let textFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + verticalContentInset + titleLayout.size.height + textSpacing), size: textLayout.size)
             
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: textLayout.size.height + verticalItemInset * 2.0 + verticalContentInset * 2.0 + 4.0), insets: UIEdgeInsets())
             return (itemLayout, { _ in
@@ -169,9 +179,11 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                     
                     strongSelf.controllerInteraction = item.controllerInteraction
                     strongSelf.currentTextAndEntities = updatedTextAndEntities
+                    let _ = titleApply()
                     let _ = textApply()
                     strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: itemLayout.contentSize)
                     strongSelf.backgroundNode.frame = backgroundFrame
+                    strongSelf.titleNode.frame = titleFrame
                     strongSelf.textNode.frame = textFrame
                 }
             })
