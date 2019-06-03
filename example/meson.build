@@ -51,7 +51,7 @@ if (demo_dep.found())
                link_with : rlottie_lib,
                dependencies : demo_dep)
 
-if (meson.get_compiler('cpp').has_header('elementary-1/efl_ui_animation_view_legacy.h'))
+if (meson.get_compiler('cpp').has_header('elementary-1/efl_ui_animation_view.h'))
     executable('efl_animview',
                'efl_animview.cpp',
                include_directories : inc,

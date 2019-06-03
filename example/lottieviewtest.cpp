@@ -129,7 +129,7 @@ main(int argc, char **argv)
        st = static_cast<Strategy>(option);
    }
    LottieViewTest *view = new LottieViewTest(app, st);
-   view->show(150);
+   view->show(250);
 
    app->addExitCb(onExitCb, view);
    app->addRenderPreCb(onRenderPreCb, view);
