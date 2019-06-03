@@ -95,6 +95,8 @@ public:
    int id() const {return mLayerData->id();}
    int parentId() const {return mLayerData->parentId();}
    void setParentLayer(LOTLayerItem *parent){mParentLayer = parent;}
+   void setComplexContent(bool value) { mComplexContent = value;}
+   bool complexContent() const {return mComplexContent;}
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha);
    VMatrix matrix(int frameNo) const;
    virtual void renderList(std::vector<VDrawable *> &){}
@@ -125,6 +127,7 @@ protected:
    float                                       mCombinedAlpha{0.0};
    int                                         mFrameNo{-1};
    DirtyFlag                                   mDirtyFlag{DirtyFlagBit::All};
+   bool                                        mComplexContent{false};
 };
 
 class LOTCompLayerItem: public LOTLayerItem
@@ -138,6 +141,7 @@ public:
 protected:
    void updateContent() final;
 private:
+    void renderHelper(VPainter *painter, const VRle &mask, const VRle &matteRle);
     void renderMatteLayer(VPainter *painter, const VRle &inheritMask, const VRle &matteRle,
                           LOTLayerItem *layer, LOTLayerItem *src);
 private:

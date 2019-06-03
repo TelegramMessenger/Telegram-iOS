@@ -77,6 +77,7 @@ LOTCompItem::LOTCompItem(LOTModel *model)
 {
     mCompData = model->mRoot.get();
     mRootLayer = createLayerItem(mCompData->mRootLayer.get());
+    mRootLayer->setComplexContent(false);
     mViewSize = mCompData->size();
 }
 
@@ -526,7 +527,7 @@ bool LOTLayerItem::visible() const
 
 LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
     : LOTLayerItem(layerModel)
-{
+{   
     // 1. create layer item
     for (auto &i : mLayerData->mChildren) {
         LOTLayerData *layerModel = static_cast<LOTLayerData *>(i.get());
@@ -552,6 +553,8 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
     if (!layerModel->layerSize().empty()) {
         mClipper = std::make_unique<LOTClipperItem>(layerModel->layerSize());
     }
+
+    if (mLayers.size() > 1) setComplexContent(true);
 }
 
 void LOTCompLayerItem::buildLayerNode()
@@ -582,6 +585,27 @@ void LOTCompLayerItem::buildLayerNode()
 }
 
 void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &matteRle)
+{
+    if (vIsZero(combinedAlpha())) return;
+
+    if (vCompare(combinedAlpha(), 1.0)) {
+        renderHelper(painter, inheritMask, matteRle);
+    } else {
+        if (complexContent()) {
+            VSize size = painter->clipBoundingRect().size();
+            VPainter srcPainter;
+            VBitmap srcBitmap(size.width(), size.height(), VBitmap::Format::ARGB32_Premultiplied);
+            srcPainter.begin(&srcBitmap);
+            renderHelper(&srcPainter, inheritMask, matteRle);
+            srcPainter.end();
+            painter->drawBitmap(VPoint(), srcBitmap, combinedAlpha() * 255);
+        } else {
+            renderHelper(painter, inheritMask, matteRle);
+        }
+    }
+}
+
+void LOTCompLayerItem::renderHelper(VPainter *painter, const VRle &inheritMask, const VRle &matteRle)
 {
     VRle mask;
     if (mLayerMask) {
@@ -702,8 +726,10 @@ void LOTCompLayerItem::updateContent()
         mClipper->update(combinedMatrix());
     }
     int mappedFrame = mLayerData->timeRemap(frameNo());
+    float alpha = combinedAlpha();
+    if (complexContent()) alpha = 1;
     for (const auto &layer : mLayers) {
-        layer->update( mappedFrame, combinedMatrix(), combinedAlpha());
+        layer->update( mappedFrame, combinedMatrix(), alpha);
     }
 }
 
