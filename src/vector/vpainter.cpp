@@ -27,7 +27,7 @@ public:
     void drawRle(const VPoint &pos, const VRle &rle);
     void drawRle(const VRle &rle, const VRle &clip);
     void setCompositionMode(VPainter::CompositionMode mode) { mSpanData.mCompositionMode = mode;}
-    void  drawBitmapUntransform(const VRect &target, const VBitmap &bitmap, const VRect &source);
+    void  drawBitmapUntransform(const VRect &target, const VBitmap &bitmap, const VRect &source, uint8_t const_alpha);
 public:
     VRasterBuffer mBuffer;
     VSpanData     mSpanData;
@@ -89,9 +89,9 @@ static void fillRect(const VRect &r, VSpanData *data)
 
 void  VPainterImpl::drawBitmapUntransform(const VRect &target,
                                           const VBitmap &bitmap,
-                                          const VRect &source)
+                                          const VRect &source, uint8_t const_alpha)
 {
-    mSpanData.initTexture(&bitmap, 255, VBitmapData::Plain, source);
+    mSpanData.initTexture(&bitmap, const_alpha, VBitmapData::Plain, source);
     if (!mSpanData.mUnclippedBlendFunc)
         return;
     mSpanData.dx = -target.x();
@@ -161,15 +161,15 @@ VRect VPainter::clipBoundingRect() const
     return mImpl->mSpanData.clipRect();
 }
 
-void  VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap, const VRect &source)
+void  VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap, const VRect &source, uint8_t const_alpha)
 {
     if (!bitmap.valid()) return;
 
     drawBitmap(VRect(point.x(), point.y(), bitmap.width(), bitmap.height()),
-               bitmap, source);
+               bitmap, source, const_alpha);
 }
 
-void  VPainter::drawBitmap(const VRect &target, const VBitmap &bitmap, const VRect &source)
+void  VPainter::drawBitmap(const VRect &target, const VBitmap &bitmap, const VRect &source, uint8_t const_alpha)
 {
     if (!bitmap.valid()) return;
 
@@ -177,25 +177,25 @@ void  VPainter::drawBitmap(const VRect &target, const VBitmap &bitmap, const VRe
     setBrush(VBrush());
 
     if (target.size() == source.size()) {
-        mImpl->drawBitmapUntransform(target, bitmap, source);
+        mImpl->drawBitmapUntransform(target, bitmap, source, const_alpha);
     } else {
         // @TODO scaling
     }
 }
 
-void  VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap)
+void  VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap, uint8_t const_alpha)
 {
     if (!bitmap.valid()) return;
 
     drawBitmap(VRect(point.x(), point.y(), bitmap.width(), bitmap.height()),
-               bitmap, VRect(0, 0, bitmap.width(), bitmap.height()));
+               bitmap, VRect(0, 0, bitmap.width(), bitmap.height()), const_alpha);
 }
 
-void  VPainter::drawBitmap(const VRect &rect, const VBitmap &bitmap)
+void  VPainter::drawBitmap(const VRect &rect, const VBitmap &bitmap, uint8_t const_alpha)
 {
     if (!bitmap.valid()) return;
 
-    drawBitmap(rect, bitmap, VRect(0, 0, bitmap.width(), bitmap.height()));
+    drawBitmap(rect, bitmap, VRect(0, 0, bitmap.width(), bitmap.height()), const_alpha);
 }
 
 V_END_NAMESPACE

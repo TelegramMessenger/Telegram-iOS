@@ -47,10 +47,10 @@ public:
     void  drawRle(const VRle &rle, const VRle &clip);
     VRect clipBoundingRect() const;
 
-    void  drawBitmap(const VPoint &point, const VBitmap &bitmap, const VRect &source);
-    void  drawBitmap(const VRect &target, const VBitmap &bitmap, const VRect &source);
-    void  drawBitmap(const VPoint &point, const VBitmap &bitmap);
-    void  drawBitmap(const VRect &rect, const VBitmap &bitmap);
+    void  drawBitmap(const VPoint &point, const VBitmap &bitmap, const VRect &source, uint8_t const_alpha = 255);
+    void  drawBitmap(const VRect &target, const VBitmap &bitmap, const VRect &source, uint8_t const_alpha = 255);
+    void  drawBitmap(const VPoint &point, const VBitmap &bitmap, uint8_t const_alpha = 255);
+    void  drawBitmap(const VRect &rect, const VBitmap &bitmap, uint8_t const_alpha = 255);
 private:
     VPainterImpl *mImpl;
 };
