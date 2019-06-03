@@ -41,7 +41,8 @@ void VDrawable::preprocess(const VRect &clip)
             VRaster::generateFillInfo(mRleFuture,
                 std::move(mPath), std::move(mRle), mFillRule, clip);
         }
-        mRle = VRle();
+        mRle = {};
+        mPath = {};
         mFlag &= ~DirtyFlag(DirtyState::Path);
     }
 }

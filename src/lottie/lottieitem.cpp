@@ -597,26 +597,18 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
         }
     }
 
-    LOTLayerItem *matteLayer = nullptr;
+    LOTLayerItem *matte = nullptr;
     for (const auto &layer : mLayers) {
         if (layer->hasMatte()) {
-            if (matteLayer) {
-                vWarning << "two consecutive layer has matter : not supported";
-            }
-            matteLayer = layer.get();
-            continue;
-        }
-
-        if (layer->visible()) {
-            if (matteLayer) {
-                if (matteLayer->visible())
-                    renderMatteLayer(painter, mask, matteRle, matteLayer, layer.get());
+            matte = layer.get();
+        } else {
+            if (matte && matte->visible() && layer->visible()) {
+                renderMatteLayer(painter, mask, matteRle, matte, layer.get());
             } else {
                 layer->render(painter, mask, matteRle);
             }
+            matte = nullptr;
         }
-
-        matteLayer = nullptr;
     }
 }
 
@@ -710,8 +702,19 @@ void LOTCompLayerItem::renderList(std::vector<VDrawable *> &list)
 {
     if (!visible()) return;
 
+    LOTLayerItem *matte = nullptr;
     for (const auto &layer : mLayers) {
-        layer->renderList(list);
+        if (layer->hasMatte()) {
+            matte = layer.get();
+        } else {
+            if (matte && matte->visible() && layer->visible()) {
+                layer->renderList(list);
+                matte->renderList(list);
+            } else {
+                layer->renderList(list);
+            }
+            matte = nullptr;
+        }
     }
 }
 
