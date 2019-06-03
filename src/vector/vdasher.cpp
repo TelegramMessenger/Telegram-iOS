@@ -179,7 +179,8 @@ VPath VDasher::dashed(const VPath &path)
 {
     if (path.empty()) return VPath();
 
-    mResult = VPath();
+    mResult = {};
+    mResult.reserve(path.points().size(), path.elements().size());
     mIndex = 0;
     const std::vector<VPath::Element> &elms = path.elements();
     const std::vector<VPointF> &       pts = path.points();
