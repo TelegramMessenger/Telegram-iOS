@@ -470,10 +470,16 @@ void LOTLayerItem::update(int frameNumber, const VMatrix &parentMatrix,
     // 1. check if the layer is part of the current frame
     if (!visible()) return;
 
+    float alpha = parentAlpha * opacity(frameNo());
+    if (vIsZero(alpha)) {
+        mCombinedAlpha = 0;
+        return;
+    }
+
     // 2. calculate the parent matrix and alpha
     VMatrix m = matrix(frameNo());
     m *= parentMatrix;
-    float alpha = parentAlpha * opacity(frameNo());
+
 
     // 3. update the dirty flag based on the change
     if (!mCombinedMatrix.fuzzyCompare(m)) {
@@ -602,10 +608,13 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
         if (layer->hasMatte()) {
             matte = layer.get();
         } else {
-            if (matte && matte->visible() && layer->visible()) {
-                renderMatteLayer(painter, mask, matteRle, matte, layer.get());
-            } else {
-                layer->render(painter, mask, matteRle);
+            if (layer->visible()) {
+                if (matte) {
+                    if (matte->visible())
+                        renderMatteLayer(painter, mask, matteRle, matte, layer.get());
+                } else {
+                    layer->render(painter, mask, matteRle);
+                }
             }
             matte = nullptr;
         }
@@ -700,18 +709,22 @@ void LOTCompLayerItem::updateContent()
 
 void LOTCompLayerItem::renderList(std::vector<VDrawable *> &list)
 {
-    if (!visible()) return;
+    if (!visible() || vIsZero(combinedAlpha())) return;
 
     LOTLayerItem *matte = nullptr;
     for (const auto &layer : mLayers) {
         if (layer->hasMatte()) {
             matte = layer.get();
         } else {
-            if (matte && matte->visible() && layer->visible()) {
-                layer->renderList(list);
-                matte->renderList(list);
-            } else {
-                layer->renderList(list);
+            if (layer->visible()) {
+                if (matte) {
+                    if (matte->visible()) {
+                        layer->renderList(list);
+                        matte->renderList(list);
+                    }
+                } else {
+                    layer->renderList(list);
+                }
             }
             matte = nullptr;
         }
@@ -766,7 +779,7 @@ void LOTSolidLayerItem::buildLayerNode()
 
 void LOTSolidLayerItem::renderList(std::vector<VDrawable *> &list)
 {
-    if (!visible()) return;
+    if (!visible() || vIsZero(combinedAlpha())) return;
 
     list.push_back(mRenderNode.get());
 }
@@ -803,7 +816,7 @@ void LOTImageLayerItem::updateContent()
 
 void LOTImageLayerItem::renderList(std::vector<VDrawable *> &list)
 {
-    if (!visible()) return;
+    if (!visible() || vIsZero(combinedAlpha())) return;
 
     list.push_back(mRenderNode.get());
 }
@@ -946,7 +959,7 @@ void LOTShapeLayerItem::buildLayerNode()
 
 void LOTShapeLayerItem::renderList(std::vector<VDrawable *> &list)
 {
-    if (!visible()) return;
+    if (!visible() || vIsZero(combinedAlpha())) return;
     mRoot->renderList(list);
 }
 
