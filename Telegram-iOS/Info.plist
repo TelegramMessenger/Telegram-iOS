@@ -32,6 +32,24 @@
                 <key>UIPrerenderedIcon</key>
                 <true/>
             </dict>
+            <key>BlueClassic</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlueClassicIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlackClassic</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlackClassicIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
             <key>BlackFilled</key>
             <dict>
                 <key>CFBundleIconFiles</key>
