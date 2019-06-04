@@ -124,13 +124,6 @@ _button_clicked_cb(void *data, Evas_Object */*obj*/, void */*event_info*/)
    _toggle_start_button(info);
 }
 
-static void
-_image_update_cb(void *data, Evas_Object *obj EINA_UNUSED)
-{
-   AppInfo *info = (AppInfo *)data;
-   info->view->render();
-}
-
 Evas_Object *
 create_layout(Evas_Object *parent, const char *file)
 {
@@ -157,7 +150,6 @@ create_layout(Evas_Object *parent, const char *file)
    //IMAGE from LOTTIEVIEW
    image = view->getImage();
    evas_object_show(image);
-   evas_object_image_pixels_get_callback_set(image, _image_update_cb, info);
    elm_object_part_content_set(layout, "lottie", image);
 
    //SLIDER
@@ -183,8 +175,6 @@ create_layout(Evas_Object *parent, const char *file)
    elm_object_part_text_set(layout, "text", buf);
 
    view->seek(0.0);
-   view->render();
-
    return layout;
 }
 

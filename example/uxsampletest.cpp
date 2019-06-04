@@ -104,14 +104,6 @@ onKeyCb(void *data, void *extra)
 }
 
 static void
-onRenderPreCb(void *data, void */*extra*/)
-{
-    UxSampleTest *view = (UxSampleTest *)data;
-    if (view->mView)
-        view->mView->render();
-}
-
-static void
 onResizeCb(void *data, void */*extra*/)
 {
     UxSampleTest *view = (UxSampleTest *)data;
@@ -134,7 +126,6 @@ main(int argc, char **argv)
 
    app->addExitCb(onExitCb, view);
    app->addKeyCb(onKeyCb, view);
-   app->addRenderPreCb(onRenderPreCb, view);
    app->addResizeCb(onResizeCb, view);
 
    app->run();

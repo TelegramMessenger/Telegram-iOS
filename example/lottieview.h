@@ -42,7 +42,9 @@ public:
     virtual ~RenderStrategy() {
         evas_object_del(renderObject());
     }
-    RenderStrategy(Evas_Object *obj):_renderObject(obj){}
+    RenderStrategy(Evas_Object *obj):_renderObject(obj){
+        addCallback();
+    }
     virtual rlottie::Animation *player() {return nullptr;}
     virtual void loadFromFile(const char *filePath) = 0;
     virtual void loadFromData(const std::string &jsonData, const std::string &key, const std::string &resourcePath) = 0;
@@ -50,14 +52,28 @@ public:
     virtual double frameRate() = 0;
     virtual size_t frameAtPos(double pos) = 0;
     virtual double duration() = 0;
-    virtual void renderRequest(int frame) = 0;
-    virtual void renderFlush() {}
+    void render(int frame) {
+        _redraw = renderRequest(frame);
+        if (_redraw)
+            evas_object_image_pixels_dirty_set(renderObject(), EINA_TRUE);
+    }
+    void dataCb() {
+        if (_redraw) {
+            evas_object_image_data_set(renderObject(), buffer());
+        }
+        _redraw = false;
+    }
     virtual void resize(int width, int height) = 0;
     virtual void setPos(int x, int y) {evas_object_move(renderObject(), x, y);}
     void show() {evas_object_show(_renderObject);}
     void hide() {evas_object_hide(_renderObject);}
+    void addCallback();
     Evas_Object* renderObject() const {return _renderObject;}
+protected:
+    virtual bool renderRequest(int) = 0;
+    virtual uint32_t* buffer() = 0;
 private:
+    bool         _redraw{false};
     Evas_Object *_renderObject;
 };
 
@@ -129,29 +145,34 @@ class RlottieRenderStrategy_CPP : public RlottieRenderStrategy {
 public:
     RlottieRenderStrategy_CPP(Evas *evas):RlottieRenderStrategy(evas) {}
 
-    void renderRequest(int frame) {
+    bool renderRequest(int frame) {
         int width , height;
         Evas_Object *image = renderObject();
         evas_object_image_size_get(image, &width, &height);
-        auto buffer = (uint32_t *)evas_object_image_data_get(image, EINA_TRUE);
+        mBuffer = (uint32_t *)evas_object_image_data_get(image, EINA_TRUE);
         size_t bytesperline =  evas_object_image_stride_get(image);
-        rlottie::Surface surface(buffer, width, height, bytesperline);
+        rlottie::Surface surface(mBuffer, width, height, bytesperline);
         mPlayer->renderSync(frame, surface);
-        evas_object_image_data_set(image, surface.buffer());
-        evas_object_image_data_update_add(image, 0 , 0, surface.width(), surface.height());
+        return true;
     }
+    uint32_t* buffer() {
+        return mBuffer;
+    }
+
+private:
+    uint32_t *              mBuffer;
 };
 
-class RlottieRenderStrategy_CPP_ASYNC : public RlottieRenderStrategy_CPP {
+class RlottieRenderStrategy_CPP_ASYNC : public RlottieRenderStrategy {
 public:
-    RlottieRenderStrategy_CPP_ASYNC(Evas *evas):RlottieRenderStrategy_CPP(evas) {}
+    RlottieRenderStrategy_CPP_ASYNC(Evas *evas):RlottieRenderStrategy(evas) {}
     ~RlottieRenderStrategy_CPP_ASYNC() {
         if (mRenderTask.valid())
             mRenderTask.get();
     }
-    void renderRequest(int frame) {
-        if (mRenderTask.valid()) return;
-        mDirty = true;
+    bool renderRequest(int frame) {
+        //addCallback();
+        if (mRenderTask.valid()) return true;
         int width , height;
         Evas_Object *image = renderObject();
         evas_object_image_size_get(image, &width, &height);
@@ -159,23 +180,15 @@ public:
         size_t bytesperline =  evas_object_image_stride_get(image);
         rlottie::Surface surface(buffer, width, height, bytesperline);
         mRenderTask = mPlayer->render(frame, surface);
-        // to force a redraw
-        evas_object_image_data_update_add(renderObject(), 0 , 0, surface.width(), surface.height());
+        return true;
     }
 
-    void renderFlush() {
-        if (!mDirty) return;
-
-        if (!mRenderTask.valid()) return;
-
+    uint32_t* buffer() {
         auto surface = mRenderTask.get();
-        evas_object_image_data_set(renderObject(), surface.buffer());
-        evas_object_image_data_update_add(renderObject(), 0 , 0, surface.width(), surface.height());
-        mDirty = false;
+        return surface.buffer();
     }
 private:
    std::future<rlottie::Surface>        mRenderTask;
-   bool                                 mDirty{true};
 };
 
 
@@ -219,18 +232,22 @@ public:
         return lottie_animation_get_duration(mPlayer);
     }
 
-    void renderRequest(int frame) {
+    bool renderRequest(int frame) {
         int width , height;
         Evas_Object *image = renderObject();
         evas_object_image_size_get(image, &width, &height);
-        auto buffer = (uint32_t *)evas_object_image_data_get(image, EINA_TRUE);
+        mBuffer = (uint32_t *)evas_object_image_data_get(image, EINA_TRUE);
         size_t bytesperline =  evas_object_image_stride_get(image);
-        lottie_animation_render_async(mPlayer, frame, buffer, width, height, bytesperline);
-        lottie_animation_render_flush(mPlayer);
-        evas_object_image_data_set(image, buffer);
-        evas_object_image_data_update_add(image, 0 , 0, width, height);
+        lottie_animation_render(mPlayer, frame, mBuffer, width, height, bytesperline);
+        return true;
     }
 
+    uint32_t* buffer() {
+        return mBuffer;
+    }
+
+private:
+    uint32_t *              mBuffer;
 protected:
    Lottie_Animation       *mPlayer;
 };
@@ -241,25 +258,23 @@ public:
     ~RlottieRenderStrategy_C_ASYNC() {
         if (mDirty) lottie_animation_render_flush(mPlayer);
     }
-    void renderRequest(int frame) {
-        if (mDirty) return;
+    bool renderRequest(int frame) {
+        if (mDirty) return true;
         mDirty = true;
         Evas_Object *image = renderObject();
         evas_object_image_size_get(image, &mWidth, &mHeight);
         mBuffer = (uint32_t *)evas_object_image_data_get(image, EINA_TRUE);
         size_t bytesperline =  evas_object_image_stride_get(image);
         lottie_animation_render_async(mPlayer, frame, mBuffer, mWidth, mHeight, bytesperline);
-        // to force a redraw
-        evas_object_image_data_update_add(renderObject(), 0 , 0, mWidth, mWidth);
+        return true;
     }
 
-    void renderFlush() {
-        if (!mDirty) return;
-        lottie_animation_render_flush(mPlayer);
-        evas_object_image_data_set(renderObject(), mBuffer);
-        evas_object_image_data_update_add(renderObject(), 0 , 0, mWidth, mHeight);
-        mDirty = false;
+    uint32_t* buffer() {
+       lottie_animation_render_flush(mPlayer);
+       mDirty =false;
+       return mBuffer;
     }
+
 private:
    uint32_t *              mBuffer;
    int                     mWidth;
@@ -305,7 +320,6 @@ public:
     void play();
     void pause();
     void stop();
-    void render();
     void initializeBufferObject(Evas *evas);
     void setMinProgress(float progress)
     {
@@ -357,7 +371,7 @@ public:
     std::unique_ptr<RenderStrategy>  mRenderDelegate;
 };
 
-
+#include<assert.h>
 class EflVgRenderStrategy : public CppApiBase {
     int mW;
     int mH;
@@ -370,9 +384,14 @@ public:
         evas_object_resize(renderObject(), width, height);
     }
 
-    void renderRequest(int frame) {
+    uint32_t *buffer() {
+        assert(false);
+    }
+
+    bool renderRequest(int frame) {
         const LOTLayerNode *root = mPlayer->renderTree(frame, mW, mH);
         updateTree(root);
+        return false;
     }
 
     void updateTree(const LOTLayerNode * node)

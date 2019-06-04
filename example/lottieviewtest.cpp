@@ -63,7 +63,6 @@ public:
         view->play();
         view->loop(true);
         //view->setRepeatMode(LottieView::RepeatMode::Reverse);
-
         posx += vw+offset;
         if ((mApp->width() - posx) < vw) {
           posx = offset;
@@ -71,15 +70,6 @@ public:
         }
         mViews.push_back(std::move(view));
     }
-  }
-
-  void render() {
-      //auto clock = std::chrono::high_resolution_clock::now();
-      for (auto &i : mViews) {
-          i->render();
-      }
-      //double d = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now()-clock).count();
-      //printf("total time taken = %f\n", d);
   }
 
 public:
@@ -93,13 +83,6 @@ onExitCb(void *data, void */*extra*/)
 {
     LottieViewTest *view = (LottieViewTest *)data;
     delete view;
-}
-
-static void
-onRenderPreCb(void *data, void */*extra*/)
-{
-    LottieViewTest *view = (LottieViewTest *)data;
-    view->render();
 }
 
 int
@@ -132,7 +115,6 @@ main(int argc, char **argv)
    view->show(250);
 
    app->addExitCb(onExitCb, view);
-   app->addRenderPreCb(onRenderPreCb, view);
 
    app->run();
    delete app;

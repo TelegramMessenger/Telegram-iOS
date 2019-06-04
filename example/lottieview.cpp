@@ -20,6 +20,17 @@
 
 using namespace rlottie;
 
+static void
+_image_update_cb(void *data, Evas_Object *obj EINA_UNUSED)
+{
+   RenderStrategy *info = (RenderStrategy *)data;
+   info->dataCb();
+}
+
+void RenderStrategy::addCallback(){
+    evas_object_image_pixels_get_callback_set(_renderObject, _image_update_cb, this);
+}
+
 static Eina_Bool
 animator(void *data , double pos)
 {
@@ -101,17 +112,12 @@ void LottieView::seek(float pos)
 
     mCurFrame = mRenderDelegate->frameAtPos(mPos);
 
-    mRenderDelegate->renderRequest(mCurFrame);
+    mRenderDelegate->render(mCurFrame);
 }
 
 float LottieView::getPos()
 {
    return mPos;
-}
-
-void LottieView::render()
-{
-    mRenderDelegate->renderFlush();
 }
 
 void LottieView::setFilePath(const char *filePath)
