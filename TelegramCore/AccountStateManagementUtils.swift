@@ -2347,7 +2347,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 Logger.shared.log("State", "apply state \(state)")
             case let .UpdateChannelState(peerId, channelState):
                 transaction.setPeerChatState(peerId, state: channelState)
-                Logger.shared.log("State", "apply channel state \(peerId): \(channelStates)")
+                Logger.shared.log("State", "apply channel state \(peerId): \(channelState)")
             case let .UpdateNotificationSettings(subject, notificationSettings):
                 switch subject {
                     case let .peer(peerId):

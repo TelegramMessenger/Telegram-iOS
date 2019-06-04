@@ -154,7 +154,7 @@ public func dismissReportPeer(account: Account, peerId: PeerId) -> Signal<Void, 
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
             if let current = current as? CachedUserData {
-                return current.withUpdatedReportStatus(.none)
+                return current.withUpdatedReportStatus(.none).withUpdatedContactStatus(.hide)
             } else if let current = current as? CachedGroupData {
                 return current.withUpdatedReportStatus(.none)
             } else if let current = current as? CachedChannelData {

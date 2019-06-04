@@ -110,12 +110,44 @@ public enum PeerMessageSound: Equatable {
     }
 }
 
+public enum PeerNotificationDisplayPreviews {
+    case `default`
+    case show
+    case hide
+    
+    static func decodeInline(_ decoder: PostboxDecoder) -> PeerNotificationDisplayPreviews {
+        switch decoder.decodeInt32ForKey("p.v", orElse: 0) {
+            case 0:
+                return .default
+            case 1:
+                return .show
+            case 2:
+                return .hide
+            default:
+                assertionFailure()
+                return .default
+        }
+    }
+    
+    func encodeInline(_ encoder: PostboxEncoder) {
+        switch self {
+            case .default:
+                encoder.encodeInt32(0, forKey: "p.v")
+            case .show:
+                encoder.encodeInt32(0, forKey: "p.v")
+            case .hide:
+                encoder.encodeInt32(0, forKey: "p.v")
+        }
+    }
+}
+
 public final class TelegramPeerNotificationSettings: PeerNotificationSettings, Equatable {
     public let muteState: PeerMuteState
     public let messageSound: PeerMessageSound
+    public let displayPreviews: PeerNotificationDisplayPreviews
     
     public static var defaultSettings: TelegramPeerNotificationSettings {
-        return TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .default)
+        return TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .default, displayPreviews: .default)
     }
     
     public var isRemovedFromTotalUnreadCount: Bool {
@@ -137,19 +169,22 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
         }
     }
     
-    public init(muteState: PeerMuteState, messageSound: PeerMessageSound) {
+    public init(muteState: PeerMuteState, messageSound: PeerMessageSound, displayPreviews: PeerNotificationDisplayPreviews) {
         self.muteState = muteState
         self.messageSound = messageSound
+        self.displayPreviews = displayPreviews
     }
     
     public init(decoder: PostboxDecoder) {
         self.muteState = PeerMuteState.decodeInline(decoder)
         self.messageSound = PeerMessageSound.decodeInline(decoder)
+        self.displayPreviews = PeerNotificationDisplayPreviews.decodeInline(decoder)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         self.muteState.encodeInline(encoder)
         self.messageSound.encodeInline(encoder)
+        self.displayPreviews.encodeInline(encoder)
     }
     
     public func isEqual(to: PeerNotificationSettings) -> Bool {
@@ -161,15 +196,19 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
     }
     
     public func withUpdatedMuteState(_ muteState: PeerMuteState) -> TelegramPeerNotificationSettings {
-        return TelegramPeerNotificationSettings(muteState: muteState, messageSound: self.messageSound)
+        return TelegramPeerNotificationSettings(muteState: muteState, messageSound: self.messageSound, displayPreviews: self.displayPreviews)
     }
     
     public func withUpdatedMessageSound(_ messageSound: PeerMessageSound) -> TelegramPeerNotificationSettings {
-        return TelegramPeerNotificationSettings(muteState: self.muteState, messageSound: messageSound)
+        return TelegramPeerNotificationSettings(muteState: self.muteState, messageSound: messageSound, displayPreviews: self.displayPreviews)
+    }
+    
+    public func withUpdatedDisplayPreviews(_ displayPreviews: PeerNotificationDisplayPreviews) -> TelegramPeerNotificationSettings {
+        return TelegramPeerNotificationSettings(muteState: self.muteState, messageSound: self.messageSound, displayPreviews: displayPreviews)
     }
     
     public static func ==(lhs: TelegramPeerNotificationSettings, rhs: TelegramPeerNotificationSettings) -> Bool {
-        return lhs.muteState == rhs.muteState && lhs.messageSound == rhs.messageSound
+        return lhs.muteState == rhs.muteState && lhs.messageSound == rhs.messageSound && lhs.displayPreviews == rhs.displayPreviews
     }
 }
 
@@ -177,8 +216,8 @@ extension TelegramPeerNotificationSettings {
     convenience init(apiSettings: Api.PeerNotifySettings) {
         switch apiSettings {
             case .peerNotifySettingsEmpty:
-                self.init(muteState: .unmuted, messageSound: .bundledModern(id: 0))
-            case let .peerNotifySettings(_, _, _, muteUntil, sound):
+                self.init(muteState: .unmuted, messageSound: .bundledModern(id: 0), displayPreviews: .default)
+            case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
                 let muteState: PeerMuteState
                 if let muteUntil = muteUntil {
                     if muteUntil == 0 {
@@ -189,7 +228,17 @@ extension TelegramPeerNotificationSettings {
                 } else {
                     muteState = .default
                 }
-                self.init(muteState: muteState, messageSound: PeerMessageSound(apiSound: sound))
+                let displayPreviews: PeerNotificationDisplayPreviews
+                if let showPreviews = showPreviews {
+                    if case .boolTrue = showPreviews {
+                        displayPreviews = .show
+                    } else {
+                        displayPreviews = .hide
+                    }
+                } else {
+                    displayPreviews = .default
+                }
+                self.init(muteState: muteState, messageSound: PeerMessageSound(apiSound: sound), displayPreviews: displayPreviews)
         }
     }
 }
