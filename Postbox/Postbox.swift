@@ -2247,6 +2247,8 @@ public final class Postbox {
                             case let .indexBased(maxIncomingReadIndex, _, _, _):
                                 anchor = .index(maxIncomingReadIndex)
                         }
+                    } else if let scrollIndex = self.peerChatInterfaceStateTable.get(peerId)?.historyScrollMessageIndex {
+                        anchor = .index(scrollIndex)
                     }
                 case let .associated(mainId, associatedId):
                     var ids: [PeerId] = []
@@ -2255,8 +2257,10 @@ public final class Postbox {
                         ids.append(associatedId.peerId)
                     }
                     
+                    var found = false
                     loop: for peerId in ids.reversed() {
                         if let combinedState = self.readStateTable.getCombinedState(peerId), let state = combinedState.states.first, state.1.count != 0 {
+                            found = true
                             switch state.1 {
                                 case let .idBased(maxIncomingReadId, _, _, _, _):
                                     anchor = .message(MessageId(peerId: peerId, namespace: state.0, id: maxIncomingReadId))
@@ -2264,6 +2268,12 @@ public final class Postbox {
                                     anchor = .index(maxIncomingReadIndex)
                             }
                             break loop
+                        }
+                    }
+                
+                    if !found {
+                        if let scrollIndex = self.peerChatInterfaceStateTable.get(mainId)?.historyScrollMessageIndex {
+                            anchor = .index(scrollIndex)
                         }
                     }
             }
