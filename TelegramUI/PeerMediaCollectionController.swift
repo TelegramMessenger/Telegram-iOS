@@ -352,6 +352,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, unblockPeer: {
         }, pinMessage: { _ in
         }, unpinMessage: {
+        }, shareAccountContact: {
         }, reportPeer: {
         }, presentPeerContact: {
         }, dismissReportPeer: {

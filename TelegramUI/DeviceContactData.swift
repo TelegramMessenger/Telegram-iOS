@@ -431,10 +431,14 @@ public extension DeviceContactExtendedData {
  
 extension DeviceContactExtendedData {
     convenience init?(peer: Peer) {
-        guard let user = peer as? TelegramUser, let phone = user.phone, !phone.isEmpty else {
+        guard let user = peer as? TelegramUser else {
             return nil
         }
-        self.init(basicData: DeviceContactBasicData(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: phone)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
+        var phoneNumbers: [DeviceContactPhoneNumberData] = []
+        if let phone = user.phone, !phone.isEmpty {
+            phoneNumbers.append(DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: phone))
+        }
+        self.init(basicData: DeviceContactBasicData(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumbers: phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
     }
 }
 

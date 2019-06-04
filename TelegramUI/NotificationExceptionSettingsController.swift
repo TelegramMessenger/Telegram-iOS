@@ -8,6 +8,7 @@ import SwiftSignalKit
 
 private enum NotificationPeerExceptionSection: Int32 {
     case switcher
+    case displayPreviews
     case soundModern
     case soundClassic
 }
@@ -21,6 +22,8 @@ private enum NotificationPeerExceptionEntryId : Hashable {
     case switcher(NotificationPeerExceptionSwitcher)
     case sound(PeerMessageSound)
     case switcherHeader
+    case displayPreviews(NotificationPeerExceptionSwitcher)
+    case displayPreviewsHeader
     case soundModernHeader
     case soundClassicHeader
     case none
@@ -36,13 +39,15 @@ private final class NotificationPeerExceptionArguments  {
     
     let selectSound: (PeerMessageSound) -> Void
     let selectMode: (NotificationPeerExceptionSwitcher) -> Void
+    let selectDisplayPreviews: (NotificationPeerExceptionSwitcher) -> Void
     let complete: () -> Void
     let cancel: () -> Void
     
-    init(account: Account, selectSound: @escaping(PeerMessageSound) -> Void, selectMode: @escaping(NotificationPeerExceptionSwitcher) -> Void, complete: @escaping()->Void, cancel: @escaping() -> Void) {
+    init(account: Account, selectSound: @escaping(PeerMessageSound) -> Void, selectMode: @escaping(NotificationPeerExceptionSwitcher) -> Void, selectDisplayPreviews: @escaping (NotificationPeerExceptionSwitcher) -> Void, complete: @escaping()->Void, cancel: @escaping() -> Void) {
         self.account = account
         self.selectSound = selectSound
         self.selectMode = selectMode
+        self.selectDisplayPreviews = selectDisplayPreviews
         self.complete = complete
         self.cancel = cancel
     }
@@ -55,6 +60,8 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
     
     case switcher(index:Int32, theme: PresentationTheme, strings: PresentationStrings, mode: NotificationPeerExceptionSwitcher, selected: Bool)
     case switcherHeader(index:Int32, theme: PresentationTheme, title: String)
+    case displayPreviews(index:Int32, theme: PresentationTheme, strings: PresentationStrings, value: NotificationPeerExceptionSwitcher, selected: Bool)
+    case displayPreviewsHeader(index:Int32, theme: PresentationTheme, title: String)
     case soundModernHeader(index:Int32, theme: PresentationTheme, title: String)
     case soundClassicHeader(index:Int32, theme: PresentationTheme, title: String)
     case none(index:Int32, section: NotificationPeerExceptionSection, theme: PresentationTheme, text: String, selected: Bool)
@@ -67,6 +74,10 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
         case let .switcherHeader(index, _, _):
             return index
         case let .switcher(index, _, _, _, _):
+            return index
+        case let .displayPreviewsHeader(index, _, _):
+            return index
+        case let .displayPreviews(index, _, _, _, _):
             return index
         case let .soundModernHeader(index, _, _):
             return index
@@ -85,6 +96,8 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
         switch self {
         case .switcher, .switcherHeader:
             return NotificationPeerExceptionSection.switcher.rawValue
+        case .displayPreviews, .displayPreviewsHeader:
+            return NotificationPeerExceptionSection.displayPreviews.rawValue
         case .soundModernHeader:
             return NotificationPeerExceptionSection.soundModern.rawValue
         case .soundClassicHeader:
@@ -104,6 +117,10 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return .switcher(mode)
         case .switcherHeader:
             return .switcherHeader
+        case let .displayPreviews(_, _, _, mode, _):
+            return .displayPreviews(mode)
+        case .displayPreviewsHeader:
+            return .displayPreviewsHeader
         case .soundModernHeader:
             return .soundModernHeader
         case .soundClassicHeader:
@@ -135,6 +152,19 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
                  arguments.selectMode(mode)
             })
         case let .switcherHeader(_, theme, text):
+            return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+        case let .displayPreviews(_, theme, strings, value, selected):
+            let title: String
+            switch value {
+            case .alwaysOn:
+                title = strings.Notification_Exceptions_AlwaysOn
+            case .alwaysOff:
+                title = strings.Notification_Exceptions_AlwaysOff
+            }
+            return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                arguments.selectDisplayPreviews(value)
+            })
+        case let .displayPreviewsHeader(_, theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .soundModernHeader(_, theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -171,32 +201,40 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
     entries.append(.switcher(index: index, theme: presentationData.theme, strings: presentationData.strings, mode: .alwaysOff, selected:  state.mode == .alwaysOff))
     index += 1
 
-    
-    entries.append(.soundModernHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_AlertTones))
-    index += 1
-    
-    if state.selectedSound == .default {
-        var bp:Int = 0
-        bp += 1
-    }
-    
-    entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .default, default: state.defaultSound), selected: state.selectedSound == .default))
-    index += 1
-
-    entries.append(.none(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .none), selected: state.selectedSound == .none))
-    index += 1
-
-    for i in 0 ..< 12 {
-        let sound: PeerMessageSound = .bundledModern(id: Int32(i))
-        entries.append(.sound(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))
+    if state.mode != .alwaysOff {
+        entries.append(.displayPreviewsHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notification_Exceptions_NewException_MessagePreviewHeader))
         index += 1
-    }
-    
-    entries.append(.soundClassicHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_ClassicTones))
-    for i in 0 ..< 8 {
-        let sound: PeerMessageSound = .bundledClassic(id: Int32(i))
-        entries.append(.sound(index: index, section: .soundClassic, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))
+        entries.append(.displayPreviews(index: index, theme: presentationData.theme, strings: presentationData.strings, value: .alwaysOn, selected: state.displayPreviews == .alwaysOn))
         index += 1
+        entries.append(.displayPreviews(index: index, theme: presentationData.theme, strings: presentationData.strings, value: .alwaysOff, selected: state.displayPreviews == .alwaysOff))
+        index += 1
+        
+        entries.append(.soundModernHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_AlertTones))
+        index += 1
+        
+        if state.selectedSound == .default {
+            var bp:Int = 0
+            bp += 1
+        }
+        
+        entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .default, default: state.defaultSound), selected: state.selectedSound == .default))
+        index += 1
+
+        entries.append(.none(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .none), selected: state.selectedSound == .none))
+        index += 1
+
+        for i in 0 ..< 12 {
+            let sound: PeerMessageSound = .bundledModern(id: Int32(i))
+            entries.append(.sound(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))
+            index += 1
+        }
+        
+        entries.append(.soundClassicHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_ClassicTones))
+        for i in 0 ..< 8 {
+            let sound: PeerMessageSound = .bundledClassic(id: Int32(i))
+            entries.append(.sound(index: index, section: .soundClassic, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))
+            index += 1
+        }
     }
     
     return entries
@@ -206,8 +244,9 @@ private struct NotificationExceptionPeerState : Equatable {
     let selectedSound: PeerMessageSound
     let mode: NotificationPeerExceptionSwitcher
     let defaultSound: PeerMessageSound
+    let displayPreviews: NotificationPeerExceptionSwitcher
+    
     init(notifications: TelegramPeerNotificationSettings? = nil) {
-        
         if let notifications = notifications {
             self.selectedSound = notifications.messageSound
             switch notifications.muteState {
@@ -218,34 +257,39 @@ private struct NotificationExceptionPeerState : Equatable {
             case .default:
                 self.mode = .alwaysOn
             }
+            self.displayPreviews = notifications.displayPreviews == .hide ? .alwaysOff : .alwaysOn
         } else {
             self.selectedSound = .default
             self.mode = .alwaysOn
+            self.displayPreviews = .alwaysOn
         }
-        
       
         self.defaultSound = .default
     }
     
-    init(selectedSound: PeerMessageSound, mode: NotificationPeerExceptionSwitcher, defaultSound: PeerMessageSound) {
+    init(selectedSound: PeerMessageSound, mode: NotificationPeerExceptionSwitcher, defaultSound: PeerMessageSound, displayPreviews: NotificationPeerExceptionSwitcher) {
         self.selectedSound = selectedSound
         self.mode = mode
         self.defaultSound = defaultSound
+        self.displayPreviews = displayPreviews
     }
     
     func withUpdatedDefaultSound(_ defaultSound: PeerMessageSound) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(selectedSound: self.selectedSound, mode: self.mode, defaultSound: defaultSound)
+        return NotificationExceptionPeerState(selectedSound: self.selectedSound, mode: self.mode, defaultSound: defaultSound, displayPreviews: self.displayPreviews)
     }
     func withUpdatedSound(_ selectedSound: PeerMessageSound) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(selectedSound: selectedSound, mode: self.mode, defaultSound: self.defaultSound)
+        return NotificationExceptionPeerState(selectedSound: selectedSound, mode: self.mode, defaultSound: self.defaultSound, displayPreviews: self.displayPreviews)
     }
     func withUpdatedMode(_ mode: NotificationPeerExceptionSwitcher) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(selectedSound: self.selectedSound, mode: mode, defaultSound: self.defaultSound)
+        return NotificationExceptionPeerState(selectedSound: self.selectedSound, mode: mode, defaultSound: self.defaultSound, displayPreviews: self.displayPreviews)
+    }
+    func withUpdatedDisplayPreviews(_ displayPreviews: NotificationPeerExceptionSwitcher) -> NotificationExceptionPeerState {
+        return NotificationExceptionPeerState(selectedSound: self.selectedSound, mode: self.mode, defaultSound: self.defaultSound, displayPreviews: displayPreviews)
     }
 }
 
 
-func notificationPeerExceptionController(context: AccountContext, peerId: PeerId, mode: NotificationExceptionMode, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void) -> ViewController {
+func notificationPeerExceptionController(context: AccountContext, peer: Peer, mode: NotificationExceptionMode, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void) -> ViewController {
     let initialState = NotificationExceptionPeerState()
     let statePromise = Promise(initialState)
     let stateValue = Atomic(value: initialState)
@@ -269,46 +313,46 @@ func notificationPeerExceptionController(context: AccountContext, peerId: PeerId
         updateState { state in
             return state.withUpdatedMode(mode)
         }
+    }, selectDisplayPreviews: { value in
+        updateState { state in
+            return state.withUpdatedDisplayPreviews(value)
+        }
     }, complete: {
         completeImpl?()
     }, cancel: {
         cancelImpl?()
     })
     
-    
-    
-    
     statePromise.set(context.account.postbox.transaction { transaction -> NotificationExceptionPeerState in
-        var state = NotificationExceptionPeerState(notifications: transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings)
+        var state = NotificationExceptionPeerState(notifications: transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings)
         let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
         switch mode {
-        case .channels:
-            state = state.withUpdatedDefaultSound(globalSettings.effective.channels.sound)
-        case .groups:
-            state = state.withUpdatedDefaultSound(globalSettings.effective.groupChats.sound)
-        case .users:
-            state = state.withUpdatedDefaultSound(globalSettings.effective.privateChats.sound)
+            case .channels:
+                state = state.withUpdatedDefaultSound(globalSettings.effective.channels.sound)
+            case .groups:
+                state = state.withUpdatedDefaultSound(globalSettings.effective.groupChats.sound)
+            case .users:
+                state = state.withUpdatedDefaultSound(globalSettings.effective.privateChats.sound)
         }
         _ = stateValue.swap(state)
         return state
     })
     
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> distinctUntilChanged)
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<NotificationPeerExceptionEntry>, NotificationPeerExceptionEntry.ItemGenerationArguments)) in
-            
-            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                arguments.cancel()
-            })
-            
-            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                arguments.complete()
-            })
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Notification_Exceptions_NewException), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: notificationPeerExceptionEntries(presentationData: presentationData, state: state), style: .blocks)
-            
-            return (controllerState, (listState, arguments))
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get() |> distinctUntilChanged)
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<NotificationPeerExceptionEntry>, NotificationPeerExceptionEntry.ItemGenerationArguments)) in
+        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            arguments.cancel()
+        })
+        
+        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Notification_Exceptions_Add), style: .bold, enabled: true, action: {
+            arguments.complete()
+        })
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: notificationPeerExceptionEntries(presentationData: presentationData, state: state), style: .blocks, animateChanges: false)
+        
+        return (controllerState, (listState, arguments))
     }
     
     let controller = ItemListController(context: context, state: signal |> afterDisposed {
@@ -320,8 +364,9 @@ func notificationPeerExceptionController(context: AccountContext, peerId: PeerId
     completeImpl = { [weak controller] in
         controller?.dismiss()
         updateState { state in
-            updatePeerSound(peerId, state.selectedSound)
-            updatePeerNotificationInterval(peerId, state.mode == .alwaysOn ? 0 : Int32.max)
+            updatePeerSound(peer.id, state.selectedSound)
+            updatePeerNotificationInterval(peer.id, state.mode == .alwaysOn ? 0 : Int32.max)
+            updatePeerDisplayPreviews(peer.id, state.displayPreviews == .alwaysOn ? .show : .hide)
             return state
         }
     }

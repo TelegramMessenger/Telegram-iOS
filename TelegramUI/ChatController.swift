@@ -1499,9 +1499,19 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 peerDiscussionId = cachedData.linkedDiscussionPeerId
                             }
                             var renderedPeer: RenderedPeer?
-                            var isContact: Bool = false
+                            var contactStatus: ChatContactStatus?
                             if let peer = peerView.peers[peerView.peerId] {
-                                isContact = peerView.peerIsContact
+                                if let cachedData = peerView.cachedData as? CachedUserData {
+                                    let didHidePanel: Bool
+                                    switch cachedData.contactStatus {
+                                        case .hide:
+                                            didHidePanel = true
+                                        case .unknown, .show:
+                                            didHidePanel = false
+                                    }
+                                    contactStatus = ChatContactStatus(isContact: peerView.peerIsContact, hasPhoneNumber: cachedData.hasAccountPeerPhone ?? false, didHidePanel: didHidePanel)
+                                }
+                                
                                 var peers = SimpleDictionary<PeerId, Peer>()
                                 peers[peer.id] = peer
                                 if let associatedPeerId = peer.associatedPeerId, let associatedPeer = peerView.peers[associatedPeerId] {
@@ -1551,9 +1561,35 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 }
                             }
                             
+                            var didDisplayActionsPanel = false
+                            if strongSelf.presentationInterfaceState.canReportPeer {
+                                didDisplayActionsPanel = true
+                            } else if let contactStatus = strongSelf.presentationInterfaceState.contactStatus {
+                                if !contactStatus.didHidePanel {
+                                    if !contactStatus.isContact || !contactStatus.hasPhoneNumber {
+                                        didDisplayActionsPanel = true
+                                    }
+                                }
+                            }
+                            
+                            var displayActionsPanel = false
+                            if strongSelf.presentationInterfaceState.canReportPeer {
+                                displayActionsPanel = true
+                            } else if let contactStatus = contactStatus {
+                                if !contactStatus.didHidePanel {
+                                    if !contactStatus.isContact || !contactStatus.hasPhoneNumber {
+                                        displayActionsPanel = true
+                                    }
+                                }
+                            }
+                            
+                            if displayActionsPanel != didDisplayActionsPanel {
+                                animated = true
+                            }
+                            
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                                 return $0.updatedPeer { _ in return renderedPeer
-                                }.updatedIsNotAccessible(isNotAccessible).updatedIsContact(isContact).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
+                                }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
                             })
                             if !strongSelf.didSetChatLocationInfoReady {
                                 strongSelf.didSetChatLocationInfoReady = true
@@ -1934,6 +1970,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         pinnedMessage = cachedDataMessages[pinnedMessageId]
                     }
                 }
+                
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { updated in
                     var updated = updated
                 
@@ -3151,6 +3188,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                 }
             }
+        }, shareAccountContact: { [weak self] in
+            self?.shareAccountContact()
         }, reportPeer: { [weak self] in
             self?.reportPeer()
         }, presentPeerContact: { [weak self] in
@@ -5792,6 +5831,52 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 self.present(peerReportOptionsController(context: self.context, subject: .peer(peer.id), present: { [weak self] c, a in
                     self?.present(c, in: .window(.root))
                 }), in: .window(.root))
+            } else if let _ = peer as? TelegramUser {
+                let presentationData = self.presentationData
+                let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                var reportSpam = true
+                var deleteChat = true
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: presentationData.strings.UserInfo_BlockConfirmationTitle(peer.compactDisplayTitle).0),
+                        ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: reportSpam, action: { [weak controller] checkValue in
+                            reportSpam = checkValue
+                            controller?.updateItem(groupIndex: 0, itemIndex: 1, { item in
+                                if let item = item as? ActionSheetCheckboxItem {
+                                    return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
+                                }
+                                return item
+                            })
+                        }),
+                        ActionSheetCheckboxItem(title: presentationData.strings.ReportSpam_DeleteThisChat, label: "", value: deleteChat, action: { [weak controller] checkValue in
+                            deleteChat = checkValue
+                            controller?.updateItem(groupIndex: 0, itemIndex: 2, { item in
+                                if let item = item as? ActionSheetCheckboxItem {
+                                    return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
+                                }
+                                return item
+                            })
+                        }),
+                        ActionSheetButtonItem(title: presentationData.strings.UserInfo_BlockActionTitle(peer.compactDisplayTitle).0, color: .destructive, action: { [weak self] in
+                            dismissAction()
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.id, isBlocked: true).start()
+                            if deleteChat {
+                                let _ = removePeerChat(account: strongSelf.context.account, peerId: peer.id, reportChatSpam: reportSpam).start()
+                                (strongSelf.navigationController as? NavigationController)?.filterController(strongSelf, animated: true)
+                            } else if reportSpam {
+                                let _ = TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peer.id, reason: .spam).start()
+                            }
+                        })
+                    ]),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                self.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             } else {
                 let title: String
                 var infoString: String?
@@ -5826,9 +5911,38 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
     }
     
+    private func shareAccountContact() {
+        let _ = (self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
+        |> deliverOnMainQueue).start(next: { [weak self] accountPeer in
+            guard let strongSelf = self else {
+                return
+            }
+            guard let accountPeer = accountPeer as? TelegramUser, let phone = accountPeer.phone, !phone.isEmpty else {
+                return
+            }
+            guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramUser else {
+                return
+            }
+            
+            strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.Conversation_ShareMyPhoneNumber_StatusSuccess(peer.compactDisplayTitle).0, true)), in: .window(.root))
+            strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaContact(firstName: accountPeer.firstName ?? "", lastName: accountPeer.lastName ?? "", phoneNumber: phone, peerId: accountPeer.id, vCardData: nil)), replyToMessageId: nil, localGroupingKey: nil)])
+        })
+    }
+    
     private func addPeerContact() {
-        if let peer = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, let phone = peer.phone, !phone.isEmpty, let contactData = DeviceContactExtendedData(peer: peer) {
-            self.present(addContactOptionsController(context: self.context, peer: peer, contactData: contactData), in: .window(.root))
+        if let peer = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: peer) {
+            self.present(deviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, isSharing: true, completion: { [weak self] peer, stableId, contactData in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let peer = peer as? TelegramUser {
+                    if let phone = peer.phone, !phone.isEmpty {
+                    }
+                    
+                    self?.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), in: .window(.root))
+                }
+            })), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            //self.present(addContactOptionsController(context: self.context, peer: peer, contactData: contactData), in: .window(.root))
         }
     }
     
@@ -5836,7 +5950,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
-        self.editMessageDisposable.set((TelegramCore.dismissReportPeer(account: self.context.account, peerId: peerId) |> afterDisposed({
+        self.editMessageDisposable.set((TelegramCore.dismissReportPeer(account: self.context.account, peerId: peerId)
+        |> afterDisposed({
             Queue.mainQueue().async {
             }
         })).start())

@@ -648,8 +648,8 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
             entries.append(UserInfoEntry.sendMessage(presentationData.theme, presentationData.strings.UserInfo_SendMessage))
             if view.peerIsContact {
                 entries.append(UserInfoEntry.shareContact(presentationData.theme, presentationData.strings.UserInfo_ShareContact))
-            } else if let phone = user.phone, !phone.isEmpty {
-                entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.UserInfo_AddContact))
+            } else {
+                entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.Conversation_AddToContacts))
             }
             
             if let cachedUserData = cachedPeerData as? CachedUserData, let hasAccountPeerPhone = cachedUserData.hasAccountPeerPhone, !hasAccountPeerPhone {
@@ -874,11 +874,22 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     }, addContact: {
         let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
         |> deliverOnMainQueue).start(next: { peer in
-            if let user = peer as? TelegramUser, let phone = user.phone, !phone.isEmpty {
-                let _ = (addContactPeerInteractively(account: context.account, peerId: user.id, phone: phone)
-                |> deliverOnMainQueue).start(completed: {
-                })
+            guard let user = peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: user) else {
+                return
             }
+            /*let _ = (addContactPeerInteractively(account: context.account, peerId: user.id, phone: phone)
+            |> deliverOnMainQueue).start(completed: {
+            })*/
+            
+            presentControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: user, contactData: contactData, isSharing: true, completion: { peer, stableId, contactData in
+                if let peer = peer as? TelegramUser {
+                    if let phone = peer.phone, !phone.isEmpty {
+                    }
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
+                }
+            })), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
     }, shareContact: {
         shareContactImpl?()

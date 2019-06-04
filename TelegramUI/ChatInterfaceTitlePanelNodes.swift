@@ -27,7 +27,18 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         }
     }
     
-    if chatPresentationInterfaceState.canReportPeer && (selectedContext == nil || selectedContext! <= .pinnedMessage) {
+    var displayActionsPanel = false
+    if chatPresentationInterfaceState.canReportPeer {
+        displayActionsPanel = true
+    } else if let contactStatus = chatPresentationInterfaceState.contactStatus {
+        if !contactStatus.didHidePanel {
+            if !contactStatus.isContact || !contactStatus.hasPhoneNumber {
+                displayActionsPanel = true
+            }
+        }
+    }
+    
+    if displayActionsPanel && (selectedContext == nil || selectedContext! <= .pinnedMessage) {
         if let currentPanel = currentPanel as? ChatReportPeerTitlePanelNode {
             return currentPanel
         } else {

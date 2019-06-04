@@ -19,6 +19,7 @@ public class NotificationExceptionsController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var removeAllItem: UIBarButtonItem!
     private var editItem: UIBarButtonItem!
     private var doneItem: UIBarButtonItem!
     
@@ -35,6 +36,7 @@ public class NotificationExceptionsController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
+        self.removeAllItem = UIBarButtonItem(title: self.presentationData.strings.Notification_Exceptions_DeleteAll, style: .plain, target: self, action: #selector(self.removeAllPressed))
         self.editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.editPressed))
         self.doneItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         
@@ -89,13 +91,16 @@ public class NotificationExceptionsController: ViewController {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.controllerNode.updatePresentationData(self.presentationData)
         
+        let removeAllItem = UIBarButtonItem(title: self.presentationData.strings.Notification_Exceptions_DeleteAll, style: .plain, target: self, action: #selector(self.removeAllPressed))
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.editPressed))
         let doneItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         if self.navigationItem.rightBarButtonItem === self.editItem {
             self.navigationItem.rightBarButtonItem = editItem
         } else if self.navigationItem.rightBarButtonItem === self.doneItem {
             self.navigationItem.rightBarButtonItem = doneItem
+            self.navigationItem.leftBarButtonItem = removeAllItem
         }
+        self.removeAllItem = removeAllItem
         self.editItem = editItem
         self.doneItem = doneItem
     }
@@ -109,11 +114,14 @@ public class NotificationExceptionsController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                let item: UIBarButtonItem?
+                var leftItem: UIBarButtonItem?
+                var item: UIBarButtonItem?
                 if let value = value {
                     item = value ? strongSelf.editItem : strongSelf.doneItem
-                } else {
-                    item = nil
+                    leftItem = value ? strongSelf.removeAllItem : nil
+                }
+                if strongSelf.navigationItem.leftBarButtonItem !== leftItem {
+                    strongSelf.navigationItem.setLeftBarButton(leftItem, animated: true)
                 }
                 if strongSelf.navigationItem.rightBarButtonItem !== item {
                     strongSelf.navigationItem.setRightBarButton(item, animated: true)
@@ -145,6 +153,10 @@ public class NotificationExceptionsController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, actualNavigationBarHeight: self.navigationHeight, transition: transition)
+    }
+    
+    @objc private func removeAllPressed() {
+        self.controllerNode
     }
     
     @objc private func editPressed() {

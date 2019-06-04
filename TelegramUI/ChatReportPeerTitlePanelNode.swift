@@ -5,25 +5,36 @@ import Postbox
 import TelegramCore
 
 private enum ChatReportPeerTitleButton {
-    case reportSpam
+    case block
     case addContact
+    case shareMyPhoneNumber
     
     func title(strings: PresentationStrings) -> String {
         switch self {
-            case .reportSpam:
-                return strings.Conversation_Report
+            case .block:
+                return strings.Conversation_Block
             case .addContact:
-                return strings.Conversation_AddContact
+                return strings.Conversation_AddToContacts
+            case .shareMyPhoneNumber:
+                return strings.Conversation_ShareMyPhoneNumber
         }
     }
 }
 
 private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReportPeerTitleButton] {
     var buttons: [ChatReportPeerTitleButton] = []
-    if let user = state.renderedPeer?.peer as? TelegramUser, let phone = user.phone, !phone.isEmpty, !state.isContact {
-        buttons.append(.addContact)
+    if let contactStatus = state.contactStatus {
+        if contactStatus.isContact {
+            if !contactStatus.hasPhoneNumber {
+                buttons.append(.shareMyPhoneNumber)
+            }
+        } else {
+            buttons.append(.block)
+            if !contactStatus.isContact, let _ = state.renderedPeer?.chatMainPeer as? TelegramUser {
+                buttons.append(.addContact)
+            }
+        }
     }
-    buttons.append(.reportSpam)
     return buttons
 }
 
@@ -95,8 +106,13 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 let view = UIButton()
                 view.setTitle(button.title(strings: interfaceState.strings), for: [])
                 view.titleLabel?.font = Font.regular(16.0)
+                if case .block = button {
+                    view.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlDestructiveColor, for: [])
+                    view.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlDestructiveColor.withAlphaComponent(0.7), for: [.highlighted])
+                } else {
                 view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor, for: [])
-                view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.7), for: [.highlighted])
+                    view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.7), for: [.highlighted])
+                }
                 view.addTarget(self, action: #selector(self.buttonPressed(_:)), for: [.touchUpInside])
                 self.view.addSubview(view)
                 self.buttons.append((button, view))
@@ -104,11 +120,30 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         if !self.buttons.isEmpty {
-            let buttonWidth = floor((width - leftInset - rightInset) / CGFloat(self.buttons.count))
-            var nextButtonOrigin: CGFloat = leftInset
-            for (_, view) in self.buttons {
-                view.frame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
-                nextButtonOrigin += buttonWidth
+            if self.buttons.count == 1 {
+                let buttonWidth = floor((width - leftInset - contentRightInset) / CGFloat(self.buttons.count))
+                var nextButtonOrigin: CGFloat = leftInset
+                for (_, view) in self.buttons {
+                    view.frame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
+                    nextButtonOrigin += buttonWidth
+                }
+            } else {
+                let areaWidth = width - leftInset - contentRightInset
+                let maxButtonWidth = floor(areaWidth / CGFloat(self.buttons.count))
+                let buttonSizes = self.buttons.map { button -> CGFloat in
+                    return button.1.sizeThatFits(CGSize(width: maxButtonWidth, height: 100.0)).width
+                }
+                let buttonsWidth = buttonSizes.reduce(0.0, +)
+                let maxButtonSpacing = floor((areaWidth - buttonsWidth) / CGFloat(self.buttons.count - 1))
+                let buttonSpacing = min(maxButtonSpacing, 110.0)
+                let updatedButtonsWidth = buttonsWidth + CGFloat(self.buttons.count - 1) * buttonSpacing
+                var nextButtonOrigin = leftInset + floor((areaWidth - updatedButtonsWidth) / 2.0)
+                
+                let buttonWidth = floor(updatedButtonsWidth / CGFloat(self.buttons.count))
+                for (_, view) in self.buttons {
+                    view.frame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
+                    nextButtonOrigin += buttonWidth
+                }
             }
         }
         
@@ -121,7 +156,9 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         for (button, buttonView) in self.buttons {
             if buttonView === view {
                 switch button {
-                    case .reportSpam:
+                    case .shareMyPhoneNumber:
+                        self.interfaceInteraction?.shareAccountContact()
+                    case .block:
                         self.interfaceInteraction?.reportPeer()
                     case .addContact:
                         self.interfaceInteraction?.presentPeerContact()
