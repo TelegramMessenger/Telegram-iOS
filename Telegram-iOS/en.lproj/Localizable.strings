@@ -4344,3 +4344,18 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.ThemeCarouselDay" = "Filled";
 "Appearance.ThemeCarouselNightBlue" = "Dark";
 "Appearance.ThemeCarouselNight" = "Monochrome";
+
+"Notification.Exceptions.DeleteAll" = "Delete All";
+"Notification.Exceptions.Add" = "Add";
+
+"Notification.Exceptions.NewException.MessagePreviewHeader" = "MESSAGE PREVIEW";
+"Notification.Exceptions.PreviewAlwaysOn" = "Show Preview";
+"Notification.Exceptions.PreviewAlwaysOff" = "Hide Preview";
+"Conversation.Block" = "Block";
+"Conversation.ShareMyPhoneNumber" = "Share My Phone Number";
+"Conversation.AddToContacts" = "Add to Contacts";
+
+"AddContact.ContactWillBeSharedNow" = "When you tap **Done**, your phone number will become visible to %@.";
+"AddContact.ContactWillBeSharedAfterMutual" = "Phone number vill be visible once %1$@ adds you as a contact. Your phone number will become visible to %1$@.";
+"AddContact.StatusSuccess" = "%@ is now in your contacts list.";
+"Conversation.ShareMyPhoneNumber.StatusSuccess" = "%@ can now see your phone number.";
