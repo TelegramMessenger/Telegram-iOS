@@ -578,7 +578,7 @@ public:
 public:
     FillRule                       mFillRule{FillRule::Winding}; /* "r" */
     LOTAnimatable<LottieColor>     mColor;   /* "c" */
-    LOTAnimatable<int>             mOpacity{100};  /* "o" */
+    LOTAnimatable<float>           mOpacity{100};  /* "o" */
     bool                           mEnabled{true}; /* "fillEnabled" */
 };
 
@@ -603,7 +603,7 @@ public:
     int getDashInfo(int frameNo, float *array) const;
 public:
     LOTAnimatable<LottieColor>        mColor;      /* "c" */
-    LOTAnimatable<int>                mOpacity{100};    /* "o" */
+    LOTAnimatable<float>              mOpacity{100};    /* "o" */
     LOTAnimatable<float>              mWidth{0};      /* "w" */
     CapStyle                          mCapStyle{CapStyle::Flat};   /* "lc" */
     JoinStyle                         mJoinStyle{JoinStyle::Miter};  /* "lj" */
