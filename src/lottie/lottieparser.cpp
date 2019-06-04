@@ -2055,7 +2055,7 @@ public:
                << ", stFm:" << obj->mStartFrame
                << ", ts:" << obj->mTimeStreatch
                << ", ao:" << obj->autoOrient()
-               << ", ddd:" << obj->mTransform->ddd()
+               << ", ddd:" << (obj->mTransform ? obj->mTransform->ddd() : false)
                << ", W:" << obj->layerSize().width()
                << ", H:" << obj->layerSize().height();
 
@@ -2065,7 +2065,6 @@ public:
                    << "ImageInfo:"
                    << " W :" << obj->mAsset->mWidth
                    << ", H :" << obj->mAsset->mHeight
-                   << ", Path :"<<obj->mAsset->mImagePath
                    <<" }"
                    << "\n";
         else {
@@ -2092,7 +2091,7 @@ public:
             vDebug << level << "{ Repeater: name: "<<obj->name()<<" , a:" << !obj->isStatic()
                    << ", copies:" << r->maxCopies()
                    << ", offset:" << r->offset(0);
-            visitChildren(static_cast<LOTGroupData *>(obj), level);
+            visitChildren(r->mContent.get(), level);
             vDebug << level << "} Repeater";
             break;
         }
