@@ -31,16 +31,17 @@ private final class ThemeSettingsControllerArguments {
 private enum ThemeSettingsControllerSection: Int32 {
     case fontSize
     case chatPreview
-    case themeList
+    case theme
     case icon
     case other
 }
 
 public enum ThemeSettingsEntryTag: ItemListItemTag {
     case fontSize
+    case theme
     case accentColor
-    case largeEmoji
     case icon
+    case largeEmoji
     case animations
     
     func isEqual(to other: ItemListItemTag) -> Bool {
@@ -61,7 +62,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case accentColor(PresentationTheme, String, Int32)
     case autoNightTheme(PresentationTheme, String, String)
     case themeListHeader(PresentationTheme, String)
-    case themeItem(PresentationTheme, String, Bool, Int32)
+    case themeItem(PresentationTheme, PresentationStrings, [PresentationBuiltinThemeReference], PresentationBuiltinThemeReference)
     case iconHeader(PresentationTheme, String)
     case iconItem(PresentationTheme, PresentationStrings, [PresentationAppIcon], String?)
     case otherHeader(PresentationTheme, String)
@@ -73,10 +74,10 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case .fontSizeHeader, .fontSize:
                 return ThemeSettingsControllerSection.fontSize.rawValue
-            case .chatPreviewHeader, .chatPreview, .wallpaper, .accentColor, .autoNightTheme:
+            case .chatPreviewHeader, .chatPreview, .wallpaper:
                 return ThemeSettingsControllerSection.chatPreview.rawValue
-            case .themeListHeader, .themeItem:
-                return ThemeSettingsControllerSection.themeList.rawValue
+            case .themeListHeader, .themeItem, .accentColor, .autoNightTheme:
+                return ThemeSettingsControllerSection.theme.rawValue
             case .iconHeader, .iconItem:
                 return ThemeSettingsControllerSection.icon.rawValue
             case .otherHeader, .largeEmoji, .animations, .animationsInfo:
@@ -96,14 +97,14 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return 3
             case .wallpaper:
                 return 4
-            case .accentColor:
-                return 5
-            case .autoNightTheme:
-                return 6
             case .themeListHeader:
+                return 5
+            case .themeItem:
+                return 6
+            case .accentColor:
                 return 7
-            case let .themeItem(_, _, _, index):
-                return 8 + index
+            case .autoNightTheme:
+                return 8
             case .iconHeader:
                 return 100
             case .iconItem:
@@ -157,8 +158,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .themeItem(lhsTheme, lhsText, lhsValue, lhsIndex):
-                if case let .themeItem(rhsTheme, rhsText, rhsValue, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsIndex == rhsIndex {
+            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme):
+                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme {
                     return true
                 } else {
                     return false
@@ -244,9 +245,9 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .themeListHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .themeItem(theme, title, value, index):
-                return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.selectTheme(index)
+            case let .themeItem(theme, strings, themes, currentTheme):
+                return ThemeSettingsThemeItem(theme: theme, strings: strings, sectionId: self.section, themes: themes.map { ($0, .white) }, currentTheme: currentTheme, updated: { theme in
+                    arguments.selectTheme(theme.rawValue)
                 })
             case let .iconHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -278,27 +279,27 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.chatPreviewHeader(presentationData.theme, strings.Appearance_Preview))
     entries.append(.chatPreview(presentationData.theme, theme, wallpaper, fontSize, presentationData.strings, dateTimeFormat, presentationData.nameDisplayOrder))
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
+    
+    entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme.uppercased()))
+    if case let .builtin(theme) = theme.name {
+        entries.append(.themeItem(presentationData.theme, presentationData.strings, [.dayClassic, .day, .nightAccent, .nightGrayscale], theme.reference))
+    }
+
     if theme.name == .builtin(.day) {
         entries.append(.accentColor(presentationData.theme, strings.Appearance_AccentColor, themeAccentColor ?? defaultDayAccentColor))
     }
     if theme.name == .builtin(.day) || theme.name == .builtin(.dayClassic) {
         let title: String
         switch autoNightSettings.trigger {
-            case .none:
-                title = strings.AutoNightTheme_Disabled
-            case .timeBased:
-                title = strings.AutoNightTheme_Scheduled
-            case .brightness:
-                title = strings.AutoNightTheme_Automatic
+        case .none:
+            title = strings.AutoNightTheme_Disabled
+        case .timeBased:
+            title = strings.AutoNightTheme_Scheduled
+        case .brightness:
+            title = strings.AutoNightTheme_Automatic
         }
         entries.append(.autoNightTheme(presentationData.theme, strings.Appearance_AutoNightTheme, title))
     }
-    
-    entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme.uppercased()))
-    entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeDayClassic, theme.name == .builtin(.dayClassic), 0))
-    entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeDay, theme.name == .builtin(.day), 1))
-    entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNight, theme.name == .builtin(.nightGrayscale), 2))
-    entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNightBlue, theme.name == .builtin(.nightAccent), 3))
     
     if !availableAppIcons.isEmpty {
         entries.append(.iconHeader(presentationData.theme, strings.Appearance_AppIcon.uppercased()))
@@ -327,9 +328,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let theme: PresentationThemeReference
         switch index {
             case 1:
-                theme = .builtin(.day)
-            case 2:
                 theme = .builtin(.nightGrayscale)
+            case 2:
+                theme = .builtin(.day)
             case 3:
                 theme = .builtin(.nightAccent)
             default:

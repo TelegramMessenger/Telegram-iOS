@@ -30,21 +30,68 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
     })?.stretchableImage(withLeftCapWidth: 15, topCapHeight: 15)
 }
 
-class ThemeSettingsAppIconItem: ListViewItem, ItemListItem {
+private func generateThemeIconImage(theme: PresentationBuiltinThemeReference) -> UIImage {
+    return generateImage(CGSize(width: 98.0, height: 62.0), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        
+        let background: UIColor
+        let incomingBubble: UIColor
+        let outgoingBubble: UIColor
+        switch theme {
+            case .dayClassic:
+                background = UIColor(rgb: 0xd6e2ee)
+                incomingBubble = UIColor(rgb: 0xffffff)
+                outgoingBubble = UIColor(rgb: 0xe1ffc7)
+            case .day:
+                background = .white
+                incomingBubble = UIColor(rgb: 0xd5dde6)
+                outgoingBubble = UIColor(rgb: 0x007aff)
+            case .nightGrayscale:
+                background = UIColor(rgb: 0x000000)
+                incomingBubble = UIColor(rgb: 0x1f1f1f)
+                outgoingBubble = UIColor(rgb: 0x313131)
+            case .nightAccent:
+                background = UIColor(rgb: 0x18222d)
+                incomingBubble = UIColor(rgb: 0x32475e)
+                outgoingBubble = UIColor(rgb: 0x3d6a97)
+        }
+        
+        context.setFillColor(background.cgColor)
+        context.fill(bounds)
+        
+        let incoming = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: incomingBubble)
+        let outgoing = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: outgoingBubble)
+        
+        context.translateBy(x: bounds.width / 2.0, y: bounds.height / 2.0)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -bounds.width / 2.0, y: -bounds.height / 2.0)
+        
+        context.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
+        
+        context.translateBy(x: bounds.width / 2.0, y: bounds.height / 2.0)
+        context.scaleBy(x: -1.0, y: 1.0)
+        context.translateBy(x: -bounds.width / 2.0, y: -bounds.height / 2.0)
+        context.draw(outgoing!.cgImage!, in: CGRect(x: 9.0, y: 12.0, width: 57.0, height: 16.0))
+        
+        
+    })!.stretchableImage(withLeftCapWidth: 15, topCapHeight: 15)
+}
+
+class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     var sectionId: ItemListSectionId
     
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let icons: [PresentationAppIcon]
-    let currentIconName: String?
-    let updated: (String) -> Void
+    let themes: [(PresentationBuiltinThemeReference, UIColor)]
+    let currentTheme: PresentationBuiltinThemeReference
+    let updated: (PresentationBuiltinThemeReference) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, icons: [PresentationAppIcon], currentIconName: String?, updated: @escaping (String) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [(PresentationBuiltinThemeReference, UIColor)], currentTheme: PresentationBuiltinThemeReference, updated: @escaping (PresentationBuiltinThemeReference) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
-        self.icons = icons
-        self.currentIconName = currentIconName
+        self.themes = themes
+        self.currentTheme = currentTheme
         self.updated = updated
         self.tag = tag
         self.sectionId = sectionId
@@ -52,7 +99,7 @@ class ThemeSettingsAppIconItem: ListViewItem, ItemListItem {
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = ThemeSettingsAppIconItemNode()
+            let node = ThemeSettingsThemeItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
@@ -68,7 +115,7 @@ class ThemeSettingsAppIconItem: ListViewItem, ItemListItem {
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            if let nodeValue = node() as? ThemeSettingsAppIconItemNode {
+            if let nodeValue = node() as? ThemeSettingsThemeItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
@@ -84,7 +131,7 @@ class ThemeSettingsAppIconItem: ListViewItem, ItemListItem {
     }
 }
 
-private final class ThemeSettingsAppIconNode : ASDisplayNode {
+private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     private let iconNode: ASImageNode
     private let overlayNode: ASImageNode
     private let textNode: ASTextNode
@@ -92,11 +139,11 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
     
     override init() {
         self.iconNode = ASImageNode()
-        self.iconNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 62.0))
+        self.iconNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 98.0, height: 62.0))
         self.iconNode.isLayerBacked = true
         
         self.overlayNode = ASImageNode()
-        self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 62.0))
+        self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 98.0, height: 62.0))
         self.overlayNode.isLayerBacked = true
         
         self.textNode = ASTextNode()
@@ -136,8 +183,8 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         
         let bounds = self.bounds
         
-        self.iconNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
-        self.overlayNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
+        self.iconNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: CGSize(width: 98.0, height: 62.0))
+        self.overlayNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: CGSize(width: 98.0, height: 62.0))
         self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 14.0 + 60.0 + 4.0 + 9.0), size: CGSize(width: bounds.size.width, height: 16.0))
     }
 }
@@ -146,15 +193,15 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
 private let textFont = Font.regular(11.0)
 private let itemSize = Font.regular(11.0)
 
-class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
+class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     
     private let scrollNode: ASScrollNode
-    private var nodes: [ThemeSettingsAppIconNode] = []
+    private var nodes: [ThemeSettingsThemeItemIconNode] = []
     
-    private var item: ThemeSettingsAppIconItem?
+    private var item: ThemeSettingsThemeItem?
     private var layoutParams: ListViewItemLayoutParams?
     
     var tag: ItemListItemTag? {
@@ -184,14 +231,13 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
         self.scrollNode.view.showsHorizontalScrollIndicator = false
     }
     
-    func asyncLayout() -> (_ item: ThemeSettingsAppIconItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ThemeSettingsThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
         return { item, params, neighbors in
             var themeUpdated = false
             if currentItem?.theme !== item.theme {
                 themeUpdated = true
-                
             }
             
             let contentSize: CGSize
@@ -246,51 +292,40 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.scrollNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: CGSize(width: layoutSize.width, height: layoutSize.height))
                     
                     let nodeInset: CGFloat = 4.0
-                    let nodeSize = CGSize(width: 80.0, height: 112.0)
+                    let nodeSize = CGSize(width: 116.0, height: 112.0)
                     var nodeOffset = nodeInset
                     
                     var i = 0
-                    for icon in item.icons {
-                        let imageNode: ThemeSettingsAppIconNode
+                    for (theme, color) in item.themes {
+                        let imageNode: ThemeSettingsThemeItemIconNode
                         if strongSelf.nodes.count > i {
                             imageNode = strongSelf.nodes[i]
                         } else {
-                            imageNode = ThemeSettingsAppIconNode()
+                            imageNode = ThemeSettingsThemeItemIconNode()
                             strongSelf.nodes.append(imageNode)
                             strongSelf.scrollNode.addSubnode(imageNode)
                         }
+
+                        let selected = theme == item.currentTheme
                         
-                        if let image = UIImage(named: icon.imageName, in: Bundle.main, compatibleWith: nil) {
-                            let selected = icon.name == item.currentIconName
-                            
-                            var name = "Icon"
-                            var bordered = true
-                            switch icon.name {
-                                case "Blue":
-                                    name = item.strings.Appearance_AppIconDefault
-                                case "Black":
-                                    name = item.strings.Appearance_AppIconDefaultX
-                                case "BlueClassic":
-                                    name = item.strings.Appearance_AppIconClassic
-                                case "BlackClassic":
-                                    name = item.strings.Appearance_AppIconClassicX
-                                case "BlueFilled":
-                                    name = item.strings.Appearance_AppIconFilled
-                                    bordered = false
-                                case "BlackFilled":
-                                    name = item.strings.Appearance_AppIconFilledX
-                                    bordered = false
-                                default:
-                                    break
-                            }
-                        
-                            imageNode.setup(theme: item.theme, icon: image, title: NSAttributedString(string: name, font: textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: bordered, selected: selected, action: {
-                                item.updated(icon.name)
-                            })
+                        var name = "Theme"
+                        switch theme {
+                            case .dayClassic:
+                                name = item.strings.Appearance_ThemeCarouselClassic
+                            case .day:
+                                name = item.strings.Appearance_ThemeCarouselDay
+                            case .nightGrayscale:
+                                name = item.strings.Appearance_ThemeCarouselNight
+                            case .nightAccent:
+                                name = item.strings.Appearance_ThemeCarouselNightBlue
                         }
                         
+                        imageNode.setup(theme: item.theme, icon: generateThemeIconImage(theme: theme), title: NSAttributedString(string: name, font: textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: {
+                            item.updated(theme)
+                        })
+                        
                         imageNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 0.0), size: nodeSize)
-                        nodeOffset += nodeSize.width + 15.0
+                        nodeOffset += nodeSize.width + 2.0
                         
                         i += 1
                     }

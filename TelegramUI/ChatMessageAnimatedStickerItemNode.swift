@@ -11,7 +11,7 @@ private class AlphaFrameFilter: CIFilter {
     static var kernel: CIColorKernel? = {
         return CIColorKernel(source: """
 kernel vec4 alphaFrame(__sample s, __sample m) {
-  return vec4( s.rgb, m.r );
+  return vec4( s.rgb, 1.0 - m.r );
 }
 """)
     }()
