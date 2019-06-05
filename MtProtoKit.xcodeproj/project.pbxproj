@@ -210,10 +210,8 @@
 		D0CB06661ADC45DA005E298F /* MTTcpConnectionBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39818B1650400C65116 /* MTTcpConnectionBehaviour.m */; };
 		D0CB066A1ADC4846005E298F /* MTResendMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A37D18B164E600C65116 /* MTResendMessageService.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CB066C1ADC49FA005E298F /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F818AFF259007F1076 /* GCDAsyncSocket.m */; };
-		D0CB066D1ADC49FF005E298F /* AFJSONUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		D0CB066E1ADC49FF005E298F /* AFHTTPClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EA18AFF259007F1076 /* AFHTTPClient.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		D0CB066F1ADC49FF005E298F /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		D0CB06701ADC49FF005E298F /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D0CB066F1ADC49FF005E298F /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; };
+		D0CB06701ADC49FF005E298F /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; };
 		D0CB06711ADC4A50005E298F /* MTTransportScheme.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A33518B161B600C65116 /* MTTransportScheme.m */; };
 		D0CD97D21D74B91400F41187 /* MTTime.h in Headers */ = {isa = PBXBuildFile; fileRef = 93DBD23318B2D9AA00631ADC /* MTTime.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CD97D31D74B91700F41187 /* MTTime.h in Headers */ = {isa = PBXBuildFile; fileRef = 93DBD23318B2D9AA00631ADC /* MTTime.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -463,12 +461,8 @@
 		D0CD98CB1D74BA9500F41187 /* MTTcpConnectionBehaviour.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A39718B1650400C65116 /* MTTcpConnectionBehaviour.h */; };
 		D0CD98CC1D74BA9700F41187 /* MTTcpConnectionBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39818B1650400C65116 /* MTTcpConnectionBehaviour.m */; };
 		D0CD98CD1D74BA9700F41187 /* MTTcpConnectionBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39818B1650400C65116 /* MTTcpConnectionBehaviour.m */; };
-		D0CD98DC1D74BAEA00F41187 /* AFJSONUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		D0CD98DD1D74BAEA00F41187 /* AFHTTPClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EA18AFF259007F1076 /* AFHTTPClient.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		D0CD98DE1D74BAEA00F41187 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		D0CD98DF1D74BAEA00F41187 /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		D0CD98E01D74BAEB00F41187 /* AFJSONUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		D0CD98E11D74BAEB00F41187 /* AFHTTPClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EA18AFF259007F1076 /* AFHTTPClient.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		D0CD98E21D74BAEB00F41187 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		D0CD98E31D74BAEB00F41187 /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		D0CD98E41D74BAF400F41187 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F818AFF259007F1076 /* GCDAsyncSocket.m */; };
@@ -683,17 +677,12 @@
 		D05A84DA18AFE81D007F1076 /* MTLogging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTLogging.h; path = MTProtoKit/MTLogging.h; sourceTree = "<group>"; };
 		D05A84DB18AFE81D007F1076 /* MTLogging.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTLogging.m; path = MTProtoKit/MTLogging.m; sourceTree = "<group>"; };
 		D05A84DC18AFE81D007F1076 /* MTEncryption.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTEncryption.m; path = MTProtoKit/MTEncryption.m; sourceTree = "<group>"; };
-		D05A84E918AFF259007F1076 /* AFHTTPClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFHTTPClient.h; sourceTree = "<group>"; };
-		D05A84EA18AFF259007F1076 /* AFHTTPClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFHTTPClient.m; sourceTree = "<group>"; };
 		D05A84EB18AFF259007F1076 /* AFHTTPRequestOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFHTTPRequestOperation.h; sourceTree = "<group>"; };
 		D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFHTTPRequestOperation.m; sourceTree = "<group>"; };
-		D05A84F318AFF259007F1076 /* AFNetworking.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFNetworking.h; sourceTree = "<group>"; };
 		D05A84F418AFF259007F1076 /* AFURLConnectionOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFURLConnectionOperation.h; sourceTree = "<group>"; };
 		D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFURLConnectionOperation.m; sourceTree = "<group>"; };
 		D05A84F718AFF259007F1076 /* GCDAsyncSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GCDAsyncSocket.h; sourceTree = "<group>"; };
 		D05A84F818AFF259007F1076 /* GCDAsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GCDAsyncSocket.m; sourceTree = "<group>"; };
-		D05A851718AFF2F8007F1076 /* AFJSONUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFJSONUtilities.h; sourceTree = "<group>"; };
-		D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFJSONUtilities.m; sourceTree = "<group>"; };
 		D063A2F918B14AB500C65116 /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.dylib; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk/usr/lib/libcrypto.dylib; sourceTree = DEVELOPER_DIR; };
 		D063A31518B157F700C65116 /* MtProtoKit-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "MtProtoKit-Prefix.pch"; path = "MtProtoKitiOS/MtProtoKit-Prefix.pch"; sourceTree = SOURCE_ROOT; };
 		D063A31818B157F700C65116 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = InfoPlist.strings; sourceTree = "<group>"; };
@@ -1300,13 +1289,8 @@
 		D05A84E818AFF259007F1076 /* AFNetworking */ = {
 			isa = PBXGroup;
 			children = (
-				D05A851718AFF2F8007F1076 /* AFJSONUtilities.h */,
-				D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */,
-				D05A84E918AFF259007F1076 /* AFHTTPClient.h */,
-				D05A84EA18AFF259007F1076 /* AFHTTPClient.m */,
 				D05A84EB18AFF259007F1076 /* AFHTTPRequestOperation.h */,
 				D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */,
-				D05A84F318AFF259007F1076 /* AFNetworking.h */,
 				D05A84F418AFF259007F1076 /* AFURLConnectionOperation.h */,
 				D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */,
 			);
@@ -2012,7 +1996,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0CD98DC1D74BAEA00F41187 /* AFJSONUtilities.m in Sources */,
 				D0CD99021D75C0ED00F41187 /* MTRequestErrorContext.m in Sources */,
 				D0CD98371D74B9AA00F41187 /* MTMsgsStateInfoMessage.m in Sources */,
 				D0CD99011D75C0ED00F41187 /* MTRequestContext.m in Sources */,
@@ -2084,7 +2067,6 @@
 				D0CD98061D74B96C00F41187 /* MTBadMsgNotificationMessage.m in Sources */,
 				D0CD98311D74B9AA00F41187 /* MTMessage.m in Sources */,
 				D0CD99001D75C0ED00F41187 /* MTRequest.m in Sources */,
-				D0CD98DD1D74BAEA00F41187 /* AFHTTPClient.m in Sources */,
 				D0CD98F01D75C0D200F41187 /* MTTimeSyncMessageService.m in Sources */,
 				D0CD98A91D74BA6F00F41187 /* MTPreparedMessage.m in Sources */,
 				D0B0DF5E1DD7E75B003BA12D /* MTBag.m in Sources */,
@@ -2113,7 +2095,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0D1A0531ADD983C007D9ED6 /* MTMsgsStateInfoMessage.m in Sources */,
-				D0CB066D1ADC49FF005E298F /* AFJSONUtilities.m in Sources */,
 				D0CB062F1ADC457B005E298F /* MTDatacenterAuthMessageService.m in Sources */,
 				D0CB06351ADC4588005E298F /* MTDatacenterAddressSet.m in Sources */,
 				D0CB06621ADC45DA005E298F /* MTTransport.m in Sources */,
@@ -2158,7 +2139,6 @@
 				D0C9322E1E095E280074F044 /* MTNetworkUsageManager.m in Sources */,
 				D0BFAE6120AB504600793CF2 /* MTDatacenterVerificationData.m in Sources */,
 				D0D1A0371ADD983C007D9ED6 /* MTBadMsgNotificationMessage.m in Sources */,
-				D0CB066E1ADC49FF005E298F /* AFHTTPClient.m in Sources */,
 				D0CAF2E41D75E7F30011F558 /* MTAtomic.m in Sources */,
 				D0CB06611ADC45DA005E298F /* MTNetworkAvailability.m in Sources */,
 				D0D1A0611ADD983C007D9ED6 /* MTRpcResultMessage.m in Sources */,
@@ -2212,7 +2192,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0CD98E01D74BAEB00F41187 /* AFJSONUtilities.m in Sources */,
 				D0CD99071D75C0ED00F41187 /* MTRequestErrorContext.m in Sources */,
 				D0CD98461D74B9AA00F41187 /* MTMsgsStateInfoMessage.m in Sources */,
 				D0CD99061D75C0ED00F41187 /* MTRequestContext.m in Sources */,
@@ -2284,7 +2263,6 @@
 				D0CD980B1D74B96C00F41187 /* MTBadMsgNotificationMessage.m in Sources */,
 				D0CD98401D74B9AA00F41187 /* MTMessage.m in Sources */,
 				D0CD99051D75C0ED00F41187 /* MTRequest.m in Sources */,
-				D0CD98E11D74BAEB00F41187 /* AFHTTPClient.m in Sources */,
 				D0CD98F11D75C0D300F41187 /* MTTimeSyncMessageService.m in Sources */,
 				D0CD98B01D74BA6F00F41187 /* MTPreparedMessage.m in Sources */,
 				D0B0DF5F1DD7E75B003BA12D /* MTBag.m in Sources */,

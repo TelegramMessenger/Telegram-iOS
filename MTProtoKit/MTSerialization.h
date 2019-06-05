@@ -11,9 +11,9 @@
 #   import <MTProtoKitMac/MTDatacenterAddressListData.h>
 #   import <MTProtoKitMac/MTDatacenterVerificationData.h>
 #else
-#   import <MTProtoKit/MTExportedAuthorizationData.h>
-#   import <MTProtoKit/MTDatacenterAddressListData.h>
-#   import <MTProtoKit/MTDatacenterVerificationData.h>
+#   import <MtProtoKit/MTExportedAuthorizationData.h>
+#   import <MtProtoKit/MTDatacenterAddressListData.h>
+#   import <MtProtoKit/MTDatacenterVerificationData.h>
 #endif
 
 typedef MTExportedAuthorizationData *(^MTExportAuthorizationResponseParser)(NSData *);

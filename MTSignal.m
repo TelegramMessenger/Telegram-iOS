@@ -5,7 +5,7 @@
 #elif defined(MtProtoKitMacFramework)
 #   import <MTProtoKitMac/MTProtoKitMac.h>
 #else
-#   import <MTProtoKit/MTProtoKit.h>
+#   import <MtProtoKit/MTProtoKit.h>
 #endif
 
 #import <libkern/OSAtomic.h>

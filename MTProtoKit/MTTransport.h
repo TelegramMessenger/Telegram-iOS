@@ -17,7 +17,7 @@
 #elif defined(MtProtoKitMacFramework)
 #   import <MTProtoKitMac/MTMessageService.h>
 #else
-#   import <MTProtoKit/MTMessageService.h>
+#   import <MtProtoKit/MTMessageService.h>
 #endif
 
 @protocol MTTransportDelegate <NSObject>

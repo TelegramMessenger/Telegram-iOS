@@ -55,7 +55,7 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
 #pragma mark -
 
 @interface AFHTTPRequestOperation ()
-@property (readwrite, nonatomic, retain) NSError *HTTPError;
+@property (readwrite, nonatomic, strong) NSError *HTTPError;
 @property (nonatomic) dispatch_once_t onceToken;
 @property (atomic) dispatch_semaphore_t dispatchSemaphore;
 @end
@@ -85,31 +85,6 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
 }
 
 - (void)dealloc {
-    [_acceptableStatusCodes release];
-    [_acceptableContentTypes release];
-    [_HTTPError release];
-    
-    if (_successCallbackQueue) { 
-        dispatch_release(_successCallbackQueue);
-        _successCallbackQueue = NULL;
-    }
-    
-    if (_failureCallbackQueue) { 
-        dispatch_release(_failureCallbackQueue); 
-        _failureCallbackQueue = NULL;
-    }
-    
-    if (_dispatchGroup) {
-        dispatch_release(_dispatchGroup);
-        _dispatchGroup = NULL;
-    }
-    
-    if (_dispatchSemaphore) {
-        dispatch_release(_dispatchSemaphore);
-        _dispatchSemaphore = NULL;
-    }
-    
-    [super dealloc];
 }
 
 - (NSHTTPURLResponse *)response {
@@ -123,13 +98,13 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
             [userInfo setValue:[NSString stringWithFormat:NSLocalizedString(@"Expected status code in (%@), got %d", nil), AFStringFromIndexSet(self.acceptableStatusCodes), [self.response statusCode]] forKey:NSLocalizedDescriptionKey];
             [userInfo setValue:[self.request URL] forKey:NSURLErrorFailingURLErrorKey];
             
-            self.HTTPError = [[[NSError alloc] initWithDomain:AFNetworkingErrorDomain code:NSURLErrorBadServerResponse userInfo:userInfo] autorelease];
+            self.HTTPError = [[NSError alloc] initWithDomain:AFNetworkingErrorDomain code:NSURLErrorBadServerResponse userInfo:userInfo];
         } else if ([self.responseData length] > 0 && ![self hasAcceptableContentType]) { // Don't invalidate content type if there is no content
             NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
             [userInfo setValue:[NSString stringWithFormat:NSLocalizedString(@"Expected content type %@, got %@", nil), self.acceptableContentTypes, [self.response MIMEType]] forKey:NSLocalizedDescriptionKey];
             [userInfo setValue:[self.request URL] forKey:NSURLErrorFailingURLErrorKey];
             
-            self.HTTPError = [[[NSError alloc] initWithDomain:AFNetworkingErrorDomain code:NSURLErrorCannotDecodeContentData userInfo:userInfo] autorelease];
+            self.HTTPError = [[NSError alloc] initWithDomain:AFNetworkingErrorDomain code:NSURLErrorCannotDecodeContentData userInfo:userInfo];
         }
     }
     
@@ -150,27 +125,13 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
 
 - (void)setSuccessCallbackQueue:(dispatch_queue_t)successCallbackQueue {
     if (successCallbackQueue != _successCallbackQueue) {
-        if (_successCallbackQueue) {
-            dispatch_release(_successCallbackQueue);
-        }
-     
-        if (successCallbackQueue) {
-            dispatch_retain(successCallbackQueue);
-            _successCallbackQueue = successCallbackQueue;
-        }
+        _successCallbackQueue = successCallbackQueue;
     }    
 }
 
 - (void)setFailureCallbackQueue:(dispatch_queue_t)failureCallbackQueue {
     if (failureCallbackQueue != _failureCallbackQueue) {
-        if (_failureCallbackQueue) {
-            dispatch_release(_failureCallbackQueue);
-        }
-        
-        if (failureCallbackQueue) {
-            dispatch_retain(failureCallbackQueue);
-            _failureCallbackQueue = failureCallbackQueue;
-        }
+        _failureCallbackQueue = failureCallbackQueue;
     }    
 }
 
@@ -179,12 +140,10 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
     if (dispatchGroup != _dispatchGroup) {
         if (_dispatchGroup) {
             dispatch_group_leave(_dispatchGroup);
-            dispatch_release(_dispatchGroup);
             _dispatchGroup = NULL;
         }
         
         if (dispatchGroup) {
-            dispatch_retain(dispatchGroup);
             _dispatchGroup = dispatchGroup;
             dispatch_group_enter(_dispatchGroup);
         }

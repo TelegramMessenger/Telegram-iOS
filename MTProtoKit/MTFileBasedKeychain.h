@@ -5,7 +5,7 @@
 #elif defined(MtProtoKitMacFramework)
 #   import <MTProtoKitMac/MTKeychain.h>
 #else
-#   import <MTProtoKit/MTKeychain.h>
+#   import <MtProtoKit/MTKeychain.h>
 #endif
 
 NS_ASSUME_NONNULL_BEGIN

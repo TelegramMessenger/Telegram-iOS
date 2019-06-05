@@ -36,8 +36,8 @@
 #   import <MTProtoKitMac/MTDisposable.h>
 #   import <MTProtoKitMac/MTSignal.h>
 #else
-#   import <MTProtoKit/MTDisposable.h>
-#   import <MTProtoKit/MTSignal.h>
+#   import <MtProtoKit/MTDisposable.h>
+#   import <MtProtoKit/MTSignal.h>
 #endif
 
 @implementation MTContextBlockChangeListener

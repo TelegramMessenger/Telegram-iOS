@@ -26,8 +26,8 @@
 #   import <MTProtoKitMac/MTSignal.h>
 #   import <MTProtoKitMac/MTDNS.h>
 #else
-#   import <MTProtoKit/MTSignal.h>
-#   import <MTProtoKit/MTDNS.h>
+#   import <MtProtoKit/MTSignal.h>
+#   import <MtProtoKit/MTDNS.h>
 #endif
 
 @interface MTTcpConnectionData : NSObject

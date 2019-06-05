@@ -5,7 +5,7 @@
 #elif defined(MtProtoKitMacFramework)
 #   import <MTProtoKitMac/MTEncryption.h>
 #else
-#   import <MTProtoKit/MTEncryption.h>
+#   import <MtProtoKit/MTEncryption.h>
 #endif
 
 void MyAesIgeEncrypt(const void *inBytes, int length, void *outBytes, const void *key, int keyLength, void *iv);

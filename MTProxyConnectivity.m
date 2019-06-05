@@ -19,14 +19,14 @@
 #   import <MTProtoKitMac/MTTcpConnection.h>
 #   import <MTProtoKitMac/MTTransportScheme.h>
 #else
-#   import <MTProtoKit/MTSignal.h>
-#   import <MTProtoKit/MTQueue.h>
-#   import <MTProtoKit/MTContext.h>
-#   import <MTProtoKit/MTApiEnvironment.h>
-#   import <MTProtoKit/MTDatacenterAddressSet.h>
-#   import <MTProtoKit/MTDatacenterAddress.h>
-#   import <MTProtoKit/MTTcpConnection.h>
-#   import <MTProtoKit/MTTransportScheme.h>
+#   import <MtProtoKit/MTSignal.h>
+#   import <MtProtoKit/MTQueue.h>
+#   import <MtProtoKit/MTContext.h>
+#   import <MtProtoKit/MTApiEnvironment.h>
+#   import <MtProtoKit/MTDatacenterAddressSet.h>
+#   import <MtProtoKit/MTDatacenterAddress.h>
+#   import <MtProtoKit/MTTcpConnection.h>
+#   import <MtProtoKit/MTTransportScheme.h>
 #endif
 
 #import "MTDiscoverConnectionSignals.h"

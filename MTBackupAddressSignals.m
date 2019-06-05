@@ -29,19 +29,19 @@
 #   import <MTProtoKitMac/MTSerialization.h>
 #   import <MTProtoKitMac/MTLogging.h>
 #else
-#   import <MTProtoKit/MTSignal.h>
-#   import <MTProtoKit/MTQueue.h>
-#   import <MTProtoKit/MTHttpRequestOperation.h>
-#   import <MTProtoKit/MTEncryption.h>
-#   import <MTProtoKit/MTRequestMessageService.h>
-#   import <MTProtoKit/MTRequest.h>
-#   import <MTProtoKit/MTContext.h>
-#   import <MTProtoKit/MTApiEnvironment.h>
-#   import <MTProtoKit/MTDatacenterAddress.h>
-#   import <MTProtoKit/MTDatacenterAddressSet.h>
-#   import <MTProtoKit/MTProto.h>
-#   import <MTProtoKit/MTSerialization.h>
-#   import <MTProtoKit/MTLogging.h>
+#   import <MtProtoKit/MTSignal.h>
+#   import <MtProtoKit/MTQueue.h>
+#   import <MtProtoKit/MTHttpRequestOperation.h>
+#   import <MtProtoKit/MTEncryption.h>
+#   import <MtProtoKit/MTRequestMessageService.h>
+#   import <MtProtoKit/MTRequest.h>
+#   import <MtProtoKit/MTContext.h>
+#   import <MtProtoKit/MTApiEnvironment.h>
+#   import <MtProtoKit/MTDatacenterAddress.h>
+#   import <MtProtoKit/MTDatacenterAddressSet.h>
+#   import <MtProtoKit/MTProto.h>
+#   import <MtProtoKit/MTSerialization.h>
+#   import <MtProtoKit/MTLogging.h>
 #endif
 
 static NSData *base64_decode(NSString *str) {

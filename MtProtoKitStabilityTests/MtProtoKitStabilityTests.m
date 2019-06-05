@@ -1,8 +1,8 @@
 #import <XCTest/XCTest.h>
 
-#import <MTProtoKit/MTProtoKit.h>
-#import <MTProtoKit/MTTcpTransport.h>
-#import <MTProtoKit/MTTransportTransaction.h>
+#import <MtProtoKit/MTProtoKit.h>
+#import <MtProtoKit/MTTcpTransport.h>
+#import <MtProtoKit/MTTransportTransaction.h>
 
 @interface TestSerialization : NSObject <MTSerialization>
 

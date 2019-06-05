@@ -63,8 +63,8 @@
 #   import <MTProtoKitMac/MTSignal.h>
 #   import <MTProtoKitMac/MTQueue.h>
 #else
-#   import <MTProtoKit/MTSignal.h>
-#   import <MTProtoKit/MTQueue.h>
+#   import <MtProtoKit/MTSignal.h>
+#   import <MtProtoKit/MTQueue.h>
 #endif
 
 typedef enum {

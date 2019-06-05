@@ -29,7 +29,7 @@
 #elif defined(MtProtoKitMacFramework)
 #   import <MTProtoKitMac/AFURLConnectionOperation.h>
 #else
-#   import <MTProtoKit/AFURLConnectionOperation.h>
+#   import <MtProtoKit/AFURLConnectionOperation.h>
 #endif
 
 /**
@@ -44,7 +44,7 @@
 /**
  The last HTTP response received by the operation's connection.
  */
-@property (readonly, nonatomic, retain) NSHTTPURLResponse *response;
+@property (readonly, nonatomic, strong) NSHTTPURLResponse *response;
 
 
 ///----------------------------------------------------------
@@ -56,7 +56,7 @@
  
  By default, this is the range 200 to 299, inclusive.
  */
-@property (nonatomic, retain) NSIndexSet *acceptableStatusCodes;
+@property (nonatomic, strong) NSIndexSet *acceptableStatusCodes;
 
 /**
  A Boolean value that corresponds to whether the status code of the response is within the specified set of acceptable status codes. Returns `YES` if `acceptableStatusCodes` is `nil`.
@@ -68,7 +68,7 @@
  
  By default, this is `nil`.
  */
-@property (nonatomic, retain) NSSet *acceptableContentTypes;
+@property (nonatomic, strong) NSSet *acceptableContentTypes;
 
 /**
  A Boolean value that corresponds to whether the MIME type of the response is among the specified set of acceptable content types. Returns `YES` if `acceptableContentTypes` is `nil`.

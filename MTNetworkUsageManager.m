@@ -16,11 +16,11 @@
 #   import <MTProtoKitMac/MTQueue.h>
 #   import <MTProtoKitMac/MTAtomic.h>
 #else
-#   import <MTProtoKit/MTNetworkUsageCalculationInfo.h>
-#   import <MTProtoKit/MTSignal.h>
-#   import <MTProtoKit/MTTimer.h>
-#   import <MTProtoKit/MTQueue.h>
-#   import <MTProtoKit/MTAtomic.h>
+#   import <MtProtoKit/MTNetworkUsageCalculationInfo.h>
+#   import <MtProtoKit/MTSignal.h>
+#   import <MtProtoKit/MTTimer.h>
+#   import <MtProtoKit/MTQueue.h>
+#   import <MtProtoKit/MTAtomic.h>
 #endif
 
 static int offsetForInterface(MTNetworkUsageCalculationInfo *info, MTNetworkUsageManagerInterface interface, bool incoming) {
