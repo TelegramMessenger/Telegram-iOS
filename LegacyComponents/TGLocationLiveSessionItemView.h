@@ -1,4 +1,5 @@
 #import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGMenuSheetButtonItemView.h>
 #import <SSignalKit/SSignalKit.h>
 
 @class TGUser;

@@ -63,7 +63,7 @@ static void PGButtonHandlerEnableMonitoring(bool enable)
     NSUInteger nameLength = notification.name.length;
     if (nameLength == 46 || nameLength == 44 || nameLength == 42)
     {
-        uint32_t hash = murMurHash32(notification.name);
+        uint32_t hash = legacy_murMurHash32(notification.name);
         switch (hash)
         {
             case 0xaeae3258: //_UIApplicationVolumeDownButtonDownNotification

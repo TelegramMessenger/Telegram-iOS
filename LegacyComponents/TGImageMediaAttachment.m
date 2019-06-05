@@ -96,7 +96,7 @@
     NSString *legacyCacheUrl = [imageInfo imageUrlForLargestSize:NULL];
     int64_t localImageId = 0;
     if (legacyCacheUrl.length != 0)
-        localImageId = murMurHash32(legacyCacheUrl);
+        localImageId = legacy_murMurHash32(legacyCacheUrl);
     
     return localImageId;
 }

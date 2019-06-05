@@ -5,8 +5,8 @@
 extern "C" {
 #endif
     
-int32_t murMurHash32(NSString *string);
-int32_t murMurHashBytes32(void *bytes, int length);
+int32_t legacy_murMurHash32(NSString *string);
+int32_t legacy_murMurHashBytes32(void *bytes, int length);
 int32_t phoneMatchHash(NSString *phone);
     
 bool TGIsRTL();

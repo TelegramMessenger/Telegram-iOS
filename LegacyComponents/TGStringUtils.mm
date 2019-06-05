@@ -1104,7 +1104,7 @@ static void MurmurHash3_x86_32 ( const void * key, int len,
     *(uint32_t*)out = h1;
 }
 
-int32_t murMurHash32(NSString *string)
+int32_t legacy_murMurHash32(NSString *string)
 {
     const char *utf8 = string.UTF8String;
     
@@ -1114,7 +1114,7 @@ int32_t murMurHash32(NSString *string)
     return result;
 }
 
-int32_t murMurHashBytes32(void *bytes, int length)
+int32_t legacy_murMurHashBytes32(void *bytes, int length)
 {
     int32_t result = 0;
     MurmurHash3_x86_32(bytes, length, -137723950, &result);
