@@ -4337,12 +4337,14 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.AppIcon" = "App Icon";
 "Appearance.AppIconDefault" = "Default";
 "Appearance.AppIconDefaultX" = "Default X";
+"Appearance.AppIconClassic" = "Classic";
+"Appearance.AppIconClassicX" = "Classic X";
 "Appearance.AppIconFilled" = "Filled";
 "Appearance.AppIconFilledX" = "Filled X";
 
 "Appearance.ThemeCarouselClassic" = "Classic";
-"Appearance.ThemeCarouselDay" = "Filled";
-"Appearance.ThemeCarouselNightBlue" = "Dark";
+"Appearance.ThemeCarouselDay" = "Day";
+"Appearance.ThemeCarouselNightBlue" = "Night Blue";
 "Appearance.ThemeCarouselNight" = "Monochrome";
 
 "Notification.Exceptions.DeleteAll" = "Delete All";

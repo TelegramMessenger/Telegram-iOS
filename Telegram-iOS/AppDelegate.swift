@@ -559,6 +559,8 @@ final class SharedApplicationContext {
             if #available(iOS 10.3, *) {
                 return [PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: false),
                         PresentationAppIcon(name: "Black", imageName: "BlackIcon", isDefault: false),
+                        PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon", isDefault: false),
+                        PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon", isDefault: false),
                         PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon", isDefault: false),
                         PresentationAppIcon(name: "BlackFilled", imageName: "BlackFilledIcon", isDefault: false)]
             } else {
