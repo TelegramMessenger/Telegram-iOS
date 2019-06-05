@@ -1,4 +1,3 @@
-
 import Foundation
 #if os(macOS)
     import PostboxMac
@@ -7,7 +6,12 @@ import Foundation
 #else
     import Postbox
     import SwiftSignalKit
-    import MtProtoKitDynamic
+    #if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
+    import UIKit
 #endif
 
 public enum UpdatePeerPhotoStatus {

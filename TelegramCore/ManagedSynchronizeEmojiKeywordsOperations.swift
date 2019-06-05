@@ -6,7 +6,11 @@ import MtProtoKitMac
 #else
 import Postbox
 import SwiftSignalKit
-import MtProtoKitDynamic
+#if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 private final class ManagedSynchronizeEmojiKeywordsOperationHelper {
@@ -116,8 +120,8 @@ func managedSynchronizeEmojiKeywordsOperations(postbox: Postbox, network: Networ
 }
 
 private func keywordCollectionItemId(_ keyword: String, inputLanguageCode: String) -> Int64 {
-    let namespace = murMurHashString32(inputLanguageCode)
-    let id = murMurHashString32(keyword)
+    let namespace = HashFunctions.murMurHash32(inputLanguageCode)
+    let id = HashFunctions.murMurHash32(keyword)
     return (Int64(namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: id)))
 }
 

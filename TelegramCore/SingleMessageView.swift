@@ -6,7 +6,11 @@ import Foundation
 #else
     import Postbox
     import SwiftSignalKit
-    import MtProtoKitDynamic
+    #if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 public func singleMessageView(account: Account, messageId: MessageId, loadIfNotExists: Bool) -> Signal<MessageView, NoError> {

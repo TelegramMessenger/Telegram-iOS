@@ -6,7 +6,11 @@ import Foundation
 #else
     import Postbox
     import SwiftSignalKit
-    import MtProtoKitDynamic
+    #if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String) -> Signal<ChatContextResultCollection?, NoError> {

@@ -146,18 +146,21 @@ public func addContactPeerInteractively(account: Account, peerId: PeerId, phone:
 public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
-            return account.network.request(Api.functions.contacts.deleteContact(id: inputUser))
+            return account.network.request(Api.functions.contacts.deleteContacts(id: [inputUser]))
             |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.contacts.Link?, NoError> in
+            |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                 return .single(nil)
             }
-            |> mapToSignal { _ -> Signal<Void, NoError> in
+            |> mapToSignal { updates -> Signal<Void, NoError> in
                 return account.postbox.transaction { transaction -> Void in
                     var peerIds = transaction.getContactPeerIds()
                     if peerIds.contains(peerId) {
                         peerIds.remove(peerId)
                         transaction.replaceContactPeerIds(peerIds)
                     }
+                }
+                if let updates = updates {
+                    account.stateManager.addUpdates(updates)
                 }
             }
         } else {
@@ -173,21 +176,25 @@ public func deleteAllContacts(account: Account) -> Signal<Never, NoError> {
     }
     |> mapToSignal { users -> Signal<Never, NoError> in
         let deleteContacts = account.network.request(Api.functions.contacts.deleteContacts(id: users))
-        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-            return .single(.boolFalse)
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
         }
         let deleteImported = account.network.request(Api.functions.contacts.resetSaved())
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }
         return combineLatest(deleteContacts, deleteImported)
-        |> mapToSignal { _ -> Signal<Never, NoError> in
+        |> mapToSignal { updates, _ -> Signal<Never, NoError> in
             return account.postbox.transaction { transaction -> Void in
                 transaction.replaceContactPeerIds(Set())
                 transaction.clearDeviceContactImportInfoIdentifiers()
             }
             |> mapToSignal { _ -> Signal<Void, NoError> in
                 account.restartContactManagement()
+                if let updates = updates {
+                    account.stateManager.addUpdates(updates)
+                }
                 
                 return .complete()
             }

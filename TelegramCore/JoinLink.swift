@@ -5,7 +5,11 @@
 #else
     import Postbox
     import SwiftSignalKit
-    import MtProtoKitDynamic
+    #if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 func apiUpdatesGroups(_ updates: Api.Updates) -> [Api.Chat] {

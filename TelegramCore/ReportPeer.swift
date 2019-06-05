@@ -6,7 +6,11 @@ import Foundation
 #else
     import Postbox
     import SwiftSignalKit
-    import MtProtoKitDynamic
+    #if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
@@ -14,50 +18,68 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
         if let peer = transaction.getPeer(peerId) {
             if let peer = peer as? TelegramSecretChat {
                 return account.network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)))
-                    |> map(Optional.init)
-                    |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-                        return .single(nil)
-                    }
-                    |> mapToSignal { result -> Signal<Void, NoError> in
-                        return account.postbox.transaction { transaction -> Void in
-                            if result != nil {
-                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                                    if let current = current as? CachedUserData {
-                                        return current.withUpdatedReportStatus(.didReport)
-                                    } else if let current = current as? CachedGroupData {
-                                        return current.withUpdatedReportStatus(.didReport)
-                                    } else if let current = current as? CachedChannelData {
-                                        return current.withUpdatedReportStatus(.didReport)
-                                    } else {
-                                        return current
-                                    }
-                                })
-                            }
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    return account.postbox.transaction { transaction -> Void in
+                        if result != nil {
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                if let current = current as? CachedUserData {
+                                    var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                                    peerContactSettings.remove(.canReport)
+                                    peerContactSettings.insert(.isHidden)
+                                    return current.withUpdatedPeerContactSettings(peerContactSettings)
+                                } else if let current = current as? CachedGroupData {
+                                    var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                                    peerContactSettings.remove(.canReport)
+                                    peerContactSettings.insert(.isHidden)
+                                    return current.withUpdatedPeerContactSettings(peerContactSettings)
+                                } else if let current = current as? CachedChannelData {
+                                    var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                                    peerContactSettings.remove(.canReport)
+                                    peerContactSettings.insert(.isHidden)
+                                    return current.withUpdatedPeerContactSettings(peerContactSettings)
+                                } else {
+                                    return current
+                                }
+                            })
                         }
                     }
+                }
             } else if let inputPeer = apiInputPeer(peer) {
                 return account.network.request(Api.functions.messages.reportSpam(peer: inputPeer))
-                    |> map(Optional.init)
-                    |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-                        return .single(nil)
-                    }
-                    |> mapToSignal { result -> Signal<Void, NoError> in
-                        return account.postbox.transaction { transaction -> Void in
-                            if result != nil {
-                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                                    if let current = current as? CachedUserData {
-                                        return current.withUpdatedReportStatus(.didReport)
-                                    } else if let current = current as? CachedGroupData {
-                                        return current.withUpdatedReportStatus(.didReport)
-                                    } else if let current = current as? CachedChannelData {
-                                        return current.withUpdatedReportStatus(.didReport)
-                                    } else {
-                                        return current
-                                    }
-                                })
-                            }
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    return account.postbox.transaction { transaction -> Void in
+                        if result != nil {
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                if let current = current as? CachedUserData {
+                                    var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                                    peerContactSettings.remove(.canReport)
+                                    peerContactSettings.insert(.isHidden)
+                                    return current.withUpdatedPeerContactSettings(peerContactSettings)
+                                } else if let current = current as? CachedGroupData {
+                                    var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                                    peerContactSettings.remove(.canReport)
+                                    peerContactSettings.insert(.isHidden)
+                                    return current.withUpdatedPeerContactSettings(peerContactSettings)
+                                } else if let current = current as? CachedChannelData {
+                                    var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                                    peerContactSettings.remove(.canReport)
+                                    peerContactSettings.insert(.isHidden)
+                                    return current.withUpdatedPeerContactSettings(peerContactSettings)
+                                } else {
+                                    return current
+                                }
+                            })
                         }
                     }
+                }
             } else {
                 return .complete()
             }
@@ -150,29 +172,37 @@ public func reportSupergroupPeer(account: Account, peerId: PeerId, memberId: Pee
     } |> switchToLatest
 }
 
-public func dismissReportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+public func dismissPeerContactOptions(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
             if let current = current as? CachedUserData {
-                return current.withUpdatedReportStatus(.none).withUpdatedContactStatus(.hide)
+                var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                peerContactSettings.insert(.isHidden)
+                return current.withUpdatedPeerContactSettings(peerContactSettings)
             } else if let current = current as? CachedGroupData {
-                return current.withUpdatedReportStatus(.none)
+                var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                peerContactSettings.insert(.isHidden)
+                return current.withUpdatedPeerContactSettings(peerContactSettings)
             } else if let current = current as? CachedChannelData {
-                return current.withUpdatedReportStatus(.none)
+                var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                peerContactSettings.insert(.isHidden)
+                return current.withUpdatedPeerContactSettings(peerContactSettings)
             } else if let current = current as? CachedSecretChatData {
-                return current.withUpdatedReportStatus(.none)
+                var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                peerContactSettings.insert(.isHidden)
+                return current.withUpdatedPeerContactSettings(peerContactSettings)
             } else {
                 return current
             }
         })
         
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.messages.hideReportSpam(peer: inputPeer))
-                |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                    return .single(.boolFalse)
-                }
-                |> mapToSignal { _ -> Signal<Void, NoError> in
-                    return .complete()
+            return account.network.request(Api.functions.messages.hidePeerSettingsBar(peer: inputPeer))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
             }
         } else {
             return .complete()

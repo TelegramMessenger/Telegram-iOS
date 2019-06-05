@@ -6,7 +6,11 @@ import Foundation
 #else
     import Postbox
     import SwiftSignalKit
-    import MtProtoKitDynamic
+    #if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool) -> Signal<PeerId?, NoError> {

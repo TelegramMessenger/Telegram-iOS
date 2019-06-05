@@ -6,7 +6,11 @@ import Foundation
 #else
     import Postbox
     import SwiftSignalKit
-    import MtProtoKitDynamic
+    #if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 func managedAutodownloadSettingsUpdates(accountManager: AccountManager, network: Network) -> Signal<Void, NoError> {

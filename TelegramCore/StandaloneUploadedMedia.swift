@@ -1,12 +1,11 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
-    import TelegramCoreMac
     import SwiftSignalKitMac
 #else
     import Postbox
-    import TelegramCore
     import SwiftSignalKit
+    import UIKit
 #endif
 
 public enum StandaloneUploadMediaError {

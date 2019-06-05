@@ -4,7 +4,11 @@ import Foundation
     import MtProtoKitMac
 #else
     import Postbox
-    import MtProtoKitDynamic
+    #if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 private let keyUseCountThreshold: Int32 = 100

@@ -6,7 +6,11 @@ import MtProtoKitMac
 #else
 import Postbox
 import SwiftSignalKit
-import MtProtoKitDynamic
+#if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 public func markAllChatsAsRead(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {

@@ -5,7 +5,11 @@ import MtProtoKitMac
 import SwiftSignalKitMac
 #else
 import Postbox
-import MtProtoKitDynamic
+#if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 import SwiftSignalKit
 #endif
 

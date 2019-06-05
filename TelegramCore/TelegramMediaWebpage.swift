@@ -3,6 +3,7 @@ import Foundation
     import PostboxMac
 #else
     import Postbox
+    import UIKit
 #endif
 
 public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {

@@ -2,7 +2,9 @@
 
 #import <Foundation/Foundation.h>
 
-#if TARGET_OS_IOS
+#ifdef BUCK
+#   import <MtProtoKit/MtProtoKit.h>
+#elif TARGET_OS_IOS
 #   import <MTProtoKitDynamic/MTLogging.h>
 #else
 #   import <MTProtoKitMac/MTLogging.h>

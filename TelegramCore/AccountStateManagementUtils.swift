@@ -6,7 +6,11 @@ import Foundation
 #else
     import Postbox
     import SwiftSignalKit
-    import MtProtoKitDynamic
+    #if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 private func peerIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
@@ -1154,33 +1158,36 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         return peer
                     }
                 })
-            case let .updateContactLink(userId, myLink, foreignLink):
-                let isContact: Bool
-                switch myLink {
-                    case .contactLinkContact:
-                        isContact = true
-                    default:
-                        isContact = false
-                }
-                let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                updatedState.updatePeerIsContact(userPeerId, isContact: isContact)
-                updatedState.updateCachedPeerData(userPeerId, { current in
-                    let previous: CachedUserData
-                    if let current = current as? CachedUserData {
-                        previous = current
+            case let .updatePeerSettings(peer, settings):
+                let peerContactSettings = PeerContactSettings(apiSettings: settings)
+                updatedState.updateCachedPeerData(peer.peerId, { current in
+                    if peer.peerId.namespace == Namespaces.Peer.CloudUser {
+                        let previous: CachedUserData
+                        if let current = current as? CachedUserData {
+                            previous = current
+                        } else {
+                            previous = CachedUserData()
+                        }
+                        return previous.withUpdatedPeerContactSettings(peerContactSettings)
+                    } else if peer.peerId.namespace == Namespaces.Peer.CloudGroup {
+                        let previous: CachedGroupData
+                        if let current = current as? CachedGroupData {
+                            previous = current
+                        } else {
+                            previous = CachedGroupData()
+                        }
+                        return previous.withUpdatedPeerContactSettings(peerContactSettings)
+                    } else if peer.peerId.namespace == Namespaces.Peer.CloudChannel {
+                        let previous: CachedChannelData
+                        if let current = current as? CachedChannelData {
+                            previous = current
+                        } else {
+                            previous = CachedChannelData()
+                        }
+                        return previous.withUpdatedPeerContactSettings(peerContactSettings)
                     } else {
-                        previous = CachedUserData()
+                        return current
                     }
-                    let hasPhone: Bool?
-                    switch foreignLink {
-                        case .contactLinkContact:
-                            hasPhone = true
-                        case .contactLinkNone:
-                            hasPhone = false
-                        case .contactLinkUnknown:
-                            hasPhone = nil
-                    }
-                    return previous.withUpdatedHasAccountPeerPhone(hasPhone)
                 })
             case let .updateEncryption(chat, date):
                 updatedState.updateSecretChat(chat: chat, timestamp: date)

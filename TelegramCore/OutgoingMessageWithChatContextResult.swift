@@ -5,6 +5,7 @@ import Foundation
 #else
     import Postbox
     import SwiftSignalKit
+    import UIKit
 #endif
 
 private func aspectFitSize(_ size: CGSize, to: CGSize) -> CGSize {

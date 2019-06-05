@@ -5,6 +5,7 @@ import Foundation
 #else
     import Postbox
     import SwiftSignalKit
+    import UIKit
 #endif
 
 func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {

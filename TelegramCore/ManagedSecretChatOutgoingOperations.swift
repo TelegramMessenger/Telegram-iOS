@@ -6,7 +6,12 @@ import Foundation
 #else
     import Postbox
     import SwiftSignalKit
-    import MtProtoKitDynamic
+    #if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
+    import UIKit
 #endif
 
 func addSecretChatOutgoingOperation(transaction: Transaction, peerId: PeerId, operation: SecretChatOutgoingOperationContents, state: SecretChatState) -> SecretChatState {
@@ -1375,7 +1380,9 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
                             if result != nil {
                                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                     if let current = current as? CachedSecretChatData {
-                                        return current.withUpdatedReportStatus(.didReport)
+                                        var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
+                                        peerContactSettings.insert(.isHidden)
+                                        return current.withUpdatedPeerContactSettings(peerContactSettings)
                                     } else {
                                         return current
                                     }

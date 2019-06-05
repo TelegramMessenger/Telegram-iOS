@@ -6,7 +6,11 @@ import MtProtoKitMac
 #else
 import Postbox
 import SwiftSignalKit
-import MtProtoKitDynamic
+#if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 func managedAppChangelog(postbox: Postbox, network: Network, stateManager: AccountStateManager, appVersion: String) -> Signal<Void, NoError> {

@@ -81,29 +81,37 @@ public final class CachedSecretChatData: CachedPeerData {
     public let messageIds: Set<MessageId> = Set()
     public let associatedHistoryMessageId: MessageId? = nil
 
-    public let reportStatus: PeerReportStatus
+    public let peerContactSettings: PeerContactSettings?
     
-    public init(reportStatus: PeerReportStatus) {
-        self.reportStatus = reportStatus
+    public init(peerContactSettings: PeerContactSettings?) {
+        self.peerContactSettings = peerContactSettings
     }
     
     public init(decoder: PostboxDecoder) {
-        self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("rs", orElse: 0))!
+        if let value = decoder.decodeOptionalInt32ForKey("pcs") {
+            self.peerContactSettings = PeerContactSettings(rawValue: value)
+        } else {
+            self.peerContactSettings = nil
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.reportStatus.rawValue, forKey: "rs")
+        if let peerContactSettings = self.peerContactSettings {
+            encoder.encodeInt32(peerContactSettings.rawValue, forKey: "pcs")
+        } else {
+            encoder.encodeNil(forKey: "pcs")
+        }
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {
         if let to = to as? CachedSecretChatData {
-            return self.reportStatus == to.reportStatus
+            return self.peerContactSettings == to.peerContactSettings
         } else {
             return false
         }
     }
     
-    func withUpdatedReportStatus(_ reportStatus: PeerReportStatus) -> CachedSecretChatData {
-        return CachedSecretChatData(reportStatus: reportStatus)
+    func withUpdatedPeerContactSettings(_ peerContactSettings: PeerContactSettings) -> CachedSecretChatData {
+        return CachedSecretChatData(peerContactSettings: peerContactSettings)
     }
 }

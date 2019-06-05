@@ -6,7 +6,7 @@
     import SwiftSignalKit
 #endif
 
-public func importContact(account:Account, firstName: String, lastName: String, phoneNumber: String) -> Signal<PeerId?, NoError> {
+public func importContact(account: Account, firstName: String, lastName: String, phoneNumber: String) -> Signal<PeerId?, NoError> {
     
     let input = Api.InputContact.inputPhoneContact(clientId: 1, phone: phoneNumber, firstName: firstName, lastName: lastName)
     
@@ -36,6 +36,73 @@ public func importContact(account:Account, firstName: String, lastName: String, 
                 }
             }
             return nil
+        }
+    }
+}
+
+public enum AddContactError {
+    case generic
+}
+
+public func addContactInteractively(account: Account, peer: Peer, firstName: String, lastName: String, phoneNumber: String) -> Signal<Never, AddContactError> {
+    guard let inputUser = apiInputUser(peer) else {
+        return .fail(.generic)
+    }
+    return account.network.request(Api.functions.contacts.addContact(id: inputUser, firstName: firstName, lastName: lastName, phone: phoneNumber))
+    |> mapError { _ -> AddContactError in
+        return .generic
+    }
+    |> mapToSignal { result -> Signal<Never, AddContactError> in
+        return account.postbox.transaction { transaction -> Void in
+            var peers: [Peer] = []
+            switch result {
+                case let .updates(_, users, _, _, _):
+                    for user in users {
+                        peers.append(TelegramUser(user: user))
+                    }
+                case let .updatesCombined(_, users, _, _, _, _):
+                    for user in users {
+                        peers.append(TelegramUser(user: user))
+                    }
+                default:
+                    break
+            }
+            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                return updated
+            })
+            var peerIds = transaction.getContactPeerIds()
+            if !peerIds.contains(peer.id) {
+                peerIds.insert(peer.id)
+                transaction.replaceContactPeerIds(peerIds)
+            }
+            
+            account.stateManager.addUpdates(result)
+        }
+        |> introduceError(AddContactError.self)
+        |> ignoreValues
+    }
+}
+
+public enum AcceptAndShareContactError {
+    case generic
+}
+
+public func acceptAndShareContact(account: Account, peerId: PeerId) -> Signal<Never, AcceptAndShareContactError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        return transaction.getPeer(peerId).flatMap(apiInputUser)
+    }
+    |> introduceError(AcceptAndShareContactError.self)
+    |> mapToSignal { inputUser -> Signal<Never, AcceptAndShareContactError> in
+        guard let inputUser = inputUser else {
+            return .fail(.generic)
+        }
+        return account.network.request(Api.functions.contacts.acceptContact(userId: inputUser))
+        |> mapError { _ -> AcceptAndShareContactError in
+            return .generic
+        }
+        |> mapToSignal { updates -> Signal<Never, AcceptAndShareContactError> in
+            account.stateManager.addUpdates(updates)
+            return .complete()
         }
     }
 }

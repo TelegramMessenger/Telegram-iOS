@@ -2526,18 +2526,18 @@ extension Api {
     
     }
     enum UserFull: TypeConstructorDescription {
-        case userFull(flags: Int32, user: Api.User, about: String?, link: Api.contacts.Link, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?)
+        case userFull(flags: Int32, user: Api.User, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .userFull(let flags, let user, let about, let link, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId):
+                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId):
                     if boxed {
-                        buffer.appendInt32(1951750604)
+                        buffer.appendInt32(-302941166)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     user.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(about!, buffer: buffer, boxed: false)}
-                    link.serialize(buffer, true)
+                    settings.serialize(buffer, true)
                     if Int(flags) & Int(1 << 2) != 0 {profilePhoto!.serialize(buffer, true)}
                     notifySettings.serialize(buffer, true)
                     if Int(flags) & Int(1 << 3) != 0 {botInfo!.serialize(buffer, true)}
@@ -2550,8 +2550,8 @@ extension Api {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .userFull(let flags, let user, let about, let link, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId):
-                return ("userFull", [("flags", flags), ("user", user), ("about", about), ("link", link), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("commonChatsCount", commonChatsCount), ("folderId", folderId)])
+                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId):
+                return ("userFull", [("flags", flags), ("user", user), ("about", about), ("settings", settings), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("commonChatsCount", commonChatsCount), ("folderId", folderId)])
     }
     }
     
@@ -2564,9 +2564,9 @@ extension Api {
             }
             var _3: String?
             if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
-            var _4: Api.contacts.Link?
+            var _4: Api.PeerSettings?
             if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.contacts.Link
+                _4 = Api.parse(reader, signature: signature) as? Api.PeerSettings
             }
             var _5: Api.Photo?
             if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
@@ -2597,7 +2597,7 @@ extension Api {
             let _c9 = _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 11) == 0) || _10 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.UserFull.userFull(flags: _1!, user: _2!, about: _3, link: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10)
+                return Api.UserFull.userFull(flags: _1!, user: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10)
             }
             else {
                 return nil
@@ -3943,7 +3943,6 @@ extension Api {
         case updateUserStatus(userId: Int32, status: Api.UserStatus)
         case updateUserName(userId: Int32, firstName: String, lastName: String, username: String)
         case updateUserPhoto(userId: Int32, date: Int32, photo: Api.UserProfilePhoto, previous: Api.Bool)
-        case updateContactLink(userId: Int32, myLink: Api.ContactLink, foreignLink: Api.ContactLink)
         case updateNewEncryptedMessage(message: Api.EncryptedMessage, qts: Int32)
         case updateEncryptedChatTyping(chatId: Int32)
         case updateEncryption(chat: Api.EncryptedChat, date: Int32)
@@ -4004,6 +4003,7 @@ extension Api {
         case updatePinnedDialogs(flags: Int32, folderId: Int32?, order: [Api.DialogPeer]?)
         case updateReadChannelInbox(flags: Int32, folderId: Int32?, channelId: Int32, maxId: Int32, stillUnreadCount: Int32, pts: Int32)
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
+        case updatePeerSettings(peer: Api.Peer, settings: Api.PeerSettings)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4079,14 +4079,6 @@ extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     photo.serialize(buffer, true)
                     previous.serialize(buffer, true)
-                    break
-                case .updateContactLink(let userId, let myLink, let foreignLink):
-                    if boxed {
-                        buffer.appendInt32(-1657903163)
-                    }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    myLink.serialize(buffer, true)
-                    foreignLink.serialize(buffer, true)
                     break
                 case .updateNewEncryptedMessage(let message, let qts):
                     if boxed {
@@ -4596,6 +4588,13 @@ extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
+                case .updatePeerSettings(let peer, let settings):
+                    if boxed {
+                        buffer.appendInt32(1786671974)
+                    }
+                    peer.serialize(buffer, true)
+                    settings.serialize(buffer, true)
+                    break
     }
     }
     
@@ -4619,8 +4618,6 @@ extension Api {
                 return ("updateUserName", [("userId", userId), ("firstName", firstName), ("lastName", lastName), ("username", username)])
                 case .updateUserPhoto(let userId, let date, let photo, let previous):
                 return ("updateUserPhoto", [("userId", userId), ("date", date), ("photo", photo), ("previous", previous)])
-                case .updateContactLink(let userId, let myLink, let foreignLink):
-                return ("updateContactLink", [("userId", userId), ("myLink", myLink), ("foreignLink", foreignLink)])
                 case .updateNewEncryptedMessage(let message, let qts):
                 return ("updateNewEncryptedMessage", [("message", message), ("qts", qts)])
                 case .updateEncryptedChatTyping(let chatId):
@@ -4741,6 +4738,8 @@ extension Api {
                 return ("updateReadChannelInbox", [("flags", flags), ("folderId", folderId), ("channelId", channelId), ("maxId", maxId), ("stillUnreadCount", stillUnreadCount), ("pts", pts)])
                 case .updateReadHistoryInbox(let flags, let folderId, let peer, let maxId, let stillUnreadCount, let pts, let ptsCount):
                 return ("updateReadHistoryInbox", [("flags", flags), ("folderId", folderId), ("peer", peer), ("maxId", maxId), ("stillUnreadCount", stillUnreadCount), ("pts", pts), ("ptsCount", ptsCount)])
+                case .updatePeerSettings(let peer, let settings):
+                return ("updatePeerSettings", [("peer", peer), ("settings", settings)])
     }
     }
     
@@ -4899,27 +4898,6 @@ extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.Update.updateUserPhoto(userId: _1!, date: _2!, photo: _3!, previous: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_updateContactLink(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.ContactLink?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.ContactLink
-            }
-            var _3: Api.ContactLink?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.ContactLink
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateContactLink(userId: _1!, myLink: _2!, foreignLink: _3!)
             }
             else {
                 return nil
@@ -5940,6 +5918,24 @@ extension Api {
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
                 return Api.Update.updateReadHistoryInbox(flags: _1!, folderId: _2, peer: _3!, maxId: _4!, stillUnreadCount: _5!, pts: _6!, ptsCount: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_updatePeerSettings(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Api.PeerSettings?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.PeerSettings
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updatePeerSettings(peer: _1!, settings: _2!)
             }
             else {
                 return nil
@@ -17693,56 +17689,6 @@ extension Api {
         }
     
     }
-    enum ContactLink: TypeConstructorDescription {
-        case contactLinkUnknown
-        case contactLinkNone
-        case contactLinkContact
-    
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .contactLinkUnknown:
-                    if boxed {
-                        buffer.appendInt32(1599050311)
-                    }
-                    
-                    break
-                case .contactLinkNone:
-                    if boxed {
-                        buffer.appendInt32(-17968211)
-                    }
-                    
-                    break
-                case .contactLinkContact:
-                    if boxed {
-                        buffer.appendInt32(-721239344)
-                    }
-                    
-                    break
-    }
-    }
-    
-    func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .contactLinkUnknown:
-                return ("contactLinkUnknown", [])
-                case .contactLinkNone:
-                return ("contactLinkNone", [])
-                case .contactLinkContact:
-                return ("contactLinkContact", [])
-    }
-    }
-    
-        static func parse_contactLinkUnknown(_ reader: BufferReader) -> ContactLink? {
-            return Api.ContactLink.contactLinkUnknown
-        }
-        static func parse_contactLinkNone(_ reader: BufferReader) -> ContactLink? {
-            return Api.ContactLink.contactLinkNone
-        }
-        static func parse_contactLinkContact(_ reader: BufferReader) -> ContactLink? {
-            return Api.ContactLink.contactLinkContact
-        }
-    
-    }
     enum WebDocument: TypeConstructorDescription {
         case webDocumentNoProxy(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
         case webDocument(url: String, accessHash: Int64, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
@@ -18245,6 +18191,9 @@ extension Api {
         case inputMessageEntityMentionName(offset: Int32, length: Int32, userId: Api.InputUser)
         case messageEntityPhone(offset: Int32, length: Int32)
         case messageEntityCashtag(offset: Int32, length: Int32)
+        case messageEntityUnderline(offset: Int32, length: Int32)
+        case messageEntityStrike(offset: Int32, length: Int32)
+        case messageEntityBlockquote(offset: Int32, length: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -18357,6 +18306,27 @@ extension Api {
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
                     break
+                case .messageEntityUnderline(let offset, let length):
+                    if boxed {
+                        buffer.appendInt32(-1672577397)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    break
+                case .messageEntityStrike(let offset, let length):
+                    if boxed {
+                        buffer.appendInt32(-1090087980)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    break
+                case .messageEntityBlockquote(let offset, let length):
+                    if boxed {
+                        buffer.appendInt32(34469328)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -18392,6 +18362,12 @@ extension Api {
                 return ("messageEntityPhone", [("offset", offset), ("length", length)])
                 case .messageEntityCashtag(let offset, let length):
                 return ("messageEntityCashtag", [("offset", offset), ("length", length)])
+                case .messageEntityUnderline(let offset, let length):
+                return ("messageEntityUnderline", [("offset", offset), ("length", length)])
+                case .messageEntityStrike(let offset, let length):
+                return ("messageEntityStrike", [("offset", offset), ("length", length)])
+                case .messageEntityBlockquote(let offset, let length):
+                return ("messageEntityBlockquote", [("offset", offset), ("length", length)])
     }
     }
     
@@ -18614,6 +18590,48 @@ extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageEntity.messageEntityCashtag(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messageEntityUnderline(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityUnderline(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messageEntityStrike(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityStrike(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messageEntityBlockquote(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityBlockquote(offset: _1!, length: _2!)
             }
             else {
                 return nil

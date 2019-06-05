@@ -2,6 +2,7 @@
     import PostboxMac
 #else
     import Postbox
+    import UIKit
 #endif
 
 public func smallestImageRepresentation(_ representations: [TelegramMediaImageRepresentation]) -> TelegramMediaImageRepresentation? {

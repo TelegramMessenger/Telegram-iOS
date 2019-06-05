@@ -8,7 +8,7 @@ import SwiftSignalKit
 #endif
 
 func emojiKeywordColletionIdForCode(_ code: String) -> ItemCollectionId {
-    return ItemCollectionId(namespace: Namespaces.ItemCollection.EmojiKeywords, id: Int64(murMurHashString32(code)))
+    return ItemCollectionId(namespace: Namespaces.ItemCollection.EmojiKeywords, id: Int64(HashFunctions.murMurHash32(code)))
 }
 
 public final class EmojiKeywordCollectionInfo: ItemCollectionInfo, Equatable {

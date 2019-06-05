@@ -4,7 +4,11 @@ import SwiftSignalKitMac
 import MtProtoKitMac
 #else
 import SwiftSignalKit
-import MtProtoKitDynamic
+#if BUCK
+        import MtProtoKit
+    #else
+        import MtProtoKitDynamic
+    #endif
 #endif
 
 public enum ConfirmTwoStepRecoveryEmailError {
