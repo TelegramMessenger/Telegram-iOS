@@ -37,17 +37,15 @@
 #include <arm_neon.h>
 #endif
 
-#ifdef _MSC_VER
-RAPIDJSON_DIAG_PUSH
-RAPIDJSON_DIAG_OFF(4127)  // conditional expression is constant
-RAPIDJSON_DIAG_OFF(4702)  // unreachable code
-#endif
-
 #ifdef __clang__
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(old-style-cast)
 RAPIDJSON_DIAG_OFF(padded)
 RAPIDJSON_DIAG_OFF(switch-enum)
+#elif defined(_MSC_VER)
+RAPIDJSON_DIAG_PUSH
+RAPIDJSON_DIAG_OFF(4127)  // conditional expression is constant
+RAPIDJSON_DIAG_OFF(4702)  // unreachable code
 #endif
 
 #ifdef __GNUC__
@@ -544,7 +542,8 @@ public:
     /*! \param stackAllocator Optional allocator for allocating stack memory. (Only use for non-destructive parsing)
         \param stackCapacity stack capacity in bytes for storing a single decoded string.  (Only use for non-destructive parsing)
     */
-    GenericReader(StackAllocator* stackAllocator = 0, size_t stackCapacity = kDefaultStackCapacity) : stack_(stackAllocator, stackCapacity), parseResult_() {}
+    GenericReader(StackAllocator* stackAllocator = 0, size_t stackCapacity = kDefaultStackCapacity) :
+        stack_(stackAllocator, stackCapacity), parseResult_(), state_(IterativeParsingStartState) {}
 
     //! Parse JSON text.
     /*! \tparam parseFlags Combination of \ref ParseFlag.
@@ -607,7 +606,7 @@ public:
         parseResult_.Clear();
         state_ = IterativeParsingStartState;
     }
-    
+
     //! Parse one token from JSON text
     /*! \tparam InputStream Type of input stream, implementing Stream concept
         \tparam Handler Type of handler, implementing Handler concept.
@@ -619,11 +618,11 @@ public:
     bool IterativeParseNext(InputStream& is, Handler& handler) {
         while (RAPIDJSON_LIKELY(is.Peek() != '\0')) {
             SkipWhitespaceAndComments<parseFlags>(is);
-            
+
             Token t = Tokenize(is.Peek());
             IterativeParsingState n = Predict(state_, t);
             IterativeParsingState d = Transit<parseFlags>(state_, t, n, is, handler);
-            
+
             // If we've finished or hit an error...
             if (RAPIDJSON_UNLIKELY(IsIterativeParsingCompleteState(d))) {
                 // Report errors.
@@ -631,11 +630,11 @@ public:
                     HandleError(state_, is);
                     return false;
                 }
-            
+
                 // Transition to the finish state.
                 RAPIDJSON_ASSERT(d == IterativeParsingFinishState);
                 state_ = d;
-                
+
                 // If StopWhenDone is not set...
                 if (!(parseFlags & kParseStopWhenDoneFlag)) {
                     // ... and extra non-whitespace data is found...
@@ -646,11 +645,11 @@ public:
                         return false;
                     }
                 }
-                
+
                 // Success! We are done!
                 return true;
             }
-            
+
             // Transition to the new state.
             state_ = d;
 
@@ -658,7 +657,7 @@ public:
             if (!IsIterativeParsingDelimiterState(n))
                 return true;
         }
-        
+
         // We reached the end of file.
         stack_.Clear();
 
@@ -666,18 +665,18 @@ public:
             HandleError(state_, is);
             return false;
         }
-        
+
         return true;
     }
-    
+
     //! Check if token-by-token parsing JSON text is complete
     /*! \return Whether the JSON has been fully decoded.
      */
-    RAPIDJSON_FORCEINLINE bool IterativeParseComplete() {
+    RAPIDJSON_FORCEINLINE bool IterativeParseComplete() const {
         return IsIterativeParsingCompleteState(state_);
     }
 
-    //! Whether a parse error has occured in the last parsing.
+    //! Whether a parse error has occurred in the last parsing.
     bool HasParseError() const { return parseResult_.IsError(); }
 
     //! Get the \ref ParseErrorCode of last parsing.
@@ -900,7 +899,7 @@ private:
             return false;
     }
 
-    // Helper function to parse four hexidecimal digits in \uXXXX in ParseString().
+    // Helper function to parse four hexadecimal digits in \uXXXX in ParseString().
     template<typename InputStream>
     unsigned ParseHex4(InputStream& is, size_t escapeOffset) {
         unsigned codepoint = 0;
@@ -1007,7 +1006,7 @@ private:
 
             Ch c = is.Peek();
             if (RAPIDJSON_UNLIKELY(c == '\\')) {    // Escape
-                size_t escapeOffset = is.Tell();    // For invalid escaping, report the inital '\\' as error offset
+                size_t escapeOffset = is.Tell();    // For invalid escaping, report the initial '\\' as error offset
                 is.Take();
                 Ch e = is.Peek();
                 if ((sizeof(Ch) == 1 || unsigned(e) < 256) && RAPIDJSON_LIKELY(escape[static_cast<unsigned char>(e)])) {
@@ -1524,7 +1523,7 @@ private:
                     }
                 }
             }
-            
+
             if (RAPIDJSON_UNLIKELY(!useNanOrInf)) {
                 RAPIDJSON_PARSE_ERROR(kParseErrorValueInvalid, s.Tell());
             }
@@ -1562,8 +1561,6 @@ private:
         // Force double for big integer
         if (useDouble) {
             while (RAPIDJSON_LIKELY(s.Peek() >= '0' && s.Peek() <= '9')) {
-                if (RAPIDJSON_UNLIKELY(d >= 1.7976931348623157e307)) // DBL_MAX / 10.0
-                    RAPIDJSON_PARSE_ERROR(kParseErrorNumberTooBig, startOffset);
                 d = d * 10 + (s.TakePush() - '0');
             }
         }
@@ -1633,9 +1630,18 @@ private:
             if (RAPIDJSON_LIKELY(s.Peek() >= '0' && s.Peek() <= '9')) {
                 exp = static_cast<int>(s.Take() - '0');
                 if (expMinus) {
+                    // (exp + expFrac) must not underflow int => we're detecting when -exp gets
+                    // dangerously close to INT_MIN (a pessimistic next digit 9 would push it into
+                    // underflow territory):
+                    //
+                    //        -(exp * 10 + 9) + expFrac >= INT_MIN
+                    //   <=>  exp <= (expFrac - INT_MIN - 9) / 10
+                    RAPIDJSON_ASSERT(expFrac <= 0);
+                    int maxExp = (expFrac + 2147483639) / 10;
+
                     while (RAPIDJSON_LIKELY(s.Peek() >= '0' && s.Peek() <= '9')) {
                         exp = exp * 10 + static_cast<int>(s.Take() - '0');
-                        if (exp >= 214748364) {                         // Issue #313: prevent overflow exponent
+                        if (RAPIDJSON_UNLIKELY(exp > maxExp)) {
                             while (RAPIDJSON_UNLIKELY(s.Peek() >= '0' && s.Peek() <= '9'))  // Consume the rest of exponent
                                 s.Take();
                         }
@@ -1693,6 +1699,13 @@ private:
                    d = internal::StrtodFullPrecision(d, p, decimal, length, decimalPosition, exp);
                else
                    d = internal::StrtodNormalPrecision(d, p);
+
+               // Use > max, instead of == inf, to fix bogus warning -Wfloat-equal
+               if (d > (std::numeric_limits<double>::max)()) {
+                   // Overflow
+                   // TODO: internal::StrtodX should report overflow (or underflow)
+                   RAPIDJSON_PARSE_ERROR(kParseErrorNumberTooBig, startOffset);
+               }
 
                cont = handler.Double(minus ? -d : d);
            }
@@ -1756,12 +1769,12 @@ private:
 
         // Single value state
         IterativeParsingValueState,
-        
+
         // Delimiter states (at bottom)
         IterativeParsingElementDelimiterState,
         IterativeParsingMemberDelimiterState,
         IterativeParsingKeyValueDelimiterState,
-        
+
         cIterativeParsingStateCount
     };
 
@@ -1785,7 +1798,7 @@ private:
         kTokenCount
     };
 
-    RAPIDJSON_FORCEINLINE Token Tokenize(Ch c) {
+    RAPIDJSON_FORCEINLINE Token Tokenize(Ch c) const {
 
 //!@cond RAPIDJSON_HIDDEN_FROM_DOXYGEN
 #define N NumberToken
@@ -1812,7 +1825,7 @@ private:
             return NumberToken;
     }
 
-    RAPIDJSON_FORCEINLINE IterativeParsingState Predict(IterativeParsingState state, Token token) {
+    RAPIDJSON_FORCEINLINE IterativeParsingState Predict(IterativeParsingState state, Token token) const {
         // current state x one lookahead token -> new state
         static const char G[cIterativeParsingStateCount][kTokenCount] = {
             // Finish(sink state)
@@ -2151,53 +2164,53 @@ private:
         }
     }
 
-    RAPIDJSON_FORCEINLINE bool IsIterativeParsingDelimiterState(IterativeParsingState s) {
+    RAPIDJSON_FORCEINLINE bool IsIterativeParsingDelimiterState(IterativeParsingState s) const {
         return s >= IterativeParsingElementDelimiterState;
     }
-    
-    RAPIDJSON_FORCEINLINE bool IsIterativeParsingCompleteState(IterativeParsingState s) {
+
+    RAPIDJSON_FORCEINLINE bool IsIterativeParsingCompleteState(IterativeParsingState s) const {
         return s <= IterativeParsingErrorState;
     }
-    
+
     template <unsigned parseFlags, typename InputStream, typename Handler>
     ParseResult IterativeParse(InputStream& is, Handler& handler) {
         parseResult_.Clear();
         ClearStackOnExit scope(*this);
         IterativeParsingState state = IterativeParsingStartState;
-        
+
         SkipWhitespaceAndComments<parseFlags>(is);
         RAPIDJSON_PARSE_ERROR_EARLY_RETURN(parseResult_);
         while (is.Peek() != '\0') {
             Token t = Tokenize(is.Peek());
             IterativeParsingState n = Predict(state, t);
             IterativeParsingState d = Transit<parseFlags>(state, t, n, is, handler);
-            
+
             if (d == IterativeParsingErrorState) {
                 HandleError(state, is);
                 break;
             }
-            
+
             state = d;
-            
+
             // Do not further consume streams if a root JSON has been parsed.
             if ((parseFlags & kParseStopWhenDoneFlag) && state == IterativeParsingFinishState)
                 break;
-            
+
             SkipWhitespaceAndComments<parseFlags>(is);
             RAPIDJSON_PARSE_ERROR_EARLY_RETURN(parseResult_);
         }
-        
+
         // Handle the end of file.
         if (state != IterativeParsingFinishState)
             HandleError(state, is);
-        
+
         return parseResult_;
     }
 
     static const size_t kDefaultStackCapacity = 256;    //!< Default stack capacity in bytes for storing a single decoded string.
     internal::Stack<StackAllocator> stack_;  //!< A stack for storing decoded string temporarily during non-destructive parsing.
     ParseResult parseResult_;
-    IterativeParsingState state_{IterativeParsingStartState};
+    IterativeParsingState state_;
 }; // class GenericReader
 
 //! Reader with UTF8 encoding and default allocator.
@@ -2205,16 +2218,12 @@ typedef GenericReader<UTF8<>, UTF8<> > Reader;
 
 RAPIDJSON_NAMESPACE_END
 
-#ifdef __clang__
+#if defined(__clang__) || defined(_MSC_VER)
 RAPIDJSON_DIAG_POP
 #endif
 
 
 #ifdef __GNUC__
-RAPIDJSON_DIAG_POP
-#endif
-
-#ifdef _MSC_VER
 RAPIDJSON_DIAG_POP
 #endif
 
