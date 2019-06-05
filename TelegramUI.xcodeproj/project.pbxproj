@@ -15,6 +15,7 @@
 		090B48C82200BCA8005083FA /* WallpaperUploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */; };
 		090E63E62195880F00E3C035 /* ContactAddItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63E52195880F00E3C035 /* ContactAddItem.swift */; };
 		090E63EE2196FE3A00E3C035 /* OpenAddContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */; };
+		090E777922A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E777822A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift */; };
 		0910B0ED21FA178C00F8F87D /* WallpaperPreviewMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0EC21FA178C00F8F87D /* WallpaperPreviewMedia.swift */; };
 		0910B0EF21FA532D00F8F87D /* WallpaperResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */; };
 		0910B0F121FB3DE100F8F87D /* WallpaperPatternPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0F021FB3DE100F8F87D /* WallpaperPatternPanelNode.swift */; };
@@ -1219,6 +1220,7 @@
 		090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperUploadManager.swift; sourceTree = "<group>"; };
 		090E63E52195880F00E3C035 /* ContactAddItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactAddItem.swift; sourceTree = "<group>"; };
 		090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAddContact.swift; sourceTree = "<group>"; };
+		090E777822A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsThemeItem.swift; sourceTree = "<group>"; };
 		0910B0EC21FA178C00F8F87D /* WallpaperPreviewMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperPreviewMedia.swift; sourceTree = "<group>"; };
 		0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperResources.swift; sourceTree = "<group>"; };
 		0910B0F021FB3DE100F8F87D /* WallpaperPatternPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperPatternPanelNode.swift; sourceTree = "<group>"; };
@@ -3419,6 +3421,7 @@
 				D0B37C5F1F8D286E004252DF /* ThemeSettingsFontSizeItem.swift */,
 				D06F31E52135A41C001A0F12 /* ThemeSettingsBrightnessItem.swift */,
 				09A218F422A15F1400DE6898 /* ThemeSettingsAppIconItem.swift */,
+				090E777822A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift */,
 				D06E4C322134A59700088087 /* ThemeAccentColorActionSheet.swift */,
 				D06E4C342134AE3C00088087 /* ThemeAutoNightSettingsController.swift */,
 				D06F31E3213597FF001A0F12 /* ThemeAutoNightTimeSelectionActionSheet.swift */,
@@ -6114,6 +6117,7 @@
 				D0EC6DE41EB9F58900EBF1C3 /* ChatUnblockInputPanelNode.swift in Sources */,
 				D0CAD90120AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift in Sources */,
 				D0EC6DE51EB9F58900EBF1C3 /* SecretChatHandshakeStatusInputPanelNode.swift in Sources */,
+				090E777922A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift in Sources */,
 				D06BEC771F62F68B0035A545 /* OverlayUniversalVideoNode.swift in Sources */,
 				D0EC6DE61EB9F58900EBF1C3 /* DeleteChatInputPanelNode.swift in Sources */,
 				D01BAA241ECE173200295217 /* PresentationResourcesCallList.swift in Sources */,

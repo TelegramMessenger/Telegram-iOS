@@ -904,6 +904,19 @@ public enum PresentationThemeBuiltinName {
     case day
     case nightGrayscale
     case nightAccent
+    
+    var reference: PresentationBuiltinThemeReference {
+        switch self {
+            case .dayClassic:
+                return .dayClassic
+            case .day:
+                return .day
+            case .nightGrayscale:
+                return .nightGrayscale
+            case .nightAccent:
+                return .nightAccent
+        }
+    }
 }
 
 public enum PresentationThemeName: Equatable {

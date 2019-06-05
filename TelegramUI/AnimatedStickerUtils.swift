@@ -5,17 +5,17 @@ import AVFoundation
 import Lottie
 import TelegramUIPrivateModule
 
-private func verifyLottieItems(_ items: [Any]?, shapes: Bool = true) -> Bool {
+private func validateAnimationItems(_ items: [Any]?, shapes: Bool = true) -> Bool {
     if let items = items {
         for case let item as [AnyHashable: Any] in items {
             if let type = item["ty"] as? String {
-                if type == "rp" || type == "sr" || type == "mm" || type == "gs" {
+                if type == "rp" || type == "sr" || type == "gs" {
                     return false
                 }
             }
             
             if shapes, let subitems = item["it"] as? [Any] {
-                if !verifyLottieItems(subitems, shapes: false) {
+                if !validateAnimationItems(subitems, shapes: false) {
                     return false
                 }
             }
@@ -24,12 +24,52 @@ private func verifyLottieItems(_ items: [Any]?, shapes: Bool = true) -> Bool {
     return true;
 }
 
-private func verifyLottieLayers(_ layers: [AnyHashable: Any]?) -> Bool {
+private func validateAnimationLayers(_ layers: [Any]?) -> Bool {
+    if let layers = layers {
+        for case let layer as [AnyHashable: Any] in layers {
+            if let ddd = layer["ddd"] as? Int, ddd != 0 {
+                return false
+            }
+            if let sr = layer["sr"] as? Int, sr != 1 {
+                return false
+            }
+            if let _ = layer["tm"] {
+                return false
+            }
+            if let ty = layer["ty"] as? Int {
+                if ty == 1 || ty == 2 || ty == 5 || ty == 9 {
+                    return false
+                }
+            }
+            if let hasMask = layer["hasMask"] as? Bool, hasMask {
+                return false
+            }
+            if let _ = layer["masksProperties"] {
+                return false
+            }
+            if let _ = layer["tt"] {
+                return false
+            }
+            if let ao = layer["ao"] as? Int, ao == 1 {
+                return false
+            }
+            
+            if let shapes = layer["shapes"] as? [Any], !validateAnimationItems(shapes, shapes: true) {
+                return false
+            }
+        }
+    }
     return true
 }
 
-func validateStickerComposition(json: [AnyHashable: Any]) -> Bool {
+func validateAnimationComposition(json: [AnyHashable: Any]) -> Bool {
     guard let tgs = json["tgs"] as? Int, tgs == 1 else {
+        return false
+    }
+    guard let width = json["w"] as? Int, width == 512 else {
+        return false
+    }
+    guard let height = json["h"] as? Int, height == 512 else {
         return false
     }
     
@@ -39,11 +79,16 @@ func validateStickerComposition(json: [AnyHashable: Any]) -> Bool {
 func convertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<String, NoError> {
     return Signal({ subscriber in
         let startTime = CACurrentMediaTime()
+        var drawingTime: Double = 0
+        var appendingTime: Double = 0
+        
         let decompressedData = TGGUnzipData(data)
         if let decompressedData = decompressedData, let json = (try? JSONSerialization.jsonObject(with: decompressedData, options: [])) as? [AnyHashable: Any] {
-            if let _ = json["tgs"] {
+            if validateAnimationComposition(json: json) {
                 let model = LOTComposition(json: json)
                 if let startFrame = model.startFrame?.int32Value, let endFrame = model.endFrame?.int32Value {
+                    print("read at \(CACurrentMediaTime() - startTime)")
+                    
                     var randomId: Int64 = 0
                     arc4random_buf(&randomId, 8)
                     let path = NSTemporaryDirectory() + "\(randomId).mp4"
@@ -91,36 +136,44 @@ func convertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<St
                                             context.restoreGState()
                                         }
                                         
-                                        let image = singleContext.generateImage()
-                                        let alphaImage = generateTintedImage(image: image, color: .white, backgroundColor: .black)
-                                        context.withFlippedContext { context in
-                                            context.setFillColor(UIColor.white.cgColor)
-                                            context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.height), size: videoSize))
-                                            if let image = image?.cgImage {
-                                                context.draw(image, in: CGRect(origin: CGPoint(x: 0.0, y: size.height), size: size))
-                                            }
-                                            if let alphaImage = alphaImage?.cgImage {
-                                                context.draw(alphaImage, in: CGRect(origin: CGPoint(), size: size))
-                                            }
-                                        }
-                                        
-                                        if let image = context.generateImage() {
-                                            if let pixelBufferPool = pixelBufferAdaptor.pixelBufferPool {
-                                                let pixelBufferPointer = UnsafeMutablePointer<CVPixelBuffer?>.allocate(capacity: 1)
-                                                let status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, pixelBufferPointer)
-                                                if let pixelBuffer = pixelBufferPointer.pointee, status == 0 {
-                                                    fillPixelBufferFromImage(image, pixelBuffer: pixelBuffer)
+                                        if let image = singleContext.generateImage()?.cgImage {
+                                            let drawStartTime = CACurrentMediaTime()
+                                            let maskDecode = [
+                                                CGFloat(1.0), CGFloat(1.0),
+                                                CGFloat(1.0), CGFloat(1.0),
+                                                CGFloat(1.0), CGFloat(1.0),
+                                                CGFloat(1.0), CGFloat(1.0)]
+                                            
+                                            let maskImage =  CGImage(width: image.width, height: image.height, bitsPerComponent: image.bitsPerComponent, bitsPerPixel: image.bitsPerPixel, bytesPerRow: image.bytesPerRow, space: image.colorSpace!, bitmapInfo:         image.bitmapInfo, provider: image.dataProvider!, decode: maskDecode, shouldInterpolate:  image.shouldInterpolate, intent: image.renderingIntent)!
 
-                                                    pixelBufferAdaptor.append(pixelBuffer, withPresentationTime: presentationTime)
-                                                    pixelBufferPointer.deinitialize(count: 1)
+                                            context.withFlippedContext { context in
+                                                context.setFillColor(UIColor.white.cgColor)
+                                                context.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: videoSize))
+                                                context.draw(image, in: CGRect(origin: CGPoint(x: 0.0, y: size.height), size: size))
+                                                context.draw(maskImage, in: CGRect(origin: CGPoint(), size: size))
+                                            }
+                                            drawingTime += CACurrentMediaTime() - drawStartTime
+                                            
+                                            let appendStartTime = CACurrentMediaTime()
+                                            if let image = context.generateImage() {
+                                                if let pixelBufferPool = pixelBufferAdaptor.pixelBufferPool {
+                                                    let pixelBufferPointer = UnsafeMutablePointer<CVPixelBuffer?>.allocate(capacity: 1)
+                                                    let status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, pixelBufferPointer)
+                                                    if let pixelBuffer = pixelBufferPointer.pointee, status == 0 {
+                                                        fillPixelBufferFromImage(image, pixelBuffer: pixelBuffer)
+
+                                                        pixelBufferAdaptor.append(pixelBuffer, withPresentationTime: presentationTime)
+                                                        pixelBufferPointer.deinitialize(count: 1)
+                                                    } else {
+                                                        break
+                                                    }
+                                                    
+                                                    pixelBufferPointer.deallocate()
                                                 } else {
                                                     break
                                                 }
-                                                
-                                                pixelBufferPointer.deallocate()
-                                            } else {
-                                                break
                                             }
+                                            appendingTime += CACurrentMediaTime() - appendStartTime
                                         }
                                         currentFrame += 1
                                     }
@@ -131,6 +184,8 @@ func convertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<St
                                             subscriber.putNext(path)
                                             subscriber.putCompletion()
                                             print("animation render time \(CACurrentMediaTime() - startTime)")
+                                            print("of which drawing time \(drawingTime)")
+                                            print("of which appending time \(appendingTime)")
                                         }
                                     }
                                 }
