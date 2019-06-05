@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 public class DisplayLinkDispatcher: NSObject {
     private var displayLink: CADisplayLink!

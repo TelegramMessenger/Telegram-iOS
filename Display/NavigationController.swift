@@ -3,6 +3,10 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
+#if BUCK
+import DisplayPrivate
+#endif
+
 public final class NavigationControllerTheme {
     public let navigationBar: NavigationBarTheme
     public let emptyAreaColor: UIColor

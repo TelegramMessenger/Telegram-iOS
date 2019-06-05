@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 struct ViewportItemSpring {
     let stiffness: CGFloat

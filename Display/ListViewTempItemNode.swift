@@ -1,5 +1,4 @@
 import Foundation
 
-final class ListViewTempItemNode: ListViewItemNode {
-    
+final class ListViewTempItemNode: ListViewItemNode {    
 }

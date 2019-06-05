@@ -1,6 +1,9 @@
 import Foundation
-#if !os(macOS)
+import UIKit
 import AsyncDisplayKit
+
+#if BUCK
+import DisplayPrivate
 #endif
 
 public enum ListViewItemHeaderStickDirection {

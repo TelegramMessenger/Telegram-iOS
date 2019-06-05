@@ -1,7 +1,7 @@
-#if os(macOS)
-    import Cocoa
-#else
-    import UIKit
+import UIKit
+
+#if BUCK
+import DisplayPrivate
 #endif
 
 @objc private class CALayerAnimationDelegate: NSObject, CAAnimationDelegate {

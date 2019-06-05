@@ -1,9 +1,10 @@
 import Foundation
-#if os(macOS)
-import SwiftSignalKitMac
-#else
+import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
+
+#if BUCK
+import DisplayPrivate
 #endif
 
 var testSpringFrictionLimits: (CGFloat, CGFloat) = (3.0, 60.0)

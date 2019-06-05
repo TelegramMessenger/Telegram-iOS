@@ -1,8 +1,6 @@
 import Foundation
-#if os(macOS)
-#else
-    import AsyncDisplayKit
-#endif
+import UIKit
+import AsyncDisplayKit
 
 open class ListViewAccessoryItemNode: ASDisplayNode {
     var transitionOffset: CGPoint = CGPoint() {

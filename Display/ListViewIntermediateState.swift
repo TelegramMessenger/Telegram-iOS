@@ -1,9 +1,6 @@
 import Foundation
-#if os(macOS)
-import SwiftSignalKitMac
-#else
+import UIKit
 import SwiftSignalKit
-#endif
 
 public enum ListViewCenterScrollPositionOverflow {
     case top

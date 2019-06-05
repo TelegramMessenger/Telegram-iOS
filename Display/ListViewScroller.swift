@@ -1,7 +1,4 @@
-#if os(macOS)
-#else
 import UIKit
-#endif
 
 class ListViewScroller: UIScrollView, UIGestureRecognizerDelegate {
     override init(frame: CGRect) {

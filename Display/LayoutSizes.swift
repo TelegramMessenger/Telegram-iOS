@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 public func horizontalContainerFillingSizeForLayout(layout: ContainerViewLayout, sideInset: CGFloat) -> CGFloat {
     if case .regular = layout.metrics.widthClass {

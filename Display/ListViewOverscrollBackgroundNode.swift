@@ -1,8 +1,6 @@
 import Foundation
-#if os(macOS)
-#else
+import UIKit
 import AsyncDisplayKit
-#endif
 
 final class ListViewOverscrollBackgroundNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode

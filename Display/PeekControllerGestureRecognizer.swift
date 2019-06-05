@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
+import AsyncDisplayKit
 
 private func traceDeceleratingScrollView(_ view: UIView, at point: CGPoint) -> Bool {
     if view.bounds.contains(point), let view = view as? UIScrollView, view.isDecelerating {

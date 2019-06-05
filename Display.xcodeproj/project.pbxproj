@@ -52,7 +52,6 @@
 		D03AA4EB202E02B10056C405 /* ListViewReorderingGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4EA202E02B10056C405 /* ListViewReorderingGestureRecognizer.swift */; };
 		D03AA5162030C5F80056C405 /* ListViewTempItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA5152030C5F80056C405 /* ListViewTempItemNode.swift */; };
 		D03B0E701D6331FB00955575 /* StatusBarHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0E6F1D6331FB00955575 /* StatusBarHost.swift */; };
-		D03BCCEB1C72AE590097A291 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BCCEA1C72AE590097A291 /* Theme.swift */; };
 		D03E7DE41C96A90100C07816 /* NavigationShadow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D03E7DE31C96A90100C07816 /* NavigationShadow@2x.png */; };
 		D03E7DE61C96B96E00C07816 /* NavigationBarTransitionContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E7DE51C96B96E00C07816 /* NavigationBarTransitionContainer.swift */; };
 		D03E7DF81C96C5F200C07816 /* NSWeakReference.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E7DF61C96C5F200C07816 /* NSWeakReference.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -107,6 +106,7 @@
 		D077B8E91F4637040046D27A /* NavigationBarBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D077B8E81F4637040046D27A /* NavigationBarBadge.swift */; };
 		D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */; };
 		D087BFB51F75181D003FD209 /* ChildWindowHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D087BFB41F75181D003FD209 /* ChildWindowHostView.swift */; };
+		D08B61BE22A752FD000A46A8 /* UITracingLayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08B61BD22A752FD000A46A8 /* UITracingLayerView.swift */; };
 		D08CAA7B1ED73C990000FDA8 /* ViewControllerTracingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CAA7A1ED73C990000FDA8 /* ViewControllerTracingNode.swift */; };
 		D08E903A1D24159200533158 /* ActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E90391D24159200533158 /* ActionSheetItem.swift */; };
 		D08E903C1D2417E000533158 /* ActionSheetButtonItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */; };
@@ -223,7 +223,6 @@
 		D03AA4EA202E02B10056C405 /* ListViewReorderingGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewReorderingGestureRecognizer.swift; sourceTree = "<group>"; };
 		D03AA5152030C5F80056C405 /* ListViewTempItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewTempItemNode.swift; sourceTree = "<group>"; };
 		D03B0E6F1D6331FB00955575 /* StatusBarHost.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarHost.swift; sourceTree = "<group>"; };
-		D03BCCEA1C72AE590097A291 /* Theme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		D03E7DE31C96A90100C07816 /* NavigationShadow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationShadow@2x.png"; sourceTree = "<group>"; };
 		D03E7DE51C96B96E00C07816 /* NavigationBarTransitionContainer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarTransitionContainer.swift; sourceTree = "<group>"; };
 		D03E7DF61C96C5F200C07816 /* NSWeakReference.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSWeakReference.h; sourceTree = "<group>"; };
@@ -281,6 +280,7 @@
 		D077B8E81F4637040046D27A /* NavigationBarBadge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarBadge.swift; sourceTree = "<group>"; };
 		D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainerViewLayout.swift; sourceTree = "<group>"; };
 		D087BFB41F75181D003FD209 /* ChildWindowHostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChildWindowHostView.swift; sourceTree = "<group>"; };
+		D08B61BD22A752FD000A46A8 /* UITracingLayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITracingLayerView.swift; sourceTree = "<group>"; };
 		D08CAA7A1ED73C990000FDA8 /* ViewControllerTracingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewControllerTracingNode.swift; sourceTree = "<group>"; };
 		D08E90391D24159200533158 /* ActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItem.swift; sourceTree = "<group>"; };
 		D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetButtonItem.swift; sourceTree = "<group>"; };
@@ -489,14 +489,6 @@
 			name = Peek;
 			sourceTree = "<group>";
 		};
-		D03BCCE91C72AE4B0097A291 /* Theme */ = {
-			isa = PBXGroup;
-			children = (
-				D03BCCEA1C72AE590097A291 /* Theme.swift */,
-			);
-			name = Theme;
-			sourceTree = "<group>";
-		};
 		D05BE4AC1D217F33002BD72C /* Utils */ = {
 			isa = PBXGroup;
 			children = (
@@ -510,6 +502,7 @@
 				D0CA3F8B2073F8240042D2B6 /* TapLongTapOrDoubleTapGestureRecognizer.swift */,
 				09E12475214D0978009FC9C3 /* DeviceMetrics.swift */,
 				D033874D223D3E86007A2CE4 /* AccessibilityAreaNode.swift */,
+				D08B61BD22A752FD000A46A8 /* UITracingLayerView.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -538,7 +531,6 @@
 			children = (
 				D08122991D19A9E0005F7395 /* User Interface */,
 				D01E2BE51D904A530066BF65 /* Collection Nodes */,
-				D03BCCE91C72AE4B0097A291 /* Theme */,
 				D05CC3001B6955D500E235A3 /* Utils */,
 				D07921AA1B6FC911005C23D9 /* Status Bar */,
 				D0FF9B2E1E7196E2000C66DB /* Keyboard */,
@@ -916,7 +908,6 @@
 				D0DC48541BF93D8B00F672FD /* TabBarController.swift in Sources */,
 				D03E7E011C974AB300C07816 /* DisplayLinkDispatcher.swift in Sources */,
 				D05CC3191B695A9600E235A3 /* NavigationBackButtonNode.swift in Sources */,
-				D03BCCEB1C72AE590097A291 /* Theme.swift in Sources */,
 				D0C2DFC81CC4431D0044FF83 /* Spring.swift in Sources */,
 				D05CC3071B69575900E235A3 /* NSBag.m in Sources */,
 				D0AE3D4D1D25C816001CCE13 /* NavigationBarTransitionState.swift in Sources */,
@@ -930,6 +921,7 @@
 				D0C2DFCF1CC4431D0044FF83 /* ListViewScroller.swift in Sources */,
 				D00C7CD21E3657570080C3D5 /* TextFieldNode.swift in Sources */,
 				D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */,
+				D08B61BE22A752FD000A46A8 /* UITracingLayerView.swift in Sources */,
 				D05CC2FA1B6955D000E235A3 /* UINavigationItem+Proxy.m in Sources */,
 				09C147D8216CCEF700390252 /* KeyShortcutsController.swift in Sources */,
 				D096A4501EA64F580000A7AE /* ActionSheetCheckboxItem.swift in Sources */,

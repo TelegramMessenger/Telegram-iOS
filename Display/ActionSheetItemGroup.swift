@@ -1,3 +1,4 @@
+import UIKit
 
 public final class ActionSheetItemGroup {
     let items: [ActionSheetItem]

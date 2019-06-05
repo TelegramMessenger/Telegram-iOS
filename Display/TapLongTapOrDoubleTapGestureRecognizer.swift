@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UIKit.UIGestureRecognizerSubclass
 
 private class TapLongTapOrDoubleTapGestureRecognizerTimerTarget: NSObject {

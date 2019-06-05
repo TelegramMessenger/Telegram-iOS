@@ -3,6 +3,10 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
+#if BUCK
+import DisplayPrivate
+#endif
+
 private func findCurrentResponder(_ view: UIView) -> UIResponder? {
     if view.isFirstResponder {
         return view

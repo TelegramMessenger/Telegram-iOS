@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 public struct ToolbarAction: Equatable {
     public let title: String

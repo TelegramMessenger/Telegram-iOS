@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AsyncDisplayKit
 
 private struct CachedMaskParams: Equatable {

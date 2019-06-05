@@ -1,10 +1,6 @@
 import Foundation
-
-#if os(macOS)
-    import QuartzCore
-#else
-    import AsyncDisplayKit
-#endif
+import UIKit
+import AsyncDisplayKit
 
 public enum ContainedViewLayoutTransitionCurve {
     case easeInOut

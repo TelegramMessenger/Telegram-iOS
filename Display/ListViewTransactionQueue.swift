@@ -1,9 +1,6 @@
 import Foundation
-#if os(iOS)
+import UIKit
 import SwiftSignalKit
-#else
-import SwiftSignalKitMac
-#endif
 
 public typealias ListViewTransaction = (@escaping () -> Void) -> Void
 

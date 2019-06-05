@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 public final class WindowPanRecognizer: UIGestureRecognizer {
     public var began: ((CGPoint) -> Void)?

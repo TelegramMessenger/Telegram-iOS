@@ -1,6 +1,11 @@
 import Foundation
+import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
+
+#if BUCK
+import DisplayPrivate
+#endif
 
 private struct WindowLayout: Equatable {
     let size: CGSize

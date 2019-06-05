@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 public struct ImmediateTextNodeLayoutInfo {
     public let size: CGSize

@@ -15,12 +15,6 @@
 
 @end
 
-@interface UITracingLayerView : UIView
-
-- (void)scheduleWithLayout:(void (^_Nonnull)())block;
-
-@end
-
 @interface CALayer (Tracing)
 
 - (CATracingLayerInfo * _Nullable)traceableInfo;

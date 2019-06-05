@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import SwiftSignalKit
 
 private let orientationChangeDuration: Double = UIDevice.current.userInterfaceIdiom == .pad ? 0.4 : 0.3

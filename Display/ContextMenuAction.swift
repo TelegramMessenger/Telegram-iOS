@@ -1,3 +1,4 @@
+import UIKit
 
 public enum ContextMenuActionContent {
     case text(title: String, accessibilityLabel: String)
