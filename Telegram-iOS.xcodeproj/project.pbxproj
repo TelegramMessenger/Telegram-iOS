@@ -1053,6 +1053,8 @@
 		D073E51E21FF7CE900742DDD /* Crypto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Crypto.h; sourceTree = "<group>"; };
 		D073E51F21FF7CE900742DDD /* Crypto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Crypto.m; sourceTree = "<group>"; };
 		D073E52122003E1E00742DDD /* Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Data.swift; sourceTree = "<group>"; };
+		D07477B522A72B1F002737C4 /* TempRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempRoot.swift; sourceTree = "<group>"; };
+		D07477B722A732F1002737C4 /* TempMain.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TempMain.m; sourceTree = "<group>"; };
 		D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-AppStore.entitlements"; sourceTree = "<group>"; };
 		D084023120E1883500065674 /* ApplicationShortcutItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationShortcutItem.swift; sourceTree = "<group>"; };
 		D08410431FABDC5B008FFE92 /* TGItemProviderSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGItemProviderSignals.h; sourceTree = "<group>"; };
@@ -2000,6 +2002,8 @@
 				D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */,
 				D09B79C42219C784003B1F9D /* SharedAccountInfo.swift */,
 				D09B79C72219C7AE003B1F9D /* ManageSharedAccountInfo.swift */,
+				D07477B522A72B1F002737C4 /* TempRoot.swift */,
+				D07477B722A732F1002737C4 /* TempMain.m */,
 			);
 			path = "Telegram-iOS";
 			sourceTree = "<group>";

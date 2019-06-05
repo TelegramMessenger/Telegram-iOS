@@ -41,7 +41,7 @@ private enum PreferencesProvider {
 
 private func loadLegacyCustomProperyData(database: SqliteInterface, key: String) -> Data? {
     var result: Data?
-    database.select("SELECT value FROM service_v29 WHERE key=\(murMurHash32(key))", { cursor in
+    database.select("SELECT value FROM service_v29 WHERE key=\(HashFunctions.murMurHash32(key))", { cursor in
         result = cursor.getData(at: 0)
         return false
     })

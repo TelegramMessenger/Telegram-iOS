@@ -24,3 +24,5 @@ DerivedData
 *.dSYM.zip
 *.ipa
 */xcuserdata/*
+buck-out/*
+.buckd/*
