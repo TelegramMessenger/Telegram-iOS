@@ -272,13 +272,13 @@ static void CollectAccessibilityElementsForView(UIView *view, NSMutableArray *el
   }
 }
 
-- (bool)accessibilityActivate {
+/*- (bool)accessibilityActivate {
   ASDisplayNode *viewNode = self.asyncdisplaykit_node;
   if ([viewNode respondsToSelector:@selector(accessibilityActivate)]) {
     return [viewNode accessibilityActivate];
   }
   return false;
-}
+}*/
 
 #pragma mark - UIAccessibility
 
