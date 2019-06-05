@@ -324,7 +324,6 @@
 		D0439B5B228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0439B5A228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift */; };
 		D044A0F320BDA05800326FAC /* ThrottledValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044A0F220BDA05800326FAC /* ThrottledValue.swift */; };
 		D044A0FB20BDC40C00326FAC /* CachedChannelAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */; };
-		D045549A21B2F173007A6DD9 /* libturbojpeg.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D045549921B2F173007A6DD9 /* libturbojpeg.a */; };
 		D04554A421B42982007A6DD9 /* ConfirmPhoneNumberController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04554A321B42982007A6DD9 /* ConfirmPhoneNumberController.swift */; };
 		D046142E2004DB3700EC0EF2 /* LiveLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D046142D2004DB3700EC0EF2 /* LiveLocationManager.swift */; };
 		D04614372005094E00EC0EF2 /* DeviceLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04614362005094E00EC0EF2 /* DeviceLocationManager.swift */; };
@@ -2514,7 +2513,6 @@
 			files = (
 				D015E04F225D2E5900CB9E8A /* WebP.framework in Frameworks */,
 				D05B077421BFC38600B1D27C /* FFMpeg.framework in Frameworks */,
-				D045549A21B2F173007A6DD9 /* libturbojpeg.a in Frameworks */,
 				091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */,
 				D0C45E9F213FFAFD00988156 /* Lottie.framework in Frameworks */,
 				D00ACA4B20222C280045D427 /* libtgvoip.framework in Frameworks */,

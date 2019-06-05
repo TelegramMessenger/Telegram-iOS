@@ -647,12 +647,14 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         if !(peer is TelegramSecretChat) {
             entries.append(UserInfoEntry.sendMessage(presentationData.theme, presentationData.strings.UserInfo_SendMessage))
             if view.peerIsContact {
-                entries.append(UserInfoEntry.shareContact(presentationData.theme, presentationData.strings.UserInfo_ShareContact))
+                if let peer = peer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
+                    entries.append(UserInfoEntry.shareContact(presentationData.theme, presentationData.strings.UserInfo_ShareContact))
+                }
             } else {
                 entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.Conversation_AddToContacts))
             }
             
-            if let cachedUserData = cachedPeerData as? CachedUserData, let hasAccountPeerPhone = cachedUserData.hasAccountPeerPhone, !hasAccountPeerPhone {
+            if let cachedUserData = cachedPeerData as? CachedUserData, let peerContactSettings = cachedUserData.peerContactSettings, peerContactSettings.contains(.canShareContact) {
                 entries.append(UserInfoEntry.shareMyContact(presentationData.theme, presentationData.strings.UserInfo_ShareMyContactInfo))
             }
             

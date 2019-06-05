@@ -1502,14 +1502,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             var contactStatus: ChatContactStatus?
                             if let peer = peerView.peers[peerView.peerId] {
                                 if let cachedData = peerView.cachedData as? CachedUserData {
-                                    let didHidePanel: Bool
-                                    switch cachedData.contactStatus {
-                                        case .hide:
-                                            didHidePanel = true
-                                        case .unknown, .show:
-                                            didHidePanel = false
-                                    }
-                                    contactStatus = ChatContactStatus(isContact: peerView.peerIsContact, hasPhoneNumber: cachedData.hasAccountPeerPhone ?? false, didHidePanel: didHidePanel)
+                                    contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, peerContactSettings: cachedData.peerContactSettings)
+                                } else if let cachedData = peerView.cachedData as? CachedGroupData {
+                                    contactStatus = ChatContactStatus(canAddContact: false, peerContactSettings: cachedData.peerContactSettings)
+                                } else if let cachedData = peerView.cachedData as? CachedChannelData {
+                                    contactStatus = ChatContactStatus(canAddContact: false, peerContactSettings: cachedData.peerContactSettings)
                                 }
                                 
                                 var peers = SimpleDictionary<PeerId, Peer>()
@@ -1562,22 +1559,26 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             }
                             
                             var didDisplayActionsPanel = false
-                            if strongSelf.presentationInterfaceState.canReportPeer {
-                                didDisplayActionsPanel = true
-                            } else if let contactStatus = strongSelf.presentationInterfaceState.contactStatus {
-                                if !contactStatus.didHidePanel {
-                                    if !contactStatus.isContact || !contactStatus.hasPhoneNumber {
+                            if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, let peerContactSettings = contactStatus.peerContactSettings {
+                                if !peerContactSettings.contains(.isHidden) {
+                                    if contactStatus.canAddContact {
+                                        didDisplayActionsPanel = true
+                                    } else if peerContactSettings.contains(.canReport) {
+                                        didDisplayActionsPanel = true
+                                    } else if peerContactSettings.contains(.canShareContact) {
                                         didDisplayActionsPanel = true
                                     }
                                 }
                             }
                             
                             var displayActionsPanel = false
-                            if strongSelf.presentationInterfaceState.canReportPeer {
-                                displayActionsPanel = true
-                            } else if let contactStatus = contactStatus {
-                                if !contactStatus.didHidePanel {
-                                    if !contactStatus.isContact || !contactStatus.hasPhoneNumber {
+                            if let contactStatus = contactStatus, let peerContactSettings = contactStatus.peerContactSettings {
+                                if !peerContactSettings.contains(.isHidden) {
+                                    if contactStatus.canAddContact {
+                                        displayActionsPanel = true
+                                    } else if peerContactSettings.contains(.canReport) {
+                                        displayActionsPanel = true
+                                    } else if peerContactSettings.contains(.canShareContact) {
                                         displayActionsPanel = true
                                     }
                                 }
@@ -1946,23 +1947,18 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let interfaceState = combinedInitialData.initialData?.chatInterfaceState as? ChatInterfaceState {
                 var pinnedMessageId: MessageId?
                 var peerIsBlocked: Bool = false
-                var canReport: Bool = false
                 var callsAvailable: Bool = true
                 var callsPrivate: Bool = false
                 if let cachedData = combinedInitialData.cachedData as? CachedChannelData {
                     pinnedMessageId = cachedData.pinnedMessageId
-                    canReport = cachedData.reportStatus == .canReport
                 } else if let cachedData = combinedInitialData.cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
-                    canReport = cachedData.reportStatus == .canReport
                     callsAvailable = cachedData.callsAvailable
                     callsPrivate = cachedData.callsPrivate
                     pinnedMessageId = cachedData.pinnedMessageId
                 } else if let cachedData = combinedInitialData.cachedData as? CachedGroupData {
-                    canReport = cachedData.reportStatus == .canReport
                     pinnedMessageId = cachedData.pinnedMessageId
                 } else if let cachedData = combinedInitialData.cachedData as? CachedSecretChatData {
-                    canReport = cachedData.reportStatus == .canReport
                 }
                 var pinnedMessage: Message?
                 if let pinnedMessageId = pinnedMessageId {
@@ -1980,7 +1976,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     updated = updated.updatedPinnedMessageId(pinnedMessageId)
                     updated = updated.updatedPinnedMessage(pinnedMessage)
                     updated = updated.updatedPeerIsBlocked(peerIsBlocked)
-                    updated = updated.updatedCanReportPeer(canReport)
                     updated = updated.updatedCallsAvailable(callsAvailable)
                     updated = updated.updatedCallsPrivate(callsPrivate)
                     updated = updated.updatedTitlePanelContext({ context in
@@ -2065,23 +2060,18 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let strongSelf = self {
                 var pinnedMessageId: MessageId?
                 var peerIsBlocked: Bool = false
-                var canReport: Bool = false
                 var callsAvailable: Bool = false
                 var callsPrivate: Bool = false
                 if let cachedData = cachedData as? CachedChannelData {
                     pinnedMessageId = cachedData.pinnedMessageId
-                    canReport = cachedData.reportStatus == .canReport
                 } else if let cachedData = cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
-                    canReport = cachedData.reportStatus == .canReport
                     callsAvailable = cachedData.callsAvailable
                     callsPrivate = cachedData.callsPrivate
                     pinnedMessageId = cachedData.pinnedMessageId
                 } else if let cachedData = cachedData as? CachedGroupData {
-                    canReport = cachedData.reportStatus == .canReport
                     pinnedMessageId = cachedData.pinnedMessageId
-                } else if let cachedData = cachedData as? CachedSecretChatData {
-                    canReport = cachedData.reportStatus == .canReport
+                } else if let _ = cachedData as? CachedSecretChatData {
                 }
                 
                 var pinnedMessage: Message?
@@ -2100,9 +2090,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 
                 let callsDataUpdated = strongSelf.presentationInterfaceState.callsAvailable != callsAvailable || strongSelf.presentationInterfaceState.callsPrivate != callsPrivate
                 
-                if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage?.stableVersion != pinnedMessage?.stableVersion || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || strongSelf.presentationInterfaceState.canReportPeer != canReport || pinnedMessageUpdated || callsDataUpdated {
+                if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage?.stableVersion != pinnedMessage?.stableVersion || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                        return state.updatedPinnedMessageId(pinnedMessageId).updatedPinnedMessage(pinnedMessage).updatedPeerIsBlocked(peerIsBlocked).updatedCanReportPeer(canReport).updatedCallsAvailable(callsAvailable).updatedCallsPrivate(callsPrivate).updatedTitlePanelContext({ context in
+                        return state.updatedPinnedMessageId(pinnedMessageId).updatedPinnedMessage(pinnedMessage).updatedPeerIsBlocked(peerIsBlocked).updatedCallsAvailable(callsAvailable).updatedCallsPrivate(callsPrivate).updatedTitlePanelContext({ context in
                             if pinnedMessageId != nil {
                                 if !context.contains(where: {
                                     switch $0 {
@@ -3195,7 +3185,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }, presentPeerContact: { [weak self] in
             self?.addPeerContact()
         }, dismissReportPeer: { [weak self] in
-            self?.dismissReportPeer()
+            self?.dismissPeerContactOptions()
         }, deleteChat: { [weak self] in
             self?.deleteChat(reportChatSpam: false)
         }, beginCall: { [weak self] in
@@ -5917,15 +5907,25 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             guard let strongSelf = self else {
                 return
             }
-            guard let accountPeer = accountPeer as? TelegramUser, let phone = accountPeer.phone, !phone.isEmpty else {
+            guard let _ = accountPeer as? TelegramUser else {
                 return
             }
             guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramUser else {
                 return
             }
             
-            strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.Conversation_ShareMyPhoneNumber_StatusSuccess(peer.compactDisplayTitle).0, true)), in: .window(.root))
-            strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaContact(firstName: accountPeer.firstName ?? "", lastName: accountPeer.lastName ?? "", phoneNumber: phone, peerId: accountPeer.id, vCardData: nil)), replyToMessageId: nil, localGroupingKey: nil)])
+            let _ = (acceptAndShareContact(account: strongSelf.context.account, peerId: peer.id)
+            |> deliverOnMainQueue).start(error: { _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }, completed: {
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.Conversation_ShareMyPhoneNumber_StatusSuccess(peer.compactDisplayTitle).0, true)), in: .window(.root))
+            })
         })
     }
     
@@ -5946,11 +5946,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
     }
     
-    private func dismissReportPeer() {
+    private func dismissPeerContactOptions() {
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
-        self.editMessageDisposable.set((TelegramCore.dismissReportPeer(account: self.context.account, peerId: peerId)
+        self.editMessageDisposable.set((TelegramCore.dismissPeerContactOptions(account: self.context.account, peerId: peerId)
         |> afterDisposed({
             Queue.mainQueue().async {
             }

@@ -28,11 +28,13 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     }
     
     var displayActionsPanel = false
-    if chatPresentationInterfaceState.canReportPeer {
-        displayActionsPanel = true
-    } else if let contactStatus = chatPresentationInterfaceState.contactStatus {
-        if !contactStatus.didHidePanel {
-            if !contactStatus.isContact || !contactStatus.hasPhoneNumber {
+    if let contactStatus = chatPresentationInterfaceState.contactStatus, let peerContactSettings = contactStatus.peerContactSettings {
+        if !peerContactSettings.contains(.isHidden) {
+            if contactStatus.canAddContact {
+                displayActionsPanel = true
+            } else if peerContactSettings.contains(.canReport) {
+                displayActionsPanel = true
+            } else if peerContactSettings.contains(.canShareContact) {
                 displayActionsPanel = true
             }
         }

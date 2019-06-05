@@ -784,6 +784,9 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
     
     let actionsDisposable = DisposableSet()
     
+    let addContactDisposable = MetaDisposable()
+    actionsDisposable.add(addContactDisposable)
+    
     var displayCopyContextMenuImpl: ((DeviceContactInfoEntryTag, String) -> Void)?
     
     let callImpl: (String) -> Void = { number in
@@ -995,7 +998,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
             if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
                 composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: filteredData.urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: filteredData.instantMessagingProfiles)
             }
-            rightNavigationButton = ItemListNavigationButton(content: .text(isShare ? presentationData.strings.Common_Done : presentationData.strings.Compose_Create), style: .bold, enabled: !filteredPhoneNumbers.isEmpty && composedContactData != nil, action: {
+            rightNavigationButton = ItemListNavigationButton(content: .text(isShare ? presentationData.strings.Common_Done : presentationData.strings.Compose_Create), style: .bold, enabled: (isShare || !filteredPhoneNumbers.isEmpty) && composedContactData != nil, action: {
                 if let composedContactData = composedContactData {
                     updateState { state in
                         var state = state
@@ -1003,18 +1006,70 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                         return state
                     }
                     if let contactDataManager = context.sharedContext.contactDataManager {
+                        switch subject {
+                            case let .create(peer, _, share, _):
+                                if share, filteredPhoneNumbers.count <= 1, let peer = peer {
+                                    addContactDisposable.set((addContactInteractively(account: context.account, peer: peer, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "")
+                                    |> deliverOnMainQueue).start(error: { _ in
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    }, completed: {
+                                        if filteredPhoneNumbers.count == 1 {
+                                            let _ = (contactDataManager.createContactWithData(composedContactData)
+                                            |> deliverOnMainQueue).start(next: { contactIdAndData in
+                                                updateState { state in
+                                                    var state = state
+                                                    state.savingData = false
+                                                    return state
+                                                }
+                                                if let contactIdAndData = contactIdAndData {
+                                                    completion(peer, contactIdAndData.0, contactIdAndData.1)
+                                                }
+                                                completed?()
+                                                dismissImpl?(true)
+                                            })
+                                        } else {
+                                            completed?()
+                                            dismissImpl?(true)
+                                        }
+                                    }))
+                                }
+                            default:
+                                break
+                        }
+                        
                         let _ = (contactDataManager.createContactWithData(composedContactData)
-                        |> mapToSignal { contactIdAndData -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, NoError> in
+                        |> introduceError(AddContactError.self)
+                        |> mapToSignal { contactIdAndData -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                             guard let (id, data) = contactIdAndData else {
                                 return .single(nil)
                             }
-                            if filteredPhoneNumbers.count == 1 {
+                            if filteredPhoneNumbers.count <= 1 {
+                                switch subject {
+                                    case let .create(peer, _, share, _):
+                                        if share, let peer = peer {
+                                            return addContactInteractively(account: context.account, peer: peer, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "")
+                                            |> mapToSignal { _ -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
+                                                return .complete()
+                                            }
+                                            |> then(
+                                                context.account.postbox.transaction { transaction -> (DeviceContactStableId, DeviceContactExtendedData, Peer?)? in
+                                                    return (id, data, transaction.getPeer(peer.id))
+                                                }
+                                                |> introduceError(AddContactError.self)
+                                            )
+                                        }
+                                    default:
+                                        break
+                                }
+                                
                                 return importContact(account: context.account, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers[0].value)
-                                |> mapToSignal { peerId -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, NoError> in
+                                |> introduceError(AddContactError.self)
+                                |> mapToSignal { peerId -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                                     if let peerId = peerId {
                                         return context.account.postbox.transaction { transaction -> (DeviceContactStableId, DeviceContactExtendedData, Peer?)? in
                                             return (id, data, transaction.getPeer(peerId))
                                         }
+                                        |> introduceError(AddContactError.self)
                                     } else {
                                         return .single((id, data, nil))
                                     }

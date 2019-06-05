@@ -23,15 +23,16 @@ private enum ChatReportPeerTitleButton {
 
 private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReportPeerTitleButton] {
     var buttons: [ChatReportPeerTitleButton] = []
-    if let contactStatus = state.contactStatus {
-        if contactStatus.isContact {
-            if !contactStatus.hasPhoneNumber {
-                buttons.append(.shareMyPhoneNumber)
-            }
-        } else {
+    if let contactStatus = state.contactStatus, let peerContactSettings = contactStatus.peerContactSettings {
+        if peerContactSettings.contains(.canReport) {
             buttons.append(.block)
-            if !contactStatus.isContact, let _ = state.renderedPeer?.chatMainPeer as? TelegramUser {
-                buttons.append(.addContact)
+        }
+        if contactStatus.canAddContact {
+            buttons.append(.addContact)
+        }
+        if buttons.isEmpty {
+            if peerContactSettings.contains(.canShareContact) {
+                buttons.append(.shareMyPhoneNumber)
             }
         }
     }
