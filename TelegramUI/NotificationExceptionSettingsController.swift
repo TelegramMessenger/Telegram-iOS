@@ -231,11 +231,6 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
         entries.append(.soundModernHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_AlertTones))
         index += 1
         
-        if state.selectedSound == .default {
-            var bp:Int = 0
-            bp += 1
-        }
-        
         entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .default, default: state.defaultSound), selected: state.selectedSound == .default))
         index += 1
 

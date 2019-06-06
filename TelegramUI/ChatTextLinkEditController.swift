@@ -350,7 +350,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var size = size
-        size.width = min(size.width , 270.0)
+        size.width = min(size.width, 270.0)
         let measureSize = CGSize(width: size.width - 16.0 * 2.0, height: CGFloat.greatestFiniteMagnitude)
         
         let hadValidLayout = self.validLayout != nil

@@ -31,7 +31,7 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
     })?.stretchableImage(withLeftCapWidth: 15, topCapHeight: 15)
 }
 
-private func generateThemeIconImage(theme: PresentationBuiltinThemeReference) -> UIImage {
+private func generateThemeIconImage(theme: PresentationBuiltinThemeReference, accentColor: UIColor?) -> UIImage {
     return generateImage(CGSize(width: 98.0, height: 62.0), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         
@@ -46,7 +46,11 @@ private func generateThemeIconImage(theme: PresentationBuiltinThemeReference) ->
             case .day:
                 background = .white
                 incomingBubble = UIColor(rgb: 0xd5dde6)
-                outgoingBubble = UIColor(rgb: 0x007aff)
+                if let accentColor = accentColor {
+                    outgoingBubble = accentColor
+                } else {
+                    outgoingBubble = UIColor(rgb: 0x007aff)
+                }
             case .nightGrayscale:
                 background = UIColor(rgb: 0x000000)
                 incomingBubble = UIColor(rgb: 0x1f1f1f)
@@ -83,12 +87,12 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let themes: [(PresentationBuiltinThemeReference, UIColor)]
+    let themes: [(PresentationBuiltinThemeReference, UIColor?)]
     let currentTheme: PresentationBuiltinThemeReference
     let updated: (PresentationBuiltinThemeReference) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [(PresentationBuiltinThemeReference, UIColor)], currentTheme: PresentationBuiltinThemeReference, updated: @escaping (PresentationBuiltinThemeReference) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [(PresentationBuiltinThemeReference, UIColor?)], currentTheme: PresentationBuiltinThemeReference, updated: @escaping (PresentationBuiltinThemeReference) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.themes = themes
@@ -297,7 +301,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     var nodeOffset = nodeInset
                     
                     var i = 0
-                    for (theme, color) in item.themes {
+                    for (theme, accentColor) in item.themes {
                         let imageNode: ThemeSettingsThemeItemIconNode
                         if strongSelf.nodes.count > i {
                             imageNode = strongSelf.nodes[i]
@@ -308,8 +312,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                         }
 
                         let selected = theme == item.currentTheme
-                        
-                        var name = "Theme"
+                        let name: String
                         switch theme {
                             case .dayClassic:
                                 name = item.strings.Appearance_ThemeCarouselClassic
@@ -321,7 +324,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                                 name = item.strings.Appearance_ThemeCarouselNightBlue
                         }
                         
-                        imageNode.setup(theme: item.theme, icon: generateThemeIconImage(theme: theme), title: NSAttributedString(string: name, font: textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: {
+                        imageNode.setup(theme: item.theme, icon: generateThemeIconImage(theme: theme, accentColor: accentColor), title: NSAttributedString(string: name, font: textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: {
                             item.updated(theme)
                         })
                         

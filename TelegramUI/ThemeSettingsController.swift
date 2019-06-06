@@ -63,7 +63,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case accentColor(PresentationTheme, String, Int32)
     case autoNightTheme(PresentationTheme, String, String)
     case themeListHeader(PresentationTheme, String)
-    case themeItem(PresentationTheme, PresentationStrings, [PresentationBuiltinThemeReference], PresentationBuiltinThemeReference)
+    case themeItem(PresentationTheme, PresentationStrings, [PresentationBuiltinThemeReference], PresentationBuiltinThemeReference, UIColor?)
     case iconHeader(PresentationTheme, String)
     case iconItem(PresentationTheme, PresentationStrings, [PresentationAppIcon], String?)
     case otherHeader(PresentationTheme, String)
@@ -159,8 +159,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme):
-                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme {
+            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsThemeAccentColor):
+                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsThemeAccentColor) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsThemeAccentColor == rhsThemeAccentColor {
                     return true
                 } else {
                     return false
@@ -246,8 +246,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .themeListHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .themeItem(theme, strings, themes, currentTheme):
-                return ThemeSettingsThemeItem(theme: theme, strings: strings, sectionId: self.section, themes: themes.map { ($0, .white) }, currentTheme: currentTheme, updated: { theme in
+            case let .themeItem(theme, strings, themes, currentTheme, themeAccentColor):
+                return ThemeSettingsThemeItem(theme: theme, strings: strings, sectionId: self.section, themes: themes.map { ($0, $0 == .day ? themeAccentColor : nil) }, currentTheme: currentTheme, updated: { theme in
                     arguments.selectTheme(theme.rawValue)
                 })
             case let .iconHeader(theme, text):
@@ -283,7 +283,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     
     entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme.uppercased()))
     if case let .builtin(theme) = theme.name {
-        entries.append(.themeItem(presentationData.theme, presentationData.strings, [.dayClassic, .day, .nightAccent, .nightGrayscale], theme.reference))
+        entries.append(.themeItem(presentationData.theme, presentationData.strings, [.dayClassic, .day, .nightAccent, .nightGrayscale], theme.reference, themeAccentColor != nil ? UIColor(rgb: UInt32(bitPattern: themeAccentColor!)) : nil))
     }
 
     if theme.name == .builtin(.day) {
@@ -354,9 +354,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 } else {
                     switch index {
                         case 1:
-                            wallpaper = .color(0xffffff)
-                        case 2:
                             wallpaper = .color(0x000000)
+                        case 2:
+                            wallpaper = .color(0xffffff)
                         case 3:
                             wallpaper = .color(0x18222d)
                         default:

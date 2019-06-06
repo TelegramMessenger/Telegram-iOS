@@ -494,6 +494,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                             if let editableControlSizeAndApply = editableControlSizeAndApply {
+                                let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
                                 if strongSelf.editableControlNode == nil {
                                     let editableControlNode = editableControlSizeAndApply.1()
                                     editableControlNode.tapped = {
@@ -504,11 +505,12 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                     }
                                     strongSelf.editableControlNode = editableControlNode
                                     strongSelf.addSubnode(editableControlNode)
-                                    let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
                                     editableControlNode.frame = editableControlFrame
                                     transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                                     editableControlNode.alpha = 0.0
                                     transition.updateAlpha(node: editableControlNode, alpha: 1.0)
+                                } else {
+                                    strongSelf.editableControlNode?.frame = editableControlFrame
                                 }
                             } else if let editableControlNode = strongSelf.editableControlNode {
                                 var editableControlFrame = editableControlNode.frame

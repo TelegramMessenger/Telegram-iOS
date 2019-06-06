@@ -188,19 +188,21 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        let insets = layout.insets(options: [.statusBar, .input])
+        var insets = layout.insets(options: [.statusBar, .input])
+        insets.left = layout.safeInsets.left
+        insets.right = layout.safeInsets.right
         
         let countryButtonHeight: CGFloat = 44.0
         let inputFieldsHeight: CGFloat = 44.0
         
-        let titleSize = self.titleNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
-        let noticeSize = self.noticeNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.titleNode.measure(CGSize(width: layout.size.width - 28.0 - insets.left - insets .right, height: CGFloat.greatestFiniteMagnitude))
+        let noticeSize = self.noticeNode.measure(CGSize(width: layout.size.width - 28.0 - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude))
         
         let navigationHeight: CGFloat = 97.0 + insets.top + navigationBarHeight
         
         let inputHeight = countryButtonHeight + inputFieldsHeight
         
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 15.0, y: navigationHeight - titleSize.height - 8.0), size: titleSize))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 15.0 + insets.left, y: navigationHeight - titleSize.height - 8.0), size: titleSize))
         
         transition.updateFrame(node: self.countryButton, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: layout.size.width, height: 44.0 + 6.0)))
         transition.updateFrame(node: self.phoneBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationHeight + 44.0), size: CGSize(width: layout.size.width, height: 44.0)))
@@ -214,7 +216,7 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.phoneInputNode.countryCodeField, frame: countryCodeFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY))
         transition.updateFrame(node: self.phoneInputNode.numberField, frame: numberFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY))
         
-        transition.updateFrame(node: self.noticeNode, frame: CGRect(origin: CGPoint(x: 15.0, y: navigationHeight + inputHeight + 8.0), size: noticeSize))
+        transition.updateFrame(node: self.noticeNode, frame: CGRect(origin: CGPoint(x: 15.0 + insets.left, y: navigationHeight + inputHeight + 8.0), size: noticeSize))
     }
     
     func activateInput() {

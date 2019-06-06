@@ -395,6 +395,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
+                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
                         if strongSelf.editableControlNode == nil {
                             let editableControlNode = editableControlSizeAndApply.1()
                             editableControlNode.tapped = {
@@ -405,11 +406,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             }
                             strongSelf.editableControlNode = editableControlNode
                             strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.imageNode)
-                            let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
                             editableControlNode.frame = editableControlFrame
                             transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                             editableControlNode.alpha = 0.0
                             transition.updateAlpha(node: editableControlNode, alpha: 1.0)
+                        } else {
+                            strongSelf.editableControlNode?.frame = editableControlFrame
                         }
                         strongSelf.editableControlNode?.isHidden = !item.editing.editable
                     } else if let editableControlNode = strongSelf.editableControlNode {
@@ -427,11 +429,11 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             let reorderControlNode = reorderControlSizeAndApply.1(false)
                             strongSelf.reorderControlNode = reorderControlNode
                             strongSelf.addSubnode(reorderControlNode)
-                            let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)
-                            reorderControlNode.frame = reorderControlFrame
                             reorderControlNode.alpha = 0.0
                             transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
                         }
+                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)
+                        strongSelf.reorderControlNode?.frame = reorderControlFrame
                     } else if let reorderControlNode = strongSelf.reorderControlNode {
                         strongSelf.reorderControlNode = nil
                         transition.updateAlpha(node: reorderControlNode, alpha: 0.0, completion: { [weak reorderControlNode] _ in

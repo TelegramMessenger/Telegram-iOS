@@ -55,8 +55,6 @@ final class SoftwareVideoLayerFrameManager {
     
     func tick(timestamp: Double) {
         applyQueue.async {
-            
-            
             if self.baseTimestamp == nil && !self.frames.isEmpty {
                 self.baseTimestamp = timestamp
             }
