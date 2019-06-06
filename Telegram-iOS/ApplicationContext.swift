@@ -7,6 +7,11 @@ import TelegramCore
 import Display
 import LegacyComponents
 
+#if BUCK
+import BuildConfig
+import AppBinaryPrivate
+#endif
+
 func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bool {
     if data.isLockable, let autolockDeadline = data.autolockDeadline, autolockDeadline <= timestamp {
         return true
@@ -342,7 +347,7 @@ final class AuthorizedApplicationContext {
         
         self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
         |> deliverOn(Queue.mainQueue())).start(next: { [weak self] messageList in
-            if let strongSelf = self, let (messages, groupId, notify) = messageList.last, let firstMessage = messages.first {
+            if let strongSelf = self, let (messages, _, notify) = messageList.last, let firstMessage = messages.first {
                 if UIApplication.shared.applicationState == .active {
                     var chatIsVisible = false
                     if let topController = strongSelf.rootController.topViewController as? ChatController, topController.traceVisibility() {

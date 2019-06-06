@@ -5,6 +5,9 @@ import Display
 import TelegramCore
 import TelegramUI
 import LegacyComponents
+#if BUCK
+import WatchUtils
+#endif
 
 let allWatchRequestHandlers: [AnyClass] = [
     WatchChatListHandler.self,
@@ -695,7 +698,7 @@ final class WatchAudioHandler: WatchRequestHandler {
                 }
             }
             //let outputPath = manager.watchTemporaryStorePath + "/\(key).opus"
-        } else if let args = subscription as? TGBridgeAudioSentSubscription {
+        } else if let _ = subscription as? TGBridgeAudioSentSubscription {
 
         }
         return SSignal.fail(nil)

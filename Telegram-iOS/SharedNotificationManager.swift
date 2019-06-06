@@ -315,7 +315,10 @@ final class SharedNotificationManager {
                 isAnnouncement = true
             }
             
-            if let body = body {
+            if let _ = body {
+                let _ = title
+                let _ = apnsSound
+                
                 if isAnnouncement {
                     //presentAnnouncement
                 } else {

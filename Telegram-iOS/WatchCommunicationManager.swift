@@ -4,6 +4,11 @@ import Postbox
 import TelegramCore
 import TelegramUI
 
+#if BUCK
+import WatchUtils
+import AppBinaryPrivate
+#endif
+
 final class WatchCommunicationManager {
     private let queue: Queue
     private let allowBackgroundTimeExtension: (Double) -> Void

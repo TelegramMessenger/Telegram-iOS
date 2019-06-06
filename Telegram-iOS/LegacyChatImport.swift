@@ -113,7 +113,7 @@ private func readSecretChatData(reader: BufferReader) -> SecretChatData? {
     guard let accessHash = reader.readInt64() else {
         return nil
     }
-    guard let keyFingerprint = reader.readInt64() else {
+    guard let _ = reader.readInt64() else {
         return nil
     }
     guard let handshakeState = reader.readInt32() else {
@@ -267,7 +267,7 @@ private func loadLegacyPeerCustomProperyData(database: SqliteInterface, peerId: 
         let keyHash: Int32
         switch key {
             case let .string(string):
-                keyHash = murMurHashString32(string)
+                keyHash = HashFunctions.murMurHash32(string)
             case let .hash(hash):
                 keyHash = hash
         }

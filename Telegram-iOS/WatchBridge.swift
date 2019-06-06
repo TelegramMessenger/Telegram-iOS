@@ -1,6 +1,10 @@
+import Foundation
 import Postbox
 import TelegramCore
 import TelegramUI
+#if BUCK
+import WatchUtils
+#endif
 
 func makePeerIdFromBridgeIdentifier(_ identifier: Int64) -> PeerId? {
     if identifier < 0 && identifier > Int32.min {

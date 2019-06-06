@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import TelegramCore
 import SwiftSignalKit
 import Postbox
@@ -8,6 +9,10 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 import TelegramUI
+
+#if BUCK
+import AppBinaryPrivate
+#endif
 
 import LegacyComponents
 
@@ -101,7 +106,6 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
         let vibrationEnabled: Bool? = preferencesProvider["vibrationEnabled"] as? Bool
         let bannerEnabled: Bool? = preferencesProvider["bannerEnabled"] as? Bool
         let callsDataUsageMode: Int? = preferencesProvider["callsDataUsageMode"] as? Int
-        let callsDisableP2P: Bool? = preferencesProvider["callsDisableP2P"] as? Bool
         let callsDisableCallKit: Bool? = preferencesProvider["callsDisableCallKit"] as? Bool
         let callsUseProxy: Bool? = preferencesProvider["callsUseProxy"] as? Bool
         let contactsInhibitSync: Bool? = preferencesProvider["contactsInhibitSync"] as? Bool
@@ -366,7 +370,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
             })
             
             transaction.updateSharedData(ApplicationSpecificSharedDataKeys.instantPagePresentationSettings, { current in
-                var settings: InstantPagePresentationSettings = current as? InstantPagePresentationSettings ?? .defaultSettings
+                let settings: InstantPagePresentationSettings = current as? InstantPagePresentationSettings ?? .defaultSettings
                 if let instantPageFontSize = instantPageFontSize {
                     switch instantPageFontSize {
                         case 0.85:

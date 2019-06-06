@@ -11,6 +11,10 @@ import PushKit
 import AsyncDisplayKit
 import CloudKit
 
+#if BUCK
+import BuildConfig
+#endif
+
 private let handleVoipNotifications = false
 
 private var testIsLaunched = false
@@ -972,23 +976,18 @@ final class SharedApplicationContext {
                     }
                     self.mainWindow.forEachViewController({ controller in
                         if let controller = controller as? TabBarAccountSwitchController {
-                            var dismissed = false
                             if let rootController = self.mainWindow.viewController as? TelegramRootController {
                                 if let tabsController = rootController.viewControllers.first as? TabBarController {
                                     for i in 0 ..< tabsController.controllers.count {
                                         if let _ = tabsController.controllers[i] as? (SettingsController & ViewController) {
                                             let sourceNodes = tabsController.sourceNodesForController(at: i)
                                             if let sourceNodes = sourceNodes {
-                                                dismissed = true
                                                 controller.dismiss(sourceNodes: sourceNodes)
                                             }
                                             return false
                                         }
                                     }
                                 }
-                            }
-                            if dismissed {
-                                controller.dismiss()
                             }
                         }
                         return true
@@ -1146,7 +1145,7 @@ final class SharedApplicationContext {
             BITHockeyManager.shared().configure(withIdentifier: hockeyAppId, delegate: self)
             BITHockeyManager.shared().crashManager.crashManagerStatus = .alwaysAsk
             BITHockeyManager.shared().start()
-            BITHockeyManager.shared().authenticator.authenticateInstallation()
+            //BITHockeyManager.shared().authenticator.authenticateInstallation()
         }
         
         NotificationCenter.default.addObserver(forName: NSNotification.Name.UIWindowDidBecomeHidden, object: nil, queue: nil, using: { notification in

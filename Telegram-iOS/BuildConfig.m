@@ -10,7 +10,11 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#ifdef BUCK
+#import <MtProtoKit/MtProtoKit.h>
+#else
 #import <MtProtoKitDynamic/MtProtoKitDynamic.h>
+#endif
 
 static uint32_t funcSwap32(uint32_t input)
 {
