@@ -9,7 +9,7 @@ url=../Display.git
 url=../HockeySDK-iOS.git
 [submodule "submodules/libtgvoip"]
 	path = submodules/libtgvoip
-url=../libtgvoip.git
+url=git@gitlab.com:peter-iakovlev/libtgvoip.git
 [submodule "submodules/lottie-ios"]
 	path = submodules/lottie-ios
 url=../lottie-ios.git
