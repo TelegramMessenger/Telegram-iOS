@@ -2,6 +2,8 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
+private let alertWidth: CGFloat = 270.0
+
 public enum TextAlertActionType {
     case genericAction
     case defaultAction
@@ -229,6 +231,9 @@ public final class TextAlertContentNode: AlertContentNode {
         
         let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 18.0, right: 18.0)
         
+        var size = size
+        size.width = min(size.width, alertWidth)
+        
         var titleSize: CGSize?
         if let titleNode = self.titleNode {
             titleSize = titleNode.measure(CGSize(width: size.width - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude))
@@ -265,10 +270,8 @@ public final class TextAlertContentNode: AlertContentNode {
                 actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
         }
         
-        if let titleNode = titleNode, let titleSize = titleSize {
-            var contentWidth = max(max(titleSize.width, textSize.width), minActionsWidth)
-            contentWidth = max(contentWidth, 150.0)
-            
+        let contentWidth = alertWidth - insets.left - insets.right
+        if let titleNode = self.titleNode, let titleSize = titleSize {
             let spacing: CGFloat = 6.0
             let titleFrame = CGRect(origin: CGPoint(x: insets.left + floor((contentWidth - titleSize.width) / 2.0), y: insets.top), size: titleSize)
             transition.updateFrame(node: titleNode, frame: titleFrame)
@@ -278,9 +281,6 @@ public final class TextAlertContentNode: AlertContentNode {
             
             resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: titleSize.height + spacing + textSize.height + actionsHeight + insets.top + insets.bottom)
         } else {
-            var contentWidth = max(textSize.width, minActionsWidth)
-            contentWidth = max(contentWidth, 150.0)
-            
             let textFrame = CGRect(origin: CGPoint(x: insets.left + floor((contentWidth - textSize.width) / 2.0), y: insets.top), size: textSize)
             transition.updateFrame(node: self.textNode, frame: textFrame)
             
