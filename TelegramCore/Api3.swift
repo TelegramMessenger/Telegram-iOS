@@ -3273,6 +3273,22 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func editCreator(channel: Api.InputChannel, userId: Api.InputUser, password: Api.InputCheckPasswordSRP) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1892102881)
+                    channel.serialize(buffer, true)
+                    userId.serialize(buffer, true)
+                    password.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.editCreator", parameters: [("channel", channel), ("userId", userId), ("password", password)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
             }
             struct payments {
                 static func getPaymentForm(msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentForm>) {
@@ -3957,11 +3973,11 @@ extension Api {
                     })
                 }
             
-                static func acceptContact(userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func acceptContact(id: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1516783130)
-                    userId.serialize(buffer, true)
-                    return (FunctionDescription(name: "contacts.acceptContact", parameters: [("userId", userId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    buffer.appendInt32(-130964977)
+                    id.serialize(buffer, true)
+                    return (FunctionDescription(name: "contacts.acceptContact", parameters: [("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

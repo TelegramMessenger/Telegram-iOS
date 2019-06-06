@@ -172,6 +172,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[469489699] = { return Api.Update.parse_updateUserStatus($0) }
     dict[-1489818765] = { return Api.Update.parse_updateUserName($0) }
     dict[-1791935732] = { return Api.Update.parse_updateUserPhoto($0) }
+    dict[-1657903163] = { return Api.Update.parse_updateContactLink($0) }
     dict[314359194] = { return Api.Update.parse_updateNewEncryptedMessage($0) }
     dict[386986326] = { return Api.Update.parse_updateEncryptedChatTyping($0) }
     dict[-1264392051] = { return Api.Update.parse_updateEncryption($0) }
@@ -699,6 +700,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1674235686] = { return Api.account.AutoDownloadSettings.parse_autoDownloadSettings($0) }
     dict[-445792507] = { return Api.DialogPeer.parse_dialogPeer($0) }
     dict[1363483106] = { return Api.DialogPeer.parse_dialogPeerFolder($0) }
+    dict[1599050311] = { return Api.ContactLink.parse_contactLinkUnknown($0) }
+    dict[-17968211] = { return Api.ContactLink.parse_contactLinkNone($0) }
+    dict[-721239344] = { return Api.ContactLink.parse_contactLinkContact($0) }
     dict[-104284986] = { return Api.WebDocument.parse_webDocumentNoProxy($0) }
     dict[475467473] = { return Api.WebDocument.parse_webDocument($0) }
     dict[-1290580579] = { return Api.contacts.Found.parse_found($0) }
@@ -1276,6 +1280,8 @@ struct Api {
             case let _1 as Api.account.AutoDownloadSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DialogPeer:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ContactLink:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.WebDocument:
                 _1.serialize(buffer, boxed)

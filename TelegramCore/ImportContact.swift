@@ -96,7 +96,7 @@ public func acceptAndShareContact(account: Account, peerId: PeerId) -> Signal<Ne
         guard let inputUser = inputUser else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.contacts.acceptContact(userId: inputUser))
+        return account.network.request(Api.functions.contacts.acceptContact(id: inputUser))
         |> mapError { _ -> AcceptAndShareContactError in
             return .generic
         }
