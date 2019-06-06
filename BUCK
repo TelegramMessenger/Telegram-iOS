@@ -102,6 +102,7 @@ apple_library(
         'MTProxyConnectivity.h',
         'MTGzip.h',
         'MTDatacenterVerificationData.h',
+        'MTPKCS.h',
     ],
     modular = True,
     configs = configs_with_config({}),
