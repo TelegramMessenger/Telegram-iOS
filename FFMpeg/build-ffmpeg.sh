@@ -19,7 +19,7 @@ SOURCE_DIR=$4
 FF_VERSION="4.1"
 SOURCE="$SOURCE_DIR/ffmpeg-$FF_VERSION"
 
-GAS_PREPROCESSOR_PATH="$SOURCE_DIR/../gas-preprocessor.pl"
+GAS_PREPROCESSOR_PATH="$SOURCE_DIR/gas-preprocessor.pl"
 
 FAT="$BUILD_DIR/FFmpeg-iOS"
 
@@ -93,7 +93,7 @@ then
 	fi
 	if [ ! `which "$GAS_PREPROCESSOR_PATH"` ]
 	then
-		echo '$GAS_PREPROCESSOR_PATH not found.'
+		echo "$GAS_PREPROCESSOR_PATH not found."
 		exit 1
 	fi
 
@@ -121,6 +121,7 @@ then
 			echo "Generating opus.pc"
 			rm -rf "$LIBOPUS_PATH"
 			cp -R "$SOURCE_DIR/libopus" "$LIBOPUS_TARGET_PATH"
+			rm "$LIBOPUS_PATH/opus.pc"
 
 			echo "$OPUS_PC" > "$LIBOPUS_PATH/opus.pc"
 		fi
