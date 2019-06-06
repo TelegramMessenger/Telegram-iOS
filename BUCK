@@ -39,6 +39,7 @@ apple_library(
         'Classes/BITUpdateManagerDelegate.h',
         'Classes/BITUpdateViewController.h',
         'Classes/BITHockeyBaseViewController.h',
+        'Classes/BITHockeyManagerDelegate.h',
     ],
     modular = True,
     configs = configs_with_config(combined_config([SHARED_CONFIGS, LIB_SPECIFIC_CONFIG])),
