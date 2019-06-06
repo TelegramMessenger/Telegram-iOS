@@ -6,15 +6,21 @@ apple_library(
     srcs = glob([
         '*.m',
         '*.cpp',
+        'audio/*.cpp',
+        'video/*.cpp',
         'os/darwin/*.m',
         'os/darwin/*.mm',
         'os/darwin/*.cpp',
+        'os/posix/*.cpp',
         'webrtc_dsp/**/*.c',
+        'webrtc_dsp/**/*.cc',
         'webrtc_dsp/**/*.cpp',
     ], exclude = ['os/darwin/*OSX*']),
     headers = merge_maps([
         glob_map(glob([
             '*.h',
+            'audio/*.h',
+            'video/*.h',
         ])),
         glob_map(glob([
             'os/darwin/*.h',
