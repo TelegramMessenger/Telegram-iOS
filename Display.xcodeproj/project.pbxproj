@@ -34,6 +34,7 @@
 		D02383861DE0E3B4004018B6 /* ListViewIntermediateState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02383851DE0E3B4004018B6 /* ListViewIntermediateState.swift */; };
 		D02958001D6F096000360E5E /* ContextMenuContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */; };
 		D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */; };
+		D02C61F322A94BD600D4EC86 /* Keyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02C61F222A94BD600D4EC86 /* Keyboard.swift */; };
 		D03310B3213F232600FC83CD /* ListViewTapGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03310B2213F232600FC83CD /* ListViewTapGestureRecognizer.swift */; };
 		D033874E223D3E86007A2CE4 /* AccessibilityAreaNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033874D223D3E86007A2CE4 /* AccessibilityAreaNode.swift */; };
 		D0338750223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033874F223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift */; };
@@ -205,6 +206,7 @@
 		D02383851DE0E3B4004018B6 /* ListViewIntermediateState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewIntermediateState.swift; sourceTree = "<group>"; };
 		D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuContainerNode.swift; sourceTree = "<group>"; };
 		D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RuntimeUtils.swift; sourceTree = "<group>"; };
+		D02C61F222A94BD600D4EC86 /* Keyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keyboard.swift; sourceTree = "<group>"; };
 		D03310B2213F232600FC83CD /* ListViewTapGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewTapGestureRecognizer.swift; sourceTree = "<group>"; };
 		D033874D223D3E86007A2CE4 /* AccessibilityAreaNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityAreaNode.swift; sourceTree = "<group>"; };
 		D033874F223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionSheetSwitchItem.swift; sourceTree = "<group>"; };
@@ -609,6 +611,7 @@
 				D01F728121F13891006AB634 /* Accessibility.swift */,
 				09167E1E229803DC005734A7 /* UIMenuItem+Icons.h */,
 				09167E1F229803DC005734A7 /* UIMenuItem+Icons.m */,
+				D02C61F222A94BD600D4EC86 /* Keyboard.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -955,6 +958,7 @@
 				D0FA08C42048803C00DD23FC /* TextNode.swift in Sources */,
 				D0CA3F8C2073F8240042D2B6 /* TapLongTapOrDoubleTapGestureRecognizer.swift in Sources */,
 				D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */,
+				D02C61F322A94BD600D4EC86 /* Keyboard.swift in Sources */,
 				D0AA840E1FEBFB72005C6E91 /* ListViewFloatingHeaderNode.swift in Sources */,
 				D03AA4EB202E02B10056C405 /* ListViewReorderingGestureRecognizer.swift in Sources */,
 				D0C2DFCD1CC4431D0044FF83 /* ListViewTransactionQueue.swift in Sources */,
