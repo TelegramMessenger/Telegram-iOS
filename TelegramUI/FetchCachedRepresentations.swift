@@ -1,11 +1,11 @@
 import Foundation
+import UIKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
 import ImageIO
 import MobileCoreServices
 import Display
-import UIKit
 import AVFoundation
 import WebP
 import Lottie

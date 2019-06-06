@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AsyncDisplayKit
 
 private func convertIndicatorColor(_ color: UIColor) -> UIColor {

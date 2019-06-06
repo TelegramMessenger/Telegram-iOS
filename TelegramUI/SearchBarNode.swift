@@ -1,6 +1,6 @@
 import Foundation
-import SwiftSignalKit
 import UIKit
+import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 

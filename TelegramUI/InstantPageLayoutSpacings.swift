@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import TelegramCore
 
 func spacingBetweenBlocks(upper: InstantPageBlock?, lower: InstantPageBlock?) -> CGFloat {

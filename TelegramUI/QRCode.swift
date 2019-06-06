@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import CoreImage
 import SwiftSignalKit
 import Display

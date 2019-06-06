@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import TelegramCore
 
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)

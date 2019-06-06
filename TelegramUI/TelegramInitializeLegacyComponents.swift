@@ -2,7 +2,11 @@ import Foundation
 import UIKit
 import TelegramCore
 import SwiftSignalKit
+#if BUCK
+import MtProtoKit
+#else
 import MtProtoKitDynamic
+#endif
 import Display
 
 import LegacyComponents

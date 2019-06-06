@@ -1,7 +1,11 @@
 #import "TGBridgeAudioEncoder.h"
 #import <AVFoundation/AVFoundation.h>
 
+#ifdef BUCK
+#import <opus/opus.h>
+#else
 #import "opus.h"
+#endif
 #import "opusenc.h"
 
 #import "TGDataItem.h"

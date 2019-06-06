@@ -1,10 +1,10 @@
 import Foundation
+import UIKit
 import LegacyComponents
 import SwiftSignalKit
 import TelegramCore
 import Postbox
 import SSignalKit
-import UIKit
 import Display
 
 func presentLegacyWebSearchEditor(context: AccountContext, theme: PresentationTheme, result: ChatContextResult, initialLayout: ContainerViewLayout?, updateHiddenMedia: @escaping (String?) -> Void, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (UIImage) -> Void, present: @escaping (ViewController, Any?) -> Void) {

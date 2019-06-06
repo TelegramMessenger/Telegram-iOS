@@ -1,0 +1,96 @@
+load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'merge_maps', 'glob_map', 'glob_sub_map')
+load('//tools:buck_defs.bzl', 'combined_config', 'SHARED_CONFIGS', 'LIB_SPECIFIC_CONFIG')
+
+apple_library(
+    name = 'TelegramUIPrivateModule',
+    srcs = glob([
+        'TelegramUI/**/*.m',
+        'TelegramUI/**/*.c',
+        'third-party/opusenc/*.c',
+        'third-party/opusenc/*.m',
+        'third-party/ogg/ogg/*.c',
+    ]),
+    headers = merge_maps([
+        glob_map(glob([
+            'TelegramUI/**/*.h',
+            'third-party/opusenc/*.h',
+        ])),
+        glob_sub_map('third-party/ogg/', [
+            'third-party/ogg/**/*.h',
+        ]),
+    ]),
+    header_namespace = 'TelegramUIPrivateModule',
+    exported_headers = [
+        'third-party/opusenc/opusenc.h',
+        'TelegramUI/TGDataItem.h',
+        'TelegramUI/FastBlur.h',
+        'TelegramUI/RingBuffer.h',
+        'TelegramUI/TelegramUIIncludes.h',
+        'third-party/RMIntro/platform/ios/RMIntroViewController.h',
+        'TelegramUI/STPPaymentCardTextField.h',
+        'TelegramUI/STPAPIClient.h',
+        'TelegramUI/STPAPIClient+ApplePay.h',
+        'TelegramUI/STPPaymentConfiguration.h',
+        'TelegramUI/STPCard.h',
+        'TelegramUI/STPToken.h',
+        'TelegramUI/STPBlocks.h',
+        'TelegramUI/STPCardBrand.h',
+        'TelegramUI/STPCardParams.h',
+        'TelegramUI/STPCustomer.h',
+        'TelegramUI/STPFormEncoder.h',
+        'TelegramUI/STPFormEncodable.h',
+        'TelegramUI/STPAddress.h',
+        'TelegramUI/STPAPIResponseDecodable.h',
+        'TelegramUI/STPPaymentMethod.h',
+        'TelegramUI/STPSource.h',
+        'TelegramUI/STPBackendAPIAdapter.h',
+        'TelegramUI/OngoingCallThreadLocalContext.h',
+        'TelegramUI/SecretChatKeyVisualization.h',
+        'TelegramUI/NumberPluralizationForm.h',
+        'TelegramUI/DeviceProximityManager.h',
+        'TelegramUI/RaiseToListenActivator.h',
+        'TelegramUI/TGMimeTypeMap.h',
+        'TelegramUI/TGEmojiSuggestions.h',
+        'TelegramUI/TGChannelIntroController.h',
+        'TelegramUI/EDSunriseSet.h',
+        'TelegramUI/TGBridgeAudioDecoder.h',
+        'TelegramUI/TGBridgeAudioEncoder.h',
+        'TelegramUI/GZip.h',
+    ],
+    modular = True,
+    #visibility = ['//submodules/TelegramUI:TelegramUI'],
+    visibility = ['PUBLIC'],
+    deps = [
+        '//submodules/SSignalKit:SSignalKit',
+        '//submodules/LegacyComponents:LegacyComponents',
+        '//submodules/ffmpeg:opus',
+    ],
+)
+
+apple_library(
+    name = 'TelegramUI',
+    srcs = glob([
+	    'TelegramUI/**/*.swift'
+    ]),
+	configs = configs_with_config(combined_config([SHARED_CONFIGS, LIB_SPECIFIC_CONFIG])),
+	swift_compiler_flags = [
+        '-suppress-warnings',
+        '-application-extension',
+        '-enable-batch-mode',
+    ],
+    visibility = ['PUBLIC'],
+    deps = [
+        ':TelegramUIPrivateModule',
+    	'//submodules/SSignalKit:SwiftSignalKit',
+        '//submodules/SSignalKit:SSignalKit',
+    	'//submodules/Postbox:Postbox',
+    	'//submodules/TelegramCore:TelegramCore',
+    	'//submodules/MtProtoKit:MtProtoKit',
+        '//submodules/ffmpeg:FFMpeg',
+        '//submodules/AsyncDisplayKit:AsyncDisplayKit',
+        '//submodules/Display:Display',
+        '//submodules/LegacyComponents:LegacyComponents',
+        '//submodules/lottie-ios:Lottie',
+        '//submodules/webp:WebP',
+    ],
+)

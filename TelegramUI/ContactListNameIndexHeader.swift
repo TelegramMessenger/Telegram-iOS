@@ -1,4 +1,6 @@
+import Foundation
 import Display
+import UIKit
 
 final class ContactListNameIndexHeader: Equatable, ListViewItemHeader {
     let id: Int64

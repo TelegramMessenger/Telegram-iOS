@@ -1,10 +1,10 @@
 import Foundation
+import UIKit
 import LegacyComponents
 import SwiftSignalKit
 import TelegramCore
 import Postbox
 import SSignalKit
-import UIKit
 import Display
 
 import TelegramUIPrivateModule

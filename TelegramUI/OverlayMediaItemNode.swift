@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AsyncDisplayKit
 
 struct OverlayMediaItemNodeGroup: Hashable, RawRepresentable {

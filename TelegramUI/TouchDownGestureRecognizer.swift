@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UIKit.UIGestureRecognizerSubclass
 
 class TouchDownGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {

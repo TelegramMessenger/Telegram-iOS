@@ -1,6 +1,6 @@
 import Foundation
-import AsyncDisplayKit
 import UIKit
+import AsyncDisplayKit
 import Display
 
 private let templateLoupeIcon = UIImage(bundleImageName: "Components/Search Bar/Loupe")

@@ -1,6 +1,6 @@
 import Foundation
-import SwiftSignalKit
 import UIKit
+import SwiftSignalKit
 
 private final class PresentationsResourceCacheHolder {
     var images: [Int32: UIImage] = [:]

@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Photos
 import Postbox
 import SwiftSignalKit

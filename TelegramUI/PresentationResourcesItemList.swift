@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Display
 
 private func generateArrowImage(_ theme: PresentationTheme) -> UIImage? {

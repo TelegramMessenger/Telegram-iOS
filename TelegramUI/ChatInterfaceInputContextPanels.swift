@@ -1,14 +1,6 @@
 import Foundation
+import UIKit
 import TelegramCore
-
-/*
- case stickers([FoundStickerItem])
- case hashtags([String])
- case mentions([Peer])
- case commands([PeerCommand])
- case emojis([(String, String)])
- case contextRequestResult(Peer?, ChatContextResultCollection?)
- */
 
 private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult) -> (Int, Bool) {
     switch result {

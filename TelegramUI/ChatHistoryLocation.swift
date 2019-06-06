@@ -1,4 +1,5 @@
 import Postbox
+import UIKit
 import Display
 
 enum ChatHistoryInitialSearchLocation: Equatable {

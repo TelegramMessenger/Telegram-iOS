@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import CoreMedia
 import SwiftSignalKit
 import FFMpeg

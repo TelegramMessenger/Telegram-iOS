@@ -1,9 +1,14 @@
 import Foundation
+import UIKit
 import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+#if BUCK
+import MtProtoKit
+#else
 import MtProtoKitDynamic
+#endif
 import MessageUI
 
 private final class DebugControllerArguments {

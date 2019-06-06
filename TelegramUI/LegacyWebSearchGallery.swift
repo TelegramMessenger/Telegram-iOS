@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import LegacyComponents
 import SwiftSignalKit
 import TelegramCore

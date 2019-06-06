@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UIKit.UIGestureRecognizerSubclass
 
 private func traceScrollView(view: UIView, point: CGPoint) -> UIScrollView? {

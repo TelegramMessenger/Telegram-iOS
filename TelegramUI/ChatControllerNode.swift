@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
@@ -278,7 +279,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.textInputPanelNode?.sendMessage = { [weak self] in
             if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
                 if textInputPanelNode.textInputNode?.isFirstResponder() ?? false {
-                    applyKeyboardAutocorrection()
+                    Keyboard.applyAutocorrection()
                 }
                 
                 var effectivePresentationInterfaceState = strongSelf.chatPresentationInterfaceState

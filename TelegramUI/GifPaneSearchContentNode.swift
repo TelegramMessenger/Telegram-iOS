@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
@@ -65,7 +66,7 @@ func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bo
                     if let content = content {
                         imageResource = content.resource
                         if let resource = content.resource as? WebFileReferenceMediaResource {
-                            uniqueId = Int64(murMurHashString32(resource.url))
+                            uniqueId = Int64(HashFunctions.murMurHash32(resource.url))
                         }
                     } else if let thumbnail = thumbnail {
                         imageResource = thumbnail.resource

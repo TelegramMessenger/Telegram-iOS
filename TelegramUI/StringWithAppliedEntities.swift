@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import TelegramCore
 
 func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> NSAttributedString {

@@ -1,10 +1,16 @@
 import Foundation
+import UIKit
+import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
+#if BUCK
+import MtProtoKit
+#else
 import MtProtoKitDynamic
+#endif
 
 private let maximumNumberOfAccounts = 3
 

@@ -4,7 +4,11 @@ import SafariServices
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+#if BUCK
+import MtProtoKit
+#else
 import MtProtoKitDynamic
+#endif
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId

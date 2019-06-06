@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 enum WebSearchScope: Int32 {
     case images
