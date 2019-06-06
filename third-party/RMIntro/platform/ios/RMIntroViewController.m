@@ -18,7 +18,6 @@
 #import <SSignalKit/SSignalKit.h>
 
 #import <LegacyComponents/LegacyComponents.h>
-#import <LegacyComponents/TGAnimationUtils.h>
 
 typedef enum {
     Inch35 = 0,
@@ -185,8 +184,9 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
                     [strongSelf->_alternativeLanguageButton sizeToFit];
                     
                     if ([strongSelf isViewLoaded]) {
-                        [strongSelf->_alternativeLanguageButton.layer animateAlphaFrom:0.0f to:strongSelf->_isEnabled ? 1.0 : 0.6 duration:0.3f timingFunction:kCAMediaTimingFunctionEaseInEaseOut removeOnCompletion:true completion:nil];
+                        strongSelf->_alternativeLanguageButton.alpha = 0.0;
                         [UIView animateWithDuration:0.3 animations:^{
+                            strongSelf->_alternativeLanguageButton.alpha = strongSelf->_isEnabled ? 1.0 : 0.6;
                             [strongSelf viewWillLayoutSubviews];
                         }];
                     }

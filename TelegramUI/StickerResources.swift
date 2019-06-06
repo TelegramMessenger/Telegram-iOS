@@ -237,7 +237,7 @@ func chatMessageLegacySticker(account: Account, file: TelegramMediaFile, small: 
                         c.interpolationQuality = .none
                         c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                     }
-                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                     
                     blurredThumbnailImage = thumbnailContext.generateImage()
                 }

@@ -749,7 +749,7 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
                                 c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
                             }
                         }
-                        telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                        imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
                         blurredThumbnailImage = additionalBlurContext.generateImage()
                     } else {
                         blurredThumbnailImage = thumbnailContext.generateImage()
@@ -795,7 +795,7 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
                                     c.interpolationQuality = .none
                                     c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                                 }
-                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                                 
                                 var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
                                 if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
@@ -811,7 +811,7 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
                                             c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
                                         }
                                     }
-                                    telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                                    imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
                                     sideBlurredImage = additionalBlurContext.generateImage()
                                 } else {
                                     sideBlurredImage = thumbnailContext.generateImage()
@@ -823,8 +823,8 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
                                     c.interpolationQuality = .none
                                     c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                                 }
-                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                                 sideBlurredImage = thumbnailContext.generateImage()
                             }
                                 
@@ -970,7 +970,7 @@ public func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMed
                     c.interpolationQuality = .none
                     c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                 }
-                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 
                 blurredThumbnailImage = thumbnailContext.generateImage()
             }
@@ -1066,7 +1066,7 @@ public func chatMessageVideoThumbnail(account: Account, fileReference: FileMedia
                         c.interpolationQuality = .none
                         c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                     }
-                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                     
                     blurredThumbnailImage = thumbnailContext.generateImage()
                 }
@@ -1131,7 +1131,7 @@ func chatSecretPhoto(account: Account, photoReference: ImageMediaReference) -> S
                             c.interpolationQuality = .none
                             c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                         }
-                        telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                        imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                         
                         let thumbnailContext2Size = thumbnailSize.aspectFitted(CGSize(width: 100.0, height: 100.0))
                         let thumbnailContext2 = DrawingContext(size: thumbnailContext2Size, scale: 1.0)
@@ -1141,7 +1141,7 @@ func chatSecretPhoto(account: Account, photoReference: ImageMediaReference) -> S
                                 c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
                             }
                         }
-                        telegramFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
+                        imageFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
                         
                         blurredImage = thumbnailContext2.generateImage()
                     }
@@ -1157,7 +1157,7 @@ func chatSecretPhoto(account: Account, photoReference: ImageMediaReference) -> S
                         c.interpolationQuality = .none
                         c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                     }
-                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                     
                     let thumbnailContext2Size = thumbnailSize.aspectFitted(CGSize(width: 100.0, height: 100.0))
                     let thumbnailContext2 = DrawingContext(size: thumbnailContext2Size, scale: 1.0)
@@ -1167,7 +1167,7 @@ func chatSecretPhoto(account: Account, photoReference: ImageMediaReference) -> S
                             c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
                         }
                     }
-                    telegramFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
+                    imageFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
                     
                     blurredImage = thumbnailContext2.generateImage()
                 }
@@ -1319,7 +1319,7 @@ func avatarGalleryThumbnailPhoto(account: Account, representations: [ImageRepres
                     c.interpolationQuality = .none
                     c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                 }
-                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 
                 blurredThumbnailImage = thumbnailContext.generateImage()
             }
@@ -1472,7 +1472,7 @@ func gifPaneVideoThumbnail(account: Account, videoReference: FileMediaReference)
                         c.interpolationQuality = .none
                         c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                     }
-                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                     
                     blurredThumbnailImage = thumbnailContext.generateImage()
                 }
@@ -1609,7 +1609,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                                 c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
                             }
                         }
-                        telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                        imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
                         blurredThumbnailImage = additionalBlurContext.generateImage()
                     } else {
                         blurredThumbnailImage = thumbnailContext.generateImage()
@@ -1636,7 +1636,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                                         c.interpolationQuality = .none
                                         c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                                     }
-                                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                    imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                                     
                                     var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
                                     if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
@@ -1652,7 +1652,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                                                 c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
                                             }
                                         }
-                                        telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                                        imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
                                         sideBlurredImage = additionalBlurContext.generateImage()
                                     } else {
                                         sideBlurredImage = thumbnailContext.generateImage()
@@ -1664,8 +1664,8 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                                         c.interpolationQuality = .none
                                         c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                                     }
-                                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                    imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                    imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                                     sideBlurredImage = thumbnailContext.generateImage()
                                 }
                                 
@@ -1953,7 +1953,7 @@ func chatSecretMessageVideo(account: Account, videoReference: FileMediaReference
                         c.interpolationQuality = .none
                         c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                     }
-                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                     
                     let thumbnailContext2Size = thumbnailSize.aspectFitted(CGSize(width: 100.0, height: 100.0))
                     let thumbnailContext2 = DrawingContext(size: thumbnailContext2Size, scale: 1.0)
@@ -1963,7 +1963,7 @@ func chatSecretMessageVideo(account: Account, videoReference: FileMediaReference
                             c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
                         }
                     }
-                    telegramFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
+                    imageFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
                     
                     blurredImage = thumbnailContext2.generateImage()
                 }
@@ -2157,7 +2157,7 @@ func chatMessageImageFile(account: Account, fileReference: FileMediaReference, t
                         c.interpolationQuality = .none
                         c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                     }
-                    telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                     
                     var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
                     if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
@@ -2173,7 +2173,7 @@ func chatMessageImageFile(account: Account, fileReference: FileMediaReference, t
                                 c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
                             }
                         }
-                        telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                        imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
                         blurredThumbnailImage = additionalBlurContext.generateImage()
                     } else {
                         blurredThumbnailImage = thumbnailContext.generateImage()
@@ -2391,7 +2391,7 @@ func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentat
                             c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
                         }
                     }
-                    telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                    imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
                     blurredThumbnailImage = additionalBlurContext.generateImage()
                 } else {
                     blurredThumbnailImage = thumbnailContext.generateImage()

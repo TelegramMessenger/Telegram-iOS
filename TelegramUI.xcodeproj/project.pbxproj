@@ -1575,7 +1575,7 @@
 		D023ED311DDB60CF00BD496D /* LegacyNavigationController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyNavigationController.swift; sourceTree = "<group>"; };
 		D025A4221F79344500563950 /* FetchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchManager.swift; sourceTree = "<group>"; };
 		D025A4251F79428E00563950 /* FetchManagerLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchManagerLocation.swift; sourceTree = "<group>"; };
-		D02660931F34CE5C000E2DC5 /* LegacyLocationVenueIconDataSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LegacyLocationVenueIconDataSource.swift; path = "../third-party/RMIntro/LegacyLocationVenueIconDataSource.swift"; sourceTree = "<group>"; };
+		D02660931F34CE5C000E2DC5 /* LegacyLocationVenueIconDataSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyLocationVenueIconDataSource.swift; sourceTree = "<group>"; };
 		D02958011D6F0D5F00360E5E /* TapLongTapOrDoubleTapGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TapLongTapOrDoubleTapGestureRecognizer.swift; sourceTree = "<group>"; };
 		D02B198921F1DA9E0094A764 /* SharedAccountContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAccountContext.swift; sourceTree = "<group>"; };
 		D02B2B9720810DA00062476B /* StickerPaneSearchStickerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerPaneSearchStickerItem.swift; sourceTree = "<group>"; };
@@ -1695,7 +1695,6 @@
 		D04BB2CD1E48797500650E93 /* animations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = animations.h; sourceTree = "<group>"; };
 		D04BB2CE1E48797500650E93 /* buffer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = buffer.c; sourceTree = "<group>"; };
 		D04BB2CF1E48797500650E93 /* buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = buffer.h; sourceTree = "<group>"; };
-		D04BB2D01E48797500650E93 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		D04BB2D11E48797500650E93 /* macros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = macros.h; sourceTree = "<group>"; };
 		D04BB2D21E48797500650E93 /* math_helper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = math_helper.h; sourceTree = "<group>"; };
 		D04BB2D31E48797500650E93 /* matrix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = matrix.h; sourceTree = "<group>"; };
@@ -3259,7 +3258,6 @@
 				D04BB2CD1E48797500650E93 /* animations.h */,
 				D04BB2CE1E48797500650E93 /* buffer.c */,
 				D04BB2CF1E48797500650E93 /* buffer.h */,
-				D04BB2D01E48797500650E93 /* config.h */,
 				D04BB2D11E48797500650E93 /* macros.h */,
 				D04BB2D21E48797500650E93 /* math_helper.h */,
 				D04BB2D31E48797500650E93 /* matrix.h */,

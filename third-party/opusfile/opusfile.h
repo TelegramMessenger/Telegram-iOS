@@ -107,7 +107,11 @@ extern "C" {
 # include <stdarg.h>
 # include <stdio.h>
 # include <ogg/ogg.h>
+#ifdef BUCK
+# include <opus/opus_multistream.h>
+#else
 # include "opus_multistream.h"
+#endif
 
 /**@cond PRIVATE*/
 

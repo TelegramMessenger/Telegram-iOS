@@ -1,5 +1,8 @@
 #include "platform_macros.h"
-#include "../../core/config.h"
+
+#ifndef LOGGING_ON
+#define LOGGING_ON 0
+#endif
 
 void _debug_log_v(const char* tag, const char* text, ...) PRINTF_ATTRIBUTE(2, 3);
 void _debug_log_d(const char* tag, const char* text, ...) PRINTF_ATTRIBUTE(2, 3);

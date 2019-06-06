@@ -6,7 +6,7 @@ static inline uint64_t get_colors (const uint8_t *p) {
     return p[0] + (p[1] << 16) + ((uint64_t)p[2] << 32);
 }
 
-void telegramFastBlur(int imageWidth, int imageHeight, int imageStride, void *pixels)
+void imageFastBlur(int imageWidth, int imageHeight, int imageStride, void *pixels)
 {
     uint8_t *pix = (uint8_t *)pixels;
     const int w = imageWidth;

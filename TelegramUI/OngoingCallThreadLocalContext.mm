@@ -4,7 +4,11 @@
 #import "../../libtgvoip/VoIPServerConfig.h"
 #import "../../libtgvoip/os/darwin/SetupLogging.h"
 
+#ifdef BUCK
+#import <MtProtoKit/MtProtoKit.h>
+#else
 #import <MtProtoKitDynamic/MtProtoKitDynamic.h>
+#endif
 
 static void TGCallAesIgeEncrypt(uint8_t *inBytes, uint8_t *outBytes, size_t length, uint8_t *key, uint8_t *iv) {
     MTAesEncryptRaw(inBytes, outBytes, length, key, iv);

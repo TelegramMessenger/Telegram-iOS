@@ -225,7 +225,7 @@ func wallpaperImage(account: Account, accountManager: AccountManager, fileRefere
                             c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
                         }
                     }
-                    telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                    imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
                     blurredThumbnailImage = additionalBlurContext.generateImage()
                 } else {
                     blurredThumbnailImage = thumbnailContext.generateImage()
@@ -546,7 +546,7 @@ func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryMediaRes
                     c.interpolationQuality = .none
                     c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                 }
-                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 
                 var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
                 if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
@@ -562,7 +562,7 @@ func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryMediaRes
                             c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
                         }
                     }
-                    telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                    imageFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
                     sourceImage = additionalBlurContext.generateImage()
                 } else {
                     sourceImage = thumbnailContext.generateImage()
