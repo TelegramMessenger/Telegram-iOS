@@ -9,7 +9,7 @@
 #include <algorithm>
 #include "logging.h"
 #include "VoIPServerConfig.h"
-#ifdef HAVE_CONFIG_H
+#if defined(HAVE_CONFIG_H) || defined(BUCK)
 #include <opus/opus.h>
 #else
 #include "opus.h"
