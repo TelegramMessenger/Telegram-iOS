@@ -24,8 +24,7 @@ final class AlertControllerNode: ASDisplayNode {
         self.containerNode.layer.masksToBounds = true
         
         self.effectNode = ASDisplayNode(viewBlock: {
-            let view = UIView()
-            return view
+            return UIVisualEffectView(effect: UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark))
         })
         
         self.contentNode = contentNode
@@ -53,6 +52,9 @@ final class AlertControllerNode: ASDisplayNode {
     }
     
     func updateTheme(_ theme: AlertControllerTheme) {
+        if let effectView = self.effectNode.view as? UIVisualEffectView {
+            effectView.effect = UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark)
+        }
         self.containerNode.backgroundColor = theme.backgroundColor
         self.contentNode.updateTheme(theme)
     }

@@ -2,7 +2,13 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
+public enum AlertControllerThemeBackgroundType {
+    case light
+    case dark
+}
+
 public final class AlertControllerTheme: Equatable {
+    public let backgroundType: ActionSheetControllerThemeBackgroundType
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
     public let highlightedItemColor: UIColor
@@ -12,7 +18,8 @@ public final class AlertControllerTheme: Equatable {
     public let destructiveColor: UIColor
     public let disabledColor: UIColor
     
-    public init(backgroundColor: UIColor, separatorColor: UIColor, highlightedItemColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disabledColor: UIColor) {
+    public init(backgroundType: ActionSheetControllerThemeBackgroundType, backgroundColor: UIColor, separatorColor: UIColor, highlightedItemColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disabledColor: UIColor) {
+        self.backgroundType = backgroundType
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
         self.highlightedItemColor = highlightedItemColor
@@ -24,6 +31,9 @@ public final class AlertControllerTheme: Equatable {
     }
     
     public static func ==(lhs: AlertControllerTheme, rhs: AlertControllerTheme) -> Bool {
+        if lhs.backgroundType != rhs.backgroundType {
+            return false
+        }
         if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
