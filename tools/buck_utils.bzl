@@ -29,69 +29,80 @@ def configs_with_config(config):
         "Release": config,
     }
 
-def subdir_glob(glob_specs, exclude = None, prefix = ""):
-    """Returns a dict of sub-directory relative paths to full paths.
-
-    The subdir_glob() function is useful for defining header maps for C/C++
-    libraries which should be relative the given sub-directory.
-    Given a list of tuples, the form of (relative-sub-directory, glob-pattern),
-    it returns a dict of sub-directory relative paths to full paths.
-
-    Please refer to native.glob() for explanations and examples of the pattern.
-
-    Args:
-      glob_specs: The array of tuples in form of
-        (relative-sub-directory, glob-pattern inside relative-sub-directory).
-        type: List[Tuple[str, str]]
-      exclude: A list of patterns to identify files that should be removed
-        from the set specified by the first argument. Defaults to [].
-        type: Optional[List[str]]
-      prefix: If is not None, prepends it to each key in the dictionary.
-        Defaults to None.
-        type: Optional[str]
-
-    Returns:
-      A dict of sub-directory relative paths to full paths.
-    """
-    if exclude == None:
-        exclude = []
-
-    results = []
-
-    for dirpath, glob_pattern in glob_specs:
-        results.append(
-            _single_subdir_glob(dirpath, glob_pattern, exclude, prefix),
-        )
-
-    return _merge_maps(*results)
-
-def _merge_maps(*file_maps):
-    result = {}
-    for file_map in file_maps:
-        for key in file_map:
-            if key in result and result[key] != file_map[key]:
+def merge_maps(dicts):
+    result = dict()
+    for d in dicts:
+        for key in d:
+            if key in result and result[key] != d[key]:
                 fail(
                     "Conflicting files in file search paths. " +
                     "\"%s\" maps to both \"%s\" and \"%s\"." %
-                    (key, result[key], file_map[key]),
+                    (key, result[key], d[key]),
                 )
-
-            result[key] = file_map[key]
-
+        result.update(d)
     return result
 
-def _single_subdir_glob(dirpath, glob_pattern, exclude = None, prefix = None):
-    if exclude == None:
-        exclude = []
-    results = {}
-    files = native.glob([dirpath + '/' + glob_pattern], exclude = exclude)
-    for f in files:
-        if dirpath:
-            key = f[len(dirpath) + 1:]
-        else:
-            key = f
-        if prefix:
-            key =prefix + '/' + key
-        results[key] = f
+def basename(p):
+    """Returns the basename (i.e., the file portion) of a path.
+    Note that if `p` ends with a slash, this function returns an empty string.
+    This matches the behavior of Python's `os.path.basename`, but differs from
+    the Unix `basename` command (which would return the path segment preceding
+    the final slash).
+    Args:
+    p: The path whose basename should be returned.
+    Returns:
+    The basename of the path, which includes the extension.
+    """
+    return p.rpartition("/")[-1]
 
-    return results
+def glob_map(glob_results):
+    result = dict()
+    for path in glob_results:
+        file_name = basename(path)
+        if file_name in result:
+            fail('\"%s\" maps to both \"%s\" and \"%s\"' % (file_name, result[file_name], path))
+        result[file_name] = path
+    return result
+
+def glob_sub_map(prefix, glob_specs):
+    result = dict()
+    for path in native.glob(glob_specs):
+        if not path.startswith(prefix):
+            fail('\"%s\" does not start with \"%s\"' % (path, prefix))
+        file_key = path[len(prefix):]
+        if file_key in result:
+            fail('\"%s\" maps to both \"%s\" and \"%s\"' % (file_key, result[file_key], path))
+        result[file_key] = path
+    return result
+
+def gen_header_targets(header_paths, prefix, source_rule, source_path):
+    result = dict()
+    for header_path in header_paths:
+        name = prefix + header_path.replace('/', '_sub_')
+        native.genrule(
+            name = name,
+            cmd = 'cp $(location :' + source_rule + ')/' + source_path + '/' + header_path + ' $OUT',
+            out = name,
+        )
+        result[header_path] = ':' + name
+    return result
+
+def lib_basename(name):
+    result = name
+    if result.startswith('lib'):
+        result = result[3:]
+    if result.endswith('.a'):
+        result = result[:-2]
+    return result
+
+def gen_lib_targets(lib_paths, prefix, source_rule, source_path):
+    result = []
+    for lib_path in lib_paths:
+        name = lib_path.replace('/', '_sub_')
+        native.genrule(
+            name = name,
+            cmd = 'cp $(location :' + source_rule + ')/' + source_path + '/' + lib_path + ' $OUT',
+            out = name
+        )
+        result.append(name)
+    return result

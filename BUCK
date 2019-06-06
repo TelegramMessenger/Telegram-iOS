@@ -51,6 +51,10 @@ apple_binary(
         '//submodules/HockeySDK-iOS:HockeySDK',
         '//submodules/lottie-ios:Lottie',
         '//submodules/libtgvoip:tgvoip',
+        '//submodules/webp:WebP',
+        '//submodules/ffmpeg:FFMpeg',
+        '//submodules/TelegramUI:TelegramUI',
+        '//submodules/TelegramUI:TelegramUIPrivateModule',
     ],
 )
 

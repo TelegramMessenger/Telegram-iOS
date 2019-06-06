@@ -9,6 +9,9 @@ import TelegramCore
 import LegacyComponents
 import HockeySDK
 import Lottie
+import WebP
+import FFMpeg
+import TelegramUIPrivateModule
 
 func test() {
     let _ = ASDisplayNode()

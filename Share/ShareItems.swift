@@ -2,7 +2,11 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+#if BUCK
+import MtProtoKit
+#else
 import MtProtoKitDynamic
+#endif
 import Display
 import TelegramUI
 
