@@ -632,7 +632,7 @@ struct OrderedHistoryViewEntries {
         if self.lowerOrAtAnchor.count > 1 {
             for i in 1 ..< self.lowerOrAtAnchor.count {
                 if self.lowerOrAtAnchor[i].index < self.lowerOrAtAnchor[i - 1].index {
-                    assertionFailure()
+                    //assertionFailure()
                     break
                 }
             }
@@ -640,7 +640,7 @@ struct OrderedHistoryViewEntries {
         if self.higherThanAnchor.count > 1 {
             for i in 1 ..< self.higherThanAnchor.count {
                 if self.higherThanAnchor[i].index < self.higherThanAnchor[i - 1].index {
-                    assertionFailure()
+                   // assertionFailure()
                     break
                 }
             }
@@ -1155,7 +1155,7 @@ final class HistoryViewLoadedState {
                 }
             }
         }
-        assert(Set(result.map({ $0.message.stableId })).count == result.count)
+        //assert(Set(result.map({ $0.message.stableId })).count == result.count)
         return HistoryViewLoadedSample(anchor: self.anchor, entries: result, holesToLower: holesToLower, holesToHigher: holesToHigher, hole: sampledHole)
     }
 }
