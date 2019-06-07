@@ -7,7 +7,6 @@ import SwiftSignalKit
 import Postbox
 #endif
 
-
 public enum AvailableChannelDiscussionGroupError {
     case generic
 }
