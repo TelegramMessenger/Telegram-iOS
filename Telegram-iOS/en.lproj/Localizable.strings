@@ -4349,10 +4349,12 @@ Any member of this group will be able to see messages in the channel.";
 
 "Notification.Exceptions.DeleteAll" = "Delete All";
 "Notification.Exceptions.Add" = "Add";
+"Exceptions.AddToExceptions" = "ADD TO EXCEPTIONS";
 
 "Notification.Exceptions.NewException.MessagePreviewHeader" = "MESSAGE PREVIEW";
 "Notification.Exceptions.PreviewAlwaysOn" = "Show Preview";
 "Notification.Exceptions.PreviewAlwaysOff" = "Hide Preview";
+"Notification.Exceptions.RemoveFromExceptions" = "Remove from Exceptions";
 "Conversation.Block" = "Block";
 "Conversation.ShareMyPhoneNumber" = "Share My Phone Number";
 "Conversation.AddToContacts" = "Add to Contacts";
