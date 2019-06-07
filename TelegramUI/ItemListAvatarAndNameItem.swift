@@ -644,6 +644,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                             }
                         } else if case .editSettings = item.mode {
                             overrideImage = AvatarNodeImageOverride.editAvatarIcon
+                        } else if peer.isDeleted {
+                            overrideImage = .deletedIcon
                         }
                         
                         strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: peer, overrideImage: overrideImage, emptyColor: ignoreEmpty ? nil : item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)

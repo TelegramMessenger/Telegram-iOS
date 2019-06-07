@@ -221,7 +221,7 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                 let peerText: String
                 switch participant.participant {
                     case .creator:
-                        peerText = strings.Channel_Management_LabelCreator
+                        peerText = strings.Channel_Management_LabelOwner
                     case .member:
                         peerText = strings.ChatAdmins_AdminLabel.capitalized
                 }

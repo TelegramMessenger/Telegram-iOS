@@ -248,8 +248,8 @@ public class ContactsController: ViewController {
         
         self.contactsNode.openPeopleNearby = { [weak self] in
             if let strongSelf = self {
-                //let controller = peopleNearbyController(context: strongSelf.context)
-                //(strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                let controller = peopleNearbyController(context: strongSelf.context)
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
             }
         }
         

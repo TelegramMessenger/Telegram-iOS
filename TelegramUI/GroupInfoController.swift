@@ -1777,7 +1777,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             presentControllerImpl?(channelAdminController(context: context, peerId: peerView.peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
             }, upgradedToSupergroup: { upgradedPeerId, f in
                 upgradedToSupergroupImpl?(upgradedPeerId, f)
-            }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }, transferedOwnership: { _ in }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
     }, restrictPeer: { participant in
         let _ = (peerView.get()

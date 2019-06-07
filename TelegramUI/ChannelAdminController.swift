@@ -8,11 +8,13 @@ import TelegramCore
 private final class ChannelAdminControllerArguments {
     let account: Account
     let toggleRight: (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void
+    let transferOwnership: () -> Void
     let dismissAdmin: () -> Void
     
-    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, dismissAdmin: @escaping () -> Void) {
+    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, dismissAdmin: @escaping () -> Void) {
         self.account = account
         self.toggleRight = toggleRight
+        self.transferOwnership = transferOwnership
         self.dismissAdmin = dismissAdmin
     }
 }
@@ -20,6 +22,7 @@ private final class ChannelAdminControllerArguments {
 private enum ChannelAdminSection: Int32 {
     case info
     case rights
+    case transfer
     case dismiss
 }
 
@@ -28,6 +31,7 @@ private enum ChannelAdminEntryStableId: Hashable {
     case rightsTitle
     case right(TelegramChatAdminRightsFlags)
     case addAdminsInfo
+    case transfer
     case dismiss
     
     var hashValue: Int {
@@ -40,6 +44,8 @@ private enum ChannelAdminEntryStableId: Hashable {
                 return 2
             case .dismiss:
                 return 3
+            case .transfer:
+                return 4
             case let .right(flags):
                 return flags.rawValue.hashValue
         }
@@ -71,6 +77,12 @@ private enum ChannelAdminEntryStableId: Hashable {
                 } else {
                     return false
                 }
+            case .transfer:
+                if case .transfer = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case .dismiss:
                 if case .dismiss = rhs {
                     return true
@@ -86,6 +98,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
     case rightsTitle(PresentationTheme, String)
     case rightItem(PresentationTheme, Int, String, TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags, Bool, Bool)
     case addAdminsInfo(PresentationTheme, String)
+    case transfer(PresentationTheme, String)
     case dismiss(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -94,6 +107,8 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 return ChannelAdminSection.info.rawValue
             case .rightsTitle, .rightItem, .addAdminsInfo:
                 return ChannelAdminSection.rights.rawValue
+            case .transfer:
+                return ChannelAdminSection.transfer.rawValue
             case .dismiss:
                 return ChannelAdminSection.dismiss.rawValue
         }
@@ -109,6 +124,8 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 return .right(right)
             case .addAdminsInfo:
                 return .addAdminsInfo
+            case .transfer:
+                return .transfer
             case .dismiss:
                 return .dismiss
         }
@@ -177,6 +194,12 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .transfer(lhsTheme, lhsText):
+                if case let .transfer(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .dismiss(lhsTheme, lhsText):
                 if case let .dismiss(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -218,6 +241,13 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
+            case .transfer:
+                switch rhs {
+                    case .info, .rightsTitle, .rightItem, .addAdminsInfo, .transfer:
+                        return false
+                    default:
+                        return true
+                }
             case .dismiss:
                 return false
         }
@@ -237,8 +267,12 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 })
             case let .addAdminsInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .transfer(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
+                    arguments.transferOwnership()
+                }, tag: nil)
             case let .dismiss(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.dismissAdmin()
                 }, tag: nil)
         }
@@ -421,6 +455,10 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             if accountUserRightsFlags.contains(.canAddAdmins) {
                 entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
             }
+            
+            if channel.flags.contains(.isCreator) && currentRightsFlags.contains(.canAddAdmins) {
+                entries.append(.transfer(presentationData.theme, isGroup ? presentationData.strings.Group_EditAdmin_TransferOwnership : presentationData.strings.Channel_EditAdmin_TransferOwnership))
+            }
         
             if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty {
                 var canDismiss = false
@@ -488,8 +526,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
         }
     
+        if group.role == .creator && currentRightsFlags.contains(.canAddAdmins) {
+            entries.append(.transfer(presentationData.theme, presentationData.strings.Group_EditAdmin_TransferOwnership))
+        }
+        
         if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty {
-            let canDismiss = true
             entries.append(.dismiss(presentationData.theme, presentationData.strings.Channel_Moderator_AccessLevelRevoke))
         }
     }
@@ -497,7 +538,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
     return entries
 }
 
-public func channelAdminController(context: AccountContext, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant?, updated: @escaping (TelegramChatAdminRights) -> Void, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
+public func channelAdminController(context: AccountContext, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant?, updated: @escaping (TelegramChatAdminRights) -> Void, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void, transferedOwnership: @escaping (PeerId) -> Void) -> ViewController {
     let statePromise = ValuePromise(ChannelAdminControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelAdminControllerState())
     let updateState: ((ChannelAdminControllerState) -> ChannelAdminControllerState) -> Void = { f in
@@ -509,8 +550,17 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     let updateRightsDisposable = MetaDisposable()
     actionsDisposable.add(updateRightsDisposable)
     
+    let transferOwnershipDisposable = MetaDisposable()
+    actionsDisposable.add(transferOwnershipDisposable)
+    
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    
+    let actualPeerId = Atomic<PeerId>(value: peerId)
+    let upgradedToSupergroupImpl: (PeerId, @escaping () -> Void) -> Void = { peerId, completion in
+        let _ = actualPeerId.swap(peerId)
+        upgradedToSupergroup(peerId, completion)
+    }
     
     let arguments = ChannelAdminControllerArguments(account: context.account, toggleRight: { right, flags in
         updateState { current in
@@ -522,6 +572,65 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
             }
             return current.withUpdatedUpdatedFlags(updated)
         }
+    }, transferOwnership: {
+        updateState { current in
+            return current.withUpdatedUpdating(true)
+        }
+        
+        let _ = (context.account.postbox.transaction { transaction -> (peer: Peer?, member: Peer?) in
+            return (peer: transaction.getPeer(peerId), member: transaction.getPeer(adminId))
+        } |> deliverOnMainQueue).start(next: { peer, member in
+            guard let peer = peer, let member = member as? TelegramUser else {
+                return
+            }
+            
+            var signal: Signal<Never, ChannelOwnershipTransferError> = .complete()
+            if let channel = peer as? TelegramChannel {
+                signal = updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: channel.id, memberId: adminId, password: nil)
+            } else if let _ = peer as? TelegramGroup {
+                signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
+                |> map(Optional.init)
+                |> mapError { _ in ChannelOwnershipTransferError.generic }
+                |> mapToSignal { upgradedPeerId -> Signal<Never, ChannelOwnershipTransferError> in
+                    guard let upgradedPeerId = upgradedPeerId else {
+                        return .fail(.generic)
+                    }
+                    upgradedToSupergroupImpl(upgradedPeerId, {})
+                    
+                    return updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: upgradedPeerId, memberId: adminId, password: nil)
+                }
+            }
+            
+            transferOwnershipDisposable.set((signal |> deliverOnMainQueue).start(error: { error in
+                updateState { current in
+                    return current.withUpdatedUpdating(false)
+                }
+                
+                let currentPeerId = actualPeerId.with { $0 }
+                let channel: Signal<Peer?, NoError>
+                if currentPeerId == peerId {
+                    channel = .single(peer)
+                } else {
+                    channel = context.account.postbox.transaction { transaction -> Peer? in
+                        return transaction.getPeer(currentPeerId)
+                    }
+                }
+                
+                let _ = (channel |> deliverOnMainQueue).start(next: { channel in
+                    guard let channel = channel as? TelegramChannel else {
+                        return
+                    }
+                    
+                    let controller = channelOwnershipTransferController(context: context, channel: channel, member: member, initialError: error, present: { c, a in
+                        presentControllerImpl?(c, a)
+                    }, completion: {
+                        dismissImpl?()
+                        transferedOwnership(member.id)
+                    })
+                    presentControllerImpl?(controller, nil)
+                })
+            }))
+        })
     }, dismissAdmin: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)

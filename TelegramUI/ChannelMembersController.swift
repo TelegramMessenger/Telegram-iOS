@@ -396,7 +396,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                                     contactsController?.dismiss()
                                     
                                     presentControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: memberId, initialParticipant: nil, updated: { _ in
-                                    }, upgradedToSupergroup: { _, f in f () }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    }, upgradedToSupergroup: { _, f in f () }, transferedOwnership: { _ in }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                 })]), nil)
                             } else {
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_AddBotErrorHaveRights, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)

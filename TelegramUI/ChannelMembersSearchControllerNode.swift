@@ -195,7 +195,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 }
                             }
                             if case .creator = participant {
-                                label = strongSelf.presentationData.strings.Channel_Management_LabelCreator
+                                label = strongSelf.presentationData.strings.Channel_Management_LabelOwner
                                 enabled = false
                             }
                     }
@@ -263,7 +263,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 }
                             }
                             if case .creator = participant.participant {
-                                label = strongSelf.presentationData.strings.Channel_Management_LabelCreator
+                                label = strongSelf.presentationData.strings.Channel_Management_LabelOwner
                                 enabled = false
                             }
                     }

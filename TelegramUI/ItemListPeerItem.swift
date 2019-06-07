@@ -709,7 +709,11 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                     if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
                         strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
                     } else {
-                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
+                        var overrideImage: AvatarNodeImageOverride?
+                        if item.peer.isDeleted {
+                            overrideImage = .deletedIcon
+                        }
+                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))
