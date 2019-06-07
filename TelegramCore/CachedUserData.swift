@@ -8,7 +8,7 @@ import Foundation
 public final class CachedUserData: CachedPeerData {
     public let about: String?
     public let botInfo: BotInfo?
-    public let peerContactSettings: PeerContactSettings?
+    public let peerStatusSettings: PeerStatusSettings?
     public let pinnedMessageId: MessageId?
     public let isBlocked: Bool
     public let commonGroupCount: Int32
@@ -23,7 +23,7 @@ public final class CachedUserData: CachedPeerData {
     init() {
         self.about = nil
         self.botInfo = nil
-        self.peerContactSettings = nil
+        self.peerStatusSettings = nil
         self.pinnedMessageId = nil
         self.isBlocked = false
         self.commonGroupCount = 0
@@ -33,10 +33,10 @@ public final class CachedUserData: CachedPeerData {
         self.messageIds = Set()
     }
     
-    init(about: String?, botInfo: BotInfo?, peerContactSettings: PeerContactSettings?, pinnedMessageId: MessageId?, isBlocked: Bool, commonGroupCount: Int32, callsAvailable: Bool, callsPrivate: Bool, canPinMessages: Bool) {
+    init(about: String?, botInfo: BotInfo?, peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, isBlocked: Bool, commonGroupCount: Int32, callsAvailable: Bool, callsPrivate: Bool, canPinMessages: Bool) {
         self.about = about
         self.botInfo = botInfo
-        self.peerContactSettings = peerContactSettings
+        self.peerStatusSettings = peerStatusSettings
         self.pinnedMessageId = pinnedMessageId
         self.isBlocked = isBlocked
         self.commonGroupCount = commonGroupCount
@@ -54,9 +54,9 @@ public final class CachedUserData: CachedPeerData {
         self.about = decoder.decodeOptionalStringForKey("a")
         self.botInfo = decoder.decodeObjectForKey("bi") as? BotInfo
         if let value = decoder.decodeOptionalInt32ForKey("pcs") {
-            self.peerContactSettings = PeerContactSettings(rawValue: value)
+            self.peerStatusSettings = PeerStatusSettings(rawValue: value)
         } else {
-            self.peerContactSettings = nil
+            self.peerStatusSettings = nil
         }
         if let pinnedMessagePeerId = decoder.decodeOptionalInt64ForKey("pm.p"), let pinnedMessageNamespace = decoder.decodeOptionalInt32ForKey("pm.n"), let pinnedMessageId = decoder.decodeOptionalInt32ForKey("pm.i") {
             self.pinnedMessageId = MessageId(peerId: PeerId(pinnedMessagePeerId), namespace: pinnedMessageNamespace, id: pinnedMessageId)
@@ -87,8 +87,8 @@ public final class CachedUserData: CachedPeerData {
         } else {
             encoder.encodeNil(forKey: "bi")
         }
-        if let peerContactSettings = self.peerContactSettings {
-            encoder.encodeInt32(peerContactSettings.rawValue, forKey: "pcs")
+        if let peerStatusSettings = self.peerStatusSettings {
+            encoder.encodeInt32(peerStatusSettings.rawValue, forKey: "pcs")
         } else {
             encoder.encodeNil(forKey: "pcs")
         }
@@ -120,42 +120,42 @@ public final class CachedUserData: CachedPeerData {
             return false
         }
         
-        return other.about == self.about && other.botInfo == self.botInfo && self.peerContactSettings == other.peerContactSettings && self.isBlocked == other.isBlocked && self.commonGroupCount == other.commonGroupCount && self.callsAvailable == other.callsAvailable && self.callsPrivate == other.callsPrivate
+        return other.about == self.about && other.botInfo == self.botInfo && self.peerStatusSettings == other.peerStatusSettings && self.isBlocked == other.isBlocked && self.commonGroupCount == other.commonGroupCount && self.callsAvailable == other.callsAvailable && self.callsPrivate == other.callsPrivate
     }
     
     func withUpdatedAbout(_ about: String?) -> CachedUserData {
-        return CachedUserData(about: about, botInfo: self.botInfo, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
+        return CachedUserData(about: about, botInfo: self.botInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
     }
     
     func withUpdatedBotInfo(_ botInfo: BotInfo?) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: botInfo, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
+        return CachedUserData(about: self.about, botInfo: botInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
     }
     
-    func withUpdatedPeerContactSettings(_ peerContactSettings: PeerContactSettings) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, peerContactSettings: peerContactSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
+    func withUpdatedPeerStatusSettings(_ peerStatusSettings: PeerStatusSettings) -> CachedUserData {
+        return CachedUserData(about: self.about, botInfo: self.botInfo, peerStatusSettings: peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
     }
     
     func withUpdatedPinnedMessageId(_ pinnedMessageId: MessageId?) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, peerContactSettings: self.peerContactSettings, pinnedMessageId: pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
     }
     
     func withUpdatedIsBlocked(_ isBlocked: Bool) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
     }
     
     func withUpdatedCommonGroupCount(_ commonGroupCount: Int32) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
     }
     
     func withUpdatedCallsAvailable(_ callsAvailable: Bool) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages)
     }
     
     func withUpdatedCallsPrivate(_ callsPrivate: Bool) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: callsPrivate, canPinMessages: self.canPinMessages)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: callsPrivate, canPinMessages: self.canPinMessages)
     }
     
     func withUpdatedCanPinMessages(_ canPinMessages: Bool) -> CachedUserData {
-        return CachedUserData(about: self.about, botInfo: self.botInfo, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: canPinMessages)
+        return CachedUserData(about: self.about, botInfo: self.botInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, canPinMessages: canPinMessages)
     }
 }

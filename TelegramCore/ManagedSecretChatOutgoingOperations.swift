@@ -1380,9 +1380,9 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
                             if result != nil {
                                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                     if let current = current as? CachedSecretChatData {
-                                        var peerContactSettings = current.peerContactSettings ?? PeerContactSettings()
-                                        peerContactSettings.insert(.isHidden)
-                                        return current.withUpdatedPeerContactSettings(peerContactSettings)
+                                        var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
+                                        peerStatusSettings.insert(.isHidden)
+                                        return current.withUpdatedPeerStatusSettings(peerStatusSettings)
                                     } else {
                                         return current
                                     }

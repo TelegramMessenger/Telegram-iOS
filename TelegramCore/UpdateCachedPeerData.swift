@@ -13,44 +13,44 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
             let cachedData = transaction.getPeerCachedData(peerId: peerId)
             
             if let cachedData = cachedData as? CachedUserData {
-                if cachedData.peerContactSettings != nil {
+                if cachedData.peerStatusSettings != nil {
                     return .complete()
                 }
             } else if let cachedData = cachedData as? CachedGroupData {
-                if cachedData.peerContactSettings != nil {
+                if cachedData.peerStatusSettings != nil {
                     return .complete()
                 }
             } else if let cachedData = cachedData as? CachedChannelData {
-                if cachedData.peerContactSettings != nil {
+                if cachedData.peerStatusSettings != nil {
                     return .complete()
                 }
             } else if let cachedData = cachedData as? CachedSecretChatData {
-                if cachedData.peerContactSettings != nil {
+                if cachedData.peerStatusSettings != nil {
                     return .complete()
                 }
             }
             
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 return postbox.transaction { transaction -> Void in
-                    var peerContactSettings: PeerContactSettings
+                    var peerStatusSettings: PeerStatusSettings
                     if let peer = transaction.getPeer(peerId), let associatedPeerId = peer.associatedPeerId, !transaction.isPeerContact(peerId: associatedPeerId) {
                         if let peer = peer as? TelegramSecretChat, case .creator = peer.role {
-                            peerContactSettings = PeerContactSettings()
-                            peerContactSettings.insert(.isHidden)
+                            peerStatusSettings = PeerStatusSettings()
+                            peerStatusSettings.insert(.isHidden)
                         } else {
-                            peerContactSettings = PeerContactSettings()
-                            peerContactSettings.insert(.canReport)
+                            peerStatusSettings = PeerStatusSettings()
+                            peerStatusSettings.insert(.canReport)
                         }
                     } else {
-                        peerContactSettings = PeerContactSettings()
-                        peerContactSettings.insert(.isHidden)
+                        peerStatusSettings = PeerStatusSettings()
+                        peerStatusSettings.insert(.isHidden)
                     }
                     
                     transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
                         if let current = current as? CachedSecretChatData {
-                            return current.withUpdatedPeerContactSettings(peerContactSettings)
+                            return current.withUpdatedPeerStatusSettings(peerStatusSettings)
                         } else {
-                            return CachedSecretChatData(peerContactSettings: peerContactSettings)
+                            return CachedSecretChatData(peerStatusSettings: peerStatusSettings)
                         }
                     })
                 }
@@ -58,7 +58,7 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
                 return network.request(Api.functions.messages.getPeerSettings(peer: inputPeer))
                 |> retryRequest
                 |> mapToSignal { peerSettings -> Signal<Void, NoError> in
-                    let peerContactSettings = PeerContactSettings(apiSettings: peerSettings)
+                    let peerStatusSettings = PeerStatusSettings(apiSettings: peerSettings)
                     
                     return postbox.transaction { transaction -> Void in
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
@@ -70,7 +70,7 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
                                     } else {
                                         previous = CachedUserData()
                                     }
-                                    return previous.withUpdatedPeerContactSettings(peerContactSettings)
+                                    return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
                                 case Namespaces.Peer.CloudGroup:
                                     let previous: CachedGroupData
                                     if let current = current as? CachedGroupData {
@@ -78,7 +78,7 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
                                     } else {
                                         previous = CachedGroupData()
                                     }
-                                    return previous.withUpdatedPeerContactSettings(peerContactSettings)
+                                    return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
                                 case Namespaces.Peer.CloudChannel:
                                     let previous: CachedChannelData
                                     if let current = current as? CachedChannelData {
@@ -86,7 +86,7 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
                                     } else {
                                         previous = CachedChannelData()
                                     }
-                                    return previous.withUpdatedPeerContactSettings(peerContactSettings)
+                                    return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
                                 default:
                                     break
                             }
@@ -138,9 +138,9 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                     let canPinMessages = (userFull.flags & (1 << 7)) != 0
                                     let pinnedMessageId = userFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                                     
-                                    let peerContactSettings = PeerContactSettings(apiSettings: userFull.settings)
+                                    let peerStatusSettings = PeerStatusSettings(apiSettings: userFull.settings)
                                 
-                                    return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerContactSettings(peerContactSettings).withUpdatedPinnedMessageId(pinnedMessageId)
+                                    return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId)
                             }
                         })
                     }
