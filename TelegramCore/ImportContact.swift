@@ -45,41 +45,51 @@ public enum AddContactError {
 }
 
 public func addContactInteractively(account: Account, peer: Peer, firstName: String, lastName: String, phoneNumber: String) -> Signal<Never, AddContactError> {
-    guard let inputUser = apiInputUser(peer) else {
-        return .fail(.generic)
-    }
-    return account.network.request(Api.functions.contacts.addContact(id: inputUser, firstName: firstName, lastName: lastName, phone: phoneNumber))
-    |> mapError { _ -> AddContactError in
-        return .generic
-    }
-    |> mapToSignal { result -> Signal<Never, AddContactError> in
-        return account.postbox.transaction { transaction -> Void in
-            var peers: [Peer] = []
-            switch result {
-                case let .updates(_, users, _, _, _):
-                    for user in users {
-                        peers.append(TelegramUser(user: user))
-                    }
-                case let .updatesCombined(_, users, _, _, _, _):
-                    for user in users {
-                        peers.append(TelegramUser(user: user))
-                    }
-                default:
-                    break
-            }
-            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                return updated
-            })
-            var peerIds = transaction.getContactPeerIds()
-            if !peerIds.contains(peer.id) {
-                peerIds.insert(peer.id)
-                transaction.replaceContactPeerIds(peerIds)
-            }
-            
-            account.stateManager.addUpdates(result)
+    return account.postbox.transaction { transaction -> (Api.InputUser, String)? in
+        if let user = transaction.getPeer(peer.id) as? TelegramUser, let inputUser = apiInputUser(user) {
+            return (inputUser, user.phone == nil ? phoneNumber : "")
+        } else {
+            return nil
         }
-        |> introduceError(AddContactError.self)
-        |> ignoreValues
+    }
+    |> introduceError(AddContactError.self)
+    |> mapToSignal { inputUserAndPhone in
+        guard let (inputUser, phone) = inputUserAndPhone else {
+            return .fail(.generic)
+        }
+        return account.network.request(Api.functions.contacts.addContact(id: inputUser, firstName: firstName, lastName: lastName, phone: phone))
+        |> mapError { _ -> AddContactError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, AddContactError> in
+            return account.postbox.transaction { transaction -> Void in
+                var peers: [Peer] = []
+                switch result {
+                    case let .updates(_, users, _, _, _):
+                        for user in users {
+                            peers.append(TelegramUser(user: user))
+                        }
+                    case let .updatesCombined(_, users, _, _, _, _):
+                        for user in users {
+                            peers.append(TelegramUser(user: user))
+                        }
+                    default:
+                        break
+                }
+                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                    return updated
+                })
+                var peerIds = transaction.getContactPeerIds()
+                if !peerIds.contains(peer.id) {
+                    peerIds.insert(peer.id)
+                    transaction.replaceContactPeerIds(peerIds)
+                }
+                
+                account.stateManager.addUpdates(result)
+            }
+            |> introduceError(AddContactError.self)
+            |> ignoreValues
+        }
     }
 }
 

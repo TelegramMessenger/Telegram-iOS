@@ -1355,6 +1355,7 @@ public class Account {
         self.stateManager.reset()
         self.restartContactManagement()
         self.managedStickerPacksDisposable.set(manageStickerPacks(network: self.network, postbox: self.postbox).start())
+        self.viewTracker.reset()
         if !self.supplementary {
             self.viewTracker.chatHistoryPreloadManager.start()
         }

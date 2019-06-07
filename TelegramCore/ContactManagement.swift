@@ -152,15 +152,15 @@ public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> 
                 return .single(nil)
             }
             |> mapToSignal { updates -> Signal<Void, NoError> in
+                if let updates = updates {
+                    account.stateManager.addUpdates(updates)
+                }
                 return account.postbox.transaction { transaction -> Void in
                     var peerIds = transaction.getContactPeerIds()
                     if peerIds.contains(peerId) {
                         peerIds.remove(peerId)
                         transaction.replaceContactPeerIds(peerIds)
                     }
-                }
-                if let updates = updates {
-                    account.stateManager.addUpdates(updates)
                 }
             }
         } else {

@@ -306,6 +306,12 @@ public final class AccountViewTracker {
         self.externallyUpdatedPeerIdDisposable.dispose()
     }
     
+    func reset() {
+        self.queue.async {
+            self.cachedDataContexts.removeAll()
+        }
+    }
+    
     private func updatePendingWebpages(viewId: Int32, messageIds: Set<MessageId>, localWebpages: [MessageId: (MediaId, String)]) {
         self.queue.async {
             var addedMessageIds: [MessageId] = []
