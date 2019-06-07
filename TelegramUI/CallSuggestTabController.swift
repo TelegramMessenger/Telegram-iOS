@@ -8,139 +8,6 @@ import TelegramCore
 
 private func generateIconImage(theme: AlertControllerTheme) -> UIImage? {
     return UIImage(bundleImageName: "Call List/AlertIcon")
-//    return generateImage(frame.size, contextGenerator: { size, context in
-//        let bounds = CGRect(origin: CGPoint(), size: size)
-//        context.clear(bounds)
-//
-//        let relativeFrame = CGRect(x: -frame.minX, y: frame.minY - background.size.height + frame.size.height
-//            , width: background.size.width, height: background.size.height)
-//
-//        context.beginPath()
-//        context.addEllipse(in: bounds)
-//        context.clip()
-//
-//        context.setAlpha(0.8)
-//        context.draw(background.foregroundImage.cgImage!, in: relativeFrame)
-//
-//        if highlighted {
-//            context.setFillColor(UIColor(white: 1.0, alpha: 0.65).cgColor)
-//            context.fillEllipse(in: bounds)
-//        }
-//
-//        context.setAlpha(1.0)
-//        context.textMatrix = .identity
-//
-//        let titleFont: UIFont
-//        let subtitleFont: UIFont
-//        let titleOffset: CGFloat
-//        let subtitleOffset: CGFloat
-//        if size.width > 80.0 {
-//            titleFont = largeTitleFont
-//            subtitleFont = largeSubtitleFont
-//            if subtitle.isEmpty {
-//                titleOffset = -18.0
-//            } else {
-//                titleOffset = -11.0
-//            }
-//            subtitleOffset = -54.0
-//        } else {
-//            titleFont = regularTitleFont
-//            subtitleFont = regularSubtitleFont
-//            if subtitle.isEmpty {
-//                titleOffset = -17.0
-//            } else {
-//                titleOffset = -10.0
-//            }
-//            subtitleOffset = -48.0
-//        }
-//
-//        let titlePath = CGMutablePath()
-//        titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: titleOffset))
-//        let titleString = NSAttributedString(string: title, font: titleFont, textColor: .white, paragraphAlignment: .center)
-//        let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
-//        let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
-//        CTFrameDraw(titleFrame, context)
-//
-//        if !subtitle.isEmpty {
-//            let subtitlePath = CGMutablePath()
-//            subtitlePath.addRect(bounds.offsetBy(dx: 0.0, dy: subtitleOffset))
-//            let subtitleString = NSAttributedString(string: subtitle, font: subtitleFont, textColor: .white, paragraphAlignment: .center)
-//            let subtitleFramesetter = CTFramesetterCreateWithAttributedString(subtitleString as CFAttributedString)
-//            let subtitleFrame = CTFramesetterCreateFrame(subtitleFramesetter, CFRangeMake(0, subtitleString.length), subtitlePath, nil)
-//            CTFrameDraw(subtitleFrame, context)
-//        }
-//    })
-}
-
-private final class CallSuggestTabContentActionNode: HighlightableButtonNode {
-    private let backgroundNode: ASDisplayNode
-    
-    let action: TextAlertAction
-    
-    init(theme: AlertControllerTheme, action: TextAlertAction) {
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.alpha = 0.0
-        
-        self.action = action
-        
-        super.init()
-        
-        self.titleNode.maximumNumberOfLines = 2
-        
-        self.highligthedChanged = { [weak self] value in
-            if let strongSelf = self {
-                if value {
-                    if strongSelf.backgroundNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                    }
-                    strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.backgroundNode.alpha = 1.0
-                } else if !strongSelf.backgroundNode.alpha.isZero {
-                    strongSelf.backgroundNode.alpha = 0.0
-                    strongSelf.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
-                }
-            }
-        }
-        
-        self.updateTheme(theme)
-    }
-    
-    func updateTheme(_ theme: AlertControllerTheme) {
-        self.backgroundNode.backgroundColor = theme.highlightedItemColor
-        
-        var font = Font.regular(17.0)
-        var color = theme.accentColor
-        switch self.action.type {
-            case .defaultAction, .genericAction:
-                break
-            case .destructiveAction:
-                color = theme.destructiveColor
-        }
-        switch self.action.type {
-            case .defaultAction:
-                font = Font.semibold(17.0)
-            case .destructiveAction, .genericAction:
-                break
-        }
-        self.setAttributedTitle(NSAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
-    }
-    
-    @objc func pressed() {
-        self.action.action()
-    }
-    
-    override func layout() {
-        super.layout()
-        
-        self.backgroundNode.frame = self.bounds
-    }
 }
 
 private final class CallSuggestTabAlertContentNode: AlertContentNode {
@@ -151,7 +18,7 @@ private final class CallSuggestTabAlertContentNode: AlertContentNode {
     private let iconNode: ASImageNode
     
     private let actionNodesSeparator: ASDisplayNode
-    private let actionNodes: [CallSuggestTabContentActionNode]
+    private let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
     
     private var validLayout: CGSize?
@@ -174,8 +41,8 @@ private final class CallSuggestTabAlertContentNode: AlertContentNode {
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
         
-        self.actionNodes = actions.map { action -> CallSuggestTabContentActionNode in
-            return CallSuggestTabContentActionNode(theme: theme, action: action)
+        self.actionNodes = actions.map { action -> TextAlertContentActionNode in
+            return TextAlertContentActionNode(theme: theme, action: action)
         }
         
         var actionVerticalSeparators: [ASDisplayNode] = []

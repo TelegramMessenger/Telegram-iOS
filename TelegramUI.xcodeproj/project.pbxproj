@@ -16,6 +16,11 @@
 		090E63E62195880F00E3C035 /* ContactAddItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63E52195880F00E3C035 /* ContactAddItem.swift */; };
 		090E63EE2196FE3A00E3C035 /* OpenAddContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */; };
 		090E777922A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E777822A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift */; };
+		090E778622A9B95A00CD99F5 /* PeopleNearbyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E778522A9B95A00CD99F5 /* PeopleNearbyController.swift */; };
+		090E778822A9B96100CD99F5 /* PeopleNearbyHeaderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E778722A9B96000CD99F5 /* PeopleNearbyHeaderItem.swift */; };
+		090E778A22A9F23C00CD99F5 /* ChannelOwnershipTransferController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E778922A9F23C00CD99F5 /* ChannelOwnershipTransferController.swift */; };
+		090E778C22AA842300CD99F5 /* anim_success.json in Resources */ = {isa = PBXBuildFile; fileRef = 090E778B22AA842200CD99F5 /* anim_success.json */; };
+		090E778E22AA863A00CD99F5 /* PeopleNearbyIconNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E778D22AA863A00CD99F5 /* PeopleNearbyIconNode.swift */; };
 		0910B0ED21FA178C00F8F87D /* WallpaperPreviewMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0EC21FA178C00F8F87D /* WallpaperPreviewMedia.swift */; };
 		0910B0EF21FA532D00F8F87D /* WallpaperResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */; };
 		0910B0F121FB3DE100F8F87D /* WallpaperPatternPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0F021FB3DE100F8F87D /* WallpaperPatternPanelNode.swift */; };
@@ -1218,6 +1223,11 @@
 		090E63E52195880F00E3C035 /* ContactAddItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactAddItem.swift; sourceTree = "<group>"; };
 		090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAddContact.swift; sourceTree = "<group>"; };
 		090E777822A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsThemeItem.swift; sourceTree = "<group>"; };
+		090E778522A9B95A00CD99F5 /* PeopleNearbyController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeopleNearbyController.swift; sourceTree = "<group>"; };
+		090E778722A9B96000CD99F5 /* PeopleNearbyHeaderItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeopleNearbyHeaderItem.swift; sourceTree = "<group>"; };
+		090E778922A9F23C00CD99F5 /* ChannelOwnershipTransferController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelOwnershipTransferController.swift; sourceTree = "<group>"; };
+		090E778B22AA842200CD99F5 /* anim_success.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_success.json; sourceTree = "<group>"; };
+		090E778D22AA863A00CD99F5 /* PeopleNearbyIconNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleNearbyIconNode.swift; sourceTree = "<group>"; };
 		0910B0EC21FA178C00F8F87D /* WallpaperPreviewMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperPreviewMedia.swift; sourceTree = "<group>"; };
 		0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperResources.swift; sourceTree = "<group>"; };
 		0910B0F021FB3DE100F8F87D /* WallpaperPatternPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperPatternPanelNode.swift; sourceTree = "<group>"; };
@@ -2544,6 +2554,16 @@
 			name = "Language Suggestion";
 			sourceTree = "<group>";
 		};
+		090E778422A9B94700CD99F5 /* People Nearby */ = {
+			isa = PBXGroup;
+			children = (
+				090E778522A9B95A00CD99F5 /* PeopleNearbyController.swift */,
+				090E778722A9B96000CD99F5 /* PeopleNearbyHeaderItem.swift */,
+				090E778D22AA863A00CD99F5 /* PeopleNearbyIconNode.swift */,
+			);
+			name = "People Nearby";
+			sourceTree = "<group>";
+		};
 		0919546D229458E900E11046 /* Animated Stickers */ = {
 			isa = PBXGroup;
 			children = (
@@ -2568,6 +2588,7 @@
 		09310D13213BC5DE0020033A /* Animations */ = {
 			isa = PBXGroup;
 			children = (
+				090E778B22AA842200CD99F5 /* anim_success.json */,
 				09FFBCCF227B7F9000C33B4B /* anim_archiveswipe.json */,
 				094735182277483B00EA2312 /* anim_infotip.json */,
 				094735072275D72000EA2312 /* anim_archive.json */,
@@ -4482,6 +4503,7 @@
 				D0E1199D229809B6008CAE3A /* ChannelDiscussionGroupActionSheetItem.swift */,
 				D050A463229C052A0044F11A /* ChannelDiscussionGroupSetupSearchItem.swift */,
 				D050A465229C06460044F11A /* ChannelDiscussionGroupSearchContainerNode.swift */,
+				090E778922A9F23C00CD99F5 /* ChannelOwnershipTransferController.swift */,
 			);
 			name = "Peer Info";
 			sourceTree = "<group>";
@@ -4669,6 +4691,7 @@
 				0941A99E210B053300EBE194 /* Open In */,
 				09F215982263E61400AEDF6D /* Passcode */,
 				09B4EE5721A82F5900847FA6 /* Permissions */,
+				090E778422A9B94700CD99F5 /* People Nearby */,
 			);
 			name = Controllers;
 			sourceTree = "<group>";
@@ -5284,6 +5307,7 @@
 				09874E5721078FA100E190B8 /* YoutubeUserScript.js in Resources */,
 				094735172275D72100EA2312 /* anim_pin.json in Resources */,
 				094735112275D72100EA2312 /* anim_archive.json in Resources */,
+				090E778C22AA842300CD99F5 /* anim_success.json in Resources */,
 				D0EB42051F3143AB00838FE6 /* LegacyComponentsResources.bundle in Resources */,
 				D0E9BAA21F056F4C00F079A4 /* stp_card_discover@3x.png in Resources */,
 				D0E9BAB01F056F4C00F079A4 /* stp_card_mastercard@3x.png in Resources */,
@@ -5380,6 +5404,7 @@
 				D0E1199A2297F9C6008CAE3A /* ChannelDiscussionGroupSetupController.swift in Sources */,
 				D083491C209361DC008CFD52 /* AvatarGalleryItemFooterContentNode.swift in Sources */,
 				D0EC6CB31EB9F58800EBF1C3 /* shader.c in Sources */,
+				090E778A22A9F23C00CD99F5 /* ChannelOwnershipTransferController.swift in Sources */,
 				D06E4C352134AE3C00088087 /* ThemeAutoNightSettingsController.swift in Sources */,
 				D0F0AAE21EC20EF8005EE2A5 /* CallControllerStatusNode.swift in Sources */,
 				D0EC6CB41EB9F58800EBF1C3 /* timing.c in Sources */,
@@ -5528,6 +5553,7 @@
 				D0EC6CF31EB9F58800EBF1C3 /* PresentationThemeSettings.swift in Sources */,
 				D067B4AD211C916300796039 /* TGChannelIntroController.m in Sources */,
 				D0BE303220601FFC00FBE6D8 /* LocationBroadcastActionSheetItem.swift in Sources */,
+				090E778E22AA863A00CD99F5 /* PeopleNearbyIconNode.swift in Sources */,
 				D0EC6CF41EB9F58800EBF1C3 /* ManagedMediaId.swift in Sources */,
 				09D968A3221F800A00B1458A /* ChatUploadingActivityContentNode.swift in Sources */,
 				D0CFBB971FD8B0F700B65C0D /* ChatBubbleInstantVideoDecoration.swift in Sources */,
@@ -5536,6 +5562,7 @@
 				D0E9BA521F0559DA00F079A4 /* STPImageLibrary.m in Sources */,
 				D0EC6CF61EB9F58800EBF1C3 /* ChatContextResultManagedMediaId.swift in Sources */,
 				D048B33B203C777500038D05 /* RenderedTotalUnreadCount.swift in Sources */,
+				090E778622A9B95A00CD99F5 /* PeopleNearbyController.swift in Sources */,
 				D04ECD721FFBF22B00DE9029 /* OpenUrl.swift in Sources */,
 				D04B4D661EEA993A00711AF6 /* LegacyLocationController.swift in Sources */,
 				D056CD7A1FF3CC2A00880D28 /* ListMessagePlaybackOverlayNode.swift in Sources */,
@@ -6387,6 +6414,7 @@
 				D0EC6E801EB9F58900EBF1C3 /* ChangePhoneNumberCodeController.swift in Sources */,
 				D09E637C1F0E7C28003444CD /* SharedMediaPlayer.swift in Sources */,
 				D0EC6E811EB9F58900EBF1C3 /* NotificationContainerController.swift in Sources */,
+				090E778822A9B96100CD99F5 /* PeopleNearbyHeaderItem.swift in Sources */,
 				D0754D271EEE10C800884F6E /* BotCheckoutController.swift in Sources */,
 				D053DADA201A4C4400993D32 /* ChatTextInputAttributes.swift in Sources */,
 				0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */,

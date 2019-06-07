@@ -6,77 +6,6 @@ import Display
 import Postbox
 import TelegramCore
 
-private final class ChatMessageActionUrlAuthContentActionNode: HighlightableButtonNode {
-    private let backgroundNode: ASDisplayNode
-    
-    let action: TextAlertAction
-    
-    init(theme: AlertControllerTheme, action: TextAlertAction) {
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.alpha = 0.0
-        
-        self.action = action
-        
-        super.init()
-        
-        self.titleNode.maximumNumberOfLines = 2
-        
-        self.highligthedChanged = { [weak self] value in
-            if let strongSelf = self {
-                if value {
-                    if strongSelf.backgroundNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                    }
-                    strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.backgroundNode.alpha = 1.0
-                } else if !strongSelf.backgroundNode.alpha.isZero {
-                    strongSelf.backgroundNode.alpha = 0.0
-                    strongSelf.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
-                }
-            }
-        }
-        
-        self.updateTheme(theme)
-    }
-    
-    func updateTheme(_ theme: AlertControllerTheme) {
-        self.backgroundNode.backgroundColor = theme.highlightedItemColor
-        
-        var font = Font.regular(17.0)
-        var color = theme.accentColor
-        switch self.action.type {
-        case .defaultAction, .genericAction:
-            break
-        case .destructiveAction:
-            color = theme.destructiveColor
-        }
-        switch self.action.type {
-        case .defaultAction:
-            font = Font.semibold(17.0)
-        case .destructiveAction, .genericAction:
-            break
-        }
-        self.setAttributedTitle(NSAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
-    }
-    
-    @objc func pressed() {
-        self.action.action()
-    }
-    
-    override func layout() {
-        super.layout()
-        
-        self.backgroundNode.frame = self.bounds
-    }
-}
-
 private let textFont = Font.regular(13.0)
 private let boldTextFont = Font.semibold(13.0)
 
@@ -99,7 +28,7 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
     private let allowWriteLabelNode: ASTextNode
     
     private let actionNodesSeparator: ASDisplayNode
-    private let actionNodes: [ChatMessageActionUrlAuthContentActionNode]
+    private let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
     
     private var validLayout: CGSize?
@@ -154,8 +83,8 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
         
-        self.actionNodes = actions.map { action -> ChatMessageActionUrlAuthContentActionNode in
-            return ChatMessageActionUrlAuthContentActionNode(theme: theme, action: action)
+        self.actionNodes = actions.map { action -> TextAlertContentActionNode in
+            return TextAlertContentActionNode(theme: theme, action: action)
         }
         
         var actionVerticalSeparators: [ASDisplayNode] = []

@@ -1,30 +1,29 @@
 import Foundation
 import UIKit
-import SwiftSignalKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
+private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
     private let backgroundNode: ASImageNode
-    private let textInputNode: EditableTextNode
+    private let textInputNode: TextFieldNode
     private let placeholderNode: ASTextNode
     
-    var updateHeight: (() -> Void)?
     var complete: (() -> Void)?
     var textChanged: ((String) -> Void)?
     
-    private let backgroundInsets = UIEdgeInsets(top: 8.0, left: 16.0, bottom: 15.0, right: 16.0)
-    private let inputInsets = UIEdgeInsets(top: 5.0, left: 12.0, bottom: 5.0, right: 12.0)
+    private let backgroundInsets = UIEdgeInsets(top: 8.0, left: 22.0, bottom: 15.0, right: 22.0)
+    private let inputInsets = UIEdgeInsets(top: 5.0, left: 11.0, bottom: 5.0, right: 11.0)
     
-    var text: String {
+    var password: String {
         get {
-            return self.textInputNode.attributedText?.string ?? ""
+            return self.textInputNode.textField.text ?? ""
         }
         set {
-            self.textInputNode.attributedText = NSAttributedString(string: newValue, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputTextColor)
+            self.textInputNode.textField.text = newValue
             self.placeholderNode.isHidden = !newValue.isEmpty
         }
     }
@@ -42,46 +41,52 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 16.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: UIScreenPixel)
         
-        self.textInputNode = EditableTextNode()
-        self.textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: theme.actionSheet.inputTextColor]
-        self.textInputNode.clipsToBounds = true
-        self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
-        self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
-        self.textInputNode.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
-        self.textInputNode.keyboardType = .URL
-        self.textInputNode.autocapitalizationType = .none
-        self.textInputNode.returnKeyType = .done
-        self.textInputNode.autocorrectionType = .no
-        
+        self.textInputNode = TextFieldNode()
+
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.displaysAsynchronously = false
-        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
+        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         
         super.init()
-        
-        self.textInputNode.delegate = self
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.textInputNode)
         self.addSubnode(self.placeholderNode)
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.textInputNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(14.0), NSAttributedStringKey.foregroundColor.rawValue: self.theme.actionSheet.inputTextColor]
+        self.textInputNode.textField.font = Font.regular(14.0)
+        self.textInputNode.textField.textColor = self.theme.list.itemPrimaryTextColor
+        self.textInputNode.textField.isSecureTextEntry = true
+        self.textInputNode.textField.returnKeyType = .done
+        self.textInputNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textInputNode.clipsToBounds = true
+        self.textInputNode.textField.delegate = self
+        self.textInputNode.textField.addTarget(self, action: #selector(self.textFieldTextChanged(_:)), for: .editingChanged)
+        self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
+    }
+    
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
         
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
-        self.textInputNode.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
-        self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 16.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: UIScreenPixel)
+        self.textInputNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textInputNode.textField.textColor = theme.list.itemPrimaryTextColor
+        self.textInputNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(14.0), NSAttributedStringKey.foregroundColor.rawValue: theme.actionSheet.inputTextColor]
+        self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(14.0), textColor: theme.actionSheet.inputPlaceholderColor)
     }
     
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let backgroundInsets = self.backgroundInsets
         let inputInsets = self.inputInsets
         
-        let textFieldHeight = self.calculateTextFieldMetrics(width: width)
+        let textFieldHeight: CGFloat = 30.0
         let panelHeight = textFieldHeight + backgroundInsets.top + backgroundInsets.bottom
         
         let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: width - backgroundInsets.left - backgroundInsets.right, height: panelHeight - backgroundInsets.top - backgroundInsets.bottom))
@@ -104,52 +109,31 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
     }
     
     @objc func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
-        self.updateTextNodeText(animated: true)
         self.textChanged?(editableTextNode.textView.text)
         self.placeholderNode.isHidden = !(editableTextNode.textView.text ?? "").isEmpty
     }
     
-    func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
-        if text == "\n" {
+    @objc func textFieldTextChanged(_ textField: UITextField) {
+        let text = textField.text ?? ""
+        self.textChanged?(text)
+        self.placeholderNode.isHidden = !text.isEmpty
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if string == "\n" {
             self.complete?()
             return false
         }
         return true
     }
-    
-    private func calculateTextFieldMetrics(width: CGFloat) -> CGFloat {
-        let backgroundInsets = self.backgroundInsets
-        let inputInsets = self.inputInsets
-        
-        let unboundTextFieldHeight = max(33.0, ceil(self.textInputNode.measure(CGSize(width: width - backgroundInsets.left - backgroundInsets.right - inputInsets.left - inputInsets.right, height: CGFloat.greatestFiniteMagnitude)).height))
-        
-        return min(61.0, max(33.0, unboundTextFieldHeight))
-    }
-    
-    private func updateTextNodeText(animated: Bool) {
-        let backgroundInsets = self.backgroundInsets
-        
-        let textFieldHeight = self.calculateTextFieldMetrics(width: self.bounds.size.width)
-        
-        let panelHeight = textFieldHeight + backgroundInsets.top + backgroundInsets.bottom
-        if !self.bounds.size.height.isEqual(to: panelHeight) {
-            self.updateHeight?()
-        }
-    }
-    
-    @objc func clearPressed() {
-        self.textInputNode.attributedText = nil
-        self.deactivateInput()
-    }
 }
 
-private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
+private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
-    private let text: String
     
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
-    let inputFieldNode: ChatTextLinkEditInputFieldNode
+    let inputFieldNode: ChannelOwnershipTransferPasswordFieldNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -171,17 +155,15 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, link: String?) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction]) {
         self.strings = strings
-        self.text = text
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 2
         
-        self.inputFieldNode = ChatTextLinkEditInputFieldNode(theme: ptheme, placeholder: strings.TextFormat_AddLinkPlaceholder)
-        self.inputFieldNode.text = link ?? ""
+        self.inputFieldNode = ChannelOwnershipTransferPasswordFieldNode(theme: ptheme, placeholder: strings.Channel_OwnershipTransfer_PasswordPlaceholder)
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -206,24 +188,16 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         self.addSubnode(self.textNode)
         
         self.addSubnode(self.inputFieldNode)
-
+        
         self.addSubnode(self.actionNodesSeparator)
         
         for actionNode in self.actionNodes {
             self.addSubnode(actionNode)
         }
-        self.actionNodes.last?.actionEnabled = !(link ?? "").isEmpty
+        self.actionNodes.last?.actionEnabled = false
         
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
-        }
-        
-        self.inputFieldNode.updateHeight = { [weak self] in
-            if let strongSelf = self {
-                if let _ = strongSelf.validLayout {
-                    strongSelf.requestLayout?(.animated(duration: 0.15, curve: .spring))
-                }
-            }
         }
         
         self.inputFieldNode.textChanged = { [weak self] text in
@@ -239,14 +213,18 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         self.disposable.dispose()
     }
     
-    var link: String {
-        return self.inputFieldNode.text
+    func dismissInput() {
+        self.inputFieldNode.deactivateInput()
     }
-
+    
+    var password: String {
+        return self.inputFieldNode.password
+    }
+    
     override func updateTheme(_ theme: AlertControllerTheme) {
-        self.titleNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.textNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkText(self.text).0, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-
+        self.titleNode.attributedText = NSAttributedString(string: self.strings.Channel_OwnershipTransfer_EnterPassword, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: self.strings.Channel_OwnershipTransfer_EnterPasswordText, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
             actionNode.updateTheme(theme)
@@ -341,14 +319,14 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
             
             let currentActionWidth: CGFloat
             switch effectiveActionLayout {
-                case .horizontal:
-                    if nodeIndex == self.actionNodes.count - 1 {
-                        currentActionWidth = resultSize.width - actionOffset
-                    } else {
-                        currentActionWidth = actionWidth
-                    }
-                case .vertical:
-                    currentActionWidth = resultSize.width
+            case .horizontal:
+                if nodeIndex == self.actionNodes.count - 1 {
+                    currentActionWidth = resultSize.width - actionOffset
+                } else {
+                    currentActionWidth = actionWidth
+                }
+            case .vertical:
+                currentActionWidth = resultSize.width
             }
             
             let actionNodeFrame: CGRect
@@ -379,53 +357,125 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     }
 }
 
-func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Account, text: String, link: String?, apply: @escaping (String?) -> Void) -> AlertController {
-    let presentationData = sharedContext.currentPresentationData.with { $0 }
+private func commitChannelOwnershipTransferController(context: AccountContext, channel: TelegramChannel, member: TelegramUser, completion: @escaping () -> Void) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     
-    var dismissImpl: ((Bool) -> Void)?
-    var applyImpl: (() -> Void)?
+    var dismissImpl: (() -> Void)?
+    var proceedImpl: (() -> Void)?
     
-    let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-        dismissImpl?(true)
-        apply(nil)
+    let disposable = MetaDisposable()
+    
+    let contentNode = ChannelOwnershipTransferAlertContentNode(theme: AlertControllerTheme(presentationTheme: presentationData.theme), ptheme: presentationData.theme, strings: presentationData.strings, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+        dismissImpl?()
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Done, action: {
-        applyImpl?()
-    })]
-    
-    let contentNode = ChatTextLinkEditAlertContentNode(theme: AlertControllerTheme(presentationTheme: presentationData.theme), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, text: text, link: link)
-    contentNode.complete = {
-        applyImpl?()
-    }
-    applyImpl = { [weak contentNode] in
-        guard let contentNode = contentNode else {
-            return
-        }
-        var updatedLink = contentNode.link
-        if !updatedLink.hasPrefix("http") && !updatedLink.hasPrefix("https") {
-            updatedLink = "http://\(updatedLink)"
-        }
-        if !updatedLink.isEmpty && isValidUrl(updatedLink) {
-            dismissImpl?(true)
-            apply(updatedLink)
-        } else {
-            contentNode.animateError()
-        }
-    }
+        proceedImpl?()
+    })])
     
     let controller = AlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), contentNode: contentNode)
-    let presentationDataDisposable = sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
+    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
         controller?.theme = AlertControllerTheme(presentationTheme: presentationData.theme)
         contentNode?.inputFieldNode.updateTheme(presentationData.theme)
     })
     controller.dismissed = {
         presentationDataDisposable.dispose()
+        disposable.dispose()
     }
-    dismissImpl = { [weak controller] animated in
-        if animated {
-            controller?.dismissAnimated()
-        } else {
-            controller?.dismiss()
+    dismissImpl = { [weak controller, weak contentNode] in
+        contentNode?.dismissInput()
+        controller?.dismissAnimated()
+    }
+    proceedImpl = { [weak contentNode] in
+        guard let contentNode = contentNode else {
+            return
         }
+        disposable.set((updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: channel.id, memberId: member.id, password: contentNode.password) |> deliverOnMainQueue).start(error: { [weak contentNode] error in
+            contentNode?.animateError()
+        }, completed: {
+            dismissImpl?()
+            completion()
+        }))
+    }
+    return controller
+}
+
+private func confirmChannelOwnershipTransferController(context: AccountContext, channel: TelegramChannel, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping () -> Void) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    let theme = AlertControllerTheme(presentationTheme: presentationData.theme)
+    
+    var title: String
+    var text: String
+    if case .group = channel.info {
+        title = presentationData.strings.Group_OwnershipTransfer_Title
+        text = presentationData.strings.Group_OwnershipTransfer_DescriptionInfo(channel.displayTitle, member.displayTitle).0
+    } else {
+        title = presentationData.strings.Channel_OwnershipTransfer_Title
+        text = presentationData.strings.Channel_OwnershipTransfer_DescriptionInfo(channel.displayTitle, member.displayTitle).0
+    }
+    
+    let attributedTitle = NSAttributedString(string: title, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+    let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor)
+    let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
+    let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
+    
+    var dismissImpl: (() -> Void)?
+    
+    let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Channel_OwnershipTransfer_ChangeOwner, action: {
+        dismissImpl?()
+        present(commitChannelOwnershipTransferController(context: context, channel: channel, member: member, completion: completion), nil)
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+        dismissImpl?()
+    })], actionLayout: .vertical)
+    dismissImpl = { [weak controller] in
+        controller?.dismissAnimated()
+    }
+    return controller
+}
+
+func channelOwnershipTransferController(context: AccountContext, channel: TelegramChannel, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping () -> Void) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    let theme = AlertControllerTheme(presentationTheme: presentationData.theme)
+    
+    var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+    
+    var text = presentationData.strings.OwnershipTransfer_SecurityRequirements
+    
+    var dismissImpl: (() -> Void)?
+    var actions: [TextAlertAction] = []
+    
+    switch initialError {
+        case .requestPassword:
+            return confirmChannelOwnershipTransferController(context: context, channel: channel, member: member, present: present, completion: completion)
+        case .twoStepAuthTooFresh, .authSessionTooFresh:
+            text = text + presentationData.strings.OwnershipTransfer_ComeBackLater
+            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                dismissImpl?()
+            })]
+        case .twoStepAuthMissing:
+            actions = [TextAlertAction(type: .genericAction, title: presentationData.strings.OwnershipTransfer_SetupTwoStepAuth, action: {
+                let controller = SetupTwoStepVerificationController(context: context, initialState: .automatic, stateUpdated: { update, shouldDismiss, controller in
+                    if shouldDismiss {
+                        controller.dismiss()
+                    }
+                })
+                present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                dismissImpl?()
+            })]
+        default:
+            title = nil
+            text = presentationData.strings.Login_UnknownError
+            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                dismissImpl?()
+            })]
+    }
+    
+    let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor)
+    let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
+    let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
+    
+    let controller = richTextAlertController(context: context, title: title, text: attributedText, actions: actions)
+    dismissImpl = { [weak controller] in
+        controller?.dismissAnimated()
     }
     return controller
 }

@@ -12,11 +12,6 @@ private final class SampleBufferLayerImpl: AVSampleBufferDisplayLayer {
     override func action(forKey event: String) -> CAAction? {
         return SampleBufferLayerImplNullAction()
     }
-    
-    deinit {
-        var bp:Int = 0
-        bp += 1
-    }
 }
 
 final class SampleBufferLayer {
