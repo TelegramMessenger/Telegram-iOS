@@ -53,6 +53,10 @@ private final class UpdatedWebpageSubscriberContext {
     let subscribers = Bag<(TelegramMediaWebpage) -> Void>()
 }
 
+private final class UpdatedPeersNearbySubscriberContext {
+    let subscribers = Bag<([PeerNearby]) -> Void>()
+}
+
 public final class AccountStateManager {
     private let queue = Queue()
     private let accountPeerId: PeerId
@@ -132,6 +136,7 @@ public final class AccountStateManager {
     }
     
     private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
+    private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
     
     private let delayNotificatonsUntil = Atomic<Int32?>(value: nil)
     private let appliedMaxMessageIdPromise = Promise<Int32?>(nil)
@@ -620,6 +625,9 @@ public final class AccountStateManager {
                             if !events.updatedWebpages.isEmpty {
                                 strongSelf.notifyUpdatedWebpages(events.updatedWebpages)
                             }
+                            if let updatedPeersNearby = events.updatedPeersNearby {
+                                strongSelf.notifyUpdatedPeersNearby(updatedPeersNearby)
+                            }
                             if !events.updatedCalls.isEmpty {
                                 for call in events.updatedCalls {
                                     strongSelf.callSessionManager.updateSession(call)
@@ -921,6 +929,33 @@ public final class AccountStateManager {
                 let _ = self.termsOfServiceUpdateValue.swap(updated)
                 self.termsOfServiceUpdatePromise.set(.single(updated))
             }
+        }
+    }
+    
+    public func updatedPeersNearby() -> Signal<[PeerNearby], NoError> {
+        let queue = self.queue
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+            queue.async {
+                if let strongSelf = self {
+                    let index = strongSelf.updatedPeersNearbyContext.subscribers.add({ peersNearby in
+                        subscriber.putNext(peersNearby)
+                    })
+                    
+                    disposable.set(ActionDisposable {
+                        if let strongSelf = self {
+                            strongSelf.updatedPeersNearbyContext.subscribers.remove(index)
+                        }
+                    })
+                }
+            }
+            return disposable
+        }
+    }
+    
+    private func notifyUpdatedPeersNearby(_ updatedPeersNearby: [PeerNearby]) {
+        for subscriber in self.updatedPeersNearbyContext.subscribers.copyItems() {
+            subscriber(updatedPeersNearby)
         }
     }
 }

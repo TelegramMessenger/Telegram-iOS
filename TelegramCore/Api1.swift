@@ -4005,6 +4005,7 @@ extension Api {
         case updateReadChannelInbox(flags: Int32, folderId: Int32?, channelId: Int32, maxId: Int32, stillUnreadCount: Int32, pts: Int32)
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
         case updatePeerSettings(peer: Api.Peer, settings: Api.PeerSettings)
+        case updateContactLocated(contacts: [Api.ContactLocated])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4604,6 +4605,16 @@ extension Api {
                     peer.serialize(buffer, true)
                     settings.serialize(buffer, true)
                     break
+                case .updateContactLocated(let contacts):
+                    if boxed {
+                        buffer.appendInt32(1602468195)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(contacts.count))
+                    for item in contacts {
+                        item.serialize(buffer, true)
+                    }
+                    break
     }
     }
     
@@ -4751,6 +4762,8 @@ extension Api {
                 return ("updateReadHistoryInbox", [("flags", flags), ("folderId", folderId), ("peer", peer), ("maxId", maxId), ("stillUnreadCount", stillUnreadCount), ("pts", pts), ("ptsCount", ptsCount)])
                 case .updatePeerSettings(let peer, let settings):
                 return ("updatePeerSettings", [("peer", peer), ("settings", settings)])
+                case .updateContactLocated(let contacts):
+                return ("updateContactLocated", [("contacts", contacts)])
     }
     }
     
@@ -5973,6 +5986,19 @@ extension Api {
                 return nil
             }
         }
+        static func parse_updateContactLocated(_ reader: BufferReader) -> Update? {
+            var _1: [Api.ContactLocated]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ContactLocated.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateContactLocated(contacts: _1!)
+            }
+            else {
+                return nil
+            }
+        }
     
     }
     enum PopularContact: TypeConstructorDescription {
@@ -6306,6 +6332,48 @@ extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Error.error(code: _1!, text: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    enum ContactLocated: TypeConstructorDescription {
+        case contactLocated(userId: Int32, expires: Int32, distance: Int32)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .contactLocated(let userId, let expires, let distance):
+                    if boxed {
+                        buffer.appendInt32(-1150339286)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    serializeInt32(distance, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .contactLocated(let userId, let expires, let distance):
+                return ("contactLocated", [("userId", userId), ("expires", expires), ("distance", distance)])
+    }
+    }
+    
+        static func parse_contactLocated(_ reader: BufferReader) -> ContactLocated? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ContactLocated.contactLocated(userId: _1!, expires: _2!, distance: _3!)
             }
             else {
                 return nil

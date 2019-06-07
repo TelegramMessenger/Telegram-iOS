@@ -234,6 +234,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[856380452] = { return Api.Update.parse_updateReadChannelInbox($0) }
     dict[-1667805217] = { return Api.Update.parse_updateReadHistoryInbox($0) }
     dict[1786671974] = { return Api.Update.parse_updatePeerSettings($0) }
+    dict[1602468195] = { return Api.Update.parse_updateContactLocated($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
@@ -246,6 +247,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-55902537] = { return Api.InputDialogPeer.parse_inputDialogPeer($0) }
     dict[1684014375] = { return Api.InputDialogPeer.parse_inputDialogPeerFolder($0) }
     dict[-994444869] = { return Api.Error.parse_error($0) }
+    dict[-1150339286] = { return Api.ContactLocated.parse_contactLocated($0) }
     dict[-1560655744] = { return Api.KeyboardButton.parse_keyboardButton($0) }
     dict[629866245] = { return Api.KeyboardButton.parse_keyboardButtonUrl($0) }
     dict[1748655686] = { return Api.KeyboardButton.parse_keyboardButtonCallback($0) }
@@ -926,6 +928,8 @@ struct Api {
             case let _1 as Api.InputDialogPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Error:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ContactLocated:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.KeyboardButton:
                 _1.serialize(buffer, boxed)
