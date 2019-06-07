@@ -109,8 +109,8 @@ public class NotificationExceptionsController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = NotificationExceptionsControllerNode(context: self.context, presentationData: self.presentationData, navigationBar: self.navigationBar!, mode: self.mode, updatedMode: self.updatedMode, requestActivateSearch: { [weak self] in
             self?.activateSearch()
-            }, requestDeactivateSearch: { [weak self] in
-                self?.deactivateSearch()
+            }, requestDeactivateSearch: { [weak self] animated in
+                self?.deactivateSearch(animated: animated)
             }, updateCanStartEditing: { [weak self] value in
                 guard let strongSelf = self else {
                     return
@@ -176,11 +176,11 @@ public class NotificationExceptionsController: ViewController {
         }
     }
     
-    private func deactivateSearch() {
+    private func deactivateSearch(animated: Bool) {
         if !self.displayNavigationBar {
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
             if let searchContentNode = self.searchContentNode {
-                self.controllerNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode)
+                self.controllerNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
             }
         }
     }

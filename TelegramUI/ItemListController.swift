@@ -150,6 +150,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, PresentableC
     private var didPlayPresentationAnimation = false
     private(set) var didAppearOnce = false
     var didAppear: ((Bool) -> Void)?
+    private var isDismissed = false
     
     var titleControlValueChanged: ((Int) -> Void)?
     
@@ -517,7 +518,10 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, PresentableC
     }
     
     override func dismiss(completion: (() -> Void)? = nil) {
-        (self.displayNode as! ItemListControllerNode<Entry>).animateOut(completion: completion)
+        if !self.isDismissed {
+            self.isDismissed = true
+            (self.displayNode as! ItemListControllerNode<Entry>).animateOut(completion: completion)
+        }
     }
     
     func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {

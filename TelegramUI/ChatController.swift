@@ -1502,11 +1502,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             var contactStatus: ChatContactStatus?
                             if let peer = peerView.peers[peerView.peerId] {
                                 if let cachedData = peerView.cachedData as? CachedUserData {
-                                    contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, peerContactSettings: cachedData.peerContactSettings)
+                                    contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, peerStatusSettings: cachedData.peerStatusSettings)
                                 } else if let cachedData = peerView.cachedData as? CachedGroupData {
-                                    contactStatus = ChatContactStatus(canAddContact: false, peerContactSettings: cachedData.peerContactSettings)
+                                    contactStatus = ChatContactStatus(canAddContact: false, peerStatusSettings: cachedData.peerStatusSettings)
                                 } else if let cachedData = peerView.cachedData as? CachedChannelData {
-                                    contactStatus = ChatContactStatus(canAddContact: false, peerContactSettings: cachedData.peerContactSettings)
+                                    contactStatus = ChatContactStatus(canAddContact: false, peerStatusSettings: cachedData.peerStatusSettings)
                                 }
                                 
                                 var peers = SimpleDictionary<PeerId, Peer>()
@@ -1559,26 +1559,26 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             }
                             
                             var didDisplayActionsPanel = false
-                            if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, let peerContactSettings = contactStatus.peerContactSettings {
-                                if !peerContactSettings.contains(.isHidden) {
+                            if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
+                                if !peerStatusSettings.contains(.isHidden) {
                                     if contactStatus.canAddContact {
                                         didDisplayActionsPanel = true
-                                    } else if peerContactSettings.contains(.canReport) {
+                                    } else if peerStatusSettings.contains(.canReport) {
                                         didDisplayActionsPanel = true
-                                    } else if peerContactSettings.contains(.canShareContact) {
+                                    } else if peerStatusSettings.contains(.canShareContact) {
                                         didDisplayActionsPanel = true
                                     }
                                 }
                             }
                             
                             var displayActionsPanel = false
-                            if let contactStatus = contactStatus, let peerContactSettings = contactStatus.peerContactSettings {
-                                if !peerContactSettings.contains(.isHidden) {
+                            if let contactStatus = contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
+                                if !peerStatusSettings.contains(.isHidden) {
                                     if contactStatus.canAddContact {
                                         displayActionsPanel = true
-                                    } else if peerContactSettings.contains(.canReport) {
+                                    } else if peerStatusSettings.contains(.canReport) {
                                         displayActionsPanel = true
-                                    } else if peerContactSettings.contains(.canShareContact) {
+                                    } else if peerStatusSettings.contains(.canShareContact) {
                                         displayActionsPanel = true
                                     }
                                 }
@@ -5950,7 +5950,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
-        self.editMessageDisposable.set((TelegramCore.dismissPeerContactOptions(account: self.context.account, peerId: peerId)
+        self.editMessageDisposable.set((TelegramCore.dismissPeerStatusOptions(account: self.context.account, peerId: peerId)
         |> afterDisposed({
             Queue.mainQueue().async {
             }

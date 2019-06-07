@@ -91,9 +91,10 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let toggleUpdated: ((Bool) -> Void)?
     let hasTopStripe: Bool
     let hasTopGroupInset: Bool
+    let noInsets: Bool
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
@@ -118,6 +119,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.toggleUpdated = toggleUpdated
         self.hasTopStripe = hasTopStripe
         self.hasTopGroupInset = hasTopGroupInset
+        self.noInsets = noInsets
         self.tag = tag
     }
     
@@ -476,10 +478,14 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
             if !item.hasTopGroupInset {
                 switch neighbors.top {
                 case .none:
-                    insets.top = 0
+                    insets.top = 0.0
                 default:
                     break
                 }
+            }
+            if item.noInsets {
+                insets.top = 0.0
+                insets.bottom = 0.0
             }
             let contentSize = CGSize(width: params.width, height: 50.0)
             let separatorHeight = UIScreenPixel

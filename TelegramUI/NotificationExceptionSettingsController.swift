@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 
 private enum NotificationPeerExceptionSection: Int32 {
+    case remove
     case switcher
     case displayPreviews
     case soundModern
@@ -19,6 +20,7 @@ private enum NotificationPeerExceptionSwitcher : Equatable {
 }
 
 private enum NotificationPeerExceptionEntryId : Hashable {
+    case remove
     case switcher(NotificationPeerExceptionSwitcher)
     case sound(PeerMessageSound)
     case switcherHeader
@@ -40,14 +42,16 @@ private final class NotificationPeerExceptionArguments  {
     let selectSound: (PeerMessageSound) -> Void
     let selectMode: (NotificationPeerExceptionSwitcher) -> Void
     let selectDisplayPreviews: (NotificationPeerExceptionSwitcher) -> Void
+    let removeFromExceptions: () -> Void
     let complete: () -> Void
     let cancel: () -> Void
     
-    init(account: Account, selectSound: @escaping(PeerMessageSound) -> Void, selectMode: @escaping(NotificationPeerExceptionSwitcher) -> Void, selectDisplayPreviews: @escaping (NotificationPeerExceptionSwitcher) -> Void, complete: @escaping()->Void, cancel: @escaping() -> Void) {
+    init(account: Account, selectSound: @escaping(PeerMessageSound) -> Void, selectMode: @escaping(NotificationPeerExceptionSwitcher) -> Void, selectDisplayPreviews: @escaping (NotificationPeerExceptionSwitcher) -> Void, removeFromExceptions: @escaping () -> Void, complete: @escaping()->Void, cancel: @escaping() -> Void) {
         self.account = account
         self.selectSound = selectSound
         self.selectMode = selectMode
         self.selectDisplayPreviews = selectDisplayPreviews
+        self.removeFromExceptions = removeFromExceptions
         self.complete = complete
         self.cancel = cancel
     }
@@ -55,9 +59,9 @@ private final class NotificationPeerExceptionArguments  {
 
 
 private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
-    
     typealias ItemGenerationArguments = NotificationPeerExceptionArguments
     
+    case remove(index:Int32, theme: PresentationTheme, strings: PresentationStrings)
     case switcher(index:Int32, theme: PresentationTheme, strings: PresentationStrings, mode: NotificationPeerExceptionSwitcher, selected: Bool)
     case switcherHeader(index:Int32, theme: PresentationTheme, title: String)
     case displayPreviews(index:Int32, theme: PresentationTheme, strings: PresentationStrings, value: NotificationPeerExceptionSwitcher, selected: Bool)
@@ -71,6 +75,8 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
     
     var index: Int32 {
         switch self {
+        case let .remove(index, _, _):
+            return index
         case let .switcherHeader(index, _, _):
             return index
         case let .switcher(index, _, _, _, _):
@@ -94,6 +100,8 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
+        case .remove:
+            return NotificationPeerExceptionSection.remove.rawValue
         case .switcher, .switcherHeader:
             return NotificationPeerExceptionSection.switcher.rawValue
         case .displayPreviews, .displayPreviewsHeader:
@@ -113,6 +121,8 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
     
     var stableId: NotificationPeerExceptionEntryId {
         switch self {
+        case .remove:
+            return .remove
         case let .switcher(_, _, _, mode, _):
             return .switcher(mode)
         case .switcherHeader:
@@ -140,6 +150,10 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
     
     func item(_ arguments: NotificationPeerExceptionArguments) -> ListViewItem {
         switch self {
+        case let .remove(_, theme, strings):
+            return ItemListActionItem(theme: theme, title: strings.Notification_Exceptions_RemoveFromExceptions, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
+                arguments.removeFromExceptions()
+            })
         case let .switcher(_, theme, strings, mode, selected):
             let title: String
             switch mode {
@@ -192,6 +206,11 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
     
     var index: Int32 = 0
     
+    if state.canRemove {
+        entries.append(.remove(index: index, theme: presentationData.theme, strings: presentationData.strings))
+        index += 1
+    }
+    
     entries.append(.switcherHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notification_Exceptions_NewException_NotificationHeader))
     index += 1
 
@@ -241,12 +260,15 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
 }
 
 private struct NotificationExceptionPeerState : Equatable {
+    let canRemove: Bool
     let selectedSound: PeerMessageSound
     let mode: NotificationPeerExceptionSwitcher
     let defaultSound: PeerMessageSound
     let displayPreviews: NotificationPeerExceptionSwitcher
     
-    init(notifications: TelegramPeerNotificationSettings? = nil) {
+    init(canRemove: Bool, notifications: TelegramPeerNotificationSettings? = nil) {
+        self.canRemove = canRemove
+        
         if let notifications = notifications {
             self.selectedSound = notifications.messageSound
             switch notifications.muteState {
@@ -267,7 +289,8 @@ private struct NotificationExceptionPeerState : Equatable {
         self.defaultSound = .default
     }
     
-    init(selectedSound: PeerMessageSound, mode: NotificationPeerExceptionSwitcher, defaultSound: PeerMessageSound, displayPreviews: NotificationPeerExceptionSwitcher) {
+    init(canRemove: Bool, selectedSound: PeerMessageSound, mode: NotificationPeerExceptionSwitcher, defaultSound: PeerMessageSound, displayPreviews: NotificationPeerExceptionSwitcher) {
+        self.canRemove = canRemove
         self.selectedSound = selectedSound
         self.mode = mode
         self.defaultSound = defaultSound
@@ -275,22 +298,22 @@ private struct NotificationExceptionPeerState : Equatable {
     }
     
     func withUpdatedDefaultSound(_ defaultSound: PeerMessageSound) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(selectedSound: self.selectedSound, mode: self.mode, defaultSound: defaultSound, displayPreviews: self.displayPreviews)
+        return NotificationExceptionPeerState(canRemove: self.canRemove, selectedSound: self.selectedSound, mode: self.mode, defaultSound: defaultSound, displayPreviews: self.displayPreviews)
     }
     func withUpdatedSound(_ selectedSound: PeerMessageSound) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(selectedSound: selectedSound, mode: self.mode, defaultSound: self.defaultSound, displayPreviews: self.displayPreviews)
+        return NotificationExceptionPeerState(canRemove: self.canRemove, selectedSound: selectedSound, mode: self.mode, defaultSound: self.defaultSound, displayPreviews: self.displayPreviews)
     }
     func withUpdatedMode(_ mode: NotificationPeerExceptionSwitcher) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(selectedSound: self.selectedSound, mode: mode, defaultSound: self.defaultSound, displayPreviews: self.displayPreviews)
+        return NotificationExceptionPeerState(canRemove: self.canRemove, selectedSound: self.selectedSound, mode: mode, defaultSound: self.defaultSound, displayPreviews: self.displayPreviews)
     }
     func withUpdatedDisplayPreviews(_ displayPreviews: NotificationPeerExceptionSwitcher) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(selectedSound: self.selectedSound, mode: self.mode, defaultSound: self.defaultSound, displayPreviews: displayPreviews)
+        return NotificationExceptionPeerState(canRemove: self.canRemove, selectedSound: self.selectedSound, mode: self.mode, defaultSound: self.defaultSound, displayPreviews: displayPreviews)
     }
 }
 
 
-func notificationPeerExceptionController(context: AccountContext, peer: Peer, mode: NotificationExceptionMode, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void) -> ViewController {
-    let initialState = NotificationExceptionPeerState()
+func notificationPeerExceptionController(context: AccountContext, peer: Peer, mode: NotificationExceptionMode, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
+    let initialState = NotificationExceptionPeerState(canRemove: false)
     let statePromise = Promise(initialState)
     let stateValue = Atomic(value: initialState)
     let updateState: ((NotificationExceptionPeerState) -> NotificationExceptionPeerState) -> Void = { f in
@@ -298,17 +321,15 @@ func notificationPeerExceptionController(context: AccountContext, peer: Peer, mo
     }
     
     var completeImpl: (() -> Void)?
+    var removeFromExceptionsImpl: (() -> Void)?
     var cancelImpl: (() -> Void)?
     let playSoundDisposable = MetaDisposable()
 
-
     let arguments = NotificationPeerExceptionArguments(account: context.account, selectSound: { sound in
-      
         updateState { state in
             playSoundDisposable.set(playSound(context: context, sound: sound, defaultSound: state.defaultSound).start())
             return state.withUpdatedSound(sound)
         }
-
     }, selectMode: { mode in
         updateState { state in
             return state.withUpdatedMode(mode)
@@ -317,6 +338,8 @@ func notificationPeerExceptionController(context: AccountContext, peer: Peer, mo
         updateState { state in
             return state.withUpdatedDisplayPreviews(value)
         }
+    }, removeFromExceptions: {
+        removeFromExceptionsImpl?()
     }, complete: {
         completeImpl?()
     }, cancel: {
@@ -324,7 +347,7 @@ func notificationPeerExceptionController(context: AccountContext, peer: Peer, mo
     })
     
     statePromise.set(context.account.postbox.transaction { transaction -> NotificationExceptionPeerState in
-        var state = NotificationExceptionPeerState(notifications: transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings)
+        var state = NotificationExceptionPeerState(canRemove: mode.peerIds.contains(peer.id), notifications: transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings)
         let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
         switch mode {
             case .channels:
@@ -345,7 +368,7 @@ func notificationPeerExceptionController(context: AccountContext, peer: Peer, mo
             arguments.cancel()
         })
         
-        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Notification_Exceptions_Add), style: .bold, enabled: true, action: {
+        let rightNavigationButton = ItemListNavigationButton(content: .text(state.canRemove ? presentationData.strings.Common_Done : presentationData.strings.Notification_Exceptions_Add), style: .bold, enabled: true, action: {
             arguments.complete()
         })
         
@@ -363,12 +386,18 @@ func notificationPeerExceptionController(context: AccountContext, peer: Peer, mo
     
     completeImpl = { [weak controller] in
         controller?.dismiss()
+        modifiedPeer()
         updateState { state in
             updatePeerSound(peer.id, state.selectedSound)
             updatePeerNotificationInterval(peer.id, state.mode == .alwaysOn ? 0 : Int32.max)
             updatePeerDisplayPreviews(peer.id, state.displayPreviews == .alwaysOn ? .show : .hide)
             return state
         }
+    }
+    
+    removeFromExceptionsImpl = { [weak controller] in
+        controller?.dismiss()
+        removePeerFromExceptions()
     }
     
     cancelImpl = { [weak controller] in

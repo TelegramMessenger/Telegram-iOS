@@ -24,15 +24,15 @@ private enum ChatReportPeerTitleButton {
 
 private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReportPeerTitleButton] {
     var buttons: [ChatReportPeerTitleButton] = []
-    if let contactStatus = state.contactStatus, let peerContactSettings = contactStatus.peerContactSettings {
-        if peerContactSettings.contains(.canReport) {
-            buttons.append(.block)
-        }
+    if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
         if contactStatus.canAddContact {
+            if !state.peerIsBlocked {
+                buttons.append(.block)
+            }
             buttons.append(.addContact)
         }
         if buttons.isEmpty {
-            if peerContactSettings.contains(.canShareContact) {
+            if peerStatusSettings.contains(.canShareContact) {
                 buttons.append(.shareMyPhoneNumber)
             }
         }
@@ -122,15 +122,16 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         if !self.buttons.isEmpty {
+            let maxInset = max(contentRightInset, leftInset)
             if self.buttons.count == 1 {
-                let buttonWidth = floor((width - leftInset - contentRightInset) / CGFloat(self.buttons.count))
-                var nextButtonOrigin: CGFloat = leftInset
+                let buttonWidth = floor((width - maxInset * 2.0) / CGFloat(self.buttons.count))
+                var nextButtonOrigin: CGFloat = maxInset
                 for (_, view) in self.buttons {
                     view.frame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
                     nextButtonOrigin += buttonWidth
                 }
             } else {
-                let areaWidth = width - leftInset - contentRightInset
+                let areaWidth = width - maxInset * 2.0
                 let maxButtonWidth = floor(areaWidth / CGFloat(self.buttons.count))
                 let buttonSizes = self.buttons.map { button -> CGFloat in
                     return button.1.sizeThatFits(CGSize(width: maxButtonWidth, height: 100.0)).width
@@ -139,7 +140,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 let maxButtonSpacing = floor((areaWidth - buttonsWidth) / CGFloat(self.buttons.count - 1))
                 let buttonSpacing = min(maxButtonSpacing, 110.0)
                 let updatedButtonsWidth = buttonsWidth + CGFloat(self.buttons.count - 1) * buttonSpacing
-                var nextButtonOrigin = leftInset + floor((areaWidth - updatedButtonsWidth) / 2.0)
+                var nextButtonOrigin = maxInset + floor((areaWidth - updatedButtonsWidth) / 2.0)
                 
                 let buttonWidth = floor(updatedButtonsWidth / CGFloat(self.buttons.count))
                 for (_, view) in self.buttons {

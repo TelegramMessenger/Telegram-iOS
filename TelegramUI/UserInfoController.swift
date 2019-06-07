@@ -656,7 +656,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
                 entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.Conversation_AddToContacts))
             }
             
-            if let cachedUserData = cachedPeerData as? CachedUserData, let peerContactSettings = cachedUserData.peerContactSettings, peerContactSettings.contains(.canShareContact) {
+            if let cachedUserData = cachedPeerData as? CachedUserData, let peerStatusSettings = cachedUserData.peerStatusSettings, peerStatusSettings.contains(.canShareContact) {
                 entries.append(UserInfoEntry.shareMyContact(presentationData.theme, presentationData.strings.UserInfo_ShareMyContactInfo))
             }
             
@@ -881,9 +881,6 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
             guard let user = peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: user) else {
                 return
             }
-            /*let _ = (addContactPeerInteractively(account: context.account, peerId: user.id, phone: phone)
-            |> deliverOnMainQueue).start(completed: {
-            })*/
             
             presentControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: user, contactData: contactData, isSharing: true, completion: { peer, stableId, contactData in
                 if let peer = peer as? TelegramUser {

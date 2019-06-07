@@ -320,7 +320,7 @@ final class ChatRecordedMediaPreview: Equatable {
 
 struct ChatContactStatus: Equatable {
     var canAddContact: Bool
-    var peerContactSettings: PeerContactSettings?
+    var peerStatusSettings: PeerStatusSettings?
 }
 
 final class ChatPresentationInterfaceState: Equatable {
