@@ -16,12 +16,12 @@ public enum ChannelOwnershipTransferError {
     case invalidPassword
 }
 
-public func updateChannelOwnership(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, channelId: PeerId, memberId: PeerId, password: String?) -> Signal<Void, ChannelOwnershipTransferError> {
+public func updateChannelOwnership(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, channelId: PeerId, memberId: PeerId, password: String?) -> Signal<Never, ChannelOwnershipTransferError> {
     return postbox.transaction { transaction -> (channel: Peer?, user: Peer?) in
         return (channel: transaction.getPeer(channelId), user: transaction.getPeer(memberId))
     }
     |> introduceError(ChannelOwnershipTransferError.self)
-    |> mapToSignal { channel, user -> Signal<Void, ChannelOwnershipTransferError> in
+    |> mapToSignal { channel, user -> Signal<Never, ChannelOwnershipTransferError> in
         guard let channel = channel, let user = user else {
             return .fail(.generic)
         }
@@ -51,7 +51,7 @@ public func updateChannelOwnership(postbox: Postbox, network: Network, accountSt
         }
         
         return checkPassword
-        |> mapToSignal { password -> Signal<Void, ChannelOwnershipTransferError> in
+        |> mapToSignal { password -> Signal<Never, ChannelOwnershipTransferError> in
             return network.request(Api.functions.channels.editCreator(channel: apiChannel, userId: apiUser, password: password))
             |> mapError { error -> ChannelOwnershipTransferError in
                 if error.errorDescription == "PASSWORD_HASH_INVALID" {
@@ -75,7 +75,7 @@ public func updateChannelOwnership(postbox: Postbox, network: Network, accountSt
                 }
                 return .generic
             }
-            |> mapToSignal { updates -> Signal<Void, ChannelOwnershipTransferError> in
+            |> mapToSignal { updates -> Signal<Never, ChannelOwnershipTransferError> in
                 accountStateManager.addUpdates(updates)
                 return.complete()
             }
