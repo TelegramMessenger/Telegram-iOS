@@ -4004,6 +4004,21 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func getLocated(geoPoint: Api.InputGeoPoint, radius: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-261936023)
+                    geoPoint.serialize(buffer, true)
+                    serializeInt32(radius, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "contacts.getLocated", parameters: [("geoPoint", geoPoint), ("radius", radius)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
             }
             struct help {
                 static func getConfig() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Config>) {

@@ -10,6 +10,7 @@
 		0900555621E4A96E0030924C /* Wallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0900555521E4A96D0030924C /* Wallpaper.swift */; };
 		09028386218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */; };
 		090E778322A9862100CD99F5 /* ChannelOwnershipTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E778222A9862100CD99F5 /* ChannelOwnershipTransfer.swift */; };
+		090E779022AAABC600CD99F5 /* PeersNearby.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E778F22AAABC600CD99F5 /* PeersNearby.swift */; };
 		093857A82243D87900EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093857A62243D87800EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift */; };
 		093857A92243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093857A72243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift */; };
 		093857AB2243D88D00EB6A54 /* EmojiKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093857AA2243D88C00EB6A54 /* EmojiKeywords.swift */; };
@@ -831,6 +832,7 @@
 		0900555521E4A96D0030924C /* Wallpaper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Wallpaper.swift; sourceTree = "<group>"; };
 		09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedVoipConfigurationUpdates.swift; sourceTree = "<group>"; };
 		090E778222A9862100CD99F5 /* ChannelOwnershipTransfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelOwnershipTransfer.swift; sourceTree = "<group>"; };
+		090E778F22AAABC600CD99F5 /* PeersNearby.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeersNearby.swift; sourceTree = "<group>"; };
 		093857A62243D87800EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeEmojiKeywordsOperations.swift; sourceTree = "<group>"; };
 		093857A72243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeEmojiKeywordsOperation.swift; sourceTree = "<group>"; };
 		093857AA2243D88C00EB6A54 /* EmojiKeywords.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EmojiKeywords.swift; sourceTree = "<group>"; };
@@ -2007,6 +2009,7 @@
 				D015E00D225CA61100CB9E8A /* FindChannelById.swift */,
 				D076F8882296D8E9004F895A /* ManageChannelDiscussionGroup.swift */,
 				090E778222A9862100CD99F5 /* ChannelOwnershipTransfer.swift */,
+				090E778F22AAABC600CD99F5 /* PeersNearby.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -2278,6 +2281,7 @@
 				D0EE7FC72098853100981319 /* SecureIdTemporaryRegistrationValue.swift in Sources */,
 				C22EE61B1E67418000334C38 /* ToggleChannelSignatures.swift in Sources */,
 				D053B3FC1F1651FA00E2D58A /* MonotonicTime.m in Sources */,
+				090E779022AAABC600CD99F5 /* PeersNearby.swift in Sources */,
 				D073CE601DCB9D14007511FD /* OutgoingMessageInfoAttribute.swift in Sources */,
 				D0AAD1A81E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift in Sources */,
 				C2366C831E4F3EAA0097CCFF /* GroupReturnAndLeft.swift in Sources */,
