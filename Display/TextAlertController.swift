@@ -22,17 +22,19 @@ public struct TextAlertAction {
     }
 }
 
-private final class TextAlertContentActionNode: HighlightableButtonNode {
-    private let backgroundNode: ASDisplayNode
-    
+public final class TextAlertContentActionNode: HighlightableButtonNode {
+    private var theme: AlertControllerTheme
     let action: TextAlertAction
     
-    init(theme: AlertControllerTheme, action: TextAlertAction) {
+    private let backgroundNode: ASDisplayNode
+    
+    public init(theme: AlertControllerTheme, action: TextAlertAction) {
+        self.theme = theme
+        self.action = action
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.alpha = 0.0
-        
-        self.action = action
         
         super.init()
         
@@ -56,16 +58,27 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
         self.updateTheme(theme)
     }
     
-    func updateTheme(_ theme: AlertControllerTheme) {
+    public var actionEnabled: Bool = true {
+        didSet {
+            self.isUserInteractionEnabled = self.actionEnabled
+            self.updateTitle()
+        }
+    }
+    
+    public func updateTheme(_ theme: AlertControllerTheme) {
+        self.theme = theme
         self.backgroundNode.backgroundColor = theme.highlightedItemColor
-        
+        self.updateTitle()
+    }
+    
+    private func updateTitle() {
         var font = Font.regular(17.0)
-        var color = theme.accentColor
+        var color: UIColor
         switch self.action.type {
             case .defaultAction, .genericAction:
-                break
+                color = self.actionEnabled ? self.theme.accentColor : self.theme.disabledColor
             case .destructiveAction:
-                color = theme.destructiveColor
+                color = self.actionEnabled ? self.theme.destructiveColor : self.theme.disabledColor
         }
         switch self.action.type {
             case .defaultAction:
@@ -76,7 +89,7 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
         self.setAttributedTitle(NSAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
@@ -86,7 +99,7 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
         self.action.action()
     }
     
-    override func layout() {
+    override public func layout() {
         super.layout()
         
         self.backgroundNode.frame = self.bounds
@@ -203,16 +216,17 @@ public final class TextAlertContentNode: AlertContentNode {
     override public func updateTheme(_ theme: AlertControllerTheme) {
         self.theme = theme
         
-        let textFont: UIFont
-        if let titleNode = self.titleNode {
-            titleNode.attributedText = NSAttributedString(string: titleNode.attributedText?.string ?? "", font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-            textFont = Font.regular(13.0)
-        } else {
-            textFont = Font.semibold(17.0)
+        if let titleNode = self.titleNode, let attributedText = titleNode.attributedText {
+            let updatedText = NSMutableAttributedString(attributedString: attributedText)
+            updatedText.addAttribute(NSAttributedStringKey.foregroundColor, value: theme.primaryColor, range: NSRange(location: 0, length: updatedText.length))
+            titleNode.attributedText = updatedText
         }
-        
-        self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: textFont, textColor: theme.primaryColor, paragraphAlignment: .center)
-        
+        if let attributedText = self.textNode.attributedText {
+            let updatedText = NSMutableAttributedString(attributedString: attributedText)
+            updatedText.addAttribute(NSAttributedStringKey.foregroundColor, value: theme.primaryColor, range: NSRange(location: 0, length: updatedText.length))
+            self.textNode.attributedText = updatedText
+        }
+
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
             actionNode.updateTheme(theme)
