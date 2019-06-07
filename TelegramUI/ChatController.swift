@@ -601,7 +601,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         }
                     })
                     
-                    strongSelf.messageActionCallbackDisposable.set(((requestMessageActionCallback(account: strongSelf.context.account, messageId: messageId, isGame: isGame, data: data) |> afterDisposed {
+                    strongSelf.messageActionCallbackDisposable.set(((requestMessageActionCallback(account: strongSelf.context.account, messageId: messageId, isGame: isGame, data: data)
+                    |> afterDisposed {
                         Queue.mainQueue().async {
                             if let strongSelf = self {
                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -623,7 +624,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 })
                             }
                         }
-                    }) |> deliverOnMainQueue).start(next: { result in
+                    })
+                    |> deliverOnMainQueue).start(next: { result in
                         if let strongSelf = self {
                             switch result {
                                 case .none:
