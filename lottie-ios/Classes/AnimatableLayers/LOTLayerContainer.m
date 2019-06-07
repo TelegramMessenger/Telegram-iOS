@@ -24,6 +24,7 @@
   LOTNumberInterpolator *_opacityInterpolator;
   NSNumber *_inFrame;
   NSNumber *_outFrame;
+  BOOL _hidden;
   CALayer *DEBUG_Center;
   LOTRenderGroup *_contentsGroup;
   LOTMaskContainer *_maskLayer;
@@ -73,6 +74,8 @@
   if (layer.layerType == LOTLayerTypeImage) {
     [self _setImageForAsset:layer.imageAsset];
   }
+    
+  _hidden = layer.hidden;
   
   _inFrame = [layer.inFrame copy];
   _outFrame = [layer.outFrame copy];
@@ -194,7 +197,6 @@
       _wrapperLayer.contents = layerContents;
     }
   }
-  
 }
 
 #endif
@@ -252,6 +254,10 @@
     hidden = (frame.floatValue < _inFrame.floatValue ||
               frame.floatValue > _outFrame.floatValue);
   }
+  if (_hidden) {
+    hidden = YES;
+  }
+  
   self.hidden = hidden;
   if (hidden) {
     return;

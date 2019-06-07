@@ -38,7 +38,7 @@
   
   NSNumber *layerType = jsonDictionary[@"ty"];
   _layerType = layerType.integerValue;
-  
+    
   if (jsonDictionary[@"refId"]) {
     _referenceID = [jsonDictionary[@"refId"] copy];
   }
@@ -84,7 +84,12 @@
       return LOT_RemapValue(inValue, 0, 100, 0, 1);
     }];
   }
-
+    
+  NSNumber *hidden = jsonDictionary[@"hd"];
+  if (hidden.boolValue) {
+    _hidden = true;
+  }
+    
   NSDictionary *timeRemap = jsonDictionary[@"tm"];
   if (timeRemap) {
     _timeRemapping = [[LOTKeyframeGroup alloc] initWithData:timeRemap];

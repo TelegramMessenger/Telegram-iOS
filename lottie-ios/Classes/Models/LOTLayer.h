@@ -49,6 +49,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) NSNumber *outFrame;
 @property (nonatomic, readonly) NSNumber *timeStretch;
 @property (nonatomic, readonly) CGRect layerBounds;
+@property (nonatomic, readonly) BOOL hidden;
 
 @property (nonatomic, readonly, nullable) NSArray<LOTShapeGroup *> *shapes;
 @property (nonatomic, readonly, nullable) NSArray<LOTMask *> *masks;
