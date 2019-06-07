@@ -390,7 +390,13 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
                 record.controller.setIgnoreAppearanceMethodInvocations(false)
             }
+            var applyFrame = false
             if !isAppearing {
+                applyFrame = true
+            } else if case .immediate = transition {
+                applyFrame = true
+            }
+            if applyFrame {
                 var isPartOfTransition = false
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
                     if navigationTransitionCoordinator.topView == record.controller.view || navigationTransitionCoordinator.bottomView == record.controller.view {
