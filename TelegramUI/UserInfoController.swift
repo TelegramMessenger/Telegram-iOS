@@ -958,7 +958,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
                     }
-                    var reportSpam = false
+                    var reportSpam = true
                     var deleteChat = true
                     controller.setItemGroups([
                         ActionSheetItemGroup(items: [

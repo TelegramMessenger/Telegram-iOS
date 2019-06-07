@@ -1010,7 +1010,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                         switch subject {
                             case let .create(peer, _, share, _):
                                 if share, filteredPhoneNumbers.count <= 1, let peer = peer {
-                                    addContactDisposable.set((addContactInteractively(account: context.account, peer: peer, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "")
+                                    addContactDisposable.set((addContactInteractively(account: context.account, peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "")
                                     |> deliverOnMainQueue).start(error: { _ in
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }, completed: {
@@ -1048,7 +1048,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                 switch subject {
                                     case let .create(peer, _, share, _):
                                         if share, let peer = peer {
-                                            return addContactInteractively(account: context.account, peer: peer, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "")
+                                            return addContactInteractively(account: context.account, peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "")
                                             |> mapToSignal { _ -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                                                 return .complete()
                                             }
@@ -1165,11 +1165,14 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         controller?.present(value, in: .window(.root), with: presentationArguments)
     }
     dismissImpl = { [weak controller] animated in
-        if let navigationController = controller?.navigationController as? NavigationController {
-            let _ = navigationController.popViewController(animated: animated)
+        guard let controller = controller else {
+            return
+        }
+        if let navigationController = controller.navigationController as? NavigationController {
+            navigationController.filterController(controller, animated: animated)
         } else {
-            controller?.view.endEditing(true)
-            controller?.dismiss()
+            controller.view.endEditing(true)
+            controller.dismiss()
         }
     }
     inviteImpl = { [weak controller] numbers in
