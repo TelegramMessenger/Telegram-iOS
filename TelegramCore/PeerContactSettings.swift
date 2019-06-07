@@ -5,23 +5,23 @@ import Foundation
     import Postbox
 #endif
 
-public struct PeerContactSettings: OptionSet {
+public struct PeerStatusSettings: OptionSet {
     public var rawValue: Int32
     
     public init(rawValue: Int32) {
         self.rawValue = rawValue
     }
     
-    public static let isHidden = PeerContactSettings(rawValue: 1 << 0)
-    public static let canReport = PeerContactSettings(rawValue: 1 << 1)
-    public static let canShareContact = PeerContactSettings(rawValue: 1 << 2)
+    public static let isHidden = PeerStatusSettings(rawValue: 1 << 0)
+    public static let canReport = PeerStatusSettings(rawValue: 1 << 1)
+    public static let canShareContact = PeerStatusSettings(rawValue: 1 << 2)
 }
 
-extension PeerContactSettings {
+extension PeerStatusSettings {
     init(apiSettings: Api.PeerSettings) {
         switch apiSettings {
             case let .peerSettings(flags):
-                var result = PeerContactSettings()
+                var result = PeerStatusSettings()
                 if (flags & (1 << 1)) != 0 {
                     result.insert(.isHidden)
                 }

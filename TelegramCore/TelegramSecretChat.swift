@@ -81,23 +81,23 @@ public final class CachedSecretChatData: CachedPeerData {
     public let messageIds: Set<MessageId> = Set()
     public let associatedHistoryMessageId: MessageId? = nil
 
-    public let peerContactSettings: PeerContactSettings?
+    public let peerStatusSettings: PeerStatusSettings?
     
-    public init(peerContactSettings: PeerContactSettings?) {
-        self.peerContactSettings = peerContactSettings
+    public init(peerStatusSettings: PeerStatusSettings?) {
+        self.peerStatusSettings = peerStatusSettings
     }
     
     public init(decoder: PostboxDecoder) {
         if let value = decoder.decodeOptionalInt32ForKey("pcs") {
-            self.peerContactSettings = PeerContactSettings(rawValue: value)
+            self.peerStatusSettings = PeerStatusSettings(rawValue: value)
         } else {
-            self.peerContactSettings = nil
+            self.peerStatusSettings = nil
         }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        if let peerContactSettings = self.peerContactSettings {
-            encoder.encodeInt32(peerContactSettings.rawValue, forKey: "pcs")
+        if let peerStatusSettings = self.peerStatusSettings {
+            encoder.encodeInt32(peerStatusSettings.rawValue, forKey: "pcs")
         } else {
             encoder.encodeNil(forKey: "pcs")
         }
@@ -105,13 +105,13 @@ public final class CachedSecretChatData: CachedPeerData {
     
     public func isEqual(to: CachedPeerData) -> Bool {
         if let to = to as? CachedSecretChatData {
-            return self.peerContactSettings == to.peerContactSettings
+            return self.peerStatusSettings == to.peerStatusSettings
         } else {
             return false
         }
     }
     
-    func withUpdatedPeerContactSettings(_ peerContactSettings: PeerContactSettings) -> CachedSecretChatData {
-        return CachedSecretChatData(peerContactSettings: peerContactSettings)
+    func withUpdatedPeerStatusSettings(_ peerStatusSettings: PeerStatusSettings) -> CachedSecretChatData {
+        return CachedSecretChatData(peerStatusSettings: peerStatusSettings)
     }
 }

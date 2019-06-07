@@ -47,7 +47,7 @@ public final class CachedGroupData: CachedPeerData {
     public let participants: CachedGroupParticipants?
     public let exportedInvitation: ExportedInvitation?
     public let botInfos: [CachedPeerBotInfo]
-    public let peerContactSettings: PeerContactSettings?
+    public let peerStatusSettings: PeerStatusSettings?
     public let pinnedMessageId: MessageId?
     public let about: String?
     public let flags: CachedGroupFlags
@@ -60,7 +60,7 @@ public final class CachedGroupData: CachedPeerData {
         self.participants = nil
         self.exportedInvitation = nil
         self.botInfos = []
-        self.peerContactSettings = nil
+        self.peerStatusSettings = nil
         self.pinnedMessageId = nil
         self.messageIds = Set()
         self.peerIds = Set()
@@ -68,11 +68,11 @@ public final class CachedGroupData: CachedPeerData {
         self.flags = CachedGroupFlags()
     }
     
-    public init(participants: CachedGroupParticipants?, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], peerContactSettings: PeerContactSettings?, pinnedMessageId: MessageId?, about: String?, flags: CachedGroupFlags) {
+    public init(participants: CachedGroupParticipants?, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, about: String?, flags: CachedGroupFlags) {
         self.participants = participants
         self.exportedInvitation = exportedInvitation
         self.botInfos = botInfos
-        self.peerContactSettings = peerContactSettings
+        self.peerStatusSettings = peerStatusSettings
         self.pinnedMessageId = pinnedMessageId
         self.about = about
         self.flags = flags
@@ -101,9 +101,9 @@ public final class CachedGroupData: CachedPeerData {
         self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
         self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
         if let value = decoder.decodeOptionalInt32ForKey("pcs") {
-            self.peerContactSettings = PeerContactSettings(rawValue: value)
+            self.peerStatusSettings = PeerStatusSettings(rawValue: value)
         } else {
-            self.peerContactSettings = nil
+            self.peerStatusSettings = nil
         }
         if let pinnedMessagePeerId = decoder.decodeOptionalInt64ForKey("pm.p"), let pinnedMessageNamespace = decoder.decodeOptionalInt32ForKey("pm.n"), let pinnedMessageId = decoder.decodeOptionalInt32ForKey("pm.i") {
             self.pinnedMessageId = MessageId(peerId: PeerId(pinnedMessagePeerId), namespace: pinnedMessageNamespace, id: pinnedMessageId)
@@ -144,8 +144,8 @@ public final class CachedGroupData: CachedPeerData {
             encoder.encodeNil(forKey: "i")
         }
         encoder.encodeObjectArray(self.botInfos, forKey: "b")
-        if let peerContactSettings = self.peerContactSettings {
-            encoder.encodeInt32(peerContactSettings.rawValue, forKey: "pcs")
+        if let peerStatusSettings = self.peerStatusSettings {
+            encoder.encodeInt32(peerStatusSettings.rawValue, forKey: "pcs")
         } else {
             encoder.encodeNil(forKey: "pcs")
         }
@@ -171,34 +171,34 @@ public final class CachedGroupData: CachedPeerData {
             return false
         }
         
-        return self.participants == other.participants && self.exportedInvitation == other.exportedInvitation && self.botInfos == other.botInfos && self.peerContactSettings == other.peerContactSettings && self.pinnedMessageId == other.pinnedMessageId && self.about == other.about && self.flags == other.flags
+        return self.participants == other.participants && self.exportedInvitation == other.exportedInvitation && self.botInfos == other.botInfos && self.peerStatusSettings == other.peerStatusSettings && self.pinnedMessageId == other.pinnedMessageId && self.about == other.about && self.flags == other.flags
     }
     
     func withUpdatedParticipants(_ participants: CachedGroupParticipants?) -> CachedGroupData {
-        return CachedGroupData(participants: participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags)
+        return CachedGroupData(participants: participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags)
     }
     
     func withUpdatedExportedInvitation(_ exportedInvitation: ExportedInvitation?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags)
+        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags)
     }
     
     func withUpdatedBotInfos(_ botInfos: [CachedPeerBotInfo]) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: botInfos, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags)
     }
     
-    func withUpdatedPeerContactSettings(_ peerContactSettings: PeerContactSettings?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerContactSettings: peerContactSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags)
+    func withUpdatedPeerStatusSettings(_ peerStatusSettings: PeerStatusSettings?) -> CachedGroupData {
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags)
     }
 
     func withUpdatedPinnedMessageId(_ pinnedMessageId: MessageId?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerContactSettings: self.peerContactSettings, pinnedMessageId: pinnedMessageId, about: self.about, flags: self.flags)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: pinnedMessageId, about: self.about, flags: self.flags)
     }
     
     func withUpdatedAbout(_ about: String?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, about: about, flags: self.flags)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: about, flags: self.flags)
     }
     
     func withUpdatedFlags(_ flags: CachedGroupFlags) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerContactSettings: self.peerContactSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: flags)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: flags)
     }
 }

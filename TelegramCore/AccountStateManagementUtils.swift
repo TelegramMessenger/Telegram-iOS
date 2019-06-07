@@ -1159,7 +1159,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     }
                 })
             case let .updatePeerSettings(peer, settings):
-                let peerContactSettings = PeerContactSettings(apiSettings: settings)
+                let peerStatusSettings = PeerStatusSettings(apiSettings: settings)
                 updatedState.updateCachedPeerData(peer.peerId, { current in
                     if peer.peerId.namespace == Namespaces.Peer.CloudUser {
                         let previous: CachedUserData
@@ -1168,7 +1168,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         } else {
                             previous = CachedUserData()
                         }
-                        return previous.withUpdatedPeerContactSettings(peerContactSettings)
+                        return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
                     } else if peer.peerId.namespace == Namespaces.Peer.CloudGroup {
                         let previous: CachedGroupData
                         if let current = current as? CachedGroupData {
@@ -1176,7 +1176,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         } else {
                             previous = CachedGroupData()
                         }
-                        return previous.withUpdatedPeerContactSettings(peerContactSettings)
+                        return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
                     } else if peer.peerId.namespace == Namespaces.Peer.CloudChannel {
                         let previous: CachedChannelData
                         if let current = current as? CachedChannelData {
@@ -1184,7 +1184,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         } else {
                             previous = CachedChannelData()
                         }
-                        return previous.withUpdatedPeerContactSettings(peerContactSettings)
+                        return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
                     } else {
                         return current
                     }
