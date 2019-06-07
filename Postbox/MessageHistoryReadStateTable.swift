@@ -20,6 +20,8 @@ final class MessageHistoryReadStateTable: Table {
         return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
+    private let seedConfiguration: SeedConfiguration
+    
     private var cachedPeerReadStates: [PeerId: InternalPeerReadStates?] = [:]
     private var updatedInitialPeerReadStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
     
@@ -30,7 +32,9 @@ final class MessageHistoryReadStateTable: Table {
         return self.sharedKey
     }
     
-    override init(valueBox: ValueBox, table: ValueBoxTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration) {
+        self.seedConfiguration = seedConfiguration
+        
         super.init(valueBox: valueBox, table: table)
     }
 
@@ -167,7 +171,9 @@ final class MessageHistoryReadStateTable: Table {
             var updated = false
             let invalidated = false
             for (namespace, namespaceIndices) in indicesByNamespace {
-                if let currentState = states.namespaces[namespace] {
+                let currentState = states.namespaces[namespace] ?? self.seedConfiguration.defaultMessageNamespaceReadStates[namespace]
+                
+                if let currentState = currentState {
                     var addedUnreadCount: Int32 = 0
                     for index in namespaceIndices {
                         switch currentState {

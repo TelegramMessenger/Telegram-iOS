@@ -253,8 +253,29 @@ public final class SqliteValueBox: ValueBox {
             database = result
         } else {
             postboxLog("Couldn't open DB")
+            
+            let tempPath = basePath + "_test\(arc4random())"
+            enum TempError: Error {
+                case generic
+            }
+            do {
+                try FileManager.default.createDirectory(atPath: tempPath, withIntermediateDirectories: true, attributes: nil)
+                let testDatabase = Database(tempPath + "/test_db")!
+                var resultCode = testDatabase.execute("PRAGMA journal_mode=WAL")
+                if !resultCode {
+                    throw TempError.generic
+                }
+                resultCode = testDatabase.execute("PRAGMA user_version=123")
+                if !resultCode {
+                    throw TempError.generic
+                }
+            } catch {
+                let _ = try? FileManager.default.removeItem(atPath: tempPath)
+                postboxLog("Don't have write access to database folder")
+                preconditionFailure("Don't have write access to database folder")
+            }
+            
             let _ = try? FileManager.default.removeItem(atPath: path)
-            database = Database(path)!
             preconditionFailure("Couldn't open database")
         }
         

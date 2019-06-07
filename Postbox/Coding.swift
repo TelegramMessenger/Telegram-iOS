@@ -1,4 +1,5 @@
 import Foundation
+import sqlcipher
 
 public protocol PostboxCoding {
     init(decoder: PostboxDecoder)
