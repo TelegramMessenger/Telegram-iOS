@@ -140,6 +140,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private let searching = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let loadingMessage = ValuePromise<Bool>(false, ignoreRepeated: true)
     
+    private var preloadHistoryPeerId: PeerId?
+    private let preloadHistoryPeerIdDisposable = MetaDisposable()
+    
     private let botCallbackAlertMessage = Promise<String?>(nil)
     private var botCallbackAlertMessageDisposable: Disposable?
     
@@ -1588,6 +1591,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 animated = true
                             }
                             
+                            if strongSelf.preloadHistoryPeerId != peerDiscussionId {
+                                strongSelf.preloadHistoryPeerId = peerDiscussionId
+                                if let peerDiscussionId = peerDiscussionId {
+                                    strongSelf.preloadHistoryPeerIdDisposable.set(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: peerDiscussionId))
+                                } else {
+                                    strongSelf.preloadHistoryPeerIdDisposable.set(nil)
+                                }
+                            }
+                            
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                                 return $0.updatedPeer { _ in return renderedPeer
                                 }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
@@ -1904,6 +1916,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.chatAdditionalDataDisposable.dispose()
         self.shareStatusDisposable?.dispose()
         self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeTarget(self)
+        self.preloadHistoryPeerIdDisposable.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {

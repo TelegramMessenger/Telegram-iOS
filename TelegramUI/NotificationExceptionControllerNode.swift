@@ -356,6 +356,24 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
             guard let peer = renderedPeer.chatMainPeer else {
                 continue
             }
+            switch state.mode {
+                case .channels:
+                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    } else {
+                        continue
+                    }
+                case .groups:
+                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    } else if peer is TelegramGroup {
+                    } else {
+                        continue
+                    }
+                case .users:
+                    if peer is TelegramUser {
+                    } else {
+                        continue
+                    }
+            }
             if existingPeerIds.contains(peer.id) {
                 continue
             }
@@ -1160,7 +1178,6 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         
         let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
         
-        
         let previousEntriesHolder = Atomic<([NotificationExceptionEntry], PresentationTheme, PresentationStrings)?>(value: nil)
         
         let stateQuery = stateAndPeers
@@ -1248,6 +1265,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
             
             var options = ListViewDeleteAndInsertOptions()
             options.insert(.PreferSynchronousDrawing)
+            options.insert(.PreferSynchronousResourceLoading)
             
             let isSearching = transition.isSearching
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in

@@ -482,6 +482,7 @@ public final class SharedAccountContext {
                 if primary !== self.activeAccountsValue!.primary {
                     hadUpdates = true
                     self.activeAccountsValue!.primary?.postbox.clearCaches()
+                    self.activeAccountsValue!.primary?.resetCachedData()
                     self.activeAccountsValue!.primary = primary
                 }
                 if self.activeAccountsValue!.currentAuth?.id != authRecord?.0 {

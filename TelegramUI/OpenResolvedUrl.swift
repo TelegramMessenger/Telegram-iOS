@@ -9,7 +9,7 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     if case .default = navigation {
         if let peerId = peerId {
             if peerId.namespace == Namespaces.Peer.CloudUser {
-                return .info
+                return .chat(textInputState: nil, messageId: nil)
             } else {
                 return .chat(textInputState: nil, messageId: nil)
             }
