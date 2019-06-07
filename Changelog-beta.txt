@@ -1,1 +1,1 @@
-Fixed sudden logout
+Fixed crashes
