@@ -1355,14 +1355,21 @@ public class Account {
         self.stateManager.reset()
         self.restartContactManagement()
         self.managedStickerPacksDisposable.set(manageStickerPacks(network: self.network, postbox: self.postbox).start())
-        self.viewTracker.reset()
         if !self.supplementary {
             self.viewTracker.chatHistoryPreloadManager.start()
         }
     }
     
+    public func resetCachedData() {
+        self.viewTracker.reset()
+    }
+    
     public func restartContactManagement() {
         self.contactSyncManager.beginSync(importableContacts: self.importableContacts.get())
+    }
+    
+    public func addAdditionalPreloadHistoryPeerId(peerId: PeerId) -> Disposable {
+        return self.viewTracker.chatHistoryPreloadManager.addAdditionalPeerId(peerId: peerId)
     }
     
     public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {

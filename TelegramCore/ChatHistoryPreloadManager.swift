@@ -8,11 +8,19 @@ import Foundation
 #endif
 
 public struct HistoryPreloadIndex: Comparable {
-    public let index: ChatListIndex
+    public let index: ChatListIndex?
     public let hasUnread: Bool
     public let isMuted: Bool
+    public let isPriority: Bool
     
     public static func <(lhs: HistoryPreloadIndex, rhs: HistoryPreloadIndex) -> Bool {
+        if lhs.isPriority != rhs.isPriority {
+            if lhs.isPriority {
+                return true
+            } else {
+                return false
+            }
+        }
         if lhs.isMuted != rhs.isMuted {
             if lhs.isMuted {
                 return false
@@ -27,7 +35,15 @@ public struct HistoryPreloadIndex: Comparable {
                 return false
             }
         }
-        return lhs.index > rhs.index
+        if let lhsIndex = lhs.index, let rhsIndex = rhs.index {
+            return lhsIndex > rhsIndex
+        } else if lhs.index != nil {
+            return true
+        } else if rhs.index != nil {
+            return false
+        } else {
+            return true
+        }
     }
 }
 
@@ -93,15 +109,16 @@ private final class HistoryPreloadEntry: Comparable {
 }
 
 private final class HistoryPreloadViewContext {
-    var index: ChatListIndex
-    var hasUnread: Bool
-    var isMuted: Bool
+    var index: ChatListIndex?
+    var hasUnread: Bool?
+    var isMuted: Bool?
+    var isPriority: Bool
     let disposable = MetaDisposable()
     var hole: MessageOfInterestHole?
     var media: [HolesViewMedia] = []
     
     var preloadIndex: HistoryPreloadIndex {
-        return HistoryPreloadIndex(index: self.index, hasUnread: self.hasUnread, isMuted: self.isMuted)
+        return HistoryPreloadIndex(index: self.index, hasUnread: self.hasUnread ?? false, isMuted: self.isMuted ?? true, isPriority: self.isPriority)
     }
     
     var currentHole: HistoryPreloadHole? {
@@ -112,10 +129,11 @@ private final class HistoryPreloadViewContext {
         }
     }
     
-    init(index: ChatListIndex, hasUnread: Bool, isMuted: Bool) {
+    init(index: ChatListIndex?, hasUnread: Bool?, isMuted: Bool?, isPriority: Bool) {
         self.index = index
         self.hasUnread = hasUnread
         self.isMuted = isMuted
+        self.isPriority = isPriority
     }
     
     deinit {
@@ -160,6 +178,56 @@ public final class ChatHistoryPreloadMediaItem: Comparable {
     }
 }
 
+private final class AdditionalPreloadPeerIdsContext {
+    private let queue: Queue
+    
+    private var subscribers: [PeerId: Bag<Void>] = [:]
+    private var additionalPeerIdsValue = ValuePromise<Set<PeerId>>(Set(), ignoreRepeated: true)
+    
+    var additionalPeerIds: Signal<Set<PeerId>, NoError> {
+        return self.additionalPeerIdsValue.get()
+    }
+    
+    init(queue: Queue) {
+        self.queue = queue
+    }
+    
+    deinit {
+        assert(self.queue.isCurrent())
+    }
+    
+    func add(peerId: PeerId) -> Disposable {
+        let bag: Bag<Void>
+        if let current = self.subscribers[peerId] {
+            bag = current
+        } else {
+            bag = Bag()
+            self.subscribers[peerId] = bag
+        }
+        let wasEmpty = bag.isEmpty
+        let index = bag.add(Void())
+        
+        if wasEmpty {
+            self.additionalPeerIdsValue.set(Set(self.subscribers.keys))
+        }
+        let queue = self.queue
+        return ActionDisposable { [weak self, weak bag] in
+            queue.async {
+                guard let strongSelf = self else {
+                    return
+                }
+                if let current = strongSelf.subscribers[peerId], let bag = bag, current === bag {
+                    current.remove(index)
+                    if current.isEmpty {
+                        strongSelf.subscribers.removeValue(forKey: peerId)
+                        strongSelf.additionalPeerIdsValue.set(Set(strongSelf.subscribers.keys))
+                    }
+                }
+            }
+        }
+    }
+}
+
 final class ChatHistoryPreloadManager {
     private let queue = Queue()
     
@@ -183,11 +251,18 @@ final class ChatHistoryPreloadManager {
         return self.orderedMediaPromise.get()
     }
     
+    private let additionalPreloadPeerIdsContext:  QueueLocalObject<AdditionalPreloadPeerIdsContext>
+    
     init(postbox: Postbox, network: Network, accountPeerId: PeerId, networkState: Signal<AccountNetworkState, NoError>) {
         self.postbox = postbox
         self.network = network
         self.accountPeerId = accountPeerId
         self.download.set(network.background())
+        
+        let queue = Queue.mainQueue()
+        self.additionalPreloadPeerIdsContext = QueueLocalObject(queue: queue, generate: {
+            AdditionalPreloadPeerIdsContext(queue: queue)
+        })
         
         self.canPreloadHistoryDisposable = (networkState
         |> map { state -> Bool in
@@ -216,15 +291,33 @@ final class ChatHistoryPreloadManager {
         self.canPreloadHistoryDisposable?.dispose()
     }
     
+    func addAdditionalPeerId(peerId: PeerId) -> Disposable {
+        let disposable = MetaDisposable()
+        self.additionalPreloadPeerIdsContext.with { context in
+            disposable.set(context.add(peerId: peerId))
+        }
+        return disposable
+    }
+    
     func start() {
-        self.automaticChatListDisposable.set((postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents())
+        let additionalPreloadPeerIdsContext = self.additionalPreloadPeerIdsContext
+        let additionalPeerIds = Signal<Set<PeerId>, NoError> { subscriber in
+            let disposable = MetaDisposable()
+            additionalPreloadPeerIdsContext.with { context in
+                disposable.set(context.additionalPeerIds.start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+        self.automaticChatListDisposable.set((combineLatest(queue: .mainQueue(), postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents()), additionalPeerIds)
         |> delay(1.0, queue: .mainQueue())
-        |> deliverOnMainQueue).start(next: { [weak self] view in
+        |> deliverOnMainQueue).start(next: { [weak self] view, additionalPeerIds in
             guard let strongSelf = self else {
                 return
             }
             #if DEBUG
-            return;
+            //return;
             #endif
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
             for entry in view.0.entries {
@@ -243,13 +336,17 @@ final class ChatHistoryPreloadManager {
                 }
             }
             
-            strongSelf.update(indices: indices)
+            strongSelf.update(indices: indices, additionalPeerIds: additionalPeerIds)
         }))
     }
     
-    private func update(indices: [(ChatHistoryPreloadIndex, Bool, Bool)]) {
+    private func update(indices: [(ChatHistoryPreloadIndex, Bool, Bool)], additionalPeerIds: Set<PeerId>) {
         self.queue.async {
-            let validEntityIds = Set(indices.map { $0.0.entity })
+            var validEntityIds = Set(indices.map { $0.0.entity })
+            for peerId in additionalPeerIds {
+                validEntityIds.insert(.peer(peerId))
+            }
+            
             var removedEntityIds: [ChatHistoryPreloadEntity] = []
             for (entityId, view) in self.views {
                 if !validEntityIds.contains(entityId) {
@@ -262,7 +359,20 @@ final class ChatHistoryPreloadManager {
             for entityId in removedEntityIds {
                 self.views.removeValue(forKey: entityId)
             }
+            
+            var combinedIndices: [(ChatHistoryPreloadIndex, Bool, Bool, Bool)] = []
+            var existingPeerIds = Set<PeerId>()
             for (index, hasUnread, isMuted) in indices {
+                existingPeerIds.insert(index.index.messageIndex.id.peerId)
+                combinedIndices.append((index, hasUnread, isMuted, additionalPeerIds.contains(index.index.messageIndex.id.peerId)))
+            }
+            for peerId in additionalPeerIds {
+                if !existingPeerIds.contains(peerId) {
+                    combinedIndices.append((ChatHistoryPreloadIndex(index: ChatListIndex.absoluteLowerBound, entity: .peer(peerId)), false, true, true))
+                }
+            }
+            
+            for (index, hasUnread, isMuted, isPriority) in combinedIndices {
                 if let view = self.views[index.entity] {
                     if view.index != index.index || view.hasUnread != hasUnread || view.isMuted != isMuted {
                         let previousHole = view.currentHole
@@ -276,7 +386,7 @@ final class ChatHistoryPreloadManager {
                         }
                     }
                 } else {
-                    let view = HistoryPreloadViewContext(index: index.index, hasUnread: hasUnread, isMuted: isMuted)
+                    let view = HistoryPreloadViewContext(index: index.index, hasUnread: hasUnread, isMuted: isMuted, isPriority: isPriority)
                     self.views[index.entity] = view
                     let key: PostboxViewKey
                     switch index.entity {
