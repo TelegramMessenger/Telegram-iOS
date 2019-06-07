@@ -108,41 +108,6 @@ func syncContactsOnce(network: Network, postbox: Postbox, accountPeerId: PeerId)
     return appliedUpdatedPeers
 }
 
-public func addContactPeerInteractively(account: Account, peerId: PeerId, phone: String?) -> Signal<Void, NoError> {
-    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let peer = transaction.getPeer(peerId) as? TelegramUser, let phone = phone ?? peer.phone, !phone.isEmpty {
-            return account.network.request(Api.functions.contacts.importContacts(contacts: [Api.InputContact.inputPhoneContact(clientId: 1, phone: phone, firstName: peer.firstName ?? "", lastName: peer.lastName ?? "")]))
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.contacts.ImportedContacts?, NoError> in
-                return .single(nil)
-            }
-            |> mapToSignal { result -> Signal<Void, NoError> in
-                return account.postbox.transaction { transaction -> Void in
-                    if let result = result {
-                        switch result {
-                            case let .importedContacts(_, _, _, users):
-                                if let first = users.first {
-                                    let user = TelegramUser(user: first)
-                                    updatePeers(transaction: transaction, peers: [user], update: { _, updated in
-                                        return updated
-                                    })
-                                    var peerIds = transaction.getContactPeerIds()
-                                    if !peerIds.contains(peerId) {
-                                        peerIds.insert(peerId)
-                                        transaction.replaceContactPeerIds(peerIds)
-                                    }
-                                }
-                        }
-                    }
-                }
-            }
-        } else {
-            return .complete()
-        }
-    }
-    |> switchToLatest
-}
-
 public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
