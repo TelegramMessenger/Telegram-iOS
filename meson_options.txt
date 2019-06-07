@@ -13,20 +13,3 @@ option('text',
    value: false,
    description: 'Enable text module')
 
-
-option('asan',
-   type: 'boolean',
-   value: false,
-   description: 'Enable address sanitizer')
-
-
-option('msan',
-   type: 'boolean',
-   value: false,
-   description: 'Enable memory sanitizer')
-
-
-option('tsan',
-   type: 'boolean',
-   value: false,
-   description: 'Enable thread sanitizer')

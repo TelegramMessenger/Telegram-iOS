@@ -10,21 +10,6 @@ compiler_flags = ['-std=c++14', '-Os', '-Wall', '-Werror', '-Wextra', '-fno-exce
                    '-fno-unwind-tables' , '-fno-asynchronous-unwind-tables',
                   '-Wnon-virtual-dtor', '-Woverloaded-virtual', '-Wno-unused-parameter', '-fvisibility=hidden']
 
-if get_option('asan') == true
-    compiler_flags += ['-fsanitize=address']
-    add_global_link_arguments('-fsanitize=address', language: 'cpp')
-endif
-
-if get_option('msan') == true
-    compiler_flags += ['-fsanitize=memory']
-    add_global_link_arguments('-fsanitize=memory', language: 'cpp')
-endif
-
-if get_option('tsan') == true
-    compiler_flags += ['-fsanitize=thread']
-    add_global_link_arguments('-fsanitize=thread', language: 'cpp')
-endif
-
 
 if (build_machine.system() == 'linux')
     compiler_flags += ['-pthread']
