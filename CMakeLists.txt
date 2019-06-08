@@ -52,10 +52,18 @@ target_link_libraries(rlottie
                     PRIVATE
                     ${CMAKE_DL_LIBS})
 
-target_link_libraries(rlottie
-                    PUBLIC
-                         "-Wl,--no-undefined"
-                      )
+if(APPLE)
+    target_link_libraries(rlottie
+                        PUBLIC
+                             "-Wl, -undefined error"
+                          )
+else()
+    target_link_libraries(rlottie
+                        PUBLIC
+                             "-Wl,--no-undefined"
+                          )
+endif()
+
 
 if (NOT LIB_INSTALL_DIR)
     set (LIB_INSTALL_DIR "/usr/lib")
