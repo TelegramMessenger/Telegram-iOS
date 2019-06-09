@@ -658,7 +658,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D0445DD21A7C2CA500267924 /* Build configuration list for PBXProject "SSignalKit" */;
+			buildConfigurationList = D0445DD21A7C2CA500267924 /* Build configuration list for PBXProject "SSignalKit_Xcode" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -2282,7 +2282,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = ReleaseHockeyapp;
 		};
-		D0445DD21A7C2CA500267924 /* Build configuration list for PBXProject "SSignalKit" */ = {
+		D0445DD21A7C2CA500267924 /* Build configuration list for PBXProject "SSignalKit_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0445DEC1A7C2CA500267924 /* DebugHockeyapp */,
