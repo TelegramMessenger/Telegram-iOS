@@ -5270,7 +5270,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D0FC40791D5B8E7400261D9D /* Build configuration list for PBXProject "TelegramUI" */;
+			buildConfigurationList = D0FC40791D5B8E7400261D9D /* Build configuration list for PBXProject "TelegramUI_Xcode" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -7406,7 +7406,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = ReleaseHockeyapp;
 		};
-		D0FC40791D5B8E7400261D9D /* Build configuration list for PBXProject "TelegramUI" */ = {
+		D0FC40791D5B8E7400261D9D /* Build configuration list for PBXProject "TelegramUI_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0FC40911D5B8E7500261D9D /* DebugHockeyapp */,
