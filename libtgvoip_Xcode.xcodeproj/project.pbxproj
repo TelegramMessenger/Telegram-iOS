@@ -2410,7 +2410,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 69F842301E67540700C110F7 /* Build configuration list for PBXProject "libtgvoip" */;
+			buildConfigurationList = 69F842301E67540700C110F7 /* Build configuration list for PBXProject "libtgvoip_Xcode" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -3851,7 +3851,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		69F842301E67540700C110F7 /* Build configuration list for PBXProject "libtgvoip" */ = {
+		69F842301E67540700C110F7 /* Build configuration list for PBXProject "libtgvoip_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				69F8423C1E67540700C110F7 /* Debug */,
