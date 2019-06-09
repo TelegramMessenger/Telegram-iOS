@@ -1595,7 +1595,7 @@
 					};
 				};
 			};
-			buildConfigurationList = E4005614148D79B500EB22B9 /* Build configuration list for PBXProject "HockeySDK" */;
+			buildConfigurationList = E4005614148D79B500EB22B9 /* Build configuration list for PBXProject "HockeySDK_Xcode" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -6189,7 +6189,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E4005614148D79B500EB22B9 /* Build configuration list for PBXProject "HockeySDK" */ = {
+		E4005614148D79B500EB22B9 /* Build configuration list for PBXProject "HockeySDK_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E400563C148D79B500EB22B9 /* Debug */,
