@@ -17,7 +17,7 @@
                BlueprintIdentifier = "D09D8C001D4FAB1D0081DBEC"
                BuildableName = "TelegramCore.framework"
                BlueprintName = "TelegramCore"
-               ReferencedContainer = "container:TelegramCore.xcodeproj">
+               ReferencedContainer = "container:TelegramCore_Xcode.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,7 +35,7 @@
                BlueprintIdentifier = "D09D8C091D4FAB1D0081DBEC"
                BuildableName = "TelegramCoreTests.xctest"
                BlueprintName = "TelegramCoreTests"
-               ReferencedContainer = "container:TelegramCore.xcodeproj">
+               ReferencedContainer = "container:TelegramCore_Xcode.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -45,7 +45,7 @@
             BlueprintIdentifier = "D09D8C001D4FAB1D0081DBEC"
             BuildableName = "TelegramCore.framework"
             BlueprintName = "TelegramCore"
-            ReferencedContainer = "container:TelegramCore.xcodeproj">
+            ReferencedContainer = "container:TelegramCore_Xcode.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -67,7 +67,7 @@
             BlueprintIdentifier = "D09D8C001D4FAB1D0081DBEC"
             BuildableName = "TelegramCore.framework"
             BlueprintName = "TelegramCore"
-            ReferencedContainer = "container:TelegramCore.xcodeproj">
+            ReferencedContainer = "container:TelegramCore_Xcode.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -85,7 +85,7 @@
             BlueprintIdentifier = "D09D8C001D4FAB1D0081DBEC"
             BuildableName = "TelegramCore.framework"
             BlueprintName = "TelegramCore"
-            ReferencedContainer = "container:TelegramCore.xcodeproj">
+            ReferencedContainer = "container:TelegramCore_Xcode.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>

@@ -2172,7 +2172,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D09D8BFB1D4FAB1D0081DBEC /* Build configuration list for PBXProject "TelegramCore" */;
+			buildConfigurationList = D09D8BFB1D4FAB1D0081DBEC /* Build configuration list for PBXProject "TelegramCore_Xcode" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -4035,7 +4035,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D09D8BFB1D4FAB1D0081DBEC /* Build configuration list for PBXProject "TelegramCore" */ = {
+		D09D8BFB1D4FAB1D0081DBEC /* Build configuration list for PBXProject "TelegramCore_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D09D8C131D4FAB1D0081DBEC /* DebugHockeyapp */,
