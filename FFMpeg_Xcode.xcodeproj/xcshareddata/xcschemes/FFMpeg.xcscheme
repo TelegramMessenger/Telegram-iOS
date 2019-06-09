@@ -17,7 +17,7 @@
                BlueprintIdentifier = "D04554B421BF0E8E007A6DD9"
                BuildableName = "FFMpeg.framework"
                BlueprintName = "FFMpeg"
-               ReferencedContainer = "container:FFMpeg.xcodeproj">
+               ReferencedContainer = "container:FFMpeg_Xcode.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -48,7 +48,7 @@
             BlueprintIdentifier = "D04554B421BF0E8E007A6DD9"
             BuildableName = "FFMpeg.framework"
             BlueprintName = "FFMpeg"
-            ReferencedContainer = "container:FFMpeg.xcodeproj">
+            ReferencedContainer = "container:FFMpeg_Xcode.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -66,7 +66,7 @@
             BlueprintIdentifier = "D04554B421BF0E8E007A6DD9"
             BuildableName = "FFMpeg.framework"
             BlueprintName = "FFMpeg"
-            ReferencedContainer = "container:FFMpeg.xcodeproj">
+            ReferencedContainer = "container:FFMpeg_Xcode.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>

@@ -212,7 +212,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D04554AF21BF0E8E007A6DD9 /* Build configuration list for PBXProject "FFMpeg" */;
+			buildConfigurationList = D04554AF21BF0E8E007A6DD9 /* Build configuration list for PBXProject "FFMpeg_Xcode" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -1183,7 +1183,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D04554AF21BF0E8E007A6DD9 /* Build configuration list for PBXProject "FFMpeg" */ = {
+		D04554AF21BF0E8E007A6DD9 /* Build configuration list for PBXProject "FFMpeg_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D04554BB21BF0E8E007A6DD9 /* Debug */,
