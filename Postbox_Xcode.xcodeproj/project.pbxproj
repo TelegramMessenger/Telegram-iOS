@@ -1140,7 +1140,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D0E3A7441B28A7E300A402D9 /* Build configuration list for PBXProject "Postbox" */;
+			buildConfigurationList = D0E3A7441B28A7E300A402D9 /* Build configuration list for PBXProject "Postbox_Xcode" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -2774,7 +2774,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = DebugHockeyapp;
 		};
-		D0E3A7441B28A7E300A402D9 /* Build configuration list for PBXProject "Postbox" */ = {
+		D0E3A7441B28A7E300A402D9 /* Build configuration list for PBXProject "Postbox_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0E3A75E1B28A7E300A402D9 /* DebugHockeyapp */,
