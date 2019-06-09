@@ -117,7 +117,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D015E024225D2A6300CB9E8A /* Build configuration list for PBXProject "WebP" */;
+			buildConfigurationList = D015E024225D2A6300CB9E8A /* Build configuration list for PBXProject "WebP_Xcode" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -1069,7 +1069,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D015E024225D2A6300CB9E8A /* Build configuration list for PBXProject "WebP" */ = {
+		D015E024225D2A6300CB9E8A /* Build configuration list for PBXProject "WebP_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D015E030225D2A6300CB9E8A /* Debug */,
