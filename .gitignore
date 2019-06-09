@@ -22,3 +22,4 @@ DerivedData
 *.dSYM.zip
 *.ipa
 */xcuserdata/*
+ffmpeg.xcodeproj/*
