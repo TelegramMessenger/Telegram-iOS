@@ -122,7 +122,7 @@ apple_binary(
 
 xcode_workspace_config(
     name = "workspace",
-    workspace_name = "Telegram_BUCK",
+    workspace_name = "Telegram",
     src_target = ":AppBinary",
 )
 

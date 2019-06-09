@@ -2,45 +2,45 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:submodules/AsyncDisplayKit/AsyncDisplayKit.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/AsyncDisplayKit/AsyncDisplayKit_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/Display/Display.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/Display/Display_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/Postbox/Postbox.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/Postbox/Postbox_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/MtProtoKit/MtProtoKit.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/MtProtoKit/MtProtoKit_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/SSignalKit/SSignalKit.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/SSignalKit/SSignalKit_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/TelegramCore/TelegramCore.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/TelegramCore/TelegramCore_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/LegacyComponents/LegacyComponents.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/LegacyComponents/LegacyComponents_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/lottie-ios/Lottie.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/lottie-ios/Lottie_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/ffmpeg/FFMpeg.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/ffmpeg/FFMpeg_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/webp/WebP.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/webp/WebP_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/libtgvoip/libtgvoip.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/libtgvoip/libtgvoip_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/TelegramUI/TelegramUI.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/TelegramUI/TelegramUI_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:submodules/HockeySDK-iOS/Support/HockeySDK.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/submodules/HockeySDK-iOS/Support/HockeySDK_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:Telegram-iOS.xcodeproj">
+      location = "group:/Users/peter/build/telegram-build/telegram-ios/Telegram-iOS.xcodeproj">
    </FileRef>
 </Workspace>
