@@ -1,8 +1,5 @@
 #!/bin/sh
 
-LOG_PATH="/Users/peter/build/pkg-config.txts"
-echo "// $@" >> "$LOG_PATH"
-
 if [ "$1" == "--version" ]; then
 	echo "0.29.2"
 	exit 0
@@ -18,7 +15,6 @@ elif [ "$1" == "--exists" ]; then
 	elif [ "$NAME" == "opus" ]; then
 		exit 0
 	else
-		echo "[check if exists] $NAME" >> "$LOG_PATH"
 		if [ "PRINT_ERRORS" == "1" ]; then
 			echo "Package $NAME was not found in the pkg-config search path."
 			echo "Perhaps you should add the directory containing \`$NAME.pc'"
@@ -42,7 +38,6 @@ elif [ "$1" == "--cflags" ]; then
 		echo "-I$LIBOPUS_PATH/include/opus"
 		exit 0
 	else
-		echo "[get cflags] $NAME" >> "$LOG_PATH"
 		exit 1
 	fi
 elif [ "$1" == "--libs" ]; then
@@ -61,7 +56,6 @@ elif [ "$1" == "--libs" ]; then
 		echo "-L$LIBOPUS_PATH/lib -lopus"
 		exit 0
 	else
-		echo "[get libs] $NAME" >> "$LOG_PATH"
 		exit 1
 	fi
 else
