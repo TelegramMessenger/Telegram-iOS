@@ -17,7 +17,7 @@
                BlueprintIdentifier = "B35061D91B010EDF0018CF92"
                BuildableName = "AsyncDisplayKit.framework"
                BlueprintName = "AsyncDisplayKit"
-               ReferencedContainer = "container:AsyncDisplayKit.xcodeproj">
+               ReferencedContainer = "container:AsyncDisplayKit_Xcode.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,7 +35,7 @@
                BlueprintIdentifier = "058D09BB195D04C000B7D73C"
                BuildableName = "AsyncDisplayKitTests.xctest"
                BlueprintName = "AsyncDisplayKitTests"
-               ReferencedContainer = "container:AsyncDisplayKit.xcodeproj">
+               ReferencedContainer = "container:AsyncDisplayKit_Xcode.xcodeproj">
             </BuildableReference>
             <SkippedTests>
                <Test
@@ -50,7 +50,7 @@
             BlueprintIdentifier = "B35061D91B010EDF0018CF92"
             BuildableName = "AsyncDisplayKit.framework"
             BlueprintName = "AsyncDisplayKit"
-            ReferencedContainer = "container:AsyncDisplayKit.xcodeproj">
+            ReferencedContainer = "container:AsyncDisplayKit_Xcode.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -72,7 +72,7 @@
             BlueprintIdentifier = "B35061D91B010EDF0018CF92"
             BuildableName = "AsyncDisplayKit.framework"
             BlueprintName = "AsyncDisplayKit"
-            ReferencedContainer = "container:AsyncDisplayKit.xcodeproj">
+            ReferencedContainer = "container:AsyncDisplayKit_Xcode.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <EnvironmentVariables>
@@ -97,7 +97,7 @@
             BlueprintIdentifier = "B35061D91B010EDF0018CF92"
             BuildableName = "AsyncDisplayKit.framework"
             BlueprintName = "AsyncDisplayKit"
-            ReferencedContainer = "container:AsyncDisplayKit.xcodeproj">
+            ReferencedContainer = "container:AsyncDisplayKit_Xcode.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>

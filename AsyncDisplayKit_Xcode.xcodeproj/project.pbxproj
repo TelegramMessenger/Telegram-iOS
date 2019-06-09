@@ -2210,7 +2210,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 058D09A7195D04C000B7D73C /* Build configuration list for PBXProject "AsyncDisplayKit" */;
+			buildConfigurationList = 058D09A7195D04C000B7D73C /* Build configuration list for PBXProject "AsyncDisplayKit_Xcode" */;
 			compatibilityVersion = "Xcode 6.3";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -3543,7 +3543,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = ReleaseAppStore;
 		};
-		058D09A7195D04C000B7D73C /* Build configuration list for PBXProject "AsyncDisplayKit" */ = {
+		058D09A7195D04C000B7D73C /* Build configuration list for PBXProject "AsyncDisplayKit_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				058D09CD195D04C000B7D73C /* DebugHockeyapp */,
