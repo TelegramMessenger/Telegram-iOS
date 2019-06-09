@@ -2568,11 +2568,11 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         } else {
             upperId = Int32.max
         }
-        if upperId > messageId.id {
+        if upperId >= messageId.id {
             transaction.addHole(peerId: messageId.peerId, namespace: messageId.namespace, space: .everywhere, range: messageId.id ... upperId)
             Logger.shared.log("State", "adding hole for peer \(messageId.peerId), \(messageId.id) ... \(upperId)")
         } else {
-            Logger.shared.log("State", "not adding hole for peer \(messageId.peerId), \(upperId) > \(messageId.id) = false")
+            Logger.shared.log("State", "not adding hole for peer \(messageId.peerId), \(upperId) >= \(messageId.id) = false")
         }
     }
     
