@@ -1,9 +1,0 @@
-exec_prefix=${prefix}
-includedir=${prefix}/include
-libdir=${prefix}/lib
-
-Name: Opus
-Description: The Opus library
-Version: 1.0.0
-Cflags: -I${includedir}/opus
-Libs: -L${libdir} -lopus

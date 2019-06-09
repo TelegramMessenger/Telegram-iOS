@@ -19,14 +19,16 @@ SOURCE_DIR=$4
 FF_VERSION="4.1"
 SOURCE="$SOURCE_DIR/ffmpeg-$FF_VERSION"
 
-GAS_PREPROCESSOR_PATH="$SOURCE_DIR/../gas-preprocessor.pl"
+GAS_PREPROCESSOR_PATH="$SOURCE_DIR/gas-preprocessor.pl"
 
 FAT="$BUILD_DIR/FFmpeg-iOS"
 
 SCRATCH="$BUILD_DIR/scratch"
 THIN="$BUILD_DIR/thin"
 
-PKG_CONFIG="$SOURCE_DIR/pkg-config-wrapper.sh"
+PKG_CONFIG="$SOURCE_DIR/pkg-config"
+
+export PATH="$SOURCE_DIR:$PATH"
 
 LIB_NAMES="libavcodec libavformat libavutil libswresample"
 
@@ -81,24 +83,23 @@ done
 
 if [ "$COMPILE" ]
 then
-	if [ ! `which yasm` ]
-	then
+	if [ ! `which yasm` ]; then
 		echo 'Yasm not found'
 		exit 1
 	fi
-	if [ ! `which pkg-config` ]
-	then
+	if [ ! `which pkg-config` ]; then
 		echo 'pkg-config not found'
 		exit 1
+	else
+		echo "PATH=$PATH"
+		echo "pkg-config=$(which pkg-config)"
 	fi
-	if [ ! `which "$GAS_PREPROCESSOR_PATH"` ]
-	then
+	if [ ! `which "$GAS_PREPROCESSOR_PATH"` ]; then
 		echo '$GAS_PREPROCESSOR_PATH not found.'
 		exit 1
 	fi
 
-	if [ ! -r $SOURCE ]
-	then
+	if [ ! -r $SOURCE ]; then
 		echo "FFmpeg source not found at $SOURCE"
 		exit 1
 	fi
@@ -110,22 +111,7 @@ then
 		mkdir -p "$SCRATCH/$ARCH"
 		cd "$SCRATCH/$ARCH"
 
-		LIBOPUS_TARGET_PATH="$SCRATCH/$ARCH"
-		LIBOPUS_PATH="$LIBOPUS_TARGET_PATH/libopus"
-
-		VANILLA_OPUS_PC=`cat $SOURCE_DIR/libopus/opus.pc`
-		OPUS_PC="prefix=\"$LIBOPUS_PATH\"\n$VANILLA_OPUS_PC"
-
-		if [ ! -e "$LIBOPUS_PATH/opus.pc" ]
-		then
-			echo "Generating opus.pc"
-			rm -rf "$LIBOPUS_PATH"
-			cp -R "$SOURCE_DIR/libopus" "$LIBOPUS_TARGET_PATH"
-
-			echo "$OPUS_PC" > "$LIBOPUS_PATH/opus.pc"
-		fi
-
-		export PKG_CONFIG_PATH="$LIBOPUS_PATH"
+		LIBOPUS_PATH="$SOURCE_DIR/libopus"
 
 		CFLAGS="-arch $ARCH"
 		if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" ]
@@ -174,6 +160,8 @@ then
 			    --extra-cflags="$CFLAGS" \
 			    --extra-ldflags="$LDFLAGS" \
 			    --prefix="$THIN/$ARCH" \
+			    --pkg-config="$PKG_CONFIG" \
+			    --pkg-config-flags="--libopus_path $LIBOPUS_PATH" \
 			|| exit 1
 			echo "$CONFIGURE_FLAGS" > "$CONFIGURED_MARKER"
 		fi
