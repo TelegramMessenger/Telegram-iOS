@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		090E777422A6945900CD99F5 /* BlackClassicIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 090E777022A6945800CD99F5 /* BlackClassicIcon@2x.png */; };
+		090E777522A6945900CD99F5 /* BlueClassicIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 090E777122A6945800CD99F5 /* BlueClassicIcon@3x.png */; };
+		090E777622A6945900CD99F5 /* BlackClassicIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 090E777222A6945800CD99F5 /* BlackClassicIcon@3x.png */; };
+		090E777722A6945900CD99F5 /* BlueClassicIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 090E777322A6945800CD99F5 /* BlueClassicIcon@2x.png */; };
 		092F368521542D6C001A9F49 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 092F368321542D6C001A9F49 /* Localizable.strings */; };
 		0956AF2C217B4642008106D0 /* WatchCommunicationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0956AF2B217B4642008106D0 /* WatchCommunicationManager.swift */; };
 		0956AF2F217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0956AF2E217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m */; };
@@ -564,6 +568,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		090E777022A6945800CD99F5 /* BlackClassicIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicIcon@2x.png"; sourceTree = "<group>"; };
+		090E777122A6945800CD99F5 /* BlueClassicIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicIcon@3x.png"; sourceTree = "<group>"; };
+		090E777222A6945800CD99F5 /* BlackClassicIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicIcon@3x.png"; sourceTree = "<group>"; };
+		090E777322A6945800CD99F5 /* BlueClassicIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicIcon@2x.png"; sourceTree = "<group>"; };
 		092F368421542D6C001A9F49 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Share/en.lproj/Localizable.strings; sourceTree = SOURCE_ROOT; };
 		0956AF2B217B4642008106D0 /* WatchCommunicationManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchCommunicationManager.swift; sourceTree = "<group>"; };
 		0956AF2D217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGNeoUnsupportedMessageViewModel.h; sourceTree = "<group>"; };
@@ -1053,6 +1061,8 @@
 		D073E51E21FF7CE900742DDD /* Crypto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Crypto.h; sourceTree = "<group>"; };
 		D073E51F21FF7CE900742DDD /* Crypto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Crypto.m; sourceTree = "<group>"; };
 		D073E52122003E1E00742DDD /* Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Data.swift; sourceTree = "<group>"; };
+		D07477B522A72B1F002737C4 /* TempRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempRoot.swift; sourceTree = "<group>"; };
+		D07477B722A732F1002737C4 /* TempMain.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TempMain.m; sourceTree = "<group>"; };
 		D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-AppStore.entitlements"; sourceTree = "<group>"; };
 		D084023120E1883500065674 /* ApplicationShortcutItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationShortcutItem.swift; sourceTree = "<group>"; };
 		D08410431FABDC5B008FFE92 /* TGItemProviderSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGItemProviderSignals.h; sourceTree = "<group>"; };
@@ -1329,6 +1339,10 @@
 		09A218E122A14E5600DE6898 /* App Icons */ = {
 			isa = PBXGroup;
 			children = (
+				090E777022A6945800CD99F5 /* BlackClassicIcon@2x.png */,
+				090E777222A6945800CD99F5 /* BlackClassicIcon@3x.png */,
+				090E777322A6945800CD99F5 /* BlueClassicIcon@2x.png */,
+				090E777122A6945800CD99F5 /* BlueClassicIcon@3x.png */,
 				09A218EA22A1570900DE6898 /* BlackFilledIcon@2x.png */,
 				09A218EB22A1570900DE6898 /* BlackFilledIcon@3x.png */,
 				09A218EC22A1570900DE6898 /* BlueFilledIcon@2x.png */,
@@ -2000,6 +2014,8 @@
 				D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */,
 				D09B79C42219C784003B1F9D /* SharedAccountInfo.swift */,
 				D09B79C72219C7AE003B1F9D /* ManageSharedAccountInfo.swift */,
+				D07477B522A72B1F002737C4 /* TempRoot.swift */,
+				D07477B722A732F1002737C4 /* TempMain.m */,
 			);
 			path = "Telegram-iOS";
 			sourceTree = "<group>";
@@ -2897,6 +2913,7 @@
 				D04DCC211F71C80000B021D7 /* 0.m4a in Resources */,
 				D04DCC261F71C80000B021D7 /* 103.m4a in Resources */,
 				09A218F222A1570A00DE6898 /* BlueFilledIcon@2x.png in Resources */,
+				090E777722A6945900CD99F5 /* BlueClassicIcon@2x.png in Resources */,
 				D0CE6F69213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D0338736223A9A9A007A2CE4 /* Config-Hockeyapp-Internal.xcconfig in Resources */,
 				D08DB0C0213F4D1D00F2ADBF /* telegram_sphere@2x.png in Resources */,
@@ -2947,6 +2964,7 @@
 				D0CE6F59213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D08DB0B9213F4D1D00F2ADBF /* powerful_star@2x.png in Resources */,
 				D04DCC271F71C80000B021D7 /* 104.m4a in Resources */,
+				090E777522A6945900CD99F5 /* BlueClassicIcon@3x.png in Resources */,
 				09A218F122A1570A00DE6898 /* BlackFilledIcon@3x.png in Resources */,
 				D04DCC2A1F71C80000B021D7 /* 107.m4a in Resources */,
 				D08DB0BA213F4D1D00F2ADBF /* private_door@2x.png in Resources */,
@@ -2981,8 +2999,10 @@
 				D04DCC251F71C80000B021D7 /* 102.m4a in Resources */,
 				D021D4D9219CAEDD0064BEBA /* Config-Fork.xcconfig in Resources */,
 				D08DB0AD213F4D1D00F2ADBF /* ic_cam@2x.png in Resources */,
+				090E777622A6945900CD99F5 /* BlackClassicIcon@3x.png in Resources */,
 				D08DB0BF213F4D1D00F2ADBF /* telegram_plane1@2x.png in Resources */,
 				D0E8B8B02044496C00605593 /* voip_ringback.caf in Resources */,
+				090E777422A6945900CD99F5 /* BlackClassicIcon@2x.png in Resources */,
 				D00ED75A1FE94630001F38BD /* AppIntentVocabulary.plist in Resources */,
 				D04DCC221F71C80000B021D7 /* 1.m4a in Resources */,
 				D0E8C2E02285EA6A009F26E8 /* BlackIcon@3x.png in Resources */,

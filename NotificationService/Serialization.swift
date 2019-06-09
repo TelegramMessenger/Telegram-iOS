@@ -1,5 +1,9 @@
 import Foundation
+#if BUCK
+import MtProtoKit
+#else
 import MtProtoKitDynamic
+#endif
 
 public class BoxedMessage: NSObject {
     public let body: Any
@@ -10,7 +14,7 @@ public class BoxedMessage: NSObject {
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
-        return 100
+        return 102
     }
     
     public func parseMessage(_ data: Data!) -> Any! {

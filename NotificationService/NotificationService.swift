@@ -1,6 +1,10 @@
 import Foundation
 import UserNotifications
+#if BUCK
+import MtProtoKit
+#else
 import MtProtoKitDynamic
+#endif
 import WebP
 
 private var sharedLogger: Logger?

@@ -1,11 +1,15 @@
 #import "TGBridgeServer.h"
-#import "TGBridgeCommon.h"
 
 #import <LegacyComponents/LegacyComponents.h>
 #import <WatchConnectivity/WatchConnectivity.h>
 #import <libkern/OSAtomic.h>
 
+#ifdef BUCK
+#import <WatchUtils/WatchUtils.h>
+#else
+#import "TGBridgeCommon.h"
 #import "TGBridgeContext.h"
+#endif
 
 @interface TGBridgeSignalManager : NSObject
 

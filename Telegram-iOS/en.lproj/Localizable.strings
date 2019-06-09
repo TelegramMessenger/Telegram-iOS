@@ -4337,10 +4337,62 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.AppIcon" = "App Icon";
 "Appearance.AppIconDefault" = "Default";
 "Appearance.AppIconDefaultX" = "Default X";
+"Appearance.AppIconClassic" = "Classic";
+"Appearance.AppIconClassicX" = "Classic X";
 "Appearance.AppIconFilled" = "Filled";
 "Appearance.AppIconFilledX" = "Filled X";
 
 "Appearance.ThemeCarouselClassic" = "Classic";
-"Appearance.ThemeCarouselDay" = "Filled";
-"Appearance.ThemeCarouselNightBlue" = "Dark";
+"Appearance.ThemeCarouselDay" = "Day";
+"Appearance.ThemeCarouselNightBlue" = "Night Blue";
 "Appearance.ThemeCarouselNight" = "Monochrome";
+
+"Notification.Exceptions.DeleteAll" = "Delete All";
+"Notification.Exceptions.Add" = "Add";
+"Exceptions.AddToExceptions" = "ADD TO EXCEPTIONS";
+
+"Notification.Exceptions.NewException.MessagePreviewHeader" = "MESSAGE PREVIEW";
+"Notification.Exceptions.PreviewAlwaysOn" = "Show Preview";
+"Notification.Exceptions.PreviewAlwaysOff" = "Hide Preview";
+"Notification.Exceptions.RemoveFromExceptions" = "Remove from Exceptions";
+"Conversation.Block" = "Block";
+"Conversation.ShareMyPhoneNumber" = "Share My Phone Number";
+"Conversation.AddToContacts" = "Add to Contacts";
+
+"AddContact.ContactWillBeSharedNow" = "When you tap **Done**, your phone number will become visible to %@.";
+"AddContact.ContactWillBeSharedAfterMutual" = "Phone number vill be visible once %1$@ adds you as a contact. Your phone number will become visible to %1$@.";
+"AddContact.StatusSuccess" = "%@ is now in your contacts list.";
+"Conversation.ShareMyPhoneNumber.StatusSuccess" = "%@ can now see your phone number.";
+
+"Group.EditAdmin.TransferOwnership" = "Transfer Group Ownership";
+"Channel.EditAdmin.TransferOwnership" = "Transfer Channel Ownership";
+
+"OwnershipTransfer.SecurityCheck" = "Security Check";
+"OwnershipTransfer.SecurityRequirements" = "Ownership transfers are available if:\n\n• 2-Step verification was enabled for your account more than **7 days** ago.\n\n• You have logged in on this device more than **24 hours** ago.";
+"OwnershipTransfer.ComeBackLater" = "\n\nPlease come back later.";
+"OwnershipTransfer.SetupTwoStepAuth" = "Enable 2-Step Verification";
+
+"Channel.OwnershipTransfer.Title" = "Transfer Channel Ownership";
+"Channel.OwnershipTransfer.DescriptionInfo" = "This will transfer the full **owner rights** for **%1$@** to **%2$@**.\n\nYou will no longer be considered the creator of the channel. The new owner will be free to remove any of your admin privileges or even ban you.";
+"Group.OwnershipTransfer.Title" = "Transfer Group Ownership";
+"Group.OwnershipTransfer.DescriptionInfo" = "This will transfer the full **owner rights** for **%1$@** to **%2$@**.\n\nYou will no longer be considered the creator of the group. The new owner will be free to remove any of your admin privileges or even ban you.";
+"Channel.OwnershipTransfer.ChangeOwner" = "Change Owner";
+
+"Channel.OwnershipTransfer.EnterPassword" = "Enter Password";
+"Channel.OwnershipTransfer.EnterPasswordText" = "Please enter your 2-Step Verification password to complete the transfer.";
+"Channel.OwnershipTransfer.PasswordPlaceholder" = "Password";
+
+"Channel.OwnershipTransfer.TransferCompleted" = "**%1$@** is now the owner of **%2$@**";
+
+"Contacts.AddPeopleNearby" = "Add People Nearby";
+
+"PeopleNearby.Title" = "People Nearby";
+"PeopleNearby.Description" = "Use this section to quickly find people and groups near you.";
+"PeopleNearby.Users" = "People Around You";
+"PeopleNearby.UsersEmpty" = "No one else is viewing \"People Nearby\" around you now";
+"PeopleNearby.Groups" = "Groups Around You";
+"PeopleNearby.CreateGroup" = "Start a Group Chat Here";
+"PeopleNearby.Channels" = "Channels Around You";
+
+"Channel.Management.LabelOwner" = "Owner";
+"Channel.Management.LabelAdministrator" = "Administrator";

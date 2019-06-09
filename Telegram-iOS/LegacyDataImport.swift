@@ -1,8 +1,13 @@
 import Foundation
+import UIKit
 import TelegramCore
 import SwiftSignalKit
 import Postbox
+#if BUCK
+import MtProtoKit
+#else
 import MtProtoKitDynamic
+#endif
 
 enum AccountImportError: Error {
     case generic

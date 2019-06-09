@@ -1,9 +1,18 @@
 import Foundation
+import UIKit
 import TelegramCore
 import SwiftSignalKit
 import Postbox
+#if BUCK
+import MtProtoKit
+#else
 import MtProtoKitDynamic
+#endif
 import TelegramUI
+
+#if BUCK
+import AppBinaryPrivate
+#endif
 
 import LegacyComponents
 
@@ -41,7 +50,7 @@ private enum PreferencesProvider {
 
 private func loadLegacyCustomProperyData(database: SqliteInterface, key: String) -> Data? {
     var result: Data?
-    database.select("SELECT value FROM service_v29 WHERE key=\(murMurHash32(key))", { cursor in
+    database.select("SELECT value FROM service_v29 WHERE key=\(HashFunctions.murMurHash32(key))", { cursor in
         result = cursor.getData(at: 0)
         return false
     })
@@ -97,7 +106,6 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
         let vibrationEnabled: Bool? = preferencesProvider["vibrationEnabled"] as? Bool
         let bannerEnabled: Bool? = preferencesProvider["bannerEnabled"] as? Bool
         let callsDataUsageMode: Int? = preferencesProvider["callsDataUsageMode"] as? Int
-        let callsDisableP2P: Bool? = preferencesProvider["callsDisableP2P"] as? Bool
         let callsDisableCallKit: Bool? = preferencesProvider["callsDisableCallKit"] as? Bool
         let callsUseProxy: Bool? = preferencesProvider["callsUseProxy"] as? Bool
         let contactsInhibitSync: Bool? = preferencesProvider["contactsInhibitSync"] as? Bool
@@ -362,7 +370,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
             })
             
             transaction.updateSharedData(ApplicationSpecificSharedDataKeys.instantPagePresentationSettings, { current in
-                var settings: InstantPagePresentationSettings = current as? InstantPagePresentationSettings ?? .defaultSettings
+                let settings: InstantPagePresentationSettings = current as? InstantPagePresentationSettings ?? .defaultSettings
                 if let instantPageFontSize = instantPageFontSize {
                     switch instantPageFontSize {
                         case 0.85:
