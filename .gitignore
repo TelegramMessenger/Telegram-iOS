@@ -24,3 +24,5 @@ DerivedData/
 
 xcuserdata/
 autom4te.cache/
+
+libtgvoip.xcodeproj/*
