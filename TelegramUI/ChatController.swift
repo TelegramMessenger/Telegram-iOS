@@ -1565,10 +1565,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             
                             var didDisplayActionsPanel = false
                             if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
-                                if !peerStatusSettings.contains(.isHidden) {
-                                    if contactStatus.canAddContact {
+                                if !peerStatusSettings.isEmpty {
+                                    if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
                                         didDisplayActionsPanel = true
-                                    } else if peerStatusSettings.contains(.canReport) {
+                                    } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {
                                         didDisplayActionsPanel = true
                                     } else if peerStatusSettings.contains(.canShareContact) {
                                         didDisplayActionsPanel = true
@@ -1578,10 +1578,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             
                             var displayActionsPanel = false
                             if let contactStatus = contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
-                                if !peerStatusSettings.contains(.isHidden) {
-                                    if contactStatus.canAddContact {
+                                if !peerStatusSettings.isEmpty {
+                                    if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
                                         displayActionsPanel = true
-                                    } else if peerStatusSettings.contains(.canReport) {
+                                    } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {
                                         displayActionsPanel = true
                                     } else if peerStatusSettings.contains(.canShareContact) {
                                         displayActionsPanel = true

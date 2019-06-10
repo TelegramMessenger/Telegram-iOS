@@ -104,7 +104,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     case addToExisting(Int, PresentationTheme, String)
     
     case company(Int, PresentationTheme, String, String, Bool?)
-    case phoneNumber(Int, Int, PresentationTheme, String, String, String, Bool?)
+    case phoneNumber(Int, Int, PresentationTheme, String, String, String, Bool?, Bool)
     case editingPhoneNumber(Int, PresentationTheme, PresentationStrings, Int64, String, String, String, Bool)
     case phoneNumberSharingInfo(Int, PresentationTheme, String)
     case addPhoneNumber(Int, PresentationTheme, String)
@@ -142,7 +142,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 return .constant(.addToExisting)
             case .company:
                 return .constant(.company)
-            case let .phoneNumber(_, catIndex, _, _, _, _, _):
+            case let .phoneNumber(_, catIndex, _, _, _, _, _, _):
                 return .phoneNumber(catIndex)
             case .phoneNumberSharingInfo:
                 return .constant(.phoneNumberSharingInfo)
@@ -224,8 +224,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .phoneNumber(lhsIndex, lhsCatIndex, lhsTheme, lhsTitle, lhsLabel, lhsValue, lhsSelected):
-                if case let .phoneNumber(rhsIndex, rhsCatIndex, rhsTheme, rhsTitle, rhsLabel, rhsValue, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsCatIndex == rhsCatIndex, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsLabel == rhsLabel, lhsValue == rhsValue, lhsSelected == rhsSelected {
+            case let .phoneNumber(lhsIndex, lhsCatIndex, lhsTheme, lhsTitle, lhsLabel, lhsValue, lhsSelected, lhsIsInteractionEnabled):
+                if case let .phoneNumber(rhsIndex, rhsCatIndex, rhsTheme, rhsTitle, rhsLabel, rhsValue, rhsSelected, rhsIsInteractionEnabled) = rhs, lhsIndex == rhsIndex, lhsCatIndex == rhsCatIndex, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsLabel == rhsLabel, lhsValue == rhsValue, lhsSelected == rhsSelected, lhsIsInteractionEnabled == rhsIsInteractionEnabled {
                     return true
                 } else {
                     return false
@@ -301,7 +301,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 return index
             case let .company(index, _, _, _, _):
                 return index
-            case let .phoneNumber(index, _, _, _, _, _, _):
+            case let .phoneNumber(index, _, _, _, _, _, _, _):
                 return index
             case let .phoneNumberSharingInfo(index, _, _):
                 return index
@@ -354,14 +354,14 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
             case let .company(_, theme, title, value, selected):
                 return ItemListTextWithLabelItem(theme: theme, label: title, text: value, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                 }, tag: nil)
-            case let .phoneNumber(_, index, theme, title, label, value, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
+            case let .phoneNumber(_, index, theme, title, label, value, selected, isInteractionEnabled):
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: isInteractionEnabled ? {
                     if selected != nil {
                         arguments.toggleSelection(.phoneNumber(label, value))
                     } else {
                         arguments.callPhone(value)
                     }
-                }, longTapAction: {
+                    } : nil, longTapAction: {
                     if selected == nil {
                         arguments.displayCopyContextMenu(.info(index), value)
                     }
@@ -583,12 +583,12 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     if isShare {
         var numberIndex = 0
         if contactData.basicData.phoneNumbers.isEmpty {
-            entries.append(.phoneNumber(entries.count, numberIndex, presentationData.theme, "mobile", "mobile", "Hidden", nil))
+            entries.append(.phoneNumber(entries.count, numberIndex, presentationData.theme, localizedPhoneNumberLabel(label: "_$!<Mobile>!$_", strings: presentationData.strings), localizedPhoneNumberLabel(label: "_$!<Mobile>!$_", strings: presentationData.strings), presentationData.strings.ContactInfo_PhoneNumberHidden, nil, false))
             numberIndex += 1
         }
         for number in contactData.basicData.phoneNumbers {
             let formattedNumber = formatPhoneNumber(number.value)
-            entries.append(.phoneNumber(entries.count, numberIndex, presentationData.theme, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.label, formattedNumber, nil))
+            entries.append(.phoneNumber(entries.count, numberIndex, presentationData.theme, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.label, formattedNumber, nil, false))
             numberIndex += 1
         }
         if let peer = peer {
@@ -609,7 +609,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
             var numberIndex = 0
             for number in contactData.basicData.phoneNumbers {
                 let formattedNumber = formatPhoneNumber(number.value)
-                entries.append(.phoneNumber(entries.count, numberIndex, presentationData.theme, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.label, formattedNumber, selecting ? !state.excludedComponents.contains(.phoneNumber(number.label, formattedNumber)) : nil))
+                entries.append(.phoneNumber(entries.count, numberIndex, presentationData.theme, localizedPhoneNumberLabel(label: number.label, strings: presentationData.strings), number.label, formattedNumber, selecting ? !state.excludedComponents.contains(.phoneNumber(number.label, formattedNumber)) : nil, true))
                 numberIndex += 1
             }
         }
@@ -1033,6 +1033,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                             dismissImpl?(true)
                                         }
                                     }))
+                                    return
                                 }
                             default:
                                 break
