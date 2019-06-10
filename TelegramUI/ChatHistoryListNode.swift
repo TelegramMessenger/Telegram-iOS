@@ -831,43 +831,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messagesWithPreloadableMediaToEarlier: [(Message, Media)] = []
             var messagesWithPreloadableMediaToLater: [(Message, Media)] = []
             
-            for i in (indexRange.0 ... indexRange.1) {
-                switch historyView.filteredEntries[i] {
-                case let .MessageEntry(message, _, _, _, _, _):
-                    var hasUnconsumedMention = false
-                    var hasUnconsumedContent = false
-                    if message.tags.contains(.unseenPersonalMessage) {
-                        for attribute in message.attributes {
-                            if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
-                                hasUnconsumedMention = true
-                            }
-                        }
-                    }
-                    var contentRequiredValidation = false
-                    for attribute in message.attributes {
-                        if attribute is ViewCountMessageAttribute {
-                            if message.id.namespace == Namespaces.Message.Cloud {
-                                messageIdsWithViewCount.append(message.id)
-                            }
-                        } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
-                            hasUnconsumedContent = true
-                        } else if let _ = attribute as? ContentRequiresValidationMessageAttribute {
-                            contentRequiredValidation = true
-                        }
-                    }
-                    for media in message.media {
-                        if let _ = media as? TelegramMediaUnsupported {
-                            contentRequiredValidation = true
-                        }
-                    }
-                    if contentRequiredValidation {
-                        messageIdsWithUnsupportedMedia.append(message.id)
-                    }
-                    if hasUnconsumedMention && !hasUnconsumedContent {
-                        messageIdsWithUnseenPersonalMention.append(message.id)
-                    }
-                case let .MessageGroupEntry(_, messages, _):
-                    for (message, _, _, _) in messages {
+            if indexRange.0 <= indexRange.1 {
+                for i in (indexRange.0 ... indexRange.1) {
+                    switch historyView.filteredEntries[i] {
+                    case let .MessageEntry(message, _, _, _, _, _):
                         var hasUnconsumedMention = false
                         var hasUnconsumedContent = false
                         if message.tags.contains(.unseenPersonalMessage) {
@@ -877,6 +844,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 }
                             }
                         }
+                        var contentRequiredValidation = false
                         for attribute in message.attributes {
                             if attribute is ViewCountMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
@@ -884,14 +852,48 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 }
                             } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
                                 hasUnconsumedContent = true
+                            } else if let _ = attribute as? ContentRequiresValidationMessageAttribute {
+                                contentRequiredValidation = true
                             }
+                        }
+                        for media in message.media {
+                            if let _ = media as? TelegramMediaUnsupported {
+                                contentRequiredValidation = true
+                            }
+                        }
+                        if contentRequiredValidation {
+                            messageIdsWithUnsupportedMedia.append(message.id)
                         }
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
                         }
+                    case let .MessageGroupEntry(_, messages, _):
+                        for (message, _, _, _) in messages {
+                            var hasUnconsumedMention = false
+                            var hasUnconsumedContent = false
+                            if message.tags.contains(.unseenPersonalMessage) {
+                                for attribute in message.attributes {
+                                    if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
+                                        hasUnconsumedMention = true
+                                    }
+                                }
+                            }
+                            for attribute in message.attributes {
+                                if attribute is ViewCountMessageAttribute {
+                                    if message.id.namespace == Namespaces.Message.Cloud {
+                                        messageIdsWithViewCount.append(message.id)
+                                    }
+                                } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
+                                    hasUnconsumedContent = true
+                                }
+                            }
+                            if hasUnconsumedMention && !hasUnconsumedContent {
+                                messageIdsWithUnseenPersonalMention.append(message.id)
+                            }
+                        }
+                    default:
+                        break
                     }
-                default:
-                    break
                 }
             }
             
