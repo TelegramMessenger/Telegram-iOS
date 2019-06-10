@@ -1,5 +1,5 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'glob_map', 'merge_maps', 'glob_sub_map')
-load('//tools:buck_defs.bzl', 'combined_config', 'SHARED_CONFIGS', 'LIB_SPECIFIC_CONFIG')
+load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'combined_config', 'configs_with_config', 'glob_map', 'merge_maps', 'glob_sub_map')
+load('//tools:buck_defs.bzl', 'SHARED_CONFIGS', 'EXTENSION_LIB_SPECIFIC_CONFIG')
 
 apple_library(
     name = 'tgvoip',
@@ -33,17 +33,31 @@ apple_library(
     exported_headers = glob([
         '*.h'
     ]),
+    exported_linker_flags = [
+        '-lc++',
+    ],
     modular = True,
-    configs = configs_with_config(combined_config([SHARED_CONFIGS, LIB_SPECIFIC_CONFIG])),
-    compiler_flags = [
-        '-w',
-        '-DTGVOIP_USE_CUSTOM_CRYPTO',
-        '-DWEBRTC_APM_DEBUG_DUMP=0',
-        '-DWEBRTC_POSIX',
-        '-DTGVOIP_HAVE_TGLOG',
-        '-DWEBRTC_NS_FLOAT',
-        '-DWEBRTC_IOS',
-        '-DWEBRTC_HAS_NEON',
+    configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
+    platform_compiler_flags = [
+        ('arm.*', [
+            '-w',
+            '-DTGVOIP_USE_CUSTOM_CRYPTO',
+            '-DWEBRTC_APM_DEBUG_DUMP=0',
+            '-DWEBRTC_POSIX',
+            '-DTGVOIP_HAVE_TGLOG',
+            '-DWEBRTC_NS_FLOAT',
+            '-DWEBRTC_IOS',
+            '-DWEBRTC_HAS_NEON',
+        ]),
+        ('.*', [
+            '-w',
+            '-DTGVOIP_USE_CUSTOM_CRYPTO',
+            '-DWEBRTC_APM_DEBUG_DUMP=0',
+            '-DWEBRTC_POSIX',
+            '-DTGVOIP_HAVE_TGLOG',
+            '-DWEBRTC_NS_FLOAT',
+            '-DWEBRTC_IOS',
+        ]),
     ],
     preprocessor_flags = ['-fobjc-arc'],
     visibility = ['PUBLIC'],
