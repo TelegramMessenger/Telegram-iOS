@@ -1,5 +1,12 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config')
-load('//tools:buck_defs.bzl', 'combined_config', 'SHARED_CONFIGS', 'LIB_SPECIFIC_CONFIG')
+load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'combined_config', 'configs_with_config')
+load('//tools:buck_defs.bzl', 'SHARED_CONFIGS', 'EXTENSION_LIB_SPECIFIC_CONFIG')
+
+apple_resource(
+    name = "LegacyComponentsResources",
+    dirs = [
+        "LegacyComponents/Resources/LegacyComponentsResources.bundle",
+    ],
+)
 
 apple_library(
     name = 'LegacyComponents',
@@ -357,11 +364,12 @@ apple_library(
         'LegacyComponents/TGEmbedPlayerControls.h',
     ],
     modular = True,
-    configs = configs_with_config(combined_config([SHARED_CONFIGS, LIB_SPECIFIC_CONFIG])),
+    configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
     compiler_flags = ['-w'],
     preprocessor_flags = ['-fobjc-arc'],
     visibility = ['PUBLIC'],
     deps = [
+        ':LegacyComponentsResources',
         '//submodules/SSignalKit:SSignalKit',
     ],
     frameworks = [
