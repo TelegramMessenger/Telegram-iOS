@@ -692,7 +692,8 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             updateState { current in
                 peerIds = peerIds.union(current.mode.peerIds)
                 let key: PostboxViewKey = .peerNotificationSettings(peerIds: peerIds)
-                updateNotificationsDisposable.set((context.account.postbox.combinedView(keys: [key]) |> deliverOnMainQueue).start(next: { view in
+                updateNotificationsDisposable.set((context.account.postbox.combinedView(keys: [key])
+                |> deliverOnMainQueue).start(next: { view in
                     if let view = view.views[key] as? PeerNotificationSettingsView {
                         _ = context.account.postbox.transaction { transaction in
                             updateState { current in
@@ -724,6 +725,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         updateNotificationsView({})
         
         var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+        var dismissInputImpl: (() -> Void)?
         
         let presentationData = context.sharedContext.currentPresentationData.modify {$0}
         
@@ -758,6 +760,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     return
                 }
                 
+                dismissInputImpl?()
                 presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer, mode: mode, updatePeerSound: { peerId, sound in
                     _ = updatePeerSound(peer.id, sound).start(next: { _ in
                         updateNotificationsDisposable.set(nil)
@@ -842,6 +845,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     controller?.dismiss()
                 })
             }
+            dismissInputImpl?()
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, updateRevealedPeerId: { peerId in
             updateState { current in
@@ -855,9 +859,14 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             } |> deliverOnMainQueue).start(completed: {
                 updateNotificationsDisposable.set(nil)
                 updateState { value in
-                    return value.withUpdatedPeerMuteInterval(peer, nil).withUpdatedPeerSound(peer, .default)
+                    return value.withUpdatedPeerMuteInterval(peer, nil).withUpdatedPeerSound(peer, .default).withUpdatedPeerDisplayPreviews(peer, .default)
                 }
-                _ = combineLatest(updatePeerSound(peer.id, .default), updatePeerNotificationInterval(peer.id, nil)).start(next: { _, _ in
+                _ = (context.account.postbox.transaction { transaction in
+                    updatePeerNotificationSoundInteractive(transaction: transaction, peerId: peer.id, sound: .default)
+                    updatePeerMuteSetting(transaction: transaction, peerId: peer.id, muteInterval: nil)
+                    updatePeerDisplayPreviewsSetting(transaction: transaction, peerId: peer.id, displayPreviews: .default)
+                }
+                |> deliverOnMainQueue).start(completed: {
                     updateNotificationsView({})
                 })
             })
@@ -903,6 +912,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     actionSheet?.dismissAnimated()
                 })
             ])])
+            dismissInputImpl?()
             presentControllerImpl?(actionSheet, nil)
         })
         
@@ -910,6 +920,10 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         
         presentControllerImpl = { [weak self] c, a in
             self?.present(c, a)
+        }
+        
+        dismissInputImpl = { [weak self] in
+            self?.view.endEditing(true)
         }
         
         let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])

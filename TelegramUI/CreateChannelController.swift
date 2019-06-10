@@ -234,7 +234,9 @@ public func createChannelController(context: AccountContext) -> ViewController {
             }
             
             endEditingImpl?()
-            actionsDisposable.add((createChannel(account: context.account, title: title, description: description.isEmpty ? nil : description) |> deliverOnMainQueue |> afterDisposed {
+            actionsDisposable.add((createChannel(account: context.account, title: title, description: description.isEmpty ? nil : description)
+            |> deliverOnMainQueue
+            |> afterDisposed {
                 Queue.mainQueue().async {
                     updateState { current in
                         var current = current
@@ -243,21 +245,27 @@ public func createChannelController(context: AccountContext) -> ViewController {
                     }
                 }
             }).start(next: { peerId in
-                if let peerId = peerId {
-                    let updatingAvatar = stateValue.with {
-                        return $0.avatar
-                    }
-                    if let _ = updatingAvatar {
-                        let _ = updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
-                            return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
-                        }).start()
-                    }
-                    
-                    let controller = channelVisibilityController(context: context, peerId: peerId, mode: .initialSetup, upgradedToSupergroup: { _, f in f() })
-                    replaceControllerImpl?(controller)
+                let updatingAvatar = stateValue.with {
+                    return $0.avatar
                 }
-            }, error: { _ in
+                if let _ = updatingAvatar {
+                    let _ = updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
+                    }).start()
+                }
                 
+                let controller = channelVisibilityController(context: context, peerId: peerId, mode: .initialSetup, upgradedToSupergroup: { _, f in f() })
+                replaceControllerImpl?(controller)
+            }, error: { error in
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let text: String
+                switch error {
+                    case .generic:
+                        text = presentationData.strings.Login_UnknownError
+                    case .restricted:
+                        text = presentationData.strings.Common_ActionNotAllowedError
+                }
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }))
         }
     }, changeProfilePhoto: {

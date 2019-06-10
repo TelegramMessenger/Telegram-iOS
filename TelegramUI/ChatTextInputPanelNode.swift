@@ -628,8 +628,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 if let textInputNode = self.textInputNode, textInputNode.keyboardAppearance != keyboardAppearance, textInputNode.isFirstResponder() {
                     textInputNode.resignFirstResponder()
                     textInputNode.becomeFirstResponder()
+                    textInputNode.keyboardAppearance = keyboardAppearance
                 }
-                self.textInputNode?.keyboardAppearance = keyboardAppearance
                 
                 self.textInputContainer.backgroundColor = interfaceState.theme.chat.inputPanel.inputBackgroundColor
                 
@@ -692,7 +692,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
                 if self.currentPlaceholder != placeholder || themeUpdated {
                     self.currentPlaceholder = placeholder
-                    let placeholderLayout = TextNode.asyncLayout(self.textPlaceholderNode)
                     let baseFontSize = max(17.0, interfaceState.fontSize.baseDisplaySize)
                     self.textPlaceholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(baseFontSize), textColor: interfaceState.theme.chat.inputPanel.inputPlaceholderColor)
                     self.textInputNode?.textView.accessibilityHint = placeholder
@@ -967,7 +966,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), transition: transition, interfaceState: presentationInterfaceState)
         }
         
-        if let mediaRecordingState = interfaceState.inputTextPanelState.mediaRecordingState {
+        if let _ = interfaceState.inputTextPanelState.mediaRecordingState {
             let text: String = "Send"
             let mediaRecordingAccessibilityArea: AccessibilityAreaNode
             var added = false
