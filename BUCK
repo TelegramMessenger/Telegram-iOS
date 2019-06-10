@@ -1,9 +1,11 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config')
+load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'combined_config')
 load('//tools:buck_defs.bzl', 'SHARED_CONFIGS')
 
 # Adding `-all_load` to our binaries works around https://bugs.swift.org/browse/SR-6004. See the
 # longer comment in `ViewController.swift` for more details.
 ALL_LOAD_LINKER_FLAG = '-all_load'
+
+BUILD_NUMBER = '2001'
 
 APP_CONFIGS = {
     'ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES': 'YES',
@@ -11,6 +13,9 @@ APP_CONFIGS = {
     'PRODUCT_BUNDLE_IDENTIFIER': 'ph.telegra.Telegraph',
     'PROVISIONING_PROFILE_SPECIFIER': 'match Development ph.telegra.Telegraph',
     'TARGETED_DEVICE_FAMILY': '1,2',
+    'APP_NAME': 'Telegram',
+    'BUILD_NUMBER': BUILD_NUMBER,
+    'CODE_SIGN_ENTITLEMENTS': 'Telegram-iOS/Telegram-iOS-AppStoreLLC.entitlements',
 }
 APP_CONFIGS.update(SHARED_CONFIGS)
 
@@ -19,6 +24,30 @@ apple_resource(
     files = [
         'Telegram-iOS/Base.lproj/LaunchScreen.xib',
     ],
+)
+
+apple_resource(
+    name = "StringResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/Localizable.strings",
+    ]),
+)
+
+apple_resource(
+    name = "InfoPlistStringResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/InfoPlist.strings",
+    ]),
+)
+
+apple_resource(
+    name = "AppIntentVocabularyStringResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/AppIntentVocabulary.plist",
+    ]),
 )
 
 apple_asset_catalog(
@@ -78,7 +107,6 @@ apple_library(
         'Telegram-iOS/UIImage+ImageEffects.h',
     ],
     modular = True,
-    #visibility = ['//submodules/TelegramUI:TelegramUI'],
     visibility = ['PUBLIC'],
     deps = [
         '//submodules/SSignalKit:SSignalKit',
@@ -90,31 +118,35 @@ apple_library(
 apple_binary(
     name = 'AppBinary',
     configs = configs_with_config(config_with_updated_linker_flags(APP_CONFIGS, ALL_LOAD_LINKER_FLAG)),
-    srcs = glob([
-        'Telegram-iOS/*.swift',
-    ]) + [
-        'Telegram-iOS/main.m',
-    ],
+    #srcs = glob([
+    #    'Telegram-iOS/*.swift',
+    #]) + [
+    #    'Telegram-iOS/main.m',
+    #],
+    srcs = ['Telegram-iOS/TempMain.m'],
     entitlements_file = 'Telegram-iOS/Telegram-iOS-AppStoreLLC.entitlements',
     deps = [
         ':LaunchScreenXib',
+        ':StringResources',
+        ':InfoPlistStringResources',
+        ':AppIntentVocabularyStringResources',
         ':Images',
-        '//submodules/AsyncDisplayKit:AsyncDisplayKit',
-        '//submodules/MtProtoKit:MtProtoKit',
-        '//submodules/SSignalKit:SwiftSignalKit',
-        '//submodules/SSignalKit:SSignalKit',
-        '//submodules/Display:Display',
-        '//submodules/Postbox:Postbox',
-        '//submodules/TelegramCore:TelegramCore',
-        '//submodules/LegacyComponents:LegacyComponents',
-        '//submodules/HockeySDK-iOS:HockeySDK',
-        '//submodules/lottie-ios:Lottie',
+        #'//submodules/AsyncDisplayKit:AsyncDisplayKit',
+        #'//submodules/MtProtoKit:MtProtoKit',
+        #'//submodules/SSignalKit:SwiftSignalKit',
+        #'//submodules/SSignalKit:SSignalKit',
+        #'//submodules/Display:Display',
+        #'//submodules/Postbox:Postbox',
+        #'//submodules/TelegramCore:TelegramCore',
+        #'//submodules/LegacyComponents:LegacyComponents',
+        #'//submodules/HockeySDK-iOS:HockeySDK',
+        #'//submodules/lottie-ios:Lottie',
         '//submodules/libtgvoip:tgvoip',
-        '//submodules/webp:WebP',
-        '//submodules/ffmpeg:FFMpeg',
-        '//submodules/TelegramUI:TelegramUI',
-        '//submodules/TelegramUI:TelegramUIPrivateModule',
-        '//Watch:WatchUtils',
+        #'//submodules/webp:WebPImage',
+        #'//submodules/ffmpeg:FFMpeg',
+        #'//submodules/TelegramUI:TelegramUI',
+        '//submodules/TelegramUI:TelegramUIFramework',
+        #'//Watch:WatchUtils',
         ':BuildConfig',
         ':AppBinaryPrivate',
     ],
@@ -140,7 +172,7 @@ apple_bundle(
         'PRODUCT_NAME': 'Telegram',
         'APP_SPECIFIC_URL_SCHEME': 'tgapp',
         'VERSION': '5.8',
-        'BUILD_NUMBER': '2001',
+        'BUILD_NUMBER': BUILD_NUMBER,
     },
 )
 

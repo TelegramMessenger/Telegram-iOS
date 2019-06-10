@@ -75,16 +75,16 @@ def glob_sub_map(prefix, glob_specs):
         result[file_key] = path
     return result
 
-def gen_header_targets(header_paths, prefix, source_rule, source_path):
+def gen_header_targets(header_paths, prefix, flavor, source_rule, source_path):
     result = dict()
     for header_path in header_paths:
         name = prefix + header_path.replace('/', '_sub_')
         native.genrule(
-            name = name,
+            name = name + flavor,
             cmd = 'cp $(location :' + source_rule + ')/' + source_path + '/' + header_path + ' $OUT',
             out = name,
         )
-        result[header_path] = ':' + name
+        result[header_path] = ':' + name + flavor
     return result
 
 def lib_basename(name):
@@ -95,14 +95,17 @@ def lib_basename(name):
         result = result[:-2]
     return result
 
-def gen_lib_targets(lib_paths, prefix, source_rule, source_path):
-    result = []
-    for lib_path in lib_paths:
-        name = lib_path.replace('/', '_sub_')
-        native.genrule(
-            name = name,
-            cmd = 'cp $(location :' + source_rule + ')/' + source_path + '/' + lib_path + ' $OUT',
-            out = name
-        )
-        result.append(name)
+def combined_config(dicts):
+    result = dict()
+    for d in dicts:
+        result.update(d)
     return result
+
+valid_build_variants = ['project', 'release']
+
+def get_build_variant():
+    build_variant = native.read_config('build', 'variant', '')
+    if build_variant not in valid_build_variants:
+        fail('build_variant should be one of %s' % valid_build_variants)
+    return build_variant
+

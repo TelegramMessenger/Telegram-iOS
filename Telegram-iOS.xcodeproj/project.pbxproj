@@ -5240,6 +5240,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
 				);
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (
 					"-ObjC",
 					"-lz",

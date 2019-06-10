@@ -10,11 +10,9 @@ SHARED_CONFIGS = {
 
 LIB_SPECIFIC_CONFIG = {
     'SKIP_INSTALL': 'YES',
-    'APPLICATION_EXTENSION_API_ONLY': 'YES',
 }
 
-def combined_config(dicts):
-    result = dict()
-    for d in dicts:
-        result.update(d)
-    return result
+EXTENSION_LIB_SPECIFIC_CONFIG = {
+    'SKIP_INSTALL': 'YES',
+    'APPLICATION_EXTENSION_API_ONLY': 'YES',
+}

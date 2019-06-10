@@ -29,3 +29,4 @@ buck-out/*
 AppBinary.xcworkspace/*
 Project.xcodeproj/*
 Watch/Watch.xcodeproj/*
+AppBundle.xcworkspace/*

@@ -4358,6 +4358,7 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.Block" = "Block";
 "Conversation.ShareMyPhoneNumber" = "Share My Phone Number";
 "Conversation.AddToContacts" = "Add to Contacts";
+"Conversation.AddNameToContacts" = "Add %@ to Contacts";
 
 "AddContact.ContactWillBeSharedNow" = "When you tap **Done**, your phone number will become visible to %@.";
 "AddContact.ContactWillBeSharedAfterMutual" = "Phone number vill be visible once %1$@ adds you as a contact. Your phone number will become visible to %1$@.";
@@ -4396,3 +4397,6 @@ Any member of this group will be able to see messages in the channel.";
 
 "Channel.Management.LabelOwner" = "Owner";
 "Channel.Management.LabelAdministrator" = "Administrator";
+"ContactInfo.PhoneNumberHidden" = "Hidden";
+
+"Common.ActionNotAllowedError" = "Sorry, you are not allowed to do this.";
