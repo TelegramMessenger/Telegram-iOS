@@ -1,12 +1,39 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config')
-load('//tools:buck_defs.bzl', 'combined_config', 'SHARED_CONFIGS', 'LIB_SPECIFIC_CONFIG')
+load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'combined_config', 'configs_with_config')
+load('//tools:buck_defs.bzl', 'SHARED_CONFIGS', 'LIB_SPECIFIC_CONFIG')
 
-prebuilt_apple_framework(
+genrule(
+    name = 'CrashReporter_lib_file',
+    srcs = [
+        'Vendor/libCrashReporter.a',
+    ],
+    bash = 'mkdir -p $OUT; cp $SRCS $OUT/',
+    out = 'CrashReporter_lib_file',
+    visibility = [
+        '//submodules/HockeySDK-iOS:...',
+    ]
+)
+
+apple_library(
+    name = 'CrashReporter',
+    visibility = [
+        '//submodules/HockeySDK-iOS:...'
+    ],
+    header_namespace = 'CrashReporter',
+    exported_headers = glob([
+        'Vendor/include/**/*.h',
+    ]),
+    exported_linker_flags = [
+        '-lCrashReporter',
+        '-L$(location :CrashReporter_lib_file)',
+    ],
+)
+
+'''apple_library(
   name = 'CrashReporter',
   framework = 'Vendor/CrashReporter.framework',
   preferred_linkage = 'static',
   visibility = ['//submodules/HockeySDK-iOS:...']
-)
+)'''
 
 apple_library(
     name = 'HockeySDK',
