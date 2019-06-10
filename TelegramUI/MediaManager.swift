@@ -263,7 +263,7 @@ public final class MediaManager: NSObject {
                     (.next, commandCenter.nextTrackCommand, #selector(self.nextTrackCommandEvent(_:))),
                     ([.play, .pause], commandCenter.togglePlayPauseCommand, #selector(self.togglePlayPauseCommandEvent(_:)))
                 ]
-                if #available(iOSApplicationExtension 9.1, *) {
+                if #available(iOSApplicationExtension 9.1, iOS 9.1, *) {
                     optionsAndCommands.append((.seek, commandCenter.changePlaybackPositionCommand, #selector(self.changePlaybackPositionCommandEvent(_:))))
                 }
                 
@@ -308,7 +308,7 @@ public final class MediaManager: NSObject {
         } |> deliverOnMainQueue).start(next: { image in
             if var nowPlayingInfo = baseNowPlayingInfo {
                 if let image = image {
-                    if #available(iOSApplicationExtension 10.0, *) {
+                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                         nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size, requestHandler: { size in
                             return image
                         })

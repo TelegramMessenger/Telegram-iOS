@@ -159,7 +159,7 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
 }
 
 private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {
-    if #available(iOSApplicationExtension 9.0, *) {
+    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
         switch CNContactsUserDefaults.shared().sortOrder {
             case .givenName:
                 return .firstLast

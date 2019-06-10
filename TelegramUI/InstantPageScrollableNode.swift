@@ -72,7 +72,7 @@ final class InstantPageScrollableNode: ASScrollNode, InstantPageNode {
         self.view.alwaysBounceVertical = false
         self.view.showsHorizontalScrollIndicator = false
         self.view.showsVerticalScrollIndicator = false
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.view.contentInsetAdjustmentBehavior = .never
         }
         self.addSubnode(self.contentNode)

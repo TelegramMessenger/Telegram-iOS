@@ -21,7 +21,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                 case _ as TelegramMediaImage:
                     if message.text.isEmpty {
                         messageText = strings.Message_Photo
-                    } else if #available(iOSApplicationExtension 9.0, *) {
+                    } else if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                         if enableMediaEmoji {
                             messageText = "🖼 \(messageText)"
                         }
@@ -79,7 +79,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                     if message.text.isEmpty {
                                         messageText = strings.Message_Video
                                         processed = true
-                                    } else if #available(iOSApplicationExtension 9.0, *) {
+                                    } else if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                                         if !fileMedia.isAnimated && enableMediaEmoji {
                                             messageText = "📹 \(messageText)"
                                             processed = true

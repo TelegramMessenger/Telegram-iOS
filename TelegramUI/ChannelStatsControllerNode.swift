@@ -34,10 +34,10 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
         
         configuration.userContentController = userController
         let webView = WKWebView(frame: CGRect(), configuration: configuration)
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             webView.allowsLinkPreview = false
         }
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             webView.scrollView.contentInsetAdjustmentBehavior = .never
         }
         webView.navigationDelegate = self

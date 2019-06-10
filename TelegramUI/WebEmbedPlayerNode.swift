@@ -85,15 +85,15 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         config.allowsInlineMediaPlayback = true
         config.userContentController = userContentController
         
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             config.mediaTypesRequiringUserActionForPlayback = []
-        } else if #available(iOSApplicationExtension 9.0, *) {
+        } else if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             config.requiresUserActionForMediaPlayback = false
         } else {
             config.mediaPlaybackRequiresUserAction = false
         }
         
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             config.allowsPictureInPictureMediaPlayback = false
         }
 
@@ -105,7 +105,7 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         
         self.webView.navigationDelegate = self
         self.webView.scrollView.isScrollEnabled = false
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.webView.accessibilityIgnoresInvertColors = true
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
         }

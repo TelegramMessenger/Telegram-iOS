@@ -29,7 +29,7 @@ func compressImageToJPEG(_ image: UIImage, quality: Float) -> Data? {
     return data as Data
 }
 
-@available(iOSApplicationExtension 11.0, *)
+@available(iOSApplicationExtension 11.0, iOS 11.0, *)
 func compressImage(_ image: UIImage, quality: Float) -> Data? {
     let data = NSMutableData()
     guard let destination = CGImageDestinationCreateWithData(data as CFMutableData, AVFileType.heic as CFString, 1, nil) else {

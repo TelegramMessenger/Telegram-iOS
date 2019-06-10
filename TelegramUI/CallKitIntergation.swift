@@ -14,7 +14,7 @@ public final class CallKitIntegration {
         return false
         #endif
         
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             return Locale.current.regionCode?.lowercased() != "cn"
         } else {
             return false
@@ -35,7 +35,7 @@ public final class CallKitIntegration {
         return nil
         #else
         
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             if sharedProviderDelegate == nil {
                 sharedProviderDelegate = CallKitProviderDelegate()
             }
@@ -47,37 +47,37 @@ public final class CallKitIntegration {
     }
     
     func startCall(account: Account, peerId: PeerId, displayTitle: String) {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(account: account, peerId: peerId, displayTitle: displayTitle)
         }
     }
     
     func answerCall(uuid: UUID) {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.answerCall(uuid: uuid)
         }
     }
     
     func dropCall(uuid: UUID) {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.dropCall(uuid: uuid)
         }
     }
     
     func reportIncomingCall(uuid: UUID, handle: String, displayTitle: String, completion: ((NSError?) -> Void)?) {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.reportIncomingCall(uuid: uuid, handle: handle, displayTitle: displayTitle, completion: completion)
         }
     }
     
     func reportOutgoingCallConnected(uuid: UUID, at date: Date) {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.reportOutgoingCallConnected(uuid: uuid, at: date)
         }
     }
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private let provider: CXProvider
     private let callController = CXCallController()

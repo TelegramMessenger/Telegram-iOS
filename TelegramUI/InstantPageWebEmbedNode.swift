@@ -54,10 +54,10 @@ final class InstantPageWebEmbedNode: ASDisplayNode, InstantPageNode {
         configuration.userContentController = userController
         
         let webView = WKWebView(frame: CGRect(origin: CGPoint(), size: frame.size), configuration: configuration)
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             webView.allowsLinkPreview = false
         }
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             webView.scrollView.contentInsetAdjustmentBehavior = .never
         }
         webView.scrollView.isScrollEnabled = enableScrolling

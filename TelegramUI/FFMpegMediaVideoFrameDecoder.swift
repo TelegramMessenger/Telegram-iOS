@@ -100,7 +100,7 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
             ioSurfaceProperties["IOSurfaceIsGlobal"] = true as NSNumber
             
             var options: [String: Any] = [kCVPixelBufferBytesPerRowAlignmentKey as String: frame.lineSize[0] as NSNumber]
-            /*if #available(iOSApplicationExtension 9.0, *) {
+            /*if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                 options[kCVPixelBufferOpenGLESTextureCacheCompatibilityKey as String] = true as NSNumber
             }*/
             options[kCVPixelBufferIOSurfacePropertiesKey as String] = ioSurfaceProperties

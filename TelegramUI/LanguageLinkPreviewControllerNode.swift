@@ -153,7 +153,7 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
     override func didLoad() {
         super.didLoad()
         
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
         }
     }

@@ -279,7 +279,7 @@ private func imageFromSampleBuffer(sampleBuffer: CMSampleBuffer) -> UIImage? {
         return nil
     }
     var maybeImage: CGImage?
-    if #available(iOSApplicationExtension 9.0, *) {
+    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
         guard VTCreateCGImageFromCVPixelBuffer(imageBuffer, nil, &maybeImage) == noErr, let image = maybeImage else {
             return nil
         }

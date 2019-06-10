@@ -3736,14 +3736,14 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         
         if !self.didSetup3dTouch {
             self.didSetup3dTouch = true
-            if #available(iOSApplicationExtension 9.0, *) {
+            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                 //self.registerForPreviewing(with: self, sourceView: self.chatDisplayNode.historyNodeContainer.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
                 if case .peer = self.chatLocation, let buttonView = (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view {
                     //self.registerForPreviewing(with: self, sourceView: buttonView, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
                 }
             }
             
-            if #available(iOSApplicationExtension 11.0, *) {
+            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 let dropInteraction = UIDropInteraction(delegate: self)
                 self.chatDisplayNode.view.addInteraction(dropInteraction)
             }
@@ -6186,9 +6186,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     let sourceRect = CGRect(origin: CGPoint(x: floor(targetRect.midX), y: floor(targetRect.midY)), size: CGSize(width: 1.0, height: 1.0))
                     if let parsedUrl = URL(string: string) {
                         if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
-                            if #available(iOSApplicationExtension 9.0, *) {
+                            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                                 let controller = SFSafariViewController(url: parsedUrl)
-                                if #available(iOSApplicationExtension 10.0, *) {
+                                if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                                     controller.preferredBarTintColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
                                     controller.preferredControlTintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
                                 }
@@ -6236,7 +6236,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             
         }
         
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             if let safariController = viewControllerToCommit as? SFSafariViewController {
                 if let window = self.navigationController?.view.window {
                     window.rootViewController?.present(safariController, animated: true)
@@ -6245,7 +6245,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
     }
     
-    @available(iOSApplicationExtension 9.0, *)
+    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
     override public var previewActionItems: [UIPreviewActionItem] {
         struct PreviewActionsData {
             let notificationSettings: PeerNotificationSettings?
@@ -6516,12 +6516,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.present(actionSheet, in: .window(.root))
     }
     
-    @available(iOSApplicationExtension 11.0, *)
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, canHandle session: UIDropSession) -> Bool {
         return session.hasItemsConforming(toTypeIdentifiers: [kUTTypeImage as String])
     }
     
-    @available(iOSApplicationExtension 11.0, *)
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, sessionDidUpdate session: UIDropSession) -> UIDropProposal {
         if !canSendMessagesToChat(self.presentationInterfaceState) {
             return UIDropProposal(operation: .cancel)
@@ -6535,7 +6535,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         return UIDropProposal(operation: operation)
     }
     
-    @available(iOSApplicationExtension 11.0, *)
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, performDrop session: UIDropSession) {
         session.loadObjects(ofClass: UIImage.self) { [weak self] imageItems in
             guard let strongSelf = self else {
@@ -6548,12 +6548,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
     }
     
-    @available(iOSApplicationExtension 11.0, *)
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, sessionDidExit session: UIDropSession) {
         self.chatDisplayNode.updateDropInteraction(isActive: false)
     }
     
-    @available(iOSApplicationExtension 11.0, *)
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, sessionDidEnd session: UIDropSession) {
         self.chatDisplayNode.updateDropInteraction(isActive: false)
     }

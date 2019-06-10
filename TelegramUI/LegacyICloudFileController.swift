@@ -52,7 +52,7 @@ func legacyICloudFileController(theme: PresentationTheme, completion: @escaping 
     
     let controller = UIDocumentPickerViewController(documentTypes: documentTypes, in: .open)
     controller.delegate = legacyController
-    if #available(iOSApplicationExtension 11.0, *) {
+    if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
         controller.allowsMultipleSelection = true
     }
     

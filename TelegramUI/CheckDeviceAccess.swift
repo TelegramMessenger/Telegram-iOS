@@ -86,7 +86,7 @@ public final class DeviceAccess {
         switch subject {
             case .notifications:
                 let status = (Signal<AccessType, NoError> { subscriber in
-                    if #available(iOSApplicationExtension 10.0, *) {
+                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                         UNUserNotificationCenter.current().getNotificationSettings(completionHandler: { settings in
                             switch settings.authorizationStatus {
                                 case .authorized:
@@ -136,7 +136,7 @@ public final class DeviceAccess {
                 }
             case .contacts:
                 let status = Signal<AccessType, NoError> { subscriber in
-                    if #available(iOSApplicationExtension 9.0, *) {
+                    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                         switch CNContactStore.authorizationStatus(for: .contacts) {
                             case .notDetermined:
                                 subscriber.putNext(.notDetermined)
@@ -170,7 +170,7 @@ public final class DeviceAccess {
                     })
             case .cellularData:
                 return Signal { subscriber in
-                    if #available(iOSApplicationExtension 9.0, *) {
+                    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                         func statusForCellularState(_ state: CTCellularDataRestrictedState) -> AccessType? {
                             switch state {
                             case .restricted:
@@ -363,7 +363,7 @@ public final class DeviceAccess {
                         if let value = value {
                             completion(value)
                         } else {
-                            if #available(iOSApplicationExtension 9.0, *) {
+                            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                                 switch CNContactStore.authorizationStatus(for: .contacts) {
                                     case .notDetermined:
                                         let store = CNContactStore()

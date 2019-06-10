@@ -13,7 +13,7 @@ private protocol DeviceContactDataContext {
     func createContactWithData(_ contactData: DeviceContactExtendedData) -> (DeviceContactStableId, DeviceContactExtendedData)?
 }
 
-@available(iOSApplicationExtension 9.0, *)
+@available(iOSApplicationExtension 9.0, iOS 9.0, *)
 private final class DeviceContactDataModernContext: DeviceContactDataContext {
     let store = CNContactStore()
     var updateHandle: NSObjectProtocol?
@@ -421,7 +421,7 @@ private final class DeviceContactDataManagerImpl {
             }
             strongSelf.accessInitialized = true
             if authorizationStatus == .allowed {
-                if #available(iOSApplicationExtension 9.0, *) {
+                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                     let dataContext = DeviceContactDataModernContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
                         guard let strongSelf = self else {
                             return

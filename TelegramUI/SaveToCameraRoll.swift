@@ -96,7 +96,7 @@ func saveToCameraRoll(context: AccountContext, postbox: Postbox, mediaReference:
                             PHPhotoLibrary.shared().performChanges({
                                 if isImage {
                                     if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                        if #available(iOSApplicationExtension 9.0, *) {
+                                        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                                             PHAssetCreationRequest.forAsset().addResource(with: .photo, data: fileData, options: nil)
                                         } else {
                                             if let image = UIImage(data: fileData) {

@@ -486,7 +486,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 scrollContainerNode.view.delaysContentTouches = false
                 scrollContainerNode.view.delegate = self
                 scrollContainerNode.view.alwaysBounceVertical = true
-                if #available(iOSApplicationExtension 11.0, *) {
+                if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                     scrollContainerNode.view.contentInsetAdjustmentBehavior = .never
                 }
                 self.insertSubnode(scrollContainerNode, aboveSubnode: self.backgroundEffectNode!)

@@ -210,7 +210,7 @@ public final class AvatarNode: ASDisplayNode {
     override public func didLoad() {
         super.didLoad()
         
-        if #available(iOSApplicationExtension 11.0, *), !self.isLayerBacked {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *), !self.isLayerBacked {
             self.view.accessibilityIgnoresInvertColors = true
         }
     }

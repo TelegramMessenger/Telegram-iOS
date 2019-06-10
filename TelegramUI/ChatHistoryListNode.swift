@@ -820,6 +820,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyView = transactionState.historyView
         if let visible = displayedRange.visibleRange {
             let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
+            if indexRange.0 > indexRange.1 {
+                assert(false)
+                return
+            }
             
             let readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
             

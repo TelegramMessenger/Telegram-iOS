@@ -72,7 +72,7 @@ struct ICloudFileDescription {
 }
 
 private func descriptionWithUrl(_ url: URL) -> ICloudFileDescription? {
-    if #available(iOSApplicationExtension 9.0, *) {
+    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
         guard url.startAccessingSecurityScopedResource() else {
             return nil
         }

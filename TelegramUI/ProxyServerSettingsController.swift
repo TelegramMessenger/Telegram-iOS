@@ -390,7 +390,7 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
         }
         
         let link = shareLink(for: server)
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             let controller = ShareProxyServerActionSheetController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, link: link)
             presentImpl?(controller, nil)
         } else {

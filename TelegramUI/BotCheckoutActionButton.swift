@@ -216,7 +216,7 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
                         self.inactiveBackgroundNode.alpha = 0.0
                         self.activeBackgroundNode.alpha = 0.0
                         if self.applePayButton == nil {
-                            if #available(iOSApplicationExtension 9.0, *) {
+                            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                                 let applePayButton = PKPaymentButton(paymentButtonType: .buy, paymentButtonStyle: .black)
                                 self.view.addSubview(applePayButton)
                                 self.applePayButton = applePayButton

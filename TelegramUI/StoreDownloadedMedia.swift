@@ -88,7 +88,7 @@ private final class DownloadedMediaStoreContext {
                     PHPhotoLibrary.shared().performChanges({
                         if let _ = media.media as? TelegramMediaImage {
                             if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                if #available(iOSApplicationExtension 9.0, *) {
+                                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                                     let creationRequest = PHAssetCreationRequest.forAsset()
                                     let options = PHAssetResourceCreationOptions()
                                     if let filename = filename {
@@ -107,7 +107,7 @@ private final class DownloadedMediaStoreContext {
                 }
                 
                 let options = PHFetchOptions()
-                if #available(iOSApplicationExtension 9.0, *) {
+                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                     options.fetchLimit = 11
                 }
                 
@@ -115,7 +115,7 @@ private final class DownloadedMediaStoreContext {
                 var alreadyStored = false
                 let assets = PHAsset.fetchAssets(in: collection, options: options)
                 assets.enumerateObjects({ asset, _, done in
-                    if #available(iOSApplicationExtension 9.0, *) {
+                    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                         if let assetResource = PHAssetResource.assetResources(for: asset).first {
                             if assetResource.originalFilename == filename {
                                 alreadyStored = true

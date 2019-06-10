@@ -7,7 +7,11 @@ import AVFoundation
 import ImageIO
 import TelegramUIPrivateModule
 import TelegramCore
+#if BUCK
+import WebPImage
+#else
 import WebP
+#endif
 
 private enum ResourceFileData {
     case data(Data)

@@ -64,7 +64,7 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
                 self.inputNode.textField.isSecureTextEntry = true
                 self.inputNode.textField.autocapitalizationType = .none
                 self.inputNode.textField.autocorrectionType = .no
-                if #available(iOSApplicationExtension 12.0, *) {
+                if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
                     self.inputNode.textField.textContentType = .newPassword
                 }
             case .text:
@@ -73,14 +73,14 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
                 self.inputNode.textField.autocapitalizationType = .none
                 self.inputNode.textField.autocorrectionType = .no
                 self.inputNode.textField.keyboardType = .numberPad
-                if #available(iOSApplicationExtension 12.0, *) {
+                if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
                     self.inputNode.textField.textContentType = .oneTimeCode
                 }
             case .email:
                 self.inputNode.textField.autocapitalizationType = .none
                 self.inputNode.textField.autocorrectionType = .no
                 self.inputNode.textField.keyboardType = .emailAddress
-                if #available(iOSApplicationExtension 10.0, *) {
+                if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                     self.inputNode.textField.textContentType = .emailAddress
                 }
         }
