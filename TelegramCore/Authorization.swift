@@ -473,6 +473,9 @@ public func signUpWithName(accountManager: AccountManager, account: Unauthorized
                         let user = TelegramUser(user: user)
                         let appliedState = account.postbox.transaction { transaction -> Void in
                             let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+                            if let hole = account.postbox.seedConfiguration.initializeChatListWithHole.topLevel {
+                                transaction.replaceChatListHole(groupId: .root, index: hole.index, hole: nil)
+                            }
                             initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
                             transaction.setState(state)
                         }

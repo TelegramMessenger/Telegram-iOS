@@ -16,6 +16,7 @@ import Foundation
 public enum CreateGroupError {
     case generic
     case privacy
+    case restricted
 }
 
 public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> Signal<PeerId?, CreateGroupError> {

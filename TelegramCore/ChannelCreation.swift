@@ -13,18 +13,20 @@ import Foundation
     #endif
 #endif
 
-private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool) -> Signal<PeerId?, NoError> {
-    return account.postbox.transaction { transaction -> Signal<PeerId?, NoError> in
+private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool) -> Signal<PeerId, CreateChannelError> {
+    return account.postbox.transaction { transaction -> Signal<PeerId, CreateChannelError> in
         return account.network.request(Api.functions.channels.createChannel(flags: isSupergroup ? 1 << 1 : 1 << 0, title: title, about: description ?? ""), automaticFloodWait: false)
-        |> map(Optional.init)
-        |> `catch` { _ in
-            return Signal<Api.Updates?, NoError>.single(nil)
+        |> mapError { error -> CreateChannelError in
+            if error.errorDescription == "USER_RESTRICTED" {
+                return .restricted
+            } else {
+                return .generic
+            }
         }
-        |> mapToSignal { updates -> Signal<PeerId?, NoError> in
-            if let updates = updates {
-                account.stateManager.addUpdates(updates)
-                if let message = updates.messages.first, let peerId = apiMessagePeerId(message) {
-                    return account.postbox.multiplePeersView([peerId])
+        |> mapToSignal { updates -> Signal<PeerId, CreateChannelError> in
+            account.stateManager.addUpdates(updates)
+            if let message = updates.messages.first, let peerId = apiMessagePeerId(message) {
+                return account.postbox.multiplePeersView([peerId])
                     |> filter { view in
                         return view.peers[peerId] != nil
                     }
@@ -32,21 +34,27 @@ private func createChannel(account: Account, title: String, description: String?
                     |> map { _ in
                         return peerId
                     }
-                    |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
-                }
-                return .single(nil)
+                    |> introduceError(CreateChannelError.self)
+                    |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
             } else {
-                return .single(nil)
+                return .fail(.generic)
             }
         }
-    } |> switchToLatest
+    }
+    |> introduceError(CreateChannelError.self)
+    |> switchToLatest
 }
 
-public func createChannel(account: Account, title: String, description: String?) -> Signal<PeerId?, NoError> {
+public enum CreateChannelError {
+    case generic
+    case restricted
+}
+
+public func createChannel(account: Account, title: String, description: String?) -> Signal<PeerId, CreateChannelError> {
     return createChannel(account: account, title: title, description: description, isSupergroup: false)
 }
 
-public func createSupergroup(account: Account, title: String, description: String?) -> Signal<PeerId?, NoError> {
+public func createSupergroup(account: Account, title: String, description: String?) -> Signal<PeerId, CreateChannelError> {
     return createChannel(account: account, title: title, description: description, isSupergroup: true)
 }
 
