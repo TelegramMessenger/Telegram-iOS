@@ -159,6 +159,16 @@ apple_library(
     ],
     header_namespace = 'ffmpeg',
     exported_headers = ffmpeg_header_targets,
+    linker_flags = [
+        '-L$(location :libffmpeg_build)/FFmpeg-iOS/lib',
+        '-lavutil',
+        '-lavcodec',
+        '-lavformat',
+        '-lswresample',
+        '-lbz2',
+        '-liconv',
+        '-lz',
+    ],
     exported_linker_flags = [
         '-L$(location :libffmpeg_build)/FFmpeg-iOS/lib',
         '-lavutil',
@@ -167,9 +177,11 @@ apple_library(
         '-lswresample',
         '-lbz2',
         '-liconv',
+        '-lz',
     ],
     deps = [
-        ':libffmpeg_build'
+        ':libffmpeg_build',
+        ':opus',
     ],
 )
 
