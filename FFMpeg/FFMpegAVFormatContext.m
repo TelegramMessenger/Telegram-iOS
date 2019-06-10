@@ -43,6 +43,7 @@ int FFMpegCodecIdMPEG4 = AV_CODEC_ID_MPEG4;
     av_dict_free(&options);
     if (_impl != nil) {
         _impl->flags |= AVFMT_FLAG_FAST_SEEK;
+        _impl->flags |= AVFMT_FLAG_NOBUFFER;
     }
     
     return result >= 0;
