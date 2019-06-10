@@ -28,18 +28,15 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
                             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                 if let current = current as? CachedUserData {
                                     var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
-                                    peerStatusSettings.remove(.canReport)
-                                    peerStatusSettings.insert(.isHidden)
+                                    peerStatusSettings = []
                                     return current.withUpdatedPeerStatusSettings(peerStatusSettings)
                                 } else if let current = current as? CachedGroupData {
                                     var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
-                                    peerStatusSettings.remove(.canReport)
-                                    peerStatusSettings.insert(.isHidden)
+                                    peerStatusSettings = []
                                     return current.withUpdatedPeerStatusSettings(peerStatusSettings)
                                 } else if let current = current as? CachedChannelData {
                                     var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
-                                    peerStatusSettings.remove(.canReport)
-                                    peerStatusSettings.insert(.isHidden)
+                                    peerStatusSettings = []
                                     return current.withUpdatedPeerStatusSettings(peerStatusSettings)
                                 } else {
                                     return current
@@ -60,18 +57,15 @@ public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError
                             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                 if let current = current as? CachedUserData {
                                     var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
-                                    peerStatusSettings.remove(.canReport)
-                                    peerStatusSettings.insert(.isHidden)
+                                    peerStatusSettings = []
                                     return current.withUpdatedPeerStatusSettings(peerStatusSettings)
                                 } else if let current = current as? CachedGroupData {
                                     var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
-                                    peerStatusSettings.remove(.canReport)
-                                    peerStatusSettings.insert(.isHidden)
+                                    peerStatusSettings = []
                                     return current.withUpdatedPeerStatusSettings(peerStatusSettings)
                                 } else if let current = current as? CachedChannelData {
                                     var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
-                                    peerStatusSettings.remove(.canReport)
-                                    peerStatusSettings.insert(.isHidden)
+                                    peerStatusSettings = []
                                     return current.withUpdatedPeerStatusSettings(peerStatusSettings)
                                 } else {
                                     return current
@@ -177,19 +171,19 @@ public func dismissPeerStatusOptions(account: Account, peerId: PeerId) -> Signal
         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
             if let current = current as? CachedUserData {
                 var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
-                peerStatusSettings.insert(.isHidden)
+                peerStatusSettings = []
                 return current.withUpdatedPeerStatusSettings(peerStatusSettings)
             } else if let current = current as? CachedGroupData {
                 var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
-                peerStatusSettings.insert(.isHidden)
+                peerStatusSettings = []
                 return current.withUpdatedPeerStatusSettings(peerStatusSettings)
             } else if let current = current as? CachedChannelData {
                 var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
-                peerStatusSettings.insert(.isHidden)
+                peerStatusSettings = []
                 return current.withUpdatedPeerStatusSettings(peerStatusSettings)
             } else if let current = current as? CachedSecretChatData {
                 var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
-                peerStatusSettings.insert(.isHidden)
+                peerStatusSettings = []
                 return current.withUpdatedPeerStatusSettings(peerStatusSettings)
             } else {
                 return current

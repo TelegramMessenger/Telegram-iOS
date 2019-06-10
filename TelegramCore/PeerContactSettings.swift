@@ -12,9 +12,10 @@ public struct PeerStatusSettings: OptionSet {
         self.rawValue = rawValue
     }
     
-    public static let isHidden = PeerStatusSettings(rawValue: 1 << 0)
     public static let canReport = PeerStatusSettings(rawValue: 1 << 1)
     public static let canShareContact = PeerStatusSettings(rawValue: 1 << 2)
+    public static let canBlock = PeerStatusSettings(rawValue: 1 << 3)
+    public static let canAddContact = PeerStatusSettings(rawValue: 1 << 4)
 }
 
 extension PeerStatusSettings {
@@ -23,12 +24,15 @@ extension PeerStatusSettings {
             case let .peerSettings(flags):
                 var result = PeerStatusSettings()
                 if (flags & (1 << 1)) != 0 {
-                    result.insert(.isHidden)
+                    result.insert(.canAddContact)
                 }
                 if (flags & (1 << 0)) != 0 {
                     result.insert(.canReport)
                 }
                 if (flags & (1 << 2)) != 0 {
+                    result.insert(.canBlock)
+                }
+                if (flags & (1 << 3)) != 0 {
                     result.insert(.canShareContact)
                 }
                 self = result
