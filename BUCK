@@ -69,5 +69,6 @@ apple_library(
         '$SDKROOT/System/Library/Frameworks/UIKit.framework',
         '$SDKROOT/System/Library/Frameworks/AudioToolbox.framework',
         '$SDKROOT/System/Library/Frameworks/VideoToolbox.framework',
+        '$SDKROOT/System/Library/Frameworks/CoreTelephony.framework',
     ],
 )
