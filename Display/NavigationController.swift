@@ -803,7 +803,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                     
                     let appliedLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
                     controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
-                    strongSelf.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { _ in
+                    strongSelf.currentPushDisposable.set((controller.ready.get()
+                    |> deliverOnMainQueue
+                    |> take(1)).start(next: { _ in
                         guard let strongSelf = self else {
                             return
                         }
@@ -848,7 +850,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             controllerLayout.inputHeight = nil
             controller.containerLayoutUpdated(controllerLayout, transition: .immediate)
         }
-        self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
+        self.currentPushDisposable.set((controller.ready.get()
+        |> deliverOnMainQueue
+        |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
                 ready?.set(true)
                 var controllers = strongSelf.viewControllers
@@ -877,7 +881,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 controllerLayout.inputHeight = nil
                 controller.containerLayoutUpdated(controllerLayout, transition: .immediate)
             }
-            strongSelf.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { _ in
+            strongSelf.currentPushDisposable.set((controller.ready.get()
+            |> deliverOnMainQueue
+            |> take(1)).start(next: { _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -901,7 +907,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 controllerLayout.inputHeight = nil
                 controller.containerLayoutUpdated(controllerLayout, transition: .immediate)
             }
-            strongSelf.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { _ in
+            strongSelf.currentPushDisposable.set((controller.ready.get()
+            |> deliverOnMainQueue
+            |> take(1)).start(next: { _ in
                 guard let strongSelf = self else {
                     return
                 }
