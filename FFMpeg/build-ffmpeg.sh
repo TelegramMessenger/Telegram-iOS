@@ -1,12 +1,23 @@
 #!/bin/sh
 
-ARCHS="$2"
+RAW_ARCHS="$2"
+ARCHS=""
 
-for ARCH in $ARCHS
-do
-	if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" -o "$ARCH" = "arm64" -o "$ARCH" = "armv7" ]
+for RAW_ARCH in $RAW_ARCHS; do
+	ARCH_NAME="$RAW_ARCH"
+	if [ "$ARCH_NAME" == "iphoneos-arm64" ]; then
+		ARCH_NAME="arm64"
+	elif [ "$ARCH_NAME" == "iphoneos-armv7" ]; then
+		ARCH_NAME="armv7"
+	elif [ "$ARCH_NAME" == "iphonesimulator-x86_64" ]; then
+		ARCH_NAME="x86_64"
+	elif [ "$ARCH_NAME" == "iphonesimulator-i386" ]; then
+		ARCH_NAME="i386"
+	fi
+
+	if [ "$ARCH_NAME" = "i386" -o "$ARCH_NAME" = "x86_64" -o "$ARCH_NAME" = "arm64" -o "$ARCH_NAME" = "armv7" ]
 	then
-		echo "1" >/dev/null
+		ARCHS="$ARCHS $ARCH_NAME"
 	else
 		echo "Invalid architecture $ARCH"
 		exit 1
@@ -167,7 +178,6 @@ then
 		fi
 
 		CORE_COUNT=`sysctl -n hw.logicalcpu`
-
 		make -j$CORE_COUNT install $EXPORT || exit 1
 		cd "$CWD"
 	done

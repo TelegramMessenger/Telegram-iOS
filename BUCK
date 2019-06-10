@@ -1,5 +1,5 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'gen_header_targets', 'gen_lib_targets', 'lib_basename')
-load('//tools:buck_defs.bzl', 'combined_config', 'SHARED_CONFIGS', 'LIB_SPECIFIC_CONFIG')
+load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'combined_config', 'configs_with_config', 'gen_header_targets', 'lib_basename', 'get_build_variant')
+load('//tools:buck_defs.bzl', 'SHARED_CONFIGS', 'EXTENSION_LIB_SPECIFIC_CONFIG')
 
 genrule(
     name = 'opus_lib',
@@ -134,19 +134,15 @@ ffmpeg_header_paths = [
     'libswresample/swresample.h',
 ]
 
-ffmpeg_lib_paths = [
-    'libavutil.a',
-    'libavcodec.a',
-    'libavformat.a',
-    'libswresample.a',
-]
+build_variant = get_build_variant()
+library_archs = 'arm64 armv7' if build_variant == 'release' else 'arm64 armv7 x86_64 i386'
 
 genrule(
     name = 'libffmpeg_build',
     srcs = glob([
         "FFMpeg/**/*",
     ]),
-    bash = '$SRCDIR/FFMpeg/build-ffmpeg.sh debug x86_64 $OUT $SRCDIR/FFMpeg',
+    bash = '$SRCDIR/FFMpeg/build-ffmpeg.sh release "' + library_archs + '" $OUT $SRCDIR/FFMpeg',
     out = 'libffmpeg',
     visibility = [
         '//submodules/ffmpeg:FFMpeg',
@@ -154,13 +150,7 @@ genrule(
     ]
 )
 
-ffmpeg_header_targets = gen_header_targets(ffmpeg_header_paths, 'ffmpeg_header_', 'libffmpeg_build', 'FFmpeg-iOS/include')
-ffmpeg_lib_targets = gen_lib_targets(ffmpeg_lib_paths, 'ffmpeg_lib_', 'libffmpeg_build', 'FFmpeg-iOS/lib')
-
-ffmpeg_lib_targets_flags = [ '-l' + lib_basename(name) for name in ffmpeg_lib_targets ]
-ffmpeg_lib_targets_flags.append('-L$(location :libffmpeg_build)/FFmpeg-iOS/lib')
-ffmpeg_lib_targets_flags.append('-lbz2')
-ffmpeg_lib_targets_flags.append('-liconv')
+ffmpeg_header_targets = gen_header_targets(ffmpeg_header_paths, 'ffmpeg_header_', '', 'libffmpeg_build', 'FFmpeg-iOS/include')
 
 apple_library(
     name = 'libffmpeg',
@@ -169,7 +159,15 @@ apple_library(
     ],
     header_namespace = 'ffmpeg',
     exported_headers = ffmpeg_header_targets,
-    exported_linker_flags = ffmpeg_lib_targets_flags,
+    exported_linker_flags = [
+        '-L$(location :libffmpeg_build)/FFmpeg-iOS/lib',
+        '-lavutil',
+        '-lavcodec',
+        '-lavformat',
+        '-lswresample',
+        '-lbz2',
+        '-liconv',
+    ],
     deps = [
         ':libffmpeg_build'
     ],
@@ -180,6 +178,7 @@ apple_library(
     srcs = glob([
         "FFMpeg/*.m",
     ]),
+    configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
     header_namespace = 'FFMpeg',
     headers = ffmpeg_header_targets,
     exported_headers = glob([
