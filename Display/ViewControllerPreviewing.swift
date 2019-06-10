@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-@available(iOSApplicationExtension 9.0, *)
+@available(iOSApplicationExtension 9.0, iOS 9.0, *)
 private final class ViewControllerPeekContent: PeekControllerContent {
     private let controller: ViewController
     private let menu: [PeekControllerMenuItem]
@@ -85,7 +85,7 @@ private final class ViewControllerPeekContentNode: ASDisplayNode, PeekController
     }
 }
 
-@available(iOSApplicationExtension 9.0, *)
+@available(iOSApplicationExtension 9.0, iOS 9.0, *)
 final class SimulatedViewControllerPreviewing: NSObject, UIViewControllerPreviewing {
     weak var delegateImpl: UIViewControllerPreviewingDelegate?
     var delegate: UIViewControllerPreviewingDelegate {

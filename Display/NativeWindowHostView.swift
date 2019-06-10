@@ -23,7 +23,7 @@ public final class PreviewingHostViewDelegate {
 }
 
 public protocol PreviewingHostView {
-    @available(iOSApplicationExtension 9.0, *)
+    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
     var previewingDelegate: PreviewingHostViewDelegate? { get }
 }
 
