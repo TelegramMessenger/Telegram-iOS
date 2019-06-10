@@ -1,5 +1,5 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config')
-load('//tools:buck_defs.bzl', 'SHARED_CONFIGS')
+load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'combined_config', 'configs_with_config')
+load('//tools:buck_defs.bzl', 'SHARED_CONFIGS', 'EXTENSION_LIB_SPECIFIC_CONFIG')
 
 genrule(
     name = 'openssl_libs',
@@ -36,6 +36,7 @@ apple_library(
         'thirdparty/AFNetworking/*.m',
         'thirdparty/AsyncSocket/*.m',
     ]),
+    configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
     headers = glob([
         '*.h',
         'MtProtoKit/*.h',
@@ -105,7 +106,6 @@ apple_library(
         'MTPKCS.h',
     ],
     modular = True,
-    configs = configs_with_config({}),
     compiler_flags = ['-w'],
     preprocessor_flags = ['-fobjc-arc'],
     visibility = ['PUBLIC'],
