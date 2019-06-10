@@ -598,10 +598,10 @@ public final class SqliteValueBox: ValueBox {
                     createStatement += " WITHOUT ROWID"
                 }
                 resultCode = database.execute(createStatement)
-                precondition(resultCode)
+                assert(resultCode)
             case .int64:
                 let resultCode = database.execute("CREATE TABLE t\(table.id) (key INTEGER PRIMARY KEY, value BLOB)")
-                precondition(resultCode)
+                assert(resultCode)
         }
     }
     
