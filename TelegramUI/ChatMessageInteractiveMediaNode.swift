@@ -81,7 +81,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     
     private var secretTimer: SwiftSignalKit.Timer?
     
-    var visibilityPromise = ValuePromise<ListViewItemNodeVisibility>(.none, ignoreRepeated: true)
+    var visibilityPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     var visibility: ListViewItemNodeVisibility = .none {
         didSet {
             if let videoNode = self.videoNode {
@@ -97,7 +97,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         videoNode.canAttachContent = false
                 }
             }
-            self.visibilityPromise.set(self.visibility)
+            var isVisible = false
+            if case .visible = self.visibility {
+                isVisible = true
+            }
+            self.visibilityPromise.set(isVisible)
         }
     }
     
@@ -700,16 +704,15 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     } else if let file = media as? TelegramMediaFile {
                                         let fetchSignal = messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: false)
                                         let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
-                                            |> mapToSignal { visibility -> Signal<Void, NoError> in
-                                                switch visibility {
-                                                    case .visible:
-                                                        return fetchSignal
-                                                        |> mapToSignal { _ -> Signal<Void, NoError> in
-                                                            return .complete()
-                                                        }
-                                                    case .none:
-                                                        return .complete()
+                                        |> mapToSignal { visibility -> Signal<Void, NoError> in
+                                            if visibility {
+                                                return fetchSignal
+                                                |> mapToSignal { _ -> Signal<Void, NoError> in
+                                                    return .complete()
                                                 }
+                                            } else {
+                                                return .complete()
+                                            }
                                         }
                                         strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.start())
                                     }
@@ -718,14 +721,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         let fetchSignal = preloadVideoResource(postbox: context.account.postbox, resourceReference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), duration: 4.0)
                                         let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
                                         |> mapToSignal { visibility -> Signal<Void, NoError> in
-                                            switch visibility {
-                                                case .visible:
-                                                    return fetchSignal
-                                                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                                                        return .complete()
-                                                    }
-                                                case .none:
+                                            if visibility {
+                                                return fetchSignal
+                                                |> mapToSignal { _ -> Signal<Void, NoError> in
                                                     return .complete()
+                                                }
+                                            } else {
+                                                return .complete()
                                             }
                                         }
                                         strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.start())
