@@ -1,13 +1,13 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config')
-load('//tools:buck_defs.bzl', 'SHARED_CONFIGS')
+load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'combined_config')
+load('//tools:buck_defs.bzl', 'SHARED_CONFIGS', 'EXTENSION_LIB_SPECIFIC_CONFIG')
 
 apple_library(
     name = 'SwiftSignalKit',
     srcs = glob([
         'SwiftSignalKit/*.swift'
     ]),
+    configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
     modular = True,
-    configs = configs_with_config({}),
     visibility = ['PUBLIC'],
     frameworks = [
         '$SDKROOT/System/Library/Frameworks/Foundation.framework',
@@ -19,6 +19,7 @@ apple_library(
     srcs = glob([
         'SSignalKit/*.m',
     ]),
+    configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
     headers = glob([
         'SSignalKit/*.h',
     ]),
@@ -27,7 +28,6 @@ apple_library(
         'SSignalKit/*.h',
     ]),
     modular = True,
-    configs = configs_with_config({}),
     compiler_flags = ['-w'],
     preprocessor_flags = ['-fobjc-arc'],
     visibility = ['PUBLIC'],
