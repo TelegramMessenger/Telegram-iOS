@@ -14,6 +14,8 @@ public enum ChannelOwnershipTransferError {
     case authSessionTooFresh(Int32)
     case requestPassword
     case invalidPassword
+    case adminsTooMuch
+    case userPublicChannelsTooMuch
     case restricted
     case userBlocked
 }
@@ -74,6 +76,10 @@ public func updateChannelOwnership(postbox: Postbox, network: Network, accountSt
                     if let value = Int32(timeout) {
                         return .authSessionTooFresh(value)
                     }
+                } else if error.errorDescription == "CHANNELS_ADMIN_PUBLIC_TOO_MUCH" {
+                    return .userPublicChannelsTooMuch
+                } else if error.errorDescription == "ADMINS_TOO_MUCH" {
+                    return .adminsTooMuch
                 } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
                     return .restricted
                 } else if error.errorDescription == "USER_BLOCKED" {
