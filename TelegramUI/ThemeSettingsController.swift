@@ -390,10 +390,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: disabled)
         }).start()
     }, selectAppIcon: { name in
-        context.sharedContext.applicationBindings.requestSetAlternateIconName(name, { succeed in
-            if succeed {
-                currentAppIconName.set(name)
-            }
+        currentAppIconName.set(name)
+        context.sharedContext.applicationBindings.requestSetAlternateIconName(name, { _ in
         })
     })
     
@@ -431,11 +429,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
-        
-        if previousTheme.swap(theme)?.name != theme.name {
-            //presentControllerImpl?(ThemeSettingsCrossfadeController())
-        }
-        
+                
         return (controllerState, (listState, arguments))
     }
     

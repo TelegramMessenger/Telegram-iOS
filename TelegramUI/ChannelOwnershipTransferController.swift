@@ -11,6 +11,10 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
     private let backgroundNode: ASImageNode
     private let textInputNode: TextFieldNode
     private let placeholderNode: ASTextNode
+    private var clearOnce: Bool = false
+    private let inputActivityNode: ActivityIndicator
+    
+    private var isChecking = false
     
     var complete: (() -> Void)?
     var textChanged: ((String) -> Void)?
@@ -50,11 +54,16 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
         self.placeholderNode.displaysAsynchronously = false
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(14.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         
+        self.inputActivityNode = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 18.0, 1.5, false))
+        
         super.init()
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.textInputNode)
         self.addSubnode(self.placeholderNode)
+        self.addSubnode(self.inputActivityNode)
+        
+        self.inputActivityNode.isHidden = true
     }
     
     override func didLoad() {
@@ -82,6 +91,15 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
         self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(14.0), textColor: theme.actionSheet.inputPlaceholderColor)
     }
     
+    func updateIsChecking(_ isChecking: Bool) {
+        self.isChecking = isChecking
+        self.inputActivityNode.isHidden = !isChecking
+    }
+    
+    func updateIsInvalid() {
+        self.clearOnce = true
+    }
+    
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let backgroundInsets = self.backgroundInsets
         let inputInsets = self.inputInsets
@@ -96,6 +114,9 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
         transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY + floor((backgroundFrame.size.height - placeholderSize.height) / 2.0)), size: placeholderSize))
         
         transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right, height: backgroundFrame.size.height)))
+        
+        let activitySize = CGSize(width: 18.0, height: 18.0)
+        transition.updateFrame(node: self.inputActivityNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX - activitySize.width - 6.0, y: backgroundFrame.minY + floor((backgroundFrame.height - activitySize.height) / 2.0)), size: activitySize))
         
         return panelHeight
     }
@@ -120,10 +141,23 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
     }
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if self.isChecking {
+            return false
+        }
+        
         if string == "\n" {
             self.complete?()
             return false
         }
+        
+        if self.clearOnce {
+            self.clearOnce = false
+            if range.length > string.count {
+                textField.text = ""
+                return false
+            }
+        }
+        
         return true
     }
 }
@@ -219,6 +253,10 @@ private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     
     var password: String {
         return self.inputFieldNode.password
+    }
+    
+    func updateIsChecking(_ checking: Bool) {
+        self.inputFieldNode.updateIsChecking(checking)
     }
     
     override func updateTheme(_ theme: AlertControllerTheme) {
@@ -352,6 +390,7 @@ private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     }
     
     func animateError() {
+        self.inputFieldNode.updateIsInvalid()
         self.inputFieldNode.layer.addShakeAnimation()
         self.hapticFeedback.error()
     }
@@ -388,7 +427,9 @@ private func commitChannelOwnershipTransferController(context: AccountContext, c
         guard let contentNode = contentNode else {
             return
         }
+        contentNode?.updateChecking(true)
         disposable.set((updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: channel.id, memberId: member.id, password: contentNode.password) |> deliverOnMainQueue).start(error: { [weak contentNode] error in
+            contentNode?.updateIsChecking(false)
             contentNode?.animateError()
         }, completed: {
             dismissImpl?()
@@ -438,6 +479,10 @@ func channelOwnershipTransferController(context: AccountContext, channel: Telegr
     var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
     
     var text = presentationData.strings.OwnershipTransfer_SecurityRequirements
+    var isGroup = false
+    if case .group = channel.info {
+        isGroup = true
+    }
     
     var dismissImpl: (() -> Void)?
     var actions: [TextAlertAction] = []
@@ -447,9 +492,7 @@ func channelOwnershipTransferController(context: AccountContext, channel: Telegr
             return confirmChannelOwnershipTransferController(context: context, channel: channel, member: member, present: present, completion: completion)
         case .twoStepAuthTooFresh, .authSessionTooFresh:
             text = text + presentationData.strings.OwnershipTransfer_ComeBackLater
-            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                dismissImpl?()
-            })]
+            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
         case .twoStepAuthMissing:
             actions = [TextAlertAction(type: .genericAction, title: presentationData.strings.OwnershipTransfer_SetupTwoStepAuth, action: {
                 let controller = SetupTwoStepVerificationController(context: context, initialState: .automatic, stateUpdated: { update, shouldDismiss, controller in
@@ -458,15 +501,23 @@ func channelOwnershipTransferController(context: AccountContext, channel: Telegr
                     }
                 })
                 present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
-                dismissImpl?()
-            })]
+            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]
+        case .adminsTooMuch:
+            title = nil
+            text = isGroup ? presentationData.strings.Group_OwnershipTransfer_ErrorAdminsTooMuch :  presentationData.strings.Channel_OwnershipTransfer_ErrorAdminsTooMuch
+            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
+        case .userPublicChannelsTooMuch:
+            title = nil
+            text = presentationData.strings.Channel_OwnershipTransfer_ErrorPublicChannelsTooMuch
+            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
+        case .userBlocked, .userPrivacyRestricted:
+            title = nil
+            text = isGroup ? presentationData.strings.Group_OwnershipTransfer_ErrorPrivacyRestricted :  presentationData.strings.Channel_OwnershipTransfer_ErrorPrivacyRestricted
+            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
         default:
             title = nil
             text = presentationData.strings.Login_UnknownError
-            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                dismissImpl?()
-            })]
+            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
     }
     
     let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor)

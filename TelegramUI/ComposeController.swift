@@ -113,20 +113,24 @@ public class ComposeController: ViewController {
         self.contactsNode.openCreateNewGroup = { [weak self] in
             if let strongSelf = self {
                 let controller = ContactMultiselectionController(context: strongSelf.context, mode: .groupCreation, options: [])
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, completion: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                    }
+                })
                 strongSelf.createActionDisposable.set((controller.result
-                    |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
-                        if let strongSelf = self, let controller = controller {
-                            let createGroup = createGroupController(context: strongSelf.context, peerIds: peerIds.compactMap({ peerId in
-                                if case let .peer(peerId) = peerId {
-                                    return peerId
-                                } else {
-                                    return nil
-                                }
-                            }))
-                            (controller.navigationController as? NavigationController)?.pushViewController(createGroup)
-                        }
-                    }))
+                |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
+                    if let strongSelf = self, let controller = controller {
+                        let createGroup = createGroupController(context: strongSelf.context, peerIds: peerIds.compactMap({ peerId in
+                            if case let .peer(peerId) = peerId {
+                                return peerId
+                            } else {
+                                return nil
+                            }
+                        }))
+                        (controller.navigationController as? NavigationController)?.pushViewController(createGroup)
+                    }
+                }))
             }
         }
         
@@ -154,13 +158,21 @@ public class ComposeController: ViewController {
                         }))
                     }
                 }))
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, completion: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                    }
+                })
             }
         }
         
         self.contactsNode.openCreateNewChannel = { [weak self] in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(legacyChannelIntroController(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings))
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(legacyChannelIntroController(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings), completion: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                    }
+                })
             }
         }
         

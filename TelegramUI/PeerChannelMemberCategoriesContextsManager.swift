@@ -224,12 +224,9 @@ final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights) -> Signal<Void, NoError> {
+    func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights) -> Signal<Void, UpdateChannelAdminRightsError> {
         return updateChannelAdminRights(account: account, peerId: peerId, adminId: memberId, rights: adminRights)
         |> map(Optional.init)
-        |> `catch` { _ -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, NoError> in
-            return .single(nil)
-        }
         |> deliverOnMainQueue
         |> beforeNext { [weak self] result in
             if let strongSelf = self, let (previous, updated) = result {
@@ -242,7 +239,7 @@ final class PeerChannelMemberCategoriesContextsManager {
                 }
             }
         }
-        |> mapToSignal { _ -> Signal<Void, NoError> in
+        |> mapToSignal { _ -> Signal<Void, UpdateChannelAdminRightsError> in
             return .complete()
         }
     }

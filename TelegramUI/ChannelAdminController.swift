@@ -388,6 +388,14 @@ private func canEditAdminRights(accountPeerId: PeerId, channelView: PeerView, in
     }
 }
 
+private func areAllAdminRightsEnabled(_ flags: TelegramChatAdminRightsFlags, group: Bool) -> Bool {
+    if group {
+        return TelegramChatAdminRightsFlags.groupSpecific.intersection(flags) == TelegramChatAdminRightsFlags.groupSpecific
+    } else {
+        return TelegramChatAdminRightsFlags.broadcastSpecific.intersection(flags) == TelegramChatAdminRightsFlags.broadcastSpecific
+    }
+}
+
 private func channelAdminControllerEntries(presentationData: PresentationData, state: ChannelAdminControllerState, accountPeerId: PeerId, channelView: PeerView, adminView: PeerView, initialParticipant: ChannelParticipant?) -> [ChannelAdminEntry] {
     var entries: [ChannelAdminEntry] = []
     
@@ -456,7 +464,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
             }
             
-            if channel.flags.contains(.isCreator) && currentRightsFlags.contains(.canAddAdmins) {
+            if let admin = admin as? TelegramUser, admin.botInfo == nil && channel.flags.contains(.isCreator) && areAllAdminRightsEnabled(currentRightsFlags, group: isGroup) {
                 entries.append(.transfer(presentationData.theme, isGroup ? presentationData.strings.Group_EditAdmin_TransferOwnership : presentationData.strings.Channel_EditAdmin_TransferOwnership))
             }
         
@@ -526,7 +534,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
         }
     
-        if group.role == .creator && currentRightsFlags.contains(.canAddAdmins) {
+        if let admin = admin as? TelegramUser, admin.botInfo == nil && group.role == .creator && areAllAdminRightsEnabled(currentRightsFlags, group: true) {
             entries.append(.transfer(presentationData.theme, presentationData.strings.Group_EditAdmin_TransferOwnership))
         }
         
@@ -573,10 +581,6 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
             return current.withUpdatedUpdatedFlags(updated)
         }
     }, transferOwnership: {
-        updateState { current in
-            return current.withUpdatedUpdating(true)
-        }
-        
         let _ = (context.account.postbox.transaction { transaction -> (peer: Peer?, member: Peer?) in
             return (peer: transaction.getPeer(peerId), member: transaction.getPeer(adminId))
         } |> deliverOnMainQueue).start(next: { peer, member in
@@ -602,10 +606,6 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
             }
             
             transferOwnershipDisposable.set((signal |> deliverOnMainQueue).start(error: { error in
-                updateState { current in
-                    return current.withUpdatedUpdating(false)
-                }
-                
                 let currentPeerId = actualPeerId.with { $0 }
                 let channel: Signal<Peer?, NoError>
                 if currentPeerId == peerId {
@@ -769,8 +769,14 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             updateState { current in
                                 return current.withUpdatedUpdating(true)
                             }
-                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags)) |> deliverOnMainQueue).start(error: { _ in
-                                
+                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags)) |> deliverOnMainQueue).start(error: { error in
+                                if case let .addMemberError(error) = error, case .restricted = error, let admin = adminView.peers[adminView.peerId] {
+                                    var text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                    if case .group = channel.info {
+                                        text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                    }
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                }
                             }, completed: {
                                 updated(TelegramChatAdminRights(flags: updateFlags))
                                 dismissImpl?()
@@ -803,15 +809,15 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                         } else if updateFlags != defaultFlags {
                             let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
                             |> map(Optional.init)
-                            |> `catch` { _ -> Signal<PeerId?, NoError> in
-                                return .single(nil)
+                            |> `catch` { _ -> Signal<PeerId?, UpdateChannelAdminRightsError> in
+                                return .fail(.generic)
                             }
-                            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
+                            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, UpdateChannelAdminRightsError> in
                                 guard let upgradedPeerId = upgradedPeerId else {
-                                    return .single(nil)
+                                    return .fail(.generic)
                                 }
                                 return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: upgradedPeerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags))
-                                |> mapToSignal { _ -> Signal<PeerId?, NoError> in
+                                |> mapToSignal { _ -> Signal<PeerId?, UpdateChannelAdminRightsError> in
                                     return .complete()
                                 }
                                 |> then(.single(upgradedPeerId))
@@ -827,7 +833,11 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         dismissImpl?()
                                     })
                                 }
-                            }, error: { _ in
+                            }, error: { error in
+                                if case let .addMemberError(error) = error, case .restricted = error, let admin = adminView.peers[adminView.peerId] {
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                }
+                                
                                 updateState { current in
                                     return current.withUpdatedUpdating(false)
                                 }

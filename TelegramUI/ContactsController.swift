@@ -192,7 +192,6 @@ public class ContactsController: ViewController {
         
         let openPeer: (ContactListPeer, Bool) -> Void = { [weak self] peer, fromSearch in
             if let strongSelf = self {
-                strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                 switch peer {
                     case let .peer(peer, _, _):
                         if let navigationController = strongSelf.navigationController as? NavigationController {
@@ -200,6 +199,10 @@ public class ContactsController: ViewController {
                                 if fromSearch {
                                     self?.deactivateSearch(animated: false)
                                     self?.switchToChatsController?()
+                                }
+                            }, completion: { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                                 }
                             })
                         }
@@ -210,7 +213,11 @@ public class ContactsController: ViewController {
                             guard let strongSelf = self, let value = value else {
                                 return
                             }
-                            (strongSelf.navigationController as? NavigationController)?.pushViewController(deviceContactInfoController(context: strongSelf.context, subject: .vcard(nil, id, value)))
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(deviceContactInfoController(context: strongSelf.context, subject: .vcard(nil, id, value)), completion: { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                                }
+                            })
                         })
                 }
             }
@@ -249,13 +256,21 @@ public class ContactsController: ViewController {
         self.contactsNode.openPeopleNearby = { [weak self] in
             if let strongSelf = self {
                 let controller = peopleNearbyController(context: strongSelf.context)
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, completion: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                    }
+                })
             }
         }
         
         self.contactsNode.openInvite = { [weak self] in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(InviteContactsController(context: strongSelf.context))
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(InviteContactsController(context: strongSelf.context), completion: {
+                    if let strongSelf = self {
+                        strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                    }
+                })
             }
         }
         

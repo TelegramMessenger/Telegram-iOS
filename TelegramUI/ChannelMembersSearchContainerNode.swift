@@ -365,6 +365,9 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
                         if case .searchAdmins = mode {
                             return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: memberId, adminRights: TelegramChatAdminRights(flags: []))
+                            |> `catch` { _ -> Signal<Void, NoError> in
+                                return .complete()
+                            }
                             |> afterDisposed {
                                 Queue.mainQueue().async {
                                     updateState { state in
