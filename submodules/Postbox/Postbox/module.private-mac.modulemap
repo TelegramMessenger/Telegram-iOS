@@ -1,0 +1,3 @@
+module PostboxMac.PostboxPrivate {
+    export *
+}
