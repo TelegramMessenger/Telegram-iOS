@@ -1,0 +1,28 @@
+//
+// Prefix header for all source files of the 'IntroOpenGL' target in the 'IntroOpenGL' project
+//
+
+#import <Availability.h>
+
+#ifndef __IPHONE_5_0
+#warning "This project uses features only available in iOS SDK 5.0 and later."
+#endif
+
+#ifdef __OBJC__
+    #import <UIKit/UIKit.h>
+    #import <Foundation/Foundation.h>
+    #import "RMGeometry.h"
+
+#define IPAD     UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad
+
+#define dDeviceOrientation [[UIDevice currentDevice] orientation]
+#define isPortrait  UIDeviceOrientationIsPortrait(dDeviceOrientation)
+#define isLandscape UIDeviceOrientationIsLandscape(dDeviceOrientation)
+
+//#define STATUS_HEIGHT [[UIDevice currentDevice] systemVersion]>=7 ? 0 : 10;
+
+    #define UIColorFromRGB(rgbValue) [UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
+
+    #define _(n) NSLocalizedString(n, nil)
+
+#endif
