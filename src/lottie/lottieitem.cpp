@@ -244,11 +244,14 @@ void LOTLayerItem::buildLayerNode()
         mLayerCNode->mNodeList.size = 0;
         mLayerCNode->mMatte = MatteNone;
         mLayerCNode->mVisible = 0;
+        mLayerCNode->mAlpha = 255;
         mLayerCNode->mClipPath.ptPtr = nullptr;
         mLayerCNode->mClipPath.elmPtr = nullptr;
         mLayerCNode->mClipPath.ptCount = 0;
         mLayerCNode->mClipPath.elmCount = 0;
     }
+    if (complexContent())
+       mLayerCNode->mAlpha = combinedAlpha() * 255;
     mLayerCNode->mVisible = visible();
     // update matte
     if (hasMatte()) {
