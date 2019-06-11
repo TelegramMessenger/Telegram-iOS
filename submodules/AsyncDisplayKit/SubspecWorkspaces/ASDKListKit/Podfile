@@ -1,0 +1,9 @@
+source 'https://github.com/CocoaPods/Specs.git'
+
+platform :ios, '9.0'
+target 'ASDKListKitTests' do
+  pod 'Texture/IGListKit', :path => '../..'
+  pod 'OCMock', '~> 3.4'
+  pod 'JGMethodSwizzler', :git => 'https://github.com/JonasGessner/JGMethodSwizzler', :branch => 'master'
+end
+

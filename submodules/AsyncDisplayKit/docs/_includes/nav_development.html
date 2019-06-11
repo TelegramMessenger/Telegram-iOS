@@ -1,0 +1,22 @@
+<nav class='toc'>
+	<h2>Development</h2>
+  {% for section in site.data.nav_development %}
+    <section>
+      <h3>{{ section.title }}</h3>
+      <ul>
+        {% for item in section.items %}
+          {% for doc in site.docs %}
+            {% assign item_url = item | prepend:"/development/" | append:".html" %}
+            {% if doc.url == item_url %}
+            <li>
+              <a href={{item_url}}{% if page.url == item_url %} class="active"{% endif %}>
+                {{ doc.title }}
+              </a>
+            </li>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+</nav>

@@ -1,0 +1,34 @@
+language: objective-c
+cache:
+  - bundler
+  - cocoapods
+osx_image: xcode8.1
+git:
+  depth: 10
+before_install:
+  - brew update
+  - brew outdated xctool || brew upgrade xctool
+  - brew outdated carthage || brew upgrade carthage
+  - gem install cocoapods -v 1.0.1
+  - gem install xcpretty -v 0.2.2
+  - gem install xcpretty-travis-formatter
+#  - gem install slather
+  - xcrun simctl list
+install: echo "<3"
+env:
+  - MODE=tests
+  - MODE=tests_listkit
+  - MODE=examples-pt1
+  - MODE=examples-pt2
+  - MODE=examples-pt3
+  - MODE=life-without-cocoapods
+  - MODE=framework
+script: ./build.sh $MODE
+
+#after_success:
+#  - slather
+
+# whitelist
+branches:
+  only:
+    - master
