@@ -83,7 +83,7 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
 
 let ChatControllerCount = Atomic<Int32>(value: 0)
 
-public final class ChatController: TelegramController, KeyShortcutResponder, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
+public final class ChatController: TelegramController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
     weak var parentController: ViewController?
@@ -6613,7 +6613,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
     }
     
-    public var keyShortcuts: [KeyShortcut] {
+    public override var keyShortcuts: [KeyShortcut] {
         let strings = self.presentationData.strings
         
         var inputShortcuts: [KeyShortcut]
