@@ -4356,12 +4356,13 @@ Any member of this group will be able to see messages in the channel.";
 "Notification.Exceptions.PreviewAlwaysOff" = "Hide Preview";
 "Notification.Exceptions.RemoveFromExceptions" = "Remove from Exceptions";
 "Conversation.Block" = "Block";
+"Conversation.BlockUser" = "Block User";
 "Conversation.ShareMyPhoneNumber" = "Share My Phone Number";
 "Conversation.AddToContacts" = "Add to Contacts";
 "Conversation.AddNameToContacts" = "Add %@ to Contacts";
 
 "AddContact.ContactWillBeSharedNow" = "When you tap **Done**, your phone number will become visible to %@.";
-"AddContact.ContactWillBeSharedAfterMutual" = "Phone number vill be visible once %1$@ adds you as a contact. Your phone number will become visible to %1$@.";
+"AddContact.ContactWillBeSharedAfterMutual" = "Phone number will be visible once %1$@ adds you as a contact. Your phone number will become visible to %1$@.";
 "AddContact.StatusSuccess" = "%@ is now in your contacts list.";
 "Conversation.ShareMyPhoneNumber.StatusSuccess" = "%@ can now see your phone number.";
 
