@@ -29,6 +29,7 @@ public class KeyShortcutsController: UIResponder {
             guard let viewController = viewController as? KeyShortcutResponder else {
                 return true
             }
+            shortcuts.removeAll(where: { viewController.keyShortcuts.contains($0) })
             shortcuts.append(contentsOf: viewController.keyShortcuts)
             return true
         })

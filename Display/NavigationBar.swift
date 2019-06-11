@@ -1123,6 +1123,17 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public func executeBack() -> Bool {
+        if self.backButtonNode.isInHierarchy {
+            self.backButtonNode.pressed(0)
+        } else if self.leftButtonNode.isInHierarchy {
+            self.leftButtonNode.pressed(0)
+        } else {
+            self.backButtonNode.pressed(0)
+        }
+        return true
+    }
+    
     public func setHidden(_ hidden: Bool, animated: Bool) {
         if let contentNode = self.contentNode, case .replacement = contentNode.mode {
         } else {

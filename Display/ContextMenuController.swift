@@ -10,11 +10,18 @@ public final class ContextMenuControllerPresentationArguments {
     }
 }
 
-public final class ContextMenuController: ViewController {
+public final class ContextMenuController: ViewController, KeyShortcutResponder {
     private var contextMenuNode: ContextMenuNode {
         return self.displayNode as! ContextMenuNode
     }
     
+    public var keyShortcuts: [KeyShortcut] {
+        return [KeyShortcut(input: UIKeyInputEscape, action: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.dismiss()
+            }
+        })]
+    }
     private let actions: [ContextMenuAction]
     private let catchTapsOutside: Bool
     private let hasHapticFeedback: Bool
