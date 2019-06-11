@@ -17,6 +17,7 @@ public struct PeerViewComponents: OptionSet {
 
 final class MutablePeerView: MutablePostboxView {
     let peerId: PeerId
+    let contactPeerId: PeerId
     let components: PeerViewComponents
     var notificationSettings: PeerNotificationSettings?
     var cachedData: CachedPeerData?
@@ -28,8 +29,6 @@ final class MutablePeerView: MutablePostboxView {
     
     init(postbox: Postbox, peerId: PeerId, components: PeerViewComponents) {
         self.components = components
-        let cachedData = postbox.cachedPeerDataTable.get(peerId)
-        let peerIsContact = postbox.contactsTable.isContact(peerId: peerId)
         
         let getPeer: (PeerId) -> Peer? = { peerId in
             return postbox.peerTable.get(peerId)
@@ -40,16 +39,21 @@ final class MutablePeerView: MutablePostboxView {
         }
         
         self.peerId = peerId
-        self.cachedData = cachedData
-        self.peerIsContact = peerIsContact
         self.groupId = postbox.chatListIndexTable.get(peerId: peerId).inclusion.groupId
         var peerIds = Set<PeerId>()
         var messageIds = Set<MessageId>()
         peerIds.insert(peerId)
+        
         if let peer = getPeer(peerId), let associatedPeerId = peer.associatedPeerId {
             peerIds.insert(associatedPeerId)
+            self.contactPeerId = associatedPeerId
+            self.peerIsContact = postbox.contactsTable.isContact(peerId: associatedPeerId)
+        } else {
+            self.contactPeerId = peerId
         }
-        if let cachedData = cachedData {
+        self.cachedData = postbox.cachedPeerDataTable.get(contactPeerId)
+        self.peerIsContact = postbox.contactsTable.isContact(peerId: self.contactPeerId)
+        if let cachedData = self.cachedData {
             peerIds.formUnion(cachedData.peerIds)
             messageIds.formUnion(cachedData.messageIds)
         }
@@ -102,7 +106,7 @@ final class MutablePeerView: MutablePostboxView {
         
         var updateMessages = false
         
-        if let cachedData = updatedCachedPeerData[self.peerId], self.cachedData == nil || !self.cachedData!.isEqual(to: cachedData) {
+        if let cachedData = updatedCachedPeerData[self.contactPeerId], self.cachedData == nil || !self.cachedData!.isEqual(to: cachedData) {
             if self.cachedData?.messageIds != cachedData.messageIds {
                 updateMessages = true
             }
@@ -227,12 +231,12 @@ final class MutablePeerView: MutablePostboxView {
         
         if let replaceContactPeerIds = replaceContactPeerIds {
             if self.peerIsContact {
-                if !replaceContactPeerIds.contains(self.peerId) {
+                if !replaceContactPeerIds.contains(self.contactPeerId) {
                     self.peerIsContact = false
                     updated = true
                 }
             } else {
-                if replaceContactPeerIds.contains(self.peerId) {
+                if replaceContactPeerIds.contains(self.contactPeerId) {
                     self.peerIsContact = true
                     updated = true
                 }

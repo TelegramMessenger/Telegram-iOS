@@ -272,6 +272,8 @@
 		D0BEAF6E1E54B77900BD963D /* AccountManagerRecordTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF6C1E54B77900BD963D /* AccountManagerRecordTable.swift */; };
 		D0BEAF701E54BC1E00BD963D /* AccountRecordsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF6F1E54BC1E00BD963D /* AccountRecordsView.swift */; };
 		D0BEAF711E54BC1E00BD963D /* AccountRecordsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF6F1E54BC1E00BD963D /* AccountRecordsView.swift */; };
+		D0BFE51D22AFD5AF00143D08 /* MutableBasicPeerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BFE51C22AFD5AF00143D08 /* MutableBasicPeerView.swift */; };
+		D0BFE51E22AFD5AF00143D08 /* MutableBasicPeerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BFE51C22AFD5AF00143D08 /* MutableBasicPeerView.swift */; };
 		D0C07F6A1B67DB4800966E43 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */; };
 		D0C0B5AB1EE1AB08000F4D2C /* ReverseAssociatedPeerTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5AA1EE1AB08000F4D2C /* ReverseAssociatedPeerTable.swift */; };
 		D0C0B5AC1EE1AB08000F4D2C /* ReverseAssociatedPeerTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5AA1EE1AB08000F4D2C /* ReverseAssociatedPeerTable.swift */; };
@@ -547,6 +549,7 @@
 		D0BEAF691E54B5FB00BD963D /* AccountManagerMetadataTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountManagerMetadataTable.swift; sourceTree = "<group>"; };
 		D0BEAF6C1E54B77900BD963D /* AccountManagerRecordTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountManagerRecordTable.swift; sourceTree = "<group>"; };
 		D0BEAF6F1E54BC1E00BD963D /* AccountRecordsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountRecordsView.swift; sourceTree = "<group>"; };
+		D0BFE51C22AFD5AF00143D08 /* MutableBasicPeerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MutableBasicPeerView.swift; sourceTree = "<group>"; };
 		D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C0B5AA1EE1AB08000F4D2C /* ReverseAssociatedPeerTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReverseAssociatedPeerTable.swift; sourceTree = "<group>"; };
 		D0C26D7D1FE3FA4E004ABF18 /* PinnedItemId.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedItemId.swift; sourceTree = "<group>"; };
@@ -934,6 +937,7 @@
 				D0CA8E47227208FE008A74C3 /* SynchronizeGroupMessageStatsView.swift */,
 				D06CA13122772DE40094E707 /* PeerNotificationSettingsBehaviorTimestampView.swift */,
 				D0E1199F229834BC008CAE3A /* MutablePeerChatInclusionView.swift */,
+				D0BFE51C22AFD5AF00143D08 /* MutableBasicPeerView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1295,6 +1299,7 @@
 				D0F7B1DD1E045C6A007EB8A5 /* PeerChatInterfaceStateTable.swift in Sources */,
 				D098C6F21D7E1201007784E4 /* Database.swift in Sources */,
 				D07E7B49224E562C00BB053B /* PostboxUpgrade_21to22.swift in Sources */,
+				D0BFE51E22AFD5AF00143D08 /* MutableBasicPeerView.swift in Sources */,
 				D0B844061DAB91B5005F29E1 /* MediaResourceStatus.swift in Sources */,
 				D0F7B1DB1E045C6A007EB8A5 /* ItemCollectionInfoTable.swift in Sources */,
 				D0F7B1D41E045C6A007EB8A5 /* PeerPresenceTable.swift in Sources */,
@@ -1558,6 +1563,7 @@
 				D0D510F41D63BA8400A97B8A /* PostboxTransaction.swift in Sources */,
 				D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */,
 				D07516441B2D9CEF00AE42E0 /* sqlite3.c in Sources */,
+				D0BFE51D22AFD5AF00143D08 /* MutableBasicPeerView.swift in Sources */,
 				D001388620BD942B007C9721 /* PostboxUpgrade_16to17.swift in Sources */,
 				D0D511001D64A58900A97B8A /* IpcPipe.swift in Sources */,
 				D01C7EDE1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */,
