@@ -441,7 +441,7 @@ open class ViewControllerPresentationArguments {
     open func dismiss(completion: (() -> Void)? = nil) {
     }
     
-    @available(iOSApplicationExtension 9.0, *)
+    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
     open func registerForPreviewing(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme, onlyNative: Bool) {
         if self.traitCollection.forceTouchCapability == .available {
             let _ = super.registerForPreviewing(with: delegate, sourceView: sourceView)
@@ -455,7 +455,7 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    @available(iOSApplicationExtension 9.0, *)
+    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
     public func registerForPreviewingNonNative(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme) {
         if self.traitCollection.forceTouchCapability != .available {
             if self.previewingContext == nil {
@@ -467,7 +467,7 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    @available(iOSApplicationExtension 9.0, *)
+    @available(iOSApplicationExtension 9.0, iOS 9.0, *)
     open override func unregisterForPreviewing(withContext previewing: UIViewControllerPreviewing) {
         if self.previewingContext != nil {
             self.previewingContext = nil

@@ -7,7 +7,7 @@ public enum ImpactHapticFeedbackStyle: Hashable {
     case heavy
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 private final class HapticFeedbackImpl {
     private lazy var impactGenerator: [ImpactHapticFeedbackStyle : UIImpactFeedbackGenerator] = {
         [.light: UIImpactFeedbackGenerator(style: .light),
@@ -65,7 +65,7 @@ public final class HapticFeedback {
         })
     }
     
-    @available(iOSApplicationExtension 10.0, *)
+    @available(iOSApplicationExtension 10.0, iOS 10.0, *)
     private func withImpl(_ f: (HapticFeedbackImpl) -> Void) {
         if self.impl == nil {
             self.impl = HapticFeedbackImpl()
