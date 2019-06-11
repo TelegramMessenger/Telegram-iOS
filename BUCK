@@ -202,6 +202,7 @@ apple_library(
     deps = [
         ':libffmpeg_build',
         ':libffmpeg',
+        ':opus',
     ],
     frameworks = [
         '$SDKROOT/System/Library/Frameworks/Foundation.framework',
