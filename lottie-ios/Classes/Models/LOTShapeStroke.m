@@ -42,6 +42,11 @@
       return LOT_RemapValue(inValue, 0, 100, 0, 1);
     }];
   }
+    
+  NSNumber *hidden = jsonDictionary[@"hd"];
+  if (hidden.boolValue) {
+    _hidden = true;
+  }
   
   _capType = [jsonDictionary[@"lc"] integerValue] - 1;
   _joinType = [jsonDictionary[@"lj"] integerValue] - 1;

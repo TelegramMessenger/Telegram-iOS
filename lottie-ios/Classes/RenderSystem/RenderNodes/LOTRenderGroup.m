@@ -74,10 +74,13 @@
       [self.containerLayer insertSublayer:fillRenderer.outputLayer atIndex:0];
       previousNode = fillRenderer;
     } else if ([item isKindOfClass:[LOTShapeStroke class]]) {
-      LOTStrokeRenderer *strokRenderer = [[LOTStrokeRenderer alloc] initWithInputNode:previousNode
+      if (((LOTShapeStroke *)item).hidden) {
+        continue;
+      }
+      LOTStrokeRenderer *strokeRenderer = [[LOTStrokeRenderer alloc] initWithInputNode:previousNode
                                                                           shapeStroke:(LOTShapeStroke *)item];
-      [self.containerLayer insertSublayer:strokRenderer.outputLayer atIndex:0];
-      previousNode = strokRenderer;
+      [self.containerLayer insertSublayer:strokeRenderer.outputLayer atIndex:0];
+      previousNode = strokeRenderer;
     } else if ([item isKindOfClass:[LOTShapePath class]]) {
       LOTPathAnimator *pathAnimator = [[LOTPathAnimator alloc] initWithInputNode:previousNode
                                                                        shapePath:(LOTShapePath *)item];

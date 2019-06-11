@@ -27,6 +27,7 @@ typedef enum : NSUInteger {
 
 @property (nonatomic, readonly) NSString *keyname;
 @property (nonatomic, readonly) BOOL fillEnabled;
+@property (nonatomic, readonly) BOOL hidden;
 @property (nonatomic, readonly) LOTKeyframeGroup *color;
 @property (nonatomic, readonly) LOTKeyframeGroup *opacity;
 @property (nonatomic, readonly) LOTKeyframeGroup *width;
