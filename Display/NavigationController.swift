@@ -818,10 +818,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                                 controller.containerLayoutUpdated(containerLayout, transition: .immediate)
                             }
                             strongSelf.pushViewController(controller, animated: animated)
+                            completion()
                         }
                     }))
                 } else {
                     strongSelf.pushViewController(controller, animated: false)
+                    completion()
                 }
             })
         }

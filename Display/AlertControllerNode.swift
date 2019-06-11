@@ -29,19 +29,15 @@ final class AlertControllerNode: ASDisplayNode {
         
         self.topDimView = UIView()
         self.topDimView.backgroundColor = dimColor
-        self.topDimView.isUserInteractionEnabled = false
         
         self.bottomDimView = UIView()
         self.bottomDimView.backgroundColor = dimColor
-        self.bottomDimView.isUserInteractionEnabled = false
         
         self.leftDimView = UIView()
         self.leftDimView.backgroundColor = dimColor
-        self.leftDimView.isUserInteractionEnabled = false
         
         self.rightDimView = UIView()
         self.rightDimView.backgroundColor = dimColor
-        self.rightDimView.isUserInteractionEnabled = false
         
         self.containerNode = ASDisplayNode()
         self.containerNode.layer.cornerRadius = 14.0
@@ -81,13 +77,15 @@ final class AlertControllerNode: ASDisplayNode {
         
         self.topDimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimmingNodeTapGesture(_:))))
         self.bottomDimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimmingNodeTapGesture(_:))))
+        self.leftDimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimmingNodeTapGesture(_:))))
+        self.rightDimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimmingNodeTapGesture(_:))))
     }
     
     func updateTheme(_ theme: AlertControllerTheme) {
         if let effectView = self.effectNode.view as? UIVisualEffectView {
             effectView.effect = UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark)
         }
-        self.containerNode.backgroundColor = theme.backgroundColor
+        self.backgroundNode.backgroundColor = theme.backgroundColor
         self.contentNode.updateTheme(theme)
     }
     
