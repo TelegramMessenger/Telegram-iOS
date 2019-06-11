@@ -1,0 +1,3 @@
+module TelegramCore.TelegramCorePrivate {
+    export *
+}
