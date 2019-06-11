@@ -298,6 +298,8 @@
 		D04FA1D02145E3810006EF45 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D04FA1C62145E3810006EF45 /* InfoPlist.strings */; };
 		D051DB0B215E5D1C00F30F92 /* TelegramUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0400ED81D5B8F97007931CE /* TelegramUI.framework */; };
 		D051DB5D21602D6E00F30F92 /* LegacyDataImportSplash.swift in Sources */ = {isa = PBXBuildFile; fileRef = D051DB5C21602D6E00F30F92 /* LegacyDataImportSplash.swift */; };
+		D052974622B0073F004ABAF6 /* WhiteFilledIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D052974422B0073E004ABAF6 /* WhiteFilledIcon@3x.png */; };
+		D052974722B0073F004ABAF6 /* WhiteFilledIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D052974522B0073F004ABAF6 /* WhiteFilledIcon@2x.png */; };
 		D053DAD32018ED2B00993D32 /* LockedWindowCoveringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D053DAD22018ED2B00993D32 /* LockedWindowCoveringView.swift */; };
 		D055BD441B7E216400F06C0A /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D055BD431B7E216400F06C0A /* MapKit.framework */; };
 		D05B37F51FEA5F6E0041D2A5 /* SnapshotEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05B37F41FEA5F6E0041D2A5 /* SnapshotEnvironment.swift */; };
@@ -1060,6 +1062,8 @@
 		D050F2351E49DEDE00988324 /* telegram_sphere@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "telegram_sphere@2x.png"; sourceTree = "<group>"; };
 		D051DB0C215E5E2300F30F92 /* NotificationContent.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NotificationContent.entitlements; sourceTree = "<group>"; };
 		D051DB5C21602D6E00F30F92 /* LegacyDataImportSplash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDataImportSplash.swift; sourceTree = "<group>"; };
+		D052974422B0073E004ABAF6 /* WhiteFilledIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "WhiteFilledIcon@3x.png"; sourceTree = "<group>"; };
+		D052974522B0073F004ABAF6 /* WhiteFilledIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "WhiteFilledIcon@2x.png"; sourceTree = "<group>"; };
 		D053DAD22018ED2B00993D32 /* LockedWindowCoveringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockedWindowCoveringView.swift; sourceTree = "<group>"; };
 		D055BD431B7E216400F06C0A /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
 		D05B37F41FEA5F6E0041D2A5 /* SnapshotEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotEnvironment.swift; sourceTree = "<group>"; };
@@ -1363,6 +1367,8 @@
 		09A218E122A14E5600DE6898 /* App Icons */ = {
 			isa = PBXGroup;
 			children = (
+				D052974522B0073F004ABAF6 /* WhiteFilledIcon@2x.png */,
+				D052974422B0073E004ABAF6 /* WhiteFilledIcon@3x.png */,
 				09EBE2A122B004E900F670AB /* BlackFilledIconIpad.png */,
 				09EBE29C22B004E900F670AB /* BlackFilledIconIpad@2x.png */,
 				09EBE29D22B004E900F670AB /* BlackFilledIconLargeIpad@2x.png */,
@@ -3021,6 +3027,7 @@
 				D0CE6F67213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D04DCC291F71C80000B021D7 /* 106.m4a in Resources */,
 				D0CE6F5E213EDA4400BCD44B /* Localizable.strings in Resources */,
+				D052974622B0073F004ABAF6 /* WhiteFilledIcon@3x.png in Resources */,
 				D08DB0B7213F4D1D00F2ADBF /* powerful_infinity_white@2x.png in Resources */,
 				D00859A91B28189D00EAF753 /* Images.xcassets in Resources */,
 				D001D5AA1F878DA300DF975A /* PhoneCountries.txt in Resources */,
@@ -3036,6 +3043,7 @@
 				D04DCC2E1F71C80000B021D7 /* 111.m4a in Resources */,
 				D08DB0AA213F4D1D00F2ADBF /* fast_spiral@2x.png in Resources */,
 				D0CE6F5C213EDA4400BCD44B /* InfoPlist.strings in Resources */,
+				D052974722B0073F004ABAF6 /* WhiteFilledIcon@2x.png in Resources */,
 				D0CE6F5D213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D0CE6F61213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D04DCC311F71C80000B021D7 /* 4.m4a in Resources */,
