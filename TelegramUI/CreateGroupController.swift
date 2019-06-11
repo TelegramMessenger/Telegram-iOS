@@ -261,7 +261,15 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
             let createSignal: Signal<PeerId?, CreateGroupError>
             if supergroup {
                 createSignal = createSupergroup(account: context.account, title: title, description: nil)
-                |> introduceError(CreateGroupError.self)
+                |> map(Optional.init)
+                |> mapError { error -> CreateGroupError in
+                    switch error {
+                        case .generic:
+                            return .generic
+                        case .restricted:
+                            return .restricted
+                    }
+                }
             } else {
                 createSignal = createGroup(account: context.account, title: title, peerIds: peerIds)
             }
@@ -318,6 +326,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                         text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelMultipleError
                     case .generic:
                         text = presentationData.strings.Login_UnknownError
+                    case .restricted:
+                        text = presentationData.strings.Common_ActionNotAllowedError
                 }
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }))

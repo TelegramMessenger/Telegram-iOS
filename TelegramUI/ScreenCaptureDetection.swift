@@ -33,7 +33,7 @@ private final class ScreenRecordingObserver: NSObject {
 
 private func screenRecordingActive() -> Signal<Bool, NoError> {
     return Signal { subscriber in
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             subscriber.putNext(UIScreen.main.isCaptured)
             let observer = ScreenRecordingObserver({ value in
                 subscriber.putNext(value)

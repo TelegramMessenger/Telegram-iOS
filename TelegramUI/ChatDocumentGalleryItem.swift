@@ -106,7 +106,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
     private var status: MediaResourceStatus?
     
     init(context: AccountContext, presentationData: PresentationData) {
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             let preferences = WKPreferences()
             preferences.javaScriptEnabled = false
             let configuration = WKWebViewConfiguration()
@@ -235,7 +235,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
                 if let strongSelf = self {
                     if data.complete {
                         if let webView = strongSelf.webView as? WKWebView {
-                            if #available(iOSApplicationExtension 11.0, *) {
+                            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                                 let blockRules = """
                                 [{
                                     "trigger": {

@@ -44,7 +44,7 @@ extension ActionSheetController {
 public extension AlertControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
         let actionSheet = presentationTheme.actionSheet
-        self.init(backgroundColor: actionSheet.opaqueItemBackgroundColor, separatorColor: actionSheet.opaqueItemSeparatorColor, highlightedItemColor: actionSheet.opaqueItemHighlightedBackgroundColor, primaryColor: actionSheet.primaryTextColor, secondaryColor: actionSheet.secondaryTextColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor, disabledColor: actionSheet.disabledActionTextColor)
+        self.init(backgroundType: actionSheet.backgroundType == .light ? .light : .dark, backgroundColor: actionSheet.itemBackgroundColor, separatorColor: actionSheet.itemHighlightedBackgroundColor, highlightedItemColor: actionSheet.itemHighlightedBackgroundColor, primaryColor: actionSheet.primaryTextColor, secondaryColor: actionSheet.secondaryTextColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor, disabledColor: actionSheet.disabledActionTextColor)
     }
 }
 

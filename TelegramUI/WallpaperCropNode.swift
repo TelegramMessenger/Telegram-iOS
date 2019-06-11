@@ -28,7 +28,7 @@ final class WallpaperCropNode: ASDisplayNode, UIScrollViewDelegate {
     
     override init() {
         self.scrollNode = ASScrollNode()
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         

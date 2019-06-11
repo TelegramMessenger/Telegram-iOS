@@ -121,7 +121,7 @@ public class ContactsController: ViewController {
             }
         })
         
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.contactsPermissionWarningKey()), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
             |> map { noticeView, preferences, sharedData -> (Bool, ContactsSortOrder) in
                 let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings ?? ContactsSettings.defaultSettings
@@ -248,8 +248,8 @@ public class ContactsController: ViewController {
         
         self.contactsNode.openPeopleNearby = { [weak self] in
             if let strongSelf = self {
-                //let controller = peopleNearbyController(context: strongSelf.context)
-                //(strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                let controller = peopleNearbyController(context: strongSelf.context)
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
             }
         }
         
@@ -366,7 +366,7 @@ public class ContactsController: ViewController {
             
             switch status {
                 case .allowed:
-                    let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: "", lastName: "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: "")]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
+                    let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: "", lastName: "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: "")]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
                     strongSelf.present(deviceContactInfoController(context: strongSelf.context, subject: .create(peer: nil, contactData: contactData, isSharing: false, completion: { peer, stableId, contactData in
                         guard let strongSelf = self else {
                             return

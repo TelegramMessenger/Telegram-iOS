@@ -584,10 +584,10 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
             if parsedUrl.host == "t.me" || parsedUrl.host == "telegram.me" {
                 handleInternalUrl(parsedUrl.absoluteString)
             } else {
-                if #available(iOSApplicationExtension 9.0, *) {
+                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                     if let window = navigationController?.view.window {
                         let controller = SFSafariViewController(url: parsedUrl)
-                        if #available(iOSApplicationExtension 10.0, *) {
+                        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                             controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.backgroundColor
                             controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
                         }

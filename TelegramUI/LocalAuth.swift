@@ -11,7 +11,7 @@ struct LocalAuth {
     static let biometricAuthentication: LocalAuthBiometricAuthentication? = {
         let context = LAContext()
         if context.canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
-            if #available(iOSApplicationExtension 11.0, *) {
+            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 switch context.biometryType {
                     case .faceID:
                         return .faceId
@@ -31,7 +31,7 @@ struct LocalAuth {
     static let evaluatedPolicyDomainState: Data? = {
         let context = LAContext()
         if context.canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
-            if #available(iOSApplicationExtension 9.0, *) {
+            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                 return context.evaluatedPolicyDomainState
             } else {
                 return Data()
@@ -47,7 +47,7 @@ struct LocalAuth {
             if LAContext().canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
                 context.evaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, localizedReason: reason, reply: { result, _ in
                     let evaluatedPolicyDomainState: Data?
-                    if #available(iOSApplicationExtension 9.0, *) {
+                    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                         evaluatedPolicyDomainState = context.evaluatedPolicyDomainState
                     } else {
                         evaluatedPolicyDomainState = Data()
@@ -61,7 +61,7 @@ struct LocalAuth {
             }
             
             return ActionDisposable {
-                if #available(iOSApplicationExtension 9.0, *) {
+                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                     context.invalidate()
                 }
             }

@@ -199,12 +199,16 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 let action: (() -> Void)?
                 switch participant.participant {
                     case .creator:
-                        peerText = strings.Channel_Management_LabelCreator
+                        peerText = strings.Channel_Management_LabelOwner
                         action = nil
                     case let .member(_, _, adminInfo, _):
                         if let adminInfo = adminInfo {
                             if let peer = participant.peers[adminInfo.promotedBy] {
-                                peerText = strings.Channel_Management_PromotedBy(peer.displayTitle).0
+                                if peer.id == participant.peer.id {
+                                    peerText = strings.Channel_Management_LabelAdministrator
+                                } else {
+                                    peerText = strings.Channel_Management_PromotedBy(peer.displayTitle).0
+                                }
                             } else {
                                 peerText = ""
                             }
@@ -491,6 +495,18 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
         upgradedToSupergroupImpl?(upgradedPeerId, f)
     }
     
+    let transferedOwnership: (PeerId) -> Void = { memberId in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let _ = (context.account.postbox.transaction { transaction -> (channel: Peer?, user: Peer?) in
+            return (channel: transaction.getPeer(peerId), user: transaction.getPeer(memberId))
+        } |> deliverOnMainQueue).start(next: { peer, user in
+            guard let peer = peer, let user = user else {
+                return
+            }
+            presentControllerImpl?(UndoOverlayController(context: context, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(peer.displayTitle, user.displayTitle).0), elevatedLayout: false, action: { _ in }), nil)
+        })
+    }
+    
     let peerView = Promise<PeerView>()
     peerView.set(context.account.viewTracker.peerView(peerId))
     
@@ -564,7 +580,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                         }
                     }
                     presentControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
-                    }, upgradedToSupergroup: upgradedToSupergroup), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
                 dismissController = { [weak controller] in
                     controller?.dismiss()
@@ -576,7 +592,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
         })
     }, openAdmin: { participant in
         presentControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
-        }, upgradedToSupergroup: upgradedToSupergroup), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let membersAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
@@ -701,7 +717,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                         updateState { state in
                             return state.withUpdatedSearchingMembers(false)
                         }
-                    }, upgradedToSupergroup: upgradedToSupergroup), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             }, present: { c, a in
                 presentControllerImpl?(c, a)

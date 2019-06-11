@@ -6,6 +6,7 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 
+private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
 private let savedMessagesIcon = UIImage(bundleImageName: "Avatar/SavedMessagesIcon")?.precomposed()
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 
@@ -101,6 +102,7 @@ private enum AvatarNodeIcon: Equatable {
     case savedMessagesIcon
     case archivedChatsIcon(hiddenByDefault: Bool)
     case editAvatarIcon
+    case deletedIcon
 }
 
 public enum AvatarNodeImageOverride: Equatable {
@@ -109,6 +111,7 @@ public enum AvatarNodeImageOverride: Equatable {
     case savedMessagesIcon
     case archivedChatsIcon(hiddenByDefault: Bool)
     case editAvatarIcon
+    case deletedIcon
 }
 
 public enum AvatarNodeColorOverride {
@@ -207,7 +210,7 @@ public final class AvatarNode: ASDisplayNode {
     override public func didLoad() {
         super.didLoad()
         
-        if #available(iOSApplicationExtension 11.0, *), !self.isLayerBacked {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *), !self.isLayerBacked {
             self.view.accessibilityIgnoresInvertColors = true
         }
     }
@@ -291,6 +294,9 @@ public final class AvatarNode: ASDisplayNode {
                 case .editAvatarIcon:
                     representation = peer?.smallProfileImage
                     icon = .editAvatarIcon
+                case .deletedIcon:
+                    representation = nil
+                    icon = .deletedIcon
             }
         } else if peer?.restrictionText == nil {
             representation = peer?.smallProfileImage
@@ -411,7 +417,9 @@ public final class AvatarNode: ASDisplayNode {
         let colorsArray: NSArray
         var iconColor = UIColor.white
         if let parameters = parameters as? AvatarNodeParameters, parameters.icon != .none {
-            if case .savedMessagesIcon = parameters.icon {
+            if case .deletedIcon = parameters.icon {
+                colorsArray = grayscaleColors
+            } else if case .savedMessagesIcon = parameters.icon {
                 colorsArray = savedMessagesColors
             } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme {
                 colorsArray = [theme.list.blocksBackgroundColor.cgColor, theme.list.blocksBackgroundColor.cgColor]
@@ -444,7 +452,16 @@ public final class AvatarNode: ASDisplayNode {
         context.setBlendMode(.normal)
         
         if let parameters = parameters as? AvatarNodeParameters {
-            if case .savedMessagesIcon = parameters.icon {
+            if case .deletedIcon = parameters.icon {
+                let factor = bounds.size.width / 60.0
+                context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                context.scaleBy(x: factor, y: -factor)
+                context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                
+                if let deletedIcon = deletedIcon {
+                    context.draw(deletedIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - deletedIcon.size.width) / 2.0), y: floor((bounds.size.height - deletedIcon.size.height) / 2.0)), size: deletedIcon.size))
+                }
+            } else if case .savedMessagesIcon = parameters.icon {
                 let factor = bounds.size.width / 60.0
                 context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
                 context.scaleBy(x: factor, y: -factor)

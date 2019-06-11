@@ -161,14 +161,14 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         self.countryCodeField.textField.textAlignment = .center
         self.countryCodeField.textField.keyboardType = .numberPad
         self.countryCodeField.textField.returnKeyType = .next
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.countryCodeField.textField.textContentType = .telephoneNumber
         }
         
         self.numberField = TextFieldNode()
         self.numberField.textField.font = Font.regular(fontSize)
         self.numberField.textField.keyboardType = .numberPad
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.numberField.textField.textContentType = .telephoneNumber
         }
         

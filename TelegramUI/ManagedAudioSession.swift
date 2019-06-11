@@ -636,7 +636,7 @@ public final class ManagedAudioSession {
                     case .play:
                         break
                     case .playWithPossiblePortOverride:
-                        if #available(iOSApplicationExtension 10.0, *) {
+                        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                             options.insert(.allowBluetoothA2DP)
                         } else {
                             options.insert(.allowBluetooth)
@@ -645,7 +645,7 @@ public final class ManagedAudioSession {
                         options.insert(.allowBluetooth)
                 }
                 print("ManagedAudioSession setting active true")
-                if #available(iOSApplicationExtension 11.0, *) {
+                if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                     try AVAudioSession.sharedInstance().setCategory(nativeCategoryForType(type, headphones: self.isHeadsetPluggedInValue), mode: type == .voiceCall ? AVAudioSessionModeVoiceChat : AVAudioSessionModeDefault, routeSharingPolicy: .default, options: options)
                 } else {
                     try AVAudioSession.sharedInstance().setCategory(nativeCategoryForType(type, headphones: self.isHeadsetPluggedInValue), with: options)

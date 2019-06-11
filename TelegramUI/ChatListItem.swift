@@ -476,6 +476,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var overrideImage: AvatarNodeImageOverride?
             if peer.id == item.context.account.peerId {
                 overrideImage = .savedMessagesIcon
+            } else if peer.isDeleted {
+                overrideImage = .deletedIcon
             }
             self.avatarNode.setPeer(account: item.context.account, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
         }

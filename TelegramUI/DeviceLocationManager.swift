@@ -49,7 +49,7 @@ final class DeviceLocationManager: NSObject, CLLocationManagerDelegate {
         
         super.init()
         
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             self.manager.allowsBackgroundLocationUpdates = true
         }
         self.manager.delegate = self

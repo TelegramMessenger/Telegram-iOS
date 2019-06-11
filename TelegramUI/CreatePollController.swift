@@ -163,8 +163,8 @@ private struct CreatePollControllerOption: Equatable {
 
 private struct CreatePollControllerState: Equatable {
     var text: String = ""
-    var options: [CreatePollControllerOption] = [CreatePollControllerOption(text: "", id: 0)]
-    var nextOptionId: Int = 1
+    var options: [CreatePollControllerOption] = [CreatePollControllerOption(text: "", id: 0), CreatePollControllerOption(text: "", id: 1)]
+    var nextOptionId: Int = 2
     var focusOptionId: Int?
     var optionIdWithRevealControls: Int?
 }

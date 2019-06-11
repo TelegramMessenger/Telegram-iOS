@@ -284,7 +284,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         UIView.animate(withDuration: 0.3, animations: {
             if #available(iOS 9.0, *) {
                 if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
-                    if #available(iOSApplicationExtension 10.0, *) {
+                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                         self.effectView.effect = UIBlurEffect(style: .regular)
                         if self.effectView.subviews.count == 2 {
                             self.effectView.subviews[1].isHidden = true
@@ -293,7 +293,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
                         self.effectView.effect = UIBlurEffect(style: .dark)
                     }
                 } else {
-                    if #available(iOSApplicationExtension 10.0, *) {
+                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                         self.effectView.effect = UIBlurEffect(style: .regular)
                     } else {
                         self.effectView.effect = UIBlurEffect(style: .light)

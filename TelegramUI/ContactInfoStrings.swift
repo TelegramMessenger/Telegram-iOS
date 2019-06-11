@@ -3,7 +3,7 @@ import Contacts
 import AddressBook
 
 func localizedPhoneNumberLabel(label: String, strings: PresentationStrings) -> String {
-    if #available(iOSApplicationExtension 9.0, *) {
+    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
         if label.isEmpty {
             return strings.ContactInfo_PhoneLabelMain
         } else if label == "X-iPhone" {
@@ -24,7 +24,7 @@ func localizedPhoneNumberLabel(label: String, strings: PresentationStrings) -> S
 }
 
 func localizedGenericContactFieldLabel(label: String, strings: PresentationStrings) -> String {
-    if #available(iOSApplicationExtension 9.0, *) {
+    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
         if label.isEmpty {
             return strings.ContactInfo_PhoneLabelMain
         }

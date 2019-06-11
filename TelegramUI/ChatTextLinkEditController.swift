@@ -18,7 +18,6 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
     
     private let backgroundInsets = UIEdgeInsets(top: 8.0, left: 16.0, bottom: 15.0, right: 16.0)
     private let inputInsets = UIEdgeInsets(top: 5.0, left: 12.0, bottom: 5.0, right: 12.0)
-    private let accessoryButtonsWidth: CGFloat = 10.0
     
     var text: String {
         get {
@@ -81,7 +80,6 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let backgroundInsets = self.backgroundInsets
         let inputInsets = self.inputInsets
-        let accessoryButtonsWidth = self.accessoryButtonsWidth
         
         let textFieldHeight = self.calculateTextFieldMetrics(width: width)
         let panelHeight = textFieldHeight + backgroundInsets.top + backgroundInsets.bottom
@@ -92,7 +90,7 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
         let placeholderSize = self.placeholderNode.measure(backgroundFrame.size)
         transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY + floor((backgroundFrame.size.height - placeholderSize.height) / 2.0)), size: placeholderSize))
         
-        transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - accessoryButtonsWidth, height: backgroundFrame.size.height)))
+        transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right, height: backgroundFrame.size.height)))
         
         return panelHeight
     }
@@ -122,9 +120,8 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
     private func calculateTextFieldMetrics(width: CGFloat) -> CGFloat {
         let backgroundInsets = self.backgroundInsets
         let inputInsets = self.inputInsets
-        let accessoryButtonsWidth = self.accessoryButtonsWidth
         
-        let unboundTextFieldHeight = max(33.0, ceil(self.textInputNode.measure(CGSize(width: width - backgroundInsets.left - backgroundInsets.right - inputInsets.left - inputInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude)).height))
+        let unboundTextFieldHeight = max(33.0, ceil(self.textInputNode.measure(CGSize(width: width - backgroundInsets.left - backgroundInsets.right - inputInsets.left - inputInsets.right, height: CGFloat.greatestFiniteMagnitude)).height))
         
         return min(61.0, max(33.0, unboundTextFieldHeight))
     }
@@ -146,91 +143,6 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
     }
 }
 
-
-private final class ChatTextLinkEditContentActionNode: HighlightableButtonNode {
-    private var theme: AlertControllerTheme
-    let action: TextAlertAction
-    
-    private let backgroundNode: ASDisplayNode
-
-    init(theme: AlertControllerTheme, action: TextAlertAction) {
-        self.theme = theme
-        self.action = action
-        
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.alpha = 0.0
-        
-        super.init()
-        
-        self.titleNode.maximumNumberOfLines = 2
-        
-        self.highligthedChanged = { [weak self] value in
-            if let strongSelf = self {
-                if value {
-                    if strongSelf.backgroundNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                    }
-                    strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.backgroundNode.alpha = 1.0
-                } else if !strongSelf.backgroundNode.alpha.isZero {
-                    strongSelf.backgroundNode.alpha = 0.0
-                    strongSelf.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
-                }
-            }
-        }
-        
-        self.updateTheme(theme)
-    }
-    
-    var actionEnabled: Bool = true {
-        didSet {
-            self.isUserInteractionEnabled = self.actionEnabled
-            self.updateTitle()
-        }
-    }
-    
-    func updateTheme(_ theme: AlertControllerTheme) {
-        self.theme = theme
-        self.backgroundNode.backgroundColor = theme.highlightedItemColor
-        self.updateTitle()
-    }
-    
-    private func updateTitle() {
-        var font = Font.regular(17.0)
-        var color: UIColor
-        switch self.action.type {
-            case .defaultAction, .genericAction:
-                color = self.actionEnabled ? self.theme.accentColor : self.theme.disabledColor
-            case .destructiveAction:
-                color = self.actionEnabled ? self.theme.destructiveColor : self.theme.disabledColor
-        }
-        switch self.action.type {
-            case .defaultAction:
-                font = Font.semibold(17.0)
-            case .destructiveAction, .genericAction:
-                break
-        }
-        self.setAttributedTitle(NSAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
-    }
-    
-    @objc func pressed() {
-        self.action.action()
-    }
-    
-    override func layout() {
-        super.layout()
-        
-        self.backgroundNode.frame = self.bounds
-    }
-}
-
 private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
     private let text: String
@@ -240,7 +152,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     let inputFieldNode: ChatTextLinkEditInputFieldNode
     
     private let actionNodesSeparator: ASDisplayNode
-    private let actionNodes: [ChatTextLinkEditContentActionNode]
+    private let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
     
     private let disposable = MetaDisposable()
@@ -274,8 +186,8 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
         
-        self.actionNodes = actions.map { action -> ChatTextLinkEditContentActionNode in
-            return ChatTextLinkEditContentActionNode(theme: theme, action: action)
+        self.actionNodes = actions.map { action -> TextAlertContentActionNode in
+            return TextAlertContentActionNode(theme: theme, action: action)
         }
         
         var actionVerticalSeparators: [ASDisplayNode] = []
@@ -350,7 +262,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var size = size
-        size.width = min(size.width , 270.0)
+        size.width = min(size.width, 270.0)
         let measureSize = CGSize(width: size.width - 16.0 * 2.0, height: CGFloat.greatestFiniteMagnitude)
         
         let hadValidLayout = self.validLayout != nil

@@ -1,5 +1,5 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'merge_maps', 'glob_map', 'glob_sub_map')
-load('//tools:buck_defs.bzl', 'combined_config', 'SHARED_CONFIGS', 'LIB_SPECIFIC_CONFIG')
+load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'merge_maps', 'glob_map', 'glob_sub_map', 'combined_config')
+load('//tools:buck_defs.bzl', 'SHARED_CONFIGS', 'EXTENSION_LIB_SPECIFIC_CONFIG')
 
 apple_library(
     name = 'TelegramUIPrivateModule',
@@ -87,6 +87,21 @@ apple_library(
         '//submodules/LegacyComponents:LegacyComponents',
         '//submodules/ffmpeg:opus',
         '//submodules/MtProtoKit:MtProtoKit',
+        '//submodules/libtgvoip:tgvoip',
+    ],
+)
+
+apple_resource(
+    name = "TelegramUIResources",
+    files = glob([
+        "TelegramUI/Resources/**/*",
+    ]),
+)
+
+apple_asset_catalog(
+    name = 'Images',
+    dirs = [
+        'Images.xcassets',
     ],
 )
 
@@ -95,14 +110,14 @@ apple_library(
     srcs = glob([
 	    'TelegramUI/**/*.swift'
     ]),
-	configs = configs_with_config(combined_config([SHARED_CONFIGS, LIB_SPECIFIC_CONFIG])),
-	swift_compiler_flags = [
-        '-suppress-warnings',
-        '-application-extension',
-        '-enable-batch-mode',
-    ],
+	configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
+	#swift_compiler_flags = [
+    #    '-application-extension',
+    #],
     visibility = ['PUBLIC'],
     deps = [
+        ':TelegramUIResources',
+        ':Images',
         ':TelegramUIPrivateModule',
     	'//submodules/SSignalKit:SwiftSignalKit',
         '//submodules/SSignalKit:SSignalKit',
@@ -114,6 +129,22 @@ apple_library(
         '//submodules/Display:Display',
         '//submodules/LegacyComponents:LegacyComponents',
         '//submodules/lottie-ios:Lottie',
-        '//submodules/webp:WebP',
+        '//submodules/webp:WebPImage',
     ],
+)
+
+apple_bundle(
+    name = "TelegramUIFramework",
+    extension = "framework",
+    binary = ":TelegramUI#shared",
+    info_plist = 'TelegramUI/Info.plist',
+    info_plist_substitutions = {
+        'DEVELOPMENT_LANGUAGE': 'en-us',
+        'APP_NAME': 'Telegram',
+        'EXECUTABLE_NAME': 'TelegramUI',
+        'PRODUCT_BUNDLE_IDENTIFIER': 'org.telegram.TelegramUI',
+        'PRODUCT_NAME': 'Telegram UI',
+        'CURRENT_PROJECT_VERSION': '5.8',
+    },
+    visibility = ['PUBLIC'],
 )

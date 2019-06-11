@@ -32,7 +32,7 @@ kernel vec4 alphaFrame(__sample s, __sample m) {
 
 private func createVideoComposition(for playerItem: AVPlayerItem, ready: @escaping () -> Void) -> AVVideoComposition? {
     let videoSize = CGSize(width: playerItem.presentationSize.width, height: playerItem.presentationSize.height / 2.0)
-    if #available(iOSApplicationExtension 9.0, *) {
+    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
         let composition = AVMutableVideoComposition(asset: playerItem.asset, applyingCIFiltersWithHandler: { request in
             let sourceRect = CGRect(origin: .zero, size: videoSize)
             let alphaRect = sourceRect.offsetBy(dx: 0, dy: sourceRect.height)
@@ -105,7 +105,7 @@ private final class StickerAnimationNode: ASDisplayNode {
             let layer = AVPlayerLayer()
             layer.isHidden = true
             layer.videoGravity = .resize
-            if #available(iOSApplicationExtension 9.0, *) {
+            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                 layer.pixelBufferAttributes = [(kCVPixelBufferPixelFormatTypeKey as String): kCVPixelFormatType_32BGRA]
             }
             return layer

@@ -13,6 +13,91 @@ public final class TelegramApplicationOpenUrlCompletion {
     }
 }
 
+private final class DeviceSpecificContactImportContext {
+    let disposable = MetaDisposable()
+    var reference: DeviceContactBasicDataWithReference?
+    
+    init() {
+    }
+    
+    deinit {
+        self.disposable.dispose()
+    }
+}
+
+private final class DeviceSpecificContactImportContexts {
+    private let queue: Queue
+    
+    private var contexts: [PeerId: DeviceSpecificContactImportContext] = [:]
+    
+    init(queue: Queue) {
+        self.queue = queue
+    }
+    
+    deinit {
+        assert(self.queue.isCurrent())
+    }
+    
+    func update(account: Account, deviceContactDataManager: DeviceContactDataManager, references: [PeerId: DeviceContactBasicDataWithReference]) {
+        var validIds = Set<PeerId>()
+        for (peerId, reference) in references {
+            validIds.insert(peerId)
+            
+            let context: DeviceSpecificContactImportContext
+            if let current = self.contexts[peerId] {
+                context = current
+            } else {
+                context = DeviceSpecificContactImportContext()
+                self.contexts[peerId] = context
+            }
+            if context.reference != reference {
+                context.reference = reference
+                
+                let key: PostboxViewKey = .basicPeer(peerId)
+                let signal = account.postbox.combinedView(keys: [key])
+                |> map { view -> String? in
+                    if let user = (view.views[key] as? BasicPeerView)?.peer as? TelegramUser {
+                        return user.phone
+                    } else {
+                        return nil
+                    }
+                }
+                |> distinctUntilChanged
+                |> mapToSignal { phone -> Signal<Never, NoError> in
+                    guard let phone = phone else {
+                        return .complete()
+                    }
+                    var found = false
+                    let formattedPhone = formatPhoneNumber(phone)
+                    for number in reference.basicData.phoneNumbers {
+                        if formatPhoneNumber(number.value) == formattedPhone {
+                            found = true
+                            break
+                        }
+                    }
+                    if !found {
+                        return deviceContactDataManager.appendPhoneNumber(DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: formattedPhone), to: reference.stableId)
+                        |> ignoreValues
+                    } else {
+                        return .complete()
+                    }
+                }
+                context.disposable.set(signal.start())
+            }
+        }
+        
+        var removeIds: [PeerId] = []
+        for peerId in self.contexts.keys {
+            if !validIds.contains(peerId) {
+                removeIds.append(peerId)
+            }
+        }
+        for peerId in removeIds {
+            self.contexts.removeValue(forKey: peerId)
+        }
+    }
+}
+
 public final class TelegramApplicationBindings {
     public let isMainApp: Bool
     public let containerPath: String
@@ -92,6 +177,9 @@ public final class AccountContext {
     private var storedPassword: (String, CFAbsoluteTime, SwiftSignalKit.Timer)?
     private var limitsConfigurationDisposable: Disposable?
     
+    private let deviceSpecificContactImportContexts: QueueLocalObject<DeviceSpecificContactImportContexts>
+    private var managedAppSpecificContactsDisposable: Disposable?
+    
     public init(sharedContext: SharedAccountContext, account: Account, limitsConfiguration: LimitsConfiguration) {
         self.sharedContext = sharedContext
         self.account = account
@@ -125,10 +213,26 @@ public final class AccountContext {
         |> deliverOnMainQueue).start(next: { value in
             let _ = currentLimitsConfiguration.swap(value)
         })
+        
+        let queue = Queue()
+        self.deviceSpecificContactImportContexts = QueueLocalObject(queue: queue, generate: {
+            return DeviceSpecificContactImportContexts(queue: queue)
+        })
+        
+        if let contactDataManager = sharedContext.contactDataManager {
+            let deviceSpecificContactImportContexts = self.deviceSpecificContactImportContexts
+            self.managedAppSpecificContactsDisposable = (contactDataManager.appSpecificReferences()
+            |> deliverOn(queue)).start(next: { appSpecificReferences in
+                deviceSpecificContactImportContexts.with { context in
+                    context.update(account: account, deviceContactDataManager: contactDataManager, references: appSpecificReferences)
+                }
+            })
+        }
     }
     
     deinit {
         self.limitsConfigurationDisposable?.dispose()
+        self.managedAppSpecificContactsDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {

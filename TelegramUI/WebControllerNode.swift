@@ -10,7 +10,7 @@ final class WebControllerNode: ViewControllerTracingNode {
     init(url: URL) {
         let configuration = WKWebViewConfiguration()
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             self.webView.allowsLinkPreview = false
         }
         self.webView.allowsBackForwardNavigationGestures = true
@@ -19,7 +19,7 @@ final class WebControllerNode: ViewControllerTracingNode {
         super.init()
         
         self.view.addSubview(self.webView)
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
         }
         self.webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0)

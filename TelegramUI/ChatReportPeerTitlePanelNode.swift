@@ -5,17 +5,21 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 
-private enum ChatReportPeerTitleButton {
+private enum ChatReportPeerTitleButton: Equatable {
     case block
-    case addContact
+    case addContact(String?)
     case shareMyPhoneNumber
     
     func title(strings: PresentationStrings) -> String {
         switch self {
             case .block:
-                return strings.Conversation_Block
-            case .addContact:
-                return strings.Conversation_AddToContacts
+                return strings.Conversation_BlockUser
+            case let .addContact(name):
+                if let name = name {
+                    return strings.Conversation_AddNameToContacts(name).0
+                } else {
+                    return strings.Conversation_AddToContacts
+                }
             case .shareMyPhoneNumber:
                 return strings.Conversation_ShareMyPhoneNumber
         }
@@ -24,12 +28,18 @@ private enum ChatReportPeerTitleButton {
 
 private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReportPeerTitleButton] {
     var buttons: [ChatReportPeerTitleButton] = []
-    if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
-        if contactStatus.canAddContact {
-            if !state.peerIsBlocked {
-                buttons.append(.block)
+    if let peer = state.renderedPeer?.chatMainPeer as? TelegramUser, let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
+        if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
+            if peerStatusSettings.contains(.canBlock) || peerStatusSettings.contains(.canReport) {
+                if !state.peerIsBlocked {
+                    buttons.append(.block)
+                }
             }
-            buttons.append(.addContact)
+            if buttons.isEmpty, let phone = peer.phone, !phone.isEmpty {
+                buttons.append(.addContact(peer.compactDisplayTitle))
+            } else {
+                buttons.append(.addContact(nil))
+            }
         }
         if buttons.isEmpty {
             if peerStatusSettings.contains(.canShareContact) {

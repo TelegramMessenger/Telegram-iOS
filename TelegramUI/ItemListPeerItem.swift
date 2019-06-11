@@ -555,6 +555,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                     }
                     
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
+                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
                         if strongSelf.editableControlNode == nil {
                             let editableControlNode = editableControlSizeAndApply.1()
                             editableControlNode.tapped = {
@@ -565,11 +566,12 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                             }
                             strongSelf.editableControlNode = editableControlNode
                             strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.avatarNode)
-                            let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
                             editableControlNode.frame = editableControlFrame
                             transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                             editableControlNode.alpha = 0.0
                             transition.updateAlpha(node: editableControlNode, alpha: 1.0)
+                        } else {
+                            strongSelf.editableControlNode?.frame = editableControlFrame
                         }
                         strongSelf.editableControlNode?.isHidden = !item.editing.editable
                     } else if let editableControlNode = strongSelf.editableControlNode {
@@ -707,7 +709,11 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                     if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
                         strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
                     } else {
-                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
+                        var overrideImage: AvatarNodeImageOverride?
+                        if item.peer.isDeleted {
+                            overrideImage = .deletedIcon
+                        }
+                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))

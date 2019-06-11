@@ -725,7 +725,7 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
         entries.append(.accountsInfo(presentationData.theme, inAppSettings.displayNotificationsFromAllAccounts ? presentationData.strings.NotificationSettings_ShowNotificationsAllAccountsInfoOn : presentationData.strings.NotificationSettings_ShowNotificationsAllAccountsInfoOff))
     }
     
-    if #available(iOSApplicationExtension 10.0, *) {
+    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
         let title: String
         let text: String
         if case .unreachable = authorizationStatus {
@@ -1043,7 +1043,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     })
     
     let notificationsWarningSuppressed = Promise<Bool>(true)
-    if #available(iOSApplicationExtension 10.0, *) {
+    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
         notificationsWarningSuppressed.set(.single(true)
         |> then(
             context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.notificationsPermissionWarningKey())

@@ -70,6 +70,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     self.iconNode?.displaysAsynchronously = false
                     self.iconNode?.image = UIImage(bundleImageName: "Chat List/ArchivedUndoIcon")
                     self.iconCheckNode = RadialStatusNode(backgroundNodeColor: .clear)
+                    self.iconCheckNode?.frame = CGRect(x: 0.0, y: 0.0, width: 24.0, height: 24.0)
                     self.animationNode = nil
                 } else {
                     self.iconNode = nil
@@ -82,19 +83,31 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.originalRemainingSeconds = 5
             case let .hidArchive(title, text, undo):
                 self.iconNode = nil
-                self.animationNode = AnimationNode(animation: "anim_archiveswipe", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_archiveswipe", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
                 self.originalRemainingSeconds = 3
             case let .revealedArchive(title, text, undo):
                 self.iconNode = nil
-                self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
+                self.originalRemainingSeconds = 3
+            case let .succeed(text):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                displayUndo = false
                 self.originalRemainingSeconds = 3
         }
         
@@ -127,7 +140,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             case .removedChat:
                 self.panelWrapperNode.addSubnode(self.timerTextNode)
                 self.panelWrapperNode.addSubnode(self.statusNode)
-            case .archivedChat, .hidArchive, .revealedArchive:
+            case .archivedChat, .hidArchive, .revealedArchive, .succeed:
                 break
         }
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)
@@ -266,8 +279,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             transition.updateFrame(node: iconNode, frame: iconFrame)
             
             if let iconCheckNode = self.iconCheckNode {
-                let statusSize: CGFloat = 24.0
-                transition.updateFrame(node: iconCheckNode, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floor((iconFrame.width - statusSize) / 2.0), y: iconFrame.minY + floor((iconFrame.height - statusSize) / 2.0) + 3.0), size: CGSize(width: statusSize, height: statusSize)))
+                let statusSize: CGFloat = iconCheckNode.frame.width
+                var offset: CGFloat = 0.0
+                if statusSize < 30.0 {
+                    offset = 3.0
+                }
+                transition.updateFrame(node: iconCheckNode, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floor((iconFrame.width - statusSize) / 2.0), y: iconFrame.minY + floor((iconFrame.height - statusSize) / 2.0) + offset), size: CGSize(width: statusSize, height: statusSize)))
             }
         }
         

@@ -200,7 +200,7 @@ func presentDocumentPreviewController(rootController: UIViewController, theme: P
     /*if #available(iOS 10.0, *) {
         rootController.present(DocumentPreviewController(theme: theme, strings: strings, postbox: postbox, file: file), animated: true, completion: nil)
     } else {*/
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             let navigationBar = UINavigationBar.appearance(whenContainedInInstancesOf: [QLPreviewController.self])
             navigationBar.barTintColor = theme.rootController.navigationBar.backgroundColor
             navigationBar.setBackgroundImage(generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in

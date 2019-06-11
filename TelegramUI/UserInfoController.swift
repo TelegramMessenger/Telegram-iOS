@@ -648,12 +648,14 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         
         if !(peer is TelegramSecretChat) {
             entries.append(UserInfoEntry.sendMessage(presentationData.theme, presentationData.strings.UserInfo_SendMessage))
-            if view.peerIsContact {
-                if let peer = peer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
-                    entries.append(UserInfoEntry.shareContact(presentationData.theme, presentationData.strings.UserInfo_ShareContact))
+            if let user = peer as? TelegramUser, user.botInfo == nil {
+                if view.peerIsContact {
+                    if let phone = user.phone, !phone.isEmpty {
+                        entries.append(UserInfoEntry.shareContact(presentationData.theme, presentationData.strings.UserInfo_ShareContact))
+                    }
+                } else {
+                    entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.Conversation_AddToContacts))
                 }
-            } else {
-                entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.Conversation_AddToContacts))
             }
             
             if let cachedUserData = cachedPeerData as? CachedUserData, let peerStatusSettings = cachedUserData.peerStatusSettings, peerStatusSettings.contains(.canShareContact) {
@@ -1023,7 +1025,18 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                         guard let peer = peer else {
                             return
                         }
-                        updatePeerBlockedDisposable.set(deleteContactPeerInteractively(account: context.account, peerId: peer.id).start())
+                        let deleteContactFromDevice: Signal<Never, NoError>
+                        if let contactDataManager = context.sharedContext.contactDataManager {
+                            deleteContactFromDevice = contactDataManager.deleteContactWithAppSpecificReference(peerId: peer.id)
+                        } else {
+                            deleteContactFromDevice = .complete()
+                        }
+                        updatePeerBlockedDisposable.set((
+                            deleteContactPeerInteractively(account: context.account, peerId: peer.id)
+                            |> then(
+                                deleteContactFromDevice
+                            )
+                        ).start())
                     })
                 })
             ]),

@@ -67,7 +67,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     init(pageGap: CGFloat) {
         self.pageGap = pageGap
         self.scrollView = UIScrollView()
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.scrollView.contentInsetAdjustmentBehavior = .never
         }
         

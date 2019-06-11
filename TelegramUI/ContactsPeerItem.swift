@@ -625,6 +625,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         var overrideImage: AvatarNodeImageOverride?
                                         if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
                                             overrideImage = .savedMessagesIcon
+                                        } else if peer.isDeleted {
+                                            overrideImage = .deletedIcon
                                         }
                                         strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
                                     }

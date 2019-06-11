@@ -2,7 +2,7 @@ import SwiftSignalKit
 import UIKit
 
 func smartInvertColorsEnabled() -> Bool {
-    if #available(iOSApplicationExtension 11.0, *), UIAccessibilityIsInvertColorsEnabled() {
+    if #available(iOSApplicationExtension 11.0, iOS 11.0, *), UIAccessibilityIsInvertColorsEnabled() {
         return true
     } else {
         return false

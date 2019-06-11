@@ -53,12 +53,12 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
                 self.textField.textField.autocorrectionType = .no
             case .phoneNumber:
                 self.textField.textField.keyboardType = .phonePad
-                if #available(iOSApplicationExtension 10.0, *) {
+                if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                     self.textField.textField.textContentType = .telephoneNumber
                 }
             case .email:
                 self.textField.textField.keyboardType = .emailAddress
-                if #available(iOSApplicationExtension 10.0, *) {
+                if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                     self.textField.textField.textContentType = .emailAddress
                 }
         }

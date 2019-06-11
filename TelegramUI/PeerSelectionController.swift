@@ -11,6 +11,8 @@ public final class PeerSelectionController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var customTitle: String?
+    
     var peerSelected: ((PeerId) -> Void)?
     private let filter: ChatListNodePeersFilter
     
@@ -54,7 +56,8 @@ public final class PeerSelectionController: ViewController {
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
-        self.title = title ?? self.presentationData.strings.Conversation_ForwardTitle
+        self.customTitle = title
+        self.title = self.customTitle ?? self.presentationData.strings.Conversation_ForwardTitle
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
@@ -100,7 +103,7 @@ public final class PeerSelectionController: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
-        self.title = self.presentationData.strings.Conversation_ForwardTitle
+        self.title = self.customTitle ?? self.presentationData.strings.Conversation_ForwardTitle
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
     

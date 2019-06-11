@@ -995,7 +995,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let peerView = contextValue.get()
     |> mapToSignal { context -> Signal<PeerView, NoError> in
-        return context.account.viewTracker.peerView(context.account.peerId)
+        return context.account.viewTracker.peerView(context.account.peerId, updateData: true)
     }
     
     archivedPacks.set(
@@ -1030,7 +1030,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     updatePassport()
     
     let notificationsAuthorizationStatus = Promise<AccessType>(.allowed)
-    if #available(iOSApplicationExtension 10.0, *) {
+    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
         notificationsAuthorizationStatus.set(
             .single(.allowed)
             |> then(
@@ -1043,7 +1043,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }
     
     let notificationsWarningSuppressed = Promise<Bool>(true)
-    if #available(iOSApplicationExtension 10.0, *) {
+    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
         notificationsWarningSuppressed.set(
             .single(true)
             |> then(

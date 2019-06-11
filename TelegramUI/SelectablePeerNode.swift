@@ -128,6 +128,9 @@ final class SelectablePeerNode: ASDisplayNode {
             overrideImage = .savedMessagesIcon
         } else {
             text = mainPeer.compactDisplayTitle
+            if mainPeer.isDeleted {
+                overrideImage = .deletedIcon
+            }
         }
         self.textNode.maximumNumberOfLines = UInt(numberOfLines)
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)

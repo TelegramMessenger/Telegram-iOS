@@ -4,7 +4,11 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
+#if BUCK
+import WebPImage
+#else
 import WebP
+#endif
 
 public struct EmojiThumbnailResourceId: MediaResourceId {
     public let emoji: String

@@ -153,7 +153,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         self.backgroundColor = self.theme.list.blocksBackgroundColor
         self.scrollNode.backgroundColor = nil
         self.scrollNode.isOpaque = false
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         self.scrollNode.view.alwaysBounceVertical = true

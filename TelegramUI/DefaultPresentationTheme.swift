@@ -408,7 +408,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         dimColor: UIColor(white: 0.0, alpha: 0.4),
         backgroundType: .light,
         opaqueItemBackgroundColor: .white,
-        itemBackgroundColor: UIColor(white: 1.0, alpha: 0.8),
+        itemBackgroundColor: UIColor(white: 1.0, alpha: 0.87),
         opaqueItemHighlightedBackgroundColor: UIColor(white: 0.9, alpha: 1.0),
         itemHighlightedBackgroundColor: UIColor(white: 0.9, alpha: 0.7),
         standardActionTextColor: accentColor,

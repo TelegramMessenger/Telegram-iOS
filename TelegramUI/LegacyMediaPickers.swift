@@ -279,7 +279,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                         if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.6) {
                                             let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
                                             #if DEBUG
-                                                if #available(iOSApplicationExtension 11.0, *) {
+                                                if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                                                     if false, let heicData = compressImage(scaledImage, quality: 0.65) {
                                                         print("scaledImageData \(scaledImageData.count), heicData \(heicData.count)")
                                                         var randomId: Int64 = 0

@@ -933,7 +933,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     override public func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             if !self.didSetup3dTouch && self.traitCollection.forceTouchCapability != .unknown {
                 self.didSetup3dTouch = true
                 self.registerForPreviewingNonNative(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme))
@@ -1169,7 +1169,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             if let (controller, rect) = self.previewingController(from: previewingContext.sourceView, for: location) {
                 previewingContext.sourceRect = rect
                 return controller

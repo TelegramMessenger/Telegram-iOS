@@ -332,7 +332,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                 return state
             }
             present(channelAdminController(context: context, peerId: peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
-            }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }, upgradedToSupergroup: { _, f in f() }, transferedOwnership: { _ in }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, restrictPeer: { participant in
             updateState { state in
                 var state = state
@@ -469,7 +469,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         if case .searchMembers = mode {
                             switch participant.participant {
                                 case .creator:
-                                    label = themeAndStrings.1.Channel_Management_LabelCreator
+                                    label = themeAndStrings.1.Channel_Management_LabelOwner
                                 default:
                                     break
                             }
@@ -675,13 +675,13 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var enabled = true
                             if case .banAndPromoteActions = mode {
                                 if case .creator = participant.participant {
-                                    label = themeAndStrings.1.Channel_Management_LabelCreator
+                                    label = themeAndStrings.1.Channel_Management_LabelOwner
                                     enabled = false
                                 }
                             } else if case .searchMembers = mode {
                                 switch participant.participant {
                                     case .creator:
-                                        label = themeAndStrings.1.Channel_Management_LabelCreator
+                                        label = themeAndStrings.1.Channel_Management_LabelOwner
                                     case let .member(member):
                                         if member.adminInfo != nil {
                                             label = themeAndStrings.1.Channel_Management_LabelEditor
@@ -712,11 +712,15 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 case .searchAdmins:
                                     switch participant.participant {
                                         case .creator:
-                                            label = themeAndStrings.1.Channel_Management_LabelCreator
+                                            label = themeAndStrings.1.Channel_Management_LabelOwner
                                         case let .member(_, _, adminInfo, _):
                                             if let adminInfo = adminInfo {
                                                 if let peer = participant.peers[adminInfo.promotedBy] {
-                                                    label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle).0
+                                                    if peer.id == participant.peer.id {
+                                                        label = themeAndStrings.1.Channel_Management_LabelAdministrator
+                                                    } else {
+                                                        label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle).0
+                                                    }
                                                 }
                                             }
                                     }
@@ -774,7 +778,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var enabled = true
                             if case .banAndPromoteActions = mode {
                                 if case .creator = participant.participant {
-                                    label = themeAndStrings.1.Channel_Management_LabelCreator
+                                    label = themeAndStrings.1.Channel_Management_LabelOwner
                                     enabled = false
                                 }
                             }
@@ -947,13 +951,13 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var enabled = true
                             if case .banAndPromoteActions = mode {
                                 if case .creator = participant.participant {
-                                    label = themeAndStrings.1.Channel_Management_LabelCreator
+                                    label = themeAndStrings.1.Channel_Management_LabelOwner
                                     enabled = false
                                 }
                             } else if case .searchMembers = mode {
                                 switch participant.participant {
                                     case .creator:
-                                        label = themeAndStrings.1.Channel_Management_LabelCreator
+                                        label = themeAndStrings.1.Channel_Management_LabelOwner
                                     case let .member(member):
                                         if member.adminInfo != nil {
                                             label = themeAndStrings.1.Channel_Management_LabelEditor
@@ -980,11 +984,15 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 case .searchAdmins:
                                     switch participant.participant {
                                     case .creator:
-                                        label = themeAndStrings.1.Channel_Management_LabelCreator
+                                        label = themeAndStrings.1.Channel_Management_LabelOwner
                                     case let .member(_, _, adminInfo, _):
                                         if let adminInfo = adminInfo {
                                             if let peer = participant.peers[adminInfo.promotedBy] {
-                                                label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle).0
+                                                if peer.id == participant.peer.id {
+                                                    label = themeAndStrings.1.Channel_Management_LabelAdministrator
+                                                } else {
+                                                    label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle).0
+                                                }
                                             }
                                         }
                                     }
@@ -1042,7 +1050,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             var enabled = true
                             if case .banAndPromoteActions = mode {
                                 if case .creator = participant.participant {
-                                    label = themeAndStrings.1.Channel_Management_LabelCreator
+                                    label = themeAndStrings.1.Channel_Management_LabelOwner
                                     enabled = false
                                 }
                             }
