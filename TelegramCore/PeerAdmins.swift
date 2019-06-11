@@ -183,7 +183,6 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
     }
     |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> in
         return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> in
-            
             if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
                 if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                     let updatedParticipant: ChannelParticipant
