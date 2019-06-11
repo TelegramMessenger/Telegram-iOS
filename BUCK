@@ -87,6 +87,7 @@ apple_library(
         '//submodules/LegacyComponents:LegacyComponents',
         '//submodules/ffmpeg:opus',
         '//submodules/MtProtoKit:MtProtoKit',
+        '//submodules/libtgvoip:tgvoip',
     ],
 )
 
@@ -117,18 +118,18 @@ apple_library(
     deps = [
         ':TelegramUIResources',
         ':Images',
-        ':TelegramUIPrivateModule#static',
-    	'//submodules/SSignalKit:SwiftSignalKit#static',
-        '//submodules/SSignalKit:SSignalKit#static',
-    	'//submodules/Postbox:Postbox#static',
-    	'//submodules/TelegramCore:TelegramCore#static',
-    	'//submodules/MtProtoKit:MtProtoKit#static',
-        '//submodules/ffmpeg:FFMpeg#static',
-        '//submodules/AsyncDisplayKit:AsyncDisplayKit#static',
-        '//submodules/Display:Display#static',
-        '//submodules/LegacyComponents:LegacyComponents#static',
-        '//submodules/lottie-ios:Lottie#static',
-        '//submodules/webp:WebPImage#static',
+        ':TelegramUIPrivateModule',
+    	'//submodules/SSignalKit:SwiftSignalKit',
+        '//submodules/SSignalKit:SSignalKit',
+    	'//submodules/Postbox:Postbox',
+    	'//submodules/TelegramCore:TelegramCore',
+    	'//submodules/MtProtoKit:MtProtoKit',
+        '//submodules/ffmpeg:FFMpeg',
+        '//submodules/AsyncDisplayKit:AsyncDisplayKit',
+        '//submodules/Display:Display',
+        '//submodules/LegacyComponents:LegacyComponents',
+        '//submodules/lottie-ios:Lottie',
+        '//submodules/webp:WebPImage',
     ],
 )
 

@@ -320,7 +320,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let historyDisposable = MetaDisposable()
     private let readHistoryDisposable = MetaDisposable()
     
-    private let messageViewQueue = Queue()
+    private let messageViewQueue = Queue(name: "ChatHistoryListNode processing")
     
     private var dequeuedInitialTransitionOnLayout = false
     private var enqueuedHistoryViewTransition: (ChatHistoryListViewTransition, () -> Void)?
@@ -502,7 +502,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             return (view, version)
         }
         
-        let previousView = Atomic<ChatHistoryView?>(value: nil)
+        let previousView = Atomic<(ChatHistoryView, Int)?>(value: nil)
         let automaticDownloadNetworkType = context.account.networkType
         |> map { type -> MediaAutoDownloadNetworkType in
             switch type {
@@ -516,9 +516,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)
         
+        let nextTransitionVersion = Atomic<Int>(value: 0)
+        
         let historyViewTransition = combineLatest(queue: messageViewQueue, historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get())
         |> introduceError(Void.self)
-        |> mapToQueue { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared -> Signal<ChatHistoryListViewTransition, Void> in
+        |> mapToQueue { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared -> Signal<(ChatHistoryListViewTransition, Int), Void> in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -590,7 +592,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType)
                     
                     let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared), associatedData: associatedData, id: id)
-                    let previous = previousView.swap(processedView)
+                    let previousValueAndVersion = previousView.swap((processedView, update.1))
+                    let previous = previousValueAndVersion?.0
+                    
+                    if let previousVersion = previousValueAndVersion?.1 {
+                        if !GlobalExperimentalSettings.isAppStoreBuild {
+                            precondition(update.1 >= previousVersion)
+                        }
+                        assert(update.1 >= previousVersion)
+                    }
                     
                     if scrollPosition == nil, let originalScrollPosition = originalScrollPosition {
                         switch originalScrollPosition {
@@ -632,19 +642,27 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 }
                         }
                     }
+                    let transitionVersion = nextTransitionVersion.modify { $0 + 1 }
                     return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators)
                     |> map({
-                        mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, transition: $0)
+                        (mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, transition: $0), transitionVersion)
                     })
                     |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
                     |> introduceError(Void.self)
             }
         }
         
+        let appliedTransitionVersion = Atomic<Int?>(value: nil)
+        
         let appliedTransition = historyViewTransition
         |> deliverOnMainQueue
-        |> mapToQueue { [weak self] transition -> Signal<Void, Void> in
+        |> mapToQueue { [weak self] (transition, version) -> Signal<Void, Void> in
             if let strongSelf = self {
+                let previousAppliedVersion = appliedTransitionVersion.swap(version) ?? 0
+                if !GlobalExperimentalSettings.isAppStoreBuild {
+                    precondition(version == previousAppliedVersion + 1)
+                }
+                assert(version == previousAppliedVersion + 1)
                 return strongSelf.enqueueHistoryViewTransition(transition)
                 |> introduceError(Void.self)
             }
