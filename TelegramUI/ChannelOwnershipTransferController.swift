@@ -427,7 +427,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, c
         guard let contentNode = contentNode else {
             return
         }
-        contentNode?.updateChecking(true)
+        contentNode.updateIsChecking(true)
         disposable.set((updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: channel.id, memberId: member.id, password: contentNode.password) |> deliverOnMainQueue).start(error: { [weak contentNode] error in
             contentNode?.updateIsChecking(false)
             contentNode?.animateError()
@@ -510,7 +510,7 @@ func channelOwnershipTransferController(context: AccountContext, channel: Telegr
             title = nil
             text = presentationData.strings.Channel_OwnershipTransfer_ErrorPublicChannelsTooMuch
             actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
-        case .userBlocked, .userPrivacyRestricted:
+        case .userBlocked, .restricted:
             title = nil
             text = isGroup ? presentationData.strings.Group_OwnershipTransfer_ErrorPrivacyRestricted :  presentationData.strings.Channel_OwnershipTransfer_ErrorPrivacyRestricted
             actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
