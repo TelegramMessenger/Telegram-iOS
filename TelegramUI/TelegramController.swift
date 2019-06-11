@@ -48,7 +48,7 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
     }
 }
 
-public class TelegramController: ViewController {
+public class TelegramController: ViewController, KeyShortcutResponder {
     private let context: AccountContext
     
     let mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility
@@ -632,5 +632,13 @@ public class TelegramController: ViewController {
                 }
             })
         }
+    }
+    
+    public var keyShortcuts: [KeyShortcut] {
+        return [KeyShortcut(input: UIKeyInputEscape, action: { [weak self] in
+            if !(self?.navigationController?.topViewController is TabBarController) {
+                _ = self?.navigationBar?.executeBack()
+            }
+        })]
     }
 }

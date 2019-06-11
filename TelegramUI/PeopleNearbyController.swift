@@ -174,6 +174,7 @@ private enum PeopleNearbyEntry: ItemListNodeEntry {
                 return ItemListPlaceholderItem(theme: theme, text: text, sectionId: self.section, style: .blocks)
             case let .user(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
                 func distance(_ distance: Int32) -> String {
+                    var distance = max(1, distance)
                     let formatter = MKDistanceFormatter()
                     formatter.unitStyle = .abbreviated
                     return formatter.string(fromDistance: Double(distance))
@@ -239,23 +240,23 @@ private func peopleNearbyControllerEntries(state: PeopleNearbyControllerState, d
         entries.append(.empty(presentationData.theme, presentationData.strings.PeopleNearby_UsersEmpty))
     }
     
-    entries.append(.groupsHeader(presentationData.theme, presentationData.strings.PeopleNearby_Groups.uppercased()))
-    entries.append(.createGroup(presentationData.theme, presentationData.strings.PeopleNearby_CreateGroup))
-    if let data = data, !data.groups.isEmpty {
-        var i: Int32 = 0
-        for group in data.groups {
-            entries.append(.group(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, group))
-            i += 1
-        }
-    }
-    
-    if let data = data, !data.channels.isEmpty {
-        var i: Int32 = 0
-        for channel in data.channels {
-            entries.append(.channel(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, channel))
-            i += 1
-        }
-    }
+//    entries.append(.groupsHeader(presentationData.theme, presentationData.strings.PeopleNearby_Groups.uppercased()))
+//    entries.append(.createGroup(presentationData.theme, presentationData.strings.PeopleNearby_CreateGroup))
+//    if let data = data, !data.groups.isEmpty {
+//        var i: Int32 = 0
+//        for group in data.groups {
+//            entries.append(.group(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, group))
+//            i += 1
+//        }
+//    }
+//    
+//    if let data = data, !data.channels.isEmpty {
+//        var i: Int32 = 0
+//        for channel in data.channels {
+//            entries.append(.channel(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, channel))
+//            i += 1
+//        }
+//    }
     
     return entries
 }
@@ -285,7 +286,7 @@ public func peopleNearbyController(context: AccountContext) -> ViewController {
         guard let coordinate = coordinate else {
             return .single(nil)
         }
-        return peersNearby(network: context.account.network, accountStateManager: context.account.stateManager, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude), radius: 200)
+        let poll = peersNearby(network: context.account.network, accountStateManager: context.account.stateManager, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude), radius: 100)
         |> mapToSignal { peersNearby -> Signal<PeopleNearbyData?, NoError> in
             return context.account.postbox.transaction { transaction -> PeopleNearbyData? in
                 var result: [PeerNearbyEntry] = []
@@ -297,6 +298,7 @@ public func peopleNearbyController(context: AccountContext) -> ViewController {
                 return PeopleNearbyData(users: result, groups: [], channels: [])
             }
         }
+        return (poll |> then(.complete() |> suspendAwareDelay(25.0, queue: Queue.concurrentDefaultQueue()))) |> restart
     }
 
     dataPromise.set(dataSignal)
@@ -315,7 +317,7 @@ public func peopleNearbyController(context: AccountContext) -> ViewController {
     let controller = ItemListController(context: context, state: signal)
     navigateToChatImpl = { [weak controller] peer in
         if let navigationController = controller?.navigationController as? NavigationController {
-            navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peer.id))
+            navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peer.id), keepStack: .always)
         }
     }
     presentControllerImpl = { [weak controller] c, p in

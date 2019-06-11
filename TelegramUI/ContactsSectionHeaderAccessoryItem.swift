@@ -42,7 +42,7 @@ final class ContactsSectionHeaderAccessoryItem: ListViewAccessoryItem {
         }
     }
     
-    func node() -> ListViewAccessoryItemNode {
+    func node(synchronous: Bool) -> ListViewAccessoryItemNode {
         return ContactsSectionHeaderAccessoryItemNode(sectionHeader: self.sectionHeader, theme: self.theme)
     }
 }

@@ -17,6 +17,81 @@ private struct MessageContextMenuData {
     let messageActions: ChatAvailableMessageActions
 }
 
+func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfiguration, message: Message) -> Bool {
+    var hasEditRights = false
+    var unlimitedInterval = false
+    
+    
+    if message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.id.namespace != Namespaces.Message.Cloud {
+        hasEditRights = false
+    } else if let author = message.author, author.id == context.account.peerId {
+        hasEditRights = true
+    } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
+        if let peer = peer as? TelegramChannel {
+            switch peer.info {
+            case .broadcast:
+                if peer.hasPermission(.editAllMessages) {
+                    hasEditRights = true
+                }
+            case .group:
+                if peer.hasPermission(.pinMessages) {
+                    unlimitedInterval = true
+                    hasEditRights = true
+                }
+            }
+        }
+    }
+    
+    var hasUneditableAttributes = false
+    
+    if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+        if !peer.hasPermission(.sendMessages) {
+            //hasUneditableAttributes = true
+        }
+    }
+    
+    if hasEditRights {
+        for attribute in message.attributes {
+            if let _ = attribute as? InlineBotMessageAttribute {
+                hasUneditableAttributes = true
+                break
+            }
+        }
+        if message.forwardInfo != nil {
+            hasUneditableAttributes = true
+        }
+        
+        for media in message.media {
+            if let file = media as? TelegramMediaFile {
+                if file.isSticker || file.isInstantVideo {
+                    hasUneditableAttributes = true
+                    break
+                }
+            } else if let _ = media as? TelegramMediaContact {
+                hasUneditableAttributes = true
+                break
+            } else if let _ = media as? TelegramMediaExpiredContent {
+                hasUneditableAttributes = true
+                break
+            } else if let _ = media as? TelegramMediaMap {
+                hasUneditableAttributes = true
+                break
+            } else if let _ = media as? TelegramMediaPoll {
+                hasUneditableAttributes = true
+                break
+            }
+        }
+        
+        if !hasUneditableAttributes {
+            if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: context.account.peerId, message: message, unlimitedInterval: unlimitedInterval) {
+                return true
+            }
+        }
+    }
+    return false
+}
+
+
 private let starIconEmpty = UIImage(bundleImageName: "Chat/Context Menu/StarIconEmpty")?.precomposed()
 private let starIconFilled = UIImage(bundleImageName: "Chat/Context Menu/StarIconFilled")?.precomposed()
 
@@ -262,77 +337,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     dataSignal = combineLatest(loadLimits, loadStickerSaveStatusSignal, loadResourceStatusSignal, chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })))
     |> map { limitsConfiguration, stickerSaveStatus, resourceStatus, messageActions -> MessageContextMenuData in
         var canEdit = false
-        if messages[0].id.namespace == Namespaces.Message.Cloud && !isAction {
+        if !isAction {
             let message = messages[0]
-            
-            var hasEditRights = false
-            var unlimitedInterval = false
-            if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
-                hasEditRights = false
-            } else if let author = message.author, author.id == context.account.peerId {
-                hasEditRights = true
-            } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
-                if let peer = peer as? TelegramChannel {
-                    switch peer.info {
-                        case .broadcast:
-                            if peer.hasPermission(.editAllMessages) {
-                                hasEditRights = true
-                            }
-                        case .group:
-                            if peer.hasPermission(.pinMessages) {
-                                unlimitedInterval = true
-                                hasEditRights = true
-                            }
-                    }
-                }
-            }
-            
-            var hasUneditableAttributes = false
-
-            if let peer = message.peers[message.id.peerId] as? TelegramChannel {
-                if !peer.hasPermission(.sendMessages) {
-                    //hasUneditableAttributes = true
-                }
-            }
-            
-            if hasEditRights {
-                for attribute in message.attributes {
-                    if let _ = attribute as? InlineBotMessageAttribute {
-                        hasUneditableAttributes = true
-                        break
-                    }
-                }
-                if message.forwardInfo != nil {
-                    hasUneditableAttributes = true
-                }
-                
-                for media in message.media {
-                    if let file = media as? TelegramMediaFile {
-                        if file.isSticker || file.isInstantVideo {
-                            hasUneditableAttributes = true
-                            break
-                        }
-                    } else if let _ = media as? TelegramMediaContact {
-                        hasUneditableAttributes = true
-                        break
-                    } else if let _ = media as? TelegramMediaExpiredContent {
-                        hasUneditableAttributes = true
-                        break
-                    } else if let _ = media as? TelegramMediaMap {
-                        hasUneditableAttributes = true
-                        break
-                    } else if let _ = media as? TelegramMediaPoll {
-                        hasUneditableAttributes = true
-                        break
-                    }
-                }
-                
-                if !hasUneditableAttributes {
-                    if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: context.account.peerId, message: message, unlimitedInterval: unlimitedInterval) {
-                        canEdit = true
-                    }
-                }
-            }
+            canEdit = canEditMessage(context: context, limitsConfiguration: limitsConfiguration, message: message)
         }
         
         return MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions)
@@ -618,7 +625,7 @@ struct ChatAvailableMessageActions {
     let banAuthor: Peer?
 }
 
-private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId: PeerId, message: Message, unlimitedInterval: Bool) -> Bool {
+func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId: PeerId, message: Message, unlimitedInterval: Bool) -> Bool {
     if message.id.peerId == accountPeerId {
         return true
     }

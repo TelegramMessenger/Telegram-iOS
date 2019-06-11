@@ -493,7 +493,7 @@ final class ChatListNode: ListView {
         let currentRemovingPeerId = self.currentRemovingPeerId
         
         let savedMessagesPeer: Signal<Peer?, NoError>
-        if case let .peers(filter) = mode, filter == [.onlyWriteable] {
+        if case let .peers(filter) = mode, filter.contains(.onlyWriteable) {
             savedMessagesPeer = context.account.postbox.loadedPeerWithId(context.account.peerId)
             |> map(Optional.init)
         } else {

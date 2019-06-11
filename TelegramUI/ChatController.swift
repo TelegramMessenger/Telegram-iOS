@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SafariServices
 import MobileCoreServices
+import Intents
 import LegacyComponents
 
 public enum ChatControllerPeekActions {
@@ -83,7 +84,7 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
 
 let ChatControllerCount = Atomic<Int32>(value: 0)
 
-public final class ChatController: TelegramController, KeyShortcutResponder, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
+public final class ChatController: TelegramController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
     weak var parentController: ViewController?
@@ -2272,6 +2273,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }
                 })
+                
+                strongSelf.donateIntent()
             }
         }
         
@@ -4896,6 +4899,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             |> deliverOnMainQueue).start(next: { [weak self] _ in
                 self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
             })
+            
+            self.donateIntent()
         }
     }
     
@@ -6613,7 +6618,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
     }
     
-    public var keyShortcuts: [KeyShortcut] {
+    public override var keyShortcuts: [KeyShortcut] {
         let strings = self.presentationData.strings
         
         var inputShortcuts: [KeyShortcut]
@@ -6789,5 +6794,30 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 return state
             }
         })
+    }
+    
+    private func donateIntent() {
+        guard case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.CloudUser else {
+            return
+        }
+        if #available(iOSApplicationExtension 10.0, *) {
+            let _ = (self.context.account.postbox.loadedPeerWithId(peerId)
+            |> deliverOnMainQueue).start(next: { peer in
+                if let peer = peer as? TelegramUser {
+                    let recipientHandle = INPersonHandle(value: "tg\(peerId.id)", type: .unknown)
+                    let recipient = INPerson(personHandle: recipientHandle, nameComponents: nil, displayName: peer.displayTitle, image: nil, contactIdentifier: nil, customIdentifier: "tg\(peerId.id)")
+                    
+                    let intent = INSendMessageIntent(recipients: [recipient], content: nil, groupName: nil, serviceName: nil, sender: nil)
+                    
+                    let interaction = INInteraction(intent: intent, response: nil)
+                    interaction.direction = .outgoing
+                    interaction.donate { error in
+                        if let error = error {
+                            print(error.localizedDescription)
+                        }
+                    }
+                }
+            })
+        }
     }
 }

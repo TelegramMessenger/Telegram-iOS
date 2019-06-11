@@ -106,6 +106,8 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
                 
                 let shareController = ShareController(context: strongSelf.context, subject: .text(body), externalShare: true, immediateExternalShare: true)
                 strongSelf.present(shareController, in: .window(.root))
+                
+                strongSelf.contactsNode.listNode.clearHighlightAnimated(true)
             }
         }
         

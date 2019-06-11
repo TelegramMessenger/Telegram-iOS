@@ -1078,7 +1078,6 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                 return state.withUpdatedUpdatingAddressName(false)
                             }
                             presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                            
                         }))
                     }
                     

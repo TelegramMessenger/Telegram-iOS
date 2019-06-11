@@ -1129,6 +1129,21 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return nil
     }
     
+    public func firstMessageForEditInCurrentHistoryView() -> Message? {
+        if let historyView = self.historyView {
+            if historyView.originalView.laterId == nil {
+                for entry in historyView.filteredEntries.reversed()  {
+                    if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                        if canEditMessage(context: context, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, message: message) {
+                            return message
+                        }
+                    }
+                }
+            }
+        }
+        return nil
+    }
+    
     public func messageInCurrentHistoryView(_ id: MessageId) -> Message? {
         if let historyView = self.historyView {
             for entry in historyView.filteredEntries {

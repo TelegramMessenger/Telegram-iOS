@@ -242,7 +242,6 @@ class ContactsPeerItem: ListViewItem {
     }
     
     func selected(listView: ListView) {
-        listView.clearHighlightAnimated(true)
         self.action(self.peer)
     }
     

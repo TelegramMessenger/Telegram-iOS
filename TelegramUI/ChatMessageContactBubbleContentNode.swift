@@ -243,7 +243,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
-                    return (layoutSize, { [weak self] animation, _ in
+                    return (layoutSize, { [weak self] animation, synchronousLoads in
                         if let strongSelf = self {
                             strongSelf.item = item
                             strongSelf.contact = selectedContact
@@ -290,7 +290,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             if let peerId = selectedContact?.peerId, let peer = item.message.peers[peerId] {
-                                strongSelf.avatarNode.setPeer(account: item.context.account, theme: item.presentationData.theme.theme, peer: peer, emptyColor: avatarPlaceholderColor)
+                                strongSelf.avatarNode.setPeer(account: item.context.account, theme: item.presentationData.theme.theme, peer: peer, emptyColor: avatarPlaceholderColor, synchronousLoad: synchronousLoads)
                             } else {
                                 strongSelf.avatarNode.setCustomLetters(customLetters)
                             }

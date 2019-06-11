@@ -132,7 +132,7 @@ struct ItemListControllerState {
     }
 }
 
-class ItemListController<Entry: ItemListNodeEntry>: ViewController, PresentableController {
+class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutResponder, PresentableController {
     private let state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>
     
     private var leftNavigationButtonTitleAndStyle: (ItemListNavigationButtonContent, ItemListNavigationButtonStyle)?
@@ -591,5 +591,12 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, PresentableC
     
     func previewingCommit(_ viewControllerToCommit: UIViewController) {
         self.commitPreview?(viewControllerToCommit)
+    }
+    public var keyShortcuts: [KeyShortcut] {
+        return [KeyShortcut(input: UIKeyInputEscape, action: { [weak self] in
+            if !(self?.navigationController?.topViewController is TabBarController) {
+                _ = self?.navigationBar?.executeBack()
+            }
+        })]
     }
 }

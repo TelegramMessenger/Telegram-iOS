@@ -17,7 +17,11 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
         
         let lineWidth: CGFloat
         if selected {
-            context.setStrokeColor(theme.list.itemAccentColor.cgColor)
+            var accentColor = theme.list.itemAccentColor
+            if accentColor.rgb == UIColor.white.rgb {
+                accentColor = UIColor(rgb: 0x999999)
+            }
+            context.setStrokeColor(accentColor.cgColor)
             lineWidth = 2.0
         } else {
             context.setStrokeColor(theme.list.disclosureArrowColor.withAlphaComponent(0.4).cgColor)

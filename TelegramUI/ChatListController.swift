@@ -53,7 +53,7 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
     return false
 }
 
-public class ChatListController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate {
+public class ChatListController: TelegramController, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
     let context: AccountContext
@@ -683,7 +683,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                         scrollToEndIfExists = true
                     }
-                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), scrollToEndIfExists: scrollToEndIfExists, animated: animated, completion: { [weak self] in
+                    
+                    let animated: Bool = !scrollToEndIfExists || strongSelf.groupId != PeerGroupId.root
+                    
+                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), scrollToEndIfExists: animated, animated: animated, parentGroupId: strongSelf.groupId, completion: { [weak self] in
                         self?.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                     })
                 }
@@ -1269,7 +1272,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
     }
     
-    public var keyShortcuts: [KeyShortcut] {
+    public override var keyShortcuts: [KeyShortcut] {
         let strings = self.presentationData.strings
         
         let toggleSearch: () -> Void = { [weak self] in

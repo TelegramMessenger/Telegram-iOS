@@ -109,7 +109,6 @@ class ContactListActionItem: ListViewItem {
     var selectable: Bool = true
     
     func selected(listView: ListView){
-        listView.clearHighlightAnimated(true)
         self.action()
     }
     

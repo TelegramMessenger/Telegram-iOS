@@ -10,7 +10,7 @@ public enum NavigateToChatKeepStack {
     case never
 }
 
-public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, completion: @escaping () -> Void = {}) {
+public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, parentGroupId: PeerGroupId? = nil, completion: @escaping () -> Void = {}) {
     var found = false
     var isFirst = true
     for controller in navigationController.viewControllers.reversed() {
@@ -58,7 +58,19 @@ public func navigateToChatController(navigationController: NavigationController,
         if resolvedKeepStack {
             navigationController.pushViewController(controller, animated: animated, completion: completion)
         } else {
-            let viewControllers = navigationController.viewControllers.filter({ $0 is ChatListController || $0 is TabBarController })
+            let viewControllers = navigationController.viewControllers.filter({ controller in
+                if controller is ChatListController {
+                    if let parentGroupId = parentGroupId {
+                        return parentGroupId != .root
+                    } else {
+                        return true
+                    }
+                } else if controller is TabBarController {
+                    return true
+                } else {
+                    return false
+                }
+            })
             if viewControllers.isEmpty {
                 navigationController.replaceAllButRootController(controller, animated: animated, completion: completion)
             } else {
