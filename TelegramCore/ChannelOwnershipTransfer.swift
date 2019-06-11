@@ -14,6 +14,8 @@ public enum ChannelOwnershipTransferError {
     case authSessionTooFresh(Int32)
     case requestPassword
     case invalidPassword
+    case restricted
+    case userBlocked
 }
 
 public func updateChannelOwnership(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, channelId: PeerId, memberId: PeerId, password: String?) -> Signal<Never, ChannelOwnershipTransferError> {
@@ -72,6 +74,10 @@ public func updateChannelOwnership(postbox: Postbox, network: Network, accountSt
                     if let value = Int32(timeout) {
                         return .authSessionTooFresh(value)
                     }
+                } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
+                    return .restricted
+                } else if error.errorDescription == "USER_BLOCKED" {
+                    return .userBlocked
                 }
                 return .generic
             }

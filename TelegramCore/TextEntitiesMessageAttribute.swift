@@ -302,13 +302,13 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
             case .PhoneNumber:
                 break
             case .Strikethrough:
-                //apiEntities.append(.messageEntityStrike(offset: offset, length: length))
+                apiEntities.append(.messageEntityStrike(offset: offset, length: length))
                 break
             case .BlockQuote:
-                //apiEntities.append(.messageEntityBlockquote(offset: offset, length: length))
+                apiEntities.append(.messageEntityBlockquote(offset: offset, length: length))
                 break
             case .Underline:
-                //apiEntities.append(.messageEntityUnderline(offset: offset, length: length))
+                apiEntities.append(.messageEntityUnderline(offset: offset, length: length))
                 break
             case .Custom:
                 break

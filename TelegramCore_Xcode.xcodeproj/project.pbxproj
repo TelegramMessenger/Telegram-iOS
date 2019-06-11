@@ -139,6 +139,8 @@
 		D0119CB120CA9EA800895300 /* MarkAllChatsAsRead.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0119CAF20CA9EA800895300 /* MarkAllChatsAsRead.swift */; };
 		D0136309208F3B0900EB3653 /* SecureIdValueContentError.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0136308208F3B0900EB3653 /* SecureIdValueContentError.swift */; };
 		D013630A208F6E2800EB3653 /* SecureIdValueContentError.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0136308208F3B0900EB3653 /* SecureIdValueContentError.swift */; };
+		D014193922AE6B85008667CB /* ChannelOwnershipTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E778222A9862100CD99F5 /* ChannelOwnershipTransfer.swift */; };
+		D014193A22AE6B85008667CB /* PeersNearby.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E778F22AAABC600CD99F5 /* PeersNearby.swift */; };
 		D015E00E225CA61100CB9E8A /* FindChannelById.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E00D225CA61100CB9E8A /* FindChannelById.swift */; };
 		D015E00F225CA61100CB9E8A /* FindChannelById.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E00D225CA61100CB9E8A /* FindChannelById.swift */; };
 		D01749591E1092BC0057C89A /* RequestStartBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01749581E1092BC0057C89A /* RequestStartBot.swift */; };
@@ -2622,6 +2624,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D014193922AE6B85008667CB /* ChannelOwnershipTransfer.swift in Sources */,
+				D014193A22AE6B85008667CB /* PeersNearby.swift in Sources */,
 				D076F88A2296D8F6004F895A /* ManageChannelDiscussionGroup.swift in Sources */,
 				9F1BC1AB2244CFED00F21815 /* EmojiKeywords.swift in Sources */,
 				9F1BC1AC2244CFED00F21815 /* SynchronizeEmojiKeywordsOperation.swift in Sources */,
