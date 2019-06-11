@@ -5250,6 +5250,7 @@
 				PRODUCT_NAME = Telegram;
 				PROVISIONING_PROFILE = "1e62fceb-1fb5-4804-ad0f-9b9b974393b8";
 				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.Telegram-iOS";
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
 				SWIFT_VERSION = 4.0;
 				USER_HEADER_SEARCH_PATHS = "";

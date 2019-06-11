@@ -1,14 +1,14 @@
 [cxx]
   default_platform = iphoneos-armv7
-  cflags = -g -fmodules -fobjc-arc -D BUCK -D DEBUG -w $(config custom.other_cflags)
-  cxxflags = -fobjc-arc -std=c++14 -D BUCK -D DEBUG -g -w $(config custom.other_cxxflags)
+  cflags = -fmodules -fobjc-arc -D BUCK -D DEBUG -w -fno-optimize-sibling-calls $(config custom.other_cflags)
+  cxxflags = -fobjc-arc -std=c++14 -D BUCK -D DEBUG -w -fno-optimize-sibling-calls $(config custom.other_cxxflags)
   combined_preprocess_and_compile = true
   pch_enabled = false
-  ldflags = -Xlinker -objc_abi_version -Xlinker 2 -fobjc-arc -fobjc-link-runtime $(config custom.other_cxxflags)
+  ldflags = -Xlinker -objc_abi_version -Xlinker 2 -fobjc-arc -fobjc-link-runtime -dead_strip -Xlinker -no_deduplicate $(config custom.other_cxxflags)
 
 [swift]
   version = 4.0
-  compiler_flags = -DBUCK -enable-testing -g -Onone -whole-module-optimization -suppress-warnings $(config custom.other_swift_compiler_flags)
+  compiler_flags = -DBUCK -enable-testing -Onone -whole-module-optimization -suppress-warnings -Xcc -fno-optimize-sibling-calls $(config custom.other_swift_compiler_flags)
   use_filelist = true
 
 [apple]
