@@ -1155,7 +1155,6 @@ final class SharedApplicationContext {
                 UIApplication.shared.setStatusBarHidden(false, with: .none)
             }
         })
-
         return true
     }
 
@@ -1620,6 +1619,13 @@ final class SharedApplicationContext {
                                 let _ = context.context.sharedContext.callManager?.requestCall(account: context.context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
                             }
                         }
+                    }
+                }
+            } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
+                if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                    let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
+                    if let id = Int32(string), let context = self.contextValue {
+                        navigateToChatController(navigationController: context.rootController, context: context.context, chatLocation: .peer(PeerId(namespace: Namespaces.Peer.CloudUser, id: id)))
                     }
                 }
             }

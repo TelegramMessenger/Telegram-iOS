@@ -4380,6 +4380,14 @@ Any member of this group will be able to see messages in the channel.";
 "Group.OwnershipTransfer.DescriptionInfo" = "This will transfer the full **owner rights** for **%1$@** to **%2$@**.\n\nYou will no longer be considered the creator of the group. The new owner will be free to remove any of your admin privileges or even ban you.";
 "Channel.OwnershipTransfer.ChangeOwner" = "Change Owner";
 
+"Channel.OwnershipTransfer.ErrorPublicChannelsTooMuch" = "Sorry, the target user has too many public groups or channels already. Please ask them to make one of their existing groups or channels private first.";
+
+"Group.OwnershipTransfer.ErrorAdminsTooMuch" = "Sorry, this group has too many admins and the new owner can't be added. Please remove one of the existing admins first.";
+"Channel.OwnershipTransfer.ErrorAdminsTooMuch" = "Sorry, this channel has too many admins and the new owner can't be added. Please remove one of the existing admins first.";
+
+"Group.OwnershipTransfer.ErrorPrivacyRestricted" = "Sorry, this user is not a member of this group and their privacy settings prevent you from adding them manually.";
+"Channel.OwnershipTransfer.ErrorPrivacyRestricted" = "Sorry, this user is not a member of this channel and their privacy settings prevent you from adding them manually.";
+
 "Channel.OwnershipTransfer.EnterPassword" = "Enter Password";
 "Channel.OwnershipTransfer.EnterPasswordText" = "Please enter your 2-Step Verification password to complete the transfer.";
 "Channel.OwnershipTransfer.PasswordPlaceholder" = "Password";
