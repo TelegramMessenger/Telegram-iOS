@@ -108,8 +108,8 @@ func syncContactsOnce(network: Network, postbox: Postbox, accountPeerId: PeerId)
     return appliedUpdatedPeers
 }
 
-public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
-    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Never, NoError> in
         if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
             return account.network.request(Api.functions.contacts.deleteContacts(id: [inputUser]))
             |> map(Optional.init)
@@ -128,6 +128,7 @@ public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> 
                     }
                 }
             }
+            |> ignoreValues
         } else {
             return .complete()
         }
