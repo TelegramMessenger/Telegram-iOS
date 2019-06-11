@@ -1025,7 +1025,18 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                         guard let peer = peer else {
                             return
                         }
-                        updatePeerBlockedDisposable.set(deleteContactPeerInteractively(account: context.account, peerId: peer.id).start())
+                        let deleteContactFromDevice: Signal<Never, NoError>
+                        if let contactDataManager = context.sharedContext.contactDataManager {
+                            deleteContactFromDevice = contactDataManager.deleteContactWithAppSpecificReference(peerId: peer.id)
+                        } else {
+                            deleteContactFromDevice = .complete()
+                        }
+                        updatePeerBlockedDisposable.set((
+                            deleteContactPeerInteractively(account: context.account, peerId: peer.id)
+                            |> then(
+                                deleteContactFromDevice
+                            )
+                        ).start())
                     })
                 })
             ]),

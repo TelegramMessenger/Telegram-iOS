@@ -13,7 +13,7 @@ private enum ChatReportPeerTitleButton: Equatable {
     func title(strings: PresentationStrings) -> String {
         switch self {
             case .block:
-                return strings.Conversation_Block
+                return strings.Conversation_BlockUser
             case let .addContact(name):
                 if let name = name {
                     return strings.Conversation_AddNameToContacts(name).0

@@ -27,7 +27,7 @@ public struct ChatListNodePeersFilter: OptionSet {
     public static let removeSearchHeader = ChatListNodePeersFilter(rawValue: 1 << 9)
     
     public static let excludeDisabled = ChatListNodePeersFilter(rawValue: 1 << 10)
-
+    public static let includeSavedMessages = ChatListNodePeersFilter(rawValue: 1 << 11)
 }
 
 enum ChatListNodeMode {

@@ -5537,7 +5537,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func forwardMessages(messageIds: [MessageId], resetCurrent: Bool = false) {
-        let controller = PeerSelectionController(context: self.context, filter: [.onlyWriteable, .excludeDisabled])
+        let controller = PeerSelectionController(context: self.context, filter: [.onlyWriteable, .excludeDisabled, .includeSavedMessages])
         controller.peerSelected = { [weak self, weak controller] peerId in
             guard let strongSelf = self, let strongController = controller else {
                 return
@@ -5945,7 +5945,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func addPeerContact() {
-        if let peer = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: peer) {
+        if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: peer) {
             self.present(deviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, isSharing: true, completion: { [weak self] peer, stableId, contactData in
                 guard let strongSelf = self else {
                     return
@@ -5957,7 +5957,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     self?.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), in: .window(.root))
                 }
             })), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-            //self.present(addContactOptionsController(context: self.context, peer: peer, contactData: contactData), in: .window(.root))
         }
     }
     
@@ -5965,7 +5964,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
-        self.editMessageDisposable.set((TelegramCore.dismissPeerStatusOptions(account: self.context.account, peerId: peerId)
+        let dismissPeerId: PeerId
+        if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramUser {
+            dismissPeerId = peer.id
+        } else {
+            dismissPeerId = peerId
+        }
+        self.editMessageDisposable.set((TelegramCore.dismissPeerStatusOptions(account: self.context.account, peerId: dismissPeerId)
         |> afterDisposed({
             Queue.mainQueue().async {
             }

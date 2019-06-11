@@ -987,7 +987,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                 completion(peerAndContactData.0, filteredData)
                 dismissImpl?(true)
             })
-        } else if case let .create(_, _, _, completion) = subject {
+        } else if case let .create(createForPeer, _, _, completion) = subject {
             let filteredData = filteredContactData(contactData: peerAndContactData.2, excludedComponents: state.excludedComponents)
             var filteredPhoneNumbers: [DeviceContactPhoneNumberData] = []
             for phoneNumber in state.phoneNumbers {
@@ -997,7 +997,21 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
             }
             var composedContactData: DeviceContactExtendedData?
             if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
-                composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: filteredData.urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: filteredData.instantMessagingProfiles)
+                var instantMessagingProfiles = filteredData.instantMessagingProfiles
+                if let createForPeer = createForPeer {
+                    let appProfile = DeviceContactInstantMessagingProfileData(appProfile: createForPeer.id)
+                    var found = false
+                    for profile in instantMessagingProfiles {
+                        if profile.service == appProfile.service && profile.username == appProfile.username {
+                            found = true
+                            break
+                        }
+                    }
+                    if !found {
+                        instantMessagingProfiles.append(appProfile)
+                    }
+                }
+                composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: filteredData.urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: instantMessagingProfiles)
             }
             rightNavigationButton = ItemListNavigationButton(content: .text(isShare ? presentationData.strings.Common_Done : presentationData.strings.Compose_Create), style: .bold, enabled: (isShare || !filteredPhoneNumbers.isEmpty) && composedContactData != nil, action: {
                 if let composedContactData = composedContactData {
@@ -1014,24 +1028,19 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                     |> deliverOnMainQueue).start(error: { _ in
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }, completed: {
-                                        if filteredPhoneNumbers.count == 1 {
-                                            let _ = (contactDataManager.createContactWithData(composedContactData)
-                                            |> deliverOnMainQueue).start(next: { contactIdAndData in
-                                                updateState { state in
-                                                    var state = state
-                                                    state.savingData = false
-                                                    return state
-                                                }
-                                                if let contactIdAndData = contactIdAndData {
-                                                    completion(peer, contactIdAndData.0, contactIdAndData.1)
-                                                }
-                                                completed?()
-                                                dismissImpl?(true)
-                                            })
-                                        } else {
+                                        let _ = (contactDataManager.createContactWithData(composedContactData)
+                                        |> deliverOnMainQueue).start(next: { contactIdAndData in
+                                            updateState { state in
+                                                var state = state
+                                                state.savingData = false
+                                                return state
+                                            }
+                                            if let contactIdAndData = contactIdAndData {
+                                                completion(peer, contactIdAndData.0, contactIdAndData.1)
+                                            }
                                             completed?()
                                             dismissImpl?(true)
-                                        }
+                                        })
                                     }))
                                     return
                                 }

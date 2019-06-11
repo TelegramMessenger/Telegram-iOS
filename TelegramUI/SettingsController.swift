@@ -995,7 +995,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let peerView = contextValue.get()
     |> mapToSignal { context -> Signal<PeerView, NoError> in
-        return context.account.viewTracker.peerView(context.account.peerId)
+        return context.account.viewTracker.peerView(context.account.peerId, updateData: true)
     }
     
     archivedPacks.set(

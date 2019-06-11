@@ -192,6 +192,23 @@ public final class DeviceContactInstantMessagingProfileData: Equatable, Hashable
     }
 }
 
+public extension DeviceContactInstantMessagingProfileData {
+    convenience init(appProfile: PeerId) {
+        self.init(label: "mobile", service: "Telegram", username: "@id\(appProfile.id)")
+    }
+}
+
+func parseAppSpecificContactReference(_ value: String) -> PeerId? {
+    if !value.hasPrefix("@id") {
+        return nil
+    }
+    let idString = String(value[value.index(value.startIndex, offsetBy: 3)...])
+    if let id = Int32(idString) {
+        return PeerId(namespace: Namespaces.Peer.CloudUser, id: id)
+    }
+    return nil
+}
+
 public final class DeviceContactBasicData: Equatable {
     public let firstName: String
     public let lastName: String
@@ -214,6 +231,20 @@ public final class DeviceContactBasicData: Equatable {
             return false
         }
         return true
+    }
+}
+
+public final class DeviceContactBasicDataWithReference: Equatable {
+    public let stableId: DeviceContactStableId
+    public let basicData: DeviceContactBasicData
+    
+    init(stableId: DeviceContactStableId, basicData: DeviceContactBasicData) {
+        self.stableId = stableId
+        self.basicData = basicData
+    }
+    
+    public static func ==(lhs: DeviceContactBasicDataWithReference, rhs: DeviceContactBasicDataWithReference) -> Bool {
+        return lhs.stableId == rhs.stableId && lhs.basicData == rhs.basicData
     }
 }
 

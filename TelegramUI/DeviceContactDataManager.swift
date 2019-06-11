@@ -1,5 +1,6 @@
 import Foundation
 import SwiftSignalKit
+import Postbox
 import TelegramCore
 import Contacts
 import AddressBook
@@ -10,7 +11,9 @@ private protocol DeviceContactDataContext {
     func personNameDisplayOrder() -> PresentationPersonNameOrder
     func getExtendedContactData(stableId: DeviceContactStableId) -> DeviceContactExtendedData?
     func appendContactData(_ contactData: DeviceContactExtendedData, to stableId: DeviceContactStableId) -> DeviceContactExtendedData?
+    func appendPhoneNumber(_ phoneNumber: DeviceContactPhoneNumberData, to stableId: DeviceContactStableId) -> DeviceContactExtendedData?
     func createContactWithData(_ contactData: DeviceContactExtendedData) -> (DeviceContactStableId, DeviceContactExtendedData)?
+    func deleteContactWithAppSpecificReference(peerId: PeerId)
 }
 
 @available(iOSApplicationExtension 9.0, iOS 9.0, *)
@@ -18,19 +21,27 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
     let store = CNContactStore()
     var updateHandle: NSObjectProtocol?
     var currentContacts: [DeviceContactStableId: DeviceContactBasicData] = [:]
+    var currentAppSpecificReferences: [PeerId: DeviceContactBasicDataWithReference] = [:]
     
-    init(queue: Queue, updated: @escaping ([DeviceContactStableId: DeviceContactBasicData]) -> Void) {
-        self.currentContacts = self.retrieveContacts()
+    init(queue: Queue, updated: @escaping ([DeviceContactStableId: DeviceContactBasicData]) -> Void, appSpecificReferencesUpdated: @escaping ([PeerId: DeviceContactBasicDataWithReference]) -> Void) {
+        let (contacts, references) = self.retrieveContacts()
+        self.currentContacts = contacts
+        self.currentAppSpecificReferences = references
         updated(self.currentContacts)
+        appSpecificReferencesUpdated(self.currentAppSpecificReferences)
         let handle = NotificationCenter.default.addObserver(forName: NSNotification.Name.CNContactStoreDidChange, object: nil, queue: nil, using: { [weak self] _ in
             queue.async {
                 guard let strongSelf = self else {
                     return
                 }
-                let contacts = strongSelf.retrieveContacts()
+                let (contacts, references) = strongSelf.retrieveContacts()
                 if strongSelf.currentContacts != contacts {
                     strongSelf.currentContacts = contacts
                     updated(strongSelf.currentContacts)
+                }
+                if strongSelf.currentAppSpecificReferences != references {
+                    strongSelf.currentAppSpecificReferences = references
+                    appSpecificReferencesUpdated(strongSelf.currentAppSpecificReferences)
                 }
             }
         })
@@ -43,18 +54,24 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
         }
     }
     
-    private func retrieveContacts() -> [DeviceContactStableId: DeviceContactBasicData] {
-        let keysToFetch: [CNKeyDescriptor] = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor]
+    private func retrieveContacts() -> ([DeviceContactStableId: DeviceContactBasicData], [PeerId: DeviceContactBasicDataWithReference]) {
+        let keysToFetch: [CNKeyDescriptor] = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactInstantMessageAddressesKey as CNKeyDescriptor]
         
         let request = CNContactFetchRequest(keysToFetch: keysToFetch)
         request.unifyResults = true
         
         var result: [DeviceContactStableId: DeviceContactBasicData] = [:]
+        var references: [PeerId: DeviceContactBasicDataWithReference] = [:]
         let _ = try? self.store.enumerateContacts(with: request, usingBlock: { contact, _ in
             let stableIdAndContact = DeviceContactDataModernContext.parseContact(contact)
             result[stableIdAndContact.0] = stableIdAndContact.1
+            for address in contact.instantMessageAddresses {
+                if address.value.service == "Telegram", let peerId = parseAppSpecificContactReference(address.value.username) {
+                    references[peerId] = DeviceContactBasicDataWithReference(stableId: stableIdAndContact.0, basicData: stableIdAndContact.1)
+                }
+            }
         })
-        return result
+        return (result, references)
     }
     
     private static func parseContact(_ contact: CNContact) -> (DeviceContactStableId, DeviceContactBasicData) {
@@ -222,6 +239,50 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
         return DeviceContactExtendedData(contact: mutableContact)
     }
     
+    func appendPhoneNumber(_ phoneNumber: DeviceContactPhoneNumberData, to stableId: DeviceContactStableId) -> DeviceContactExtendedData? {
+        let keysToFetch: [CNKeyDescriptor] = [
+            CNContactFormatter.descriptorForRequiredKeys(for: .fullName),
+            CNContactPhoneNumbersKey as CNKeyDescriptor,
+            CNContactEmailAddressesKey as CNKeyDescriptor,
+            CNContactBirthdayKey as CNKeyDescriptor,
+            CNContactSocialProfilesKey as CNKeyDescriptor,
+            CNContactInstantMessageAddressesKey as CNKeyDescriptor,
+            CNContactPostalAddressesKey as CNKeyDescriptor,
+            CNContactUrlAddressesKey as CNKeyDescriptor,
+            CNContactOrganizationNameKey as CNKeyDescriptor,
+            CNContactJobTitleKey as CNKeyDescriptor,
+            CNContactDepartmentNameKey as CNKeyDescriptor
+        ]
+        
+        guard let current = try? self.store.unifiedContact(withIdentifier: stableId, keysToFetch: keysToFetch) else {
+            return nil
+        }
+        
+        let mutableContact = current.mutableCopy() as! CNMutableContact
+        
+        var phoneNumbers = mutableContact.phoneNumbers
+        let appendPhoneNumbers: [CNLabeledValue<CNPhoneNumber>] = [CNLabeledValue<CNPhoneNumber>(label: phoneNumber.label, value: CNPhoneNumber(stringValue: phoneNumber.value))]
+        for appendPhoneNumber in appendPhoneNumbers {
+            var found = false
+            inner: for n in phoneNumbers {
+                if n.value.stringValue == appendPhoneNumber.value.stringValue {
+                    found = true
+                    break inner
+                }
+            }
+            if !found {
+                phoneNumbers.insert(appendPhoneNumber, at: 0)
+            }
+        }
+        mutableContact.phoneNumbers = phoneNumbers
+        
+        let saveRequest = CNSaveRequest()
+        saveRequest.update(mutableContact)
+        let _ = try? self.store.execute(saveRequest)
+        
+        return DeviceContactExtendedData(contact: mutableContact)
+    }
+    
     func createContactWithData(_ contactData: DeviceContactExtendedData) -> (DeviceContactStableId, DeviceContactExtendedData)? {
         let saveRequest = CNSaveRequest()
         let mutableContact = contactData.asMutableCNContact()
@@ -229,6 +290,19 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
         let _ = try? self.store.execute(saveRequest)
         
         return (mutableContact.identifier, contactData)
+    }
+    
+    func deleteContactWithAppSpecificReference(peerId: PeerId) {
+        guard let reference = self.currentAppSpecificReferences[peerId] else {
+            return
+        }
+        guard let current = try? self.store.unifiedContact(withIdentifier: reference.stableId, keysToFetch: []) else {
+            return
+        }
+        
+        let saveRequest = CNSaveRequest()
+            saveRequest.delete(current.mutableCopy() as! CNMutableContact)
+        let _ = try? self.store.execute(saveRequest)
     }
 }
 
@@ -349,6 +423,10 @@ private final class DeviceContactDataLegacyContext: DeviceContactDataContext {
         return nil
     }
     
+    func appendPhoneNumber(_ phoneNumber: DeviceContactPhoneNumberData, to stableId: DeviceContactStableId) -> DeviceContactExtendedData? {
+        return nil
+    }
+    
     func createContactWithData(_ contactData: DeviceContactExtendedData) -> (DeviceContactStableId, DeviceContactExtendedData)? {
         var result: (DeviceContactStableId, DeviceContactExtendedData)?
         withAddressBook { addressBook in
@@ -373,6 +451,9 @@ private final class DeviceContactDataLegacyContext: DeviceContactDataContext {
             }
         }
         return result
+    }
+    
+    func deleteContactWithAppSpecificReference(peerId: PeerId) {
     }
 }
 
@@ -401,6 +482,7 @@ private final class DeviceContactDataManagerImpl {
     
     private var stableIdToBasicContactData: [DeviceContactStableId: DeviceContactBasicData] = [:]
     private var normalizedPhoneNumberToStableId: [DeviceContactNormalizedPhoneNumber: [DeviceContactStableId]] = [:]
+    private var appSpecificReferences: [PeerId: DeviceContactBasicDataWithReference] = [:]
     
     private var importableContacts: [DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData] = [:]
     
@@ -410,6 +492,7 @@ private final class DeviceContactDataManagerImpl {
     private let basicDataSubscribers = Bag<([DeviceContactStableId: DeviceContactBasicData]) -> Void>()
     private var basicDataForNormalizedNumberContexts: [DeviceContactNormalizedPhoneNumber: BasicDataForNormalizedNumberContext] = [:]
     private let importableContactsSubscribers = Bag<([DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]) -> Void>()
+    private let appSpecificReferencesSubscribers = Bag<([PeerId: DeviceContactBasicDataWithReference]) -> Void>()
     
     init(queue: Queue) {
         self.queue = queue
@@ -427,6 +510,11 @@ private final class DeviceContactDataManagerImpl {
                             return
                         }
                         strongSelf.updateAll(stableIdToBasicContactData)
+                    }, appSpecificReferencesUpdated: { appSpecificReferences in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.updateAppSpecificReferences(appSpecificReferences: appSpecificReferences)
                     })
                     strongSelf.dataContext = dataContext
                     strongSelf.personNameDisplayOrder.set(dataContext.personNameDisplayOrder())
@@ -524,6 +612,13 @@ private final class DeviceContactDataManagerImpl {
         }
     }
     
+    private func updateAppSpecificReferences(appSpecificReferences: [PeerId: DeviceContactBasicDataWithReference]) {
+        self.appSpecificReferences = appSpecificReferences
+        for f in self.appSpecificReferencesSubscribers.copyItems() {
+            f(appSpecificReferences)
+        }
+    }
+    
     func basicData(updated: @escaping ([DeviceContactStableId: DeviceContactBasicData]) -> Void) -> Disposable {
         let queue = self.queue
         
@@ -577,15 +672,10 @@ private final class DeviceContactDataManagerImpl {
     }
     
     func extendedData(stableId: String, updated: @escaping (DeviceContactExtendedData?) -> Void) -> Disposable {
-        let queue = self.queue
-        
         let current = self.dataContext?.getExtendedContactData(stableId: stableId)
         updated(current)
         
-        return ActionDisposable { [weak self] in
-            queue.async {
-                
-            }
+        return ActionDisposable {
         }
     }
     
@@ -609,6 +699,26 @@ private final class DeviceContactDataManagerImpl {
         }
     }
     
+    func appSpecificReferences(updated: @escaping ([PeerId: DeviceContactBasicDataWithReference]) -> Void) -> Disposable {
+        let queue = self.queue
+        
+        let index = self.appSpecificReferencesSubscribers.add({ data in
+            updated(data)
+        })
+        if self.accessInitialized {
+            updated(self.appSpecificReferences)
+        }
+        
+        return ActionDisposable { [weak self] in
+            queue.async {
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.appSpecificReferencesSubscribers.remove(index)
+            }
+        }
+    }
+    
     func search(query: String, updated: @escaping ([DeviceContactStableId: DeviceContactBasicData]) -> Void) -> Disposable {
         let normalizedQuery = query.lowercased()
         var result: [DeviceContactStableId: DeviceContactBasicData] = [:]
@@ -626,9 +736,19 @@ private final class DeviceContactDataManagerImpl {
         completion(result)
     }
     
+    func appendPhoneNumber(_ phoneNumber: DeviceContactPhoneNumberData, to stableId: DeviceContactStableId, completion: @escaping (DeviceContactExtendedData?) -> Void) {
+        let result = self.dataContext?.appendPhoneNumber(phoneNumber, to: stableId)
+        completion(result)
+    }
+    
     func createContactWithData(_ contactData: DeviceContactExtendedData, completion: @escaping ((DeviceContactStableId, DeviceContactExtendedData)?) -> Void) {
         let result = self.dataContext?.createContactWithData(contactData)
         completion(result)
+    }
+    
+    func deleteContactWithAppSpecificReference(peerId: PeerId, completion: @escaping () -> Void) {
+        self.dataContext?.deleteContactWithAppSpecificReference(peerId: peerId)
+        completion()
     }
 }
 
@@ -703,6 +823,18 @@ public final class DeviceContactDataManager {
         }
     }
     
+    public func appSpecificReferences() -> Signal<[PeerId: DeviceContactBasicDataWithReference], NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with({ impl in
+                disposable.set(impl.appSpecificReferences(updated: { value in
+                    subscriber.putNext(value)
+                }))
+            })
+            return disposable
+        }
+    }
+    
     public func search(query: String) -> Signal<[DeviceContactStableId: DeviceContactBasicData], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -729,12 +861,37 @@ public final class DeviceContactDataManager {
         }
     }
     
+    func appendPhoneNumber(_ phoneNumber: DeviceContactPhoneNumberData, to stableId: DeviceContactStableId) -> Signal<DeviceContactExtendedData?, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with({ impl in
+                impl.appendPhoneNumber(phoneNumber, to: stableId, completion: { next in
+                    subscriber.putNext(next)
+                    subscriber.putCompletion()
+                })
+            })
+            return disposable
+        }
+    }
+    
     func createContactWithData(_ contactData: DeviceContactExtendedData) -> Signal<(DeviceContactStableId, DeviceContactExtendedData)?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with({ impl in
                 impl.createContactWithData(contactData, completion: { next in
                     subscriber.putNext(next)
+                    subscriber.putCompletion()
+                })
+            })
+            return disposable
+        }
+    }
+    
+    func deleteContactWithAppSpecificReference(peerId: PeerId) -> Signal<Never, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with({ impl in
+                impl.deleteContactWithAppSpecificReference(peerId: peerId, completion: {
                     subscriber.putCompletion()
                 })
             })

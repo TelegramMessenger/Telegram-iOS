@@ -705,7 +705,10 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                                                 current = current.withUpdatedPeerSound(peer, settings.messageSound).withUpdatedPeerMuteInterval(peer, settings.muteState.timeInterval).withUpdatedPeerDisplayPreviews(peer, settings.displayPreviews)
                                             }
                                         } else if let peer = transaction.getPeer(key) {
-                                            current = current.withUpdatedPeerSound(peer, value.messageSound).withUpdatedPeerMuteInterval(peer, value.muteState.timeInterval).withUpdatedPeerDisplayPreviews(peer, value.displayPreviews)
+                                            if case .default = value.messageSound, case .unmuted = value.muteState, case .default = value.displayPreviews {
+                                            } else {
+                                                current = current.withUpdatedPeerSound(peer, value.messageSound).withUpdatedPeerMuteInterval(peer, value.muteState.timeInterval).withUpdatedPeerDisplayPreviews(peer, value.displayPreviews)
+                                            }
                                         }
                                     }
                                 }
