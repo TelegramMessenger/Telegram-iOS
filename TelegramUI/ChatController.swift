@@ -83,7 +83,7 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
 
 let ChatControllerCount = Atomic<Int32>(value: 0)
 
-public final class ChatController: TelegramController, KeyShortcutResponder, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
+public final class ChatController: TelegramController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
     weak var parentController: ViewController?
@@ -1449,7 +1449,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         if let strongSelf = self {
                             if let peer = peerViewMainPeer(peerView) {
                                 strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount)
-                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, peer: peer)
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, peer: peer, synchronousLoad: true)
                             }
                             if strongSelf.peerView === peerView {
                                 return
@@ -6606,7 +6606,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
     }
     
-    public var keyShortcuts: [KeyShortcut] {
+    public override var keyShortcuts: [KeyShortcut] {
         let strings = self.presentationData.strings
         
         var inputShortcuts: [KeyShortcut]
@@ -6701,23 +6701,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                 })
             ]
-            
-            if let message = self.chatDisplayNode.historyNode.latestMessageInCurrentHistoryView(), !message.flags.contains(.Incoming) {
-                inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
-                    if let strongSelf = self {
-                        var canEdit = false
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                            if state.interfaceState.effectiveInputState.inputText.length == 0 && state.interfaceState.editMessage == nil {
-                                canEdit = true
-                            }
-                            return state
-                        })
-                        if canEdit {
-                            strongSelf.interfaceInteraction?.setupEditMessage(message.id)
-                        }
-                    }
-                }))
-            }
         }
         
         let otherShortcuts: [KeyShortcut] = [
@@ -6746,6 +6729,51 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
             })
         ]
+        
+        if let message = self.chatDisplayNode.historyNode.firstMessageForEditInCurrentHistoryView() {
+            inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
+                if let strongSelf = self {
+                    var canEdit = false
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        if state.interfaceState.effectiveInputState.inputText.length == 0 && state.interfaceState.editMessage == nil {
+                            canEdit = true
+                        }
+                        return state
+                    })
+                    if canEdit {
+                        strongSelf.interfaceInteraction?.setupEditMessage(message.id)
+                    }
+                }
+            }))
+        }
+        
+        inputShortcuts.append(KeyShortcut(input: UIKeyInputEscape, action: { [weak self] in
+            if let strongSelf = self {
+                if strongSelf.presentationInterfaceState.interfaceState.selectionState != nil {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        return state.updatedInterfaceState({ $0.withoutSelectionState()})
+                    })
+                } else if strongSelf.presentationInterfaceState.editMessageState != nil {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        return state.updatedInterfaceState({ $0.withUpdatedEditMessage(nil) }).updatedEditMessageState(nil)
+                    })
+                } else if strongSelf.presentationInterfaceState.search != nil {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        return state.updatedSearch(nil)
+                    })
+                } else if strongSelf.presentationInterfaceState.recordedMediaPreview != nil {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        return state.updatedRecordedMediaPreview(nil)
+                    })
+                } else if strongSelf.presentationInterfaceState.interfaceState.replyMessageId != nil {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        return state.updatedInterfaceState({ $0.withUpdatedReplyMessageId(nil)})
+                    })
+                } else {
+                    _ = (strongSelf.navigationController as? NavigationController)?.popViewController(animated: true)
+                }
+            }
+        }))
         
         return inputShortcuts + otherShortcuts
     }

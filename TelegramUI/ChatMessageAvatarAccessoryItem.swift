@@ -39,11 +39,11 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
         return false
     }
     
-    func node() -> ListViewAccessoryItemNode {
+    func node(synchronous: Bool) -> ListViewAccessoryItemNode {
         let node = ChatMessageAvatarAccessoryItemNode()
         node.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         if let peer = self.peer {
-            node.setPeer(account: self.context.account, theme: self.context.sharedContext.currentPresentationData.with({ $0 }).theme, peer: peer, authorOfMessage: self.messageReference, emptyColor: self.emptyColor)
+            node.setPeer(account: self.context.account, theme: self.context.sharedContext.currentPresentationData.with({ $0 }).theme, synchronousLoad: synchronous, peer: peer, authorOfMessage: self.messageReference, emptyColor: self.emptyColor)
         }
         return node
     }
@@ -65,7 +65,7 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
         self.addSubnode(self.avatarNode)
     }
     
-    func setPeer(account: Account, theme: PresentationTheme, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
-        self.avatarNode.setPeer(account: account, theme: theme, peer: peer, authorOfMessage: authorOfMessage, emptyColor: emptyColor)
+    func setPeer(account: Account, theme: PresentationTheme, synchronousLoad:Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
+        self.avatarNode.setPeer(account: account, theme: theme, peer: peer, authorOfMessage: authorOfMessage, emptyColor: emptyColor, synchronousLoad: synchronousLoad)
     }
 }

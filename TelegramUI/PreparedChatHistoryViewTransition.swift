@@ -42,6 +42,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                 } else {
                     let _ = options.insert(.LowLatency)
                     let _ = options.insert(.Synchronous)
+                    let _ = options.insert(.PreferSynchronousResourceLoading)
                 }
             case .InteractiveChanges:
                 let _ = options.insert(.AnimateAlpha)

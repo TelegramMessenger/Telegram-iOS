@@ -75,7 +75,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 } else {
                     self.stopTimer()
                 }
-                self.updateStatus()
+                self.updateStatus(animated: false)
             }
         }
     }
@@ -663,7 +663,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         if let strongSelf = strongSelf {
                                             strongSelf.fetchStatus = status
                                             strongSelf.actualFetchStatus = actualFetchStatus
-                                            strongSelf.updateStatus()
+                                            strongSelf.updateStatus(animated: synchronousLoads)
                                         }
                                     }
                                 }))
@@ -736,7 +736,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 strongSelf.fetchControls.with({ $0 })?.fetch(false)
                             }
                             
-                            strongSelf.updateStatus()
+                            strongSelf.updateStatus(animated: synchronousLoads)
                         }
                     })
                 })
@@ -747,7 +747,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private func ensureHasTimer() {
         if self.playerUpdateTimer == nil {
             let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
-                self?.updateStatus()
+                self?.updateStatus(animated: false)
                 }, queue: Queue.mainQueue())
             self.playerUpdateTimer = timer
             timer.start()
@@ -759,7 +759,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         self.playerUpdateTimer = nil
     }
     
-    private func updateStatus() {
+    private func updateStatus(animated: Bool) {
         guard let (theme, strings, decimalSeparator) = self.themeAndStrings, let sizeCalculation = self.sizeCalculation, let message = self.message, var automaticPlayback = self.automaticPlayback, let wideLayout = self.wideLayout else {
             return
         }
@@ -872,8 +872,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             }
             badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, text: string)
         }
-        
-        var animated = true
+        var animated: Bool = animated
         if var fetchStatus = self.fetchStatus {
             var playerPosition: Int32?
             var playerDuration: Int32 = 0
@@ -1080,7 +1079,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 self.statusNode = nil
                 removeStatusNode = true
             }
-            statusNode.transitionToState(state, completion: { [weak statusNode] in
+            statusNode.transitionToState(state, animated: animated, completion: { [weak statusNode] in
                 if removeStatusNode {
                     statusNode?.removeFromSupernode()
                 }
@@ -1115,7 +1114,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         if isSecretMedia, secretBeginTimeAndTimeout?.0 != nil {
             if self.secretTimer == nil {
                 self.secretTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: true, completion: { [weak self] in
-                    self?.updateStatus()
+                    self?.updateStatus(animated: false)
                 }, queue: Queue.mainQueue())
                 self.secretTimer?.start()
             }

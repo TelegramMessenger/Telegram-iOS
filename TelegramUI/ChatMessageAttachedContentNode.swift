@@ -338,7 +338,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             var textCutout = TextNodeCutout()
             var initialWidth: CGFloat = CGFloat.greatestFiniteMagnitude
             var refineContentImageLayout: ((CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode)))?
-            var refineContentFileLayout: ((CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode)))?
+            var refineContentFileLayout: ((CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> ChatMessageInteractiveFileNode)))?
 
             var contentInstantVideoSizeAndApply: (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> ChatMessageInteractiveInstantVideoNode)?
             
@@ -604,7 +604,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     
                     boundingSize.width = max(boundingSize.width, refinedWidth)
                 }
-                var finalizeContentFileLayout: ((CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode))?
+                var finalizeContentFileLayout: ((CGFloat) -> (CGSize, (Bool) -> ChatMessageInteractiveFileNode))?
                 if let refineContentFileLayout = refineContentFileLayout {
                     let (refinedWidth, finalizeFileLayout) = refineContentFileLayout(textConstrainedSize)
                     finalizeContentFileLayout = finalizeFileLayout
@@ -689,7 +689,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                     }
                     
-                    var contentFileSizeAndApply: (CGSize, () -> ChatMessageInteractiveFileNode)?
+                    var contentFileSizeAndApply: (CGSize, (Bool) -> ChatMessageInteractiveFileNode)?
                     if let finalizeContentFileLayout = finalizeContentFileLayout {
                         let (size, apply) = finalizeContentFileLayout(boundingWidth - insets.left - insets.right)
                         contentFileSizeAndApply = (size, apply)
@@ -824,7 +824,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             if let (contentFileSize, contentFileApply) = contentFileSizeAndApply {
                                 contentMediaHeight = contentFileSize.height
                                 
-                                let contentFileNode = contentFileApply()
+                                let contentFileNode = contentFileApply(synchronousLoads)
                                 if strongSelf.contentFileNode !== contentFileNode {
                                     strongSelf.contentFileNode = contentFileNode
                                     strongSelf.addSubnode(contentFileNode)
