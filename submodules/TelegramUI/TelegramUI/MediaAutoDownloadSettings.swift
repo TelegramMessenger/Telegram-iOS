@@ -337,13 +337,12 @@ public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings
     }
     
     if let (category, size) = categoryAndSizeForMedia(media, categories: effectiveAutodownloadCategories(settings: settings, networkType: networkType)) {
-        guard isAutodownloadEnabledForPeerType(peerType, category: category) else {
-            return false
-        }
         if let size = size {
             var sizeLimit = category.sizeLimit
             if let file = media as? TelegramMediaFile, file.isVoice {
                 sizeLimit = max(2 * 1024 * 1024, sizeLimit)
+            } else if !isAutodownloadEnabledForPeerType(peerType, category: category) {
+                return false
             }
             return size <= sizeLimit
         } else if category.sizeLimit == Int32.max {
