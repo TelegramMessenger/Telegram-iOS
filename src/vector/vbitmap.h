@@ -37,6 +37,7 @@ public:
     VBitmap(uint w, uint h, VBitmap::Format format);
     VBitmap(uchar *data, uint w, uint h, uint bytesPerLine, VBitmap::Format format);
 
+    void reset(uint w, uint h, VBitmap::Format format=Format::ARGB32_Premultiplied);
     uint          stride() const;
     uint          width() const;
     uint          height() const;

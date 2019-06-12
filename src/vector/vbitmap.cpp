@@ -40,6 +40,13 @@ struct VBitmap::Impl {
         mOwnData(true),
         mRoData(false)
     {
+        reset(width, height, format);
+    }
+
+    void reset(uint width, uint height, VBitmap::Format format)
+    {
+        if (mOwnData && mData) delete(mData);
+
         mDepth = depth(format);
         uint stride = ((width * mDepth + 31) >> 5) << 2; // bytes per scanline (must be multiple of 4)
 
@@ -49,11 +56,6 @@ struct VBitmap::Impl {
         mStride = stride;
         mBytes = mStride * mHeight;
         mData = reinterpret_cast<uchar *>(::operator new(mBytes));
-
-        if (!mData) {
-            // handle malloc failure
-            ;
-        }
     }
 
     Impl(uchar *data, uint w, uint h, uint bytesPerLine, VBitmap::Format format):
@@ -148,6 +150,20 @@ VBitmap::VBitmap(uchar *data, uint width, uint height, uint bytesPerLine,
         format == Format::Invalid) return;
 
     mImpl = std::make_shared<Impl>(data, width, height, bytesPerLine, format);
+}
+
+void VBitmap::reset(uint w, uint h, VBitmap::Format format)
+{
+    if (mImpl) {
+        if (w == mImpl->width() &&
+            h == mImpl->height() &&
+            format == mImpl->format()) {
+            return;
+        }
+        mImpl->reset(w, h, format);
+    } else {
+        mImpl = std::make_shared<Impl>(w, h, format);
+    }
 }
 
 uint VBitmap::stride() const
