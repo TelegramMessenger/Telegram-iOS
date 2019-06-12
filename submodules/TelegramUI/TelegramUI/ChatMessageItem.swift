@@ -358,7 +358,9 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 for attribute in telegramFile.attributes {
                     switch attribute {
                         case .Sticker:
-                            viewClassName = ChatMessageStickerItemNode.self
+                            if let size = telegramFile.size, size > 0 && size <= 512 * 1024 {
+                                viewClassName = ChatMessageStickerItemNode.self
+                            }
                             break loop
                         case let .Video(_, _, flags):
                             if flags.contains(.instantRoundVideo) {
