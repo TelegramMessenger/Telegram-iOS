@@ -108,6 +108,7 @@ public:
    LOTLayerNode * layerNode() const {return mLayerCNode.get();}
    const std::string & name() const {return mLayerData->name();}
    virtual bool resolveKeyPath(LOTKeyPath &keyPath, uint depth, LOTVariant &value);
+   VBitmap& bitmap() {return mRenderBuffer;}
 protected:
    virtual void updateContent() = 0;
    inline VMatrix combinedMatrix() const {return mCombinedMatrix;}
@@ -124,6 +125,7 @@ protected:
    LOTLayerData                               *mLayerData{nullptr};
    LOTLayerItem                               *mParentLayer{nullptr};
    VMatrix                                     mCombinedMatrix;
+   VBitmap                                     mRenderBuffer;
    float                                       mCombinedAlpha{0.0};
    int                                         mFrameNo{-1};
    DirtyFlag                                   mDirtyFlag{DirtyFlagBit::All};

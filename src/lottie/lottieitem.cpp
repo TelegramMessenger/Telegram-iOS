@@ -658,15 +658,15 @@ void LOTCompLayerItem::renderMatteLayer(VPainter *painter,
     // Decide if we can use fast matte.
     // 1. draw src layer to matte buffer
     VPainter srcPainter;
-    VBitmap srcBitmap(size.width(), size.height(), VBitmap::Format::ARGB32_Premultiplied);
-    srcPainter.begin(&srcBitmap);
+    src->bitmap().reset(size.width(), size.height(), VBitmap::Format::ARGB32_Premultiplied);
+    srcPainter.begin(&src->bitmap());
     src->render(&srcPainter, mask, matteRle);
     srcPainter.end();
 
     // 2. draw layer to layer buffer
     VPainter layerPainter;
-    VBitmap layerBitmap(size.width(), size.height(), VBitmap::Format::ARGB32_Premultiplied);
-    layerPainter.begin(&layerBitmap);
+    layer->bitmap().reset(size.width(), size.height(), VBitmap::Format::ARGB32_Premultiplied);
+    layerPainter.begin(&layer->bitmap());
     layer->render(&layerPainter, mask, matteRle);
 
     // 2.1update composition mode
@@ -688,14 +688,14 @@ void LOTCompLayerItem::renderMatteLayer(VPainter *painter,
     //2.2 update srcBuffer if the matte is luma type
     if (layer->matteType() == MatteType::Luma ||
         layer->matteType() == MatteType::LumaInv) {
-        srcBitmap.updateLuma();
+        src->bitmap().updateLuma();
     }
 
     // 2.3 draw src buffer as mask
-    layerPainter.drawBitmap(VPoint(), srcBitmap);
+    layerPainter.drawBitmap(VPoint(), src->bitmap());
     layerPainter.end();
     // 3. draw the result buffer into painter
-    painter->drawBitmap(VPoint(), layerBitmap);
+    painter->drawBitmap(VPoint(), layer->bitmap());
 }
 
 void LOTClipperItem::update(const VMatrix &matrix)
