@@ -1537,6 +1537,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         for (relativeFrame, _, apply) in contentNodeFramesPropertiesAndApply {
             apply(animation, synchronousLoads)
             
+            if contentNodeIndex >= strongSelf.contentNodes.count {
+                break
+            }
+            
             let contentNode = strongSelf.contentNodes[contentNodeIndex]
             let contentNodeFrame = relativeFrame.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
             let previousContentNodeFrame = contentNode.frame
