@@ -254,14 +254,45 @@ public class ContactsController: ViewController {
         }
         
         self.contactsNode.openPeopleNearby = { [weak self] in
-            if let strongSelf = self {
-                let controller = peopleNearbyController(context: strongSelf.context)
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, completion: { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-                    }
-                })
+            guard let strongSelf = self else {
+                return
             }
+            let _ = (DeviceAccess.authorizationStatus(context: strongSelf.context, subject: .location(.tracking))
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let presentPeersNearby = {
+                    let controller = peersNearbyController(context: strongSelf.context)
+                    (strongSelf.navigationController as? NavigationController)?.replaceAllButRootController(controller, animated: true, completion: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                        }
+                    })
+                }
+                
+                switch status {
+                    case .allowed:
+                        presentPeersNearby()
+                    default:
+                        let controller = PermissionController(context: strongSelf.context, splashScreen: false)
+                        controller.setState(.nearbyLocation(status: PermissionRequestStatus(accessType: status)), animated: false)
+                        controller.proceed = { result in
+                            if result {
+                                presentPeersNearby()
+                            } else {
+                                let _ = (strongSelf.navigationController as? NavigationController)?.popViewController(animated: true)
+                            }
+                        }
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, completion: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                            }
+                        })
+                }
+            })
         }
         
         self.contactsNode.openInvite = { [weak self] in

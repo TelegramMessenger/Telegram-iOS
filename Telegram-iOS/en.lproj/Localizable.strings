@@ -4410,3 +4410,27 @@ Any member of this group will be able to see messages in the channel.";
 "ContactInfo.PhoneNumberHidden" = "Hidden";
 
 "Common.ActionNotAllowedError" = "Sorry, you are not allowed to do this.";
+
+"Group.Location.Title" = "Location (Optional)";
+"Group.Location.SetLocation" = "Set Location";
+"Group.Location.ChangeLocation" = "Change Location";
+"Group.Location.RemoveLocation" = "Remove Location";
+"Group.Location.Info" = "People will be able to find your group using People Nearby section";
+
+"Channel.AdminLog.MessageTransferedName" = "transferred ownership to %1$@";
+"Channel.AdminLog.MessageTransferedNameUsername" = "transferred ownership to %1$@ (%2$@)";
+
+"Channel.AdminLog.MessageChangedGroupGeoLocation" = "changed group location to \"%@\"";
+"Channel.AdminLog.MessageRemovedGroupGeoLocation" = "%@ removed group location";
+
+"Map.SetThisLocation" = "Set This Location";
+
+"Permissions.PeopleNearbyTitle.v0" = "People Nearby";
+"Permissions.PeopleNearbyText.v0" = "Use this section to quickly add people near you and discover nearby group chats.\n\nPlease allow location access\nto start using this feature.";
+"Permissions.PeopleNearbyAllow.v0" = "Allow Access";
+"Permissions.PeopleNearbyAllowInSettings.v0" = "Allow in Settings";
+
+"Conversation.ReportGroupLocation" = "Group unrelated to tocation?";
+"ReportGroupLocation.Title" = "Report Unrelated Group";
+"ReportGroupLocation.Text" = "Please tell us if this group is not related to this location.";
+"ReportGroupLocation.Report" = "Report";

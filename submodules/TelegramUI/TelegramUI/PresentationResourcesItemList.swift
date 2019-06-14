@@ -107,6 +107,12 @@ struct PresentationResourcesItemList {
         })
     }
     
+    static func createGroupIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListCreateGroupIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateGroupActionIcon"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     static func addExceptionIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddExceptionIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Item List/AddExceptionIcon"), color: theme.list.itemAccentColor)

@@ -8,6 +8,7 @@ public enum PermissionKind: Int32 {
     case notifications
     case siri
     case cellularData
+    case nearbyLocation
 }
 
 public enum PermissionRequestStatus {
@@ -35,6 +36,7 @@ public enum PermissionState: Equatable {
     case notifications(status: PermissionRequestStatus)
     case siri(status: PermissionRequestStatus)
     case cellularData
+    case nearbyLocation(status: PermissionRequestStatus)
     
     var kind: PermissionKind {
         switch self {
@@ -46,6 +48,8 @@ public enum PermissionState: Equatable {
                 return .siri
             case .cellularData:
                 return .cellularData
+            case .nearbyLocation:
+                return .nearbyLocation
         }
     }
     
@@ -59,6 +63,8 @@ public enum PermissionState: Equatable {
                 return status
             case .cellularData:
                 return .unreachable
+            case let .nearbyLocation(status):
+                return status
         }
     }
 }

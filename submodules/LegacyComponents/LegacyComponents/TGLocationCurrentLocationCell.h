@@ -12,6 +12,7 @@
 
 - (void)configureForCurrentLocationWithAccuracy:(CLLocationAccuracy)accuracy;
 - (void)configureForCustomLocationWithAddress:(NSString *)address;
+- (void)configureForGroupLocationWithAddress:(NSString *)address;
 - (void)configureForLiveLocationWithAccuracy:(CLLocationAccuracy)accuracy;
 - (void)configureForStopWithMessage:(TGMessage *)message remaining:(SSignal *)remaining;
 
