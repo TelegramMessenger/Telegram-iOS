@@ -57,10 +57,9 @@ public:
         CapStyle           cap{CapStyle::Flat};
         JoinStyle          join{JoinStyle::Bevel};
     };
+    VRasterizer       mRasterizer;
     VBrush            mBrush;
     VPath             mPath;
-    RleShare          mRleFuture;
-    VRle              mRle;
     StrokeInfo        mStroke;
     DirtyFlag         mFlag{DirtyState::All};
     FillRule          mFillRule{FillRule::Winding};

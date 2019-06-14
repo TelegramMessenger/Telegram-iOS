@@ -81,8 +81,7 @@ public:
 public:
     VSize                    mSize;
     VPath                    mPath;
-    RleShare                 mRleFuture;
-    VRle                     mRle;
+    VRasterizer              mRasterizer;
 };
 
 typedef vFlag<DirtyFlagBit> DirtyFlag;
@@ -215,8 +214,8 @@ public:
     VMatrix                  mCombinedMatrix;
     VPath                    mLocalPath;
     VPath                    mFinalPath;
-    RleShare                 mRleFuture;
-    VRle                     mRle;
+    VRasterizer              mRasterizer;
+    bool                     mRasterRequest{false};
 };
 
 /*

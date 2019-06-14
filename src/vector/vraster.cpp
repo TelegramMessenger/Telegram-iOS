@@ -254,105 +254,136 @@ static void bboxCb(int x, int y, int w, int h, void *user)
     rle->setBoundingRect({x, y, w, h});
 }
 
-struct RleTask {
-    RleShare           mRlePromise;
-    VPath              path;
-    VRle               rle;
-    float              width;
-    float              meterLimit;
-    VRect              clip;
-    FillRule           fillRule;
-    CapStyle           cap;
-    JoinStyle          join;
-    bool               stroke;
-    VRle               operator()(FTOutline &outRef, SW_FT_Stroker &stroker);
-    void               render(FTOutline &outRef);
-    RleTask() {}
-    RleTask(RleShare &apromise, VPath &&apath, VRle &&arle, FillRule afillRule, const VRect &aclip)
-    {
-        path = std::move(apath);
-        rle = std::move(arle);
-        fillRule = afillRule;
-        clip = aclip;
-        stroke = false;
-        mRlePromise = apromise;
+
+class SharedRle {
+public:
+    VRle& unsafe(){ return _rle;}
+    void notify() {
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+            _ready = true;
+        }
+        _cv.notify_one();
     }
-    RleTask(RleShare &apromise, VPath &&apath, VRle &&arle, CapStyle acap, JoinStyle ajoin,
-            float awidth, float ameterLimit, const VRect &aclip)
-    {
-        stroke = true;
-        path = std::move(apath);
-        rle = std::move(arle);
-        cap = acap;
-        join = ajoin;
-        width = awidth;
-        meterLimit = ameterLimit;
-        clip = aclip;
-        mRlePromise = apromise;
+    VRle& get(){
+
+        if (!_pending) return _rle;
+
+        std::unique_lock<std::mutex> lock(_mutex);
+        while(!_ready) _cv.wait(lock);
+        _pending = false;
+        return _rle;
     }
 
+    void reset() {
+        _ready = false;
+        _pending = true;
+    }
+private:
+    VRle                     _rle;
+    std::mutex               _mutex;
+    std::condition_variable  _cv;
+    bool                     _ready{true};
+    bool                     _pending{false};
 };
 
-void RleTask::render(FTOutline &outRef)
-{
-    SW_FT_Raster_Params params;
+struct VRleTask {
+    SharedRle     mRle;
+    VPath         mPath;
+    float         mStrokeWidth;
+    float         mMeterLimit;
+    VRect         mClip;
+    FillRule      mFillRule;
+    CapStyle      mCap;
+    JoinStyle     mJoin;
+    bool          mGenerateStroke;
 
-    params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA;
-    params.gray_spans = &rleGenerationCb;
-    params.bbox_cb = &bboxCb;
-    params.user = &rle;
-    params.source = &outRef.ft;
+    VRle& rle() { return mRle.get();}
 
-    if (!clip.empty()) {
-        params.flags |= SW_FT_RASTER_FLAG_CLIP;
-
-        params.clip_box.xMin =  clip.left();
-        params.clip_box.yMin =  clip.top();
-        params.clip_box.xMax =  clip.right();
-        params.clip_box.yMax =  clip.bottom();
+    void update(VPath path, FillRule fillRule, const VRect &clip)
+    {
+        mRle.reset();
+        mPath = std::move(path);
+        mFillRule = fillRule;
+        mClip = clip;
+        mGenerateStroke = false;
     }
-    // compute rle
-    sw_ft_grays_raster.raster_render(nullptr, &params);
-}
 
-VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
-{
-    rle.reset();
-    if (stroke) {  // Stroke Task
-        outRef.convert(path);
-        outRef.convert(cap, join, width, meterLimit);
+    void update(VPath path, CapStyle cap, JoinStyle join, float width, float meterLimit, const VRect &clip)
+    {
+        mRle.reset();
+        mPath = std::move(path);
+        mCap = cap;
+        mJoin = join;
+        mStrokeWidth = width;
+        mMeterLimit = meterLimit;
+        mClip = clip;
+        mGenerateStroke = true;
+    }
+    void render(FTOutline &outRef)
+    {
+        SW_FT_Raster_Params params;
 
-        uint points, contors;
+        mRle.unsafe().reset();
 
-        SW_FT_Stroker_Set(stroker, outRef.ftWidth, outRef.ftCap, outRef.ftJoin,
-                          outRef.ftMeterLimit);
-        SW_FT_Stroker_ParseOutline(stroker, &outRef.ft);
-        SW_FT_Stroker_GetCounts(stroker, &points, &contors);
+        params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA;
+        params.gray_spans = &rleGenerationCb;
+        params.bbox_cb = &bboxCb;
+        params.user = &mRle.unsafe();
+        params.source = &outRef.ft;
 
-        outRef.grow(points, contors);
+        if (!mClip.empty()) {
+            params.flags |= SW_FT_RASTER_FLAG_CLIP;
 
-        SW_FT_Stroker_Export(stroker, &outRef.ft);
-
-    } else {  // Fill Task
-        outRef.convert(path);
-        int fillRuleFlag = SW_FT_OUTLINE_NONE;
-        switch (fillRule) {
-        case FillRule::EvenOdd:
-            fillRuleFlag = SW_FT_OUTLINE_EVEN_ODD_FILL;
-            break;
-        default:
-            fillRuleFlag = SW_FT_OUTLINE_NONE;
-            break;
+            params.clip_box.xMin =  mClip.left();
+            params.clip_box.yMin =  mClip.top();
+            params.clip_box.xMax =  mClip.right();
+            params.clip_box.yMax =  mClip.bottom();
         }
-        outRef.ft.flags = fillRuleFlag;
+        // compute rle
+        sw_ft_grays_raster.raster_render(nullptr, &params);
     }
 
-    render(outRef);
+    void operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
+    {
+        if (mGenerateStroke) {  // Stroke Task
+            outRef.convert(mPath);
+            outRef.convert(mCap, mJoin, mStrokeWidth, mMeterLimit);
 
-    path = VPath();
+            uint points, contors;
 
-    return std::move(rle);
-}
+            SW_FT_Stroker_Set(stroker, outRef.ftWidth, outRef.ftCap, outRef.ftJoin,
+                              outRef.ftMeterLimit);
+            SW_FT_Stroker_ParseOutline(stroker, &outRef.ft);
+            SW_FT_Stroker_GetCounts(stroker, &points, &contors);
+
+            outRef.grow(points, contors);
+
+            SW_FT_Stroker_Export(stroker, &outRef.ft);
+
+        } else {  // Fill Task
+            outRef.convert(mPath);
+            int fillRuleFlag = SW_FT_OUTLINE_NONE;
+            switch (mFillRule) {
+            case FillRule::EvenOdd:
+                fillRuleFlag = SW_FT_OUTLINE_EVEN_ODD_FILL;
+                break;
+            default:
+                fillRuleFlag = SW_FT_OUTLINE_NONE;
+                break;
+            }
+            outRef.ft.flags = fillRuleFlag;
+        }
+
+        render(outRef);
+
+        mPath = VPath();
+
+        mRle.notify();
+    }
+};
+
+using VTask = std::shared_ptr<VRleTask>;
 
 #ifdef LOTTIE_THREAD_SUPPORT
 
@@ -362,7 +393,7 @@ VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
 class RleTaskScheduler {
     const unsigned                  _count{std::thread::hardware_concurrency()};
     std::vector<std::thread>        _threads;
-    std::vector<TaskQueue<RleTask>> _q{_count};
+    std::vector<TaskQueue<VTask>>   _q{_count};
     std::atomic<unsigned>           _index{0};
 
     void run(unsigned i)
@@ -375,7 +406,7 @@ class RleTaskScheduler {
         SW_FT_Stroker_New(&stroker);
 
         // Task Loop
-        RleTask task;
+        VTask task;
         while (true) {
             bool success = false;
 
@@ -388,7 +419,7 @@ class RleTaskScheduler {
 
             if (!success && !_q[i].pop(task)) break;
 
-            task.mRlePromise->set_value((task)(outlineRef, stroker));
+            (*task)(outlineRef, stroker);
         }
 
         // cleanup
@@ -415,7 +446,7 @@ public:
         for (auto &e : _threads) e.join();
     }
 
-    void process(RleTask &&task)
+    void process(VTask task)
     {
         auto i = _index++;
 
@@ -452,34 +483,59 @@ public:
         SW_FT_Stroker_Done(stroker);
     }
 
-    void process(RleTask &&task)
+    void process(VTask task)
     {
-        task.mRlePromise->set_value((task)(outlineRef, stroker));
+        (*task)(outlineRef, stroker);
     }
 };
 #endif
 
-void VRaster::generateFillInfo(RleShare &promise, VPath &&path, VRle &&rle,
-                                            FillRule fillRule, const VRect &clip)
+
+struct VRasterizer::VRasterizerImpl
 {
-    if (path.empty()) {
-        rle.reset();
-        promise->set_value(rle);
-        return;
-    }
-    return RleTaskScheduler::instance().process(RleTask(promise, std::move(path), std::move(rle), fillRule, clip));
+    VRleTask mTask;
+
+    VRle& rle(){ return mTask.rle(); }
+    VRleTask& task(){ return mTask; }
+};
+
+VRle VRasterizer::rle()
+{
+    if(!d) return VRle();
+    return d->rle();
 }
 
-void VRaster::generateStrokeInfo(RleShare &promise, VPath &&path, VRle &&rle, CapStyle cap,
-                                 JoinStyle join, float width,
-                                 float meterLimit, const VRect &clip)
+void VRasterizer::init()
 {
-    if (path.empty() || vCompare(width, 0.0f)) {
-        rle.reset();
-        promise->set_value(rle);
+    if(!d) d = std::make_shared<VRasterizerImpl>();
+}
+
+void VRasterizer::updateRequest()
+{
+    VTask taskObj = VTask(d, &d->task());
+    RleTaskScheduler::instance().process(std::move(taskObj));
+}
+
+void VRasterizer::rasterize(VPath path, FillRule fillRule, const VRect &clip)
+{
+    init();
+    if (path.empty()) {
+        d->rle().reset();
         return;
     }
-    return RleTaskScheduler::instance().process(RleTask(promise, std::move(path), std::move(rle), cap, join, width, meterLimit, clip));
+    d->task().update(std::move(path), fillRule, clip);
+    updateRequest();
+}
+
+void VRasterizer::rasterize(VPath path, CapStyle cap, JoinStyle join, float width, float meterLimit, const VRect &clip)
+{
+    init();
+    if (path.empty() || vIsZero(width)) {
+        d->rle().reset();
+        return;
+    }
+    d->task().update(std::move(path), cap, join, width, meterLimit, clip);
+    updateRequest();
 }
 
 V_END_NAMESPACE

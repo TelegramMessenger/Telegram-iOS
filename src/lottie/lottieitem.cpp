@@ -210,26 +210,19 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
     mFinalPath.clone(mLocalPath);
     mFinalPath.transform(parentMatrix);
 
-    VPath tmp = mFinalPath;
-
-    if (!mRleFuture) mRleFuture = std::make_shared<VSharedState<VRle>>();
-
-    if (mRleFuture->valid()) mRle = mRleFuture->get();
-    mRleFuture->reuse();
-
-    VRaster::generateFillInfo(mRleFuture, std::move(tmp), std::move(mRle));
-    mRle = VRle();
+    mRasterizer.rasterize(mFinalPath);
+    mRasterRequest = true;
 }
 
 VRle LOTMaskItem::rle()
 {
-    if (mRleFuture && mRleFuture->valid()) {
-        mRle = mRleFuture->get();
+    if (mRasterRequest) {
+        mRasterRequest = false;
         if (!vCompare(mCombinedAlpha, 1.0f))
-            mRle *= (mCombinedAlpha * 255);
-        if (mData->mInv) mRle.invert();
+            mRasterizer.rle() *= (mCombinedAlpha * 255);
+        if (mData->mInv) mRasterizer.rle().invert();
     }
-    return mRle;
+    return mRasterizer.rle();
 }
 
 void LOTLayerItem::buildLayerNode()
@@ -703,24 +696,12 @@ void LOTClipperItem::update(const VMatrix &matrix)
     mPath.reset();
     mPath.addRect(VRectF(0,0, mSize.width(), mSize.height()));
     mPath.transform(matrix);
-
-    VPath tmp = mPath;
-
-    if (!mRleFuture) mRleFuture = std::make_shared<VSharedState<VRle>>();
-
-    if (mRleFuture->valid()) mRle = mRleFuture->get();
-    mRleFuture->reuse();
-
-    VRaster::generateFillInfo(mRleFuture, std::move(tmp), std::move(mRle));
-    mRle = VRle();
+    mRasterizer.rasterize(mPath);
 }
 
 VRle LOTClipperItem::rle()
 {
-    if (mRleFuture && mRleFuture->valid()) {
-        mRle = mRleFuture->get();
-    }
-    return mRle;
+    return mRasterizer.rle();
 }
 
 void LOTCompLayerItem::updateContent()

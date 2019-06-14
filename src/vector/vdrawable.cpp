@@ -23,25 +23,16 @@
 void VDrawable::preprocess(const VRect &clip)
 {
     if (mFlag & (DirtyState::Path)) {
-
-        if (!mRleFuture) mRleFuture = std::make_shared<VSharedState<VRle>>();
-
-        if (mRleFuture->valid()) mRle = mRleFuture->get();
-        mRleFuture->reuse();
-
         if (mStroke.enable) {
             if (mStroke.mDash.size()) {
                 VDasher dasher(mStroke.mDash.data(), mStroke.mDash.size());
                 mPath = dasher.dashed(mPath);
             }
-            VRaster::generateStrokeInfo(mRleFuture,
-                std::move(mPath), std::move(mRle), mStroke.cap, mStroke.join,
-                mStroke.width, mStroke.meterLimit, clip);
+            mRasterizer.rasterize(std::move(mPath), mStroke.cap, mStroke.join,
+                                  mStroke.width, mStroke.meterLimit, clip);
         } else {
-            VRaster::generateFillInfo(mRleFuture,
-                std::move(mPath), std::move(mRle), mFillRule, clip);
+            mRasterizer.rasterize(std::move(mPath), mFillRule, clip);
         }
-        mRle = {};
         mPath = {};
         mFlag &= ~DirtyFlag(DirtyState::Path);
     }
@@ -49,10 +40,7 @@ void VDrawable::preprocess(const VRect &clip)
 
 VRle VDrawable::rle()
 {
-    if (mRleFuture && mRleFuture->valid()) {
-        mRle = mRleFuture->get();
-    }
-    return mRle;
+    return mRasterizer.rle();
 }
 
 void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
