@@ -2,7 +2,9 @@
 
 1. Install the brew package manager, if you haven’t already.
 2. Install the packages pkg-config, yasm:
+```
 brew install pkg-config yasm
+```
 3. Clone the project from GitHub:
 
 ```
