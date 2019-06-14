@@ -735,16 +735,18 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
     return entries
 }
 
-private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<Peer?, NoError> {
-    return postbox.transaction { transaction -> Peer? in
+private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<(Peer?, CachedPeerData?), NoError> {
+    return postbox.transaction { transaction -> (Peer?, CachedPeerData?) in
         guard let peer = transaction.getPeer(peerId) else {
-            return nil
+            return (nil, nil)
         }
+        var resultPeer: Peer?
         if let peer = peer as? TelegramSecretChat {
-            return transaction.getPeer(peer.regularPeerId)
+            resultPeer = transaction.getPeer(peer.regularPeerId)
         } else {
-            return peer
+            resultPeer = peer
         }
+        return (resultPeer, resultPeer.flatMap({ transaction.getPeerCachedData(peerId: $0.id) }))
     }
 }
 
@@ -856,7 +858,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
             }
         }
     }, tapAvatarAction: {
-        let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId) |> deliverOnMainQueue).start(next: { peer in
+        let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId) |> deliverOnMainQueue).start(next: { peer, _ in
             guard let peer = peer else {
                 return
             }
@@ -879,12 +881,17 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
         openChatImpl?()
     }, addContact: {
         let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
-        |> deliverOnMainQueue).start(next: { peer in
+        |> deliverOnMainQueue).start(next: { peer, cachedData in
             guard let user = peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: user) else {
                 return
             }
             
-            presentControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: user, contactData: contactData, isSharing: true, completion: { peer, stableId, contactData in
+            var shareViaException = false
+            if let cachedData = cachedData as? CachedUserData, let peerStatusSettings = cachedData.peerStatusSettings {
+                shareViaException = peerStatusSettings.contains(.addExceptionWhenAddingContact)
+            }
+            
+            presentControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
                 if let peer = peer as? TelegramUser {
                     if let phone = peer.phone, !phone.isEmpty {
                     }
@@ -931,7 +938,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     }, openGroupsInCommon: {
         let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
             |> take(1)
-            |> deliverOnMainQueue).start(next: { peer in
+            |> deliverOnMainQueue).start(next: { peer, _ in
                 guard let peer = peer else {
                     return
                 }
@@ -941,7 +948,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     }, updatePeerBlocked: { value in
         let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
         |> take(1)
-        |> deliverOnMainQueue).start(next: { peer in
+        |> deliverOnMainQueue).start(next: { peer, _ in
             guard let peer = peer else {
                 return
             }
@@ -1021,7 +1028,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                 ActionSheetButtonItem(title: presentationData.strings.UserInfo_DeleteContact, color: .destructive, action: {
                     dismissAction()
                     let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
-                    |> deliverOnMainQueue).start(next: { peer in
+                    |> deliverOnMainQueue).start(next: { peer, _ in
                         guard let peer = peer else {
                             return
                         }
@@ -1031,12 +1038,33 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                         } else {
                             deleteContactFromDevice = .complete()
                         }
-                        updatePeerBlockedDisposable.set((
-                            deleteContactPeerInteractively(account: context.account, peerId: peer.id)
-                            |> then(
-                                deleteContactFromDevice
-                            )
-                        ).start())
+                        
+                        var deleteSignal = deleteContactPeerInteractively(account: context.account, peerId: peer.id)
+                        |> then(deleteContactFromDevice)
+                        
+                        let progressSignal = Signal<Never, NoError> { subscriber in
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                            presentControllerImpl?(controller, nil)
+                            return ActionDisposable { [weak controller] in
+                                Queue.mainQueue().async() {
+                                    controller?.dismiss()
+                                }
+                            }
+                        }
+                        |> runOn(Queue.mainQueue())
+                        |> delay(0.15, queue: Queue.mainQueue())
+                        let progressDisposable = progressSignal.start()
+                        
+                        deleteSignal = deleteSignal
+                        |> afterDisposed {
+                            Queue.mainQueue().async {
+                                progressDisposable.dispose()
+                            }
+                        }
+                        
+                        updatePeerBlockedDisposable.set((deleteSignal
+                        |> deliverOnMainQueue).start())
                     })
                 })
             ]),
@@ -1052,7 +1080,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
         requestCallImpl()
     }, openCallMenu: { number in
         let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
-        |> deliverOnMainQueue).start(next: { peer in
+        |> deliverOnMainQueue).start(next: { peer, _ in
             if let peer = peer as? TelegramUser, let peerPhoneNumber = peer.phone, formatPhoneNumber(number) == formatPhoneNumber(peerPhoneNumber) {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let controller = ActionSheetController(presentationTheme: presentationData.theme)
@@ -1212,7 +1240,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                                 }
                                 
                                 let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
-                                |> mapToSignal { peer -> Signal<Void, NoError> in
+                                |> mapToSignal { peer, _ -> Signal<Void, NoError> in
                                     guard let peer = peer as? TelegramUser, let phone = peer.phone, !phone.isEmpty else {
                                         return .complete()
                                     }
@@ -1271,7 +1299,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     }
     shareContactImpl = { [weak controller] in
         let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
-        |> deliverOnMainQueue).start(next: { peer in
+        |> deliverOnMainQueue).start(next: { peer, _ in
             if let peer = peer as? TelegramUser, let phone = peer.phone {
                 let contact = TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)
                 let shareController = ShareController(context: context, subject: .media(.standalone(media: contact)))
@@ -1281,7 +1309,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     }
     shareMyContactImpl = { [weak controller] in
         let _ = (getUserPeer(postbox: context.account.postbox, peerId: context.account.peerId)
-            |> deliverOnMainQueue).start(next: { peer in
+            |> deliverOnMainQueue).start(next: { peer, _ in
                 guard let peer = peer as? TelegramUser, let phone = peer.phone else {
                     return
                 }
@@ -1377,7 +1405,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     }
     shareBotImpl = { [weak controller] in
         let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
-            |> deliverOnMainQueue).start(next: { peer in
+            |> deliverOnMainQueue).start(next: { peer, _ in
                 if let peer = peer as? TelegramUser, let username = peer.username {
                     let shareController = ShareController(context: context, subject: .url("https://t.me/\(username)"))
                     controller?.present(shareController, in: .window(.root))

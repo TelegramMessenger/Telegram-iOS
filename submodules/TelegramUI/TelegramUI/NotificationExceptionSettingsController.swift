@@ -267,11 +267,9 @@ private struct NotificationExceptionPeerState : Equatable {
         if let notifications = notifications {
             self.selectedSound = notifications.messageSound
             switch notifications.muteState {
-            case .muted:
+            case let .muted(until) where until >= Int32.max - 1:
                 self.mode = .alwaysOff
-            case .unmuted:
-                self.mode = .alwaysOn
-            case .default:
+            default:
                 self.mode = .alwaysOn
             }
             self.displayPreviews = notifications.displayPreviews == .hide ? .alwaysOff : .alwaysOn

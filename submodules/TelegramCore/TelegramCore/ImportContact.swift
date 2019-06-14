@@ -44,7 +44,7 @@ public enum AddContactError {
     case generic
 }
 
-public func addContactInteractively(account: Account, peerId: PeerId, firstName: String, lastName: String, phoneNumber: String) -> Signal<Never, AddContactError> {
+public func addContactInteractively(account: Account, peerId: PeerId, firstName: String, lastName: String, phoneNumber: String, addToPrivacyExceptions: Bool) -> Signal<Never, AddContactError> {
     return account.postbox.transaction { transaction -> (Api.InputUser, String)? in
         if let user = transaction.getPeer(peerId) as? TelegramUser, let inputUser = apiInputUser(user) {
             return (inputUser, user.phone == nil ? phoneNumber : "")
@@ -57,7 +57,11 @@ public func addContactInteractively(account: Account, peerId: PeerId, firstName:
         guard let (inputUser, phone) = inputUserAndPhone else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.contacts.addContact(id: inputUser, firstName: firstName, lastName: lastName, phone: phone))
+        var flags: Int32 = 0
+        if addToPrivacyExceptions {
+            flags |= (1 << 0)
+        }
+        return account.network.request(Api.functions.contacts.addContact(flags: flags, id: inputUser, firstName: firstName, lastName: lastName, phone: phone))
         |> mapError { _ -> AddContactError in
             return .generic
         }

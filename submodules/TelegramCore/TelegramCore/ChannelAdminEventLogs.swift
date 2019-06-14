@@ -214,6 +214,8 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                         }
                                     case let .channelAdminLogEventActionChangeLinkedChat(prevValue, newValue):
                                         action = .linkedPeerUpdated(previous: prevValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: prevValue)], updated: newValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: newValue)])
+                                    case let .channelAdminLogEventActionChangeLocation(prevValue, newValue):
+                                        break
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {

@@ -752,7 +752,9 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             requestActivateSearch()
         }
         
-        let presentPeerSettings: (PeerId, @escaping () -> Void) -> Void = { peerId, completion in
+        let presentPeerSettings: (PeerId, @escaping () -> Void) -> Void = { [weak self] peerId, completion in
+            (self?.searchDisplayController?.contentNode as? NotificationExceptionsSearchContainerNode)?.listNode.clearHighlightAnimated(true)
+            
             let _ = (context.account.postbox.transaction { transaction -> Peer? in
                 return transaction.getPeer(peerId)
             }
@@ -1115,7 +1117,7 @@ private func preparedNotificationExceptionsSearchContainerTransition(theme: Pres
 
 private final class NotificationExceptionsSearchContainerNode: SearchDisplayControllerContentNode {
     private let dimNode: ASDisplayNode
-    private let listNode: ListView
+    let listNode: ListView
     
     private var enqueuedTransitions: [NotificationExceptionsSearchContainerTransition] = []
     private var hasValidLayout = false

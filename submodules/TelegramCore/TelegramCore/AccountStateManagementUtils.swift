@@ -1291,10 +1291,10 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                             updatedState.updatePeerChatInclusion(peerId: peer.peerId, groupId: PeerGroupId(rawValue: folderId), changedGroup: true)
                     }
                 }
-            case let .updateContactLocated(contacts):
+            case let .updatePeerLocated(contacts):
                 var peersNearby: [PeerNearby] = []
-                for case let .contactLocated(userId, expires, distance) in contacts {
-                    peersNearby.append(PeerNearby(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), expires: expires, distance: distance))
+                for case let .peerLocated(peer, expires, distance) in contacts {
+                    peersNearby.append(PeerNearby(id: peer.peerId, expires: expires, distance: distance))
                 }
                 updatedState.updatePeersNearby(peersNearby)
             default:

@@ -10,7 +10,7 @@ func openAddContact(context: AccountContext, firstName: String = "", lastName: S
         switch value {
             case .allowed:
                 let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: label, value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
-                present(deviceContactInfoController(context: context, subject: .create(peer: nil, contactData: contactData, isSharing: false, completion: { peer, stableId, contactData in
+                present(deviceContactInfoController(context: context, subject: .create(peer: nil, contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
                     if let peer = peer {
                         if let infoController = peerInfoController(context: context, peer: peer) {
                             pushController(infoController)

@@ -451,6 +451,8 @@
 		D073CEA11DCBF3D3007511FD /* StickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DE1DB539FC00C6B04F /* StickerPack.swift */; };
 		D073CEA41DCBF3EA007511FD /* MultipartUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03C53761DAFF20F004C17B3 /* MultipartUpload.swift */; };
 		D073CEA51DCBF3F5007511FD /* StickerManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E11DB5401A00C6B04F /* StickerManagement.swift */; };
+		D0750C9022B2FD8300BE5F6E /* PeerAccessHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0750C8F22B2FD8300BE5F6E /* PeerAccessHash.swift */; };
+		D0750C9122B2FD8300BE5F6E /* PeerAccessHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0750C8F22B2FD8300BE5F6E /* PeerAccessHash.swift */; };
 		D0754D2A1EEE10FC00884F6E /* BotPaymentForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0754D291EEE10FC00884F6E /* BotPaymentForm.swift */; };
 		D0754D2B1EEE10FC00884F6E /* BotPaymentForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0754D291EEE10FC00884F6E /* BotPaymentForm.swift */; };
 		D076F8892296D8E9004F895A /* ManageChannelDiscussionGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D076F8882296D8E9004F895A /* ManageChannelDiscussionGroup.swift */; };
@@ -1066,6 +1068,7 @@
 		D07047B91F3DF75500F6A8D4 /* ConsumePersonalMessageAction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConsumePersonalMessageAction.swift; sourceTree = "<group>"; };
 		D073CE5C1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ForwardSourceInfoAttribute.swift; sourceTree = "<group>"; };
 		D073CE5F1DCB9D14007511FD /* OutgoingMessageInfoAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OutgoingMessageInfoAttribute.swift; sourceTree = "<group>"; };
+		D0750C8F22B2FD8300BE5F6E /* PeerAccessHash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerAccessHash.swift; sourceTree = "<group>"; };
 		D0754D291EEE10FC00884F6E /* BotPaymentForm.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentForm.swift; sourceTree = "<group>"; };
 		D076F8882296D8E9004F895A /* ManageChannelDiscussionGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageChannelDiscussionGroup.swift; sourceTree = "<group>"; };
 		D07827BA1E00451F00071108 /* SearchPeers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchPeers.swift; sourceTree = "<group>"; };
@@ -1445,6 +1448,7 @@
 				D03B0CDA1D62245F00955575 /* ApiUtils.swift */,
 				D03B0CD81D62245B00955575 /* PeerUtils.swift */,
 				D09A2FEA1D7CDC320018FB72 /* PeerAccessRestrictionInfo.swift */,
+				D0750C8F22B2FD8300BE5F6E /* PeerAccessHash.swift */,
 				D03B0CD41D62245300955575 /* TelegramUser.swift */,
 				D03B0CD51D62245300955575 /* TelegramGroup.swift */,
 				D09A2FE51D7CD4940018FB72 /* TelegramChannel.swift */,
@@ -2398,6 +2402,7 @@
 				D0E412E7206ABC7500BEE4A2 /* EncryptedMediaResource.swift in Sources */,
 				D0AB262621C2F991008F6685 /* TelegramMediaPoll.swift in Sources */,
 				D0BC38791E40BAF20044D6FE /* SynchronizePinnedChatsOperation.swift in Sources */,
+				D0750C9022B2FD8300BE5F6E /* PeerAccessHash.swift in Sources */,
 				D0FC195B2020D1CA00FEDBB2 /* PeerGroupMessageStateVersionAttribute.swift in Sources */,
 				D0B1671D1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */,
 				D02B199021FB1D520094A764 /* RegisterNotificationToken.swift in Sources */,
@@ -2661,6 +2666,7 @@
 				D0C26D6A1FE02402004ABF18 /* ManagedSynchronizeGroupedPeersOperations.swift in Sources */,
 				D01C7F051EFC1C49008305F1 /* DeviceContact.swift in Sources */,
 				D050F26A1E4A5B6D00988324 /* ManagedGlobalNotificationSettings.swift in Sources */,
+				D0750C9122B2FD8300BE5F6E /* PeerAccessHash.swift in Sources */,
 				D050F26B1E4A5B6D00988324 /* ApplyMaxReadIndexInteractively.swift in Sources */,
 				D033FEB11E61EB0200644997 /* PeerContactSettings.swift in Sources */,
 				D0458C891E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */,

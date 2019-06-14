@@ -16,6 +16,7 @@ public struct PeerStatusSettings: OptionSet {
     public static let canShareContact = PeerStatusSettings(rawValue: 1 << 2)
     public static let canBlock = PeerStatusSettings(rawValue: 1 << 3)
     public static let canAddContact = PeerStatusSettings(rawValue: 1 << 4)
+    public static let addExceptionWhenAddingContact = PeerStatusSettings(rawValue: 1 << 5)
 }
 
 extension PeerStatusSettings {
@@ -34,6 +35,9 @@ extension PeerStatusSettings {
                 }
                 if (flags & (1 << 3)) != 0 {
                     result.insert(.canShareContact)
+                }
+                if (flags & (1 << 4)) != 0 {
+                    result.insert(.addExceptionWhenAddingContact)
                 }
                 self = result
         }

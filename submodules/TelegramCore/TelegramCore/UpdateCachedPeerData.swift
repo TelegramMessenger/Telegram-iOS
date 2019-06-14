@@ -7,112 +7,140 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let peer = transaction.getPeer(peerId) {
-            let cachedData = transaction.getPeerCachedData(peerId: peerId)
-            
-            if let cachedData = cachedData as? CachedUserData {
-                if cachedData.peerStatusSettings != nil {
-                    return .complete()
-                }
-            } else if let cachedData = cachedData as? CachedGroupData {
-                if cachedData.peerStatusSettings != nil {
-                    return .complete()
-                }
-            } else if let cachedData = cachedData as? CachedChannelData {
-                if cachedData.peerStatusSettings != nil {
-                    return .complete()
-                }
-            } else if let cachedData = cachedData as? CachedSecretChatData {
-                if cachedData.peerStatusSettings != nil {
-                    return .complete()
-                }
+        guard let rawPeer = transaction.getPeer(rawPeerId) else {
+            return .complete()
+        }
+        
+        let peer: Peer
+        if let secretChat = rawPeer as? TelegramSecretChat {
+            guard let user = transaction.getPeer(secretChat.regularPeerId) else {
+                return .complete()
             }
+            peer = user
+        } else {
+            peer = rawPeer
+        }
             
-            if peerId.namespace == Namespaces.Peer.SecretChat {
-                return postbox.transaction { transaction -> Void in
-                    var peerStatusSettings: PeerStatusSettings
-                    if let peer = transaction.getPeer(peerId), let associatedPeerId = peer.associatedPeerId, !transaction.isPeerContact(peerId: associatedPeerId) {
-                        if let peer = peer as? TelegramSecretChat, case .creator = peer.role {
-                            peerStatusSettings = PeerStatusSettings()
-                            peerStatusSettings = []
-                        } else {
-                            peerStatusSettings = PeerStatusSettings()
-                            peerStatusSettings.insert(.canReport)
-                        }
-                    } else {
+        let cachedData = transaction.getPeerCachedData(peerId: peer.id)
+        
+        if let cachedData = cachedData as? CachedUserData {
+            if cachedData.peerStatusSettings != nil {
+                return .complete()
+            }
+        } else if let cachedData = cachedData as? CachedGroupData {
+            if cachedData.peerStatusSettings != nil {
+                return .complete()
+            }
+        } else if let cachedData = cachedData as? CachedChannelData {
+            if cachedData.peerStatusSettings != nil {
+                return .complete()
+            }
+        } else if let cachedData = cachedData as? CachedSecretChatData {
+            if cachedData.peerStatusSettings != nil {
+                return .complete()
+            }
+        }
+        
+        if peer.id.namespace == Namespaces.Peer.SecretChat {
+            return postbox.transaction { transaction -> Void in
+                var peerStatusSettings: PeerStatusSettings
+                if let peer = transaction.getPeer(peer.id), let associatedPeerId = peer.associatedPeerId, !transaction.isPeerContact(peerId: associatedPeerId) {
+                    if let peer = peer as? TelegramSecretChat, case .creator = peer.role {
                         peerStatusSettings = PeerStatusSettings()
                         peerStatusSettings = []
+                    } else {
+                        peerStatusSettings = PeerStatusSettings()
+                        peerStatusSettings.insert(.canReport)
                     }
-                    
-                    transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
-                        if let current = current as? CachedSecretChatData {
-                            return current.withUpdatedPeerStatusSettings(peerStatusSettings)
-                        } else {
-                            return CachedSecretChatData(peerStatusSettings: peerStatusSettings)
+                } else {
+                    peerStatusSettings = PeerStatusSettings()
+                    peerStatusSettings = []
+                }
+                
+                transaction.updatePeerCachedData(peerIds: [peer.id], update: { peerId, current in
+                    if let current = current as? CachedSecretChatData {
+                        return current.withUpdatedPeerStatusSettings(peerStatusSettings)
+                    } else {
+                        return CachedSecretChatData(peerStatusSettings: peerStatusSettings)
+                    }
+                })
+            }
+        } else if let inputPeer = apiInputPeer(peer) {
+            return network.request(Api.functions.messages.getPeerSettings(peer: inputPeer))
+            |> retryRequest
+            |> mapToSignal { peerSettings -> Signal<Void, NoError> in
+                let peerStatusSettings = PeerStatusSettings(apiSettings: peerSettings)
+                
+                return postbox.transaction { transaction -> Void in
+                    transaction.updatePeerCachedData(peerIds: Set([peer.id]), update: { _, current in
+                        switch peer.id.namespace {
+                            case Namespaces.Peer.CloudUser:
+                                let previous: CachedUserData
+                                if let current = current as? CachedUserData {
+                                    previous = current
+                                } else {
+                                    previous = CachedUserData()
+                                }
+                                return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
+                            case Namespaces.Peer.CloudGroup:
+                                let previous: CachedGroupData
+                                if let current = current as? CachedGroupData {
+                                    previous = current
+                                } else {
+                                    previous = CachedGroupData()
+                                }
+                                return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
+                            case Namespaces.Peer.CloudChannel:
+                                let previous: CachedChannelData
+                                if let current = current as? CachedChannelData {
+                                    previous = current
+                                } else {
+                                    previous = CachedChannelData()
+                                }
+                                return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
+                            default:
+                                break
                         }
+                        return current
                     })
                 }
-            } else if let inputPeer = apiInputPeer(peer) {
-                return network.request(Api.functions.messages.getPeerSettings(peer: inputPeer))
-                |> retryRequest
-                |> mapToSignal { peerSettings -> Signal<Void, NoError> in
-                    let peerStatusSettings = PeerStatusSettings(apiSettings: peerSettings)
-                    
-                    return postbox.transaction { transaction -> Void in
-                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                            switch peerId.namespace {
-                                case Namespaces.Peer.CloudUser:
-                                    let previous: CachedUserData
-                                    if let current = current as? CachedUserData {
-                                        previous = current
-                                    } else {
-                                        previous = CachedUserData()
-                                    }
-                                    return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
-                                case Namespaces.Peer.CloudGroup:
-                                    let previous: CachedGroupData
-                                    if let current = current as? CachedGroupData {
-                                        previous = current
-                                    } else {
-                                        previous = CachedGroupData()
-                                    }
-                                    return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
-                                case Namespaces.Peer.CloudChannel:
-                                    let previous: CachedChannelData
-                                    if let current = current as? CachedChannelData {
-                                        previous = current
-                                    } else {
-                                        previous = CachedChannelData()
-                                    }
-                                    return previous.withUpdatedPeerStatusSettings(peerStatusSettings)
-                                default:
-                                    break
-                            }
-                            return current
-                        })
-                    }
-                }
-            } else {
-                return .complete()
             }
         } else {
             return .complete()
         }
-    } |> switchToLatest
+    }
+    |> switchToLatest
 }
 
-func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> (Api.InputUser?, Peer?) in
-        if peerId == accountPeerId {
-            return (.inputUserSelf, transaction.getPeer(peerId))
+func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> (Api.InputUser?, Peer?, PeerId) in
+        guard let rawPeer = transaction.getPeer(rawPeerId) else {
+            if rawPeerId == accountPeerId {
+                return (.inputUserSelf, transaction.getPeer(rawPeerId), rawPeerId)
+            } else {
+                return (nil, nil, rawPeerId)
+            }
+        }
+        
+        let peer: Peer
+        if let secretChat = rawPeer as? TelegramSecretChat {
+            guard let user = transaction.getPeer(secretChat.regularPeerId) else {
+                return (nil, nil, rawPeerId)
+            }
+            peer = user
         } else {
-            let peer = transaction.getPeer(peerId)
-            return (peer.flatMap(apiInputUser), peer)
+            peer = rawPeer
+        }
+        
+        if rawPeerId == accountPeerId {
+            return (.inputUserSelf, transaction.getPeer(rawPeerId), rawPeerId)
+        } else {
+            return (apiInputUser(peer), peer, peer.id)
         }
     }
-    |> mapToSignal { inputUser, maybePeer -> Signal<Void, NoError> in
+    |> mapToSignal { inputUser, maybePeer, peerId -> Signal<Void, NoError> in
         if let inputUser = inputUser {
             return network.request(Api.functions.users.getFullUser(id: inputUser))
             |> retryRequest
@@ -250,7 +278,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                 }
                                 
                                 switch fullChat {
-                                    case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, pts):
+                                    case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, pts):
                                         var channelFlags = CachedChannelFlags()
                                         if (flags & (1 << 3)) != 0 {
                                             channelFlags.insert(.canDisplayParticipants)
