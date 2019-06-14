@@ -648,23 +648,24 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         
         if !(peer is TelegramSecretChat) {
             entries.append(UserInfoEntry.sendMessage(presentationData.theme, presentationData.strings.UserInfo_SendMessage))
-            if let user = peer as? TelegramUser, user.botInfo == nil {
-                if view.peerIsContact {
-                    if let phone = user.phone, !phone.isEmpty {
-                        entries.append(UserInfoEntry.shareContact(presentationData.theme, presentationData.strings.UserInfo_ShareContact))
-                    }
-                } else {
-                    entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.Conversation_AddToContacts))
+        }
+        
+        if user.botInfo == nil {
+            if view.peerIsContact {
+                if let phone = user.phone, !phone.isEmpty {
+                    entries.append(UserInfoEntry.shareContact(presentationData.theme, presentationData.strings.UserInfo_ShareContact))
                 }
+            } else {
+                entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.Conversation_AddToContacts))
             }
+        }
             
-            if let cachedUserData = cachedPeerData as? CachedUserData, let peerStatusSettings = cachedUserData.peerStatusSettings, peerStatusSettings.contains(.canShareContact) {
-                entries.append(UserInfoEntry.shareMyContact(presentationData.theme, presentationData.strings.UserInfo_ShareMyContactInfo))
-            }
-            
-            if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                entries.append(UserInfoEntry.startSecretChat(presentationData.theme, presentationData.strings.UserInfo_StartSecretChat))
-            }
+        if let cachedUserData = cachedPeerData as? CachedUserData, let peerStatusSettings = cachedUserData.peerStatusSettings, peerStatusSettings.contains(.canShareContact) {
+            entries.append(UserInfoEntry.shareMyContact(presentationData.theme, presentationData.strings.UserInfo_ShareMyContactInfo))
+        }
+        
+        if let peer = peer as? TelegramUser, peer.botInfo == nil {
+            entries.append(UserInfoEntry.startSecretChat(presentationData.theme, presentationData.strings.UserInfo_StartSecretChat))
         }
         
         if let peer = peer as? TelegramUser, let botInfo = peer.botInfo {

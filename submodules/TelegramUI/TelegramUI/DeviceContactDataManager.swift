@@ -55,7 +55,7 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
     }
     
     private func retrieveContacts() -> ([DeviceContactStableId: DeviceContactBasicData], [PeerId: DeviceContactBasicDataWithReference]) {
-        let keysToFetch: [CNKeyDescriptor] = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactInstantMessageAddressesKey as CNKeyDescriptor]
+        let keysToFetch: [CNKeyDescriptor] = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactUrlAddressesKey as CNKeyDescriptor]
         
         let request = CNContactFetchRequest(keysToFetch: keysToFetch)
         request.unifyResults = true
@@ -65,8 +65,8 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
         let _ = try? self.store.enumerateContacts(with: request, usingBlock: { contact, _ in
             let stableIdAndContact = DeviceContactDataModernContext.parseContact(contact)
             result[stableIdAndContact.0] = stableIdAndContact.1
-            for address in contact.instantMessageAddresses {
-                if address.value.service == "Telegram", let peerId = parseAppSpecificContactReference(address.value.username) {
+            for address in contact.urlAddresses {
+                if address.label == "Telegram", let peerId = parseAppSpecificContactReference(address.value as String) {
                     references[peerId] = DeviceContactBasicDataWithReference(stableId: stableIdAndContact.0, basicData: stableIdAndContact.1)
                 }
             }

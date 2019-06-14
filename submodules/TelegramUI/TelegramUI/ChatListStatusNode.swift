@@ -10,6 +10,7 @@ enum ChatListStatusNodeState: Equatable {
     case delivered(UIColor)
     case read(UIColor)
     case progress(UIColor, CGFloat)
+    case failed(UIColor, UIColor)
     
     func contentNode() -> ChatListStatusContentNode? {
         switch self {
@@ -23,6 +24,8 @@ enum ChatListStatusNodeState: Equatable {
             return ChatListStatusChecksNode(color: color)
         case let .progress(color, progress):
             return ChatListStatusProgressNode(color: color, progress: progress)
+        case let .failed(fill, foreground):
+            return ChatListStatusFailedNode(fill: fill, foreground: foreground)
         }
     }
 }
@@ -343,6 +346,84 @@ private class ChatListStatusChecksNode: ChatListStatusContentNode {
         } else {
             super.animateIn(from: from)
         }
+    }
+}
+
+private final class ChatListStatusFailedNodeParameters: NSObject {
+    let fill: UIColor
+    let foreground: UIColor
+    
+    init(fill: UIColor, foreground: UIColor) {
+        self.fill = fill
+        self.foreground = foreground
+        
+        super.init()
+    }
+}
+
+private class ChatListStatusFailedNode: ChatListStatusContentNode {
+    private var state: ChatListStatusNodeState?
+    
+    var fill: UIColor {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
+    
+    var foreground: UIColor {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
+    
+    init(fill: UIColor, foreground: UIColor) {
+        self.fill = fill
+        self.foreground = foreground
+        
+        super.init()
+    }
+    
+    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+        return ChatListStatusFailedNodeParameters(fill: self.fill, foreground: self.foreground)
+    }
+    
+    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+        let context = UIGraphicsGetCurrentContext()!
+        
+        if !isRasterizing {
+            context.setBlendMode(.copy)
+            context.setFillColor(UIColor.clear.cgColor)
+            context.fill(bounds)
+        }
+        
+        guard let parameters = parameters as? ChatListStatusFailedNodeParameters else {
+            return
+        }
+        
+        let diameter: CGFloat = 14.0
+        let rect = CGRect(origin: CGPoint(x: floor((bounds.width - diameter) / 2.0), y: floor((bounds.height - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter)).offsetBy(dx: 1.0, dy: 1.0)
+        
+        context.setFillColor(parameters.fill.cgColor)
+        context.fillEllipse(in: rect)
+        context.setStrokeColor(parameters.foreground.cgColor)
+        
+        let string = NSAttributedString(string: "!", font: Font.medium(12.0), textColor: parameters.foreground)
+        let stringRect = string.boundingRect(with: rect.size, options: .usesLineFragmentOrigin, context: nil)
+        
+        UIGraphicsPushContext(context)
+        string.draw(at: CGPoint(x: rect.minX + floor((rect.width - stringRect.width) / 2.0), y: 1.0 + rect.minY + floor((rect.height - stringRect.height) / 2.0)))
+        UIGraphicsPopContext()
+    }
+    
+    override func updateWithState(_ state: ChatListStatusNodeState, animated: Bool) {
+        switch state {
+        case let .failed(fill, foreground):
+            self.fill = fill
+            self.foreground = foreground
+        default:
+            break
+        }
+        self.state = state
     }
 }
 

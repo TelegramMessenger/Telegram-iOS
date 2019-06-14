@@ -4361,8 +4361,7 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.AddToContacts" = "Add to Contacts";
 "Conversation.AddNameToContacts" = "Add %@ to Contacts";
 
-"AddContact.ContactWillBeSharedNow" = "When you tap **Done**, your phone number will become visible to %@.";
-"AddContact.ContactWillBeSharedAfterMutual" = "Phone number will be visible once %1$@ adds you as a contact. Your phone number will become visible to %1$@.";
+"AddContact.ContactWillBeSharedAfterMutual" = "Phone number will be visible once %1$@ adds you as a contact.";
 "AddContact.SharedContactException" = "Share My Phone Number";
 "AddContact.SharedContactExceptionInfo" = "You can make your phone visible to %@.";
 "AddContact.StatusSuccess" = "%@ is now in your contacts list.";

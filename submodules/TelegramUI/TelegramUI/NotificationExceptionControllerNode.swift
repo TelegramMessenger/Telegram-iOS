@@ -765,6 +765,8 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     return
                 }
                 
+                let mode = stateValue.with { $0.mode }
+                
                 dismissInputImpl?()
                 presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer, mode: mode, updatePeerSound: { peerId, sound in
                     _ = updatePeerSound(peer.id, sound).start(next: { _ in

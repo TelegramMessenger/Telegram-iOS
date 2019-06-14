@@ -1246,7 +1246,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: messages.map({ $0.id }), type: .forLocalPeer).start()
+                    let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: [id], type: .forLocalPeer).start()
                 }))
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in

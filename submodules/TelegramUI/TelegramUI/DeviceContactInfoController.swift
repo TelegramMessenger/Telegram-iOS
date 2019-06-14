@@ -628,14 +628,21 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
             numberIndex += 1
         }
         if let peer = peer {
-            if contactData.basicData.phoneNumbers.isEmpty {
-                entries.append(.phoneNumberSharingInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_ContactWillBeSharedAfterMutual(peer.compactDisplayTitle).0))
+            let personCompactName: String
+            if !personName.0.isEmpty {
+                personCompactName = personName.0
+            } else if !personName.1.isEmpty {
+                personCompactName = personName.1
             } else {
-                entries.append(.phoneNumberSharingInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_ContactWillBeSharedNow(peer.compactDisplayTitle).0))
+                personCompactName = peer.compactDisplayTitle
+            }
+            
+            if contactData.basicData.phoneNumbers.isEmpty {
+                entries.append(.phoneNumberSharingInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_ContactWillBeSharedAfterMutual(personCompactName).0))
             }
             if shareViaException {
                 entries.append(.phoneNumberShareViaException(entries.count, presentationData.theme, presentationData.strings.AddContact_SharedContactException, state.addToPrivacyExceptions))
-                entries.append(.phoneNumberShareViaExceptionInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_SharedContactExceptionInfo(peer.compactDisplayTitle).0))
+                entries.append(.phoneNumberShareViaExceptionInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_SharedContactExceptionInfo(personCompactName).0))
             }
         }
     } else {
@@ -1045,21 +1052,21 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
             }
             var composedContactData: DeviceContactExtendedData?
             if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
-                var instantMessagingProfiles = filteredData.instantMessagingProfiles
+                var urls = filteredData.urls
                 if let createForPeer = createForPeer {
-                    let appProfile = DeviceContactInstantMessagingProfileData(appProfile: createForPeer.id)
+                    let appProfile = DeviceContactUrlData(appProfile: createForPeer.id)
                     var found = false
-                    for profile in instantMessagingProfiles {
-                        if profile.service == appProfile.service && profile.username == appProfile.username {
+                    for url in urls {
+                        if url.label == appProfile.label && url.value == appProfile.value {
                             found = true
                             break
                         }
                     }
                     if !found {
-                        instantMessagingProfiles.append(appProfile)
+                        urls.append(appProfile)
                     }
                 }
-                composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: filteredData.urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: instantMessagingProfiles)
+                composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: filteredData.instantMessagingProfiles)
             }
             rightNavigationButton = ItemListNavigationButton(content: .text(isShare ? presentationData.strings.Common_Done : presentationData.strings.Compose_Create), style: .bold, enabled: (isShare || !filteredPhoneNumbers.isEmpty) && composedContactData != nil, action: {
                 if let composedContactData = composedContactData {
