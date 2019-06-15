@@ -41,7 +41,6 @@ public enum ChannelDiscussionGroupError {
 }
 
 public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, channelId: PeerId, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {
-    
     return postbox.transaction { transaction -> (channel: Peer?, group: Peer?) in
         return (channel: transaction.getPeer(channelId), group: groupId != nil ? transaction.getPeer(groupId!) : nil)
     }
@@ -101,5 +100,4 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
             return .single(result)
         }
     }
-    
 }

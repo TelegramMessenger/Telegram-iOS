@@ -244,6 +244,25 @@ final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
+    func transferOwnership(account: Account, peerId: PeerId, memberId: PeerId, password: String) -> Signal<Never, ChannelOwnershipTransferError> {
+        return updateChannelOwnership(postbox: account.postbox, network: account.network, accountStateManager: account.stateManager, channelId: peerId, memberId: memberId, password: password)
+        |> deliverOnMainQueue
+//        |> beforeNext { [weak self] result in
+//            if let strongSelf = self, let (previous, updated) = result {
+//                strongSelf.impl.with { impl in
+//                    for (contextPeerId, context) in impl.contexts {
+//                        if peerId == contextPeerId {
+//                            context.replayUpdates([(previous, updated, nil)])
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//        |> mapToSignal { _ -> Signal<Void, ChannelOwnershipTransferError> in
+//            return .complete()
+//        }
+    }
+    
     func join(account: Account, peerId: PeerId) -> Signal<Never, JoinChannelError> {
         return joinChannel(account: account, peerId: peerId)
         |> deliverOnMainQueue

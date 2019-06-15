@@ -462,7 +462,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 combineComponent(string: &string, component: value.city)
                 combineComponent(string: &string, component: value.country)
                 combineComponent(string: &string, component: value.postcode)
-                return ItemListAddressItem(theme: theme, label: title, text: string, imageSignal: imageSignal, selected: selected, sectionId: self.section, action: {
+                return ItemListAddressItem(theme: theme, label: title, text: string, imageSignal: imageSignal, selected: selected, sectionId: self.section, style: .plain, action: {
                     if selected != nil {
                         arguments.toggleSelection(.address(value))
                     } else {

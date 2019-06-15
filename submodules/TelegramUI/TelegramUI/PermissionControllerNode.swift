@@ -46,7 +46,7 @@ private func localizedString(for key: String, strings: PresentationStrings, fall
 final class PermissionControllerNode: ASDisplayNode {
     private let context: AccountContext
     private var presentationData: PresentationData
-    private let splitTest: PermissionUISplitTest
+    private let splitTest: PermissionUISplitTest?
     
     private var innerState: PermissionControllerInnerState
     
@@ -56,7 +56,7 @@ final class PermissionControllerNode: ASDisplayNode {
     var openPrivacyPolicy: (() -> Void)?
     var dismiss: (() -> Void)?
     
-    init(context: AccountContext, splitTest: PermissionUISplitTest) {
+    init(context: AccountContext, splitTest: PermissionUISplitTest?) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.splitTest = splitTest
@@ -122,7 +122,7 @@ final class PermissionControllerNode: ASDisplayNode {
                 switch dataState {
                     case let .contacts(status):
                         icon = UIImage(bundleImageName: "Settings/Permissions/Contacts")
-                        if case let .modal(titleKey, textKey, allowTitleKey, allowInSettingsTitleKey) = self.splitTest.configuration.contacts {
+                        if let splitTest = self.splitTest, case let .modal(titleKey, textKey, allowTitleKey, allowInSettingsTitleKey) = splitTest.configuration.contacts {
                             title = localizedString(for: titleKey, strings: self.presentationData.strings)
                             text = localizedString(for: textKey, strings: self.presentationData.strings)
                             if status == .denied {
@@ -142,7 +142,7 @@ final class PermissionControllerNode: ASDisplayNode {
                         hasPrivacyPolicy = true
                     case let .notifications(status):
                         icon = UIImage(bundleImageName: "Settings/Permissions/Notifications")
-                        if case let .modal(titleKey, textKey, allowTitleKey, allowInSettingsTitleKey) = self.splitTest.configuration.notifications {
+                        if let splitTest = self.splitTest, case let .modal(titleKey, textKey, allowTitleKey, allowInSettingsTitleKey) = splitTest.configuration.notifications {
                             title = localizedString(for: titleKey, strings: self.presentationData.strings, fallback: self.presentationData.strings.Permissions_NotificationsTitle_v0)
                             text = localizedString(for: textKey, strings: self.presentationData.strings, fallback: self.presentationData.strings.Permissions_NotificationsText_v0)
                             if status == .denied {
@@ -175,6 +175,16 @@ final class PermissionControllerNode: ASDisplayNode {
                         title = self.presentationData.strings.Permissions_CellularDataTitle_v0
                         text = self.presentationData.strings.Permissions_CellularDataText_v0
                         buttonTitle = self.presentationData.strings.Permissions_CellularDataAllowInSettings_v0
+                        hasPrivacyPolicy = false
+                    case let .nearbyLocation(status):
+                        icon = nil
+                        title = self.presentationData.strings.Permissions_PeopleNearbyTitle_v0
+                        text = self.presentationData.strings.Permissions_PeopleNearbyText_v0
+                        if status == .denied {
+                            buttonTitle = self.presentationData.strings.Permissions_PeopleNearbyAllowInSettings_v0
+                        } else {
+                            buttonTitle = self.presentationData.strings.Permissions_PeopleNearbyAllow_v0
+                        }
                         hasPrivacyPolicy = false
                 }
 

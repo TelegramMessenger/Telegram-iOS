@@ -464,11 +464,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
             }
             
-            if let admin = admin as? TelegramUser, admin.botInfo == nil && channel.flags.contains(.isCreator) && areAllAdminRightsEnabled(currentRightsFlags, group: isGroup) {
+            if let admin = admin as? TelegramUser, admin.botInfo == nil && !admin.isDeleted && channel.flags.contains(.isCreator) && areAllAdminRightsEnabled(currentRightsFlags, group: isGroup) {
                 entries.append(.transfer(presentationData.theme, isGroup ? presentationData.strings.Group_EditAdmin_TransferOwnership : presentationData.strings.Channel_EditAdmin_TransferOwnership))
             }
         
-            if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty {
+            if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty && admin.id != accountPeerId {
                 var canDismiss = false
                 if channel.flags.contains(.isCreator) {
                     canDismiss = true
@@ -534,11 +534,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
         }
     
-        if let admin = admin as? TelegramUser, admin.botInfo == nil && group.role == .creator && areAllAdminRightsEnabled(currentRightsFlags, group: true) {
+        if let admin = admin as? TelegramUser, admin.botInfo == nil && !admin.isDeleted && group.role == .creator && areAllAdminRightsEnabled(currentRightsFlags, group: true) {
             entries.append(.transfer(presentationData.theme, presentationData.strings.Group_EditAdmin_TransferOwnership))
         }
         
-        if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty {
+        if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty && admin.id != accountPeerId {
             entries.append(.dismiss(presentationData.theme, presentationData.strings.Channel_Moderator_AccessLevelRevoke))
         }
     }
@@ -588,47 +588,21 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                 return
             }
             
-            var signal: Signal<Never, ChannelOwnershipTransferError> = .complete()
-            if let channel = peer as? TelegramChannel {
-                signal = updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: channel.id, memberId: adminId, password: nil)
-            } else if let _ = peer as? TelegramGroup {
-                signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
-                |> map(Optional.init)
-                |> mapError { _ in ChannelOwnershipTransferError.generic }
-                |> mapToSignal { upgradedPeerId -> Signal<Never, ChannelOwnershipTransferError> in
-                    guard let upgradedPeerId = upgradedPeerId else {
-                        return .fail(.generic)
-                    }
-                    upgradedToSupergroupImpl(upgradedPeerId, {})
-                    
-                    return updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: upgradedPeerId, memberId: adminId, password: nil)
-                }
-            }
-            
-            transferOwnershipDisposable.set((signal |> deliverOnMainQueue).start(error: { error in
-                let currentPeerId = actualPeerId.with { $0 }
-                let channel: Signal<Peer?, NoError>
-                if currentPeerId == peerId {
-                    channel = .single(peer)
-                } else {
-                    channel = context.account.postbox.transaction { transaction -> Peer? in
-                        return transaction.getPeer(currentPeerId)
-                    }
-                }
-                
-                let _ = (channel |> deliverOnMainQueue).start(next: { channel in
-                    guard let channel = channel as? TelegramChannel else {
-                        return
-                    }
-                    
-                    let controller = channelOwnershipTransferController(context: context, channel: channel, member: member, initialError: error, present: { c, a in
-                        presentControllerImpl?(c, a)
-                    }, completion: {
+            transferOwnershipDisposable.set((checkOwnershipTranfserAvailability(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, memberId: adminId) |> deliverOnMainQueue).start(error: { error in
+                let controller = channelOwnershipTransferController(context: context, peer: peer, member: member, initialError: error, present: { c, a in
+                    presentControllerImpl?(c, a)
+                }, completion: { upgradedPeerId in
+                    if let upgradedPeerId = upgradedPeerId {
+                        upgradedToSupergroupImpl(upgradedPeerId, {
+                            dismissImpl?()
+                            transferedOwnership(member.id)
+                        })
+                    } else {
                         dismissImpl?()
                         transferedOwnership(member.id)
-                    })
-                    presentControllerImpl?(controller, nil)
+                    }
                 })
+                presentControllerImpl?(controller, nil)
             }))
         })
     }, dismissAdmin: {

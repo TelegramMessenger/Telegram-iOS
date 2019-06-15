@@ -135,6 +135,11 @@ private final class StickerAnimationNode: ASDisplayNode {
         self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
     }
     
+    func reset() {
+        self.disposable.set(nil)
+        self.fetchDisposable.set(nil)
+    }
+    
     private func setupLooping() {
         guard let playerItem = self.playerItem, let player = self.player else {
             return
@@ -166,7 +171,7 @@ private final class StickerAnimationNode: ASDisplayNode {
                     }
                 })
                 playerItem.videoComposition = composition
-                ready = true
+                self.ready = true
                 if self.visibility {
                     self.player?.play()
                 }
@@ -188,6 +193,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var shareButtonNode: HighlightableButtonNode?
     
     var telegramFile: TelegramMediaFile?
+    private let disposable = MetaDisposable()
     
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var replyInfoNode: ChatMessageReplyInfoNode?
@@ -212,6 +218,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.addSubnode(self.imageNode)
         self.addSubnode(self.animationNode)
         self.addSubnode(self.dateAndStatusNode)
+    }
+    
+    deinit {
+        self.disposable.dispose()
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -245,14 +255,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.view.addGestureRecognizer(replyRecognizer)
     }
     
+    private var visibilityPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             if self.visibility != oldValue {
                 switch self.visibility {
                     case .visible:
                         self.animationNode.visibility = true
+                        self.visibilityPromise.set(true)
                     case .none:
                         self.animationNode.visibility = false
+                        self.visibilityPromise.set(false)
                 }
             }
         }

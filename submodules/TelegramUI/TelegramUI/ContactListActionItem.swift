@@ -110,6 +110,9 @@ class ContactListActionItem: ListViewItem {
     
     func selected(listView: ListView){
         self.action()
+        if case .alpha = self.highlight {
+            listView.clearHighlightAnimated(true)
+        }
     }
     
     static func mergeType(item: ContactListActionItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {

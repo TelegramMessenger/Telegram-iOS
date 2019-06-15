@@ -15,8 +15,8 @@ final class PeerPresenceStatusManager {
     }
     
     func reset(presence: TelegramUserPresence) {
-        timer?.invalidate()
-        timer = nil
+        self.timer?.invalidate()
+        self.timer = nil
         
         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
         let timeout = userPresenceStringRefreshTimeout(presence, relativeTo: Int32(timestamp))

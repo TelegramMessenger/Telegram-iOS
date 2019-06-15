@@ -4,7 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-class PeopleNearbyHeaderItem: ListViewItem, ItemListItem {
+class PeersNearbyHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
     let sectionId: ItemListSectionId
@@ -17,7 +17,7 @@ class PeopleNearbyHeaderItem: ListViewItem, ItemListItem {
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = PeopleNearbyHeaderItemNode()
+            let node = PeersNearbyHeaderItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
@@ -33,7 +33,7 @@ class PeopleNearbyHeaderItem: ListViewItem, ItemListItem {
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            guard let nodeValue = node() as? PeopleNearbyHeaderItemNode else {
+            guard let nodeValue = node() as? PeersNearbyHeaderItemNode else {
                 assertionFailure()
                 return
             }
@@ -54,11 +54,11 @@ class PeopleNearbyHeaderItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(13.0)
 
-class PeopleNearbyHeaderItemNode: ListViewItemNode {
+class PeersNearbyHeaderItemNode: ListViewItemNode {
     private let titleNode: TextNode
-    private var iconNode: PeopleNearbyIconNode?
+    private var iconNode: PeersNearbyIconNode?
     
-    private var item: PeopleNearbyHeaderItem?
+    private var item: PeersNearbyHeaderItem?
     
     init() {
         self.titleNode = TextNode()
@@ -71,7 +71,7 @@ class PeopleNearbyHeaderItemNode: ListViewItemNode {
         self.addSubnode(self.titleNode)
     }
     
-    func asyncLayout() -> (_ item: PeopleNearbyHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: PeersNearbyHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, params, neighbors in
@@ -93,12 +93,12 @@ class PeopleNearbyHeaderItemNode: ListViewItemNode {
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
                     
-                    let iconNode: PeopleNearbyIconNode
+                    let iconNode: PeersNearbyIconNode
                     if let node = strongSelf.iconNode {
                         iconNode = node
                         iconNode.updateTheme(item.theme)
                     } else {
-                        iconNode = PeopleNearbyIconNode(theme: item.theme)
+                        iconNode = PeersNearbyIconNode(theme: item.theme)
                         strongSelf.iconNode = iconNode
                         strongSelf.addSubnode(iconNode)
                     }

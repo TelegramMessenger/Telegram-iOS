@@ -366,7 +366,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         |> mapToSignal { coordinates -> Signal<(Double, Double, String), NoError> in
             return reverseGeocodeLocation(latitude: coordinates.0, longitude: coordinates.1)
             |> map { locality in
-                return (coordinates.0, coordinates.1, locality)
+                return (coordinates.0, coordinates.1, locality?.city ?? "")
             }
         }
         

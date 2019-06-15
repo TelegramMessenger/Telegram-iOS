@@ -125,6 +125,34 @@ public struct ChannelMigrationReference: PostboxCoding, Equatable {
     }
 }
 
+public struct PeerGeoLocation: PostboxCoding, Equatable {
+    public let latitude: Double
+    public let longitude: Double
+    public let address: String
+    
+    public init(latitude: Double, longitude: Double, address: String) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.address = address
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.latitude = decoder.decodeDoubleForKey("la", orElse: 0.0)
+        self.longitude = decoder.decodeDoubleForKey("lo", orElse: 0.0)
+        self.address = decoder.decodeStringForKey("a", orElse: "")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeDouble(self.latitude, forKey: "la")
+        encoder.encodeDouble(self.longitude, forKey: "lo")
+        encoder.encodeString(self.address, forKey: "a")
+    }
+    
+    public static func ==(lhs: PeerGeoLocation, rhs: PeerGeoLocation) -> Bool {
+        return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude && lhs.address == rhs.address
+    }
+}
+
 public final class CachedChannelData: CachedPeerData {
     public let isNotAccessible: Bool
     public let flags: CachedChannelFlags
@@ -137,8 +165,8 @@ public final class CachedChannelData: CachedPeerData {
     public let stickerPack: StickerPackCollectionInfo?
     public let minAvailableMessageId: MessageId?
     public let migrationReference: ChannelMigrationReference?
-    
     public let linkedDiscussionPeerId: PeerId?
+    public let peerGeoLocation: PeerGeoLocation?
     
     public let peerIds: Set<PeerId>
     public let messageIds: Set<MessageId>
@@ -161,9 +189,10 @@ public final class CachedChannelData: CachedPeerData {
         self.minAvailableMessageId = nil
         self.migrationReference = nil
         self.linkedDiscussionPeerId = nil
+        self.peerGeoLocation = nil
     }
     
-    init(isNotAccessible: Bool, flags: CachedChannelFlags, about: String?, participantsSummary: CachedChannelParticipantsSummary, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, stickerPack: StickerPackCollectionInfo?, minAvailableMessageId: MessageId?, migrationReference: ChannelMigrationReference?, linkedDiscussionPeerId: PeerId?) {
+    init(isNotAccessible: Bool, flags: CachedChannelFlags, about: String?, participantsSummary: CachedChannelParticipantsSummary, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, stickerPack: StickerPackCollectionInfo?, minAvailableMessageId: MessageId?, migrationReference: ChannelMigrationReference?, linkedDiscussionPeerId: PeerId?, peerGeoLocation: PeerGeoLocation?) {
         self.isNotAccessible = isNotAccessible
         self.flags = flags
         self.about = about
@@ -176,6 +205,7 @@ public final class CachedChannelData: CachedPeerData {
         self.minAvailableMessageId = minAvailableMessageId
         self.migrationReference = migrationReference
         self.linkedDiscussionPeerId = linkedDiscussionPeerId
+        self.peerGeoLocation = peerGeoLocation
         
         var peerIds = Set<PeerId>()
         for botInfo in botInfos {
@@ -196,51 +226,55 @@ public final class CachedChannelData: CachedPeerData {
     }
     
     func withUpdatedIsNotAccessible(_ isNotAccessible: Bool) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedFlags(_ flags: CachedChannelFlags) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedAbout(_ about: String?) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedParticipantsSummary(_ participantsSummary: CachedChannelParticipantsSummary) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedExportedInvitation(_ exportedInvitation: ExportedInvitation?) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedBotInfos(_ botInfos: [CachedPeerBotInfo]) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedPeerStatusSettings(_ peerStatusSettings: PeerStatusSettings?) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedPinnedMessageId(_ pinnedMessageId: MessageId?) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedStickerPack(_ stickerPack: StickerPackCollectionInfo?) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedMinAvailableMessageId(_ minAvailableMessageId: MessageId?) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedMigrationReference(_ migrationReference: ChannelMigrationReference?) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
     }
     
     func withUpdatedLinkedDiscussionPeerId(_ linkedDiscussionPeerId: PeerId?) -> CachedChannelData {
-        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: linkedDiscussionPeerId)
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation)
+    }
+    
+    func withUpdatedPeerGeoLocation(peerGeoLocation: PeerGeoLocation?) -> CachedChannelData {
+        return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: peerGeoLocation)
     }
     
     public init(decoder: PostboxDecoder) {
@@ -284,6 +318,12 @@ public final class CachedChannelData: CachedPeerData {
             self.linkedDiscussionPeerId = PeerId(linkedDiscussionPeerId)
         } else {
             self.linkedDiscussionPeerId = nil
+        }
+        
+        if let peerGeoLocation = decoder.decodeObjectForKey("pgl", decoder: { PeerGeoLocation(decoder: $0) }) as? PeerGeoLocation {
+            self.peerGeoLocation = peerGeoLocation
+        } else {
+            self.peerGeoLocation = nil
         }
         
         if let linkedDiscussionPeerId = self.linkedDiscussionPeerId {
@@ -352,6 +392,11 @@ public final class CachedChannelData: CachedPeerData {
         } else {
             encoder.encodeNil(forKey: "dgi")
         }
+        if let peerGeoLocation = self.peerGeoLocation {
+            encoder.encodeObject(peerGeoLocation, forKey: "pgl")
+        } else {
+            encoder.encodeNil(forKey: "pgl")
+        }
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {
@@ -407,6 +452,25 @@ public final class CachedChannelData: CachedPeerData {
             return false
         }
         
+        if other.peerGeoLocation != self.peerGeoLocation {
+            return false
+        }
+        
         return true
+    }
+}
+
+extension PeerGeoLocation {
+    init?(apiLocation: Api.ChannelLocation) {
+        switch apiLocation {
+            case let .channelLocation(geopoint, address):
+                if case let .geoPoint(longitude, latitude, _) = geopoint {
+                    self.init(latitude: latitude, longitude: longitude, address: address)
+                } else {
+                    return nil
+                }
+            default:
+                return nil
+        }
     }
 }

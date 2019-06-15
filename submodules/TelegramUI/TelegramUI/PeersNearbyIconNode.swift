@@ -5,7 +5,7 @@ import AsyncDisplayKit
 
 import LegacyComponents
 
-private final class PeopleNearbyIconWavesNodeParams: NSObject {
+private final class PeersNearbyIconWavesNodeParams: NSObject {
     let color: UIColor
     let progress: CGFloat
     
@@ -21,7 +21,7 @@ private func degToRad(_ degrees: CGFloat) -> CGFloat {
     return degrees * CGFloat.pi / 180.0
 }
 
-final class PeopleNearbyIconWavesNode: ASDisplayNode {
+final class PeersNearbyIconWavesNode: ASDisplayNode {
     var color: UIColor {
         didSet {
             self.setNeedsDisplay()
@@ -51,10 +51,10 @@ final class PeopleNearbyIconWavesNode: ASDisplayNode {
         let animation = POPBasicAnimation()
         animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
             property?.readBlock = { node, values in
-                values?.pointee = (node as! PeopleNearbyIconWavesNode).effectiveProgress
+                values?.pointee = (node as! PeersNearbyIconWavesNode).effectiveProgress
             }
             property?.writeBlock = { node, values in
-                (node as! PeopleNearbyIconWavesNode).effectiveProgress = values!.pointee
+                (node as! PeersNearbyIconWavesNode).effectiveProgress = values!.pointee
             }
             property?.threshold = 0.01
         }) as! POPAnimatableProperty)
@@ -75,7 +75,7 @@ final class PeopleNearbyIconWavesNode: ASDisplayNode {
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         let t = CACurrentMediaTime()
         let value: CGFloat = CGFloat(t.truncatingRemainder(dividingBy: 2.0)) / 2.0
-        return PeopleNearbyIconWavesNodeParams(color: self.color, progress: value)
+        return PeersNearbyIconWavesNodeParams(color: self.color, progress: value)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -87,7 +87,7 @@ final class PeopleNearbyIconWavesNode: ASDisplayNode {
             context.fill(bounds)
         }
         
-        if let parameters = parameters as? PeopleNearbyIconWavesNodeParams {
+        if let parameters = parameters as? PeersNearbyIconWavesNodeParams {
             let center = CGPoint(x: bounds.width / 2.0, y: bounds.height / 2.0)
             let radius: CGFloat = bounds.width * 0.3333
             let range: CGFloat = (bounds.width - radius * 2.0) / 2.0
@@ -158,22 +158,27 @@ private func generateIcon(size: CGSize, color: UIColor, contentColor: UIColor) -
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         context.translateBy(x: 0.0, y: 6.0)
         context.setFillColor(contentColor.cgColor)
+        
+        if size.width == 120.0 {
+            context.translateBy(x: 30.0, y: 30.0)
+        }
+        
         let _ = try? drawSvgPath(context, path: "M27.8628211,52.2347452 L27.8628211,27.1373017 L2.76505663,27.1373017 C1.55217431,27.1373017 0.568938916,26.1540663 0.568938916,24.941184 C0.568938916,24.0832172 1.06857435,23.3038117 1.84819149,22.9456161 L51.2643819,0.241311309 C52.586928,-0.366333451 54.1516568,0.213208572 54.7593016,1.53575465 C55.0801868,2.23416513 55.080181,3.03785964 54.7592857,3.7362655 L32.0544935,53.1516391 C31.548107,54.2537536 30.2441593,54.7366865 29.1420449,54.2302999 C28.3624433,53.8720978 27.8628211,53.0927006 27.8628211,52.2347452 Z ")
     })!
 }
 
-final class PeopleNearbyIconNode: ASDisplayNode {
+final class PeersNearbyIconNode: ASDisplayNode {
     private var theme: PresentationTheme
     
     private var iconNode: ASImageNode
-    private var wavesNode: PeopleNearbyIconWavesNode
+    private var wavesNode: PeersNearbyIconWavesNode
     
     init(theme: PresentationTheme) {
         self.theme = theme
         
         self.iconNode = ASImageNode()
         self.iconNode.isOpaque = false
-        self.wavesNode = PeopleNearbyIconWavesNode(color: theme.list.itemAccentColor)
+        self.wavesNode = PeersNearbyIconWavesNode(color: theme.list.itemAccentColor)
         
         super.init()
         

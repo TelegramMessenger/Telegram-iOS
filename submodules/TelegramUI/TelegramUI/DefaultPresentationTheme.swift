@@ -188,7 +188,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         secretIconColor: secretColor,
         pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: (UIColor(rgb: 0x72d5fd), UIColor(rgb: 0x2a9ef1)), foregroundColor: .white),
         unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: (UIColor(rgb: 0xDEDEE5), UIColor(rgb: 0xC5C6CC)), foregroundColor: .white),
-        onlineDotColor: accentColor
+        onlineDotColor: UIColor(rgb: 0x4cc91f)
     )
     
     let bubble = PresentationThemeChatBubble(

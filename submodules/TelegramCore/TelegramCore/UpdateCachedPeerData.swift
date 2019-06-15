@@ -297,11 +297,17 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         }
                                         
                                         let linkedDiscussionPeerId: PeerId?
-                                        
                                         if let linkedChatId = linkedChatId, linkedChatId != 0 {
                                             linkedDiscussionPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: linkedChatId)
                                         } else {
                                             linkedDiscussionPeerId = nil
+                                        }
+                                        
+                                        let peerGeoLocation: PeerGeoLocation?
+                                        if let location = location {
+                                            peerGeoLocation = PeerGeoLocation(apiLocation: location)
+                                        } else {
+                                            peerGeoLocation = nil
                                         }
                                         
                                         var botInfos: [CachedPeerBotInfo] = []
@@ -391,6 +397,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 .withUpdatedMinAvailableMessageId(minAvailableMessageId)
                                                 .withUpdatedMigrationReference(migrationReference)
                                                 .withUpdatedLinkedDiscussionPeerId(linkedDiscussionPeerId)
+                                                .withUpdatedPeerGeoLocation(peerGeoLocation: peerGeoLocation)
                                         })
                                     
                                         if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
