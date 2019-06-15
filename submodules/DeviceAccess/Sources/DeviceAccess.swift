@@ -78,6 +78,11 @@ public final class DeviceAccess {
         return self.siriPromise.get()
     }
     
+    private static let locationPromise = Promise<Bool?>(nil)
+    static var location: Signal<Bool?, NoError> {
+        return self.locationPromise.get()
+    }
+    
     public static func isMicrophoneAccessAuthorized() -> Bool? {
         return AVAudioSession.sharedInstance().recordPermission == .granted
     }
@@ -173,12 +178,12 @@ public final class DeviceAccess {
                     if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                         func statusForCellularState(_ state: CTCellularDataRestrictedState) -> AccessType? {
                             switch state {
-                            case .restricted:
-                                return .denied
-                            case .notRestricted:
-                                return .allowed
-                            default:
-                                return nil
+                                case .restricted:
+                                    return .denied
+                                case .notRestricted:
+                                    return .allowed
+                                default:
+                                    return nil
                             }
                         }
                         let cellState = CTCellularData.init()
@@ -215,6 +220,29 @@ public final class DeviceAccess {
                 } else {
                     return .single(.denied)
                 }
+            case .location:
+                return Signal { subscriber in
+                    let status = CLLocationManager.authorizationStatus()
+                    switch status {
+                        case .authorizedAlways, .authorizedWhenInUse:
+                            subscriber.putNext(.allowed)
+                        case .denied, .restricted:
+                            subscriber.putNext(.denied)
+                        case .notDetermined:
+                            subscriber.putNext(.notDetermined)
+                    }
+                    subscriber.putCompletion()
+                    return EmptyDisposable
+                }
+                |> then(self.location
+                    |> mapToSignal { authorized -> Signal<AccessType, NoError> in
+                        if let authorized = authorized {
+                            return .single(authorized ? .allowed : .denied)
+                        } else {
+                            return .complete()
+                        }
+                    }
+                )
             default:
                 return .single(.notDetermined)
         }

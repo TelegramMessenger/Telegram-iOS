@@ -15,6 +15,7 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let label: String
     let text: String
+    let style: ItemListStyle
     let labelColor: ItemListTextWithLabelItemTextColor
     let textColor: ItemListTextWithLabelItemTextColor
     let enabledEntitiyTypes: EnabledEntityTypes
@@ -27,10 +28,11 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     
     let tag: Any?
     
-    init(theme: PresentationTheme, label: String, text: String, labelColor: ItemListTextWithLabelItemTextColor = .primary, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntitiyTypes: EnabledEntityTypes, multiline: Bool, selected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+    init(theme: PresentationTheme, label: String, text: String, style: ItemListStyle = .plain, labelColor: ItemListTextWithLabelItemTextColor = .primary, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntitiyTypes: EnabledEntityTypes, multiline: Bool, selected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.label = label
         self.text = text
+        self.style = style
         self.labelColor = labelColor
         self.textColor = textColor
         self.enabledEntitiyTypes = enabledEntitiyTypes
@@ -226,9 +228,16 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
                     strongSelf.accessibilityValue = item.text
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.plainBackgroundColor
+                        switch item.style {
+                        case .plain:
+                            strongSelf.topStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                            strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                            strongSelf.backgroundNode.backgroundColor = item.theme.list.plainBackgroundColor
+                        case .blocks:
+                            strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                            strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                            strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
+                        }
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                     }
                     
@@ -259,8 +268,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 31.0), size: textLayout.size)
                     
                     let leftInset: CGFloat
-                    let style = ItemListStyle.plain
-                    switch style {
+                    switch item.style {
                         case .plain:
                             leftInset = 16.0 + params.leftInset + leftOffset
                             

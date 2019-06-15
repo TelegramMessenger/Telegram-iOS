@@ -38,8 +38,9 @@ private final class GroupInfoArguments {
     let openStickerPackSetup: () -> Void
     let openGroupTypeSetup: () -> Void
     let openLinkedChannelSetup: () -> Void
+    let openLocation: (PeerGeoLocation) -> Void
     
-    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void, openLinkedChannelSetup: @escaping () -> Void) {
+    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void, openLinkedChannelSetup: @escaping () -> Void, openLocation: @escaping (PeerGeoLocation) -> Void) {
         self.context = context
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
@@ -66,6 +67,7 @@ private final class GroupInfoArguments {
         self.openStickerPackSetup = openStickerPackSetup
         self.openGroupTypeSetup = openGroupTypeSetup
         self.openLinkedChannelSetup = openLinkedChannelSetup
+        self.openLocation = openLocation
     }
 }
 
@@ -138,6 +140,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     case groupDescriptionSetup(PresentationTheme, String, String)
     case aboutHeader(PresentationTheme, String)
     case about(PresentationTheme, String)
+    case location(PresentationTheme, PeerGeoLocation)
     case link(PresentationTheme, String)
     case sharedMedia(PresentationTheme, String)
     case notifications(PresentationTheme, String, String)
@@ -155,7 +158,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
         switch self {
             case .info, .setGroupPhoto, .groupDescriptionSetup:
                 return GroupInfoSection.info.rawValue
-            case .aboutHeader, .about, .link:
+            case .aboutHeader, .about, .link, .location:
                 return GroupInfoSection.about.rawValue
             case .groupTypeSetup, .linkedChannelSetup, .preHistory, .stickerPack:
                 return GroupInfoSection.infoManagement.rawValue
@@ -245,6 +248,12 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 }
             case let .link(lhsTheme, lhsText):
                 if case let .link(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .location(lhsTheme, lhsLocation):
+                if case let .location(rhsTheme, rhsLocation) = rhs, lhsTheme === rhsTheme, lhsLocation == rhsLocation {
                     return true
                 } else {
                     return false
@@ -393,6 +402,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return 5
             case .link:
                 return 6
+            case .location:
+                return 7
             case .groupTypeSetup:
                 return 8
             case .linkedChannelSetup:
@@ -425,7 +436,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     func item(_ arguments: GroupInfoArguments) -> ListViewItem {
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, cachedData, state, updatingAvatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.context.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.context.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
@@ -448,6 +459,12 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 }, longTapAction: {
                     arguments.displayUsernameContextMenu(url)
                 }, tag: GroupInfoEntryTag.link)
+            case let .location(theme, location):
+                let imageSignal = chatMapSnapshotImage(account: arguments.context.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
+                return ItemListAddressItem(theme: theme, label: "", text: location.address, imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: {
+                    arguments.openLocation(location)
+                }, longTapAction: {
+                })
             case let .notifications(theme, title, text):
                 return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.changeNotificationMuteSettings()
@@ -840,6 +857,10 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             }
             if let peer = view.peers[view.peerId] as? TelegramChannel, let username = peer.username, !username.isEmpty {
                 entries.append(.link(presentationData.theme, "t.me/" + username))
+                
+                if let location = cachedChannelData.peerGeoLocation {
+                    entries.append(.location(presentationData.theme, location))
+                }
             }
         } else if let cachedGroupData = view.cachedData as? CachedGroupData {
             if let about = cachedGroupData.about, !about.isEmpty {
@@ -1926,6 +1947,17 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerView in
             pushControllerImpl?(channelDiscussionGroupSetupController(context: context, peerId: peerView.peerId))
+        })
+    }, openLocation: { location in
+        let _ = (peerView.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peerView in
+            guard let peer = peerView.peers[peerView.peerId] else {
+                return
+            }
+            let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: MapVenue(title: peer.displayTitle, address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
+            let controller = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, isModal: false, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { _ in })
+            pushControllerImpl?(controller)
         })
     })
     

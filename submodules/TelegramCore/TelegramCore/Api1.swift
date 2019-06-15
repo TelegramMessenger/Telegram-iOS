@@ -51,7 +51,7 @@ extension Api {
     }
     enum ChatFull: TypeConstructorDescription {
         case chatFull(flags: Int32, id: Int32, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?)
-        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int32?, pts: Int32)
+        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int32?, location: Api.ChannelLocation?, pts: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -74,9 +74,9 @@ extension Api {
                     if Int(flags) & Int(1 << 6) != 0 {serializeInt32(pinnedMsgId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 11) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
                     break
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let pts):
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let pts):
                     if boxed {
-                        buffer.appendInt32(-1736252138)
+                        buffer.appendInt32(277964371)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -103,7 +103,8 @@ extension Api {
                     if Int(flags) & Int(1 << 8) != 0 {stickerset!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 9) != 0 {serializeInt32(availableMinId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 11) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 13) != 0 {serializeInt32(linkedChatId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 14) != 0 {serializeInt32(linkedChatId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 15) != 0 {location!.serialize(buffer, true)}
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     break
     }
@@ -113,8 +114,8 @@ extension Api {
         switch self {
                 case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId):
                 return ("chatFull", [("flags", flags), ("id", id), ("about", about), ("participants", participants), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("folderId", folderId)])
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let pts):
-                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("onlineCount", onlineCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId), ("folderId", folderId), ("linkedChatId", linkedChatId), ("pts", pts)])
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let pts):
+                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("onlineCount", onlineCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId), ("folderId", folderId), ("linkedChatId", linkedChatId), ("location", location), ("pts", pts)])
     }
     }
     
@@ -220,9 +221,13 @@ extension Api {
             var _21: Int32?
             if Int(_1!) & Int(1 << 11) != 0 {_21 = reader.readInt32() }
             var _22: Int32?
-            if Int(_1!) & Int(1 << 13) != 0 {_22 = reader.readInt32() }
-            var _23: Int32?
-            _23 = reader.readInt32()
+            if Int(_1!) & Int(1 << 14) != 0 {_22 = reader.readInt32() }
+            var _23: Api.ChannelLocation?
+            if Int(_1!) & Int(1 << 15) != 0 {if let signature = reader.readInt32() {
+                _23 = Api.parse(reader, signature: signature) as? Api.ChannelLocation
+            } }
+            var _24: Int32?
+            _24 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -244,10 +249,11 @@ extension Api {
             let _c19 = (Int(_1!) & Int(1 << 8) == 0) || _19 != nil
             let _c20 = (Int(_1!) & Int(1 << 9) == 0) || _20 != nil
             let _c21 = (Int(_1!) & Int(1 << 11) == 0) || _21 != nil
-            let _c22 = (Int(_1!) & Int(1 << 13) == 0) || _22 != nil
-            let _c23 = _23 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 {
-                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14!, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20, folderId: _21, linkedChatId: _22, pts: _23!)
+            let _c22 = (Int(_1!) & Int(1 << 14) == 0) || _22 != nil
+            let _c23 = (Int(_1!) & Int(1 << 15) == 0) || _23 != nil
+            let _c24 = _24 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 {
+                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14!, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20, folderId: _21, linkedChatId: _22, location: _23, pts: _24!)
             }
             else {
                 return nil
@@ -3943,7 +3949,6 @@ extension Api {
         case updateUserStatus(userId: Int32, status: Api.UserStatus)
         case updateUserName(userId: Int32, firstName: String, lastName: String, username: String)
         case updateUserPhoto(userId: Int32, date: Int32, photo: Api.UserProfilePhoto, previous: Api.Bool)
-        case updateContactLink(userId: Int32, myLink: Api.ContactLink, foreignLink: Api.ContactLink)
         case updateNewEncryptedMessage(message: Api.EncryptedMessage, qts: Int32)
         case updateEncryptedChatTyping(chatId: Int32)
         case updateEncryption(chat: Api.EncryptedChat, date: Int32)
@@ -4005,7 +4010,7 @@ extension Api {
         case updateReadChannelInbox(flags: Int32, folderId: Int32?, channelId: Int32, maxId: Int32, stillUnreadCount: Int32, pts: Int32)
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
         case updatePeerSettings(peer: Api.Peer, settings: Api.PeerSettings)
-        case updateContactLocated(contacts: [Api.ContactLocated])
+        case updatePeerLocated(peers: [Api.PeerLocated])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4081,14 +4086,6 @@ extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     photo.serialize(buffer, true)
                     previous.serialize(buffer, true)
-                    break
-                case .updateContactLink(let userId, let myLink, let foreignLink):
-                    if boxed {
-                        buffer.appendInt32(-1657903163)
-                    }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    myLink.serialize(buffer, true)
-                    foreignLink.serialize(buffer, true)
                     break
                 case .updateNewEncryptedMessage(let message, let qts):
                     if boxed {
@@ -4605,13 +4602,13 @@ extension Api {
                     peer.serialize(buffer, true)
                     settings.serialize(buffer, true)
                     break
-                case .updateContactLocated(let contacts):
+                case .updatePeerLocated(let peers):
                     if boxed {
-                        buffer.appendInt32(1602468195)
+                        buffer.appendInt32(-1263546448)
                     }
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(contacts.count))
-                    for item in contacts {
+                    buffer.appendInt32(Int32(peers.count))
+                    for item in peers {
                         item.serialize(buffer, true)
                     }
                     break
@@ -4638,8 +4635,6 @@ extension Api {
                 return ("updateUserName", [("userId", userId), ("firstName", firstName), ("lastName", lastName), ("username", username)])
                 case .updateUserPhoto(let userId, let date, let photo, let previous):
                 return ("updateUserPhoto", [("userId", userId), ("date", date), ("photo", photo), ("previous", previous)])
-                case .updateContactLink(let userId, let myLink, let foreignLink):
-                return ("updateContactLink", [("userId", userId), ("myLink", myLink), ("foreignLink", foreignLink)])
                 case .updateNewEncryptedMessage(let message, let qts):
                 return ("updateNewEncryptedMessage", [("message", message), ("qts", qts)])
                 case .updateEncryptedChatTyping(let chatId):
@@ -4762,8 +4757,8 @@ extension Api {
                 return ("updateReadHistoryInbox", [("flags", flags), ("folderId", folderId), ("peer", peer), ("maxId", maxId), ("stillUnreadCount", stillUnreadCount), ("pts", pts), ("ptsCount", ptsCount)])
                 case .updatePeerSettings(let peer, let settings):
                 return ("updatePeerSettings", [("peer", peer), ("settings", settings)])
-                case .updateContactLocated(let contacts):
-                return ("updateContactLocated", [("contacts", contacts)])
+                case .updatePeerLocated(let peers):
+                return ("updatePeerLocated", [("peers", peers)])
     }
     }
     
@@ -4922,27 +4917,6 @@ extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.Update.updateUserPhoto(userId: _1!, date: _2!, photo: _3!, previous: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_updateContactLink(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.ContactLink?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.ContactLink
-            }
-            var _3: Api.ContactLink?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.ContactLink
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateContactLink(userId: _1!, myLink: _2!, foreignLink: _3!)
             }
             else {
                 return nil
@@ -5986,14 +5960,14 @@ extension Api {
                 return nil
             }
         }
-        static func parse_updateContactLocated(_ reader: BufferReader) -> Update? {
-            var _1: [Api.ContactLocated]?
+        static func parse_updatePeerLocated(_ reader: BufferReader) -> Update? {
+            var _1: [Api.PeerLocated]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ContactLocated.self)
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PeerLocated.self)
             }
             let _c1 = _1 != nil
             if _c1 {
-                return Api.Update.updateContactLocated(contacts: _1!)
+                return Api.Update.updatePeerLocated(peers: _1!)
             }
             else {
                 return nil
@@ -6332,48 +6306,6 @@ extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Error.error(code: _1!, text: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-    enum ContactLocated: TypeConstructorDescription {
-        case contactLocated(userId: Int32, expires: Int32, distance: Int32)
-    
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .contactLocated(let userId, let expires, let distance):
-                    if boxed {
-                        buffer.appendInt32(-1150339286)
-                    }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    serializeInt32(expires, buffer: buffer, boxed: false)
-                    serializeInt32(distance, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .contactLocated(let userId, let expires, let distance):
-                return ("contactLocated", [("userId", userId), ("expires", expires), ("distance", distance)])
-    }
-    }
-    
-        static func parse_contactLocated(_ reader: BufferReader) -> ContactLocated? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ContactLocated.contactLocated(userId: _1!, expires: _2!, distance: _3!)
             }
             else {
                 return nil
@@ -9267,6 +9199,7 @@ extension Api {
         case channelAdminLogEventActionStopPoll(message: Api.Message)
         case channelAdminLogEventActionChangePhoto(prevPhoto: Api.Photo, newPhoto: Api.Photo)
         case channelAdminLogEventActionChangeLinkedChat(prevValue: Int32, newValue: Int32)
+        case channelAdminLogEventActionChangeLocation(prevValue: Api.ChannelLocation, newValue: Api.ChannelLocation)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -9394,6 +9327,13 @@ extension Api {
                     serializeInt32(prevValue, buffer: buffer, boxed: false)
                     serializeInt32(newValue, buffer: buffer, boxed: false)
                     break
+                case .channelAdminLogEventActionChangeLocation(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(241923758)
+                    }
+                    prevValue.serialize(buffer, true)
+                    newValue.serialize(buffer, true)
+                    break
     }
     }
     
@@ -9437,6 +9377,8 @@ extension Api {
                 return ("channelAdminLogEventActionChangePhoto", [("prevPhoto", prevPhoto), ("newPhoto", newPhoto)])
                 case .channelAdminLogEventActionChangeLinkedChat(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeLinkedChat", [("prevValue", prevValue), ("newValue", newValue)])
+                case .channelAdminLogEventActionChangeLocation(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeLocation", [("prevValue", prevValue), ("newValue", newValue)])
     }
     }
     
@@ -9696,6 +9638,24 @@ extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeLinkedChat(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_channelAdminLogEventActionChangeLocation(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ChannelLocation?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ChannelLocation
+            }
+            var _2: Api.ChannelLocation?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ChannelLocation
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeLocation(prevValue: _1!, newValue: _2!)
             }
             else {
                 return nil
@@ -11398,6 +11358,58 @@ extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.SecureCredentialsEncrypted.secureCredentialsEncrypted(data: _1!, hash: _2!, secret: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    enum ChannelLocation: TypeConstructorDescription {
+        case channelLocationEmpty
+        case channelLocation(geoPoint: Api.GeoPoint, address: String)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .channelLocationEmpty:
+                    if boxed {
+                        buffer.appendInt32(-1078612597)
+                    }
+                    
+                    break
+                case .channelLocation(let geoPoint, let address):
+                    if boxed {
+                        buffer.appendInt32(547062491)
+                    }
+                    geoPoint.serialize(buffer, true)
+                    serializeString(address, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .channelLocationEmpty:
+                return ("channelLocationEmpty", [])
+                case .channelLocation(let geoPoint, let address):
+                return ("channelLocation", [("geoPoint", geoPoint), ("address", address)])
+    }
+    }
+    
+        static func parse_channelLocationEmpty(_ reader: BufferReader) -> ChannelLocation? {
+            return Api.ChannelLocation.channelLocationEmpty
+        }
+        static func parse_channelLocation(_ reader: BufferReader) -> ChannelLocation? {
+            var _1: Api.GeoPoint?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.GeoPoint
+            }
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelLocation.channelLocation(geoPoint: _1!, address: _2!)
             }
             else {
                 return nil
@@ -17789,56 +17801,6 @@ extension Api {
         }
     
     }
-    enum ContactLink: TypeConstructorDescription {
-        case contactLinkUnknown
-        case contactLinkNone
-        case contactLinkContact
-    
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .contactLinkUnknown:
-                    if boxed {
-                        buffer.appendInt32(1599050311)
-                    }
-                    
-                    break
-                case .contactLinkNone:
-                    if boxed {
-                        buffer.appendInt32(-17968211)
-                    }
-                    
-                    break
-                case .contactLinkContact:
-                    if boxed {
-                        buffer.appendInt32(-721239344)
-                    }
-                    
-                    break
-    }
-    }
-    
-    func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .contactLinkUnknown:
-                return ("contactLinkUnknown", [])
-                case .contactLinkNone:
-                return ("contactLinkNone", [])
-                case .contactLinkContact:
-                return ("contactLinkContact", [])
-    }
-    }
-    
-        static func parse_contactLinkUnknown(_ reader: BufferReader) -> ContactLink? {
-            return Api.ContactLink.contactLinkUnknown
-        }
-        static func parse_contactLinkNone(_ reader: BufferReader) -> ContactLink? {
-            return Api.ContactLink.contactLinkNone
-        }
-        static func parse_contactLinkContact(_ reader: BufferReader) -> ContactLink? {
-            return Api.ContactLink.contactLinkContact
-        }
-    
-    }
     enum WebDocument: TypeConstructorDescription {
         case webDocumentNoProxy(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
         case webDocument(url: String, accessHash: Int64, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
@@ -19080,6 +19042,50 @@ extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.EncryptedChat.encryptedChatDiscarded(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    enum PeerLocated: TypeConstructorDescription {
+        case peerLocated(peer: Api.Peer, expires: Int32, distance: Int32)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .peerLocated(let peer, let expires, let distance):
+                    if boxed {
+                        buffer.appendInt32(-901375139)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    serializeInt32(distance, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .peerLocated(let peer, let expires, let distance):
+                return ("peerLocated", [("peer", peer), ("expires", expires), ("distance", distance)])
+    }
+    }
+    
+        static func parse_peerLocated(_ reader: BufferReader) -> PeerLocated? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.PeerLocated.peerLocated(peer: _1!, expires: _2!, distance: _3!)
             }
             else {
                 return nil

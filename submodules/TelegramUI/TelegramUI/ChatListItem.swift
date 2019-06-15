@@ -855,7 +855,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     statusState = .clock(PresentationResourcesChatList.clockFrameImage(item.presentationData.theme), PresentationResourcesChatList.clockMinImage(item.presentationData.theme))
                 } else if message.id.peerId != account.peerId {
                     if message.flags.contains(.Failed) {
-                        statusState = .none
+                        statusState = .failed(item.presentationData.theme.chatList.failedFillColor, item.presentationData.theme.chatList.failedForegroundColor)
                     } else {
                         if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
                             statusState = .read(item.presentationData.theme.chatList.checkmarkColor)

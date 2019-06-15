@@ -460,7 +460,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         //self.snapToBottomInsetUntilFirstInteraction = true
         
-        let messageViewQueue = self.messageViewQueue
+        let messageViewQueue = Queue.mainQueue() //self.messageViewQueue
         
         let fixedCombinedReadStates = Atomic<MessageHistoryViewReadState?>(value: nil)
         

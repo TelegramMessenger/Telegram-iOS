@@ -79,6 +79,130 @@ func validateAnimationComposition(json: [AnyHashable: Any]) -> Bool {
     return true
 }
 
+func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<String, NoError> {
+    return Signal({ subscriber in
+        let startTime = CACurrentMediaTime()
+        var drawingTime: Double = 0
+        var appendingTime: Double = 0
+        
+        let decompressedData = TGGUnzipData(data)
+        if let decompressedData = decompressedData, let json = (try? JSONSerialization.jsonObject(with: decompressedData, options: [])) as? [AnyHashable: Any] {
+            if validateAnimationComposition(json: json) {
+                let model = LOTComposition(json: json)
+                if let startFrame = model.startFrame?.int32Value, let endFrame = model.endFrame?.int32Value {
+                    print("read at \(CACurrentMediaTime() - startTime)")
+                    
+                    var randomId: Int64 = 0
+                    arc4random_buf(&randomId, 8)
+                    let path = NSTemporaryDirectory() + "\(randomId).mp4"
+                    let url = URL(fileURLWithPath: path)
+                    
+                    let videoSize = CGSize(width: size.width, height: size.height * 2.0)
+                    let scale = size.width / 512.0
+                    
+                    if let assetWriter = try? AVAssetWriter(outputURL: url, fileType: AVFileType.mp4) {
+                        let videoSettings: [String: AnyObject] = [AVVideoCodecKey : AVVideoCodecH264 as AnyObject, AVVideoWidthKey : videoSize.width as AnyObject, AVVideoHeightKey : videoSize.height as AnyObject]
+                        
+                        let assetWriterInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoSettings)
+                        let sourceBufferAttributes = [(kCVPixelBufferPixelFormatTypeKey as String): Int(kCVPixelFormatType_32ARGB),
+                                                      (kCVPixelBufferWidthKey as String): Float(videoSize.width),
+                                                      (kCVPixelBufferHeightKey as String): Float(videoSize.height)] as [String : Any]
+                        let pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: assetWriterInput, sourcePixelBufferAttributes: sourceBufferAttributes)
+                        
+                        assetWriter.add(assetWriterInput)
+                        
+                        if assetWriter.startWriting() {
+                            print("startedWriting at \(CACurrentMediaTime() - startTime)")
+                            assetWriter.startSession(atSourceTime: kCMTimeZero)
+                            
+                            var currentFrame: Int32 = 0
+                            let writeQueue = DispatchQueue(label: "assetWriterQueue")
+                            writeQueue.async {
+                                let container = LOTAnimationLayerContainer(model: model, size: size)
+                                
+                                let singleContext = DrawingContext(size: size, scale: 1.0, clear: true)
+                                let context = DrawingContext(size: videoSize, scale: 1.0, clear: false)
+                                
+                                let fps: Int32 = model.framerate?.int32Value ?? 30
+                                let frameDuration = CMTimeMake(1, fps)
+                                
+                                assetWriterInput.requestMediaDataWhenReady(on: writeQueue) {
+                                    while assetWriterInput.isReadyForMoreMediaData && startFrame + currentFrame < endFrame {
+                                        let lastFrameTime = CMTimeMake(Int64(currentFrame - startFrame), fps)
+                                        let presentationTime = currentFrame == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
+                                        
+                                        let drawStartTime = CACurrentMediaTime()
+                                        singleContext.withContext { context in
+                                            context.clear(CGRect(origin: CGPoint(), size: size))
+                                            context.saveGState()
+                                            context.scaleBy(x: scale, y: scale)
+                                            container?.renderFrame(startFrame + currentFrame, in: context)
+                                            context.restoreGState()
+                                        }
+                                        
+                                        if let image = singleContext.generateImage()?.cgImage {
+                                            
+                                            let maskDecode = [
+                                                CGFloat(1.0), CGFloat(1.0),
+                                                CGFloat(1.0), CGFloat(1.0),
+                                                CGFloat(1.0), CGFloat(1.0),
+                                                CGFloat(1.0), CGFloat(1.0)]
+                                            
+                                            let maskImage =  CGImage(width: image.width, height: image.height, bitsPerComponent: image.bitsPerComponent, bitsPerPixel: image.bitsPerPixel, bytesPerRow: image.bytesPerRow, space: image.colorSpace!, bitmapInfo:         image.bitmapInfo, provider: image.dataProvider!, decode: maskDecode, shouldInterpolate:  image.shouldInterpolate, intent: image.renderingIntent)!
+                                            
+                                            context.withFlippedContext { context in
+                                                context.setFillColor(UIColor.white.cgColor)
+                                                context.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: videoSize))
+                                                context.draw(image, in: CGRect(origin: CGPoint(x: 0.0, y: size.height), size: size))
+                                                context.draw(maskImage, in: CGRect(origin: CGPoint(), size: size))
+                                            }
+                                            drawingTime += CACurrentMediaTime() - drawStartTime
+                                            
+                                            let appendStartTime = CACurrentMediaTime()
+                                            if let image = context.generateImage() {
+                                                if let pixelBufferPool = pixelBufferAdaptor.pixelBufferPool {
+                                                    let pixelBufferPointer = UnsafeMutablePointer<CVPixelBuffer?>.allocate(capacity: 1)
+                                                    let status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, pixelBufferPointer)
+                                                    if let pixelBuffer = pixelBufferPointer.pointee, status == 0 {
+                                                        fillPixelBufferFromImage(image, pixelBuffer: pixelBuffer)
+                                                        
+                                                        pixelBufferAdaptor.append(pixelBuffer, withPresentationTime: presentationTime)
+                                                        pixelBufferPointer.deinitialize(count: 1)
+                                                    } else {
+                                                        break
+                                                    }
+                                                    
+                                                    pixelBufferPointer.deallocate()
+                                                } else {
+                                                    break
+                                                }
+                                            }
+                                            appendingTime += CACurrentMediaTime() - appendStartTime
+                                        }
+                                        currentFrame += 1
+                                    }
+                                    
+                                    if startFrame + currentFrame == endFrame {
+                                        assetWriterInput.markAsFinished()
+                                        assetWriter.finishWriting {
+                                            subscriber.putNext(path)
+                                            subscriber.putCompletion()
+                                            print("animation render time \(CACurrentMediaTime() - startTime)")
+                                            print("of which drawing time \(drawingTime)")
+                                            print("of which appending time \(appendingTime)")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return EmptyDisposable
+    })
+}
+
 func convertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<String, NoError> {
     return Signal({ subscriber in
         let startTime = CACurrentMediaTime()
@@ -131,6 +255,7 @@ func convertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<St
                                         let lastFrameTime = CMTimeMake(Int64(currentFrame - startFrame), fps)
                                         let presentationTime = currentFrame == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
                                         
+                                        let drawStartTime = CACurrentMediaTime()
                                         singleContext.withContext { context in
                                             context.clear(CGRect(origin: CGPoint(), size: size))
                                             context.saveGState()
@@ -140,7 +265,7 @@ func convertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<St
                                         }
                                         
                                         if let image = singleContext.generateImage()?.cgImage {
-                                            let drawStartTime = CACurrentMediaTime()
+                                            
                                             let maskDecode = [
                                                 CGFloat(1.0), CGFloat(1.0),
                                                 CGFloat(1.0), CGFloat(1.0),

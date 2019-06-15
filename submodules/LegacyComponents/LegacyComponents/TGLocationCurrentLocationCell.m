@@ -341,6 +341,48 @@ const CGFloat TGLocationCurrentLocationCellHeight = 68;
     [self setNeedsLayout];
 }
 
+- (void)configureForGroupLocationWithAddress:(NSString *)address
+{
+    _messageId = 0;
+    
+    UIImage *icon = TGComponentsImageNamed(@"LocationMessagePinIcon");
+    if (_pallete != nil)
+        icon = TGTintedImage(icon, _pallete.iconColor);
+    _iconView.image = icon;
+    _titleLabel.textColor = self.pallete != nil ? self.pallete.accentColor : TGAccentColor();
+    _elapsedView.hidden = true;
+    
+    if (_isCurrentLocation)
+    {
+        [UIView transitionWithView:self duration:0.2f options:UIViewAnimationOptionTransitionCrossDissolve animations:^
+         {
+             _titleLabel.text = TGLocalized(@"Map.SetThisLocation");
+             _subtitleLabel.text = [self _subtitleForAddress:address];
+             
+             _circleView.alpha = 1.0f;
+             _titleLabel.alpha = 1.0f;
+             _subtitleLabel.alpha = 1.0f;
+         } completion:nil];
+        
+        _isCurrentLocation = false;
+    }
+    else
+    {
+        [UIView transitionWithView:self duration:0.2f options:UIViewAnimationOptionTransitionCrossDissolve animations:^
+         {
+             _subtitleLabel.text = [self _subtitleForAddress:address];
+         } completion:nil];
+    }
+    
+    [self setCircleColor:_pallete != nil ? _pallete.locationColor : UIColorRGB(0x008df2)];
+    
+    _separatorView.hidden = true;
+    [_wavesView stop];
+    _wavesView.hidden = true;
+    
+    [self setNeedsLayout];
+}
+
 - (NSString *)_subtitleForAddress:(NSString *)address
 {
     if (address != nil && address.length == 0)

@@ -429,10 +429,10 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
 
 - (void)setPinRaised:(bool)raised
 {
-    [self setPinRaised:raised animated:false completion:nil];
+    [self setPinRaised:raised avatar:false animated:false completion:nil];
 }
 
-- (void)setPinRaised:(bool)raised animated:(bool)animated completion:(void (^)(void))completion
+- (void)setPinRaised:(bool)raised avatar:(bool)avatar animated:(bool)animated completion:(void (^)(void))completion
 {
     _pinRaised = raised;
     
@@ -447,6 +447,8 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             [UIView animateWithDuration:0.2 delay:0.0 options:7 << 16 | UIViewAnimationOptionAllowAnimatedContent animations:^
             {
                 _shadowView.center = CGPointMake(TGScreenPixel, -66.0f);
+                if (avatar)
+                    _avatarView.center = CGPointMake(TGScreenPixel, -71.0f);
             } completion:^(BOOL finished) {
                 if (finished && completion != nil)
                     completion();
@@ -457,6 +459,8 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             [UIView animateWithDuration:0.2 delay:0.0 usingSpringWithDamping:0.6 initialSpringVelocity:0.0 options:UIViewAnimationOptionAllowAnimatedContent animations:^
             {
                 _shadowView.center = CGPointMake(TGScreenPixel, -36.0f);
+                if (avatar)
+                    _avatarView.center = CGPointMake(TGScreenPixel, -41.0f);
             } completion:^(BOOL finished)
             {
                 if (finished && completion != nil)
@@ -467,6 +471,8 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     else
     {
         _shadowView.center = CGPointMake(TGScreenPixel, raised ? -66.0f : -36.0f);
+        if (avatar)
+            _avatarView.center = CGPointMake(TGScreenPixel, raised ? -71.0 : -41.0f);
         
         if (completion != nil)
             completion();

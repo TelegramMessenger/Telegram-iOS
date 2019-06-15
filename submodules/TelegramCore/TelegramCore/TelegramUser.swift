@@ -302,8 +302,9 @@ extension TelegramUser {
     
     static func merge(_ lhs: TelegramUser?, rhs: Api.User) -> TelegramUser? {
         switch rhs {
-            case let .user(flags, _, accessHash, _, _, username, _, photo, _, _, restrictionReason, botInlinePlaceholder, _):
-                if let _ = accessHash {
+            case let .user(flags, _, _, _, _, username, _, photo, _, _, restrictionReason, botInlinePlaceholder, _):
+                let isMin = (flags & (1 << 20)) != 0
+                if !isMin {
                     return TelegramUser(user: rhs)
                 } else {
                     let telegramPhoto = photo.flatMap(parsedTelegramProfilePhoto) ?? []

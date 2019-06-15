@@ -202,7 +202,7 @@ private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocation, additi
 private final class PeerCachedDataContext {
     var viewIds = Set<Int32>()
     var timestamp: Double?
-    var referenceData: CachedPeerData?
+    var hasCachedData: Bool = false
     let disposable = MetaDisposable()
     
     deinit {
@@ -780,22 +780,22 @@ public final class AccountViewTracker {
         }
     }
     
-    private func updateCachedPeerData(peerId: PeerId, viewId: Int32, referenceData: CachedPeerData?) {
+    private func updateCachedPeerData(peerId: PeerId, viewId: Int32, hasCachedData: Bool) {
         self.queue.async {
             let context: PeerCachedDataContext
             var dataUpdated = false
             if let existingContext = self.cachedDataContexts[peerId] {
                 context = existingContext
-                context.referenceData = referenceData
+                context.hasCachedData = hasCachedData
                 if context.timestamp == nil || abs(CFAbsoluteTimeGetCurrent() - context.timestamp!) > 60.0 * 5 {
                     context.timestamp = CFAbsoluteTimeGetCurrent()
                     dataUpdated = true
                 }
             } else {
                 context = PeerCachedDataContext()
-                context.referenceData = referenceData
+                context.hasCachedData = hasCachedData
                 self.cachedDataContexts[peerId] = context
-                if context.referenceData == nil || context.timestamp == nil || abs(CFAbsoluteTimeGetCurrent() - context.timestamp!) > 60.0 * 5 {
+                if !context.hasCachedData || context.timestamp == nil || abs(CFAbsoluteTimeGetCurrent() - context.timestamp!) > 60.0 * 5 {
                     context.timestamp = CFAbsoluteTimeGetCurrent()
                     dataUpdated = true
                 }
@@ -816,7 +816,7 @@ public final class AccountViewTracker {
                 context.viewIds.remove(id)
                 if context.viewIds.isEmpty {
                     context.disposable.set(nil)
-                    context.referenceData = nil
+                    context.hasCachedData = false
                 }
             }
         }
@@ -968,7 +968,7 @@ public final class AccountViewTracker {
             }
         }, next: { [weak self] next, viewId in
             if let strongSelf = self {
-                strongSelf.updateCachedPeerData(peerId: peerId, viewId: viewId, referenceData: next.cachedData)
+                strongSelf.updateCachedPeerData(peerId: peerId, viewId: viewId, hasCachedData: next.cachedData != nil)
             }
         }, disposed: { [weak self] viewId in
             if let strongSelf = self {

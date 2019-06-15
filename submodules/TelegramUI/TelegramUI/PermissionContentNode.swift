@@ -9,6 +9,7 @@ final class PermissionContentNode: ASDisplayNode {
     let kind: PermissionKind
     
     private let iconNode: ASImageNode
+    private let nearbyIconNode: PeersNearbyIconNode?
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let actionButton: SolidRoundedButtonNode
@@ -32,6 +33,12 @@ final class PermissionContentNode: ASDisplayNode {
         self.iconNode.isLayerBacked = true
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.displaysAsynchronously = false
+        
+        if kind == .nearbyLocation {
+            self.nearbyIconNode = PeersNearbyIconNode(theme: theme)
+        } else {
+            self.nearbyIconNode = nil
+        }
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 0
@@ -62,6 +69,9 @@ final class PermissionContentNode: ASDisplayNode {
         self.privacyPolicyButton.isHidden = openPrivacyPolicy == nil
         
         self.addSubnode(self.iconNode)
+        if let nearbyIconNode = self.nearbyIconNode {
+            self.addSubnode(nearbyIconNode)
+        }
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.actionButton)
@@ -110,11 +120,17 @@ final class PermissionContentNode: ASDisplayNode {
             imageSize = icon.size
             contentHeight += imageSize.height + imageSpacing
         }
+        if let _ = self.nearbyIconNode, size.width < size.height {
+            imageSpacing = floor(availableHeight * 0.12)
+            imageSize = CGSize(width: 120.0, height: 120.0)
+            contentHeight += imageSize.height + imageSpacing
+        }
 
         let privacySpacing: CGFloat = max(30.0 + privacyButtonSize.height, (availableHeight - titleSubtitleSpacing - buttonSpacing - imageSize.height - imageSpacing) / 2.0)
         
         let contentOrigin = insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0)
         let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: contentOrigin), size: imageSize)
+        let nearbyIconFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: contentOrigin), size: imageSize)
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: iconFrame.maxY + imageSpacing), size: titleSize)
         let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSubtitleSpacing), size: textSize)
         let buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonWidth) / 2.0), y: textFrame.maxY + buttonSpacing), size: CGSize(width: buttonWidth, height: buttonHeight))
@@ -122,6 +138,9 @@ final class PermissionContentNode: ASDisplayNode {
         
         
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
+        if let nearbyIconNode = self.nearbyIconNode {
+            transition.updateFrame(node: nearbyIconNode, frame: nearbyIconFrame)
+        }
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         transition.updateFrame(node: self.textNode, frame: textFrame)
         transition.updateFrame(node: self.actionButton, frame: buttonFrame)

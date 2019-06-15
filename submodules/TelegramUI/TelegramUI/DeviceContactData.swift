@@ -192,17 +192,20 @@ public final class DeviceContactInstantMessagingProfileData: Equatable, Hashable
     }
 }
 
-public extension DeviceContactInstantMessagingProfileData {
+public let phonebookUsernamePathPrefix = "@id"
+private let phonebookUsernamePrefix = "https://t.me/" + phonebookUsernamePathPrefix
+
+public extension DeviceContactUrlData {
     convenience init(appProfile: PeerId) {
-        self.init(label: "mobile", service: "Telegram", username: "@id\(appProfile.id)")
+        self.init(label: "Telegram", value: "\(phonebookUsernamePrefix)\(appProfile.id)")
     }
 }
 
 func parseAppSpecificContactReference(_ value: String) -> PeerId? {
-    if !value.hasPrefix("@id") {
+    if !value.hasPrefix(phonebookUsernamePrefix) {
         return nil
     }
-    let idString = String(value[value.index(value.startIndex, offsetBy: 3)...])
+    let idString = String(value[value.index(value.startIndex, offsetBy: phonebookUsernamePrefix.count)...])
     if let id = Int32(idString) {
         return PeerId(namespace: Namespaces.Peer.CloudUser, id: id)
     }

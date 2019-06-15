@@ -10,6 +10,7 @@ private enum ChatReportPeerTitleButton: Equatable {
     case block
     case addContact(String?)
     case shareMyPhoneNumber
+    case reportSpam
     
     func title(strings: PresentationStrings) -> String {
         switch self {
@@ -23,6 +24,8 @@ private enum ChatReportPeerTitleButton: Equatable {
                 }
             case .shareMyPhoneNumber:
                 return strings.Conversation_ShareMyPhoneNumber
+            case .reportSpam:
+                return strings.Conversation_ReportSpam
         }
     }
 }
@@ -47,6 +50,8 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
                 buttons.append(.shareMyPhoneNumber)
             }
         }
+    } else if let _ = state.renderedPeer?.chatMainPeer {
+        buttons.append(.reportSpam)
     }
     return buttons
 }
@@ -142,7 +147,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                     nextButtonOrigin += buttonWidth
                 }
             } else {
-                let areaWidth = width - maxInset * 2.0
+                let additionalRightInset: CGFloat = 18.0
+                let areaWidth = width - maxInset * 2.0 - additionalRightInset
                 let maxButtonWidth = floor(areaWidth / CGFloat(self.buttons.count))
                 let buttonSizes = self.buttons.map { button -> CGFloat in
                     return button.1.sizeThatFits(CGSize(width: maxButtonWidth, height: 100.0)).width
@@ -172,7 +178,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 switch button {
                     case .shareMyPhoneNumber:
                         self.interfaceInteraction?.shareAccountContact()
-                    case .block:
+                    case .block, .reportSpam:
                         self.interfaceInteraction?.reportPeer()
                     case .addContact:
                         self.interfaceInteraction?.presentPeerContact()

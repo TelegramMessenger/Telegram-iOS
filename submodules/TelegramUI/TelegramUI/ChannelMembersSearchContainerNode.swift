@@ -825,6 +825,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                 updateActivity(true)
                 let foundGroupMembers: Signal<[RenderedChannelParticipant], NoError>
                 let foundMembers: Signal<[RenderedChannelParticipant], NoError>
+                let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError>
                 
                 switch mode {
                     case .searchMembers, .banAndPromoteActions:
@@ -884,8 +885,15 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         foundMembers = .single([])
                 }
                 
-                return combineLatest(foundGroupMembers, foundMembers, themeAndStringsPromise.get(), statePromise.get())
-                |> map { foundGroupMembers, foundMembers, themeAndStrings, state -> [ChannelMembersSearchEntry]? in
+                if mode == .banAndPromoteActions || mode == .inviteActions {
+                    foundRemotePeers = .single(([], [])) |> then(searchPeers(account: context.account, query: query)
+                        |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                } else {
+                    foundRemotePeers = .single(([], []))
+                }
+                
+                return combineLatest(foundGroupMembers, foundMembers, foundRemotePeers, themeAndStringsPromise.get(), statePromise.get())
+                |> map { foundGroupMembers, foundMembers, foundRemotePeers, themeAndStrings, state -> [ChannelMembersSearchEntry]? in
                     var entries: [ChannelMembersSearchEntry] = []
                     
                     var existingPeerIds = Set<PeerId>()
@@ -1061,6 +1069,24 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             }
                             
                             entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: [], revealed: false, enabled: enabled), section: section, dateTimeFormat: themeAndStrings.4, addIcon: addIcon))
+                            index += 1
+                        }
+                    }
+                    
+                    for foundPeer in foundRemotePeers.0 {
+                        let peer = foundPeer.peer
+                        if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
+                            existingPeerIds.insert(peer.id)
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: themeAndStrings.4))
+                            index += 1
+                        }
+                    }
+                    
+                    for foundPeer in foundRemotePeers.1 {
+                        let peer = foundPeer.peer
+                        if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
+                            existingPeerIds.insert(peer.id)
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: themeAndStrings.4))
                             index += 1
                         }
                     }

@@ -187,7 +187,7 @@ class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 17.0), size: textLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - textLayout.size.width) / 2.0), y: 17.0), size: textLayout.size)
                 }
             })
         }

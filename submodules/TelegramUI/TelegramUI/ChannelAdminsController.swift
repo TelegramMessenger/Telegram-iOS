@@ -505,7 +505,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
             guard let peer = peer, let user = user else {
                 return
             }
-            presentControllerImpl?(UndoOverlayController(context: context, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(peer.displayTitle, user.displayTitle).0), elevatedLayout: false, action: { _ in }), nil)
+            presentControllerImpl?(UndoOverlayController(context: context, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(user.displayTitle, peer.displayTitle).0), elevatedLayout: false, action: { _ in }), nil)
         })
     }
     

@@ -136,6 +136,8 @@ private let chatList = PresentationThemeChatList(
     messageDraftTextColor: UIColor(rgb: 0xdd4b39), //!!!
     checkmarkColor: accentColor,
     pendingIndicatorColor: UIColor(rgb: 0x8E8E93),
+    failedFillColor: destructiveColor,
+    failedForegroundColor: .white,
     muteIconColor: UIColor(rgb: 0x8E8E93),
     unreadBadgeActiveBackgroundColor: accentColor,
     unreadBadgeActiveTextColor: UIColor(rgb: 0xffffff),

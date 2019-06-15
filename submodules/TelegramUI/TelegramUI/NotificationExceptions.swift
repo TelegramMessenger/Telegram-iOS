@@ -158,7 +158,7 @@ public class NotificationExceptionsController: ViewController {
     }
     
     @objc private func removeAllPressed() {
-        self.controllerNode
+        self.controllerNode.removeAll()
     }
     
     @objc private func editPressed() {

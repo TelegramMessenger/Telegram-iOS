@@ -51,6 +51,7 @@ public final class SharedWakeupManager {
     
     private var inForeground: Bool = false
     private var hasActiveAudioSession: Bool = false
+    private var activeExplicitExtensionTimer: SwiftSignalKit.Timer?
     private var allowBackgroundTimeExtensionDeadline: Double?
     private var isInBackgroundExtension: Bool = false
     
@@ -74,6 +75,10 @@ public final class SharedWakeupManager {
                 return
             }
             strongSelf.inForeground = value
+            if value {
+                strongSelf.activeExplicitExtensionTimer?.invalidate()
+                strongSelf.activeExplicitExtensionTimer = nil
+            }
             strongSelf.checkTasks()
         })
         
@@ -158,10 +163,23 @@ public final class SharedWakeupManager {
         }
     }
     
-    func allowBackgroundTimeExtension(timeout: Double) {
+    func allowBackgroundTimeExtension(timeout: Double, extendNow: Bool = false) {
         let shouldCheckTasks = self.allowBackgroundTimeExtensionDeadline == nil
         self.allowBackgroundTimeExtensionDeadline = CACurrentMediaTime() + timeout
-        if shouldCheckTasks {
+        if extendNow {
+            if self.activeExplicitExtensionTimer == nil {
+                self.activeExplicitExtensionTimer = SwiftSignalKit.Timer(timeout: 20.0, repeat: false, completion: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.activeExplicitExtensionTimer?.invalidate()
+                    strongSelf.activeExplicitExtensionTimer = nil
+                    strongSelf.checkTasks()
+                }, queue: .mainQueue())
+                self.activeExplicitExtensionTimer?.start()
+            }
+        }
+        if shouldCheckTasks || extendNow {
             self.checkTasks()
         }
     }
@@ -181,6 +199,9 @@ public final class SharedWakeupManager {
                     hasTasksForBackgroundExtension = true
                     break
                 }
+            }
+            if self.activeExplicitExtensionTimer != nil {
+                hasTasksForBackgroundExtension = true
             }
             
             let canBeginBackgroundExtensionTasks = self.allowBackgroundTimeExtensionDeadline.flatMap({ CACurrentMediaTime() < $0 }) ?? false
@@ -231,9 +252,9 @@ public final class SharedWakeupManager {
     }
     
     private func updateAccounts() {
-        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension {
+        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || self.activeExplicitExtensionTimer != nil {
             for (account, primary, tasks) in self.accountsAndTasks {
-                if (self.inForeground && primary) || !tasks.isEmpty {
+                if (self.inForeground && primary) || !tasks.isEmpty || (self.activeExplicitExtensionTimer != nil && primary) {
                     account.shouldBeServiceTaskMaster.set(.single(.always))
                 } else {
                     account.shouldBeServiceTaskMaster.set(.single(.never))
