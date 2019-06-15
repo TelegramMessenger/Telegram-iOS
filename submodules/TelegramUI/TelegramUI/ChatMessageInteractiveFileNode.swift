@@ -105,7 +105,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.consumableContentNode = ASImageNode()
         
         super.init()
-        
+        self.backgroundColor = UIColor.red.withAlphaComponent(0.5)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.descriptionNode)
         self.addSubnode(self.fetchingTextNode)
@@ -489,6 +489,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         if hasStreamingProgress {
                             fittedLayoutSize.width += streamingProgressDiameter + 6.0
                         }
+                        fittedLayoutSize.width = max(fittedLayoutSize.width, boundingWidth + 2.0)
                     } else {
                         streamingCacheStatusFrame = CGRect()
                     }
@@ -633,8 +634,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     }
     
     private func updateStatus(animated: Bool) {
-        
-        
         guard let resourceStatus = self.resourceStatus else {
             return
         }

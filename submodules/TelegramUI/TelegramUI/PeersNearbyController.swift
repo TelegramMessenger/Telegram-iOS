@@ -305,28 +305,39 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         guard let coordinate = coordinate else {
             return .single(nil)
         }
-        let poll = peersNearby(network: context.account.network, accountStateManager: context.account.stateManager, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude))
-        |> mapToSignal { peersNearby -> Signal<PeersNearbyData?, NoError> in
-            return context.account.postbox.transaction { transaction -> PeersNearbyData? in
-                var users: [PeerNearbyEntry] = []
-                var groups: [PeerNearbyEntry] = []
-                for peerNearby in peersNearby {
-                    if peerNearby.id != context.account.peerId, let peer = transaction.getPeer(peerNearby.id) {
-                        if peerNearby.id.namespace == Namespaces.Peer.CloudUser {
-                            users.append(PeerNearbyEntry(peer: (peer, nil), expires: peerNearby.expires, distance: peerNearby.distance))
-                        } else {
-                            let cachedData = transaction.getPeerCachedData(peerId: peerNearby.id) as? CachedChannelData
-                            groups.append(PeerNearbyEntry(peer: (peer, cachedData), expires: peerNearby.expires, distance: peerNearby.distance))
+        
+        return Signal { subscriber in
+            let peersNearbyContext = PeersNearbyContext(network: context.account.network, accountStateManager: context.account.stateManager, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude))
+            
+            let disposable = (peersNearbyContext.get()
+            |> mapToSignal { peersNearby -> Signal<PeersNearbyData?, NoError> in
+                return context.account.postbox.transaction { transaction -> PeersNearbyData? in
+                    var users: [PeerNearbyEntry] = []
+                    var groups: [PeerNearbyEntry] = []
+                    for peerNearby in peersNearby {
+                        if peerNearby.id != context.account.peerId, let peer = transaction.getPeer(peerNearby.id) {
+                            if peerNearby.id.namespace == Namespaces.Peer.CloudUser {
+                                users.append(PeerNearbyEntry(peer: (peer, nil), expires: peerNearby.expires, distance: peerNearby.distance))
+                            } else {
+                                let cachedData = transaction.getPeerCachedData(peerId: peerNearby.id) as? CachedChannelData
+                                groups.append(PeerNearbyEntry(peer: (peer, cachedData), expires: peerNearby.expires, distance: peerNearby.distance))
+                            }
                         }
                     }
+                    return PeersNearbyData(users: users, groups: groups, channels: [])
                 }
-                return PeersNearbyData(users: users, groups: groups, channels: [])
+            }).start(next: { data in
+                subscriber.putNext(data)
+            })
+            
+            return ActionDisposable {
+                disposable.dispose()
+                let _ = peersNearbyContext.get()
             }
         }
-        return (poll |> then(.complete() |> suspendAwareDelay(25.0, queue: Queue.concurrentDefaultQueue()))) |> restart
     }
 
-    dataPromise.set(dataSignal)
+    dataPromise.set((dataSignal |> then(.complete() |> suspendAwareDelay(25.0, queue: Queue.concurrentDefaultQueue()))) |> restart)
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), dataPromise.get())
     |> deliverOnMainQueue

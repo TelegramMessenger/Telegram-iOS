@@ -410,6 +410,10 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
         proceedImpl?()
     })])
     
+    contentNode.complete = {
+        proceedImpl?()
+    }
+    
     let controller = AlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), contentNode: contentNode)
     let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
         controller?.theme = AlertControllerTheme(presentationTheme: presentationData.theme)
