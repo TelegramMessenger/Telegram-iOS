@@ -105,7 +105,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.consumableContentNode = ASImageNode()
         
         super.init()
-        self.backgroundColor = UIColor.red.withAlphaComponent(0.5)
+        
         self.addSubnode(self.titleNode)
         self.addSubnode(self.descriptionNode)
         self.addSubnode(self.fetchingTextNode)
