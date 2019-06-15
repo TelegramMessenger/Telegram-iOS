@@ -424,7 +424,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     func item(_ arguments: GroupInfoArguments) -> ListViewItem {
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, cachedData, state, updatingAvatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.context.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.context.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()

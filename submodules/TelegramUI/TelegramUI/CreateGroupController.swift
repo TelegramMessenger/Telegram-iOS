@@ -142,7 +142,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
     func item(_ arguments: CreateGroupArguments) -> ListViewItem {
         switch self {
             case let .groupInfo(theme, strings, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, updatingImage: avatar, tag: CreateGroupEntryTag.info)

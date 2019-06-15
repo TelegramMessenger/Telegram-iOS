@@ -256,7 +256,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
     func item(_ arguments: ChannelAdminControllerArguments) -> ListViewItem {
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rightsTitle(theme, text):

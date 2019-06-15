@@ -117,7 +117,7 @@ final class ItemListAvatarAndNameInfoItemContext {
 
 enum ItemListAvatarAndNameInfoItemStyle {
     case plain
-    case blocks(withTopInset: Bool)
+    case blocks(withTopInset: Bool, withExtendedBottomInset: Bool)
 }
 
 enum ItemListAvatarAndNameInfoItemUpdatingAvatar: Equatable {
@@ -489,7 +489,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
             let separatorHeight = UIScreenPixel
             
             let contentSize: CGSize
-            let insets: UIEdgeInsets
+            var insets: UIEdgeInsets
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             switch item.style {
@@ -498,7 +498,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                     itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
                     contentSize = CGSize(width: params.width, height: 96.0)
                     insets = itemListNeighborsPlainInsets(neighbors)
-                case let .blocks(withTopInset):
+                case let .blocks(withTopInset, withExtendedBottomInset):
                     itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
                     contentSize = CGSize(width: params.width, height: 92.0)
@@ -513,6 +513,9 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                 topInset = separatorHeight + 35.0
                         }
                         insets = UIEdgeInsets(top: topInset, left: 0.0, bottom: separatorHeight, right: 0.0)
+                        if withExtendedBottomInset {
+                            insets.bottom += 12.0
+                        }
                     }
             }
             
@@ -623,7 +626,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: contentSize.height))
                             strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel))
                             strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: layoutSize.height - insets.top - separatorHeight), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: layoutSize.height - insets.top - insets.bottom), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     }
                     
                     let _ = nameNodeApply()
