@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import TelegramPresentationData
 
 private let titleFont = Font.medium(16.0)
 private let textFont = Font.regular(15.0)

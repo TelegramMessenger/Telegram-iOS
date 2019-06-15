@@ -168,16 +168,6 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
     } catch let e {
         print("\(e)")
     }
-    
-    if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: appGroupPath), includingPropertiesForKeys: [], options: []) {
-        for url in files {
-            if url.lastPathComponent == "accounts-metadata" ||
-                url.lastPathComponent.hasSuffix("logs") ||
-                url.lastPathComponent.hasPrefix("account-") {
-                let _ = try? FileManager.default.moveItem(at: url, to: URL(fileURLWithPath: rootPath + "/" + url.lastPathComponent))
-            }
-        }
-    }
 }
 
 public final class TemporaryAccount {

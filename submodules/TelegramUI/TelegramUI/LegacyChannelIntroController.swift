@@ -1,6 +1,7 @@
 import Foundation
 import TelegramCore
 import Display
+import TelegramPresentationData
 
 import TelegramUIPrivateModule
 

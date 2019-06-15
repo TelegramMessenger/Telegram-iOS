@@ -3,6 +3,7 @@ import UIKit
 import Postbox
 import TelegramCore
 import AsyncDisplayKit
+import TelegramPresentationData
 
 protocol InstantPageItem {
     var frame: CGRect { get set }

@@ -5,6 +5,8 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider, PreviewingHostView {
     var inputAccessoryHeight: (() -> CGFloat)?

@@ -4,7 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-
+import TelegramPresentationData
 import LegacyComponents
 
 final class AuthorizationSequenceSignUpController: ViewController {

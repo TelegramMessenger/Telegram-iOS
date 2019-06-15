@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
+import TelegramPresentationData
 
 private struct EditSettingsItemArguments {
     let context: AccountContext

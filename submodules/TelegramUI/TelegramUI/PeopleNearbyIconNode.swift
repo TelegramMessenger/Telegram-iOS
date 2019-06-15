@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-
+import TelegramPresentationData
 import LegacyComponents
 
 private final class PeopleNearbyIconWavesNodeParams: NSObject {

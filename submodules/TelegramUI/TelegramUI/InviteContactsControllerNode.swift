@@ -5,6 +5,8 @@ import UIKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private enum InviteContactsEntryId: Hashable {
     case option(index: Int)

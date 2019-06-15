@@ -1,7 +1,9 @@
 #import "TGComposeController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGBridgeSendMessageSignals.h"
-#import "TGBridgeUser.h"
 
 #import "WKInterfaceGroup+Signals.h"
 #import "TGBridgeMediaSignals.h"

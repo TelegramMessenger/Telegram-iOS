@@ -5,6 +5,8 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 public enum ChatMessageItemContent: Sequence {
     case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes)

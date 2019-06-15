@@ -6,6 +6,8 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 import WebP
+import BuildConfig
+import LightweightAccountData
 
 private var sharedLogger: Logger?
 

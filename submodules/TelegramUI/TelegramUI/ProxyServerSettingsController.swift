@@ -9,6 +9,7 @@ import MtProtoKit
 #else
 import MtProtoKitDynamic
 #endif
+import TelegramPresentationData
 
 private func shareLink(for server: ProxyServerSettings) -> String {
     var link: String

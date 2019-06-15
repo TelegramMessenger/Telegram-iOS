@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
+import TelegramPresentationData
 
 private func generateCheckImage(partial: Bool, color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 11.0, height: 9.0), rotatedContext: { size, context in

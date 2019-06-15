@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import TelegramPresentationData
 
 enum ChatMessageInteractiveMediaDownloadState: Equatable {
     case remote

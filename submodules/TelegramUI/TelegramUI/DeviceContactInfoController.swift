@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import MessageUI
+import TelegramPresentationData
 
 private enum DeviceContactInfoAction {
     case sendMessage

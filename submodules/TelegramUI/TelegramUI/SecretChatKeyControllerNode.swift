@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import Postbox
+import TelegramPresentationData
 
 private func processHexString(_ string: String) -> String {
     var result = ""

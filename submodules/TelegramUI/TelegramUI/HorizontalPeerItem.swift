@@ -5,6 +5,7 @@ import Postbox
 import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 enum HorizontalPeerItemMode {
     case list

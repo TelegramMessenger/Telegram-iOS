@@ -3,6 +3,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Postbox
+import TelegramUIPreferences
 
 private struct FetchManagerLocationEntryId: Hashable {
     let location: FetchManagerLocation

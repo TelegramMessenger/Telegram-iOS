@@ -3,7 +3,7 @@ import UIKit
 import SwiftSignalKit
 import TelegramCore
 import Postbox
-
+import TelegramUIPreferences
 import TelegramUIPrivateModule
 import LegacyComponents
 

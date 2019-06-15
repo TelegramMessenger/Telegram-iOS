@@ -5,6 +5,9 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
+import DeviceAccess
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
@@ -122,7 +125,7 @@ public class ContactsController: ViewController {
         })
         
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.contactsPermissionWarningKey()), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
+            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(subject: .contacts), combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.contactsPermissionWarningKey()), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
             |> map { noticeView, preferences, sharedData -> (Bool, ContactsSortOrder) in
                 let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings ?? ContactsSettings.defaultSettings
                 let synchronizeDeviceContacts: Bool = settings.synchronizeContacts
@@ -372,7 +375,7 @@ public class ContactsController: ViewController {
     }
     
     @objc func addPressed() {
-        let _ = (DeviceAccess.authorizationStatus(context: self.context, subject: .contacts)
+        let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let strongSelf = self else {
@@ -395,7 +398,7 @@ public class ContactsController: ViewController {
                         }
                     })), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 case .notDetermined:
-                    DeviceAccess.authorizeAccess(to: .contacts, context: strongSelf.context)
+                    DeviceAccess.authorizeAccess(to: .contacts)
                 default:
                     let presentationData = strongSelf.presentationData
                     strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {

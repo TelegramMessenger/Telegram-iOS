@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 enum ChatNavigationButtonAction {
     case openChatInfo

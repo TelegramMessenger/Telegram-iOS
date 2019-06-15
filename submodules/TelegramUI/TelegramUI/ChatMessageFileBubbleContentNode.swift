@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramUIPreferences
 
 class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     private let interactiveFileNode: ChatMessageInteractiveFileNode

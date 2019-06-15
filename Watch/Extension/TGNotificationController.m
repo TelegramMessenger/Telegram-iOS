@@ -1,4 +1,7 @@
 #import "TGNotificationController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGStringUtils.h"
 #import "TGLocationUtils.h"
@@ -10,14 +13,7 @@
 
 #import "TGBridgeMediaSignals.h"
 #import "TGBridgeClient.h"
-#import "TGBridgeSubscriptions.h"
-#import "TGBridgeChatMessages.h"
-#import "TGBridgeMessage.h"
-#import "TGBridgeChat.h"
-#import "TGBridgeUser.h"
 #import "TGBridgeUserCache.h"
-
-#import "TGBridgePeerIdAdapter.h"
 
 #import <WatchConnectivity/WatchConnectivity.h>
 #import <UserNotifications/UserNotifications.h>

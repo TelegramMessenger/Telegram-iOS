@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import LegacyComponents
+import TelegramPresentationData
+import TelegramUIPreferences
 
 enum ChatTitleContent {
     case peer(peerView: PeerView, onlineMemberCount: Int32?)

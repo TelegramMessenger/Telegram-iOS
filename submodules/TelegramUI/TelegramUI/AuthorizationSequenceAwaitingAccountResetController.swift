@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import TelegramPresentationData
 
 final class AuthorizationSequenceAwaitingAccountResetController: ViewController {
     private var controllerNode: AuthorizationSequenceAwaitingAccountResetControllerNode {

@@ -1,10 +1,12 @@
 #import "TGLocationController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 
 #import "TGBridgeLocationSignals.h"
 
 #import "TGBridgeLocationVenue+TGTableItem.h"
-#import "TGBridgeLocationMediaAttachment.h"
 
 #import "WKInterfaceTable+TGDataDrivenTable.h"
 #import "TGTableDeltaUpdater.h"

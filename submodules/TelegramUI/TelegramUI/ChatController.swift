@@ -9,6 +9,9 @@ import SafariServices
 import MobileCoreServices
 import Intents
 import LegacyComponents
+import TelegramPresentationData
+import TelegramUIPreferences
+import DeviceAccess
 
 public enum ChatControllerPeekActions {
     case standard
@@ -2855,7 +2858,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     }
                 })
             }
-            DeviceAccess.authorizeAccess(to: .microphone(isVideo ? .video : .audio), context: strongSelf.context, presentationData: strongSelf.presentationData, present: { c, a in
+            DeviceAccess.authorizeAccess(to: .microphone(isVideo ? .video : .audio), presentationData: strongSelf.presentationData, present: { c, a in
                 self?.present(c, in: .window(.root), with: a)
             }, openSettings: {
                 self?.context.sharedContext.applicationBindings.openSettings()
@@ -2864,7 +2867,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     return
                 }
                 if isVideo {
-                    DeviceAccess.authorizeAccess(to: .camera, context: strongSelf.context, presentationData: strongSelf.presentationData, present: { c, a in
+                    DeviceAccess.authorizeAccess(to: .camera, presentationData: strongSelf.presentationData, present: { c, a in
                         self?.present(c, in: .window(.root), with: a)
                     }, openSettings: {
                         self?.context.sharedContext.applicationBindings.openSettings()
@@ -6800,7 +6803,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         guard case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.CloudUser else {
             return
         }
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             let _ = (self.context.account.postbox.loadedPeerWithId(peerId)
             |> deliverOnMainQueue).start(next: { peer in
                 if let peer = peer as? TelegramUser {

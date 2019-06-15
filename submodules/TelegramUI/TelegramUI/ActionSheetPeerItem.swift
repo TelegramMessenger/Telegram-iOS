@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import Postbox
+import TelegramPresentationData
 
 public class ActionSheetPeerItem: ActionSheetItem {
     public let account: Account

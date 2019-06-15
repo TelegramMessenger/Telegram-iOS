@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import MapKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private struct PeerNearbyEntry {
     let peer: Peer

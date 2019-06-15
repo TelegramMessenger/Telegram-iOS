@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private let historyMessageCount: Int = 100
 

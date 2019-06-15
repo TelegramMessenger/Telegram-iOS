@@ -5,6 +5,8 @@ import Postbox
 import SwiftSignalKit
 import Display
 import AsyncDisplayKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 public class TermsOfServiceControllerTheme {
     public let statusBarStyle: StatusBarStyle

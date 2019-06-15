@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
 import Postbox
+import TelegramPresentationData
 
 enum PasscodeSetupControllerMode {
     case setup(change: Bool, PasscodeEntryFieldType)

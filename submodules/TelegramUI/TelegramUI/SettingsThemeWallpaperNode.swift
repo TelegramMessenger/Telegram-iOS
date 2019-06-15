@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramPresentationData
 
 private func whiteColorImage(theme: PresentationTheme) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return .single({ arguments in

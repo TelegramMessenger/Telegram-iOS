@@ -2,6 +2,8 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 enum ChatPresentationInputQueryKind: Int32 {
     case emoji

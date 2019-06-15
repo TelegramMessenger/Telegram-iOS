@@ -5,6 +5,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers

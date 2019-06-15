@@ -6,6 +6,7 @@ import UIKit
 import TelegramCore
 import SwiftSignalKit
 import Photos
+import TelegramPresentationData
 
 final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?

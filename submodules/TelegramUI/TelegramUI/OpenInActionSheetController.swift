@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import MapKit
+import TelegramPresentationData
 
 public struct OpenInControllerAction {
     let title: String

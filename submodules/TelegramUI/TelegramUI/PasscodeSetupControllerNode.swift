@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import TelegramPresentationData
 
 enum PasscodeSetupInitialState {
     case createPasscode

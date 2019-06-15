@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
 
 private struct PermissionControllerDataState: Equatable {
     var state: PermissionState?

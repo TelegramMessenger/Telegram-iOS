@@ -1,12 +1,11 @@
 #import "TGNeoChatViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGNeoLabelViewModel.h"
 #import "TGNeoImageViewModel.h"
 #import "TGNeoAttachmentViewModel.h"
-
-#import "TGBridgeContext.h"
-#import "TGBridgeChat.h"
-#import "TGBridgeUser.h"
 
 #import "TGExtensionDelegate.h"
 #import "TGStringUtils.h"

@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int

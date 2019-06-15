@@ -1,6 +1,8 @@
 import Foundation
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message?, chatPeer: RenderedPeer, accountPeerId: PeerId, enableMediaEmoji: Bool = true) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
     let peer: Peer?

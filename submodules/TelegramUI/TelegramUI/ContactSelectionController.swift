@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
 
 class ContactSelectionController: ViewController, PresentableController {
     private let context: AccountContext

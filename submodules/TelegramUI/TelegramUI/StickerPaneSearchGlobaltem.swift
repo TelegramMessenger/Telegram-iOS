@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
 import Postbox
+import TelegramPresentationData
 
 final class StickerPaneSearchGlobalSection: GridSection {
     let height: CGFloat = 0.0

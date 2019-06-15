@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
+import TelegramPresentationData
 
 private final class UserInfoControllerArguments {
     let account: Account
@@ -960,12 +961,12 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
                     }
-                    var reportSpam = true
-                    var deleteChat = true
+                    var reportSpam = false
+                    var deleteChat = false
                     controller.setItemGroups([
                         ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: presentationData.strings.UserInfo_BlockConfirmationTitle(peer.compactDisplayTitle).0),
-                            ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: reportSpam, action: { [weak controller] checkValue in
+                            /*ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: reportSpam, action: { [weak controller] checkValue in
                                 reportSpam = checkValue
                                 controller?.updateItem(groupIndex: 0, itemIndex: 1, { item in
                                     if let item = item as? ActionSheetCheckboxItem {
@@ -982,7 +983,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                                     }
                                     return item
                                 })
-                            }),
+                            }),*/
                             ActionSheetButtonItem(title: presentationData.strings.UserInfo_BlockActionTitle(peer.compactDisplayTitle).0, color: .destructive, action: {
                                 dismissAction()
                                 updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: context.account, peerId: peer.id, isBlocked: true).start())

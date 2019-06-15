@@ -1,4 +1,7 @@
 #import "TGUserInfoHeaderController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGDateUtils.h"
 #import "TGStringUtils.h"
@@ -6,11 +9,6 @@
 #import "WKInterfaceGroup+Signals.h"
 
 #import "TGBridgeMediaSignals.h"
-
-#import "TGBridgeUser.h"
-#import "TGBridgeChat.h"
-
-#import "TGBridgeContext.h"
 
 NSString *const TGUserInfoHeaderIdentifier = @"TGUserInfoHeader";
 

@@ -1,8 +1,9 @@
 #import "TGMessageViewFooterController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGDateUtils.h"
-
-#import "TGBridgeMessage.h"
 
 NSString *const TGMessageViewFooterIdentifier = @"TGMessageViewFooter";
 

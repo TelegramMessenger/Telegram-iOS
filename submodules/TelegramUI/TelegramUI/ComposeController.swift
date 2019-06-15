@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
 
 public class ComposeController: ViewController {
     private let context: AccountContext

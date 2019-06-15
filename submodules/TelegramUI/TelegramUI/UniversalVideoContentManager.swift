@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
+import UniversalMediaPlayer
 
 private final class UniversalVideoContentSubscriber {
     let id: Int32

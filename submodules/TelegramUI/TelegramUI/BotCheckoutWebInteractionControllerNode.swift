@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import WebKit
+import TelegramPresentationData
 
 private class WeakPaymentScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()

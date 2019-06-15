@@ -1,10 +1,7 @@
 import Foundation
 import UIKit
-
-enum WebSearchScope: Int32 {
-    case images
-    case gifs
-}
+import TelegramPresentationData
+import TelegramUIPreferences
 
 struct WebSearchInterfaceInnerState: Equatable {
     let scope: WebSearchScope

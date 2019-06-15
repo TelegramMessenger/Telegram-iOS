@@ -6,8 +6,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
-
+import TelegramPresentationData
 import SafariServices
+import TelegramUIPreferences
 
 private final class GroupInfoArguments {
     let context: AccountContext

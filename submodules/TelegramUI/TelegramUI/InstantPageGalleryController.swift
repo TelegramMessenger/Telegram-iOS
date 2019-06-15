@@ -7,6 +7,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
 import SafariServices
+import TelegramPresentationData
 
 struct InstantPageGalleryEntryLocation: Equatable {
     let position: Int32

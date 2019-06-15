@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import DeviceAccess
 
 public enum PermissionKind: Int32 {
     case contacts
@@ -64,7 +65,9 @@ public enum PermissionState: Equatable {
 }
 
 public func requiredPermissions(context: AccountContext) -> Signal<(PermissionState, PermissionState, PermissionState), NoError> {
-    return combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), DeviceAccess.authorizationStatus(context: context, subject: .notifications), DeviceAccess.authorizationStatus(context: context, subject: .siri))
+    return combineLatest(DeviceAccess.authorizationStatus(subject: .contacts), DeviceAccess.authorizationStatus(applicationInForeground: context.sharedContext.applicationBindings.applicationInForeground, subject: .notifications), DeviceAccess.authorizationStatus(siriAuthorization: {
+        return context.sharedContext.applicationBindings.siriAuthorization()
+    }, subject: .siri))
     |> map { contactsStatus, notificationsStatus, siriStatus in
         return (.contacts(status: PermissionRequestStatus(accessType: contactsStatus)), .notifications(status: PermissionRequestStatus(accessType: notificationsStatus)), .siri(status: PermissionRequestStatus(accessType: siriStatus)))
     }

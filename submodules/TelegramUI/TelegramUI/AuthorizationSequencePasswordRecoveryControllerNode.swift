@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings

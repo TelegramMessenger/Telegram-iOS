@@ -1,9 +1,9 @@
 #import "TGNeoForwardHeaderViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGNeoLabelViewModel.h"
-
-#import "TGBridgeUser.h"
-#import "TGBridgeChat.h"
 
 const CGFloat TGNeoForwardHeaderHeight = 29;
 

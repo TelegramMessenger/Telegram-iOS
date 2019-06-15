@@ -6,6 +6,8 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import SafariServices
+import TelegramPresentationData
+import TelegramUIPreferences
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext

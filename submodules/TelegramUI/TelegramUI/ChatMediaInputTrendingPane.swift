@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 final class TrendingPaneInteraction {
     let installPack: (ItemCollectionInfo) -> Void

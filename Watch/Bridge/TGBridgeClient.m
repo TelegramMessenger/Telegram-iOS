@@ -1,11 +1,11 @@
 #import "TGBridgeClient.h"
-#import "TGBridgeCommon.h"
-#import "TGBridgeChat.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 
 #import <WatchConnectivity/WatchConnectivity.h>
 
-#import "TGBridgeContext.h"
 #import "TGFileCache.h"
 
 #import "TGBridgeStickersSignals.h"

@@ -4,6 +4,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
+import DeviceAccess
 
 public final class PermissionController : ViewController {
     private let context: AccountContext
@@ -100,7 +102,7 @@ public final class PermissionController : ViewController {
                         switch status {
                             case .requestable:
                                 strongSelf.splitTest.addEvent(.ContactsRequest)
-                                DeviceAccess.authorizeAccess(to: .contacts, context: strongSelf.context, { [weak self] result in
+                                DeviceAccess.authorizeAccess(to: .contacts, { [weak self] result in
                                     if let strongSelf = self {
                                         if result {
                                             strongSelf.splitTest.addEvent(.ContactsAllowed)
@@ -126,7 +128,10 @@ public final class PermissionController : ViewController {
                         switch status {
                             case .requestable:
                                 strongSelf.splitTest.addEvent(.NotificationsRequest)
-                                DeviceAccess.authorizeAccess(to: .notifications, context: strongSelf.context, { [weak self] result in
+                                let context = strongSelf.context
+                                DeviceAccess.authorizeAccess(to: .notifications, registerForNotifications: { [weak context] result in
+                                    context?.sharedContext.applicationBindings.registerForNotifications(result)
+                                }, { [weak self] result in
                                     if let strongSelf = self {
                                         if result {
                                             strongSelf.splitTest.addEvent(.NotificationsAllowed)

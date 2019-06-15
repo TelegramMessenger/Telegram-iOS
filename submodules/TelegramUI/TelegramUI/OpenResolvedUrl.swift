@@ -4,6 +4,7 @@ import TelegramCore
 import Postbox
 import Display
 import SwiftSignalKit
+import TelegramUIPreferences
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {

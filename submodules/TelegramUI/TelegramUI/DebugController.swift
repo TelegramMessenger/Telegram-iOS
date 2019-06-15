@@ -10,6 +10,8 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 import MessageUI
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class DebugControllerArguments {
     let sharedContext: SharedAccountContext

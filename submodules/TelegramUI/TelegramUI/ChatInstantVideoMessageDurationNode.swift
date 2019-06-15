@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import Display
+import UniversalMediaPlayer
 
 private let textFont = Font.regular(11.0)
 

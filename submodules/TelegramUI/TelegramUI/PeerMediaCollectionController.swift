@@ -6,6 +6,8 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import SafariServices
+import TelegramPresentationData
+import TelegramUIPreferences
 
 public class PeerMediaCollectionController: TelegramController {
     private var validLayout: ContainerViewLayout?

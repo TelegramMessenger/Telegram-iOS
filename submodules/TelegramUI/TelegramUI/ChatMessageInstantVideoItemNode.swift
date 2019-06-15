@@ -5,6 +5,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private let nameFont = Font.medium(14.0)
 

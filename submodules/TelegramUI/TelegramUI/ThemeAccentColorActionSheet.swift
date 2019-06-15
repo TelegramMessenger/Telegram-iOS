@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import UIKit
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
 
 final class ThemeAccentColorActionSheet: ActionSheetController {
     private var presentationDisposable: Disposable?

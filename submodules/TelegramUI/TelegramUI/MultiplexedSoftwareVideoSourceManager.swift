@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import CoreMedia
+import UniversalMediaPlayer
 
 private final class RunningSoftwareVideoSource {
     let fetchDisposable: Disposable

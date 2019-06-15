@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import TelegramPresentationData
 
 class PeopleNearbyHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

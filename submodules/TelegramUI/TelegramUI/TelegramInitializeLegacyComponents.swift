@@ -8,7 +8,9 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 import Display
-
+import TelegramPresentationData
+import DeviceAccess
+import TelegramAudio
 import LegacyComponents
 
 var legacyComponentsApplication: UIApplication?

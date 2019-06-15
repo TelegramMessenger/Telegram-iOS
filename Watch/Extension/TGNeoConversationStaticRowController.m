@@ -1,5 +1,7 @@
 #import "TGNeoConversationStaticRowController.h"
-#import "TGBridgeMessage.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGBridgeUserCache.h"
 
 #import "TGChatInfo.h"

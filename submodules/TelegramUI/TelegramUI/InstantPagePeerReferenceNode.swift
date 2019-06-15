@@ -5,6 +5,7 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 private enum JoinState: Equatable {
     case none

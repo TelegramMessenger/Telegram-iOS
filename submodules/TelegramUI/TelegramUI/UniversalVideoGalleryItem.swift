@@ -5,6 +5,8 @@ import SwiftSignalKit
 import TelegramCore
 import Display
 import Postbox
+import TelegramPresentationData
+import UniversalMediaPlayer
 
 enum UniversalVideoGalleryItemContentInfo {
     case message(Message)

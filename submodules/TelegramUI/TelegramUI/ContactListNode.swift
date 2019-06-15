@@ -5,6 +5,9 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
+import DeviceAccess
 
 private let dropDownIcon = { () -> UIImage in
     UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)
@@ -829,7 +832,7 @@ final class ContactListNode: ASDisplayNode {
         
         let contactsAuthorization = Promise<AccessType>()
         contactsAuthorization.set(.single(.allowed)
-        |> then(DeviceAccess.authorizationStatus(context: context, subject: .contacts)))
+        |> then(DeviceAccess.authorizationStatus(subject: .contacts)))
         
         let contactsWarningSuppressed = Promise<(Bool, Bool)>()
         contactsWarningSuppressed.set(.single((false, false))
@@ -1297,12 +1300,12 @@ final class ContactListNode: ASDisplayNode {
         }
         
         authorizeImpl = {
-            let _ = (DeviceAccess.authorizationStatus(context: context, subject: .contacts)
+            let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
             |> take(1)
             |> deliverOnMainQueue).start(next: { status in
                 switch status {
                     case .notDetermined:
-                        DeviceAccess.authorizeAccess(to: .contacts, context: context)
+                        DeviceAccess.authorizeAccess(to: .contacts)
                     case .denied, .restricted:
                         context.sharedContext.applicationBindings.openSettings()
                     default:

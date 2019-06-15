@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import AVFoundation
 import CoreImage
+import TelegramPresentationData
 
 private class AlphaFrameFilter: CIFilter {
     static var kernel: CIColorKernel? = {

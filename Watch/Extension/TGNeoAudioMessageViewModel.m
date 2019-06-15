@@ -1,6 +1,8 @@
 #import "TGNeoAudioMessageViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
-#import "TGBridgeMessage.h"
 
 @interface TGNeoAudioMessageViewModel ()
 {

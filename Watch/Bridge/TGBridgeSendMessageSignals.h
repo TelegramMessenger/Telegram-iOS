@@ -1,7 +1,6 @@
 #import <SSignalKit/SSignalKit.h>
 
-#import "TGBridgeDocumentMediaAttachment.h"
-#import "TGBridgeLocationMediaAttachment.h"
+#import <WatchCommonWatch/WatchCommonWatch.h>
 
 @interface TGBridgeSendMessageSignals : NSObject
 

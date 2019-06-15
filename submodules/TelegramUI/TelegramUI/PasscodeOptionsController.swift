@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 import LocalAuthentication
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOff: () -> Void

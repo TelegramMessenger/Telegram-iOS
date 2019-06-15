@@ -3,6 +3,7 @@ import UIKit
 import Display
 import SwiftSignalKit
 import LegacyComponents
+import TelegramPresentationData
 
 public enum LegacyControllerPresentation {
     case custom

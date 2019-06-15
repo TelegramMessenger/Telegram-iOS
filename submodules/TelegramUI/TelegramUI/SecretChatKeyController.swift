@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import Postbox
+import TelegramPresentationData
 
 final class SecretChatKeyController: ViewController {
     private var controllerNode: SecretChatKeyControllerNode {

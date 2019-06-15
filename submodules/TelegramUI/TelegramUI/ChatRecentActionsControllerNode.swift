@@ -5,7 +5,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import Display
-
+import TelegramPresentationData
+import TelegramUIPreferences
 import SafariServices
 
 private final class ChatRecentActionsListOpaqueState {

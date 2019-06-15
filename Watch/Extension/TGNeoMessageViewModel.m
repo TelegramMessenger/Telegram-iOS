@@ -1,4 +1,7 @@
 #import "TGNeoMessageViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGNeoTextMessageViewModel.h"
 #import "TGNeoSmiliesMessageViewModel.h"
 #import "TGNeoMediaMessageViewModel.h"
@@ -16,8 +19,6 @@
 
 #import "TGStringUtils.h"
 
-#import "TGBridgePeerIdAdapter.h"
-#import "TGBridgeMessage.h"
 #import "TGBridgeUserCache.h"
 
 NSString *const TGNeoContentInset = @"contentInset";

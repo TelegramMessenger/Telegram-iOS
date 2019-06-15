@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import TelegramPresentationData
 
 private class ChatGridLiveSelectorRecognizer: UIPanGestureRecognizer {
     private let selectionGestureActivationThreshold: CGFloat = 2.0

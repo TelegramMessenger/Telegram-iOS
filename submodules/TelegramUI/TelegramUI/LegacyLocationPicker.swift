@@ -5,6 +5,7 @@ import LegacyComponents
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramPresentationData
 
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)

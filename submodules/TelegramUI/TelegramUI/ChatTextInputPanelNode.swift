@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import MobileCoreServices
+import TelegramPresentationData
 
 private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))

@@ -1,13 +1,11 @@
 #import "TGNeoSmiliesMessageViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGNeoBubbleMessageViewModel.h"
 #import "TGNeoLabelViewModel.h"
 
-#import "TGBridgeContext.h"
-#import "TGBridgeMessage.h"
-
 #import "TGWatchColor.h"
-
-#import "TGBridgePeerIdAdapter.h"
 
 const CGFloat TGNeoSmiliesMessageHeight = 39;
 

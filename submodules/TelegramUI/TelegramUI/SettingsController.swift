@@ -11,6 +11,9 @@ import MtProtoKit
 #else
 import MtProtoKitDynamic
 #endif
+import TelegramPresentationData
+import TelegramUIPreferences
+import DeviceAccess
 
 private let maximumNumberOfAccounts = 3
 
@@ -1036,7 +1039,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             |> then(
                 contextValue.get()
                 |> mapToSignal { context -> Signal<AccessType, NoError> in
-                    return DeviceAccess.authorizationStatus(context: context, subject: .notifications)
+                    return DeviceAccess.authorizationStatus(applicationInForeground: context.sharedContext.applicationBindings.applicationInForeground, subject: .notifications)
                 }
             )
         )

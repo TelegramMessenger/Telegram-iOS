@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
+import TelegramPresentationData
 
 private let cancelFont = Font.regular(17.0)
 private let subtitleFont = Font.regular(12.0)

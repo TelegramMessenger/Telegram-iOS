@@ -6,6 +6,8 @@ import AVFoundation
 import Lottie
 import TelegramUIPrivateModule
 
+import GZip
+
 private func validateAnimationItems(_ items: [Any]?, shapes: Bool = true) -> Bool {
     if let items = items {
         for case let item as [AnyHashable: Any] in items {

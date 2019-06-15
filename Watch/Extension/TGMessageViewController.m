@@ -1,14 +1,12 @@
 #import "TGMessageViewController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGBridgeSendMessageSignals.h"
 #import "TGBridgeRemoteSignals.h"
 #import "TGBridgeAudioSignals.h"
 
-#import "TGBridgePeerIdAdapter.h"
-
-#import "TGBridgeChat.h"
-#import "TGBridgeUser.h"
-#import "TGBridgeMessage.h"
 #import "TGBridgeUserCache.h"
 
 #import "WKInterfaceTable+TGDataDrivenTable.h"

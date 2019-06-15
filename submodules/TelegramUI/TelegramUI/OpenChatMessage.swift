@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import PassKit
 import Lottie
+import TelegramUIPreferences
 
 private enum ChatMessageGalleryControllerData {
     case url(String)

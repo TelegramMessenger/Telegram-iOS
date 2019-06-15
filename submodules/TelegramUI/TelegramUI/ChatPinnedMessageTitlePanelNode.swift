@@ -5,6 +5,8 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let context: AccountContext

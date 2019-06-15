@@ -1,6 +1,6 @@
 #import "TGNeoUnsupportedMessageViewModel.h"
 #import "TGWatchCommon.h"
-#import "TGBridgeMessage.h"
+#import <WatchCommonWatch/WatchCommonWatch.h>
 
 @interface TGNeoUnsupportedMessageViewModel ()
 {

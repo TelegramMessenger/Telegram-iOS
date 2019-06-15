@@ -1,9 +1,9 @@
 #import "TGBotCommandController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import <SSignalKit/SSignalKit.h>
-
-#import "TGBridgeUser.h"
-#import "TGBridgeBotCommandInfo.h"
 
 #import "WKInterfaceTable+TGDataDrivenTable.h"
 

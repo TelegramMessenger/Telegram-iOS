@@ -8,6 +8,8 @@ import MtProtoKit
 #else
 import MtProtoKitDynamic
 #endif
+import TelegramPresentationData
+import TelegramUIPreferences
 
 enum ParsedInternalPeerUrlParameter {
     case botStart(String)

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 private struct SearchResultEntry: Identifiable {
     let index: Int

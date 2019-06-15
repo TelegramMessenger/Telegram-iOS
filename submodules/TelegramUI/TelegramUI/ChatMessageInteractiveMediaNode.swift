@@ -5,6 +5,9 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
+import UniversalMediaPlayer
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

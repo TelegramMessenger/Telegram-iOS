@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import Display
+import TelegramPresentationData
 
 private struct HashtagChatInputContextPanelEntryStableId: Hashable {
     let text: String

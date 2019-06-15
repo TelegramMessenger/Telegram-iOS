@@ -5,6 +5,7 @@ import TelegramCore
 import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
+import TelegramPresentationData
 
 final class ShareControllerRecentPeersGridItem: GridItem {
     let account: Account

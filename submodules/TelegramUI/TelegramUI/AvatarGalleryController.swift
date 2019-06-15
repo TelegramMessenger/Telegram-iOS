@@ -6,6 +6,7 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
+import TelegramPresentationData
 
 public struct ImageRepresentationWithReference: Equatable {
     public let representation: TelegramMediaImageRepresentation

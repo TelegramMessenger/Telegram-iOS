@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import TelegramPresentationData
 
 private let backArrowImage = NavigationBarTheme.generateBackArrowImage(color: .white)
 private let moreImage = generateTintedImage(image: UIImage(bundleImageName: "Instant View/MoreIcon"), color: .white)

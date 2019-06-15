@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 class BotPaymentItemNode: ASDisplayNode {
     private let needsBackground: Bool

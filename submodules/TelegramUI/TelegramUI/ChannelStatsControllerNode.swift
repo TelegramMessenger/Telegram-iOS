@@ -6,6 +6,7 @@ import WebKit
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramPresentationData
 
 final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationDelegate {
     private var webView: WKWebView?

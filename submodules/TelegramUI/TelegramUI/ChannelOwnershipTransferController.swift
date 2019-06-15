@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme

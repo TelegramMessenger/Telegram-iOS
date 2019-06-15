@@ -1,12 +1,10 @@
 #import "TGNeoServiceMessageViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGNeoLabelViewModel.h"
-
-#import "TGBridgeMessage.h"
-#import "TGBridgeUser.h"
 #import "TGChatInfo.h"
-
-#import "TGBridgePeerIdAdapter.h"
 
 const UIEdgeInsets TGNeoServiceMessageInsets = { 2, 0, 6, 0 };
 const UIEdgeInsets TGNeoChatInfoInsets = { 12, 0, 12, 0 };

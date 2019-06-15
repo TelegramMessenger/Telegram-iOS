@@ -5,9 +5,11 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
-
+import TelegramPresentationData
 import TelegramUIPrivateModule
 import LegacyComponents
+
+import RMIntro
 
 final class AuthorizationSequenceSplashController: ViewController {
     private var controllerNode: AuthorizationSequenceSplashControllerNode {

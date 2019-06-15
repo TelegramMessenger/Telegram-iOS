@@ -5,8 +5,9 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-
+import TelegramAudio
 import LegacyComponents
+import UniversalMediaPlayer
 
 final class SystemVideoContent: UniversalVideoContent {
     let id: AnyHashable

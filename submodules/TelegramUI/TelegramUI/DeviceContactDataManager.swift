@@ -4,6 +4,8 @@ import Postbox
 import TelegramCore
 import Contacts
 import AddressBook
+import TelegramUIPreferences
+import DeviceAccess
 
 public typealias DeviceContactStableId = String
 

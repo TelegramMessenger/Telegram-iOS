@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import Display
+import TelegramPresentationData
 
 private struct EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
     let symbol: String

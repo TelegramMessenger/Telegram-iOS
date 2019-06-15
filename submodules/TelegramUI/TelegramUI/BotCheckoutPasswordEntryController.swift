@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 private struct BotCheckoutPasswordAlertAction {
     public let title: String

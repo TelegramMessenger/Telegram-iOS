@@ -3,6 +3,7 @@ import UIKit
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import Display
 
 private final class SoftwareVideoThumbnailLayerNullAction: NSObject, CAAction {
     @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {

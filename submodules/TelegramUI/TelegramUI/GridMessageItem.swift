@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramPresentationData
 
 private func mediaForMessage(_ message: Message) -> Media? {
     for media in message.media {

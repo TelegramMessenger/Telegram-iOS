@@ -3,6 +3,7 @@ import Intents
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import BuildConfig
 
 private var accountCache: Account?
 

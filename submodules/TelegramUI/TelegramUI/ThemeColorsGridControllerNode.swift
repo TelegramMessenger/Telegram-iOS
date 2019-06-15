@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 final class ThemeColorsGridControllerInteraction {
     let openWallpaper: (TelegramWallpaper) -> Void
