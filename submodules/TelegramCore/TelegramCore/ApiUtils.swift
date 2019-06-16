@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public enum PeerReference: PostboxCoding, Hashable, Equatable {
     case user(id: Int32, accessHash: Int64)

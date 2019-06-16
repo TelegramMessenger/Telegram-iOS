@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource, Data)]? {
     switch photo {

@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public final class TelegramMediaGame: Media {
     public let gameId: Int64

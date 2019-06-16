@@ -11,6 +11,7 @@
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public typealias AdminLogEventId = Int64
 

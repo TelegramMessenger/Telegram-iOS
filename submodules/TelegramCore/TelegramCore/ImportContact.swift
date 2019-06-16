@@ -5,6 +5,7 @@
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public func importContact(account: Account, firstName: String, lastName: String, phoneNumber: String) -> Signal<PeerId?, NoError> {
     

@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public enum MessageTextEntityType: Equatable {
     public typealias CustomEntityType = Int32

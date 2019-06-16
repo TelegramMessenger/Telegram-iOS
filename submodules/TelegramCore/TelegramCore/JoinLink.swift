@@ -11,6 +11,7 @@
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 func apiUpdatesGroups(_ updates: Api.Updates) -> [Api.Chat] {
     switch updates {

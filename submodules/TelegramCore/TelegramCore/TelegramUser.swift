@@ -5,6 +5,7 @@ import Foundation
     import Postbox
     import UIKit
 #endif
+import TelegramApi
 
 public struct UserInfoFlags: OptionSet {
     public var rawValue: Int32

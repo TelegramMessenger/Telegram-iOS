@@ -7,6 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 import TelegramCorePrivateModule
+import TelegramApi
 
 private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
     var acc: UInt32 = 0

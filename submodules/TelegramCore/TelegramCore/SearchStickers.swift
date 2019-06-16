@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public final class FoundStickerItem: Equatable {
     public let file: TelegramMediaFile

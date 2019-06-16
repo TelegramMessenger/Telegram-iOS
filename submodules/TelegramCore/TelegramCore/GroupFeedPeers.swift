@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public func availableGroupFeedPeers(postbox: Postbox, network: Network, groupId: PeerGroupId) -> Signal<[(Peer, Bool)], NoError> {
     /*feed*/

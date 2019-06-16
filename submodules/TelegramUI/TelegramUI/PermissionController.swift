@@ -142,6 +142,7 @@ public final class PermissionController : ViewController {
                         switch status {
                             case .requestable:
                                 strongSelf.splitTest?.addEvent(.NotificationsRequest)
+                                let context = strongSelf.context
                                 DeviceAccess.authorizeAccess(to: .notifications, registerForNotifications: { [weak context] result in
                                     context?.sharedContext.applicationBindings.registerForNotifications(result)
                                 }, { [weak self] result in
@@ -178,7 +179,7 @@ public final class PermissionController : ViewController {
                     if let strongSelf = self {
                         switch status {
                             case .requestable:
-                                DeviceAccess.authorizeAccess(to: .location(.tracking), context: strongSelf.context, { [weak self] result in
+                                DeviceAccess.authorizeAccess(to: .location(.tracking), presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, { [weak self] result in
                                     self?.proceed?(result)
                                 })
                         case .denied, .unreachable:

@@ -8,6 +8,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 #if os(macOS)
 private let apiPrefix = "TelegramCoreMac.Api."

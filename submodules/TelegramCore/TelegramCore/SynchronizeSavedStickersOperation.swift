@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 private enum SynchronizeSavedStickersOperationContentType: Int32 {
     case add

@@ -13,6 +13,7 @@ import Foundation
     #endif
     import UIKit
 #endif
+import TelegramApi
 
 public enum UpdatePeerPhotoStatus {
     case progress(Float)

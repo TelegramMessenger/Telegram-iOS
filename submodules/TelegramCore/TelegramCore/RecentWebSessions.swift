@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public struct WebAuthorization : Equatable {
     public let hash: Int64

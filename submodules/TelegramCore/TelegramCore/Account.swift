@@ -14,6 +14,7 @@ import Foundation
     import UIKit
 #endif
 import TelegramCorePrivateModule
+import TelegramApi
 
 public protocol AccountState: PostboxCoding {
     func equalsTo(_ other: AccountState) -> Bool

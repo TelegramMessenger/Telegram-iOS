@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public final class SelectivePrivacyPeer: Equatable {
     public let peer: Peer

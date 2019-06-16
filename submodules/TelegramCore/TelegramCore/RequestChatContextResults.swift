@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public func requestChatContextResults(account: Account, botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String) -> Signal<ChatContextResultCollection?, NoError> {
     return combineLatest(account.postbox.transaction { transaction -> (bot: Peer, peer: Peer)? in

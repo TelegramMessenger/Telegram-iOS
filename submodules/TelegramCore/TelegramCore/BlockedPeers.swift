@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public func requestBlockedPeers(account: Account) -> Signal<[Peer], NoError> {
     return account.network.request(Api.functions.contacts.getBlocked(offset: 0, limit: 100))

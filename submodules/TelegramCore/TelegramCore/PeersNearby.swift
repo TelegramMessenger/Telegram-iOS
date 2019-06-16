@@ -6,6 +6,7 @@ import PostboxMac
 import SwiftSignalKit
 import Postbox
 #endif
+import TelegramApi
 
 public struct PeerNearby {
     public let id: PeerId

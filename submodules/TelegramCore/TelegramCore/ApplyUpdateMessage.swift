@@ -7,6 +7,7 @@ import Foundation
     import SwiftSignalKit
     import UIKit
 #endif
+import TelegramApi
 
 func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {

@@ -5,6 +5,7 @@ import Foundation
     import Postbox
     import UIKit
 #endif
+import TelegramApi
 
 private let typeFileName: Int32 = 0
 private let typeSticker: Int32 = 1

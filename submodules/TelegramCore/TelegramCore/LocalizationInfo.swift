@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public struct LocalizationInfo: PostboxCoding, Equatable {
     public let languageCode: String

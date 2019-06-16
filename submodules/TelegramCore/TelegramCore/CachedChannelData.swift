@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public struct CachedChannelFlags: OptionSet {
     public var rawValue: Int32

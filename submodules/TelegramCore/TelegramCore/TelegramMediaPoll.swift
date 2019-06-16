@@ -4,6 +4,7 @@ import PostboxMac
 #else
 import Postbox
 #endif
+import TelegramApi
 
 public struct TelegramMediaPollOption: Equatable, PostboxCoding {
     public let text: String

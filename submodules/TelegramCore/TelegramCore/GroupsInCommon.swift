@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public func groupsInCommon(account:Account, peerId:PeerId) -> Signal<[PeerId], NoError> {
     return account.postbox.transaction { transaction -> Signal<[PeerId], NoError> in

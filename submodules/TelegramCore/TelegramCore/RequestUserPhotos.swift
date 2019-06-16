@@ -13,7 +13,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
-
+import TelegramApi
 
 public struct TelegramPeerPhoto {
     public let image: TelegramMediaImage

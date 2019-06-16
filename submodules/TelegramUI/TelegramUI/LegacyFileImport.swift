@@ -126,7 +126,7 @@ func loadLegacyFiles(account: TemporaryAccount, basePath: String, accountPeerId:
         for type in mediaTypes {
             database.select("SELECT mids FROM media_cache_v29 WHERE media_type=\(type) ORDER BY date DESC LIMIT 32000", { cursor in
                 let midsData = cursor.getData(at: 0)
-                let reader = BufferReader(Buffer(data: midsData))
+                let reader = LegacyBufferReader(LegacyBuffer(data: midsData))
                 while true {
                     if let mid = reader.readInt32() {
                         chatMessageIds.append(mid)

@@ -210,7 +210,6 @@
 		D02CF619215DA24900E0F56A /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02CF618215DA24900E0F56A /* SwiftSignalKit.framework */; };
 		D02CF61B215DA24900E0F56A /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02CF61A215DA24900E0F56A /* TelegramCore.framework */; };
 		D02E31231BD803E800CD3F01 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = D02E31221BD803E800CD3F01 /* main.m */; };
-		D0338736223A9A9A007A2CE4 /* Config-Hockeyapp-Internal.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */; };
 		D03B0E7B1D63484500955575 /* ShareRootController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0E7A1D63484500955575 /* ShareRootController.swift */; };
 		D03B0E821D63484500955575 /* Share.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D03B0E781D63484500955575 /* Share.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D03B0E8A1D634B1100955575 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03B0E871D634B1100955575 /* Display.framework */; };
@@ -2670,7 +2669,6 @@
 				09A218F222A1570A00DE6898 /* BlueFilledIcon@2x.png in Resources */,
 				090E777722A6945900CD99F5 /* BlueClassicIcon@2x.png in Resources */,
 				D0CE6F69213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
-				D0338736223A9A9A007A2CE4 /* Config-Hockeyapp-Internal.xcconfig in Resources */,
 				D08DB0C0213F4D1D00F2ADBF /* telegram_sphere@2x.png in Resources */,
 				D08DB0AB213F4D1D00F2ADBF /* ic_bubble@2x.png in Resources */,
 				D04DCC341F71C80000B021D7 /* 7.m4a in Resources */,

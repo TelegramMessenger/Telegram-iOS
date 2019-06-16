@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public extension MemoryBuffer {
     public convenience init(_ buffer: Buffer) {

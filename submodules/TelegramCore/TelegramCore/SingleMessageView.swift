@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public func singleMessageView(account: Account, messageId: MessageId, loadIfNotExists: Bool) -> Signal<MessageView, NoError> {
     return Signal { subscriber in

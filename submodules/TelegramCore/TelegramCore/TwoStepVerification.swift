@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public enum TwoStepVerificationConfiguration {
     case notSet(pendingEmail: TwoStepVerificationPendingEmail?)

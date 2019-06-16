@@ -1,8 +1,8 @@
 import Foundation
 
 public final class FunctionDescription {
-    let name: String
-    let parameters: [(String, Any)]
+    public let name: String
+    public let parameters: [(String, Any)]
     
     init(name: String, parameters: [(String, Any)]) {
         self.name = name
@@ -22,6 +22,6 @@ public final class DeserializeFunctionResponse<T> {
     }
 }
 
-protocol TypeConstructorDescription {
+public protocol TypeConstructorDescription {
     func descriptionFields() -> (String, [(String, Any)])
 }

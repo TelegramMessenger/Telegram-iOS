@@ -42,7 +42,7 @@ func serializeString(_ value: String, buffer: Buffer, boxed: Bool) {
     serializeBytes(stringBuffer, buffer: buffer, boxed: boxed)
 }
 
-func serializeBytes(_ value: Buffer, buffer: Buffer, boxed: Bool) {
+public func serializeBytes(_ value: Buffer, buffer: Buffer, boxed: Bool) {
         if boxed {
             buffer.appendInt32(-1255641564)
         }
@@ -130,7 +130,7 @@ private func roundUp(_ numToRound: Int, multiple: Int) -> Int
     return numToRound + multiple - remainder
 }
 
-func parseBytes(_ reader: BufferReader) -> Buffer? {
+public func parseBytes(_ reader: BufferReader) -> Buffer? {
     if let tmp = reader.readBytesAsInt32(1) {
         var paddingBytes: Int = 0
         var length: Int = 0
@@ -163,8 +163,8 @@ func parseString(_ reader: BufferReader) -> String? {
 }
 
 public class Buffer: CustomStringConvertible {
-    var data: UnsafeMutableRawPointer?
-    var _size: UInt = 0
+    public var data: UnsafeMutableRawPointer?
+    public var _size: UInt = 0
     private var capacity: UInt = 0
     private let freeWhenDone: Bool
     
@@ -201,8 +201,6 @@ public class Buffer: CustomStringConvertible {
             }
         }
     }
-    
-    
     
     public func makeData() -> Data {
         return self.withUnsafeMutablePointer { pointer, size -> Data in

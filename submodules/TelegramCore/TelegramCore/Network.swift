@@ -13,6 +13,7 @@ import Foundation
     #endif
 #endif
 import TelegramCorePrivateModule
+import TelegramApi
 
 public enum ConnectionStatus: Equatable {
     case waitingForNetwork

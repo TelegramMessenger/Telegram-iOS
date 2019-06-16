@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool) -> Signal<PeerId, CreateChannelError> {
     return account.postbox.transaction { transaction -> Signal<PeerId, CreateChannelError> in

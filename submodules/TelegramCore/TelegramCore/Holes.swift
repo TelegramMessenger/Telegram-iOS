@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 private func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
     if tagMask == .photoOrVideo {

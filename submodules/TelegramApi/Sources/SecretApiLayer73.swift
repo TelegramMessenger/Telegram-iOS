@@ -1,64 +1,63 @@
 
-
 fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     var dict: [Int32 : (BufferReader) -> Any?] = [:]
     dict[-1471112230] = { return $0.readInt32() }
     dict[570911930] = { return $0.readInt64() }
     dict[571523412] = { return $0.readDouble() }
     dict[-1255641564] = { return parseString($0) }
-    dict[-1586283796] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionSetMessageTTL($0) }
-    dict[206520510] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionReadMessages($0) }
-    dict[1700872964] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionDeleteMessages($0) }
-    dict[-1967000459] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionScreenshotMessages($0) }
-    dict[1729750108] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionFlushHistory($0) }
-    dict[-217806717] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionNotifyLayer($0) }
-    dict[1360072880] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionResend($0) }
-    dict[-204906213] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionRequestKey($0) }
-    dict[1877046107] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionAcceptKey($0) }
-    dict[-586814357] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionAbortKey($0) }
-    dict[-332526693] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionCommitKey($0) }
-    dict[-1473258141] = { return SecretApi46.DecryptedMessageAction.parse_decryptedMessageActionNoop($0) }
-    dict[236446268] = { return SecretApi46.PhotoSize.parse_photoSizeEmpty($0) }
-    dict[2009052699] = { return SecretApi46.PhotoSize.parse_photoSize($0) }
-    dict[-374917894] = { return SecretApi46.PhotoSize.parse_photoCachedSize($0) }
-    dict[2086234950] = { return SecretApi46.FileLocation.parse_fileLocationUnavailable($0) }
-    dict[1406570614] = { return SecretApi46.FileLocation.parse_fileLocation($0) }
-    dict[467867529] = { return SecretApi46.DecryptedMessageLayer.parse_decryptedMessageLayer($0) }
-    dict[1930838368] = { return SecretApi46.DecryptedMessage.parse_decryptedMessageService($0) }
-    dict[917541342] = { return SecretApi46.DecryptedMessage.parse_decryptedMessage($0) }
-    dict[1815593308] = { return SecretApi46.DocumentAttribute.parse_documentAttributeImageSize($0) }
-    dict[297109817] = { return SecretApi46.DocumentAttribute.parse_documentAttributeAnimated($0) }
-    dict[1494273227] = { return SecretApi46.DocumentAttribute.parse_documentAttributeVideo($0) }
-    dict[358154344] = { return SecretApi46.DocumentAttribute.parse_documentAttributeFilename($0) }
-    dict[978674434] = { return SecretApi46.DocumentAttribute.parse_documentAttributeSticker($0) }
-    dict[-1739392570] = { return SecretApi46.DocumentAttribute.parse_documentAttributeAudio($0) }
-    dict[-2044933984] = { return SecretApi46.InputStickerSet.parse_inputStickerSetShortName($0) }
-    dict[-4838507] = { return SecretApi46.InputStickerSet.parse_inputStickerSetEmpty($0) }
-    dict[-1148011883] = { return SecretApi46.MessageEntity.parse_messageEntityUnknown($0) }
-    dict[-100378723] = { return SecretApi46.MessageEntity.parse_messageEntityMention($0) }
-    dict[1868782349] = { return SecretApi46.MessageEntity.parse_messageEntityHashtag($0) }
-    dict[1827637959] = { return SecretApi46.MessageEntity.parse_messageEntityBotCommand($0) }
-    dict[1859134776] = { return SecretApi46.MessageEntity.parse_messageEntityUrl($0) }
-    dict[1692693954] = { return SecretApi46.MessageEntity.parse_messageEntityEmail($0) }
-    dict[-1117713463] = { return SecretApi46.MessageEntity.parse_messageEntityBold($0) }
-    dict[-2106619040] = { return SecretApi46.MessageEntity.parse_messageEntityItalic($0) }
-    dict[681706865] = { return SecretApi46.MessageEntity.parse_messageEntityCode($0) }
-    dict[1938967520] = { return SecretApi46.MessageEntity.parse_messageEntityPre($0) }
-    dict[1990644519] = { return SecretApi46.MessageEntity.parse_messageEntityTextUrl($0) }
-    dict[144661578] = { return SecretApi46.DecryptedMessageMedia.parse_decryptedMessageMediaEmpty($0) }
-    dict[893913689] = { return SecretApi46.DecryptedMessageMedia.parse_decryptedMessageMediaGeoPoint($0) }
-    dict[1485441687] = { return SecretApi46.DecryptedMessageMedia.parse_decryptedMessageMediaContact($0) }
-    dict[1474341323] = { return SecretApi46.DecryptedMessageMedia.parse_decryptedMessageMediaAudio($0) }
-    dict[-90853155] = { return SecretApi46.DecryptedMessageMedia.parse_decryptedMessageMediaExternalDocument($0) }
-    dict[-235238024] = { return SecretApi46.DecryptedMessageMedia.parse_decryptedMessageMediaPhoto($0) }
-    dict[2063502050] = { return SecretApi46.DecryptedMessageMedia.parse_decryptedMessageMediaDocument($0) }
-    dict[-1760785394] = { return SecretApi46.DecryptedMessageMedia.parse_decryptedMessageMediaVideo($0) }
-    dict[-1978796689] = { return SecretApi46.DecryptedMessageMedia.parse_decryptedMessageMediaVenue($0) }
-    dict[-452652584] = { return SecretApi46.DecryptedMessageMedia.parse_decryptedMessageMediaWebPage($0) }
+    dict[-1586283796] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionSetMessageTTL($0) }
+    dict[206520510] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionReadMessages($0) }
+    dict[1700872964] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionDeleteMessages($0) }
+    dict[-1967000459] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionScreenshotMessages($0) }
+    dict[1729750108] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionFlushHistory($0) }
+    dict[-217806717] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionNotifyLayer($0) }
+    dict[1360072880] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionResend($0) }
+    dict[-204906213] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionRequestKey($0) }
+    dict[1877046107] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionAcceptKey($0) }
+    dict[-586814357] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionAbortKey($0) }
+    dict[-332526693] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionCommitKey($0) }
+    dict[-1473258141] = { return SecretApi73.DecryptedMessageAction.parse_decryptedMessageActionNoop($0) }
+    dict[236446268] = { return SecretApi73.PhotoSize.parse_photoSizeEmpty($0) }
+    dict[2009052699] = { return SecretApi73.PhotoSize.parse_photoSize($0) }
+    dict[-374917894] = { return SecretApi73.PhotoSize.parse_photoCachedSize($0) }
+    dict[2086234950] = { return SecretApi73.FileLocation.parse_fileLocationUnavailable($0) }
+    dict[1406570614] = { return SecretApi73.FileLocation.parse_fileLocation($0) }
+    dict[467867529] = { return SecretApi73.DecryptedMessageLayer.parse_decryptedMessageLayer($0) }
+    dict[1930838368] = { return SecretApi73.DecryptedMessage.parse_decryptedMessageService($0) }
+    dict[-1848883596] = { return SecretApi73.DecryptedMessage.parse_decryptedMessage($0) }
+    dict[1815593308] = { return SecretApi73.DocumentAttribute.parse_documentAttributeImageSize($0) }
+    dict[297109817] = { return SecretApi73.DocumentAttribute.parse_documentAttributeAnimated($0) }
+    dict[358154344] = { return SecretApi73.DocumentAttribute.parse_documentAttributeFilename($0) }
+    dict[978674434] = { return SecretApi73.DocumentAttribute.parse_documentAttributeSticker($0) }
+    dict[-1739392570] = { return SecretApi73.DocumentAttribute.parse_documentAttributeAudio($0) }
+    dict[250621158] = { return SecretApi73.DocumentAttribute.parse_documentAttributeVideo($0) }
+    dict[-2044933984] = { return SecretApi73.InputStickerSet.parse_inputStickerSetShortName($0) }
+    dict[-4838507] = { return SecretApi73.InputStickerSet.parse_inputStickerSetEmpty($0) }
+    dict[-1148011883] = { return SecretApi73.MessageEntity.parse_messageEntityUnknown($0) }
+    dict[-100378723] = { return SecretApi73.MessageEntity.parse_messageEntityMention($0) }
+    dict[1868782349] = { return SecretApi73.MessageEntity.parse_messageEntityHashtag($0) }
+    dict[1827637959] = { return SecretApi73.MessageEntity.parse_messageEntityBotCommand($0) }
+    dict[1859134776] = { return SecretApi73.MessageEntity.parse_messageEntityUrl($0) }
+    dict[1692693954] = { return SecretApi73.MessageEntity.parse_messageEntityEmail($0) }
+    dict[-1117713463] = { return SecretApi73.MessageEntity.parse_messageEntityBold($0) }
+    dict[-2106619040] = { return SecretApi73.MessageEntity.parse_messageEntityItalic($0) }
+    dict[681706865] = { return SecretApi73.MessageEntity.parse_messageEntityCode($0) }
+    dict[1938967520] = { return SecretApi73.MessageEntity.parse_messageEntityPre($0) }
+    dict[1990644519] = { return SecretApi73.MessageEntity.parse_messageEntityTextUrl($0) }
+    dict[144661578] = { return SecretApi73.DecryptedMessageMedia.parse_decryptedMessageMediaEmpty($0) }
+    dict[893913689] = { return SecretApi73.DecryptedMessageMedia.parse_decryptedMessageMediaGeoPoint($0) }
+    dict[1485441687] = { return SecretApi73.DecryptedMessageMedia.parse_decryptedMessageMediaContact($0) }
+    dict[1474341323] = { return SecretApi73.DecryptedMessageMedia.parse_decryptedMessageMediaAudio($0) }
+    dict[-90853155] = { return SecretApi73.DecryptedMessageMedia.parse_decryptedMessageMediaExternalDocument($0) }
+    dict[-235238024] = { return SecretApi73.DecryptedMessageMedia.parse_decryptedMessageMediaPhoto($0) }
+    dict[2063502050] = { return SecretApi73.DecryptedMessageMedia.parse_decryptedMessageMediaDocument($0) }
+    dict[-1760785394] = { return SecretApi73.DecryptedMessageMedia.parse_decryptedMessageMediaVideo($0) }
+    dict[-1978796689] = { return SecretApi73.DecryptedMessageMedia.parse_decryptedMessageMediaVenue($0) }
+    dict[-452652584] = { return SecretApi73.DecryptedMessageMedia.parse_decryptedMessageMediaWebPage($0) }
     return dict
 }()
 
-public struct SecretApi46 {
+public struct SecretApi73 {
     public static func parse(_ buffer: Buffer) -> Any? {
         let reader = BufferReader(buffer)
         if let signature = reader.readInt32() {
@@ -72,7 +71,7 @@ public struct SecretApi46 {
                 return parser(reader)
             }
             else {
-                Logger.shared.log("TL", "Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
@@ -91,7 +90,7 @@ public struct SecretApi46 {
                         return nil
                     }
                 }
-                if let item = SecretApi46.parse(reader, signature: signature) as? T {
+                if let item = SecretApi73.parse(reader, signature: signature) as? T {
                     array.append(item)
                 }
                 else {
@@ -106,23 +105,23 @@ public struct SecretApi46 {
     
     public static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) {
         switch object {
-            case let _1 as SecretApi46.DecryptedMessageAction:
+            case let _1 as SecretApi73.DecryptedMessageAction:
                 _1.serialize(buffer, boxed)
-            case let _1 as SecretApi46.PhotoSize:
+            case let _1 as SecretApi73.PhotoSize:
                 _1.serialize(buffer, boxed)
-            case let _1 as SecretApi46.FileLocation:
+            case let _1 as SecretApi73.FileLocation:
                 _1.serialize(buffer, boxed)
-            case let _1 as SecretApi46.DecryptedMessageLayer:
+            case let _1 as SecretApi73.DecryptedMessageLayer:
                 _1.serialize(buffer, boxed)
-            case let _1 as SecretApi46.DecryptedMessage:
+            case let _1 as SecretApi73.DecryptedMessage:
                 _1.serialize(buffer, boxed)
-            case let _1 as SecretApi46.DocumentAttribute:
+            case let _1 as SecretApi73.DocumentAttribute:
                 _1.serialize(buffer, boxed)
-            case let _1 as SecretApi46.InputStickerSet:
+            case let _1 as SecretApi73.InputStickerSet:
                 _1.serialize(buffer, boxed)
-            case let _1 as SecretApi46.MessageEntity:
+            case let _1 as SecretApi73.MessageEntity:
                 _1.serialize(buffer, boxed)
-            case let _1 as SecretApi46.DecryptedMessageMedia:
+            case let _1 as SecretApi73.DecryptedMessageMedia:
                 _1.serialize(buffer, boxed)
             default:
                 break
@@ -236,13 +235,12 @@ public struct SecretApi46 {
                     break
     }
     }
-    
         fileprivate static func parse_decryptedMessageActionSetMessageTTL(_ reader: BufferReader) -> DecryptedMessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
             if _c1 {
-                return SecretApi46.DecryptedMessageAction.decryptedMessageActionSetMessageTTL(ttlSeconds: _1!)
+                return SecretApi73.DecryptedMessageAction.decryptedMessageActionSetMessageTTL(ttlSeconds: _1!)
             }
             else {
                 return nil
@@ -251,11 +249,11 @@ public struct SecretApi46 {
         fileprivate static func parse_decryptedMessageActionReadMessages(_ reader: BufferReader) -> DecryptedMessageAction? {
             var _1: [Int64]?
             if let _ = reader.readInt32() {
-                _1 = SecretApi46.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+                _1 = SecretApi73.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
             if _c1 {
-                return SecretApi46.DecryptedMessageAction.decryptedMessageActionReadMessages(randomIds: _1!)
+                return SecretApi73.DecryptedMessageAction.decryptedMessageActionReadMessages(randomIds: _1!)
             }
             else {
                 return nil
@@ -264,11 +262,11 @@ public struct SecretApi46 {
         fileprivate static func parse_decryptedMessageActionDeleteMessages(_ reader: BufferReader) -> DecryptedMessageAction? {
             var _1: [Int64]?
             if let _ = reader.readInt32() {
-                _1 = SecretApi46.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+                _1 = SecretApi73.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
             if _c1 {
-                return SecretApi46.DecryptedMessageAction.decryptedMessageActionDeleteMessages(randomIds: _1!)
+                return SecretApi73.DecryptedMessageAction.decryptedMessageActionDeleteMessages(randomIds: _1!)
             }
             else {
                 return nil
@@ -277,25 +275,25 @@ public struct SecretApi46 {
         fileprivate static func parse_decryptedMessageActionScreenshotMessages(_ reader: BufferReader) -> DecryptedMessageAction? {
             var _1: [Int64]?
             if let _ = reader.readInt32() {
-                _1 = SecretApi46.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+                _1 = SecretApi73.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
             if _c1 {
-                return SecretApi46.DecryptedMessageAction.decryptedMessageActionScreenshotMessages(randomIds: _1!)
+                return SecretApi73.DecryptedMessageAction.decryptedMessageActionScreenshotMessages(randomIds: _1!)
             }
             else {
                 return nil
             }
         }
         fileprivate static func parse_decryptedMessageActionFlushHistory(_ reader: BufferReader) -> DecryptedMessageAction? {
-            return SecretApi46.DecryptedMessageAction.decryptedMessageActionFlushHistory
+            return SecretApi73.DecryptedMessageAction.decryptedMessageActionFlushHistory
         }
         fileprivate static func parse_decryptedMessageActionNotifyLayer(_ reader: BufferReader) -> DecryptedMessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
             if _c1 {
-                return SecretApi46.DecryptedMessageAction.decryptedMessageActionNotifyLayer(layer: _1!)
+                return SecretApi73.DecryptedMessageAction.decryptedMessageActionNotifyLayer(layer: _1!)
             }
             else {
                 return nil
@@ -309,7 +307,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.DecryptedMessageAction.decryptedMessageActionResend(startSeqNo: _1!, endSeqNo: _2!)
+                return SecretApi73.DecryptedMessageAction.decryptedMessageActionResend(startSeqNo: _1!, endSeqNo: _2!)
             }
             else {
                 return nil
@@ -323,7 +321,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.DecryptedMessageAction.decryptedMessageActionRequestKey(exchangeId: _1!, gA: _2!)
+                return SecretApi73.DecryptedMessageAction.decryptedMessageActionRequestKey(exchangeId: _1!, gA: _2!)
             }
             else {
                 return nil
@@ -340,7 +338,7 @@ public struct SecretApi46 {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return SecretApi46.DecryptedMessageAction.decryptedMessageActionAcceptKey(exchangeId: _1!, gB: _2!, keyFingerprint: _3!)
+                return SecretApi73.DecryptedMessageAction.decryptedMessageActionAcceptKey(exchangeId: _1!, gB: _2!, keyFingerprint: _3!)
             }
             else {
                 return nil
@@ -351,7 +349,7 @@ public struct SecretApi46 {
             _1 = reader.readInt64()
             let _c1 = _1 != nil
             if _c1 {
-                return SecretApi46.DecryptedMessageAction.decryptedMessageActionAbortKey(exchangeId: _1!)
+                return SecretApi73.DecryptedMessageAction.decryptedMessageActionAbortKey(exchangeId: _1!)
             }
             else {
                 return nil
@@ -365,22 +363,23 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.DecryptedMessageAction.decryptedMessageActionCommitKey(exchangeId: _1!, keyFingerprint: _2!)
+                return SecretApi73.DecryptedMessageAction.decryptedMessageActionCommitKey(exchangeId: _1!, keyFingerprint: _2!)
             }
             else {
                 return nil
             }
         }
         fileprivate static func parse_decryptedMessageActionNoop(_ reader: BufferReader) -> DecryptedMessageAction? {
-            return SecretApi46.DecryptedMessageAction.decryptedMessageActionNoop
+            return SecretApi73.DecryptedMessageAction.decryptedMessageActionNoop
         }
+    
     
     }
 
     public enum PhotoSize {
         case photoSizeEmpty(type: String)
-        case photoSize(type: String, location: SecretApi46.FileLocation, w: Int32, h: Int32, size: Int32)
-        case photoCachedSize(type: String, location: SecretApi46.FileLocation, w: Int32, h: Int32, bytes: Buffer)
+        case photoSize(type: String, location: SecretApi73.FileLocation, w: Int32, h: Int32, size: Int32)
+        case photoCachedSize(type: String, location: SecretApi73.FileLocation, w: Int32, h: Int32, bytes: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -412,13 +411,12 @@ public struct SecretApi46 {
                     break
     }
     }
-    
         fileprivate static func parse_photoSizeEmpty(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
             if _c1 {
-                return SecretApi46.PhotoSize.photoSizeEmpty(type: _1!)
+                return SecretApi73.PhotoSize.photoSizeEmpty(type: _1!)
             }
             else {
                 return nil
@@ -427,9 +425,9 @@ public struct SecretApi46 {
         fileprivate static func parse_photoSize(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
-            var _2: SecretApi46.FileLocation?
+            var _2: SecretApi73.FileLocation?
             if let signature = reader.readInt32() {
-                _2 = SecretApi46.parse(reader, signature: signature) as? SecretApi46.FileLocation
+                _2 = SecretApi73.parse(reader, signature: signature) as? SecretApi73.FileLocation
             }
             var _3: Int32?
             _3 = reader.readInt32()
@@ -443,7 +441,7 @@ public struct SecretApi46 {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return SecretApi46.PhotoSize.photoSize(type: _1!, location: _2!, w: _3!, h: _4!, size: _5!)
+                return SecretApi73.PhotoSize.photoSize(type: _1!, location: _2!, w: _3!, h: _4!, size: _5!)
             }
             else {
                 return nil
@@ -452,9 +450,9 @@ public struct SecretApi46 {
         fileprivate static func parse_photoCachedSize(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
-            var _2: SecretApi46.FileLocation?
+            var _2: SecretApi73.FileLocation?
             if let signature = reader.readInt32() {
-                _2 = SecretApi46.parse(reader, signature: signature) as? SecretApi46.FileLocation
+                _2 = SecretApi73.parse(reader, signature: signature) as? SecretApi73.FileLocation
             }
             var _3: Int32?
             _3 = reader.readInt32()
@@ -468,12 +466,13 @@ public struct SecretApi46 {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return SecretApi46.PhotoSize.photoCachedSize(type: _1!, location: _2!, w: _3!, h: _4!, bytes: _5!)
+                return SecretApi73.PhotoSize.photoCachedSize(type: _1!, location: _2!, w: _3!, h: _4!, bytes: _5!)
             }
             else {
                 return nil
             }
         }
+    
     
     }
 
@@ -502,7 +501,6 @@ public struct SecretApi46 {
                     break
     }
     }
-    
         fileprivate static func parse_fileLocationUnavailable(_ reader: BufferReader) -> FileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
@@ -514,7 +512,7 @@ public struct SecretApi46 {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return SecretApi46.FileLocation.fileLocationUnavailable(volumeId: _1!, localId: _2!, secret: _3!)
+                return SecretApi73.FileLocation.fileLocationUnavailable(volumeId: _1!, localId: _2!, secret: _3!)
             }
             else {
                 return nil
@@ -534,17 +532,18 @@ public struct SecretApi46 {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
-                return SecretApi46.FileLocation.fileLocation(dcId: _1!, volumeId: _2!, localId: _3!, secret: _4!)
+                return SecretApi73.FileLocation.fileLocation(dcId: _1!, volumeId: _2!, localId: _3!, secret: _4!)
             }
             else {
                 return nil
             }
         }
     
+    
     }
 
     public enum DecryptedMessageLayer {
-        case decryptedMessageLayer(randomBytes: Buffer, layer: Int32, inSeqNo: Int32, outSeqNo: Int32, message: SecretApi46.DecryptedMessage)
+        case decryptedMessageLayer(randomBytes: Buffer, layer: Int32, inSeqNo: Int32, outSeqNo: Int32, message: SecretApi73.DecryptedMessage)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -560,7 +559,6 @@ public struct SecretApi46 {
                     break
     }
     }
-    
         fileprivate static func parse_decryptedMessageLayer(_ reader: BufferReader) -> DecryptedMessageLayer? {
             var _1: Buffer?
             _1 = parseBytes(reader)
@@ -570,9 +568,9 @@ public struct SecretApi46 {
             _3 = reader.readInt32()
             var _4: Int32?
             _4 = reader.readInt32()
-            var _5: SecretApi46.DecryptedMessage?
+            var _5: SecretApi73.DecryptedMessage?
             if let signature = reader.readInt32() {
-                _5 = SecretApi46.parse(reader, signature: signature) as? SecretApi46.DecryptedMessage
+                _5 = SecretApi73.parse(reader, signature: signature) as? SecretApi73.DecryptedMessage
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -580,18 +578,19 @@ public struct SecretApi46 {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return SecretApi46.DecryptedMessageLayer.decryptedMessageLayer(randomBytes: _1!, layer: _2!, inSeqNo: _3!, outSeqNo: _4!, message: _5!)
+                return SecretApi73.DecryptedMessageLayer.decryptedMessageLayer(randomBytes: _1!, layer: _2!, inSeqNo: _3!, outSeqNo: _4!, message: _5!)
             }
             else {
                 return nil
             }
         }
     
+    
     }
 
     public enum DecryptedMessage {
-        case decryptedMessageService(randomId: Int64, action: SecretApi46.DecryptedMessageAction)
-        case decryptedMessage(flags: Int32, randomId: Int64, ttl: Int32, message: String, media: SecretApi46.DecryptedMessageMedia?, entities: [SecretApi46.MessageEntity]?, viaBotName: String?, replyToRandomId: Int64?)
+        case decryptedMessageService(randomId: Int64, action: SecretApi73.DecryptedMessageAction)
+        case decryptedMessage(flags: Int32, randomId: Int64, ttl: Int32, message: String, media: SecretApi73.DecryptedMessageMedia?, entities: [SecretApi73.MessageEntity]?, viaBotName: String?, replyToRandomId: Int64?, groupedId: Int64?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -602,9 +601,9 @@ public struct SecretApi46 {
                     serializeInt64(randomId, buffer: buffer, boxed: false)
                     action.serialize(buffer, true)
                     break
-                case .decryptedMessage(let flags, let randomId, let ttl, let message, let media, let entities, let viaBotName, let replyToRandomId):
+                case .decryptedMessage(let flags, let randomId, let ttl, let message, let media, let entities, let viaBotName, let replyToRandomId, let groupedId):
                     if boxed {
-                        buffer.appendInt32(917541342)
+                        buffer.appendInt32(-1848883596)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(randomId, buffer: buffer, boxed: false)
@@ -618,21 +617,21 @@ public struct SecretApi46 {
                     }}
                     if Int(flags) & Int(1 << 11) != 0 {serializeString(viaBotName!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt64(replyToRandomId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 17) != 0 {serializeInt64(groupedId!, buffer: buffer, boxed: false)}
                     break
     }
     }
-    
         fileprivate static func parse_decryptedMessageService(_ reader: BufferReader) -> DecryptedMessage? {
             var _1: Int64?
             _1 = reader.readInt64()
-            var _2: SecretApi46.DecryptedMessageAction?
+            var _2: SecretApi73.DecryptedMessageAction?
             if let signature = reader.readInt32() {
-                _2 = SecretApi46.parse(reader, signature: signature) as? SecretApi46.DecryptedMessageAction
+                _2 = SecretApi73.parse(reader, signature: signature) as? SecretApi73.DecryptedMessageAction
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.DecryptedMessage.decryptedMessageService(randomId: _1!, action: _2!)
+                return SecretApi73.DecryptedMessage.decryptedMessageService(randomId: _1!, action: _2!)
             }
             else {
                 return nil
@@ -647,18 +646,20 @@ public struct SecretApi46 {
             _3 = reader.readInt32()
             var _4: String?
             _4 = parseString(reader)
-            var _5: SecretApi46.DecryptedMessageMedia?
+            var _5: SecretApi73.DecryptedMessageMedia?
             if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
-                _5 = SecretApi46.parse(reader, signature: signature) as? SecretApi46.DecryptedMessageMedia
+                _5 = SecretApi73.parse(reader, signature: signature) as? SecretApi73.DecryptedMessageMedia
             } }
-            var _6: [SecretApi46.MessageEntity]?
+            var _6: [SecretApi73.MessageEntity]?
             if Int(_1!) & Int(1 << 7) != 0 {if let _ = reader.readInt32() {
-                _6 = SecretApi46.parseVector(reader, elementSignature: 0, elementType: SecretApi46.MessageEntity.self)
+                _6 = SecretApi73.parseVector(reader, elementSignature: 0, elementType: SecretApi73.MessageEntity.self)
             } }
             var _7: String?
             if Int(_1!) & Int(1 << 11) != 0 {_7 = parseString(reader) }
             var _8: Int64?
             if Int(_1!) & Int(1 << 3) != 0 {_8 = reader.readInt64() }
+            var _9: Int64?
+            if Int(_1!) & Int(1 << 17) != 0 {_9 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -667,23 +668,25 @@ public struct SecretApi46 {
             let _c6 = (Int(_1!) & Int(1 << 7) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 11) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return SecretApi46.DecryptedMessage.decryptedMessage(flags: _1!, randomId: _2!, ttl: _3!, message: _4!, media: _5, entities: _6, viaBotName: _7, replyToRandomId: _8)
+            let _c9 = (Int(_1!) & Int(1 << 17) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return SecretApi73.DecryptedMessage.decryptedMessage(flags: _1!, randomId: _2!, ttl: _3!, message: _4!, media: _5, entities: _6, viaBotName: _7, replyToRandomId: _8, groupedId: _9)
             }
             else {
                 return nil
             }
         }
     
+    
     }
 
     public enum DocumentAttribute {
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeAnimated
-        case documentAttributeVideo(duration: Int32, w: Int32, h: Int32)
         case documentAttributeFilename(fileName: String)
-        case documentAttributeSticker(alt: String, stickerset: SecretApi46.InputStickerSet)
+        case documentAttributeSticker(alt: String, stickerset: SecretApi73.InputStickerSet)
         case documentAttributeAudio(flags: Int32, duration: Int32, title: String?, performer: String?, waveform: Buffer?)
+        case documentAttributeVideo(flags: Int32, duration: Int32, w: Int32, h: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -699,14 +702,6 @@ public struct SecretApi46 {
                         buffer.appendInt32(297109817)
                     }
                     
-                    break
-                case .documentAttributeVideo(let duration, let w, let h):
-                    if boxed {
-                        buffer.appendInt32(1494273227)
-                    }
-                    serializeInt32(duration, buffer: buffer, boxed: false)
-                    serializeInt32(w, buffer: buffer, boxed: false)
-                    serializeInt32(h, buffer: buffer, boxed: false)
                     break
                 case .documentAttributeFilename(let fileName):
                     if boxed {
@@ -731,9 +726,17 @@ public struct SecretApi46 {
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(performer!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeBytes(waveform!, buffer: buffer, boxed: false)}
                     break
+                case .documentAttributeVideo(let flags, let duration, let w, let h):
+                    if boxed {
+                        buffer.appendInt32(250621158)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(duration, buffer: buffer, boxed: false)
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    break
     }
     }
-    
         fileprivate static func parse_documentAttributeImageSize(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -742,38 +745,21 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.DocumentAttribute.documentAttributeImageSize(w: _1!, h: _2!)
+                return SecretApi73.DocumentAttribute.documentAttributeImageSize(w: _1!, h: _2!)
             }
             else {
                 return nil
             }
         }
         fileprivate static func parse_documentAttributeAnimated(_ reader: BufferReader) -> DocumentAttribute? {
-            return SecretApi46.DocumentAttribute.documentAttributeAnimated
-        }
-        fileprivate static func parse_documentAttributeVideo(_ reader: BufferReader) -> DocumentAttribute? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return SecretApi46.DocumentAttribute.documentAttributeVideo(duration: _1!, w: _2!, h: _3!)
-            }
-            else {
-                return nil
-            }
+            return SecretApi73.DocumentAttribute.documentAttributeAnimated
         }
         fileprivate static func parse_documentAttributeFilename(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
             if _c1 {
-                return SecretApi46.DocumentAttribute.documentAttributeFilename(fileName: _1!)
+                return SecretApi73.DocumentAttribute.documentAttributeFilename(fileName: _1!)
             }
             else {
                 return nil
@@ -782,14 +768,14 @@ public struct SecretApi46 {
         fileprivate static func parse_documentAttributeSticker(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: String?
             _1 = parseString(reader)
-            var _2: SecretApi46.InputStickerSet?
+            var _2: SecretApi73.InputStickerSet?
             if let signature = reader.readInt32() {
-                _2 = SecretApi46.parse(reader, signature: signature) as? SecretApi46.InputStickerSet
+                _2 = SecretApi73.parse(reader, signature: signature) as? SecretApi73.InputStickerSet
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.DocumentAttribute.documentAttributeSticker(alt: _1!, stickerset: _2!)
+                return SecretApi73.DocumentAttribute.documentAttributeSticker(alt: _1!, stickerset: _2!)
             }
             else {
                 return nil
@@ -812,12 +798,33 @@ public struct SecretApi46 {
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return SecretApi46.DocumentAttribute.documentAttributeAudio(flags: _1!, duration: _2!, title: _3, performer: _4, waveform: _5)
+                return SecretApi73.DocumentAttribute.documentAttributeAudio(flags: _1!, duration: _2!, title: _3, performer: _4, waveform: _5)
             }
             else {
                 return nil
             }
         }
+        fileprivate static func parse_documentAttributeVideo(_ reader: BufferReader) -> DocumentAttribute? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return SecretApi73.DocumentAttribute.documentAttributeVideo(flags: _1!, duration: _2!, w: _3!, h: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
     
     }
 
@@ -841,21 +848,21 @@ public struct SecretApi46 {
                     break
     }
     }
-    
         fileprivate static func parse_inputStickerSetShortName(_ reader: BufferReader) -> InputStickerSet? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
             if _c1 {
-                return SecretApi46.InputStickerSet.inputStickerSetShortName(shortName: _1!)
+                return SecretApi73.InputStickerSet.inputStickerSetShortName(shortName: _1!)
             }
             else {
                 return nil
             }
         }
         fileprivate static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
-            return SecretApi46.InputStickerSet.inputStickerSetEmpty
+            return SecretApi73.InputStickerSet.inputStickerSetEmpty
         }
+    
     
     }
 
@@ -955,7 +962,6 @@ public struct SecretApi46 {
                     break
     }
     }
-    
         fileprivate static func parse_messageEntityUnknown(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -964,7 +970,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.MessageEntity.messageEntityUnknown(offset: _1!, length: _2!)
+                return SecretApi73.MessageEntity.messageEntityUnknown(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -978,7 +984,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.MessageEntity.messageEntityMention(offset: _1!, length: _2!)
+                return SecretApi73.MessageEntity.messageEntityMention(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -992,7 +998,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.MessageEntity.messageEntityHashtag(offset: _1!, length: _2!)
+                return SecretApi73.MessageEntity.messageEntityHashtag(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -1006,7 +1012,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.MessageEntity.messageEntityBotCommand(offset: _1!, length: _2!)
+                return SecretApi73.MessageEntity.messageEntityBotCommand(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -1020,7 +1026,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.MessageEntity.messageEntityUrl(offset: _1!, length: _2!)
+                return SecretApi73.MessageEntity.messageEntityUrl(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -1034,7 +1040,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.MessageEntity.messageEntityEmail(offset: _1!, length: _2!)
+                return SecretApi73.MessageEntity.messageEntityEmail(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -1048,7 +1054,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.MessageEntity.messageEntityBold(offset: _1!, length: _2!)
+                return SecretApi73.MessageEntity.messageEntityBold(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -1062,7 +1068,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.MessageEntity.messageEntityItalic(offset: _1!, length: _2!)
+                return SecretApi73.MessageEntity.messageEntityItalic(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -1076,7 +1082,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.MessageEntity.messageEntityCode(offset: _1!, length: _2!)
+                return SecretApi73.MessageEntity.messageEntityCode(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -1093,7 +1099,7 @@ public struct SecretApi46 {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return SecretApi46.MessageEntity.messageEntityPre(offset: _1!, length: _2!, language: _3!)
+                return SecretApi73.MessageEntity.messageEntityPre(offset: _1!, length: _2!, language: _3!)
             }
             else {
                 return nil
@@ -1110,12 +1116,13 @@ public struct SecretApi46 {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return SecretApi46.MessageEntity.messageEntityTextUrl(offset: _1!, length: _2!, url: _3!)
+                return SecretApi73.MessageEntity.messageEntityTextUrl(offset: _1!, length: _2!, url: _3!)
             }
             else {
                 return nil
             }
         }
+    
     
     }
 
@@ -1124,9 +1131,9 @@ public struct SecretApi46 {
         case decryptedMessageMediaGeoPoint(lat: Double, long: Double)
         case decryptedMessageMediaContact(phoneNumber: String, firstName: String, lastName: String, userId: Int32)
         case decryptedMessageMediaAudio(duration: Int32, mimeType: String, size: Int32, key: Buffer, iv: Buffer)
-        case decryptedMessageMediaExternalDocument(id: Int64, accessHash: Int64, date: Int32, mimeType: String, size: Int32, thumb: SecretApi46.PhotoSize, dcId: Int32, attributes: [SecretApi46.DocumentAttribute])
+        case decryptedMessageMediaExternalDocument(id: Int64, accessHash: Int64, date: Int32, mimeType: String, size: Int32, thumb: SecretApi73.PhotoSize, dcId: Int32, attributes: [SecretApi73.DocumentAttribute])
         case decryptedMessageMediaPhoto(thumb: Buffer, thumbW: Int32, thumbH: Int32, w: Int32, h: Int32, size: Int32, key: Buffer, iv: Buffer, caption: String)
-        case decryptedMessageMediaDocument(thumb: Buffer, thumbW: Int32, thumbH: Int32, mimeType: String, size: Int32, key: Buffer, iv: Buffer, attributes: [SecretApi46.DocumentAttribute], caption: String)
+        case decryptedMessageMediaDocument(thumb: Buffer, thumbW: Int32, thumbH: Int32, mimeType: String, size: Int32, key: Buffer, iv: Buffer, attributes: [SecretApi73.DocumentAttribute], caption: String)
         case decryptedMessageMediaVideo(thumb: Buffer, thumbW: Int32, thumbH: Int32, duration: Int32, mimeType: String, w: Int32, h: Int32, size: Int32, key: Buffer, iv: Buffer, caption: String)
         case decryptedMessageMediaVenue(lat: Double, long: Double, title: String, address: String, provider: String, venueId: String)
         case decryptedMessageMediaWebPage(url: String)
@@ -1249,9 +1256,8 @@ public struct SecretApi46 {
                     break
     }
     }
-    
         fileprivate static func parse_decryptedMessageMediaEmpty(_ reader: BufferReader) -> DecryptedMessageMedia? {
-            return SecretApi46.DecryptedMessageMedia.decryptedMessageMediaEmpty
+            return SecretApi73.DecryptedMessageMedia.decryptedMessageMediaEmpty
         }
         fileprivate static func parse_decryptedMessageMediaGeoPoint(_ reader: BufferReader) -> DecryptedMessageMedia? {
             var _1: Double?
@@ -1261,7 +1267,7 @@ public struct SecretApi46 {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return SecretApi46.DecryptedMessageMedia.decryptedMessageMediaGeoPoint(lat: _1!, long: _2!)
+                return SecretApi73.DecryptedMessageMedia.decryptedMessageMediaGeoPoint(lat: _1!, long: _2!)
             }
             else {
                 return nil
@@ -1281,7 +1287,7 @@ public struct SecretApi46 {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
-                return SecretApi46.DecryptedMessageMedia.decryptedMessageMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, userId: _4!)
+                return SecretApi73.DecryptedMessageMedia.decryptedMessageMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, userId: _4!)
             }
             else {
                 return nil
@@ -1304,7 +1310,7 @@ public struct SecretApi46 {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return SecretApi46.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: _1!, mimeType: _2!, size: _3!, key: _4!, iv: _5!)
+                return SecretApi73.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: _1!, mimeType: _2!, size: _3!, key: _4!, iv: _5!)
             }
             else {
                 return nil
@@ -1321,15 +1327,15 @@ public struct SecretApi46 {
             _4 = parseString(reader)
             var _5: Int32?
             _5 = reader.readInt32()
-            var _6: SecretApi46.PhotoSize?
+            var _6: SecretApi73.PhotoSize?
             if let signature = reader.readInt32() {
-                _6 = SecretApi46.parse(reader, signature: signature) as? SecretApi46.PhotoSize
+                _6 = SecretApi73.parse(reader, signature: signature) as? SecretApi73.PhotoSize
             }
             var _7: Int32?
             _7 = reader.readInt32()
-            var _8: [SecretApi46.DocumentAttribute]?
+            var _8: [SecretApi73.DocumentAttribute]?
             if let _ = reader.readInt32() {
-                _8 = SecretApi46.parseVector(reader, elementSignature: 0, elementType: SecretApi46.DocumentAttribute.self)
+                _8 = SecretApi73.parseVector(reader, elementSignature: 0, elementType: SecretApi73.DocumentAttribute.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -1340,7 +1346,7 @@ public struct SecretApi46 {
             let _c7 = _7 != nil
             let _c8 = _8 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return SecretApi46.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: _1!, accessHash: _2!, date: _3!, mimeType: _4!, size: _5!, thumb: _6!, dcId: _7!, attributes: _8!)
+                return SecretApi73.DecryptedMessageMedia.decryptedMessageMediaExternalDocument(id: _1!, accessHash: _2!, date: _3!, mimeType: _4!, size: _5!, thumb: _6!, dcId: _7!, attributes: _8!)
             }
             else {
                 return nil
@@ -1375,7 +1381,7 @@ public struct SecretApi46 {
             let _c8 = _8 != nil
             let _c9 = _9 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return SecretApi46.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: _1!, thumbW: _2!, thumbH: _3!, w: _4!, h: _5!, size: _6!, key: _7!, iv: _8!, caption: _9!)
+                return SecretApi73.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: _1!, thumbW: _2!, thumbH: _3!, w: _4!, h: _5!, size: _6!, key: _7!, iv: _8!, caption: _9!)
             }
             else {
                 return nil
@@ -1396,9 +1402,9 @@ public struct SecretApi46 {
             _6 = parseBytes(reader)
             var _7: Buffer?
             _7 = parseBytes(reader)
-            var _8: [SecretApi46.DocumentAttribute]?
+            var _8: [SecretApi73.DocumentAttribute]?
             if let _ = reader.readInt32() {
-                _8 = SecretApi46.parseVector(reader, elementSignature: 0, elementType: SecretApi46.DocumentAttribute.self)
+                _8 = SecretApi73.parseVector(reader, elementSignature: 0, elementType: SecretApi73.DocumentAttribute.self)
             }
             var _9: String?
             _9 = parseString(reader)
@@ -1412,7 +1418,7 @@ public struct SecretApi46 {
             let _c8 = _8 != nil
             let _c9 = _9 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: _1!, thumbW: _2!, thumbH: _3!, mimeType: _4!, size: _5!, key: _6!, iv: _7!, attributes: _8!, caption: _9!)
+                return SecretApi73.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: _1!, thumbW: _2!, thumbH: _3!, mimeType: _4!, size: _5!, key: _6!, iv: _7!, attributes: _8!, caption: _9!)
             }
             else {
                 return nil
@@ -1453,7 +1459,7 @@ public struct SecretApi46 {
             let _c10 = _10 != nil
             let _c11 = _11 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return SecretApi46.DecryptedMessageMedia.decryptedMessageMediaVideo(thumb: _1!, thumbW: _2!, thumbH: _3!, duration: _4!, mimeType: _5!, w: _6!, h: _7!, size: _8!, key: _9!, iv: _10!, caption: _11!)
+                return SecretApi73.DecryptedMessageMedia.decryptedMessageMediaVideo(thumb: _1!, thumbW: _2!, thumbH: _3!, duration: _4!, mimeType: _5!, w: _6!, h: _7!, size: _8!, key: _9!, iv: _10!, caption: _11!)
             }
             else {
                 return nil
@@ -1479,7 +1485,7 @@ public struct SecretApi46 {
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return SecretApi46.DecryptedMessageMedia.decryptedMessageMediaVenue(lat: _1!, long: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!)
+                return SecretApi73.DecryptedMessageMedia.decryptedMessageMediaVenue(lat: _1!, long: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!)
             }
             else {
                 return nil
@@ -1490,12 +1496,13 @@ public struct SecretApi46 {
             _1 = parseString(reader)
             let _c1 = _1 != nil
             if _c1 {
-                return SecretApi46.DecryptedMessageMedia.decryptedMessageMediaWebPage(url: _1!)
+                return SecretApi73.DecryptedMessageMedia.decryptedMessageMediaWebPage(url: _1!)
             }
             else {
                 return nil
             }
         }
+    
     
     }
 

@@ -4,6 +4,7 @@ import PostboxMac
 #else
 import Postbox
 #endif
+import TelegramApi
 
 public indirect enum JSON: PostboxCoding, Equatable {
     case null

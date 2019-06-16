@@ -12,6 +12,7 @@ import SwiftSignalKit
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 #if os(macOS)
 private typealias SignalKitTimer = SwiftSignalKitMac.Timer

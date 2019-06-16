@@ -260,7 +260,7 @@ public class ContactsController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            let _ = (DeviceAccess.authorizationStatus(context: strongSelf.context, subject: .location(.tracking))
+            let _ = (DeviceAccess.authorizationStatus(subject: .location(.tracking))
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] status in
                 guard let strongSelf = self else {

@@ -1,5 +1,4 @@
 
-
 fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     var dict: [Int32 : (BufferReader) -> Any?] = [:]
     dict[-1471112230] = { return $0.readInt32() }
@@ -38,7 +37,7 @@ public struct SecretApi8 {
                 return parser(reader)
             }
             else {
-                Logger.shared.log("TL", "Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }

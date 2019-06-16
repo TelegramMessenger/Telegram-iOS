@@ -12,6 +12,7 @@ import Foundation
     #endif
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public func rateCall(account: Account, callId: CallId, starsCount: Int32, comment: String = "", userInitiated: Bool) -> Signal<Void, NoError> {
     var flags: Int32 = 0

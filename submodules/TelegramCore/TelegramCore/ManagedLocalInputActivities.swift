@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 struct PeerInputActivityRecord: Equatable {
     let activity: PeerInputActivity

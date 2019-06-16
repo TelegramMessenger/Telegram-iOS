@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 private enum MessagePreParsingError: Error {
     case invalidChatState

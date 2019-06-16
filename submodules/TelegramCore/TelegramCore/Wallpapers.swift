@@ -6,6 +6,7 @@ import SwiftSignalKitMac
 import Postbox
 import SwiftSignalKit
 #endif
+import TelegramApi
 
 final class CachedWallpapersConfiguration: PostboxCoding {
     let hash: Int32

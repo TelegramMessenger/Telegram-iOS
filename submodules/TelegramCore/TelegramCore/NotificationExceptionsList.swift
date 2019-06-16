@@ -6,6 +6,7 @@ import PostboxMac
 import SwiftSignalKit
 import Postbox
 #endif
+import TelegramApi
 
 public final class NotificationExceptionsList: Equatable {
     public let peers: [PeerId: Peer]

@@ -68,7 +68,7 @@ private struct SecretChatData {
 }
 
 private func readSecretChatParticipantData(accountPeerId: PeerId, data: Data) -> (SecretChatRole, PeerId)? {
-    let reader = BufferReader(Buffer(data: data))
+    let reader = LegacyBufferReader(LegacyBuffer(data: data))
     
     guard reader.readInt32() == Int32(bitPattern: 0xabcdef12) else {
         return nil
@@ -101,7 +101,7 @@ private func readSecretChatParticipantData(accountPeerId: PeerId, data: Data) ->
     return (adminId == accountPeerId.id ? .creator : .participant, PeerId(namespace: Namespaces.Peer.CloudUser, id: otherPeerId))
 }
 
-private func readSecretChatData(reader: BufferReader) -> SecretChatData? {
+private func readSecretChatData(reader: LegacyBufferReader) -> SecretChatData? {
     guard let version = reader.readBytesAsInt32(1) else {
         return nil
     }
@@ -196,7 +196,7 @@ let registeredAttachmentParsers: Bool = {
 }()
 
 private func parseSecretChatData(peerId: PeerId, data: Data, unreadCount: Int32) -> (SecretChatData, [MessageId.Namespace: PeerReadState], Int32)? {
-    let reader = BufferReader(Buffer(data: data))
+    let reader = LegacyBufferReader(LegacyBuffer(data: data))
     guard let magic = reader.readInt32() else {
         return nil
     }
@@ -271,7 +271,7 @@ private func loadLegacyPeerCustomProperyData(database: SqliteInterface, peerId: 
             case let .hash(hash):
                 keyHash = hash
         }
-        let reader = BufferReader(Buffer(data: propertiesData))
+        let reader = LegacyBufferReader(LegacyBuffer(data: propertiesData))
         
         guard let _ = reader.readInt32() else {
             return nil
@@ -607,7 +607,7 @@ private func importChannelBroadcastPreferences(account: TemporaryAccount, basePa
         var peerIdsWithMutedMessages: [Int64] = []
         for peerId in peerIds {
             if let data = loadLegacyPeerCustomProperyData(database: database, peerId: peerId, key: .hash(0x374BF349)), !data.isEmpty {
-                let reader = BufferReader(Buffer(data: data))
+                let reader = LegacyBufferReader(LegacyBuffer(data: data))
                 guard let version = reader.readBytesAsInt32(1) else {
                     continue
                 }

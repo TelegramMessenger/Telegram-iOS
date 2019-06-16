@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public struct ExportedInvitation: PostboxCoding, Equatable {
     public let link: String

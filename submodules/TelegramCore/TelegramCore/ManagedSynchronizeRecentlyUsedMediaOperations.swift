@@ -12,6 +12,7 @@ import SwiftSignalKit
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 private final class ManagedSynchronizeRecentlyUsedMediaOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]

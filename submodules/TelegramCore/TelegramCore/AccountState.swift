@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 private enum SentAuthorizationCodeTypeValue: Int32 {
     case otherSession = 0

@@ -12,6 +12,7 @@ import Postbox
     #endif
 import SwiftSignalKit
 #endif
+import TelegramApi
 
 private let minLayer: Int32 = 65
 

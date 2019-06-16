@@ -318,6 +318,7 @@
 		D02D60C8206E705D00FEFE1E /* SecureIdValueFormPhoneItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60C7206E705D00FEFE1E /* SecureIdValueFormPhoneItem.swift */; };
 		D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02F4AE81FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift */; };
 		D02F4AF01FD4C46D004DFBAE /* SystemVideoContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02F4AEF1FD4C46D004DFBAE /* SystemVideoContent.swift */; };
+		D035734B22B5CCCA00F0920D /* LegacyBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D035734A22B5CCCA00F0920D /* LegacyBuffer.swift */; };
 		D0380DA9204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DA8204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift */; };
 		D0380DAB204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DAA204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift */; };
 		D0380DAD204ED434000414AB /* LegacyLiveUploadInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */; };
@@ -1581,6 +1582,7 @@
 		D02F4AE81FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageInteractiveMediaBadge.swift; sourceTree = "<group>"; };
 		D02F4AEF1FD4C46D004DFBAE /* SystemVideoContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemVideoContent.swift; sourceTree = "<group>"; };
 		D03120F51DA534C1006A2A60 /* ItemListActionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListActionItem.swift; sourceTree = "<group>"; };
+		D035734A22B5CCCA00F0920D /* LegacyBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyBuffer.swift; sourceTree = "<group>"; };
 		D0380DA8204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretMediaPreviewFooterContentNode.swift; sourceTree = "<group>"; };
 		D0380DAA204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialStatusSecretTimeoutContentNode.swift; sourceTree = "<group>"; };
 		D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyLiveUploadInterface.swift; sourceTree = "<group>"; };
@@ -2745,6 +2747,7 @@
 				D00817C922B47A14008A895F /* TGPresentationAutoNightPreferences.m */,
 				D00817B422B47A12008A895F /* TGProxyItem.h */,
 				D00817BC22B47A13008A895F /* TGProxyItem.m */,
+				D035734A22B5CCCA00F0920D /* LegacyBuffer.swift */,
 			);
 			name = "Legacy Data Import";
 			sourceTree = "<group>";
@@ -5253,7 +5256,6 @@
 				D0EC6CF51EB9F58800EBF1C3 /* PeerMessageManagedMediaId.swift in Sources */,
 				D0E9BA521F0559DA00F079A4 /* STPImageLibrary.m in Sources */,
 				D0EC6CF61EB9F58800EBF1C3 /* ChatContextResultManagedMediaId.swift in Sources */,
-				D048B33B203C777500038D05 /* RenderedTotalUnreadCount.swift in Sources */,
 				090E778622A9B95A00CD99F5 /* PeersNearbyController.swift in Sources */,
 				D04ECD721FFBF22B00DE9029 /* OpenUrl.swift in Sources */,
 				D04B4D661EEA993A00711AF6 /* LegacyLocationController.swift in Sources */,
@@ -5602,6 +5604,7 @@
 				9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */,
 				D039FB1921711B5D00BD1BAD /* PlatformVideoContent.swift in Sources */,
 				D0CAD8FD20AE467D00ACD96E /* PeerChannelMemberCategoriesContextsManager.swift in Sources */,
+				D035734B22B5CCCA00F0920D /* LegacyBuffer.swift in Sources */,
 				D0430B001FF4570500A35ADD /* WebController.swift in Sources */,
 				09D9689D221F74F000B1458A /* ChatTitleActivityNode.swift in Sources */,
 				D0EC6D991EB9F58900EBF1C3 /* ChatMessageMediaBubbleContentNode.swift in Sources */,

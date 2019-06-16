@@ -5,6 +5,7 @@
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public enum ChannelHistoryAvailabilityError {
     case generic

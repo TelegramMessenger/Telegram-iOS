@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 enum SecretChatIncomingEncryptedOperationType: Int32 {
     case message

@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public enum ArchivedStickerPacksNamespace: Int32 {
     case stickers = 0

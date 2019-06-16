@@ -11,7 +11,7 @@
         import MtProtoKitDynamic
     #endif
 #endif
-
+import TelegramApi
 
 public func supportPeerId(account:Account) -> Signal<PeerId?, NoError> {
     return account.network.request(Api.functions.help.getSupport())

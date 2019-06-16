@@ -12,7 +12,7 @@
         import MtProtoKitDynamic
     #endif
 #endif
-
+import TelegramApi
 
 public func returnGroup(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.loadedPeerWithId(account.peerId)

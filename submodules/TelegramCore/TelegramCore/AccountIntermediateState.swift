@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 struct PeerChatInfo {
     var notificationSettings: PeerNotificationSettings

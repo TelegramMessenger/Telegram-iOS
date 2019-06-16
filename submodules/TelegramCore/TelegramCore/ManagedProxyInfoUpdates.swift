@@ -12,6 +12,7 @@ import SwiftSignalKit
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 func managedProxyInfoUpdates(postbox: Postbox, network: Network, viewTracker: AccountViewTracker) -> Signal<Void, NoError> {
     return Signal { subscriber in

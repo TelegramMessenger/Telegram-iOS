@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public struct RenderedChannelParticipant: Equatable {
     public let participant: ChannelParticipant

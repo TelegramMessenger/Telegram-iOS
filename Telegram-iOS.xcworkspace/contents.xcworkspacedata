@@ -2,40 +2,40 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/LightweightAccountData/LightweightAccountData_Xcode.xcodeproj">
+      location = "group:submodules/LightweightAccountData/LightweightAccountData_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/WatchCommon/WatchCommon_Xcode.xcodeproj">
+      location = "group:submodules/WatchCommon/WatchCommon_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/BuildConfig/BuildConfig_Xcode.xcodeproj">
+      location = "group:submodules/BuildConfig/BuildConfig_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/MediaPlayer/UniversalMediaPlayer_Xcode.xcodeproj">
+      location = "group:submodules/MediaPlayer/UniversalMediaPlayer_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/DeviceAccess/DeviceAccess_Xcode.xcodeproj">
+      location = "group:submodules/DeviceAccess/DeviceAccess_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/TelegramPresentationData/TelegramPresentationData_Xcode.xcodeproj">
+      location = "group:submodules/TelegramPresentationData/TelegramPresentationData_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/TelegramAudio/TelegramAudio_Xcode.xcodeproj">
+      location = "group:submodules/TelegramAudio/TelegramAudio_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/TelegramVoip/TelegramVoip_Xcode.xcodeproj">
+      location = "group:submodules/TelegramVoip/TelegramVoip_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/TelegramUIPreferences/TelegramUIPreferences_Xcode.xcodeproj">
+      location = "group:submodules/TelegramUIPreferences/TelegramUIPreferences_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/GZip/GZip_Xcode.xcodeproj">
+      location = "group:submodules/GZip/GZip_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/RMIntro/RMIntro_Xcode.xcodeproj">
+      location = "group:submodules/RMIntro/RMIntro_Xcode.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/peter/build/telegram-subtrees/telegram-ios/submodules/TelegramCallsUI/TelegramCallsUI_Xcode.xcodeproj">
+      location = "group:submodules/TelegramCallsUI/TelegramCallsUI_Xcode.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:submodules/AsyncDisplayKit/AsyncDisplayKit_Xcode.xcodeproj">
@@ -51,6 +51,9 @@
    </FileRef>
    <FileRef
       location = "group:submodules/SSignalKit/SSignalKit_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/TelegramApi/TelegramApi_Xcode.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:submodules/TelegramCore/TelegramCore_Xcode.xcodeproj">

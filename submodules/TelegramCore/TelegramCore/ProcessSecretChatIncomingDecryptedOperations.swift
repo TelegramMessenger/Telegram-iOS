@@ -5,6 +5,7 @@ import Foundation
     import Postbox
     import UIKit
 #endif
+import TelegramApi
 
 private enum MessageParsingError: Error {
     case contentParsingError

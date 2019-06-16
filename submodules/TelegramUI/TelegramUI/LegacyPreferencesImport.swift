@@ -149,7 +149,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
         
         var passcodeChallenge: PostboxAccessChallengeData?
         if let data = try? Data(contentsOf: URL(fileURLWithPath: documentsPath + "/x.y")) {
-            let reader = BufferReader(Buffer(data: data))
+            let reader = LegacyBufferReader(LegacyBuffer(data: data))
             if let mode = reader.readBytesAsInt32(1), let length = reader.readInt32(), let passwordData = reader.readBuffer(Int(length))?.makeData(), let passwordText = String(data: passwordData, encoding: .utf8) {
                 var lockTimeout: Int32?
                 if let value = UserDefaults.standard.object(forKey: "Passcode_lockTimeout") as? Int {

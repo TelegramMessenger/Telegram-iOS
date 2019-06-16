@@ -13,6 +13,7 @@ import Foundation
     #endif
 #endif
 import TelegramCorePrivateModule
+import TelegramApi
 
 #if os(macOS)
     private typealias SignalKitTimer = SwiftSignalKitMac.Timer
