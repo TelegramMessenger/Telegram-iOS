@@ -12,6 +12,7 @@
 		D00818B222B59067008A895F /* Config-Fork.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = D00818AF22B59067008A895F /* Config-Fork.xcconfig */; };
 		D00818B322B59067008A895F /* Config-Hockeyapp-Internal.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = D00818B022B59067008A895F /* Config-Hockeyapp-Internal.xcconfig */; };
 		D00818B422B59067008A895F /* Config-AppStoreLLC.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = D00818B122B59067008A895F /* Config-AppStoreLLC.xcconfig */; };
+		D035734E22B5CEE200F0920D /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D035734D22B5CEE200F0920D /* MtProtoKitDynamic.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +23,7 @@
 		D00818AF22B59067008A895F /* Config-Fork.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-Fork.xcconfig"; sourceTree = "<group>"; };
 		D00818B022B59067008A895F /* Config-Hockeyapp-Internal.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-Hockeyapp-Internal.xcconfig"; sourceTree = "<group>"; };
 		D00818B122B59067008A895F /* Config-AppStoreLLC.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-AppStoreLLC.xcconfig"; sourceTree = "<group>"; };
+		D035734D22B5CEE200F0920D /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -29,6 +31,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D035734E22B5CEE200F0920D /* MtProtoKitDynamic.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -44,6 +47,7 @@
 				D008179122B4786B008A895F /* Info.plist */,
 				D008178F22B4786B008A895F /* Sources */,
 				D008178E22B4786B008A895F /* Products */,
+				D035734C22B5CEE200F0920D /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -62,6 +66,14 @@
 				D008179922B4792C008A895F /* BuildConfig.m */,
 			);
 			path = Sources;
+			sourceTree = "<group>";
+		};
+		D035734C22B5CEE200F0920D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D035734D22B5CEE200F0920D /* MtProtoKitDynamic.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
