@@ -26,9 +26,10 @@ class ItemListActionItem: ListViewItem, ItemListItem {
     let style: ItemListStyle
     let action: () -> Void
     let longTapAction: (() -> Void)?
+    let clearHighlightAutomatically: Bool
     let tag: Any?
     
-    init(theme: PresentationTheme, title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, longTapAction: (() -> Void)? = nil, tag: Any? = nil) {
+    init(theme: PresentationTheme, title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, longTapAction: (() -> Void)? = nil, clearHighlightAutomatically: Bool = true, tag: Any? = nil) {
         self.theme = theme
         self.title = title
         self.kind = kind
@@ -37,6 +38,7 @@ class ItemListActionItem: ListViewItem, ItemListItem {
         self.style = style
         self.action = action
         self.longTapAction = longTapAction
+        self.clearHighlightAutomatically = clearHighlightAutomatically
         self.tag = tag
     }
     
@@ -76,7 +78,9 @@ class ItemListActionItem: ListViewItem, ItemListItem {
     var selectable: Bool = true
     
     func selected(listView: ListView){
-        listView.clearHighlightAnimated(true)
+        if self.clearHighlightAutomatically {
+            listView.clearHighlightAnimated(true)
+        }
         self.action()
     }
 }

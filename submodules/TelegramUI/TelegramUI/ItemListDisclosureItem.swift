@@ -35,9 +35,10 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let style: ItemListStyle
     let disclosureStyle: ItemListDisclosureStyle
     let action: (() -> Void)?
+    let clearHighlightAutomatically: Bool
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.icon = icon
         self.title = title
@@ -49,6 +50,7 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
         self.style = style
         self.disclosureStyle = disclosureStyle
         self.action = action
+        self.clearHighlightAutomatically = clearHighlightAutomatically
         self.tag = tag
     }
     
@@ -88,7 +90,9 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
     var selectable: Bool = true
     
     func selected(listView: ListView){
-        listView.clearHighlightAnimated(true)
+        if self.clearHighlightAutomatically {
+            listView.clearHighlightAnimated(true)
+        }
         if self.enabled {
             self.action?()
         }

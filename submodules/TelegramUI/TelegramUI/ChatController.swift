@@ -1504,8 +1504,13 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 }
                             }
                             var peerDiscussionId: PeerId?
-                            if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, case .broadcast = peer.info, let cachedData = peerView.cachedData as? CachedChannelData {
-                                peerDiscussionId = cachedData.linkedDiscussionPeerId
+                            var peerGeoLocation: PeerGeoLocation?
+                            if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
+                                if case .broadcast = peer.info {
+                                    peerDiscussionId = cachedData.linkedDiscussionPeerId
+                                } else {
+                                    peerGeoLocation = cachedData.peerGeoLocation
+                                }
                             }
                             var renderedPeer: RenderedPeer?
                             var contactStatus: ChatContactStatus?
@@ -1576,6 +1581,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                         didDisplayActionsPanel = true
                                     } else if peerStatusSettings.contains(.canShareContact) {
                                         didDisplayActionsPanel = true
+                                    } else if peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                        didDisplayActionsPanel = true
                                     }
                                 }
                             }
@@ -1588,6 +1595,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                     } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {
                                         displayActionsPanel = true
                                     } else if peerStatusSettings.contains(.canShareContact) {
+                                        displayActionsPanel = true
+                                    } else if peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                         displayActionsPanel = true
                                     }
                                 }
@@ -1608,7 +1617,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                                 return $0.updatedPeer { _ in return renderedPeer
-                                }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
+                                }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
                             })
                             if !strongSelf.didSetChatLocationInfoReady {
                                 strongSelf.didSetChatLocationInfoReady = true
@@ -3430,6 +3439,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 strongSelf.present(controller, in: .window(.root))
                 
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInputMode({ _ in return .none }) })
+            }
+        }, reportPeerIrrelevantGeoLocation: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.chatDisplayNode.dismissInput()
+                
+                let actions = [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.ReportGroupLocation_Report, action: {})]
+                strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.ReportGroupLocation_Title, text: strongSelf.presentationData.strings.ReportGroupLocation_Text, actions: actions), in: .window(.root))
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         

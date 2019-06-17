@@ -383,7 +383,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             case let .locationSetup(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.setLocation()
-                })
+                }, clearHighlightAutomatically: false)
             case let .locationRemove(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.removeLocation()
@@ -886,10 +886,12 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }))
     
     var dismissImpl: (() -> Void)?
+    var dismissInputImpl: (() -> Void)?
     var nextImpl: (() -> Void)?
     var displayPrivateLinkMenuImpl: ((String) -> Void)?
     var scrollToPublicLinkTextImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var clearHighlightImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -1034,6 +1036,8 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             }
         })
     }, setLocation: {
+        dismissInputImpl?()
+        
         let _ = (context.account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(peerId)
         } |> deliverOnMainQueue).start(next: { peer in
@@ -1044,7 +1048,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let controller = legacyLocationPickerController(context: context, selfPeer: peer, peer: peer, sendLocation: { coordinate, _ in
                 updateState { state in
-                    return state.withUpdatedEditingLocation(.location(PeerGeoLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, address: "Locating...")))
+                    return state.withUpdatedEditingLocation(.location(PeerGeoLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, address: "")))
                 }
                 
                 let _ = (reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
@@ -1059,13 +1063,32 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         return state.withUpdatedEditingLocation(.location(PeerGeoLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, address: address)))
                     }
                 })
-            }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true)
+            }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
+                clearHighlightImpl?()
+            })
             presentControllerImpl?(controller, nil)
         })
     }, removeLocation: {
-        updateState { state in
-            return state.withUpdatedEditingLocation(.removed)
+        dismissInputImpl?()
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
         }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Group_Location_RemoveLocation, color: .destructive, action: {
+                    dismissAction()
+                    
+                    updateState { state in
+                        return state.withUpdatedEditingLocation(.removed)
+                    }
+                })
+            ]),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+        ])
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let peerView = context.account.viewTracker.peerView(peerId)
@@ -1336,6 +1359,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         controller?.view.endEditing(true)
         controller?.dismiss()
     }
+    dismissInputImpl = { [weak controller] in
+        controller?.dismiss()
+    }
     nextImpl = { [weak controller] in
         if let controller = controller {
             if case .initialSetup = mode {
@@ -1430,6 +1456,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    clearHighlightImpl = { [weak controller] in
+        controller?.clearItemNodesHighlight(animated: true)
     }
     return controller
 }

@@ -11,8 +11,11 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
 
-func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme, customLocationPicker: Bool = false) -> ViewController {
+func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme, customLocationPicker: Bool = false, presentationCompleted: @escaping () -> Void = {}) -> ViewController {
     let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: theme)
+    legacyController.presentationCompleted = {
+        presentationCompleted()
+    }
     let controller = TGLocationPickerController(context: legacyController.context, intent: customLocationPicker ? TGLocationPickerControllerCustomLocationIntent : TGLocationPickerControllerDefaultIntent)!
     controller.peer = makeLegacyPeer(selfPeer)
     controller.receivingPeer = makeLegacyPeer(peer)

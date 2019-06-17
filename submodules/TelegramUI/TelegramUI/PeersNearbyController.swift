@@ -57,7 +57,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
     case header(PresentationTheme, String)
    
     case usersHeader(PresentationTheme, String)
-    case empty(PresentationTheme, String)
+    case empty(PresentationTheme, String, Bool)
     case user(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PeerNearbyEntry)
     
     case groupsHeader(PresentationTheme, String)
@@ -117,8 +117,8 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .empty(lhsTheme, lhsText):
-                if case let .empty(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .empty(lhsTheme, lhsText, lhsLoading):
+                if case let .empty(rhsTheme, rhsText, rhsLoading) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsLoading == rhsLoading {
                     return true
                 } else {
                     return false
@@ -166,26 +166,27 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
+    private func stringForDistance(_ distance: Int32) -> String {
+        let distance = max(1, distance)
+        let formatter = MKDistanceFormatter()
+        formatter.unitStyle = .abbreviated
+        var result = formatter.string(fromDistance: Double(distance))
+        if result.hasPrefix("0 ") {
+            result = result.replacingOccurrences(of: "0 ", with: "1 ")
+        }
+        return result
+    }
+    
     func item(_ arguments: PeersNearbyControllerArguments) -> ListViewItem {
         switch self {
             case let .header(theme, text):
                 return PeersNearbyHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .usersHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .empty(theme, text):
+            case let .empty(theme, text, loading):
                 return ItemListPlaceholderItem(theme: theme, text: text, sectionId: self.section, style: .blocks)
             case let .user(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
-                func distance(_ distance: Int32) -> String {
-                    let distance = max(1, distance)
-                    let formatter = MKDistanceFormatter()
-                    formatter.unitStyle = .abbreviated
-                    var result = formatter.string(fromDistance: Double(distance))
-                    if result.hasPrefix("0 ") {
-                        result = result.replacingOccurrences(of: "0 ", with: "1 ")
-                    }
-                    return result
-                }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(distance(peer.distance)), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(stringForDistance(peer.distance)), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, hasTopGroupInset: false, tag: nil)
             case let .groupsHeader(theme, text):
@@ -197,9 +198,9 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .group(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text(strings.Conversation_StatusMembers(memberCount))
+                    text = .text("\(stringForDistance(peer.distance)), \(strings.Conversation_StatusMembers(memberCount))")
                 } else {
-                    text = .none
+                    text = .text(stringForDistance(peer.distance))
                 }
                 return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
@@ -209,9 +210,9 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .channel(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text(strings.Conversation_StatusSubscribers(memberCount))
+                    text = .text("\(stringForDistance(peer.distance)), \(strings.Conversation_StatusSubscribers(memberCount))")
                 } else {
-                    text = .none
+                    text = .text(stringForDistance(peer.distance))
                 }
                 return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
@@ -254,12 +255,12 @@ private func peersNearbyControllerEntries(state: PeersNearbyControllerState, dat
             i += 1
         }
     } else {
-        entries.append(.empty(presentationData.theme, presentationData.strings.PeopleNearby_UsersEmpty))
+        entries.append(.empty(presentationData.theme, presentationData.strings.PeopleNearby_UsersEmpty, data == nil))
     }
     
-    //entries.append(.createGroup(presentationData.theme, presentationData.strings.PeopleNearby_CreateGroup))
+    entries.append(.groupsHeader(presentationData.theme, presentationData.strings.PeopleNearby_Groups.uppercased()))
+    entries.append(.createGroup(presentationData.theme, presentationData.strings.PeopleNearby_CreateGroup))
     if let data = data, !data.groups.isEmpty {
-        entries.append(.groupsHeader(presentationData.theme, presentationData.strings.PeopleNearby_Groups.uppercased()))
         var i: Int32 = 0
         for group in data.groups {
             entries.append(.group(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, group))

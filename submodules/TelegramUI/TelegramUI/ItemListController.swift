@@ -590,9 +590,14 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
+    func clearItemNodesHighlight(animated: Bool = false) {
+        (self.displayNode as! ItemListControllerNode<Entry>).listNode.clearHighlightAnimated(animated)
+    }
+    
     func previewingCommit(_ viewControllerToCommit: UIViewController) {
         self.commitPreview?(viewControllerToCommit)
     }
+    
     public var keyShortcuts: [KeyShortcut] {
         return [KeyShortcut(input: UIKeyInputEscape, action: { [weak self] in
             if !(self?.navigationController?.topViewController is TabBarController) {

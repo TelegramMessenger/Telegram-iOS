@@ -288,7 +288,6 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     bordered = false
                                 case "WhiteFilled":
                                     name = "⍺ White"
-                                    bordered = false
                                 default:
                                     break
                             }

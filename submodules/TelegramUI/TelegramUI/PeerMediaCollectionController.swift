@@ -373,6 +373,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, updateInputLanguage: { _ in
         }, unarchiveChat: {
         }, openLinkEditing: {
+        }, reportPeerIrrelevantGeoLocation: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

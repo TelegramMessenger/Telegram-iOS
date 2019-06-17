@@ -39,8 +39,9 @@ private final class GroupInfoArguments {
     let openGroupTypeSetup: () -> Void
     let openLinkedChannelSetup: () -> Void
     let openLocation: (PeerGeoLocation) -> Void
+    let displayLocationContextMenu: (String) -> Void
     
-    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void, openLinkedChannelSetup: @escaping () -> Void, openLocation: @escaping (PeerGeoLocation) -> Void) {
+    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void, openLinkedChannelSetup: @escaping () -> Void, openLocation: @escaping (PeerGeoLocation) -> Void, displayLocationContextMenu: @escaping (String) -> Void) {
         self.context = context
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
@@ -68,6 +69,7 @@ private final class GroupInfoArguments {
         self.openGroupTypeSetup = openGroupTypeSetup
         self.openLinkedChannelSetup = openLinkedChannelSetup
         self.openLocation = openLocation
+        self.displayLocationContextMenu = displayLocationContextMenu
     }
 }
 
@@ -84,6 +86,7 @@ private enum GroupInfoSection: ItemListSectionId {
 private enum GroupInfoEntryTag {
     case about
     case link
+    case location
 }
 
 private enum GroupInfoMemberStatus {
@@ -464,7 +467,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return ItemListAddressItem(theme: theme, label: "", text: location.address, imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: {
                     arguments.openLocation(location)
                 }, longTapAction: {
-                })
+                    arguments.displayLocationContextMenu(location.address.replacingOccurrences(of: "\n", with: ", "))
+                }, tag: GroupInfoEntryTag.location)
             case let .notifications(theme, title, text):
                 return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.changeNotificationMuteSettings()
@@ -738,6 +742,10 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
         }
     } else if let channel = view.peers[view.peerId] as? TelegramChannel {
         isPublic = channel.username != nil
+        if !isPublic, let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
+            isPublic = true
+        }
+        
         isCreator = channel.flags.contains(.isCreator)
         if channel.hasPermission(.changeInfo) {
             canEditGroupInfo = true
@@ -1959,6 +1967,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             let controller = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, isModal: false, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { _ in })
             pushControllerImpl?(controller)
         })
+    }, displayLocationContextMenu: { text in
+        displayCopyContextMenuImpl?(text, .location)
     })
     
     let loadMoreControl = Atomic<(PeerId, PeerChannelMemberCategoryControl)?>(value: nil)
@@ -2241,6 +2251,11 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     }
                 }
                 else if let itemNode = itemNode as? ItemListActionItemNode {
+                    if let tag = itemNode.tag as? GroupInfoEntryTag {
+                        itemTag = tag
+                    }
+                }
+                else if let itemNode = itemNode as? ItemListAddressItemNode {
                     if let tag = itemNode.tag as? GroupInfoEntryTag {
                         itemTag = tag
                     }
