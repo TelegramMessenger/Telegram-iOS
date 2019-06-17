@@ -1074,7 +1074,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             |> mapToSignal { context -> Signal<NotificationExceptionsList?, NoError> in
                 return .single(NotificationExceptionsList(peers: [:], settings: [:]))
                 |> then(
-                    notificationExceptionsList(network: context.account.network)
+                    notificationExceptionsList(postbox: context.account.postbox, network: context.account.network)
                     |> map(Optional.init)
                 )
             }

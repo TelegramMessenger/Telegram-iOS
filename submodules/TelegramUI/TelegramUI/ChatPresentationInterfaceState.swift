@@ -323,6 +323,16 @@ final class ChatRecordedMediaPreview: Equatable {
 struct ChatContactStatus: Equatable {
     var canAddContact: Bool
     var peerStatusSettings: PeerStatusSettings?
+    
+    var isEmpty: Bool {
+        guard var peerStatusSettings = self.peerStatusSettings else {
+            return false
+        }
+        if !self.canAddContact {
+            peerStatusSettings.remove(.canAddContact)
+        }
+        return peerStatusSettings.isEmpty
+    }
 }
 
 final class ChatPresentationInterfaceState: Equatable {

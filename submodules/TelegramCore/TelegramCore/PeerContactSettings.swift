@@ -18,7 +18,7 @@ public struct PeerStatusSettings: OptionSet {
     public static let canBlock = PeerStatusSettings(rawValue: 1 << 3)
     public static let canAddContact = PeerStatusSettings(rawValue: 1 << 4)
     public static let addExceptionWhenAddingContact = PeerStatusSettings(rawValue: 1 << 5)
-    public static let canReportIrrelevantGeoLocation = PeerStatusSettings(rawValue: 1 << 5)
+    public static let canReportIrrelevantGeoLocation = PeerStatusSettings(rawValue: 1 << 6)
 }
 
 extension PeerStatusSettings {

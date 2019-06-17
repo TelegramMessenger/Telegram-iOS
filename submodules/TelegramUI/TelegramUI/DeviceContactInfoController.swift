@@ -414,9 +414,9 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     arguments.setPhoneIdWithRevealedOptions(lhs, rhs)
                 }, updated: { value in
                     arguments.updatePhone(id, value)
-                }, selectLabel: {
+                }, selectLabel: nil /*{
                     arguments.updatePhoneLabel(id, label)
-                }, delete: {
+                }*/, delete: {
                     arguments.deletePhone(id)
                 }, tag: DeviceContactInfoEntryTag.editingPhone(id))
             case let .addPhoneNumber(_, theme, title):
