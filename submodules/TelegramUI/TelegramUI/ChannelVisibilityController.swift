@@ -390,7 +390,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
             case let .location(theme, location):
                 let imageSignal = chatMapSnapshotImage(account: arguments.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
-                return ItemListAddressItem(theme: theme, label: "", text: location.address, imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: nil)
+                return ItemListAddressItem(theme: theme, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: nil)
             case let .locationSetup(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.setLocation()
@@ -1080,7 +1080,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                     updateState { state in
                         let address: String
                         if let placemark = placemark {
-                            address = placemark.fullAddress.replacingOccurrences(of: ", ", with: "\n")
+                            address = placemark.fullAddress
                         } else {
                             address = "\(coordinate.latitude), \(coordinate.longitude)"
                         }
@@ -1247,6 +1247,16 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                     case .privateChannel:
                         break
                     case .publicChannel:
+                        var hasLocation = false
+                        if let editingLocation = state.editingLocation {
+                            switch editingLocation {
+                                case .location:
+                                    hasLocation = true
+                                case .removed:
+                                    hasLocation = false
+                            }
+                        }
+                        
                         if let addressNameValidationStatus = state.addressNameValidationStatus {
                             switch addressNameValidationStatus {
                                 case .availability(.available):
@@ -1255,7 +1265,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                     doneEnabled = false
                             }
                         } else {
-                            doneEnabled = !(peer.addressName?.isEmpty ?? true)
+                            doneEnabled = !(peer.addressName?.isEmpty ?? true) || hasLocation
                         }
                 }
             }
@@ -1364,6 +1374,8 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                     selectedType = current
                 } else {
                     if let addressName = peer.addressName, !addressName.isEmpty {
+                        selectedType = .publicChannel
+                    } else if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil  {
                         selectedType = .publicChannel
                     } else {
                         selectedType = .privateChannel
