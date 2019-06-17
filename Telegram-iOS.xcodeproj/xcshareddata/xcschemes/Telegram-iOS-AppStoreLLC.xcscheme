@@ -27,6 +27,8 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES">
+      <Testables>
+      </Testables>
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
@@ -36,8 +38,8 @@
             ReferencedContainer = "container:Telegram-iOS.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
-      <Testables>
-      </Testables>
+      <AdditionalOptions>
+      </AdditionalOptions>
    </TestAction>
    <LaunchAction
       buildConfiguration = "DebugAppStoreLLC"
@@ -59,6 +61,8 @@
             ReferencedContainer = "container:Telegram-iOS.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <AdditionalOptions>
+      </AdditionalOptions>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "DebugAppStoreLLC"

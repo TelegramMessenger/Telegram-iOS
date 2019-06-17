@@ -316,6 +316,7 @@
 		D02D60B1206C189900FEFE1E /* SecureIdPlaintextFormController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60B0206C189900FEFE1E /* SecureIdPlaintextFormController.swift */; };
 		D02D60B3206C18A600FEFE1E /* SecureIdPlaintextFormControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60B2206C18A600FEFE1E /* SecureIdPlaintextFormControllerNode.swift */; };
 		D02D60C8206E705D00FEFE1E /* SecureIdValueFormPhoneItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60C7206E705D00FEFE1E /* SecureIdValueFormPhoneItem.swift */; };
+		D02D634A22B85B94006BE519 /* PushKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02D634922B85B94006BE519 /* PushKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02F4AE81FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift */; };
 		D02F4AF01FD4C46D004DFBAE /* SystemVideoContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02F4AEF1FD4C46D004DFBAE /* SystemVideoContent.swift */; };
 		D035734B22B5CCCA00F0920D /* LegacyBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D035734A22B5CCCA00F0920D /* LegacyBuffer.swift */; };
@@ -1578,6 +1579,7 @@
 		D02D60B0206C189900FEFE1E /* SecureIdPlaintextFormController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPlaintextFormController.swift; sourceTree = "<group>"; };
 		D02D60B2206C18A600FEFE1E /* SecureIdPlaintextFormControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPlaintextFormControllerNode.swift; sourceTree = "<group>"; };
 		D02D60C7206E705D00FEFE1E /* SecureIdValueFormPhoneItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdValueFormPhoneItem.swift; sourceTree = "<group>"; };
+		D02D634922B85B94006BE519 /* PushKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PushKit.framework; path = System/Library/Frameworks/PushKit.framework; sourceTree = SDKROOT; };
 		D02DADBE2138D76F00116225 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		D02F4AE81FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageInteractiveMediaBadge.swift; sourceTree = "<group>"; };
 		D02F4AEF1FD4C46D004DFBAE /* SystemVideoContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemVideoContent.swift; sourceTree = "<group>"; };
@@ -2393,6 +2395,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D02D634A22B85B94006BE519 /* PushKit.framework in Frameworks */,
 				D00818CD22B595CB008A895F /* LightweightAccountData.framework in Frameworks */,
 				D008184A22B57225008A895F /* WatchCommon.framework in Frameworks */,
 				D0750C7A22B2A14300BE5F6E /* DeviceAccess.framework in Frameworks */,
@@ -3511,6 +3514,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D02D634922B85B94006BE519 /* PushKit.framework */,
 				D00818CC22B595CB008A895F /* LightweightAccountData.framework */,
 				D008184922B57225008A895F /* WatchCommon.framework */,
 				D0750C7922B2A14300BE5F6E /* DeviceAccess.framework */,
