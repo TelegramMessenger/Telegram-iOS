@@ -752,6 +752,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     }
                                     presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
+                                dismissImpl?()
                             }, completed: {
                                 updated(TelegramChatAdminRights(flags: updateFlags))
                                 dismissImpl?()
@@ -778,7 +779,13 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 return current.withUpdatedUpdating(true)
                             }
                             updateRightsDisposable.set((addGroupAdmin(account: context.account, peerId: peerId, adminId: adminId)
-                            |> deliverOnMainQueue).start(completed: {
+                            |> deliverOnMainQueue).start(error: { error in
+                                if case let .addMemberError(error) = error, case .privacy = error, let admin = adminView.peers[adminView.peerId] {
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                }
+                                
+                                dismissImpl?()
+                            }, completed: {
                                 dismissImpl?()
                             }))
                         } else if updateFlags != defaultFlags {
@@ -813,9 +820,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 
-                                updateState { current in
-                                    return current.withUpdatedUpdating(false)
-                                }
+                                dismissImpl?()
                             }))
                         } else {
                             dismissImpl?()

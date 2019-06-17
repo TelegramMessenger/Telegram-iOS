@@ -217,7 +217,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     interaction.authorize()
                 })
             case let .option(_, option, header, theme, _):
-                return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, header: header, action: option.action)
+                return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, clearHighlightAutomatically: false, header: header, action: option.action)
             case let .peer(_, peer, presence, header, selection, theme, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, enabled):
                 let status: ContactsPeerItemStatus
                 let itemPeer: ContactsPeerItemPeer

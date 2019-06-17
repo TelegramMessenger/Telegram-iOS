@@ -257,16 +257,12 @@ public class ContactsController: ViewController {
         }
         
         self.contactsNode.openPeopleNearby = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
             let _ = (DeviceAccess.authorizationStatus(subject: .location(.tracking))
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] status in
                 guard let strongSelf = self else {
                     return
                 }
-                
                 let presentPeersNearby = {
                     let controller = peersNearbyController(context: strongSelf.context)
                     (strongSelf.navigationController as? NavigationController)?.replaceAllButRootController(controller, animated: true, completion: { [weak self] in

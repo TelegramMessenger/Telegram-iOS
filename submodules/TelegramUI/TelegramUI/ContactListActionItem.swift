@@ -60,15 +60,17 @@ class ContactListActionItem: ListViewItem {
     let title: String
     let icon: ContactListActionItemIcon
     let highlight: ContactListActionItemHighlight
+    let clearHighlightAutomatically: Bool
     let action: () -> Void
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, title: String, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, header: ListViewItemHeader?, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.icon = icon
         self.highlight = highlight
         self.header = header
+        self.clearHighlightAutomatically = clearHighlightAutomatically
         self.action = action
     }
     
@@ -111,7 +113,7 @@ class ContactListActionItem: ListViewItem {
     
     func selected(listView: ListView){
         self.action()
-        if case .alpha = self.highlight {
+        if self.clearHighlightAutomatically {
             listView.clearHighlightAnimated(true)
         }
     }

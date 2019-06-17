@@ -4416,11 +4416,13 @@ Any member of this group will be able to see messages in the channel.";
 
 "Common.ActionNotAllowedError" = "Sorry, you are not allowed to do this.";
 
-"Group.Location.Title" = "Location (Optional)";
+"Group.Location.Title" = "Location";
 "Group.Location.SetLocation" = "Set Location";
 "Group.Location.ChangeLocation" = "Change Location";
 "Group.Location.RemoveLocation" = "Remove Location";
-"Group.Location.Info" = "People will be able to find your group using People Nearby section";
+"Group.Location.Info" = "People will be able to find your group in the Groups Nearby section (Contacts > Add People Nearby).";
+
+"Group.Username.Title" = "Username";
 
 "Channel.AdminLog.MessageTransferedName" = "transferred ownership to %1$@";
 "Channel.AdminLog.MessageTransferedNameUsername" = "transferred ownership to %1$@ (%2$@)";
@@ -4439,3 +4441,5 @@ Any member of this group will be able to see messages in the channel.";
 "ReportGroupLocation.Title" = "Report Unrelated Group";
 "ReportGroupLocation.Text" = "Please tell us if this group is not related to this location.";
 "ReportGroupLocation.Report" = "Report";
+
+"Group.Setup.TypePublicWithLocationHelp" = "Public groups can be found in search, chat history is available to everyone and anyone can join.\n\nTo make your group public, set a username or add a location.";

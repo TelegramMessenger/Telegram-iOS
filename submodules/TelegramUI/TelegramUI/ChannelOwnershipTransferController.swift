@@ -397,7 +397,7 @@ private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     }
 }
 
-private func commitChannelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, completion: @escaping (PeerId?) -> Void) -> ViewController {
+private func commitChannelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: (() -> Void)?
@@ -462,8 +462,32 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
             dismissImpl?()
             completion(upgradedPeerId)
         }, error: { [weak contentNode] error in
+            var isGroup = true
+            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                isGroup = false
+            }
+            
+            var errorTextAndActions: (String, [TextAlertAction])?
+            switch error {
+                case .invalidPassword:
+                    contentNode?.animateError()
+                case .limitExceeded:
+                    errorTextAndActions = (presentationData.strings.TwoStepAuth_FloodError, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                case .adminsTooMuch:
+                    errorTextAndActions = (isGroup ? presentationData.strings.Group_OwnershipTransfer_ErrorAdminsTooMuch :  presentationData.strings.Channel_OwnershipTransfer_ErrorAdminsTooMuch, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                case .userPublicChannelsTooMuch:
+                    errorTextAndActions = (presentationData.strings.Channel_OwnershipTransfer_ErrorPublicChannelsTooMuch, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                case .userBlocked, .restricted:
+                    errorTextAndActions = (isGroup ? presentationData.strings.Group_OwnershipTransfer_ErrorPrivacyRestricted :  presentationData.strings.Channel_OwnershipTransfer_ErrorPrivacyRestricted, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                default:
+                    errorTextAndActions = (presentationData.strings.Login_UnknownError, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+            }
             contentNode?.updateIsChecking(false)
-            contentNode?.animateError()
+            
+            if let (text, actions) = errorTextAndActions {
+                dismissImpl?()
+                present(textAlertController(context: context, title: nil, text: text, actions: actions), nil)
+            }
         }))
     }
     return controller
@@ -497,7 +521,7 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
     
     let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Channel_OwnershipTransfer_ChangeOwner, action: {
         dismissImpl?()
-        present(commitChannelOwnershipTransferController(context: context, peer: peer, member: member, completion: completion), nil)
+        present(commitChannelOwnershipTransferController(context: context, peer: peer, member: member, present: present, completion: completion), nil)
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?()
     })], actionLayout: .vertical)
@@ -519,7 +543,6 @@ func channelOwnershipTransferController(context: AccountContext, peer: Peer, mem
         isGroup = false
     }
     
-    var dismissImpl: (() -> Void)?
     var actions: [TextAlertAction] = []
     
     switch initialError {
@@ -559,9 +582,5 @@ func channelOwnershipTransferController(context: AccountContext, peer: Peer, mem
     let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
     
-    let controller = richTextAlertController(context: context, title: title, text: attributedText, actions: actions)
-    dismissImpl = { [weak controller] in
-        controller?.dismissAnimated()
-    }
-    return controller
+    return richTextAlertController(context: context, title: title, text: attributedText, actions: actions)
 }
