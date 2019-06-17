@@ -47,6 +47,19 @@ class LOTLayerItem;
 class LOTMaskItem;
 class VDrawable;
 
+class LOTDrawable : public VDrawable
+{
+public:
+    void sync();
+public:
+    std::unique_ptr<LOTNode>  mCNode{nullptr};
+
+    ~LOTDrawable() {
+        if (mCNode && mCNode->mGradient.stopPtr)
+          free(mCNode->mGradient.stopPtr);
+    }
+};
+
 class LOTCompItem
 {
 public:
@@ -161,7 +174,7 @@ protected:
    void renderList(std::vector<VDrawable *> &list) final;
 private:
    std::vector<LOTNode *>       mCNodeList;
-   std::unique_ptr<VDrawable>   mRenderNode;
+   LOTDrawable                  mRenderNode;
 };
 
 class LOTContentItem;
@@ -198,7 +211,7 @@ protected:
    void renderList(std::vector<VDrawable *> &list) final;
 private:
    std::vector<LOTNode *>       mCNodeList;
-   std::unique_ptr<VDrawable>   mRenderNode;
+   LOTDrawable                  mRenderNode;
 };
 
 class LOTMaskItem
@@ -233,19 +246,6 @@ public:
     VRle                       mRle;
     bool                       mStatic{true};
     bool                       mDirty{true};
-};
-
-class LOTDrawable : public VDrawable
-{
-public:
-    void sync();
-public:
-    std::unique_ptr<LOTNode>  mCNode;
-
-    ~LOTDrawable() {
-        if (mCNode && mCNode->mGradient.stopPtr)
-          free(mCNode->mGradient.stopPtr);
-    }
 };
 
 class LOTPathDataItem;
@@ -403,13 +403,13 @@ protected:
    virtual void updateContent(int frameNo) = 0;
    virtual void updateRenderNode();
    inline float parentAlpha() const {return mParentAlpha;}
-public:
-   float                            mParentAlpha{1.0f};
-   VPath                            mPath;
-   DirtyFlag                        mFlag;
-   int                              mFrameNo{-1};
+protected:
    std::vector<LOTPathDataItem *>   mPathItems;
-   std::unique_ptr<VDrawable>       mDrawable;
+   LOTDrawable                      mDrawable;
+   VPath                            mPath;
+   float                            mParentAlpha{1.0f};
+   int                              mFrameNo{-1};
+   DirtyFlag                        mFlag;
    bool                             mStaticContent;
    bool                             mRenderNodeUpdate{true};
 };

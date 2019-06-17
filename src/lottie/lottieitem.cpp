@@ -743,30 +743,23 @@ void LOTCompLayerItem::renderList(std::vector<VDrawable *> &list)
 
 LOTSolidLayerItem::LOTSolidLayerItem(LOTLayerData *layerData)
     : LOTLayerItem(layerData)
-{
-}
+{}
 
 void LOTSolidLayerItem::updateContent()
 {
-    if (!mRenderNode) {
-        mRenderNode = std::make_unique<LOTDrawable>();
-        mRenderNode->mType = VDrawable::Type::Fill;
-        mRenderNode->mFlag |= VDrawable::DirtyState::All;
-    }
-
     if (flag() & DirtyFlagBit::Matrix) {
         VPath path;
         path.addRect(
             VRectF(0, 0, mLayerData->solidWidth(), mLayerData->solidHeight()));
         path.transform(combinedMatrix());
-        mRenderNode->mFlag |= VDrawable::DirtyState::Path;
-        mRenderNode->mPath = path;
+        mRenderNode.mFlag |= VDrawable::DirtyState::Path;
+        mRenderNode.mPath = path;
     }
     if (flag() & DirtyFlagBit::Alpha) {
         LottieColor color = mLayerData->solidColor();
         VBrush      brush(color.toColor(combinedAlpha()));
-        mRenderNode->setBrush(brush);
-        mRenderNode->mFlag |= VDrawable::DirtyState::Brush;
+        mRenderNode.setBrush(brush);
+        mRenderNode.mFlag |= VDrawable::DirtyState::Brush;
     }
 }
 
@@ -791,32 +784,26 @@ void LOTSolidLayerItem::renderList(std::vector<VDrawable *> &list)
 {
     if (!visible() || vIsZero(combinedAlpha())) return;
 
-    list.push_back(mRenderNode.get());
+    list.push_back(&mRenderNode);
 }
 
 LOTImageLayerItem::LOTImageLayerItem(LOTLayerData *layerData)
     : LOTLayerItem(layerData)
 {
+    VBrush brush(mLayerData->mAsset->bitmap());
+    mRenderNode.setBrush(brush);
 }
 
 void LOTImageLayerItem::updateContent()
 {
-    if (!mRenderNode) {
-        mRenderNode = std::make_unique<LOTDrawable>();
-        mRenderNode->mType = VDrawable::Type::Fill;
-        mRenderNode->mFlag |= VDrawable::DirtyState::All;
-        VBrush brush(mLayerData->mAsset->bitmap());
-        mRenderNode->setBrush(brush);
-    }
-
     if (flag() & DirtyFlagBit::Matrix) {
         VPath path;
         path.addRect(
             VRectF(0, 0, mLayerData->mAsset->mWidth, mLayerData->mAsset->mHeight));
         path.transform(combinedMatrix());
-        mRenderNode->mFlag |= VDrawable::DirtyState::Path;
-        mRenderNode->mPath = path;
-        mRenderNode->mBrush.setMatrix(combinedMatrix());
+        mRenderNode.mFlag |= VDrawable::DirtyState::Path;
+        mRenderNode.mPath = path;
+        mRenderNode.mBrush.setMatrix(combinedMatrix());
     }
 
     if (flag() & DirtyFlagBit::Alpha) {
@@ -828,7 +815,7 @@ void LOTImageLayerItem::renderList(std::vector<VDrawable *> &list)
 {
     if (!visible() || vIsZero(combinedAlpha())) return;
 
-    list.push_back(mRenderNode.get());
+    list.push_back(&mRenderNode);
 }
 
 void LOTImageLayerItem::buildLayerNode()
@@ -843,9 +830,9 @@ void LOTImageLayerItem::buildLayerNode()
         LOTDrawable *lotDrawable = static_cast<LOTDrawable *>(i);
         lotDrawable->sync();
 
-        lotDrawable->mCNode->mImageInfo.data = mRenderNode->mBrush.mTexture.data();
-        lotDrawable->mCNode->mImageInfo.width = mRenderNode->mBrush.mTexture.width();
-        lotDrawable->mCNode->mImageInfo.height = mRenderNode->mBrush.mTexture.height();
+        lotDrawable->mCNode->mImageInfo.data = lotDrawable->mBrush.mTexture.data();
+        lotDrawable->mCNode->mImageInfo.width = lotDrawable->mBrush.mTexture.width();
+        lotDrawable->mCNode->mImageInfo.height = lotDrawable->mBrush.mTexture.height();
 
         lotDrawable->mCNode->mImageInfo.mMatrix.m11 = combinedMatrix().m_11();
         lotDrawable->mCNode->mImageInfo.mMatrix.m12 = combinedMatrix().m_12();
@@ -1279,7 +1266,6 @@ void LOTPolystarItem::updatePath(VPath& path, int frameNo)
  */
 LOTPaintDataItem::LOTPaintDataItem(bool staticContent):
     LOTContentItem(ContentType::Paint),
-    mDrawable(std::make_unique<LOTDrawable>()),
     mStaticContent(staticContent){}
 
 void LOTPaintDataItem::update(int frameNo, const VMatrix &/*parentMatrix*/,
@@ -1309,10 +1295,10 @@ void LOTPaintDataItem::updateRenderNode()
         for (auto &i : mPathItems) {
             mPath.addPath(i->finalPath());
         }
-        mDrawable->setPath(mPath);
+        mDrawable.setPath(mPath);
     } else {
-        if (mDrawable->mFlag & VDrawable::DirtyState::Path)
-            mDrawable->mPath = mPath;
+        if (mDrawable.mFlag & VDrawable::DirtyState::Path)
+            mDrawable.mPath = mPath;
     }
 }
 
@@ -1323,7 +1309,7 @@ void LOTPaintDataItem::renderList(std::vector<VDrawable *> &list)
         LOTPaintDataItem::updateRenderNode();
         mRenderNodeUpdate = false;
     }
-    list.push_back(mDrawable.get());
+    list.push_back(&mDrawable);
 }
 
 
@@ -1349,8 +1335,8 @@ void LOTFillItem::updateRenderNode()
 
     color.setAlpha(color.a * parentAlpha());
     VBrush brush(color);
-    mDrawable->setBrush(brush);
-    mDrawable->setFillRule(mModel.fillRule());
+    mDrawable.setBrush(brush);
+    mDrawable.setFillRule(mModel.fillRule());
 }
 
 LOTGFillItem::LOTGFillItem(LOTGFillData *data)
@@ -1369,8 +1355,8 @@ void LOTGFillItem::updateContent(int frameNo)
 void LOTGFillItem::updateRenderNode()
 {
     mGradient->setAlpha(mAlpha * parentAlpha());
-    mDrawable->setBrush(VBrush(mGradient.get()));
-    mDrawable->setFillRule(mFillRule);
+    mDrawable.setBrush(VBrush(mGradient.get()));
+    mDrawable.setFillRule(mFillRule);
 }
 
 LOTStrokeItem::LOTStrokeItem(LOTStrokeData *data)
@@ -1406,9 +1392,9 @@ void LOTStrokeItem::updateRenderNode()
 
     color.setAlpha(color.a * parentAlpha());
     VBrush brush(color);
-    mDrawable->setBrush(brush);
+    mDrawable.setBrush(brush);
     float scale = getScale(static_cast<LOTContentGroupItem *>(parent())->matrix());
-    mDrawable->setStrokeInfo(mModel.capStyle(), mModel.joinStyle(), mModel.meterLimit(),
+    mDrawable.setStrokeInfo(mModel.capStyle(), mModel.joinStyle(), mModel.meterLimit(),
                             mWidth * scale);
     if (mDashArraySize) {
         for (int i = 0 ; i < mDashArraySize ; i++)
@@ -1417,7 +1403,7 @@ void LOTStrokeItem::updateRenderNode()
         /* AE draw the dash even if dash value is 0 */
         if (vCompare(mDashArray[0], 0.0f)) mDashArray[0]= 0.1;
 
-        mDrawable->setDashInfo(mDashArray, mDashArraySize);
+        mDrawable.setDashInfo(mDashArray, mDashArraySize);
     }
 }
 
@@ -1445,13 +1431,13 @@ void LOTGStrokeItem::updateRenderNode()
 {
     float scale = getScale(mGradient->mMatrix);
     mGradient->setAlpha(mAlpha * parentAlpha());
-    mDrawable->setBrush(VBrush(mGradient.get()));
-    mDrawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
+    mDrawable.setBrush(VBrush(mGradient.get()));
+    mDrawable.setStrokeInfo(mCap, mJoin, mMiterLimit,
                             mWidth * scale);
     if (mDashArraySize) {
         for (int i = 0 ; i < mDashArraySize ; i++)
             mDashArray[i] *= scale;
-        mDrawable->setDashInfo(mDashArray, mDashArraySize);
+        mDrawable.setDashInfo(mDashArray, mDashArraySize);
     }
 }
 
