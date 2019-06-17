@@ -113,6 +113,24 @@ public func addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) -> 
             if let group = peer as? TelegramGroup {
                 return account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id, userId: inputUser, isAdmin: .boolTrue))
                 |> mapError { _ -> AddGroupAdminError in return .generic }
+//                |> `catch` { error -> Signal<Void, AddGroupAdminError> in
+//                    if error.errorDescription == "USER_NOT_PARTICIPANT" {
+//                        return addGroupMember(account: account, peerId: peerId, memberId: adminId)
+//                        |> mapToSignal { _ -> Signal<Void, AddGroupAdminError> in
+//                            return .complete()
+//                        }
+//                        |> mapError { error -> AddGroupAdminError in
+//                            return .addMemberError(error)
+//                        }
+//                        |> then(account.network.request(Api.functions.messages.editChatAdmin(chatId: group.id.id, userId: inputUser, isAdmin: .boolTrue))
+//                        |> mapError { error -> AddGroupAdminError
+//                            return .generic
+//                        })
+//                    } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
+//                        return .fail(.addMemberError(.privacy))
+//                    }
+//                    return .fail(.generic)
+//                }
                 |> mapToSignal { result -> Signal<Void, AddGroupAdminError> in
                     return account.postbox.transaction { transaction -> Void in
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
@@ -220,6 +238,8 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                                         return .generic
                                     }
                                 |> map { [$0] })
+                            } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
+                                return .fail(.addMemberError(.restricted))
                             }
                             return .fail(.generic)
                         }

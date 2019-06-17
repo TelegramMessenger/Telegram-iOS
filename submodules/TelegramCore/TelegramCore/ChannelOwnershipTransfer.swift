@@ -13,6 +13,7 @@ public enum ChannelOwnershipTransferError {
     case twoStepAuthMissing
     case twoStepAuthTooFresh(Int32)
     case authSessionTooFresh(Int32)
+    case limitExceeded
     case requestPassword
     case invalidPassword
     case adminsTooMuch
@@ -105,7 +106,9 @@ public func updateChannelOwnership(postbox: Postbox, network: Network, accountSt
         |> mapToSignal { password -> Signal<Never, ChannelOwnershipTransferError> in
             return network.request(Api.functions.channels.editCreator(channel: apiChannel, userId: apiUser, password: password))
             |> mapError { error -> ChannelOwnershipTransferError in
-                if error.errorDescription == "PASSWORD_HASH_INVALID" {
+                if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                    return .limitExceeded
+                } else if error.errorDescription == "PASSWORD_HASH_INVALID" {
                     return .invalidPassword
                 } else if error.errorDescription == "PASSWORD_MISSING" {
                     return .twoStepAuthMissing

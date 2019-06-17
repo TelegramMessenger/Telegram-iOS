@@ -221,6 +221,12 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     return entries
 }
 
+public enum CreateGroupType {
+    case generic
+    case supergroup
+    case locatedGroup(location: PeerGeoLocation)
+}
+
 public func createGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String? = nil, supergroup: Bool = false, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
     let initialState = CreateGroupState(creating: false, editingName: .title(title: initialTitle ?? "", type: .group), avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)

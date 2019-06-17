@@ -186,7 +186,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .empty(theme, text, loading):
                 return ItemListPlaceholderItem(theme: theme, text: text, sectionId: self.section, style: .blocks)
             case let .user(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(stringForDistance(peer.distance)), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, hasTopGroupInset: false, tag: nil)
             case let .groupsHeader(theme, text):
@@ -198,9 +198,9 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .group(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text("\(stringForDistance(peer.distance)), \(strings.Conversation_StatusMembers(memberCount))")
+                    text = .text("\(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), \(strings.Conversation_StatusMembers(memberCount))")
                 } else {
-                    text = .text(stringForDistance(peer.distance))
+                    text = .text(strings.Map_DistanceAway(stringForDistance(peer.distance)).0)
                 }
                 return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
@@ -210,9 +210,9 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .channel(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text("\(stringForDistance(peer.distance)), \(strings.Conversation_StatusSubscribers(memberCount))")
+                    text = .text("\(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), \(strings.Conversation_StatusSubscribers(memberCount))")
                 } else {
-                    text = .text(stringForDistance(peer.distance))
+                    text = .text(strings.Map_DistanceAway(stringForDistance(peer.distance)).0)
                 }
                 return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
@@ -303,8 +303,9 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         replaceTopControllerImpl?(controller, true)
     })
     
-    let dataSignal: Signal<PeersNearbyData?, NoError> = currentLocationManagerCoordinate(manager: context.sharedContext.locationManager!, timeout: 5.0)
-    |> mapToSignal { coordinate -> Signal<PeersNearbyData?, NoError> in
+    let dataSignal: Signal<PeersNearbyData?, Void> = currentLocationManagerCoordinate(manager: context.sharedContext.locationManager!, timeout: 5.0)
+    |> introduceError(Void.self)
+    |> mapToSignal { coordinate -> Signal<PeersNearbyData?, Void> in
         guard let coordinate = coordinate else {
             return .single(nil)
         }
@@ -312,8 +313,9 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         return Signal { subscriber in
             let peersNearbyContext = PeersNearbyContext(network: context.account.network, accountStateManager: context.account.stateManager, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude))
             
-            let disposable = (peersNearbyContext.get()
-            |> mapToSignal { peersNearby -> Signal<PeersNearbyData?, NoError> in
+            let peersNearby: Signal<PeersNearbyData?, Void> = peersNearbyContext.get()
+            |> introduceError(Void.self)
+            |> mapToSignal { peersNearby -> Signal<PeersNearbyData?, Void> in
                 return context.account.postbox.transaction { transaction -> PeersNearbyData? in
                     var users: [PeerNearbyEntry] = []
                     var groups: [PeerNearbyEntry] = []
@@ -329,7 +331,10 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
                     }
                     return PeersNearbyData(users: users, groups: groups, channels: [])
                 }
-            }).start(next: { data in
+                |> introduceError(Void.self)
+            }
+            
+            let disposable = peersNearby.start(next: { data in
                 subscriber.putNext(data)
             })
             
@@ -339,9 +344,17 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
             }
         }
     }
-
-    dataPromise.set((dataSignal |> then(.complete() |> suspendAwareDelay(25.0, queue: Queue.concurrentDefaultQueue()))) |> restart)
     
+    let errorSignal: Signal<Void, Void> = .single(Void()) |> then( Signal.fail(Void()) |> suspendAwareDelay(25.0, queue: Queue.concurrentDefaultQueue()) )
+    let combinedSignal = combineLatest(dataSignal, errorSignal) |> map { data, _ -> PeersNearbyData? in
+        return data
+    }
+    |> restartIfError
+    |> `catch` { _ -> Signal<PeersNearbyData?, NoError> in
+        return .single(nil)
+    }
+    dataPromise.set(combinedSignal)
+
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), dataPromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state, data -> (ItemListControllerState, (ItemListNodeState<PeersNearbyEntry>, PeersNearbyEntry.ItemGenerationArguments)) in

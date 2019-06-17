@@ -64,6 +64,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     case typePrivate(PresentationTheme, String, Bool)
     case typeInfo(PresentationTheme, String)
     
+    case publicLinkHeader(PresentationTheme, String)
     case publicLinkAvailability(PresentationTheme, String, Bool)
     case privateLink(PresentationTheme, String, String?)
     case editablePublicLink(PresentationTheme, String)
@@ -87,7 +88,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
         switch self {
             case .typeHeader, .typePublic, .typePrivate, .typeInfo:
                 return ChannelVisibilitySection.type.rawValue
-            case .publicLinkAvailability, .privateLink, .editablePublicLink, .privateLinkInfo, .publicLinkInfo, .publicLinkStatus:
+            case .publicLinkHeader, .publicLinkAvailability, .privateLink, .editablePublicLink, .privateLinkInfo, .publicLinkInfo, .publicLinkStatus:
                 return ChannelVisibilitySection.link.rawValue
             case .privateLinkCopy, .privateLinkRevoke, .privateLinkShare:
                 return ChannelVisibilitySection.linkActions.rawValue
@@ -108,28 +109,30 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return 2
             case .typeInfo:
                 return 3
-            case .publicLinkAvailability:
+            case .publicLinkHeader:
                 return 4
-            case .privateLink:
+            case .publicLinkAvailability:
                 return 5
-            case .editablePublicLink:
+            case .privateLink:
                 return 6
-            case .privateLinkInfo:
+            case .editablePublicLink:
                 return 7
-            case .privateLinkCopy:
+            case .privateLinkInfo:
                 return 8
-            case .privateLinkRevoke:
+            case .privateLinkCopy:
                 return 9
-            case .privateLinkShare:
+            case .privateLinkRevoke:
                 return 10
-            case .publicLinkStatus:
+            case .privateLinkShare:
                 return 11
-            case .publicLinkInfo:
+            case .publicLinkStatus:
                 return 12
-            case .existingLinksInfo:
+            case .publicLinkInfo:
                 return 13
+            case .existingLinksInfo:
+                return 14
             case let .existingLinkPeerItem(index, _, _, _, _, _, _, _):
-                return 14 + index
+                return 15 + index
             case .locationHeader:
                 return 1000
             case .location:
@@ -165,6 +168,12 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 }
             case let .typeInfo(lhsTheme, lhsText):
                 if case let .typeInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .publicLinkHeader(lhsTheme, lhsTitle):
+                if case let .publicLinkHeader(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
                     return true
                 } else {
                     return false
@@ -310,6 +319,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 })
             case let .typeInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .publicLinkHeader(theme, title):
+                return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
             case let .publicLinkAvailability(theme, text, value):
                 let attr = NSMutableAttributedString(string: text, textColor: value ? theme.list.freeTextColor : theme.list.freeTextErrorColor)
                 attr.addAttribute(.font, value: Font.regular(13), range: NSMakeRange(0, attr.length))
@@ -543,7 +554,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 switch selectedType {
                     case .publicChannel:
                         if isGroup {
-                            entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
+                            entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicWithLocationHelp))
                         } else {
                             entries.append(.typeInfo(presentationData.theme, presentationData.strings.Channel_Setup_TypePublicHelp))
                         }
@@ -585,6 +596,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp, true))
                     }
                 } else {
+                    entries.append(.publicLinkHeader(presentationData.theme, presentationData.strings.Group_Username_Title.uppercased()))
                     entries.append(.editablePublicLink(presentationData.theme, currentAddressName))
                     if let status = state.addressNameValidationStatus {
                         let text: String
@@ -629,8 +641,6 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp))
                         
                         entries.append(.locationHeader(presentationData.theme, presentationData.strings.Group_Location_Title.uppercased()))
-                        
-
                         if let currentEditingLocation = state.editingLocation {
                             if case .removed = currentEditingLocation {
                                 entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_SetLocation))
@@ -717,7 +727,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
                 entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
                 
-                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
+                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicWithLocationHelp))
                 
                 switch selectedType {
                     case .publicChannel:
@@ -745,6 +755,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                 entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp, true))
                             }
                         } else {
+                            entries.append(.publicLinkHeader(presentationData.theme, presentationData.strings.Group_Username_Title.uppercased()))
                             entries.append(.editablePublicLink(presentationData.theme, currentAddressName))
                             if let status = state.addressNameValidationStatus {
                                 let text: String
@@ -778,6 +789,19 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                 entries.append(.publicLinkStatus(presentationData.theme, text, status))
                             }
                             entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp))
+                            
+                            entries.append(.locationHeader(presentationData.theme, presentationData.strings.Group_Location_Title.uppercased()))
+                            if let currentEditingLocation = state.editingLocation {
+                                if case .removed = currentEditingLocation {
+                                    entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_SetLocation))
+                                } else if case let .location(location) = currentEditingLocation {
+                                    entries.append(.location(presentationData.theme, location))
+                                    entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_ChangeLocation))
+                                    entries.append(.locationRemove(presentationData.theme, presentationData.strings.Group_Location_RemoveLocation))
+                                }
+                            } else {
+                                entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_SetLocation))
+                            }
                         }
                     case .privateChannel:
                         let link = (view.cachedData as? CachedGroupData)?.exportedInvitation?.link
@@ -1109,6 +1133,18 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                     case .privateChannel:
                         break
                     case .publicChannel:
+                        var hasLocation = false
+                        if let editingLocation = state.editingLocation {
+                            switch editingLocation {
+                                case .location:
+                                    hasLocation = true
+                                case .removed:
+                                    hasLocation = false
+                            }
+                        } else if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
+                            hasLocation = true
+                        }
+                        
                         if let addressNameValidationStatus = state.addressNameValidationStatus {
                             switch addressNameValidationStatus {
                                 case .availability(.available):
@@ -1117,7 +1153,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                     doneEnabled = false
                             }
                         } else {
-                            doneEnabled = !(peer.addressName?.isEmpty ?? true)
+                            doneEnabled = !(peer.addressName?.isEmpty ?? true) || hasLocation
                         }
                 }
             }
@@ -1360,7 +1396,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         controller?.dismiss()
     }
     dismissInputImpl = { [weak controller] in
-        controller?.dismiss()
+        controller?.view.endEditing(true)
     }
     nextImpl = { [weak controller] in
         if let controller = controller {
