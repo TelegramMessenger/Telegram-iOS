@@ -2258,7 +2258,10 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             insertItems.append(ListViewInsertItem(index: item.index, previousIndex: item.previousIndex, item: item.item, directionHint: item.directionHint == .Down ? .Up : nil))
                         }
                         
-                        let scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: 0.2), directionHint: .Up)
+                        var scrollToItem: ListViewScrollToItem?
+                        if transition.historyView.originalView.laterId == nil {
+                            scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: 0.2), directionHint: .Up)
+                        }
                         
                         var stationaryItemRange: (Int, Int)?
                         if let maxInsertedItem = maxInsertedItem {
@@ -2280,7 +2283,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
                 strongSelf.commitPurposefulAction()
                 
-                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages(messages)) |> deliverOnMainQueue).start(next: { _ in
+                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages(messages))
+                |> deliverOnMainQueue).start(next: { _ in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }
