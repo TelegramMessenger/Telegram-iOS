@@ -1009,7 +1009,7 @@ final class ContactListNode: ASDisplayNode {
                         |> map { ($0.0, $0.1) }
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     )
-                    let foundDeviceContacts: Signal<[DeviceContactStableId: DeviceContactBasicData], NoError>
+                    let foundDeviceContacts: Signal<[DeviceContactStableId: (DeviceContactBasicData, PeerId?)], NoError>
                     if searchDeviceContacts {
                         foundDeviceContacts = context.sharedContext.contactDataManager?.search(query: query) ?? .single([:])
                     } else {
@@ -1106,13 +1106,18 @@ final class ContactListNode: ASDisplayNode {
                             }
                             
                             outer: for (stableId, contact) in deviceContacts {
-                                inner: for phoneNumber in contact.phoneNumbers {
+                                inner: for phoneNumber in contact.0.phoneNumbers {
                                     let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
                                     if existingNormalizedPhoneNumbers.contains(normalizedNumber) {
                                         continue outer
                                     }
                                 }
-                                peers.append(.deviceContact(stableId, contact))
+                                if let peerId = contact.1 {
+                                    if existingPeerIds.contains(peerId) {
+                                        continue outer
+                                    }
+                                }
+                                peers.append(.deviceContact(stableId, contact.0))
                             }
                             
                             let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: (true, true), displaySortOptions: false)

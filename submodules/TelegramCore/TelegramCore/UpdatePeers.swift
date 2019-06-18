@@ -154,12 +154,12 @@ func updateContacts(transaction: Transaction, apiUsers: [Api.User]) {
         }
         if isContact {
             if !contactIds.contains(user.peerId) {
-                contactIds.remove(user.peerId)
+                contactIds.insert(user.peerId)
                 updated = true
             }
         } else {
             if contactIds.contains(user.peerId) {
-                contactIds.insert(user.peerId)
+                contactIds.remove(user.peerId)
                 updated = true
             }
         }

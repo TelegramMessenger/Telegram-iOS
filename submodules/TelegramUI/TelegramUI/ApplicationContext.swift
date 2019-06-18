@@ -486,15 +486,23 @@ final class AuthorizedApplicationContext {
                     })
                 }
                 
-                declineImpl = {
+                declineImpl = { [weak controller] in
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = (strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.context.account.peerId)
-                    |> deliverOnMainQueue).start(next: { peer in
-                        if let phone = (peer as? TelegramUser)?.phone {
-                            UIApplication.shared.openURL(URL(string: "https://telegram.org/deactivate?phone=\(phone)")!)
+                    let accountId = strongSelf.context.account.id
+                    let accountManager = strongSelf.context.sharedContext.accountManager
+                    let _ = (deleteAccount(account: strongSelf.context.account)
+                    |> deliverOnMainQueue).start(error: { _ in
+                        guard let strongSelf = self else {
+                            return
                         }
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        let controller = textAlertController(context: strongSelf.context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                        (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
+                    }, completed: {
+                        controller?.dismiss()
+                        let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: true).start()
                     })
                 }
                 

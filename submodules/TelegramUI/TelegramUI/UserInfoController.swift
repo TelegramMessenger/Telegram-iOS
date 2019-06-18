@@ -773,6 +773,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     var botAddToGroupImpl: (() -> Void)?
     var shareBotImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
+    var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -1066,7 +1067,9 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                         }
                         
                         updatePeerBlockedDisposable.set((deleteSignal
-                        |> deliverOnMainQueue).start())
+                        |> deliverOnMainQueue).start(completed: {
+                            dismissImpl?()
+                        }))
                     })
                 })
             ]),
@@ -1287,6 +1290,12 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
+    }
+    dismissImpl = { [weak controller] in
+        guard let controller = controller else {
+            return
+        }
+        (controller.navigationController as? NavigationController)?.filterController(controller, animated: true)
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window(.root), with: presentationArguments, blockInteraction: true)

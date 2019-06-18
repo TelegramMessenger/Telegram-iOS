@@ -400,6 +400,8 @@
 		D0575AF21E9FFA5D006F2541 /* SynchronizeSavedGifsOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AF01E9FFA5D006F2541 /* SynchronizeSavedGifsOperation.swift */; };
 		D0575AF41E9FFDDE006F2541 /* ManagedSynchronizeSavedGifsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AF31E9FFDDD006F2541 /* ManagedSynchronizeSavedGifsOperations.swift */; };
 		D0575AF51E9FFDDE006F2541 /* ManagedSynchronizeSavedGifsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AF31E9FFDDD006F2541 /* ManagedSynchronizeSavedGifsOperations.swift */; };
+		D0575C2D22B922DF00A71A0E /* DeleteAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575C2C22B922DF00A71A0E /* DeleteAccount.swift */; };
+		D0575C2E22B922DF00A71A0E /* DeleteAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575C2C22B922DF00A71A0E /* DeleteAccount.swift */; };
 		D058E0D11E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D058E0D01E8AD65C00A442DE /* StandaloneSendMessage.swift */; };
 		D058E0D21E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D058E0D01E8AD65C00A442DE /* StandaloneSendMessage.swift */; };
 		D05A32E11E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32E01E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift */; };
@@ -1023,6 +1025,7 @@
 		D0561DE91E5754FA00E6B9E9 /* ChannelAdmins.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelAdmins.swift; sourceTree = "<group>"; };
 		D0575AF01E9FFA5D006F2541 /* SynchronizeSavedGifsOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeSavedGifsOperation.swift; sourceTree = "<group>"; };
 		D0575AF31E9FFDDD006F2541 /* ManagedSynchronizeSavedGifsOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeSavedGifsOperations.swift; sourceTree = "<group>"; };
+		D0575C2C22B922DF00A71A0E /* DeleteAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccount.swift; sourceTree = "<group>"; };
 		D058E0D01E8AD65C00A442DE /* StandaloneSendMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StandaloneSendMessage.swift; sourceTree = "<group>"; };
 		D05A32E01E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatedAccountPrivacySettings.swift; sourceTree = "<group>"; };
 		D05A32E31E6F0B2E002760B4 /* RecentAccountSessions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentAccountSessions.swift; sourceTree = "<group>"; };
@@ -1634,6 +1637,7 @@
 				D01843A72190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift */,
 				D02B198F21FB1D520094A764 /* RegisterNotificationToken.swift */,
 				D0338742223BD532007A2CE4 /* InitializeAccountAfterLogin.swift */,
+				D0575C2C22B922DF00A71A0E /* DeleteAccount.swift */,
 			);
 			name = Account;
 			sourceTree = "<group>";
@@ -2559,6 +2563,7 @@
 				D054649A20738760002ECC1E /* SecureIdRentalAgreementValue.swift in Sources */,
 				D0B843BF1DA7FF30005F29E1 /* NBNumberFormat.m in Sources */,
 				D0E305A71E5B5CBE00D7A3A2 /* PeerAdmins.swift in Sources */,
+				D0575C2D22B922DF00A71A0E /* DeleteAccount.swift in Sources */,
 				D0B843C51DA7FF30005F29E1 /* NBPhoneNumber.m in Sources */,
 				D03B0D0D1D62255C00955575 /* SynchronizePeerReadState.swift in Sources */,
 				D03B0D081D62255C00955575 /* ChannelState.swift in Sources */,
@@ -2838,6 +2843,7 @@
 				D08F4A671E79CC4A00A2AA15 /* SynchronizeInstalledStickerPacksOperations.swift in Sources */,
 				D05A32E81E6F0B5C002760B4 /* RecentAccountSession.swift in Sources */,
 				D0F7B1E31E045C7B007EB8A5 /* RichText.swift in Sources */,
+				D0575C2E22B922DF00A71A0E /* DeleteAccount.swift in Sources */,
 				D0FA8BB11E1FEC7E001E855B /* SecretChatEncryptionConfig.swift in Sources */,
 				D0B418AA1D7E0597004562A4 /* Download.swift in Sources */,
 				D001F3F41E128A1C007A8C60 /* UpdatesApiUtils.swift in Sources */,

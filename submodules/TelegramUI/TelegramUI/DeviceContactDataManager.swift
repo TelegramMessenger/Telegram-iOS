@@ -485,6 +485,7 @@ private final class DeviceContactDataManagerImpl {
     private var stableIdToBasicContactData: [DeviceContactStableId: DeviceContactBasicData] = [:]
     private var normalizedPhoneNumberToStableId: [DeviceContactNormalizedPhoneNumber: [DeviceContactStableId]] = [:]
     private var appSpecificReferences: [PeerId: DeviceContactBasicDataWithReference] = [:]
+    private var stableIdToAppSpecificReference: [DeviceContactStableId: PeerId] = [:]
     
     private var importableContacts: [DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData] = [:]
     
@@ -616,6 +617,11 @@ private final class DeviceContactDataManagerImpl {
     
     private func updateAppSpecificReferences(appSpecificReferences: [PeerId: DeviceContactBasicDataWithReference]) {
         self.appSpecificReferences = appSpecificReferences
+        var stableIdToAppSpecificReference: [DeviceContactStableId: PeerId] = [:]
+        for (peerId, value) in appSpecificReferences {
+            stableIdToAppSpecificReference[value.stableId] = peerId
+        }
+        self.stableIdToAppSpecificReference = stableIdToAppSpecificReference
         for f in self.appSpecificReferencesSubscribers.copyItems() {
             f(appSpecificReferences)
         }
@@ -721,12 +727,12 @@ private final class DeviceContactDataManagerImpl {
         }
     }
     
-    func search(query: String, updated: @escaping ([DeviceContactStableId: DeviceContactBasicData]) -> Void) -> Disposable {
+    func search(query: String, updated: @escaping ([DeviceContactStableId: (DeviceContactBasicData, PeerId?)]) -> Void) -> Disposable {
         let normalizedQuery = query.lowercased()
-        var result: [DeviceContactStableId: DeviceContactBasicData] = [:]
+        var result: [DeviceContactStableId: (DeviceContactBasicData, PeerId?)] = [:]
         for (stableId, basicData) in self.stableIdToBasicContactData {
             if basicData.firstName.lowercased().hasPrefix(normalizedQuery) || basicData.lastName.lowercased().hasPrefix(normalizedQuery) {
-                result[stableId] = basicData
+                result[stableId] = (basicData, self.stableIdToAppSpecificReference[stableId])
             }
         }
         updated(result)
@@ -837,7 +843,7 @@ public final class DeviceContactDataManager {
         }
     }
     
-    public func search(query: String) -> Signal<[DeviceContactStableId: DeviceContactBasicData], NoError> {
+    public func search(query: String) -> Signal<[DeviceContactStableId: (DeviceContactBasicData, PeerId?)], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with({ impl in
