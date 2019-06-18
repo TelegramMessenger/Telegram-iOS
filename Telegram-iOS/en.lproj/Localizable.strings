@@ -1614,7 +1614,10 @@
 "ShareMenu.Send" = "Send";
 
 "Conversation.ReportSpam" = "Report Spam";
+"Conversation.ReportSpamAndLeave" = "Report Spam and Leave";
 "Conversation.ReportSpamConfirmation" = "Are you sure you want to report spam from this user?";
+"Conversation.ReportSpamGroupConfirmation" = "Are you sure you want to report spam from this group?";
+"Conversation.ReportSpamChannelConfirmation" = "Are you sure you want to report spam from this channel?";
 "SharedMedia.EmptyMusicText" = "All music shared in this chat will appear here.";
 
 "ChatSettings.AutoPlayAnimations" = "Autoplay GIFs";
@@ -4348,6 +4351,7 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.ThemeCarouselNight" = "Monochrome";
 
 "Notification.Exceptions.DeleteAll" = "Delete All";
+"Notification.Exceptions.DeleteAllConfirmation" = "Are you sure you want to delete all exceptions?";
 "Notification.Exceptions.Add" = "Add";
 "Exceptions.AddToExceptions" = "ADD TO EXCEPTIONS";
 
@@ -4358,6 +4362,7 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.Block" = "Block";
 "Conversation.BlockUser" = "Block User";
 "Conversation.ShareMyPhoneNumber" = "Share My Phone Number";
+"Conversation.ShareMyPhoneNumberConfirmation" = "Are you sure you want to share your phone number %1$@ with %2$@?";
 "Conversation.AddToContacts" = "Add to Contacts";
 "Conversation.AddNameToContacts" = "Add %@ to Contacts";
 

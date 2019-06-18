@@ -102,7 +102,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 strongSelf.leftActionTextNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
             }
         }
-        self.leftActionNode.highligthedChanged = { [weak self] highlighted in
+        self.rightActionNode.highligthedChanged = { [weak self] highlighted in
             guard let strongSelf = self else {
                 return
             }

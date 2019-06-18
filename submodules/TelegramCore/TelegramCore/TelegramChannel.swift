@@ -148,7 +148,7 @@ public struct TelegramChannelFlags: OptionSet {
 
 public final class TelegramChannel: Peer {
     public let id: PeerId
-    public let accessHash: Int64?
+    public let accessHash: TelegramPeerAccessHash?
     public let title: String
     public let username: String?
     public let photo: [TelegramMediaImageRepresentation]
@@ -169,7 +169,7 @@ public final class TelegramChannel: Peer {
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
-    public init(id: PeerId, accessHash: Int64?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?, adminRights: TelegramChatAdminRights?, bannedRights: TelegramChatBannedRights?, defaultBannedRights: TelegramChatBannedRights?) {
+    public init(id: PeerId, accessHash: TelegramPeerAccessHash?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?, adminRights: TelegramChatAdminRights?, bannedRights: TelegramChatBannedRights?, defaultBannedRights: TelegramChatBannedRights?) {
         self.id = id
         self.accessHash = accessHash
         self.title = title
@@ -188,7 +188,17 @@ public final class TelegramChannel: Peer {
     
     public init(decoder: PostboxDecoder) {
         self.id = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
-        self.accessHash = decoder.decodeOptionalInt64ForKey("ah")
+        let accessHash = decoder.decodeOptionalInt64ForKey("ah")
+        let accessHashType: Int32 = decoder.decodeInt32ForKey("aht", orElse: 0)
+        if let accessHash = accessHash {
+            if accessHashType == 0 {
+                self.accessHash = .personal(accessHash)
+            } else {
+                self.accessHash = .genericPublic(accessHash)
+            }
+        } else {
+            self.accessHash = nil
+        }
         self.title = decoder.decodeStringForKey("t", orElse: "")
         self.username = decoder.decodeOptionalStringForKey("un")
         self.photo = decoder.decodeObjectArrayForKey("ph")
@@ -206,7 +216,14 @@ public final class TelegramChannel: Peer {
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.id.toInt64(), forKey: "i")
         if let accessHash = self.accessHash {
-            encoder.encodeInt64(accessHash, forKey: "ah")
+            switch accessHash {
+            case let .personal(value):
+                encoder.encodeInt64(value, forKey: "ah")
+                encoder.encodeInt32(0, forKey: "aht")
+            case let .genericPublic(value):
+                encoder.encodeInt64(value, forKey: "ah")
+                encoder.encodeInt32(1, forKey: "aht")
+            }
         } else {
             encoder.encodeNil(forKey: "ah")
         }

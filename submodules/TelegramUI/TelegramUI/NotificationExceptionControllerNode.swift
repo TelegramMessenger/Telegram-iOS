@@ -883,6 +883,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.Notification_Exceptions_DeleteAllConfirmation),
                 ActionSheetButtonItem(title: presentationData.strings.Notification_Exceptions_DeleteAll, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     

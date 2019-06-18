@@ -1573,7 +1573,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             }
                             
                             var didDisplayActionsPanel = false
-                            if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
+                            if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
                                 if !peerStatusSettings.isEmpty {
                                     if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
                                         didDisplayActionsPanel = true
@@ -1588,7 +1588,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             }
                             
                             var displayActionsPanel = false
-                            if let contactStatus = contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
+                            if let contactStatus = contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
                                 if !peerStatusSettings.isEmpty {
                                     if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
                                         displayActionsPanel = true
@@ -2258,7 +2258,10 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             insertItems.append(ListViewInsertItem(index: item.index, previousIndex: item.previousIndex, item: item.item, directionHint: item.directionHint == .Down ? .Up : nil))
                         }
                         
-                        let scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: 0.2), directionHint: .Up)
+                        var scrollToItem: ListViewScrollToItem?
+                        if transition.historyView.originalView.laterId == nil {
+                            scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: 0.2), directionHint: .Up)
+                        }
                         
                         var stationaryItemRange: (Int, Int)?
                         if let maxInsertedItem = maxInsertedItem {
@@ -2280,7 +2283,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
                 strongSelf.commitPurposefulAction()
                 
-                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages(messages)) |> deliverOnMainQueue).start(next: { _ in
+                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages(messages))
+                |> deliverOnMainQueue).start(next: { _ in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }
@@ -5391,6 +5395,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         self.chatDisplayNode.historyNode.scrollToEndOfHistory()
     }
     
+    func updateTextInputState(_ textInputState: ChatTextInputState) {
+        self.updateChatPresentationInterfaceState(interactive: false, { state in
+            state.updatedInterfaceState({ state in
+                state.withUpdatedComposeInputState(textInputState)
+            })
+        })
+    }
+    
     public func navigateToMessage(messageLocation: NavigateToMessageLocation, animated: Bool, forceInCurrentChat: Bool = false, completion: (() -> Void)? = nil, customPresentProgress: ((ViewController, Any?) -> Void)? = nil) {
         self.navigateToMessage(from: nil, to: messageLocation, rememberInStack: false, forceInCurrentChat: forceInCurrentChat, animated: animated, completion: completion, customPresentProgress: customPresentProgress)
     }
@@ -5698,8 +5710,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                         })
                                     })
                                     |> deliverOnMainQueue).start(completed: { [weak self] in
-                                        if let strongSelf = self {
-                                            (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId))
+                                        if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId, updateTextInputState: textInputState)
                                         }
                                     })
                                 } else {
@@ -5920,9 +5932,15 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             let title: String
             var infoString: String?
             if let _ = peer as? TelegramGroup {
-                title = self.presentationData.strings.Conversation_ReportSpam
-            } else if let _ = peer as? TelegramChannel {
-                title = self.presentationData.strings.Conversation_ReportSpam
+                title = self.presentationData.strings.Conversation_ReportSpamAndLeave
+                infoString = self.presentationData.strings.Conversation_ReportSpamGroupConfirmation
+            } else if let channel = peer as? TelegramChannel {
+                title = self.presentationData.strings.Conversation_ReportSpamAndLeave
+                if case .group = channel.info {
+                    infoString = self.presentationData.strings.Conversation_ReportSpamGroupConfirmation
+                } else {
+                    infoString = self.presentationData.strings.Conversation_ReportSpamChannelConfirmation
+                }
             } else {
                 title = self.presentationData.strings.Conversation_ReportSpam
                 infoString = self.presentationData.strings.Conversation_ReportSpamConfirmation
@@ -5955,25 +5973,42 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             guard let strongSelf = self else {
                 return
             }
-            guard let _ = accountPeer as? TelegramUser else {
+            guard let user = accountPeer as? TelegramUser, let phoneNumber = user.phone else {
                 return
             }
             guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramUser else {
                 return
             }
             
-            let _ = (acceptAndShareContact(account: strongSelf.context.account, peerId: peer.id)
-            |> deliverOnMainQueue).start(error: { _ in
+            let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+            var items: [ActionSheetItem] = []
+            items.append(ActionSheetTextItem(title: strongSelf.presentationData.strings.Conversation_ShareMyPhoneNumberConfirmation(formatPhoneNumber(phoneNumber), peer.compactDisplayTitle).0))
+            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ShareMyPhoneNumber, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-            }, completed: {
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.Conversation_ShareMyPhoneNumber_StatusSuccess(peer.compactDisplayTitle).0, true)), in: .window(.root))
-            })
+                let _ = (acceptAndShareContact(account: strongSelf.context.account, peerId: peer.id)
+                |> deliverOnMainQueue).start(error: { _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }, completed: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.Conversation_ShareMyPhoneNumber_StatusSuccess(peer.compactDisplayTitle).0, true)), in: .window(.root))
+                })
+            }))
+            
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])])
+            strongSelf.chatDisplayNode.dismissInput()
+            strongSelf.present(actionSheet, in: .window(.root))
         })
     }
     

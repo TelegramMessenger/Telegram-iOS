@@ -28,6 +28,7 @@ private func encodeText(_ string: String, _ key: Int) -> String {
 }
 
 private let statusBarRootViewClass: AnyClass = NSClassFromString("UIStatusBar")!
+private let statusBarPlaceholderClass: AnyClass? = NSClassFromString("UIStatusBar_Placeholder")
 private let cutoutStatusBarForegroundClass: AnyClass? = NSClassFromString("_UIStatusBar")
 private let keyboardViewClass: AnyClass? = NSClassFromString(encodeText("VJJoqvuTfuIptuWjfx", -1))!
 private let keyboardViewContainerClass: AnyClass? = NSClassFromString(encodeText("VJJoqvuTfuDpoubjofsWjfx", -1))!
@@ -65,6 +66,12 @@ private class ApplicationStatusBarHost: StatusBarHost {
         if containerView.isKind(of: statusBarRootViewClass) {
             return containerView
         }
+        if let statusBarPlaceholderClass = statusBarPlaceholderClass {
+            if containerView.isKind(of: statusBarPlaceholderClass) {
+                return containerView
+            }
+        }
+            
         
         for subview in containerView.subviews {
             if let cutoutStatusBarForegroundClass = cutoutStatusBarForegroundClass, subview.isKind(of: cutoutStatusBarForegroundClass) {
