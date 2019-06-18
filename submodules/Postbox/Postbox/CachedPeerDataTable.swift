@@ -54,6 +54,5 @@ final class CachedPeerDataTable: Table {
         }
         
         self.updatedPeerIds.removeAll()
-        self.cachedDatas.removeAll()
     }
 }
