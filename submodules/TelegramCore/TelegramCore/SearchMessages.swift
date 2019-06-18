@@ -275,10 +275,8 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
                 return combineLatest(peerMessages, additionalPeerMessages)
             }
-        case let .group(groupId):
+        case .group:
             remoteSearchResult = .single((nil, nil))
-            /*remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
-                |> mapError { _ in } |> map(Optional.init)*/
         case .general:
             remoteSearchResult = account.postbox.transaction { transaction -> (Int32, MessageIndex?, Api.InputPeer) in
                 var lowerBound: MessageIndex?

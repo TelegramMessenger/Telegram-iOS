@@ -2424,6 +2424,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                     return updated
                 })
+                updateContacts(transaction: transaction, apiUsers: users)
             case let .UpdatePeer(id, f):
                 if let peer = f(transaction.getPeer(id)) {
                     updatePeers(transaction: transaction, peers: [peer], update: { _, updated in

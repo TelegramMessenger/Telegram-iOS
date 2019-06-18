@@ -11,32 +11,6 @@ import TelegramUIPreferences
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
     case peerId(PeerId)
-    
-    static func ==(lhs: ChatListRecentEntryStableId, rhs: ChatListRecentEntryStableId) -> Bool {
-        switch lhs {
-            case .topPeers:
-                if case .topPeers = rhs {
-                    return true
-                } else {
-                    return false
-            }
-            case let .peerId(peerId):
-                if case .peerId(peerId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case .topPeers:
-                return 0
-            case let .peerId(peerId):
-                return peerId.hashValue
-        }
-    }
 }
 
 private enum ChatListRecentEntry: Comparable, Identifiable {
@@ -251,7 +225,7 @@ enum ChatListSearchEntryStableId: Hashable {
 enum ChatListSearchEntry: Comparable, Identifiable {
     case localPeer(Peer, Peer?, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
     case globalPeer(FoundPeer, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
-    case message(Message, CombinedPeerReadState?, ChatListPresentationData)
+    case message(Message, RenderedPeer, CombinedPeerReadState?, ChatListPresentationData)
     case addContact(String, PresentationTheme, PresentationStrings)
     
     var stableId: ChatListSearchEntryStableId {
@@ -260,7 +234,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 return .localPeerId(peer.id)
             case let .globalPeer(peer, _, _, _, _, _, _):
                 return .globalPeerId(peer.peer.id)
-            case let .message(message, _, _):
+            case let .message(message, _, _, _):
                 return .messageId(message.id)
             case .addContact:
                 return .addContact
@@ -281,12 +255,15 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .message(lhsMessage, lhsCombinedPeerReadState, lhsPresentationData):
-                if case let .message(rhsMessage, rhsCombinedPeerReadState, rhsPresentationData) = rhs {
+            case let .message(lhsMessage, lhsPeer, lhsCombinedPeerReadState, lhsPresentationData):
+                if case let .message(rhsMessage, rhsPeer, rhsCombinedPeerReadState, rhsPresentationData) = rhs {
                     if lhsMessage.id != rhsMessage.id {
                         return false
                     }
                     if lhsMessage.stableVersion != rhsMessage.stableVersion {
+                        return false
+                    }
+                    if lhsPeer != rhsPeer {
                         return false
                     }
                     if lhsPresentationData !== rhsPresentationData {
@@ -334,8 +311,8 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     case .message, .addContact:
                         return true
                 }
-            case let .message(lhsMessage, _, _):
-                if case let .message(rhsMessage, _, _) = rhs {
+            case let .message(lhsMessage, _, _, _):
+                if case let .message(rhsMessage, _, _, _) = rhs {
                     return lhsMessage.index < rhsMessage.index
                 } else if case .addContact = rhs {
                     return true
@@ -448,8 +425,8 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: context.account, peerMode: .generalSearch, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                     interaction.peerSelected(peer.peer)
                 })
-            case let .message(message, readState, presentationData):
-                return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true), editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+            case let .message(message, peer, readState, presentationData):
+                return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: peer, combinedReadState: readState, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true), editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
             case let .addContact(phoneNumber, theme, strings):
                 return ContactsAddItem(theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
                     interaction.addContact(phoneNumber)
@@ -813,7 +790,13 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 if !foundRemotePeers.2 {
                     index = 0
                     for message in foundRemoteMessages.0.0 {
-                        entries.append(.message(message, foundRemoteMessages.0.1[message.id.peerId], presentationData))
+                        var peer = RenderedPeer(message: message)
+                        if let group = message.peers[message.id.peerId] as? TelegramGroup, let migrationReference = group.migrationReference {
+                            if let channelPeer = message.peers[migrationReference.peerId] {
+                                peer = RenderedPeer(peer: channelPeer)
+                            }
+                        }
+                        entries.append(.message(message, peer, foundRemoteMessages.0.1[message.id.peerId], presentationData))
                         index += 1
                     }
                 }

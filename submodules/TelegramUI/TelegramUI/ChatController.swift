@@ -5391,6 +5391,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         self.chatDisplayNode.historyNode.scrollToEndOfHistory()
     }
     
+    func updateTextInputState(_ textInputState: ChatTextInputState) {
+        self.updateChatPresentationInterfaceState(interactive: false, { state in
+            state.updatedInterfaceState({ state in
+                state.withUpdatedComposeInputState(textInputState)
+            })
+        })
+    }
+    
     public func navigateToMessage(messageLocation: NavigateToMessageLocation, animated: Bool, forceInCurrentChat: Bool = false, completion: (() -> Void)? = nil, customPresentProgress: ((ViewController, Any?) -> Void)? = nil) {
         self.navigateToMessage(from: nil, to: messageLocation, rememberInStack: false, forceInCurrentChat: forceInCurrentChat, animated: animated, completion: completion, customPresentProgress: customPresentProgress)
     }
@@ -5698,8 +5706,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                         })
                                     })
                                     |> deliverOnMainQueue).start(completed: { [weak self] in
-                                        if let strongSelf = self {
-                                            (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId))
+                                        if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId, updateTextInputState: textInputState)
                                         }
                                     })
                                 } else {

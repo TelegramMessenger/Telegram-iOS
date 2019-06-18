@@ -770,8 +770,6 @@
 		D0F7B1EA1E045C87007EB8A5 /* ChangePeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843961DA7FBBC005F29E1 /* ChangePeerNotificationSettings.swift */; };
 		D0F7B1EB1E045C87007EB8A5 /* ResolvePeerByName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC7C1DDE289E008148FA /* ResolvePeerByName.swift */; };
 		D0F7B1EC1E045C87007EB8A5 /* SearchPeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827BA1E00451F00071108 /* SearchPeers.swift */; };
-		D0F8C39D20178B9B00236FC5 /* GroupFeedPeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8C39C20178B9B00236FC5 /* GroupFeedPeers.swift */; };
-		D0F8C39E20178B9B00236FC5 /* GroupFeedPeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8C39C20178B9B00236FC5 /* GroupFeedPeers.swift */; };
 		D0F8C3A02017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8C39F2017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift */; };
 		D0F8C3A12017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8C39F2017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift */; };
 		D0FA08BB2046B37900DD23FC /* ContentPrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08BA2046B37900DD23FC /* ContentPrivacySettings.swift */; };
@@ -1226,7 +1224,6 @@
 		D0F760D722202FE20074F7E5 /* ChannelStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelStats.swift; sourceTree = "<group>"; };
 		D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditedMessageAttribute.swift; sourceTree = "<group>"; };
 		D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReplyMarkupMessageAttribute.swift; sourceTree = "<group>"; };
-		D0F8C39C20178B9B00236FC5 /* GroupFeedPeers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupFeedPeers.swift; sourceTree = "<group>"; };
 		D0F8C39F2017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalTelegramCoreConfiguration.swift; sourceTree = "<group>"; };
 		D0FA08BA2046B37900DD23FC /* ContentPrivacySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentPrivacySettings.swift; sourceTree = "<group>"; };
 		D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoStepVerification.swift; sourceTree = "<group>"; };
@@ -1975,7 +1972,6 @@
 				D0DA1D311F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift */,
 				D02395D51F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift */,
 				D0C44B601FC616E200227BE0 /* SearchGroupMembers.swift */,
-				D0F8C39C20178B9B00236FC5 /* GroupFeedPeers.swift */,
 				D018EE042045E95000CBB130 /* CheckPeerChatServiceActions.swift */,
 				9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */,
 				D0F760D722202FE20074F7E5 /* ChannelStats.swift */,
@@ -2543,7 +2539,6 @@
 				C2366C861E4F403C0097CCFF /* AddressNames.swift in Sources */,
 				D0529D2421A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift in Sources */,
 				D0FA08BB2046B37900DD23FC /* ContentPrivacySettings.swift in Sources */,
-				D0F8C39D20178B9B00236FC5 /* GroupFeedPeers.swift in Sources */,
 				D0B843C11DA7FF30005F29E1 /* NBPhoneMetaData.m in Sources */,
 				D0528E601E65B94E00E2FEF5 /* SingleMessageView.swift in Sources */,
 				D08CAA841ED8164B0000FDA8 /* Localization.swift in Sources */,
@@ -2803,7 +2798,6 @@
 				D0529D2521A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift in Sources */,
 				D06ECFC920B810D300C576C2 /* TermsOfService.swift in Sources */,
 				9F06831121A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */,
-				D0F8C39E20178B9B00236FC5 /* GroupFeedPeers.swift in Sources */,
 				D0AB262C21C3CE80008F6685 /* Polls.swift in Sources */,
 				D073CE6C1DCBCF17007511FD /* TextEntitiesMessageAttribute.swift in Sources */,
 				D03C53751DAD5CA9004C17B3 /* TelegramUserPresence.swift in Sources */,

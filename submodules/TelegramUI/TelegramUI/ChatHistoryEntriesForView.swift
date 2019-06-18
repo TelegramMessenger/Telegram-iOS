@@ -21,15 +21,13 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
     loop: for entry in view.entries {
-        if entry.message.id.peerId.namespace == Namespaces.Peer.CloudChannel || entry.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
-            for media in entry.message.media {
-                if let action = media as? TelegramMediaAction {
-                    switch action.action {
-                        case .channelMigratedFromGroup, .groupMigratedToChannel, .historyCleared:
-                            continue loop
-                        default:
-                            break
-                    }
+        for media in entry.message.media {
+            if let action = media as? TelegramMediaAction {
+                switch action.action {
+                    case .channelMigratedFromGroup, .groupMigratedToChannel, .historyCleared:
+                        continue loop
+                    default:
+                        break
                 }
             }
         }
@@ -82,7 +80,9 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, presentationData)
         for entry in entries {
             if entry > unreadEntry {
-                entries.insert(unreadEntry, at: i)
+                if i != 0 {
+                    entries.insert(unreadEntry, at: i)
+                }
                 break
             }
             i += 1
