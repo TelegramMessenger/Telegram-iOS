@@ -323,10 +323,18 @@ final class AuthorizedApplicationContext {
         }))
         
         let accountId = context.account.id
-        self.loggedOutDisposable.set(context.account.loggedOut.start(next: { value in
+        self.loggedOutDisposable.set((context.account.loggedOut
+        |> deliverOnMainQueue).start(next: { [weak self] value in
             if value {
                 Logger.shared.log("ApplicationContext", "account logged out")
                 let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: false).start()
+                if let strongSelf = self {
+                    strongSelf.rootController.currentWindow?.forEachController { controller in
+                        if let controller = controller as? TermsOfServiceController {
+                            controller.dismiss()
+                        }
+                    }
+                }
             }
         }))
         
