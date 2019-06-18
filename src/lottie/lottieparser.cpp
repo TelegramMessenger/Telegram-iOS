@@ -895,12 +895,26 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
             parseMaskProperty(layer);
         } else if (0 == strcmp(key, "ao")) {
             layer->mAutoOrient = GetInt();
+        } else if (0 == strcmp(key, "hd")) {
+            layer->mHidden = GetBool();
         } else {
 #ifdef DEBUG_PARSER
             vWarning << "Layer Attribute Skipped : " << key;
 #endif
             Skip(key);
         }
+    }
+
+    layer->mCompRef = compRef;
+
+    if (layer->hidden()) {
+        // if layer is hidden, only data that is usefull is its
+        // transform matrix(when it is a parent of some other layer)
+        // so force it to be a Null Layer and release all resource.
+        layer->setStatic(layer->mTransform->isStatic());
+        layer->mLayerType = LayerType::Null;
+        layer->mChildren = {};
+        return sharedLayer;
     }
 
     // update the static property of layer
@@ -914,7 +928,6 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
     }
 
     layer->setStatic(staticFlag && layer->mTransform->isStatic());
-    layer->mCompRef = compRef;
 
     if (record) {
         mLayerInfoList.push_back(LayerInfo(layer->mName, layer->mInFrame, layer->mOutFrame));
