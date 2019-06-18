@@ -296,6 +296,9 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         if (flags & (1 << 7)) != 0 {
                                             channelFlags.insert(.canSetStickerSet)
                                         }
+                                        if (flags & (1 << 16)) != 0 {
+                                            channelFlags.insert(.canChangePeerGeoLocation)
+                                        }
                                         
                                         let linkedDiscussionPeerId: PeerId?
                                         if let linkedChatId = linkedChatId, linkedChatId != 0 {

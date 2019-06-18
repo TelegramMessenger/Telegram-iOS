@@ -90,7 +90,13 @@ public func updateChannelOwnership(postbox: Postbox, network: Network, accountSt
         }
         
         let checkPassword = twoStepAuthData(network)
-        |> mapError { _ in ChannelOwnershipTransferError.generic }
+        |> mapError { error -> ChannelOwnershipTransferError in
+            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                return .limitExceeded
+            } else {
+                return .generic
+            }
+        }
         |> mapToSignal { authData -> Signal<Api.InputCheckPasswordSRP, ChannelOwnershipTransferError> in
             if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
                 guard let kdfResult = passwordKDF(password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {

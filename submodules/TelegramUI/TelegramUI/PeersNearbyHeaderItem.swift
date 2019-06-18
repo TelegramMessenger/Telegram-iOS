@@ -76,7 +76,7 @@ class PeersNearbyHeaderItemNode: ListViewItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 54.0 + params.leftInset
+            let leftInset: CGFloat = 48.0 + params.leftInset
             let topInset: CGFloat = 92.0
             
             let attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.freeTextColor)

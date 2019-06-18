@@ -6,13 +6,15 @@ import TelegramPresentationData
 
 final class PermissionContentNode: ASDisplayNode {
     private var theme: PresentationTheme
-    let kind: PermissionKind
+    let kind: Int32
     
     private let iconNode: ASImageNode
     private let nearbyIconNode: PeersNearbyIconNode?
     private let titleNode: ImmediateTextNode
+    private let subtitleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let actionButton: SolidRoundedButtonNode
+    private let footerNode: ImmediateTextNode
     private let privacyPolicyButton: HighlightableButtonNode
     
     private var title: String
@@ -20,7 +22,7 @@ final class PermissionContentNode: ASDisplayNode {
     var buttonAction: (() -> Void)?
     var openPrivacyPolicy: (() -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, kind: PermissionKind, icon: UIImage?, title: String, text: String, buttonTitle: String, buttonAction: @escaping () -> Void, openPrivacyPolicy: (() -> Void)?) {
+    init(theme: PresentationTheme, strings: PresentationStrings, kind: Int32, icon: UIImage?, title: String, subtitle: String? = nil, text: String, buttonTitle: String, footerText: String? = nil, buttonAction: @escaping () -> Void, openPrivacyPolicy: (() -> Void)?) {
         self.theme = theme
         self.kind = kind
         
@@ -34,7 +36,7 @@ final class PermissionContentNode: ASDisplayNode {
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.displaysAsynchronously = false
         
-        if kind == .nearbyLocation {
+        if kind == PermissionKind.nearbyLocation.rawValue {
             self.nearbyIconNode = PeersNearbyIconNode(theme: theme)
         } else {
             self.nearbyIconNode = nil
@@ -46,12 +48,23 @@ final class PermissionContentNode: ASDisplayNode {
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
+        self.subtitleNode = ImmediateTextNode()
+        self.subtitleNode.maximumNumberOfLines = 1
+        self.subtitleNode.textAlignment = .center
+        self.subtitleNode.isUserInteractionEnabled = false
+        self.subtitleNode.displaysAsynchronously = false
+        
         self.textNode = ImmediateTextNode()
         self.textNode.textAlignment = .center
         self.textNode.maximumNumberOfLines = 0
         self.textNode.displaysAsynchronously = false
         
         self.actionButton = SolidRoundedButtonNode(theme: theme, height: 48.0, cornerRadius: 9.0)
+        
+        self.footerNode = ImmediateTextNode()
+        self.footerNode.textAlignment = .center
+        self.footerNode.maximumNumberOfLines = 0
+        self.footerNode.displaysAsynchronously = false
         
         self.privacyPolicyButton = HighlightableButtonNode()
         self.privacyPolicyButton.setTitle(strings.Permissions_PrivacyPolicy, with: Font.regular(16.0), with: theme.list.itemAccentColor, for: .normal)
@@ -68,13 +81,23 @@ final class PermissionContentNode: ASDisplayNode {
         self.actionButton.title = buttonTitle
         self.privacyPolicyButton.isHidden = openPrivacyPolicy == nil
         
+        if let subtitle = subtitle {
+            self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
+        }
+        
+        if let footerText = footerText {
+            self.footerNode.attributedText = NSAttributedString(string: footerText, font: Font.regular(13.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
+        }
+        
         self.addSubnode(self.iconNode)
         if let nearbyIconNode = self.nearbyIconNode {
             self.addSubnode(nearbyIconNode)
         }
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.subtitleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.actionButton)
+        self.addSubnode(self.footerNode)
         self.addSubnode(self.privacyPolicyButton)
         
         self.actionButton.pressed = { [weak self] in
@@ -93,25 +116,33 @@ final class PermissionContentNode: ASDisplayNode {
         let fontSize: CGFloat
         if min(size.width, size.height) > 330.0 {
             fontSize = 24.0
-            sidePadding = 38.0
+            sidePadding = 36.0
         } else {
             fontSize = 20.0
             sidePadding = 20.0
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.semibold(fontSize), textColor: self.theme.list.itemPrimaryTextColor)
+        let smallerSidePadding: CGFloat = 20.0
+        
+        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.bold(fontSize), textColor: self.theme.list.itemPrimaryTextColor)
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
+        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: size.width - smallerSidePadding * 2.0, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         let buttonWidth = min(size.width, size.height)
         let buttonHeight = self.actionButton.updateLayout(width: buttonWidth, transition: transition)
+        let footerSize = self.footerNode.updateLayout(CGSize(width: size.width - smallerSidePadding * 2.0, height: .greatestFiniteMagnitude))
         let privacyButtonSize = self.privacyPolicyButton.measure(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         
-        let availableHeight = floor(size.height - insets.top - insets.bottom - titleSize.height - textSize.height - buttonHeight)
+        let availableHeight = floor(size.height - insets.top - insets.bottom - titleSize.height - subtitleSize.height - textSize.height - buttonHeight)
         
-        let titleSubtitleSpacing: CGFloat = max(15.0, floor(availableHeight * 0.055))
+        let titleTextSpacing: CGFloat = max(15.0, floor(availableHeight * 0.045))
+        let titleSubtitleSpacing: CGFloat = 6.0
         let buttonSpacing: CGFloat = max(19.0, floor(availableHeight * 0.075))
-        var contentHeight = titleSize.height + titleSubtitleSpacing + textSize.height + buttonHeight + buttonSpacing
+        var contentHeight = titleSize.height + titleTextSpacing + textSize.height + buttonHeight + buttonSpacing
+        if subtitleSize.height > 0.0 {
+            contentHeight += titleSubtitleSpacing + subtitleSize.height
+        }
         
         var imageSize = CGSize()
         var imageSpacing: CGFloat = 0.0
@@ -126,24 +157,36 @@ final class PermissionContentNode: ASDisplayNode {
             contentHeight += imageSize.height + imageSpacing
         }
 
-        let privacySpacing: CGFloat = max(30.0 + privacyButtonSize.height, (availableHeight - titleSubtitleSpacing - buttonSpacing - imageSize.height - imageSpacing) / 2.0)
+        let privacySpacing: CGFloat = max(30.0 + privacyButtonSize.height, (availableHeight - titleTextSpacing - buttonSpacing - imageSize.height - imageSpacing) / 2.0)
         
-        let contentOrigin = insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0)
+        let contentOrigin = insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0) - availableHeight * 0.05
         let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: contentOrigin), size: imageSize)
         let nearbyIconFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: contentOrigin), size: imageSize)
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: iconFrame.maxY + imageSpacing), size: titleSize)
-        let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSubtitleSpacing), size: textSize)
-        let buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonWidth) / 2.0), y: textFrame.maxY + buttonSpacing), size: CGSize(width: buttonWidth, height: buttonHeight))
-        let privacyButtonFrame = CGRect(origin: CGPoint(x: floor((size.width - privacyButtonSize.width) / 2.0), y: buttonFrame.maxY + floor((privacySpacing - privacyButtonSize.height) / 2.0)), size: privacyButtonSize)
         
+        let subtitleFrame: CGRect
+        if subtitleSize.height > 0.0 {
+            subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
+        } else {
+            subtitleFrame = titleFrame
+        }
+        
+        let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: subtitleFrame.maxY + titleTextSpacing), size: textSize)
+        let buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonWidth) / 2.0), y: textFrame.maxY + buttonSpacing), size: CGSize(width: buttonWidth, height: buttonHeight))
+        
+        let footerFrame = CGRect(origin: CGPoint(x: floor((size.width - footerSize.width) / 2.0), y: size.height - footerSize.height - insets.bottom - 8.0), size: footerSize)
+        
+        let privacyButtonFrame = CGRect(origin: CGPoint(x: floor((size.width - privacyButtonSize.width) / 2.0), y: buttonFrame.maxY + floor((privacySpacing - privacyButtonSize.height) / 2.0)), size: privacyButtonSize)
         
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
         if let nearbyIconNode = self.nearbyIconNode {
             transition.updateFrame(node: nearbyIconNode, frame: nearbyIconFrame)
         }
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        transition.updateFrame(node: self.subtitleNode, frame: subtitleFrame)
         transition.updateFrame(node: self.textNode, frame: textFrame)
         transition.updateFrame(node: self.actionButton, frame: buttonFrame)
+        transition.updateFrame(node: self.footerNode, frame: footerFrame)
         transition.updateFrame(node: self.privacyPolicyButton, frame: privacyButtonFrame)
     }
 }

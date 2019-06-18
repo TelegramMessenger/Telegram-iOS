@@ -69,5 +69,17 @@
     
     return nil;
 }
+    
+- (NSString *)fullAddress
+{
+    NSMutableArray *components = [[NSMutableArray alloc] init];
+    if (self.street.length > 0)
+        [components addObject:self.street];
+    if (self.city.length > 0)
+        [components addObject:self.city];
+    if (self.country.length > 0)
+        [components addObject:self.country];
+    return [components componentsJoinedByString:@", "];
+}
 
 @end

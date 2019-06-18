@@ -93,6 +93,7 @@
 		09874E5721078FA100E190B8 /* YoutubeUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 0979788121065F8B0077D77F /* YoutubeUserScript.js */; };
 		09874E582107A4C300E190B8 /* VimeoEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09874E3A21075BF400E190B8 /* VimeoEmbedImplementation.swift */; };
 		09874E592107BD4100E190B8 /* GenericEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09874E4021075C1700E190B8 /* GenericEmbedImplementation.swift */; };
+		098CF79222B924E200AF6134 /* ThemeSettingsAccentColorItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098CF79122B924E200AF6134 /* ThemeSettingsAccentColorItem.swift */; };
 		099529AA21CDB27900805E13 /* ShareProxyServerActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529A921CDB27900805E13 /* ShareProxyServerActionSheetController.swift */; };
 		099529AC21CDBBB200805E13 /* QRCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529AB21CDBBB200805E13 /* QRCode.swift */; };
 		099529B021D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */; };
@@ -324,12 +325,6 @@
 		D0380DAD204ED434000414AB /* LegacyLiveUploadInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */; };
 		D0380DB8204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DB7204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift */; };
 		D0383ED4207CFBB900C45548 /* GalleryThumbnailContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0383ED3207CFBB900C45548 /* GalleryThumbnailContainerNode.swift */; };
-		D0383EDC207D1A1600C45548 /* emoji_suggestions_data.h in Headers */ = {isa = PBXBuildFile; fileRef = D0383ED6207D1A1500C45548 /* emoji_suggestions_data.h */; };
-		D0383EDD207D1A1600C45548 /* TGEmojiSuggestions.h in Headers */ = {isa = PBXBuildFile; fileRef = D0383ED7207D1A1500C45548 /* TGEmojiSuggestions.h */; };
-		D0383EDE207D1A1600C45548 /* emoji_suggestions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0383ED8207D1A1600C45548 /* emoji_suggestions.cpp */; };
-		D0383EDF207D1A1600C45548 /* emoji_suggestions_data.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0383ED9207D1A1600C45548 /* emoji_suggestions_data.cpp */; };
-		D0383EE0207D1A1600C45548 /* TGEmojiSuggestions.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0383EDA207D1A1600C45548 /* TGEmojiSuggestions.mm */; };
-		D0383EE1207D1A1600C45548 /* emoji_suggestions.h in Headers */ = {isa = PBXBuildFile; fileRef = D0383EDB207D1A1600C45548 /* emoji_suggestions.h */; };
 		D0383EE4207D292800C45548 /* EmojisChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0383EE3207D292800C45548 /* EmojisChatInputContextPanelNode.swift */; };
 		D0383EE6207D299600C45548 /* EmojisChatInputPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0383EE5207D299600C45548 /* EmojisChatInputPanelItem.swift */; };
 		D039FB152170D99D00BD1BAD /* RadialCloudProgressContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D039FB142170D99D00BD1BAD /* RadialCloudProgressContentNode.swift */; };
@@ -1265,6 +1260,7 @@
 		0979788821065F8C0077D77F /* GenericUserScript.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = GenericUserScript.js; sourceTree = "<group>"; };
 		09874E3A21075BF400E190B8 /* VimeoEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VimeoEmbedImplementation.swift; sourceTree = "<group>"; };
 		09874E4021075C1700E190B8 /* GenericEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenericEmbedImplementation.swift; sourceTree = "<group>"; };
+		098CF79122B924E200AF6134 /* ThemeSettingsAccentColorItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsAccentColorItem.swift; sourceTree = "<group>"; };
 		099529A921CDB27900805E13 /* ShareProxyServerActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareProxyServerActionSheetController.swift; sourceTree = "<group>"; };
 		099529AB21CDBBB200805E13 /* QRCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCode.swift; sourceTree = "<group>"; };
 		099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageUnsupportedBubbleContentNode.swift; sourceTree = "<group>"; };
@@ -1588,12 +1584,6 @@
 		D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyLiveUploadInterface.swift; sourceTree = "<group>"; };
 		D0380DB7204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInstantVideoMessageDurationNode.swift; sourceTree = "<group>"; };
 		D0383ED3207CFBB900C45548 /* GalleryThumbnailContainerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryThumbnailContainerNode.swift; sourceTree = "<group>"; };
-		D0383ED6207D1A1500C45548 /* emoji_suggestions_data.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = emoji_suggestions_data.h; sourceTree = "<group>"; };
-		D0383ED7207D1A1500C45548 /* TGEmojiSuggestions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGEmojiSuggestions.h; sourceTree = "<group>"; };
-		D0383ED8207D1A1600C45548 /* emoji_suggestions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = emoji_suggestions.cpp; sourceTree = "<group>"; };
-		D0383ED9207D1A1600C45548 /* emoji_suggestions_data.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = emoji_suggestions_data.cpp; sourceTree = "<group>"; };
-		D0383EDA207D1A1600C45548 /* TGEmojiSuggestions.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGEmojiSuggestions.mm; sourceTree = "<group>"; };
-		D0383EDB207D1A1600C45548 /* emoji_suggestions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = emoji_suggestions.h; sourceTree = "<group>"; };
 		D0383EE3207D292800C45548 /* EmojisChatInputContextPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojisChatInputContextPanelNode.swift; sourceTree = "<group>"; };
 		D0383EE5207D299600C45548 /* EmojisChatInputPanelItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojisChatInputPanelItem.swift; sourceTree = "<group>"; };
 		D039EB021DEAEFEE00886EBC /* ChatTextInputAudioRecordingOverlayButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputAudioRecordingOverlayButton.swift; sourceTree = "<group>"; };
@@ -3007,19 +2997,6 @@
 			name = "Plaintext Fields";
 			sourceTree = "<group>";
 		};
-		D0383ED5207D19BC00C45548 /* Emoji */ = {
-			isa = PBXGroup;
-			children = (
-				D0383ED9207D1A1600C45548 /* emoji_suggestions_data.cpp */,
-				D0383ED6207D1A1500C45548 /* emoji_suggestions_data.h */,
-				D0383ED8207D1A1600C45548 /* emoji_suggestions.cpp */,
-				D0383EDB207D1A1600C45548 /* emoji_suggestions.h */,
-				D0383ED7207D1A1500C45548 /* TGEmojiSuggestions.h */,
-				D0383EDA207D1A1600C45548 /* TGEmojiSuggestions.mm */,
-			);
-			name = Emoji;
-			sourceTree = "<group>";
-		};
 		D0383EE2207D291100C45548 /* Emojis */ = {
 			isa = PBXGroup;
 			children = (
@@ -3228,6 +3205,7 @@
 				D0B37C5F1F8D286E004252DF /* ThemeSettingsFontSizeItem.swift */,
 				D06F31E52135A41C001A0F12 /* ThemeSettingsBrightnessItem.swift */,
 				09A218F422A15F1400DE6898 /* ThemeSettingsAppIconItem.swift */,
+				098CF79122B924E200AF6134 /* ThemeSettingsAccentColorItem.swift */,
 				090E777822A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift */,
 				D06E4C322134A59700088087 /* ThemeAccentColorActionSheet.swift */,
 				D06E4C342134AE3C00088087 /* ThemeAutoNightSettingsController.swift */,
@@ -4728,7 +4706,6 @@
 				09E4A7FE223ADFD80038140F /* Data */,
 				D0B69C3A20EBD8B3003632C7 /* Device */,
 				D01C7EFE1EF9D434008305F1 /* Device Contacts */,
-				D0383ED5207D19BC00C45548 /* Emoji */,
 				D025A4241F79428300563950 /* Fetch Manager */,
 				09E4A7FC223ADF300038140F /* Images */,
 				D04614352005093B00EC0EF2 /* Location */,
@@ -4882,7 +4859,6 @@
 				D0208AD51FA33D14001F0D5F /* RaiseToListenActivator.h in Headers */,
 				D00817DA22B47A14008A895F /* TGPresentationAutoNightPreferences.h in Headers */,
 				D0E9BAE31F0574D800F079A4 /* STPBankAccountParams.h in Headers */,
-				D0383EE1207D1A1600C45548 /* emoji_suggestions.h in Headers */,
 				D0E9BA361F05585000F079A4 /* STPPhoneNumberValidator.h in Headers */,
 				D0E9BA511F0559DA00F079A4 /* STPImageLibrary.h in Headers */,
 				D0E9BA4C1F0559C700F079A4 /* NSString+Stripe_CardBrands.h in Headers */,
@@ -4892,7 +4868,6 @@
 				D0E9BA2A1F0557A600F079A4 /* STPFormEncoder.h in Headers */,
 				D0E9BA321F05583A00F079A4 /* STPPostalCodeValidator.h in Headers */,
 				D0E9BADC1F0574D800F079A4 /* PKPayment+Stripe.h in Headers */,
-				D0383EDC207D1A1600C45548 /* emoji_suggestions_data.h in Headers */,
 				D0E9BA491F0559B600F079A4 /* STPPaymentMethod.h in Headers */,
 				D08803C51F6064CF00DD7951 /* TelegramUI.h in Headers */,
 				D0E9BA171F05574500F079A4 /* STPPaymentCardTextFieldViewModel.h in Headers */,
@@ -4924,7 +4899,6 @@
 				D00817CE22B47A14008A895F /* TGProxyItem.h in Headers */,
 				D0E9BA401F0558FE00F079A4 /* StripeError.h in Headers */,
 				D0E9BA191F05574500F079A4 /* STPPaymentCardTextField.h in Headers */,
-				D0383EDD207D1A1600C45548 /* TGEmojiSuggestions.h in Headers */,
 				D0E9BA3F1F0558FE00F079A4 /* STPSource.h in Headers */,
 				D008177A22B46B7E008A895F /* TGShareLocationSignals.h in Headers */,
 				D0E9BABC1F05735F00F079A4 /* STPPaymentConfiguration.h in Headers */,
@@ -5655,7 +5629,6 @@
 				D056CD761FF2A30900880D28 /* ChatSwipeToReplyRecognizer.swift in Sources */,
 				D00580B321E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift in Sources */,
 				D091C7A41F8EBB1E00D7DE13 /* ChatPresentationData.swift in Sources */,
-				D0383EE0207D1A1600C45548 /* TGEmojiSuggestions.mm in Sources */,
 				09A218F522A15F1400DE6898 /* ThemeSettingsAppIconItem.swift in Sources */,
 				D013630C208FA62400EB3653 /* SecureIdDocumentGalleryFooterContentNode.swift in Sources */,
 				D0EB41F31F2FEAB800838FE6 /* LegacyComponentsStickers.swift in Sources */,
@@ -6014,6 +5987,7 @@
 				D081E106217F5834003CD921 /* LanguageLinkPreviewControllerNode.swift in Sources */,
 				D093D7E72063E57F00BC3599 /* BotPaymentActionItemNode.swift in Sources */,
 				D01C06BA1FBBB076001561AB /* ItemListSelectableControlNode.swift in Sources */,
+				098CF79222B924E200AF6134 /* ThemeSettingsAccentColorItem.swift in Sources */,
 				D0EC6E541EB9F58900EBF1C3 /* ConvertToSupergroupController.swift in Sources */,
 				D0EC6E561EB9F58900EBF1C3 /* UserInfoController.swift in Sources */,
 				D0EC6E571EB9F58900EBF1C3 /* GroupsInCommonController.swift in Sources */,
@@ -6044,14 +6018,12 @@
 				D0EC6E651EB9F58900EBF1C3 /* TwoStepVerificationResetController.swift in Sources */,
 				D0EC6E661EB9F58900EBF1C3 /* PasscodeOptionsController.swift in Sources */,
 				09CE95082237A53900A7D2C3 /* SettingsSearchableItems.swift in Sources */,
-				D0383EDE207D1A1600C45548 /* emoji_suggestions.cpp in Sources */,
 				D0EC6E671EB9F58900EBF1C3 /* DataAndStorageSettingsController.swift in Sources */,
 				D0EC6E681EB9F58900EBF1C3 /* VoiceCallDataSavingController.swift in Sources */,
 				D0EC6E691EB9F58900EBF1C3 /* NetworkUsageStatsController.swift in Sources */,
 				D0EC6E6A1EB9F58900EBF1C3 /* StorageUsageController.swift in Sources */,
 				D079FCDF1F05C9280038FADE /* BotReceiptController.swift in Sources */,
 				D0EC6E6B1EB9F58900EBF1C3 /* InstalledStickerPacksController.swift in Sources */,
-				D0383EDF207D1A1600C45548 /* emoji_suggestions_data.cpp in Sources */,
 				D0EC6E6C1EB9F58900EBF1C3 /* FeaturedStickerPacksController.swift in Sources */,
 				D0B85C231FF70BF400E795B4 /* AuthorizationSequenceAwaitingAccountResetController.swift in Sources */,
 				D0EC6E6D1EB9F58900EBF1C3 /* ItemListStickerPackItem.swift in Sources */,

@@ -569,7 +569,7 @@ final class AuthorizedApplicationContext {
                             strongSelf.currentPermissionsController = controller
                         }
                         
-                        controller.setState(state, animated: didAppear)
+                        controller.setState(.permission(state), animated: didAppear)
                         controller.proceed = { resolved in
                             permissionsPosition.set(position + 1)
                             switch state {

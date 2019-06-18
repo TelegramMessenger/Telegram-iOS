@@ -435,6 +435,7 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
 - (void)setPinRaised:(bool)raised avatar:(bool)avatar animated:(bool)animated completion:(void (^)(void))completion
 {
     _pinRaised = raised;
+    avatar = false;
     
     [_shadowView.layer removeAllAnimations];
     if (iosMajorVersion() < 7)
@@ -491,6 +492,9 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         _iconView.image = image;
         [_backgroundView addSubview:_avatarView];
         _avatarView.center = CGPointMake(_backgroundView.frame.size.width / 2.0f, _backgroundView.frame.size.height / 2.0f - 5.0f);
+        _shadowView.center = CGPointMake(TGScreenPixel, -36.0f);
+        _backgroundView.center = CGPointMake(_shadowView.frame.size.width / 2.0f, _shadowView.frame.size.height / 2.0f);
+        _iconView.center = CGPointMake(_shadowView.frame.size.width / 2.0f, _shadowView.frame.size.height / 2.0f - 5.0f);
         
         TGDispatchAfter(0.01, dispatch_get_main_queue(), ^
         {
@@ -504,8 +508,11 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
                  if (!customPin)
                      [self addSubview:_avatarView];
                  _animating = false;
+                 [self setNeedsLayout];
              }];
         });
+        
+        [self setNeedsLayout];
     }
     else
     {

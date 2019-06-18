@@ -19,10 +19,8 @@ private final class ChannelVisibilityControllerArguments {
     let copyPrivateLink: () -> Void
     let revokePrivateLink: () -> Void
     let sharePrivateLink: () -> Void
-    let setLocation: () -> Void
-    let removeLocation: () -> Void
     
-    init(account: Account, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyPrivateLink: @escaping () -> Void, revokePrivateLink: @escaping () -> Void, sharePrivateLink: @escaping () -> Void, setLocation: @escaping () -> Void, removeLocation: @escaping () -> Void) {
+    init(account: Account, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyPrivateLink: @escaping () -> Void, revokePrivateLink: @escaping () -> Void, sharePrivateLink: @escaping () -> Void) {
         self.account = account
         self.updateCurrentType = updateCurrentType
         self.updatePublicLinkText = updatePublicLinkText
@@ -33,8 +31,6 @@ private final class ChannelVisibilityControllerArguments {
         self.copyPrivateLink = copyPrivateLink
         self.revokePrivateLink = revokePrivateLink
         self.sharePrivateLink = sharePrivateLink
-        self.setLocation = setLocation
-        self.removeLocation = removeLocation
     }
 }
 
@@ -78,12 +74,6 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     case existingLinksInfo(PresentationTheme, String)
     case existingLinkPeerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Peer, ItemListPeerItemEditing, Bool)
     
-    case locationHeader(PresentationTheme, String)
-    case location(PresentationTheme, PeerGeoLocation)
-    case locationSetup(PresentationTheme, String)
-    case locationRemove(PresentationTheme, String)
-    case locationInfo(PresentationTheme, String)
-    
     var section: ItemListSectionId {
         switch self {
             case .typeHeader, .typePublic, .typePrivate, .typeInfo:
@@ -94,8 +84,6 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return ChannelVisibilitySection.linkActions.rawValue
             case .existingLinksInfo, .existingLinkPeerItem:
                 return ChannelVisibilitySection.link.rawValue
-            case .locationHeader, .location, .locationSetup, .locationRemove, .locationInfo:
-                return ChannelVisibilitySection.location.rawValue
         }
     }
     
@@ -133,16 +121,6 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return 14
             case let .existingLinkPeerItem(index, _, _, _, _, _, _, _):
                 return 15 + index
-            case .locationHeader:
-                return 1000
-            case .location:
-                return 1001
-            case .locationSetup:
-                return 1002
-            case .locationRemove:
-                return 1003
-            case .locationInfo:
-                return 1004
         }
     }
     
@@ -268,36 +246,6 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .locationHeader(lhsTheme, lhsTitle):
-                if case let .locationHeader(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
-                    return true
-                } else {
-                    return false
-                }
-            case let .location(lhsTheme, lhsLocation):
-                if case let .location(rhsTheme, rhsLocation) = rhs, lhsTheme === rhsTheme, lhsLocation == rhsLocation {
-                    return true
-                } else {
-                    return false
-                }
-            case let .locationSetup(lhsTheme, lhsTitle):
-                if case let .locationSetup(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
-                    return true
-                } else {
-                    return false
-                }
-            case let .locationRemove(lhsTheme, lhsTitle):
-                if case let .locationRemove(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
-                    return true
-                } else {
-                    return false
-                }
-            case let .locationInfo(lhsTheme, lhsTitle):
-                if case let .locationInfo(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
-                    return true
-                } else {
-                    return false
-                }
         }
     }
     
@@ -386,21 +334,6 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 }, removePeer: { peerId in
                     arguments.revokePeerId(peerId)
                 })
-            case let .locationHeader(theme, title):
-                return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
-            case let .location(theme, location):
-                let imageSignal = chatMapSnapshotImage(account: arguments.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
-                return ItemListAddressItem(theme: theme, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: nil)
-            case let .locationSetup(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    arguments.setLocation()
-                }, clearHighlightAutomatically: false)
-            case let .locationRemove(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    arguments.removeLocation()
-                })
-            case let .locationInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -526,6 +459,8 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             } else {
                 if let addressName = peer.addressName, !addressName.isEmpty {
                     selectedType = .publicChannel
+                } else if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil  {
+                    selectedType = .publicChannel
                 } else {
                     selectedType = .privateChannel
                 }
@@ -543,30 +478,33 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             }
         }
         
-        switch mode {
-            case .privateLink:
-                break
-            case .initialSetup, .generic:
-                entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader : presentationData.strings.Channel_Edit_LinkItem))
-                entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
-                entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
-        
-                switch selectedType {
-                    case .publicChannel:
-                        if isGroup {
-                            entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicWithLocationHelp))
-                        } else {
-                            entries.append(.typeInfo(presentationData.theme, presentationData.strings.Channel_Setup_TypePublicHelp))
-                        }
-                    case .privateChannel:
-                        if isGroup {
-                            entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePrivateHelp))
-                        } else {
-                            entries.append(.typeInfo(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivateHelp))
-                        }
-                }
+        if let _ = (view.cachedData as? CachedChannelData)?.peerGeoLocation {
+        } else {
+            switch mode {
+                case .privateLink:
+                    break
+                case .initialSetup, .generic:
+                    entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader : presentationData.strings.Channel_Edit_LinkItem))
+                    entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
+                    entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
+            
+                    switch selectedType {
+                        case .publicChannel:
+                            if isGroup {
+                                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
+                            } else {
+                                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Channel_Setup_TypePublicHelp))
+                            }
+                        case .privateChannel:
+                            if isGroup {
+                                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePrivateHelp))
+                            } else {
+                                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivateHelp))
+                            }
+                    }
+            }
         }
-
+        
         switch selectedType {
             case .publicChannel:
                 var displayAvailability = false
@@ -596,7 +534,6 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp, true))
                     }
                 } else {
-                    entries.append(.publicLinkHeader(presentationData.theme, presentationData.strings.Group_Username_Title.uppercased()))
                     entries.append(.editablePublicLink(presentationData.theme, currentAddressName))
                     if let status = state.addressNameValidationStatus {
                         let text: String
@@ -639,26 +576,6 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     }
                     if isGroup {
                         entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp))
-                        
-                        entries.append(.locationHeader(presentationData.theme, presentationData.strings.Group_Location_Title.uppercased()))
-                        if let currentEditingLocation = state.editingLocation {
-                            if case .removed = currentEditingLocation {
-                                entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_SetLocation))
-                            } else if case let .location(location) = currentEditingLocation {
-                                entries.append(.location(presentationData.theme, location))
-                                entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_ChangeLocation))
-                                entries.append(.locationRemove(presentationData.theme, presentationData.strings.Group_Location_RemoveLocation))
-                            }
-                        } else {
-                            if let location = (view.cachedData as? CachedChannelData)?.peerGeoLocation {
-                                entries.append(.location(presentationData.theme, location))
-                                entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_ChangeLocation))
-                                entries.append(.locationRemove(presentationData.theme, presentationData.strings.Group_Location_RemoveLocation))
-                            } else {
-                                entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_SetLocation))
-                            }
-                        }
-                        entries.append(.locationInfo(presentationData.theme, presentationData.strings.Group_Location_Info))
                     } else {
                         entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePublicLinkHelp))
                     }
@@ -727,7 +644,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
                 entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
                 
-                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicWithLocationHelp))
+                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
                 
                 switch selectedType {
                     case .publicChannel:
@@ -755,7 +672,6 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                 entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp, true))
                             }
                         } else {
-                            entries.append(.publicLinkHeader(presentationData.theme, presentationData.strings.Group_Username_Title.uppercased()))
                             entries.append(.editablePublicLink(presentationData.theme, currentAddressName))
                             if let status = state.addressNameValidationStatus {
                                 let text: String
@@ -789,19 +705,6 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                 entries.append(.publicLinkStatus(presentationData.theme, text, status))
                             }
                             entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp))
-                            
-                            entries.append(.locationHeader(presentationData.theme, presentationData.strings.Group_Location_Title.uppercased()))
-                            if let currentEditingLocation = state.editingLocation {
-                                if case .removed = currentEditingLocation {
-                                    entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_SetLocation))
-                                } else if case let .location(location) = currentEditingLocation {
-                                    entries.append(.location(presentationData.theme, location))
-                                    entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_ChangeLocation))
-                                    entries.append(.locationRemove(presentationData.theme, presentationData.strings.Group_Location_RemoveLocation))
-                                }
-                            } else {
-                                entries.append(.locationSetup(presentationData.theme, presentationData.strings.Group_Location_SetLocation))
-                            }
                         }
                     case .privateChannel:
                         let link = (view.cachedData as? CachedGroupData)?.exportedInvitation?.link
@@ -902,8 +805,8 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     let peersDisablingAddressNameAssignment = Promise<[Peer]?>()
     peersDisablingAddressNameAssignment.set(.single(nil) |> then(channelAddressNameAssignmentAvailability(account: context.account, peerId: peerId.namespace == Namespaces.Peer.CloudChannel ? peerId : nil) |> mapToSignal { result -> Signal<[Peer]?, NoError> in
         if case .addressNameLimitReached = result {
-            return adminedPublicChannels(account: context.account)
-                |> map(Optional.init)
+            return adminedPublicChannels(account: context.account, location: false)
+            |> map(Optional.init)
         } else {
             return .single([])
         }
@@ -1059,60 +962,6 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 presentControllerImpl?(shareController, nil)
             }
         })
-    }, setLocation: {
-        dismissInputImpl?()
-        
-        let _ = (context.account.postbox.transaction { transaction -> Peer? in
-            return transaction.getPeer(peerId)
-        } |> deliverOnMainQueue).start(next: { peer in
-            guard let peer = peer else {
-                return
-            }
-           
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = legacyLocationPickerController(context: context, selfPeer: peer, peer: peer, sendLocation: { coordinate, _ in
-                updateState { state in
-                    return state.withUpdatedEditingLocation(.location(PeerGeoLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, address: "")))
-                }
-                
-                let _ = (reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-                |> deliverOnMainQueue).start(next: { placemark in
-                    updateState { state in
-                        let address: String
-                        if let placemark = placemark {
-                            address = placemark.fullAddress
-                        } else {
-                            address = "\(coordinate.latitude), \(coordinate.longitude)"
-                        }
-                        return state.withUpdatedEditingLocation(.location(PeerGeoLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, address: address)))
-                    }
-                })
-            }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
-                clearHighlightImpl?()
-            })
-            presentControllerImpl?(controller, nil)
-        })
-    }, removeLocation: {
-        dismissInputImpl?()
-        
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Group_Location_RemoveLocation, color: .destructive, action: {
-                    dismissAction()
-                    
-                    updateState { state in
-                        return state.withUpdatedEditingLocation(.removed)
-                    }
-                })
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let peerView = context.account.viewTracker.peerView(peerId)
@@ -1134,14 +983,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         break
                     case .publicChannel:
                         var hasLocation = false
-                        if let editingLocation = state.editingLocation {
-                            switch editingLocation {
-                                case .location:
-                                    hasLocation = true
-                                case .removed:
-                                    hasLocation = false
-                            }
-                        } else if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
+                        if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
                             hasLocation = true
                         }
                         
@@ -1247,16 +1089,6 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                     case .privateChannel:
                         break
                     case .publicChannel:
-                        var hasLocation = false
-                        if let editingLocation = state.editingLocation {
-                            switch editingLocation {
-                                case .location:
-                                    hasLocation = true
-                                case .removed:
-                                    hasLocation = false
-                            }
-                        }
-                        
                         if let addressNameValidationStatus = state.addressNameValidationStatus {
                             switch addressNameValidationStatus {
                                 case .availability(.available):
@@ -1265,7 +1097,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                     doneEnabled = false
                             }
                         } else {
-                            doneEnabled = !(peer.addressName?.isEmpty ?? true) || hasLocation
+                            doneEnabled = !(peer.addressName?.isEmpty ?? true)
                         }
                 }
             }

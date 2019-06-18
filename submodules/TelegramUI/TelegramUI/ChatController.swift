@@ -4744,7 +4744,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
             
             strongSelf.chatDisplayNode.dismissInput()
-            strongSelf.present(legacyLocationPickerController(context: strongSelf.context, selfPeer: selfPeer, peer: peer, sendLocation: { coordinate, venue in
+            strongSelf.present(legacyLocationPickerController(context: strongSelf.context, selfPeer: selfPeer, peer: peer, sendLocation: { coordinate, venue, _ in
                 guard let strongSelf = self else {
                     return
                 }

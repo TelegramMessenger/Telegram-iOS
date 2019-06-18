@@ -294,6 +294,8 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
+private let themeColors = [UIColor(rgb: 0x007aff), UIColor(rgb: 0x70bb23), UIColor(rgb: 0xeb6ca4), UIColor(rgb: 0xf08200), UIColor(rgb: 0x9472ee), UIColor(rgb: 0xd33213), UIColor(rgb: 0xedb400), UIColor(rgb: 0x6d839e), UIColor(rgb: 0x000000)]
+
 public func themeSettingsController(context: AccountContext, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?

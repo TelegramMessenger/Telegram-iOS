@@ -8,12 +8,19 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import LegacyComponents
 
+public enum CreateGroupMode {
+    case generic
+    case supergroup
+    case locatedGroup(latitude: Double, longitude: Double, address: String?)
+}
+
 private struct CreateGroupArguments {
     let account: Account
     
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let done: () -> Void
     let changeProfilePhoto: () -> Void
+    let changeLocation: () -> Void
 }
 
 private enum CreateGroupSection: Int32 {
@@ -47,6 +54,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
     case member(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Peer, PeerPresence?)
     case locationHeader(PresentationTheme, String)
     case location(PresentationTheme, PeerGeoLocation)
+    case changeLocation(PresentationTheme, String)
+    case locationInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -54,7 +63,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 return CreateGroupSection.info.rawValue
             case .member:
                 return CreateGroupSection.members.rawValue
-            case .locationHeader, .location:
+            case .locationHeader, .location, .changeLocation, .locationInfo:
                 return CreateGroupSection.location.rawValue
         }
     }
@@ -71,6 +80,10 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 return 10000
             case .location:
                 return 10001
+            case .changeLocation:
+                return 10002
+            case .locationInfo:
+                return 10003
         }
     }
     
@@ -153,6 +166,18 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .changeLocation(lhsTheme, lhsTitle):
+                if case let .changeLocation(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
+                    return true
+                } else {
+                    return false
+                }
+            case let .locationInfo(lhsTheme, lhsText):
+                if case let .locationInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -178,6 +203,12 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .location(theme, location):
                 let imageSignal = chatMapSnapshotImage(account: arguments.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
                 return ItemListAddressItem(theme: theme, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: nil)
+            case let .changeLocation(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.changeLocation()
+                }, clearHighlightAutomatically: false)
+            case let .locationInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -186,6 +217,7 @@ private struct CreateGroupState: Equatable {
     var creating: Bool
     var editingName: ItemListAvatarAndNameInfoItemName
     var avatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
+    var location: PeerGeoLocation?
     
     static func ==(lhs: CreateGroupState, rhs: CreateGroupState) -> Bool {
         if lhs.creating != rhs.creating {
@@ -197,12 +229,14 @@ private struct CreateGroupState: Equatable {
         if lhs.avatar != rhs.avatar {
             return false
         }
-        
+        if lhs.location != rhs.location {
+            return false
+        }
         return true
     }
 }
 
-private func createGroupEntries(presentationData: PresentationData, state: CreateGroupState, peerIds: [PeerId], view: MultiplePeersView, geoLocation: PeerGeoLocation?) -> [CreateGroupEntry] {
+private func createGroupEntries(presentationData: PresentationData, state: CreateGroupState, peerIds: [PeerId], view: MultiplePeersView) -> [CreateGroupEntry] {
     var entries: [CreateGroupEntry] = []
     
     let groupInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: nil)
@@ -243,22 +277,23 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
         entries.append(.member(Int32(i), presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peers[i], view.presences[peers[i].id]))
     }
     
-    if let geoLocation = geoLocation {
+    if let location = state.location {
         entries.append(.locationHeader(presentationData.theme, presentationData.strings.Group_Location_Title.uppercased()))
-        entries.append(.location(presentationData.theme, geoLocation))
+        entries.append(.location(presentationData.theme, location))
+        entries.append(.changeLocation(presentationData.theme, presentationData.strings.Group_Location_ChangeLocation))
+        entries.append(.locationInfo(presentationData.theme, presentationData.strings.Group_Location_Info))
     }
     
     return entries
 }
 
-public enum CreateGroupType {
-    case generic
-    case supergroup
-    case locatedGroup(latitude: Double, longitude: Double)
-}
-
-public func createGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String? = nil, type: CreateGroupType = .generic, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
-    let initialState = CreateGroupState(creating: false, editingName: .title(title: initialTitle ?? "", type: .group), avatar: nil)
+public func createGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String? = nil, mode: CreateGroupMode = .generic, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
+    var location: PeerGeoLocation?
+    if case let .locatedGroup(latitude, longitude, address) = mode {
+        location = PeerGeoLocation(latitude: latitude, longitude: longitude, address: address ?? "")
+    }
+    
+    let initialState = CreateGroupState(creating: false, editingName: .title(title: initialTitle ?? "", type: .group), avatar: nil, location: location)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((CreateGroupState) -> CreateGroupState) -> Void = { f in
@@ -269,6 +304,7 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var endEditingImpl: (() -> Void)?
+    var clearHighlightImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -276,9 +312,16 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
     
     let uploadedAvatar = Promise<UploadedPeerPhotoData>()
     
-    let placemarkPromise = Promise<ReverseGeocodedPlacemark?>()
-    if case let .locatedGroup(latitude, longitude) = type {
-        placemarkPromise.set(reverseGeocodeLocation(latitude: latitude, longitude: longitude))
+    let addressPromise = Promise<String?>(nil)
+    if case let .locatedGroup(latitude, longitude, address) = mode {
+        if let address = address {
+            addressPromise.set(.single(address))
+        } else {
+            addressPromise.set(reverseGeocodeLocation(latitude: latitude, longitude: longitude)
+            |> map { placemark in
+                return placemark?.fullAddress ?? "\(latitude), \(longitude)"
+            })
+        }
     }
     
     let arguments = CreateGroupArguments(account: context.account, updateEditingName: { editingName in
@@ -288,8 +331,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
             return current
         }
     }, done: {
-        let (creating, title) = stateValue.with { state -> (Bool, String) in
-            return (state.creating, state.editingName.composedTitle)
+        let (creating, title, location) = stateValue.with { state -> (Bool, String, PeerGeoLocation?) in
+            return (state.creating, state.editingName.composedTitle, state.location)
         }
         
         if !creating && !title.isEmpty {
@@ -301,7 +344,7 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
             endEditingImpl?()
             
             let createSignal: Signal<PeerId?, CreateGroupError>
-            switch type {
+            switch mode {
                 case .generic:
                     createSignal = createGroup(account: context.account, title: title, peerIds: peerIds)
                 case .supergroup:
@@ -315,28 +358,25 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                                 return .restricted
                         }
                     }
-                case let .locatedGroup(latitude, longitude):
-                    createSignal = createSupergroup(account: context.account, title: title, description: nil)
-                    |> map(Optional.init)
-                    |> mapError { error -> CreateGroupError in
-                        switch error {
-                            case .generic:
-                                return .generic
-                            case .restricted:
-                                return .restricted
-                        }
+                case .locatedGroup:
+                    guard let location = location else {
+                        return
                     }
-                    |> mapToSignal { peerId in
-                        guard let peerId = peerId else {
-                            return .single(nil)
+                    
+                    createSignal = addressPromise.get()
+                    |> introduceError(CreateGroupError.self)
+                    |> mapToSignal { address -> Signal<PeerId?, CreateGroupError> in
+                        guard let address = address else {
+                            return .complete()
                         }
-                        return placemarkPromise.get()
-                        |> introduceError(CreateGroupError.self)
-                        |> mapToSignal { placemark in
-                            return updateChannelGeoLocation(postbox: context.account.postbox, network: context.account.network, channelId: peerId, coordinate: (latitude, longitude), address: placemark?.fullAddress ?? "\(latitude), \(longitude)")
-                            |> introduceError(CreateGroupError.self)
-                            |> map { _ in
-                                return peerId
+                        return createSupergroup(account: context.account, title: title, description: nil, location: (location.latitude, location.longitude, address))
+                        |> map(Optional.init)
+                        |> mapError { error -> CreateGroupError in
+                            switch error {
+                                case .generic:
+                                    return .generic
+                                case .restricted:
+                                    return .restricted
                             }
                         }
                     }
@@ -475,10 +515,43 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                 }
             }
         })
+    }, changeLocation: {
+        endEditingImpl?()
+        
+        let peer = TelegramChannel(id: PeerId(0), accessHash: nil, title: "", username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(TelegramChannelGroupInfo(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil)
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let controller = legacyLocationPickerController(context: context, selfPeer: peer, peer: peer, sendLocation: { coordinate, _, address in
+            let addressSignal: Signal<String, NoError>
+            if let address = address {
+                addressSignal = .single(address)
+            } else {
+                addressSignal = reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                |> map { placemark in
+                    if let placemark = placemark {
+                        return placemark.fullAddress
+                    } else {
+                        return "\(coordinate.latitude), \(coordinate.longitude)"
+                    }
+                }
+            }
+            
+            let _ = (addressSignal
+            |> deliverOnMainQueue).start(next: { address in
+                addressPromise.set(.single(address))
+                updateState { current in
+                    var current = current
+                    current.location = PeerGeoLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, address: address)
+                    return current
+                }
+            })
+        }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
+            clearHighlightImpl?()
+        })
+        presentControllerImpl?(controller, nil)
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds), .single(nil) |> then(placemarkPromise.get()))
-    |> map { presentationData, state, view, placemark -> (ItemListControllerState, (ItemListNodeState<CreateGroupEntry>, CreateGroupEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds), .single(nil) |> then(addressPromise.get()))
+    |> map { presentationData, state, view, address -> (ItemListControllerState, (ItemListNodeState<CreateGroupEntry>, CreateGroupEntry.ItemGenerationArguments)) in
         
         let rightNavigationButton: ItemListNavigationButton
         if state.creating {
@@ -489,17 +562,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
             })
         }
         
-        var geoLocation: PeerGeoLocation?
-        if case let .locatedGroup(latitude, longitude) = type {
-            if let placemark = placemark {
-                geoLocation = PeerGeoLocation(latitude: latitude, longitude: longitude, address: placemark.fullAddress)
-            } else {
-                geoLocation = PeerGeoLocation(latitude: latitude, longitude: longitude, address: "")
-            }
-        }
-        
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Compose_NewGroupTitle), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: createGroupEntries(presentationData: presentationData, state: state, peerIds: peerIds, view: view, geoLocation: geoLocation), style: .blocks, focusItemTag: CreateGroupEntryTag.info)
+        let listState = ItemListNodeState(entries: createGroupEntries(presentationData: presentationData, state: state, peerIds: peerIds, view: view), style: .blocks, focusItemTag: CreateGroupEntryTag.info)
         
         return (controllerState, (listState, arguments))
     }
@@ -525,6 +589,9 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
     endEditingImpl = {
         [weak controller] in
         controller?.view.endEditing(true)
+    }
+    clearHighlightImpl = { [weak controller] in
+        controller?.clearItemNodesHighlight(animated: true)
     }
     return controller
 }

@@ -16,11 +16,11 @@ public struct PeerNearby {
 
 public final class PeersNearbyContext {
     private let queue: Queue = Queue.mainQueue()
-    private var subscribers = Bag<([PeerNearby]) -> Void>()
+    private var subscribers = Bag<([PeerNearby]?) -> Void>()
     private let disposable = MetaDisposable()
     private var timer: SwiftSignalKit.Timer?
     
-    private var entries: [PeerNearby] = []
+    private var entries: [PeerNearby]?
    
     public init(network: Network, accountStateManager: AccountStateManager, coordinate: (latitude: Double, longitude: Double)) {
         self.disposable.set((network.request(Api.functions.contacts.getLocated(geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude)))
@@ -53,7 +53,7 @@ public final class PeersNearbyContext {
             }
             
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            var entries = strongSelf.entries.filter { Double($0.expires) > timestamp }
+            var entries = strongSelf.entries?.filter { Double($0.expires) > timestamp } ?? []
             let updatedEntries = updatedEntries.filter { Double($0.expires) > timestamp }
             
             var existingPeerIds: [PeerId: Int] = [:]
@@ -82,7 +82,7 @@ public final class PeersNearbyContext {
             }
             
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            strongSelf.entries = strongSelf.entries.filter { Double($0.expires) > timestamp }
+            strongSelf.entries = strongSelf.entries?.filter { Double($0.expires) > timestamp }
         }, queue: self.queue)
         self.timer?.start()
     }
@@ -92,7 +92,7 @@ public final class PeersNearbyContext {
         self.timer?.invalidate()
     }
     
-    public func get() -> Signal<[PeerNearby], NoError> {
+    public func get() -> Signal<[PeerNearby]?, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
