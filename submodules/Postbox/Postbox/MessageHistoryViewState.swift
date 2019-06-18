@@ -5,6 +5,13 @@ struct PeerIdAndNamespace: Hashable {
     let namespace: MessageId.Namespace
 }
 
+private func canContainHoles(_ peerIdAndNamespace: PeerIdAndNamespace, seedConfiguration: SeedConfiguration) -> Bool {
+    guard let messageNamespaces = seedConfiguration.messageHoles[peerIdAndNamespace.peerId.namespace] else {
+        return false
+    }
+    return messageNamespaces[peerIdAndNamespace.namespace] != nil
+}
+
 private struct MessageMonthIndex: Equatable {
     let year: Int32
     let month: Int32
@@ -279,7 +286,7 @@ private func isIndex(index: MessageIndex, closerTo anchor: HistoryViewAnchor, th
     }
 }
 
-private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries], holes: HistoryViewHoles, anchor: HistoryViewAnchor, tag: MessageTags?, halfLimit: Int) -> (clipRanges: [ClosedRange<MessageIndex>], sampledHole: SampledHistoryViewHole?) {
+private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries], holes: HistoryViewHoles, anchor: HistoryViewAnchor, tag: MessageTags?, halfLimit: Int, seedConfiguration: SeedConfiguration) -> (clipRanges: [ClosedRange<MessageIndex>], sampledHole: SampledHistoryViewHole?) {
     var clipRanges: [ClosedRange<MessageIndex>] = []
     var sampledHole: (distanceFromAnchor: Int?, hole: SampledHistoryViewHole)?
     
@@ -287,6 +294,7 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
         if indices.isEmpty {
             continue
         }
+        assert(canContainHoles(space, seedConfiguration: seedConfiguration))
         switch anchor {
             case .lowerBound, .upperBound:
                 break
@@ -628,11 +636,11 @@ struct OrderedHistoryViewEntries {
     var lowerOrAtAnchor: [MutableMessageHistoryEntry]
     var higherThanAnchor: [MutableMessageHistoryEntry]
     
-    mutating func fixMonotonity() {
+    mutating func fixMonotony() {
         if self.lowerOrAtAnchor.count > 1 {
             for i in 1 ..< self.lowerOrAtAnchor.count {
                 if self.lowerOrAtAnchor[i].index < self.lowerOrAtAnchor[i - 1].index {
-                    //assertionFailure()
+                    assertionFailure()
                     break
                 }
             }
@@ -640,7 +648,7 @@ struct OrderedHistoryViewEntries {
         if self.higherThanAnchor.count > 1 {
             for i in 1 ..< self.higherThanAnchor.count {
                 if self.higherThanAnchor[i].index < self.higherThanAnchor[i - 1].index {
-                   // assertionFailure()
+                    assertionFailure()
                     break
                 }
             }
@@ -664,7 +672,7 @@ struct OrderedHistoryViewEntries {
             }
         }
         if fix {
-            //assertionFailure()
+            assertionFailure()
             self.lowerOrAtAnchor.sort(by: { $0.index.id.id < $1.index.id.id })
             self.higherThanAnchor.sort(by: { $0.index.id.id < $1.index.id.id })
         }
@@ -742,6 +750,7 @@ final class HistoryViewLoadedState {
     let tag: MessageTags?
     let statistics: MessageHistoryViewOrderStatistics
     let halfLimit: Int
+    let seedConfiguration: SeedConfiguration
     var orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries]
     var holes: HistoryViewHoles
     var spacesWithRemovals = Set<PeerIdAndNamespace>()
@@ -752,6 +761,7 @@ final class HistoryViewLoadedState {
         self.tag = tag
         self.statistics = statistics
         self.halfLimit = halfLimit
+        self.seedConfiguration = postbox.seedConfiguration
         self.orderedEntriesBySpace = [:]
         self.holes = holes
         
@@ -805,7 +815,7 @@ final class HistoryViewLoadedState {
         
         if lowerOrAtAnchorMessages.count < self.halfLimit {
             let nextLowerIndex: (index: MessageIndex, includeFrom: Bool)
-            if let lastMessage = lowerOrAtAnchorMessages.last {
+            if let lastMessage = lowerOrAtAnchorMessages.min(by: { $0.index < $1.index }) {
                 nextLowerIndex = (lastMessage.index, false)
             } else {
                 nextLowerIndex = (anchorIndex, true)
@@ -814,7 +824,7 @@ final class HistoryViewLoadedState {
         }
         if higherThanAnchorMessages.count < self.halfLimit {
             let nextHigherIndex: MessageIndex
-            if let lastMessage = higherThanAnchorMessages.last {
+            if let lastMessage = higherThanAnchorMessages.max(by: { $0.index < $1.index }) {
                 nextHigherIndex = lastMessage.index
             } else {
                 nextHigherIndex = anchorIndex
@@ -872,15 +882,19 @@ final class HistoryViewLoadedState {
             }
         }
         
-        entries.fixMonotonity()
+        if canContainHoles(space, seedConfiguration: self.seedConfiguration) {
+            entries.fixMonotony()
+        }
         self.orderedEntriesBySpace[space] = entries
     }
     
     func insertHole(space: PeerIdAndNamespace, range: ClosedRange<MessageId.Id>) -> Bool {
+        assert(canContainHoles(space, seedConfiguration: self.seedConfiguration))
         return self.holes.insertHole(space: space, range: range)
     }
     
     func removeHole(space: PeerIdAndNamespace, range: ClosedRange<MessageId.Id>) -> Bool {
+        assert(canContainHoles(space, seedConfiguration: self.seedConfiguration))
         return self.holes.removeHole(space: space, range: range)
     }
     
@@ -1097,7 +1111,7 @@ final class HistoryViewLoadedState {
             self.spacesWithRemovals.removeAll()
         }
         let combinedSpacesAndIndicesByDirection = sampleEntries(orderedEntriesBySpace: self.orderedEntriesBySpace, anchor: self.anchor, halfLimit: self.halfLimit)
-        let (clipRanges, sampledHole) = sampleHoleRanges(orderedEntriesBySpace: self.orderedEntriesBySpace, holes: self.holes, anchor: self.anchor, tag: self.tag, halfLimit: self.halfLimit)
+        let (clipRanges, sampledHole) = sampleHoleRanges(orderedEntriesBySpace: self.orderedEntriesBySpace, holes: self.holes, anchor: self.anchor, tag: self.tag, halfLimit: self.halfLimit, seedConfiguration: self.seedConfiguration)
         
         var holesToLower = false
         var holesToHigher = false
@@ -1164,20 +1178,22 @@ private func fetchHoles(postbox: Postbox, locations: MessageHistoryViewPeerIds, 
     var holesBySpace: [PeerIdAndNamespace: IndexSet] = [:]
     var peerIds: [PeerId] = []
     switch locations {
-        case let .single(peerId):
-            peerIds.append(peerId)
-        case let .associated(peerId, associatedId):
-            peerIds.append(peerId)
-            if let associatedId = associatedId {
-                peerIds.append(associatedId.peerId)
-            }
+    case let .single(peerId):
+        peerIds.append(peerId)
+    case let .associated(peerId, associatedId):
+        peerIds.append(peerId)
+        if let associatedId = associatedId {
+            peerIds.append(associatedId.peerId)
+        }
     }
     let holeSpace = tag.flatMap(MessageHistoryHoleSpace.tag) ?? .everywhere
     for peerId in peerIds {
         for namespace in postbox.messageHistoryHoleIndexTable.existingNamespaces(peerId: peerId, holeSpace: holeSpace) {
             let indices = postbox.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: holeSpace, range: 1 ... (Int32.max - 1))
             if !indices.isEmpty {
-                holesBySpace[PeerIdAndNamespace(peerId: peerId, namespace: namespace)] = indices
+                let peerIdAndNamespace = PeerIdAndNamespace(peerId: peerId, namespace: namespace)
+                assert(canContainHoles(peerIdAndNamespace, seedConfiguration: postbox.seedConfiguration))
+                holesBySpace[peerIdAndNamespace] = indices
             }
         }
     }
