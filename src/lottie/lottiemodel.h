@@ -138,12 +138,12 @@ inline T lerp(const T& start, const T& end, float t)
 
 inline LottieShapeData lerp(const LottieShapeData& start, const LottieShapeData& end, float t)
 {
-    if (start.mPoints.size() != end.mPoints.size())
-       return LottieShapeData();
-
+    // Usal case both start and end path has same size
+    // In case its different then truncate the larger path and do the interpolation.
     LottieShapeData result;
-    result.reserve(start.mPoints.size());
-    for (unsigned int i = 0 ; i < start.mPoints.size(); i++) {
+    auto size = std::min(start.mPoints.size(), end.mPoints.size());
+    result.reserve(size);
+    for (unsigned int i = 0 ; i < size; i++) {
        result.mPoints.push_back(start.mPoints[i] + t * (end.mPoints[i] - start.mPoints[i]));
     }
    return result;
