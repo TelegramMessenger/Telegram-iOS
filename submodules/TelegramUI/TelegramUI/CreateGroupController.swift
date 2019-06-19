@@ -356,6 +356,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                                 return .generic
                             case .restricted:
                                 return .restricted
+                            case .tooMuchLocationBasedGroups:
+                                return .tooMuchLocationBasedGroups
                         }
                     }
                 case .locatedGroup:
@@ -377,6 +379,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                                     return .generic
                                 case .restricted:
                                     return .restricted
+                                case .tooMuchLocationBasedGroups:
+                                    return .tooMuchLocationBasedGroups
                             }
                         }
                     }
@@ -436,6 +440,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                         text = presentationData.strings.Login_UnknownError
                     case .restricted:
                         text = presentationData.strings.Common_ActionNotAllowedError
+                    case .tooMuchLocationBasedGroups:
+                        text = presentationData.strings.CreateGroup_ErrorLocatedGroupsTooMuch
                 }
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }))

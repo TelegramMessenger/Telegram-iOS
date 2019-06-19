@@ -4387,6 +4387,7 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.OwnershipTransfer.ChangeOwner" = "Change Owner";
 
 "Channel.OwnershipTransfer.ErrorPublicChannelsTooMuch" = "Sorry, the target user has too many public groups or channels already. Please ask them to make one of their existing groups or channels private first.";
+"Group.OwnershipTransfer.ErrorLocatedGroupsTooMuch" = "Sorry, the target user has too many location-based groups already. Please ask them to delete or transfer one of their existing ones first.";
 
 "Group.OwnershipTransfer.ErrorAdminsTooMuch" = "Sorry, this group has too many admins and the new owner can't be added. Please remove one of the existing admins first.";
 "Channel.OwnershipTransfer.ErrorAdminsTooMuch" = "Sorry, this channel has too many admins and the new owner can't be added. Please remove one of the existing admins first.";
@@ -4446,3 +4447,9 @@ Any member of this group will be able to see messages in the channel.";
 "GroupInfo.Location" = "Location";
 "GroupInfo.PublicLink" = "Public Link";
 "GroupInfo.PublicLinkAdd" = "Add";
+
+"Group.PublicLink.Title" = "Public Link";
+"Group.PublicLink.Placeholder" = "link";
+"Group.PublicLink.Info" = "People can share this link with others and find your group using Telegram search.\n\nYou can use use **a-z**, **0-9** and undescores. Minimum length is **5** characters.";
+
+"CreateGroup.ErrorLocatedGroupsTooMuch" = "Sorry, you have too many location-based groups already. Please delete one of your existing ones first.";

@@ -47,7 +47,8 @@ public final class PeersNearbyContext {
             }
             return .single(peersNearby)
             |> then(accountStateManager.updatedPeersNearby())
-        }).start(next: { [weak self] updatedEntries in
+        }
+        |> deliverOn(self.queue)).start(next: { [weak self] updatedEntries in
             guard let strongSelf = self else {
                 return
             }
@@ -76,7 +77,7 @@ public final class PeersNearbyContext {
             }
         }))
         
-        self.timer = SwiftSignalKit.Timer(timeout: 5.0, repeat: true, completion: { [weak self] in
+        self.timer = SwiftSignalKit.Timer(timeout: 2.0, repeat: true, completion: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

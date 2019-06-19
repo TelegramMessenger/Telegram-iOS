@@ -260,7 +260,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text: String
                 switch error {
-                    case .generic:
+                    case .generic, .tooMuchLocationBasedGroups:
                         text = presentationData.strings.Login_UnknownError
                     case .restricted:
                         text = presentationData.strings.Common_ActionNotAllowedError

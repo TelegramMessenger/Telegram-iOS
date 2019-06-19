@@ -340,6 +340,8 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
 
 - (void)_sendLocation
 {
+    _tableView.userInteractionEnabled = false;
+    
     CLLocationCoordinate2D coordinate = _currentUserLocation.coordinate;
     if (_mapInFullScreenMode)
         coordinate = [self mapCenterCoordinateForPickerPin];

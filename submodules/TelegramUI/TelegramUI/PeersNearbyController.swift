@@ -313,6 +313,8 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
             return .single(nil)
         }
         
+        print("TTTTT: \(CFAbsoluteTimeGetCurrent())")
+        
         return Signal { subscriber in
             let peersNearbyContext = PeersNearbyContext(network: context.account.network, accountStateManager: context.account.stateManager, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude))
             
@@ -373,12 +375,25 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         return value != nil
     }
     dataPromise.set(.single(nil) |> then(combinedSignal))
-
+    
+    
+    let previousData = Atomic<PeersNearbyData?>(value: nil)
+    
     let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, data -> (ItemListControllerState, (ItemListNodeState<PeersNearbyEntry>, PeersNearbyEntry.ItemGenerationArguments)) in
+        let previous = previousData.swap(data)
+        
+        var crossfade = false
+        if (data?.users.isEmpty ?? true) != (previous?.users.isEmpty ?? true) {
+            crossfade = true
+        }
+        if (data?.groups.isEmpty ?? true) != (previous?.groups.isEmpty ?? true) {
+            crossfade = true
+        }
+        
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PeopleNearby_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(entries: peersNearbyControllerEntries(data: data, presentationData: presentationData), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: true, userInteractionEnabled: true)
+        let listState = ItemListNodeState(entries: peersNearbyControllerEntries(data: data, presentationData: presentationData), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: !crossfade, userInteractionEnabled: true)
         
         return (controllerState, (listState, arguments))
     }

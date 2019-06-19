@@ -316,6 +316,10 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                                 break loop
                             }
                         }
+                        if let updated = updated, case .creator = updated.participant{
+                            list.insert(updated, at: 0)
+                            updatedList = true
+                        }
                     }
                 case .restricted:
                     if let updated = updated, let banInfo = updated.participant.banInfo, !banInfo.rights.flags.contains(.banReadMessages) {

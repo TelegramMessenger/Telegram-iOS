@@ -1563,7 +1563,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     }
                 } else if let channel = groupPeer as? TelegramChannel {
                     if channel.hasPermission(.inviteMembers) {
-                        if channel.adminRights != nil {
+                        if channel.flags.contains(.isCreator) || channel.adminRights != nil {
                             canCreateInviteLink = true
                         }
                     }
@@ -1772,8 +1772,13 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 
                 inviteByLinkImpl = { [weak contactsController] in
                     contactsController?.dismiss()
-                    
-                    presentControllerImpl?(channelVisibilityController(context: context, peerId: peerView.peerId, mode: .privateLink, upgradedToSupergroup: { updatedPeerId, f in
+                    let mode: ChannelVisibilityControllerMode
+                    if groupPeer.addressName != nil {
+                        mode = .generic
+                    } else {
+                        mode = .privateLink
+                    }
+                    presentControllerImpl?(channelVisibilityController(context: context, peerId: peerView.peerId, mode: mode, upgradedToSupergroup: { updatedPeerId, f in
                         upgradedToSupergroupImpl?(updatedPeerId, f)
                     }), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 }

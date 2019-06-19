@@ -91,6 +91,7 @@ class ItemListAddressItemNode: ListViewItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     private let imageNode: TransformImageNode
+    private let iconNode: ASImageNode
     private var selectionNode: ItemListSelectableControlNode?
     
     var item: ItemListAddressItem?
@@ -125,11 +126,14 @@ class ItemListAddressItemNode: ListViewItemNode {
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
         
+        self.iconNode = ASImageNode()
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.labelNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.iconNode)
     }
     
     func asyncLayout() -> (_ item: ItemListAddressItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
@@ -204,6 +208,10 @@ class ItemListAddressItemNode: ListViewItemNode {
                         strongSelf.imageNode.clearContents()
                     }
                     
+                    if strongSelf.iconNode.image == nil {
+                        strongSelf.iconNode.image = UIImage(bundleImageName: "Peer Info/LocationIcon")
+                    }
+                    
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
@@ -237,7 +245,13 @@ class ItemListAddressItemNode: ListViewItemNode {
                     
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 11.0), size: labelLayout.size)
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: item.label.isEmpty ? 11.0 : 31.0), size: textLayout.size)
-                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: params.width - imageSize.width - rightInset, y: floorToScreenPixels((contentSize.height - imageSize.height) / 2.0)), size: imageSize)
+                    
+                    let imageFrame = CGRect(origin: CGPoint(x: params.width - imageSize.width - rightInset, y: floorToScreenPixels((contentSize.height - imageSize.height) / 2.0)), size: imageSize)
+                    strongSelf.imageNode.frame = imageFrame
+                    
+                    if let icon = strongSelf.iconNode.image {
+                         strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - icon.size.width) / 2.0), y: imageFrame.minY + floorToScreenPixels((imageFrame.height - icon.size.height) / 2.0) - 7.0), size: icon.size)
+                    }
                     
                     let leftInset: CGFloat
                     switch item.style {
