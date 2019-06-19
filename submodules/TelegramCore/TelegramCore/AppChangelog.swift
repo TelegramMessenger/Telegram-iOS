@@ -3,8 +3,10 @@ import Foundation
 import PostboxMac
 import SwiftSignalKitMac
 import MtProtoKitMac
+import TelegramApiMac
 #else
 import Postbox
+import TelegramApi
 import SwiftSignalKit
     #if BUCK
         import MtProtoKit
@@ -12,7 +14,6 @@ import SwiftSignalKit
         import MtProtoKitDynamic
     #endif
 #endif
-import TelegramApi
 
 func managedAppChangelog(postbox: Postbox, network: Network, stateManager: AccountStateManager, appVersion: String) -> Signal<Void, NoError> {
     return stateManager.pollStateUpdateCompletion()

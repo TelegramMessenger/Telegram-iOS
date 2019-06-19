@@ -2,11 +2,12 @@ import Foundation
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
     import SwiftSignalKit
 #endif
-import TelegramApi
 
 private func hashForIds(_ ids: [Int64]) -> Int32 {
     var acc: UInt32 = 0

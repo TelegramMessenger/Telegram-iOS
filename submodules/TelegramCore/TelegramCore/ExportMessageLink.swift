@@ -2,11 +2,12 @@
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
     import SwiftSignalKit
 #endif
-import TelegramApi
 
 public func exportMessageLink(account: Account, peerId: PeerId, messageId: MessageId) -> Signal<String?, NoError> {
     return account.postbox.transaction { transaction -> Peer? in

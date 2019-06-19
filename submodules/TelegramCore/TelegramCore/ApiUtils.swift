@@ -1,10 +1,11 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
 #endif
-import TelegramApi
 
 public enum PeerReference: PostboxCoding, Hashable, Equatable {
     case user(id: Int32, accessHash: Int64)

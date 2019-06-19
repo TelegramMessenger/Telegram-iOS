@@ -3,16 +3,17 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
         import MtProtoKitDynamic
     #endif
 #endif
-import TelegramApi
 
 public func requestBlockedPeers(account: Account) -> Signal<[Peer], NoError> {
     return account.network.request(Api.functions.contacts.getBlocked(offset: 0, limit: 100))

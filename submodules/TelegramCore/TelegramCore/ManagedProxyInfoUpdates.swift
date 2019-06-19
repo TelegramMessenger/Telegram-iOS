@@ -3,7 +3,9 @@ import Foundation
 import PostboxMac
 import SwiftSignalKitMac
 import MtProtoKitMac
+import TelegramApiMac
 #else
+import TelegramApi
 import Postbox
 import SwiftSignalKit
 #if BUCK
@@ -12,7 +14,6 @@ import SwiftSignalKit
         import MtProtoKitDynamic
     #endif
 #endif
-import TelegramApi
 
 func managedProxyInfoUpdates(postbox: Postbox, network: Network, viewTracker: AccountViewTracker) -> Signal<Void, NoError> {
     return Signal { subscriber in

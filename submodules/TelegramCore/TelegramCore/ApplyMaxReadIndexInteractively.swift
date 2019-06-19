@@ -2,11 +2,12 @@ import Foundation
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
     import SwiftSignalKit
 #endif
-import TelegramApi
 
 public func applyMaxReadIndexInteractively(postbox: Postbox, stateManager: AccountStateManager, index: MessageIndex) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in

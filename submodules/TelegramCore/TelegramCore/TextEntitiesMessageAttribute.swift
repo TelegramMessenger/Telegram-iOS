@@ -1,10 +1,11 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
 #endif
-import TelegramApi
 
 public enum MessageTextEntityType: Equatable {
     public typealias CustomEntityType = Int32

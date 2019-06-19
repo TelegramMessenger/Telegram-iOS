@@ -2,11 +2,12 @@ import Foundation
 #if os(macOS)
 import PostboxMac
 import SwiftSignalKitMac
+import TelegramApiMac
 #else
 import Postbox
 import SwiftSignalKit
-#endif
 import TelegramApi
+#endif
 
 public func clearCloudDraftsInteractively(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.getAllDrafts())

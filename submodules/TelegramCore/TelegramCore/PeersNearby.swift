@@ -2,11 +2,19 @@ import Foundation
 #if os(macOS)
 import SwiftSignalKitMac
 import PostboxMac
+import TelegramApiMac
 #else
 import SwiftSignalKit
 import Postbox
-#endif
 import TelegramApi
+#endif
+
+#if os(macOS)
+private typealias SignalKitTimer = SwiftSignalKitMac.Timer
+#else
+private typealias SignalKitTimer = SwiftSignalKit.Timer
+#endif
+
 
 public struct PeerNearby {
     public let id: PeerId
@@ -18,7 +26,7 @@ public final class PeersNearbyContext {
     private let queue: Queue = Queue.mainQueue()
     private var subscribers = Bag<([PeerNearby]?) -> Void>()
     private let disposable = MetaDisposable()
-    private var timer: SwiftSignalKit.Timer?
+    private var timer: SignalKitTimer?
     
     private var entries: [PeerNearby]?
    
@@ -77,7 +85,7 @@ public final class PeersNearbyContext {
             }
         }))
         
-        self.timer = SwiftSignalKit.Timer(timeout: 2.0, repeat: true, completion: { [weak self] in
+        self.timer = SignalKitTimer(timeout: 2.0, repeat: true, completion: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
