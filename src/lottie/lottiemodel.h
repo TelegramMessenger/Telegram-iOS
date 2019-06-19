@@ -138,7 +138,7 @@ inline T lerp(const T& start, const T& end, float t)
 
 inline LottieShapeData lerp(const LottieShapeData& start, const LottieShapeData& end, float t)
 {
-    if (start.mPoints.size() != start.mPoints.size())
+    if (start.mPoints.size() != end.mPoints.size())
        return LottieShapeData();
 
     LottieShapeData result;
