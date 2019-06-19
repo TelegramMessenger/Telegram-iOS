@@ -4,7 +4,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-
+import TelegramUIPreferences
+import TelegramPresentationData
 import LegacyComponents
 
 enum AutomaticDownloadDataUsage: Int {

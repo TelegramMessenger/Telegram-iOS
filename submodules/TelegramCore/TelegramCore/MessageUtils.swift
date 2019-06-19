@@ -143,6 +143,12 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Mes
     
     if let peer = peers[id.peerId] {
         messagePeers[peer.id] = peer
+        
+        if let group = peer as? TelegramGroup, let migrationReference = group.migrationReference {
+            if let channelPeer = peers[migrationReference.peerId] {
+                messagePeers[channelPeer.id] = channelPeer
+            }
+        }
     }
     
     for media in message.media {

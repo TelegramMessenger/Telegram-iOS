@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
 
 private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selected: Bool) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
@@ -287,7 +288,6 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     bordered = false
                                 case "WhiteFilled":
                                     name = "⍺ White"
-                                    bordered = false
                                 default:
                                     break
                             }

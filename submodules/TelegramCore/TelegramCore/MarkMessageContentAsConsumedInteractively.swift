@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in

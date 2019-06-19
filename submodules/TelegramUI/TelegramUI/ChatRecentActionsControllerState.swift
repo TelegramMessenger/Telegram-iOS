@@ -1,6 +1,8 @@
 import Foundation
 import UIKit
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 final class ChatRecentActionsControllerState: Equatable {
     let chatWallpaper: TelegramWallpaper

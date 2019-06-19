@@ -3,6 +3,8 @@ import UIKit
 import Display
 import SwiftSignalKit
 import LegacyComponents
+import TelegramPresentationData
+import DeviceAccess
 
 private final class LegacyWallpaperEditorController: LegacyController, TGWallpaperControllerDelegate {
     private let completion: (UIImage?) -> Void
@@ -53,7 +55,7 @@ func legacyWallpaperPicker(context: AccountContext, presentationData: Presentati
     return Signal { subscriber in
         let intent = TGMediaAssetsControllerSetCustomWallpaperIntent
         
-        DeviceAccess.authorizeAccess(to: .mediaLibrary(.wallpaper), context: context, presentationData: presentationData, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+        DeviceAccess.authorizeAccess(to: .mediaLibrary(.wallpaper), presentationData: presentationData, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
             if !value {
                 subscriber.putError(Void())
                 return

@@ -1,8 +1,6 @@
 #import "TGAvatarViewModel.h"
 
-#import "TGBridgeContext.h"
-#import "TGBridgeUser.h"
-#import "TGBridgeChat.h"
+#import <WatchCommonWatch/WatchCommonWatch.h>
 
 #import "TGStringUtils.h"
 #import "TGWatchColor.h"

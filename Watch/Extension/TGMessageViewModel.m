@@ -1,4 +1,7 @@
 #import "TGMessageViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGStringUtils.h"
 #import "TGGeometry.h"
@@ -6,12 +9,7 @@
 #import "WKInterfaceImage+Signals.h"
 #import "WKInterfaceGroup+Signals.h"
 
-#import "TGBridgeUser.h"
-#import "TGBridgeChat.h"
-#import "TGBridgeMessage.h"
 #import "TGBridgeUserCache.h"
-
-#import "TGBridgeContext.h"
 
 #import "TGBridgeMediaSignals.h"
 

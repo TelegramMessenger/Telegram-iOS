@@ -3,6 +3,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import NotificationCenter
+import BuildConfig
 
 private var installedSharedLogger = false
 

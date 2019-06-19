@@ -1,4 +1,5 @@
 import Foundation
+import TelegramApi
 
 public struct SecureIdPersonName: Equatable {
     public let firstName: String

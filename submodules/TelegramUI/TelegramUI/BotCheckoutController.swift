@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
 import Postbox
+import TelegramPresentationData
 
 final class BotCheckoutController: ViewController {
     private var controllerNode: BotCheckoutControllerNode {

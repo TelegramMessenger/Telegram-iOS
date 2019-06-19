@@ -1,12 +1,12 @@
 #import "TGNeoChatsController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "WKInterfaceTable+TGDataDrivenTable.h"
 #import "TGTableDeltaUpdater.h"
 #import "TGInterfaceMenu.h"
 
-#import "TGBridgeContext.h"
-#import "TGBridgeUser.h"
-#import "TGBridgeChat.h"
 #import "TGBridgeUserCache.h"
 
 #import "TGBridgeClient.h"

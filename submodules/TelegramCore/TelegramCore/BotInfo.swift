@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public struct BotCommand: PostboxCoding, Equatable {
     public let text: String

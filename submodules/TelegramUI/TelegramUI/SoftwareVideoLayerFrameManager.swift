@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import CoreMedia
+import UniversalMediaPlayer
 
 private let applyQueue = Queue()
 private let workers = ThreadPool(threadCount: 2, threadPriority: 0.09)

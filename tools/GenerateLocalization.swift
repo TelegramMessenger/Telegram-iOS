@@ -297,7 +297,7 @@ private func extractArgumentRanges(_ value: String) -> [(Int, NSRange)] {
     return result
 }
     
-func formatWithArgumentRanges(_ value: String, _ ranges: [(Int, NSRange)], _ arguments: [String]) -> (String, [(Int, NSRange)]) {
+public func formatWithArgumentRanges(_ value: String, _ ranges: [(Int, NSRange)], _ arguments: [String]) -> (String, [(Int, NSRange)]) {
     let string = value as NSString
     
     var resultingRanges: [(Int, NSRange)] = []
@@ -348,7 +348,7 @@ private final class DataReader {
 }
         
 private func loadMapping() -> ([Int], [String], [Int], [Int], [String]) {
-    guard let filePath = frameworkBundle.path(forResource: "PresentationStrings", ofType: "mapping") else {
+    guard let filePath = Bundle(for: PresentationStrings.self).path(forResource: "PresentationStrings", ofType: "mapping") else {
         fatalError()
     }
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
@@ -505,7 +505,7 @@ public final class PresentationStrings {
         result +=
 """
         
-    init(primaryComponent: PresentationStringsComponent, secondaryComponent: PresentationStringsComponent?, groupingSeparator: String) {
+    public init(primaryComponent: PresentationStringsComponent, secondaryComponent: PresentationStringsComponent?, groupingSeparator: String) {
         self.primaryComponent = primaryComponent
         self.secondaryComponent = secondaryComponent
         self.groupingSeparator = groupingSeparator

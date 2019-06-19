@@ -1,4 +1,7 @@
 #import "TGMessageViewMessageRowController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGExtensionDelegate.h"
 
@@ -11,13 +14,7 @@
 
 #import "TGBridgeMediaSignals.h"
 
-#import "TGBridgeUser.h"
-#import "TGBridgeMessage.h"
 #import "TGBridgeUserCache.h"
-
-#import "TGBridgeContext.h"
-
-#import "TGBridgePeerIdAdapter.h"
 
 NSString *const TGMessageViewMessageRowIdentifier = @"TGMessageViewMessageRow";
 

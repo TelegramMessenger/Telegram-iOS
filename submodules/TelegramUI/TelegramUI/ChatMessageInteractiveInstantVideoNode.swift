@@ -5,6 +5,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import UniversalMediaPlayer
+import TelegramPresentationData
 
 struct ChatMessageInstantVideoItemLayoutResult {
     let contentSize: CGSize

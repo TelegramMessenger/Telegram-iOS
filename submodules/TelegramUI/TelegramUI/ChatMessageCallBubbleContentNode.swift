@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import Postbox
+import TelegramPresentationData
 
 private let titleFont: UIFont = Font.medium(16.0)
 private let labelFont: UIFont = Font.regular(13.0)

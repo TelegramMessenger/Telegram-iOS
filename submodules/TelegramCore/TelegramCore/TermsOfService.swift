@@ -12,6 +12,7 @@ import SwiftSignalKit
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public struct TermsOfServiceUpdate: Equatable {
     public let id: String

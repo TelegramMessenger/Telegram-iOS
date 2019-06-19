@@ -1,5 +1,5 @@
 #import <SSignalKit/SSignalKit.h>
-#import "TGBridgeSubscriptions.h"
+#import <WatchCommonWatch/WatchCommonWatch.h>
 
 @class TGBridgeImageMediaAttachment;
 @class TGBridgeVideoMediaAttachment;

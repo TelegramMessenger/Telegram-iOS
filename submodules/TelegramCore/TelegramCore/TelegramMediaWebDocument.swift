@@ -5,6 +5,7 @@ import Foundation
     import Postbox
     import UIKit
 #endif
+import TelegramApi
 
 public class TelegramMediaWebFile: Media {
     public let resource: TelegramMediaResource

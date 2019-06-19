@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 final class InstantPageDetailsItem: InstantPageItem {
     var frame: CGRect

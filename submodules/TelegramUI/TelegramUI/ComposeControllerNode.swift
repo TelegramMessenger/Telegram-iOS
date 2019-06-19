@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 final class ComposeControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode

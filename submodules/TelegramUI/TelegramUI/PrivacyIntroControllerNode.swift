@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 private func generateButtonImage(backgroundColor: UIColor, borderColor: UIColor, highlightColor: UIColor?) -> UIImage? {
     return generateImage(CGSize(width: 1.0, height: 44.0), contextGenerator: { size, context in

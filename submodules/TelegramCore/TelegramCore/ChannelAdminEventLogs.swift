@@ -11,6 +11,7 @@
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public typealias AdminLogEventId = Int64
 
@@ -56,10 +57,10 @@ public enum AdminLogEventAction {
     case participantToggleAdmin(prev: RenderedChannelParticipant, new: RenderedChannelParticipant)
     case changeStickerPack(prev: StickerPackReference?, new: StickerPackReference?)
     case togglePreHistoryHidden(Bool)
-    case updateDefaultBannedRights(prev: TelegramChatBannedRights, new: TelegramChatBannedRights
-    )
+    case updateDefaultBannedRights(prev: TelegramChatBannedRights, new: TelegramChatBannedRights)
     case pollStopped(Message)
     case linkedPeerUpdated(previous: Peer?, updated: Peer?)
+    case changeGeoLocation(previous: PeerGeoLocation?, updated: PeerGeoLocation?)
 }
 
 public enum ChannelAdminLogEventError {
@@ -215,7 +216,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                     case let .channelAdminLogEventActionChangeLinkedChat(prevValue, newValue):
                                         action = .linkedPeerUpdated(previous: prevValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: prevValue)], updated: newValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: newValue)])
                                     case let .channelAdminLogEventActionChangeLocation(prevValue, newValue):
-                                        break
+                                        action = .changeGeoLocation(previous: PeerGeoLocation(apiLocation: prevValue), updated: PeerGeoLocation(apiLocation: newValue))
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {

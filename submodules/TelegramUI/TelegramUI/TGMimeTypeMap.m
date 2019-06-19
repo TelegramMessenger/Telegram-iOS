@@ -315,6 +315,7 @@ static void initializeMapping()
         mimeToExtension[@"x-conference/x-cooltalk"] = @"ice"; extensionToMime[@"ice"] = @"x-conference/x-cooltalk";
         mimeToExtension[@"x-epoc/x-sisx-app"] = @"sisx"; extensionToMime[@"sisx"] = @"x-epoc/x-sisx-app";
         mimeToExtension[@"application/epub+zip"] = @"epub"; extensionToMime[@"epub"] = @"application/epub+zip";
+        mimeToExtension[@"text/swift"] = @"swift"; extensionToMime[@"swift"] = @"text/swift";
         
         mimeToExtensionMap = mimeToExtension;
         extensionToMimeMap = extensionToMime;

@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 

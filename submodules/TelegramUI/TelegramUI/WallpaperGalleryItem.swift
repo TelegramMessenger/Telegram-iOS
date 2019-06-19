@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
+import TelegramPresentationData
+import TelegramUIPreferences
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool

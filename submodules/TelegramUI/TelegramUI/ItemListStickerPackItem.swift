@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 struct ItemListStickerPackItemEditing: Equatable {
     let editable: Bool

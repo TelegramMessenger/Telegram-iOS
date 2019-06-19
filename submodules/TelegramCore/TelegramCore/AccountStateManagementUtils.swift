@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 private func peerIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
     var peerIds = Set<PeerId>()
@@ -1291,9 +1292,9 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                             updatedState.updatePeerChatInclusion(peerId: peer.peerId, groupId: PeerGroupId(rawValue: folderId), changedGroup: true)
                     }
                 }
-            case let .updatePeerLocated(contacts):
+            case let .updatePeerLocated(peers):
                 var peersNearby: [PeerNearby] = []
-                for case let .peerLocated(peer, expires, distance) in contacts {
+                for case let .peerLocated(peer, expires, distance) in peers {
                     peersNearby.append(PeerNearby(id: peer.peerId, expires: expires, distance: distance))
                 }
                 updatedState.updatePeersNearby(peersNearby)
@@ -2423,6 +2424,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                     return updated
                 })
+                updateContacts(transaction: transaction, apiUsers: users)
             case let .UpdatePeer(id, f):
                 if let peer = f(transaction.getPeer(id)) {
                     updatePeers(transaction: transaction, peers: [peer], update: { _, updated in

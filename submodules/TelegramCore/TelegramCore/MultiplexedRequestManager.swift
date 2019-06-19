@@ -12,6 +12,7 @@ import SwiftSignalKit
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 enum MultiplexedRequestTarget: Equatable, Hashable {
     case main(Int)

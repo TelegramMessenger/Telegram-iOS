@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import AVFoundation
+import TelegramPresentationData
 
 private struct NotificationSoundSelectionArguments {
     let account: Account
@@ -218,27 +219,36 @@ func playSound(context: AccountContext, sound: PeerMessageSound, defaultSound: P
             var currentPlayer: AudioPlayerWrapper?
             var deactivateImpl: (() -> Void)?
             let session = context.sharedContext.mediaManager.audioSession.push(audioSessionType: .play, activate: { _ in
-                if let url = Bundle.main.url(forResource: fileNameForNotificationSound(sound, defaultSound: defaultSound), withExtension: "m4a") {
-                    currentPlayer = AudioPlayerWrapper(url: url, completed: {
-                        deactivateImpl?()
-                    })
-                    currentPlayer?.play()
+                Queue.mainQueue().async {
+                    if let url = Bundle.main.url(forResource: fileNameForNotificationSound(sound, defaultSound: defaultSound), withExtension: "m4a") {
+                        currentPlayer = AudioPlayerWrapper(url: url, completed: {
+                            deactivateImpl?()
+                        })
+                        currentPlayer?.play()
+                    }
                 }
             }, deactivate: {
-                currentPlayer?.stop()
-                currentPlayer = nil
-                
-                return .complete()
+                return Signal { subscriber in
+                    Queue.mainQueue().async {
+                        currentPlayer?.stop()
+                        currentPlayer = nil
+                        subscriber.putCompletion()
+                    }
+                    return EmptyDisposable
+                }
             })
             deactivateImpl = {
                 session.dispose()
             }
             return ActionDisposable {
                 session.dispose()
-                currentPlayer?.stop()
-                currentPlayer = nil
+                Queue.mainQueue().async {
+                    currentPlayer?.stop()
+                    currentPlayer = nil
+                }
             }
-        } |> runOn(Queue.mainQueue())
+        }
+        |> runOn(Queue.mainQueue())
     }
 }
 

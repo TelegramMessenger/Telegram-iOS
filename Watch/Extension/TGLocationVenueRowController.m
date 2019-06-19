@@ -1,6 +1,6 @@
 #import "TGLocationVenueRowController.h"
 
-#import "TGBridgeLocationVenue.h"
+#import <WatchCommonWatch/WatchCommonWatch.h>
 
 NSString *const TGLocationVenueRowIdentifier = @"TGLocationVenueRow";
 

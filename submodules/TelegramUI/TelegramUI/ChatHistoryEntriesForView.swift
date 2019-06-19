@@ -21,15 +21,13 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
     loop: for entry in view.entries {
-        if entry.message.id.peerId.namespace == Namespaces.Peer.CloudChannel || entry.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
-            for media in entry.message.media {
-                if let action = media as? TelegramMediaAction {
-                    switch action.action {
-                        case .channelMigratedFromGroup, .groupMigratedToChannel, .historyCleared:
-                            continue loop
-                        default:
-                            break
-                    }
+        for media in entry.message.media {
+            if let action = media as? TelegramMediaAction {
+                switch action.action {
+                    case .channelMigratedFromGroup, .groupMigratedToChannel, .historyCleared:
+                        continue loop
+                    default:
+                        break
                 }
             }
         }
@@ -82,7 +80,9 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, presentationData)
         for entry in entries {
             if entry > unreadEntry {
-                entries.insert(unreadEntry, at: i)
+                if i != 0 {
+                    entries.insert(unreadEntry, at: i)
+                }
                 break
             }
             i += 1
@@ -100,38 +100,39 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
             }
             if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
                 entries.insert(.ChatInfoEntry(botInfo.description, presentationData), at: 0)
-            }
-            var isEmpty = true
-            if entries.count <= 3 {
-                loop: for entry in view.entries {
-                    var isEmptyMedia = false
-                    for media in entry.message.media {
-                        if let action = media as? TelegramMediaAction {
-                            switch action.action {
-                                case .groupCreated, .photoUpdated, .channelMigratedFromGroup, .groupMigratedToChannel:
-                                    isEmptyMedia = true
-                                default:
-                                    break
+            } else {
+                var isEmpty = true
+                if entries.count <= 3 {
+                    loop: for entry in view.entries {
+                        var isEmptyMedia = false
+                        for media in entry.message.media {
+                            if let action = media as? TelegramMediaAction {
+                                switch action.action {
+                                    case .groupCreated, .photoUpdated, .channelMigratedFromGroup, .groupMigratedToChannel:
+                                        isEmptyMedia = true
+                                    default:
+                                        break
+                                }
                             }
                         }
+                        var isCreator = false
+                        if let peer = entry.message.peers[entry.message.id.peerId] as? TelegramGroup, case .creator = peer.role {
+                            isCreator = true
+                        } else if let peer = entry.message.peers[entry.message.id.peerId] as? TelegramChannel, case .group = peer.info, peer.flags.contains(.isCreator) {
+                            isCreator = true
+                        }
+                        if isEmptyMedia && isCreator {
+                        } else {
+                            isEmpty = false
+                            break loop
+                        }
                     }
-                    var isCreator = false
-                    if let peer = entry.message.peers[entry.message.id.peerId] as? TelegramGroup, case .creator = peer.role {
-                        isCreator = true
-                    } else if let peer = entry.message.peers[entry.message.id.peerId] as? TelegramChannel, case .group = peer.info, peer.flags.contains(.isCreator) {
-                        isCreator = true
-                    }
-                    if isEmptyMedia && isCreator {
-                    } else {
-                        isEmpty = false
-                        break loop
-                    }
+                } else {
+                    isEmpty = false
                 }
-            } else {
-                isEmpty = false
-            }
-            if isEmpty {
-                entries.removeAll()
+                if isEmpty {
+                    entries.removeAll()
+                }
             }
         }
     } else if includeSearchEntry {

@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 final class HashtagSearchControllerNode: ASDisplayNode {
     private let toolbarBackgroundNode: ASDisplayNode

@@ -4,6 +4,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class ThemeSettingsControllerArguments {
     let context: AccountContext
@@ -30,9 +32,9 @@ private final class ThemeSettingsControllerArguments {
 }
 
 private enum ThemeSettingsControllerSection: Int32 {
-    case fontSize
     case chatPreview
-    case theme
+    case background
+    case fontSize
     case icon
     case other
 }
@@ -57,12 +59,10 @@ public enum ThemeSettingsEntryTag: ItemListItemTag {
 private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case fontSizeHeader(PresentationTheme, String)
     case fontSize(PresentationTheme, PresentationFontSize)
-    case chatPreviewHeader(PresentationTheme, String)
     case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder)
     case wallpaper(PresentationTheme, String)
     case accentColor(PresentationTheme, String, Int32)
     case autoNightTheme(PresentationTheme, String, String)
-    case themeListHeader(PresentationTheme, String)
     case themeItem(PresentationTheme, PresentationStrings, [PresentationBuiltinThemeReference], PresentationBuiltinThemeReference, UIColor?)
     case iconHeader(PresentationTheme, String)
     case iconItem(PresentationTheme, PresentationStrings, [PresentationAppIcon], String?)
@@ -73,12 +73,12 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
+            case .chatPreview, .themeItem, .accentColor:
+                return ThemeSettingsControllerSection.chatPreview.rawValue
             case .fontSizeHeader, .fontSize:
                 return ThemeSettingsControllerSection.fontSize.rawValue
-            case .chatPreviewHeader, .chatPreview, .wallpaper:
-                return ThemeSettingsControllerSection.chatPreview.rawValue
-            case .themeListHeader, .themeItem, .accentColor, .autoNightTheme:
-                return ThemeSettingsControllerSection.theme.rawValue
+            case .wallpaper, .autoNightTheme:
+                return ThemeSettingsControllerSection.background.rawValue
             case .iconHeader, .iconItem:
                 return ThemeSettingsControllerSection.icon.rawValue
             case .otherHeader, .largeEmoji, .animations, .animationsInfo:
@@ -88,47 +88,37 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .fontSizeHeader:
-                return 0
-            case .fontSize:
-                return 1
-            case .chatPreviewHeader:
-                return 2
             case .chatPreview:
-                return 3
-            case .wallpaper:
-                return 4
-            case .themeListHeader:
-                return 5
+                return 0
             case .themeItem:
-                return 6
+                return 1
             case .accentColor:
-                return 7
+                return 2
+            case .wallpaper:
+                return 3
             case .autoNightTheme:
-                return 8
+                return 4
+            case .fontSizeHeader:
+                return 5
+            case .fontSize:
+                return 6
             case .iconHeader:
-                return 100
+                return 7
             case .iconItem:
-                return 101
+                return 8
             case .otherHeader:
-                return 102
+                return 9
             case .largeEmoji:
-                return 103
+                return 10
             case .animations:
-                return 104
+                return 11
             case .animationsInfo:
-                return 105
+                return 12
         }
     }
     
     static func ==(lhs: ThemeSettingsControllerEntry, rhs: ThemeSettingsControllerEntry) -> Bool {
         switch lhs {
-            case let .chatPreviewHeader(lhsTheme, lhsText):
-                if case let .chatPreviewHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
             case let .chatPreview(lhsTheme, lhsComponentTheme, lhsWallpaper, lhsFontSize, lhsStrings, lhsTimeFormat, lhsNameOrder):
                 if case let .chatPreview(rhsTheme, rhsComponentTheme, rhsWallpaper, rhsFontSize, rhsStrings, rhsTimeFormat, rhsNameOrder) = rhs, lhsComponentTheme === rhsComponentTheme, lhsTheme === rhsTheme, lhsWallpaper == rhsWallpaper, lhsFontSize == rhsFontSize, lhsStrings === rhsStrings, lhsTimeFormat == rhsTimeFormat, lhsNameOrder == rhsNameOrder {
                     return true
@@ -149,12 +139,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 }
             case let .autoNightTheme(lhsTheme, lhsText, lhsValue):
                 if case let .autoNightTheme(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .themeListHeader(lhsTheme, lhsText):
-                if case let .themeListHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -228,8 +212,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ThemeSettingsFontSizeItem(theme: theme, fontSize: fontSize, sectionId: self.section, updated: { value in
                     arguments.selectFontSize(value)
                 }, tag: ThemeSettingsEntryTag.fontSize)
-            case let .chatPreviewHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .chatPreview(theme, componentTheme, wallpaper, fontSize, strings, dateTimeFormat, nameDisplayOrder):
                 return ThemeSettingsChatPreviewItem(context: arguments.context, theme: theme, componentTheme: componentTheme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder)
             case let .wallpaper(theme, text):
@@ -244,8 +226,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: nil, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openAutoNightTheme()
                 })
-            case let .themeListHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .themeItem(theme, strings, themes, currentTheme, themeAccentColor):
                 return ThemeSettingsThemeItem(theme: theme, strings: strings, sectionId: self.section, themes: themes.map { ($0, $0 == .day ? themeAccentColor : nil) }, currentTheme: currentTheme, updated: { theme in
                     arguments.selectTheme(theme.rawValue)
@@ -275,20 +255,16 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
 private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeAccentColor: Int32?, autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool, availableAppIcons: [PresentationAppIcon], currentAppIconName: String?) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
-    entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize.uppercased()))
-    entries.append(.fontSize(presentationData.theme, fontSize))
-    entries.append(.chatPreviewHeader(presentationData.theme, strings.Appearance_Preview))
     entries.append(.chatPreview(presentationData.theme, theme, wallpaper, fontSize, presentationData.strings, dateTimeFormat, presentationData.nameDisplayOrder))
-    entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
-    
-    entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme.uppercased()))
     if case let .builtin(theme) = theme.name {
         entries.append(.themeItem(presentationData.theme, presentationData.strings, [.dayClassic, .day, .nightAccent, .nightGrayscale], theme.reference, themeAccentColor != nil ? UIColor(rgb: UInt32(bitPattern: themeAccentColor!)) : nil))
     }
-
     if theme.name == .builtin(.day) {
         entries.append(.accentColor(presentationData.theme, strings.Appearance_AccentColor, themeAccentColor ?? defaultDayAccentColor))
     }
+    
+    entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
+
     if theme.name == .builtin(.day) || theme.name == .builtin(.dayClassic) {
         let title: String
         switch autoNightSettings.trigger {
@@ -302,6 +278,9 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
         entries.append(.autoNightTheme(presentationData.theme, strings.Appearance_AutoNightTheme, title))
     }
     
+    entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize.uppercased()))
+    entries.append(.fontSize(presentationData.theme, fontSize))
+    
     if !availableAppIcons.isEmpty {
         entries.append(.iconHeader(presentationData.theme, strings.Appearance_AppIcon.uppercased()))
         entries.append(.iconItem(presentationData.theme, presentationData.strings, availableAppIcons, currentAppIconName))
@@ -314,6 +293,8 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     
     return entries
 }
+
+private let themeColors = [UIColor(rgb: 0x007aff), UIColor(rgb: 0x70bb23), UIColor(rgb: 0xeb6ca4), UIColor(rgb: 0xf08200), UIColor(rgb: 0x9472ee), UIColor(rgb: 0xd33213), UIColor(rgb: 0xedb400), UIColor(rgb: 0x6d839e), UIColor(rgb: 0x000000)]
 
 public func themeSettingsController(context: AccountContext, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?

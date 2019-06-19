@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 final class SecretChatFileReference: PostboxCoding {
     let id: Int64

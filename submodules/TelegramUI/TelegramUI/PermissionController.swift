@@ -4,19 +4,17 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
+import DeviceAccess
 
 public final class PermissionController : ViewController {
     private let context: AccountContext
-    private let splitTest: PermissionUISplitTest
-    private var state: PermissionState?
+    private let splitTest: PermissionUISplitTest?
+    private var state: PermissionControllerContent?
+    private var splashScreen = false
     
     private var controllerNode: PermissionControllerNode {
         return self.displayNode as! PermissionControllerNode
-    }
-    
-    private var _ready = Promise<Bool>()
-    override public var ready: Promise<Bool> {
-        return self._ready
     }
     
     private var didPlayPresentationAnimation = false
@@ -28,12 +26,20 @@ public final class PermissionController : ViewController {
     private var skip: (() -> Void)?
     public var proceed: ((Bool) -> Void)?
     
-    public init(context: AccountContext, splitTest: PermissionUISplitTest) {
+    public init(context: AccountContext, splashScreen: Bool = true, splitTest: PermissionUISplitTest? = nil) {
         self.context = context
         self.splitTest = splitTest
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.splashScreen = splashScreen
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
+        let navigationBarPresentationData: NavigationBarPresentationData
+        if splashScreen {
+            navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings))
+        } else {
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
+        }
+        
+        super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -75,9 +81,19 @@ public final class PermissionController : ViewController {
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
+        
+        let navigationBarPresentationData: NavigationBarPresentationData
+        if self.splashScreen {
+            navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings))
+        } else {
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
+        }
+        
+        self.navigationBar?.updatePresentationData(navigationBarPresentationData)
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: nil, style: .plain, target: nil, action: nil)
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Permissions_Skip, style: .plain, target: self, action: #selector(PermissionController.nextPressed))
+        if self.navigationItem.rightBarButtonItem != nil {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Permissions_Skip, style: .plain, target: self, action: #selector(PermissionController.nextPressed))
+        }
         self.controllerNode.updatePresentationData(self.presentationData)
     }
     
@@ -85,73 +101,103 @@ public final class PermissionController : ViewController {
         self.context.sharedContext.applicationBindings.openSettings()
     }
     
-    public func setState(_ state: PermissionState, animated: Bool) {
+    public func setState(_ state: PermissionControllerContent, animated: Bool) {
         guard state != self.state else {
             return
         }
         
         self.state = state
-        switch state {
-            case let .contacts(status):
-                self.splitTest.addEvent(.ContactsModalRequest)
-                
-                self.allow = { [weak self] in
-                    if let strongSelf = self {
-                        switch status {
-                            case .requestable:
-                                strongSelf.splitTest.addEvent(.ContactsRequest)
-                                DeviceAccess.authorizeAccess(to: .contacts, context: strongSelf.context, { [weak self] result in
-                                    if let strongSelf = self {
-                                        if result {
-                                            strongSelf.splitTest.addEvent(.ContactsAllowed)
-                                        } else {
-                                            strongSelf.splitTest.addEvent(.ContactsDenied)
+        if case let .permission(permission) = state, let state = permission {
+            switch state {
+                case let .contacts(status):
+                    self.splitTest?.addEvent(.ContactsModalRequest)
+                    
+                    self.allow = { [weak self] in
+                        if let strongSelf = self {
+                            switch status {
+                                case .requestable:
+                                    strongSelf.splitTest?.addEvent(.ContactsRequest)
+                                    DeviceAccess.authorizeAccess(to: .contacts, { [weak self] result in
+                                        if let strongSelf = self {
+                                            if result {
+                                                strongSelf.splitTest?.addEvent(.ContactsAllowed)
+                                            } else {
+                                                strongSelf.splitTest?.addEvent(.ContactsDenied)
+                                            }
+                                            strongSelf.proceed?(true)
                                         }
-                                        strongSelf.proceed?(true)
-                                    }
-                                })
-                            case .denied:
-                                strongSelf.openAppSettings()
-                                strongSelf.proceed?(true)
-                            default:
-                                break
+                                    })
+                                case .denied:
+                                    strongSelf.openAppSettings()
+                                    strongSelf.proceed?(true)
+                                default:
+                                    break
+                            }
                         }
                     }
-                }
-            case let .notifications(status):
-                self.splitTest.addEvent(.NotificationsModalRequest)
-                
-                self.allow = { [weak self] in
-                    if let strongSelf = self {
-                        switch status {
-                            case .requestable:
-                                strongSelf.splitTest.addEvent(.NotificationsRequest)
-                                DeviceAccess.authorizeAccess(to: .notifications, context: strongSelf.context, { [weak self] result in
-                                    if let strongSelf = self {
-                                        if result {
-                                            strongSelf.splitTest.addEvent(.NotificationsAllowed)
-                                        } else {
-                                            strongSelf.splitTest.addEvent(.NotificationsDenied)
+                case let .notifications(status):
+                    self.splitTest?.addEvent(.NotificationsModalRequest)
+                    
+                    self.allow = { [weak self] in
+                        if let strongSelf = self {
+                            switch status {
+                                case .requestable:
+                                    strongSelf.splitTest?.addEvent(.NotificationsRequest)
+                                    let context = strongSelf.context
+                                    DeviceAccess.authorizeAccess(to: .notifications, registerForNotifications: { [weak context] result in
+                                        context?.sharedContext.applicationBindings.registerForNotifications(result)
+                                    }, { [weak self] result in
+                                        if let strongSelf = self {
+                                            if result {
+                                                strongSelf.splitTest?.addEvent(.NotificationsAllowed)
+                                            } else {
+                                                strongSelf.splitTest?.addEvent(.NotificationsDenied)
+                                            }
+                                            strongSelf.proceed?(true)
                                         }
-                                        strongSelf.proceed?(true)
-                                    }
-                                })
+                                    })
+                                case .denied, .unreachable:
+                                    strongSelf.openAppSettings()
+                                    strongSelf.proceed?(true)
+                                default:
+                                    break
+                            }
+                        }
+                    }
+                case .siri:
+                    self.allow = { [weak self] in
+                        self?.proceed?(true)
+                    }
+                case .cellularData:
+                    self.allow = { [weak self] in
+                        self?.proceed?(true)
+                    }
+                case let .nearbyLocation(status):
+                    self.title = self.presentationData.strings.Permissions_PeopleNearbyTitle_v0
+                    self.navigationItem.rightBarButtonItem = nil
+                    
+                    self.allow = { [weak self] in
+                        if let strongSelf = self {
+                            switch status {
+                                case .requestable:
+                                    DeviceAccess.authorizeAccess(to: .location(.tracking), presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, { [weak self] result in
+                                        self?.proceed?(result)
+                                    })
                             case .denied, .unreachable:
                                 strongSelf.openAppSettings()
-                                strongSelf.proceed?(true)
+                                strongSelf.proceed?(false)
                             default:
                                 break
+                            }
                         }
                     }
+            }
+        } else {
+            self.allow = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.proceed?(true)
                 }
-            case let .siri(status):
-                self.allow = { [weak self] in
-                    self?.proceed?(true)
-                }
-            case .cellularData:
-                self.allow = { [weak self] in
-                    self?.proceed?(true)
-                }
+            }
         }
         
         self.skip = { [weak self] in

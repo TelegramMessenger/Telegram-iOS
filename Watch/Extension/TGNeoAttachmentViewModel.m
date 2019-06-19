@@ -1,12 +1,12 @@
 #import "TGNeoAttachmentViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGNeoImageViewModel.h"
 #import "TGNeoLabelViewModel.h"
 
 #import "TGStringUtils.h"
-
-#import "TGBridgeMessage.h"
-#import "TGBridgeUser.h"
 
 @interface TGNeoAttachmentViewModel ()
 {

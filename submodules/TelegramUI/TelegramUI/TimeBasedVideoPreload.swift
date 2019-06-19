@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import FFMpeg
+import UniversalMediaPlayer
 
 func preloadVideoResource(postbox: Postbox, resourceReference: MediaResourceReference, duration: Double) -> Signal<Never, NoError> {
     return Signal { subscriber in

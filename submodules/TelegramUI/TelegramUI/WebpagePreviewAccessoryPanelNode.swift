@@ -5,6 +5,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import Display
+import TelegramPresentationData
 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()

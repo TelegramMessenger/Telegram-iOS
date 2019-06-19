@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 public final class TabBarAccountSwitchController: ViewController {
     private var controllerNode: TabBarAccountSwitchControllerNode {

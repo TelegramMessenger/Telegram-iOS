@@ -5,6 +5,7 @@ import Foundation
     import Postbox
     import UIKit
 #endif
+import TelegramApi
 
 public enum TelegramMediaImageReference: PostboxCoding, Equatable {
     case cloud(imageId: Int64, accessHash: Int64, fileReference: Data?)

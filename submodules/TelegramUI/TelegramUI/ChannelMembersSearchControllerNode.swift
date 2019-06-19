@@ -5,6 +5,8 @@ import Display
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class ChannelMembersSearchInteraction {
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void

@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 class MediaInputPaneTrendingItem: ListViewItem {
     let account: Account

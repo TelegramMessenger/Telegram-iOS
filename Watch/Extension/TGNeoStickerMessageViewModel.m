@@ -1,4 +1,7 @@
 #import "TGNeoStickerMessageViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGNeoLabelViewModel.h"
 
@@ -6,11 +9,7 @@
 
 #import "TGGeometry.h"
 
-#import "TGBridgeContext.h"
-#import "TGBridgeMessage.h"
-
 #import "../Extension/TGStringUtils.h"
-#import "TGBridgePeerIdAdapter.h"
 
 @interface TGNeoStickerMessageViewModel ()
 {

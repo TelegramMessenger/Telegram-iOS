@@ -5,6 +5,8 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import Postbox
+import TelegramPresentationData
+import TelegramUIPreferences
 
 class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
     let context: AccountContext

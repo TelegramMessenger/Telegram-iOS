@@ -6,6 +6,7 @@ import SwiftSignalKitMac
 import Postbox
 import SwiftSignalKit
 #endif
+import TelegramApi
 
 public func clearCloudDraftsInteractively(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.getAllDrafts())

@@ -1,4 +1,5 @@
 import Foundation
+import TelegramApi
 
 public enum PeerInputActivity: Comparable {
     case typingText

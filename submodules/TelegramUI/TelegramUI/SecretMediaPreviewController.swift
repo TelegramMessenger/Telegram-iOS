@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 private func galleryMediaForMedia(media: Media) -> Media? {
     if let media = media as? TelegramMediaImage {

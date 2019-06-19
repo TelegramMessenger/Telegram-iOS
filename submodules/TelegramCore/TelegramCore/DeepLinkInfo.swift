@@ -4,6 +4,7 @@ import SwiftSignalKitMac
 #else
 import SwiftSignalKit
 #endif
+import TelegramApi
 
 public struct DeepLinkInfo {
     public let message: String

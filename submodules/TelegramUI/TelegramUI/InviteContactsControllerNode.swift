@@ -5,6 +5,8 @@ import UIKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private enum InviteContactsEntryId: Hashable {
     case option(index: Int)
@@ -349,20 +351,22 @@ final class InviteContactsControllerNode: ASDisplayNode {
             self?.requestShareTelegram?()
         })
         
-        let existingNumbers: Signal<Set<String>, NoError> = account.postbox.contactPeersView(accountPeerId: nil, includePresences: false)
-        |> map { view -> Set<String> in
+        let existingNumbers: Signal<(Set<String>, Set<PeerId>), NoError> = account.postbox.contactPeersView(accountPeerId: nil, includePresences: false)
+        |> map { view -> (Set<String>, Set<PeerId>) in
             var existingNumbers = Set<String>()
+            var existingPeerIds = Set<PeerId>()
             for peer in view.peers {
                 if let peer = peer as? TelegramUser, let phone = peer.phone {
                     existingNumbers.insert(formatPhoneNumber(phone))
                 }
+                existingPeerIds.insert(peer.id)
             }
-            return existingNumbers
+            return (existingNumbers, existingPeerIds)
         }
         
         let currentSortedContacts = self.currentSortedContacts
         let sortedContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> = combineLatest(existingNumbers, (context.sharedContext.contactDataManager?.basicData() ?? .single([:])) |> take(1))
-        |> mapToSignal { existingNumbers, contacts -> Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> in
+        |> mapToSignal { existingNumbersAndPeerIds, contacts -> Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> in
             var mappedContacts: [(String, [DeviceContactNormalizedPhoneNumber])] = []
             for (id, basicData) in contacts {
                 mappedContacts.append((id: id, basicData.phoneNumbers.map({ phoneNumber in
@@ -376,7 +380,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 for (id, basicData) in contacts {
                     var found = false
                     for number in basicData.phoneNumbers {
-                        if existingNumbers.contains(formatPhoneNumber(number.value)) {
+                        if existingNumbersAndPeerIds.0.contains(formatPhoneNumber(number.value)) {
                             found = true
                         }
                     }

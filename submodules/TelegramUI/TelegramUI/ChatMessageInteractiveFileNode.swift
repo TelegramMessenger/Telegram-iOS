@@ -5,6 +5,8 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
+import UniversalMediaPlayer
+import TelegramPresentationData
 
 private struct FetchControls {
     let fetch: () -> Void
@@ -489,6 +491,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         if hasStreamingProgress {
                             fittedLayoutSize.width += streamingProgressDiameter + 6.0
                         }
+                        fittedLayoutSize.width = max(fittedLayoutSize.width, boundingWidth + 2.0)
                     } else {
                         streamingCacheStatusFrame = CGRect()
                     }
@@ -633,8 +636,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     }
     
     private func updateStatus(animated: Bool) {
-        
-        
         guard let resourceStatus = self.resourceStatus else {
             return
         }

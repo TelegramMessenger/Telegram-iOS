@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)

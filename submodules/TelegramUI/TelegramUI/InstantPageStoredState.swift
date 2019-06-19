@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramUIPreferences
 
 final class InstantPageStoredDetailsState: PostboxCoding {
     let index: Int32

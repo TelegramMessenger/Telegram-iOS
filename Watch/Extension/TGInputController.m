@@ -1,6 +1,8 @@
 #import "TGInputController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
-#import "TGBridgeCommon.h"
 #import "TGInterfaceController.h"
 
 #import "TGFileCache.h"

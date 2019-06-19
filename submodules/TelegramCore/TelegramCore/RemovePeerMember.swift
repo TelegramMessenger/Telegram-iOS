@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public func removePeerMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {
     if peerId.namespace == Namespaces.Peer.CloudChannel {

@@ -1,6 +1,8 @@
 #import "TGNeoVenueMessageViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGNeoImageViewModel.h"
-#import "TGBridgeMessage.h"
 
 @interface TGNeoVenueMessageViewModel ()
 {

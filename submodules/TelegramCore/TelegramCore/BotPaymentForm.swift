@@ -12,6 +12,7 @@ import Foundation
     #endif
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public struct BotPaymentInvoiceFields: OptionSet {
     public var rawValue: Int32

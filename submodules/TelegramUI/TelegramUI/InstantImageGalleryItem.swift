@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account

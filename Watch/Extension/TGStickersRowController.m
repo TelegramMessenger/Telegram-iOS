@@ -1,8 +1,9 @@
 #import "TGStickersRowController.h"
 
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "WKInterfaceGroup+Signals.h"
 #import "TGBridgeMediaSignals.h"
-#import "TGBridgeDocumentMediaAttachment.h"
 
 NSString *const TGStickersRowIdentifier = @"TGStickersRow";
 

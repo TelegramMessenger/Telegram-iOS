@@ -1,8 +1,8 @@
 #import "TGNeoChatRowController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
-#import "TGBridgeContext.h"
-#import "TGBridgeChat.h"
-#import "TGBridgeUser.h"
 #import "TGBridgeUserCache.h"
 
 #import "TGNeoChatViewModel.h"

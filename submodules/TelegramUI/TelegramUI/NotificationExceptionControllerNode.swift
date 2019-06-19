@@ -5,6 +5,8 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class NotificationExceptionState : Equatable {
     let mode:NotificationExceptionMode
@@ -765,6 +767,8 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     return
                 }
                 
+                let mode = stateValue.with { $0.mode }
+                
                 dismissInputImpl?()
                 presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer, mode: mode, updatePeerSound: { peerId, sound in
                     _ = updatePeerSound(peer.id, sound).start(next: { _ in
@@ -879,6 +883,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.Notification_Exceptions_DeleteAllConfirmation),
                 ActionSheetButtonItem(title: presentationData.strings.Notification_Exceptions_DeleteAll, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     

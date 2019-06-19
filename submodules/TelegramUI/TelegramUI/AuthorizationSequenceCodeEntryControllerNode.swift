@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> NSAttributedString {
     switch type {

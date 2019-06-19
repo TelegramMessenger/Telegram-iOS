@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 private func hashForIds(_ ids: [Int64]) -> Int32 {
     var acc: UInt32 = 0

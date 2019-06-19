@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 class UpdateMessageService: NSObject, MTMessageService {
     var peerId: PeerId!

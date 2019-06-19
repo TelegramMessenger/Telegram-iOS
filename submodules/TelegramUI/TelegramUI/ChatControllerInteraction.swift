@@ -4,6 +4,7 @@ import Postbox
 import AsyncDisplayKit
 import TelegramCore
 import Display
+import TelegramUIPreferences
 
 public enum ChatControllerInitialBotStartBehavior {
     case interactive

@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import QuickLook
 import Display
+import TelegramPresentationData
 
 private final class DocumentPreviewItem: NSObject, QLPreviewItem {
     private let url: URL

@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
@@ -295,13 +296,22 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         if (flags & (1 << 7)) != 0 {
                                             channelFlags.insert(.canSetStickerSet)
                                         }
+                                        if (flags & (1 << 16)) != 0 {
+                                            channelFlags.insert(.canChangePeerGeoLocation)
+                                        }
                                         
                                         let linkedDiscussionPeerId: PeerId?
-                                        
                                         if let linkedChatId = linkedChatId, linkedChatId != 0 {
                                             linkedDiscussionPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: linkedChatId)
                                         } else {
                                             linkedDiscussionPeerId = nil
+                                        }
+                                        
+                                        let peerGeoLocation: PeerGeoLocation?
+                                        if let location = location {
+                                            peerGeoLocation = PeerGeoLocation(apiLocation: location)
+                                        } else {
+                                            peerGeoLocation = nil
                                         }
                                         
                                         var botInfos: [CachedPeerBotInfo] = []
@@ -391,6 +401,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 .withUpdatedMinAvailableMessageId(minAvailableMessageId)
                                                 .withUpdatedMigrationReference(migrationReference)
                                                 .withUpdatedLinkedDiscussionPeerId(linkedDiscussionPeerId)
+                                                .withUpdatedPeerGeoLocation(peerGeoLocation: peerGeoLocation)
                                         })
                                     
                                         if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

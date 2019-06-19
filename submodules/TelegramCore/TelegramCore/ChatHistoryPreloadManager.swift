@@ -143,7 +143,6 @@ private final class HistoryPreloadViewContext {
 
 private enum ChatHistoryPreloadEntity: Hashable {
     case peer(PeerId)
-    //case group(PeerGroupId)
 }
 
 private struct ChatHistoryPreloadIndex {
@@ -317,7 +316,9 @@ final class ChatHistoryPreloadManager {
                 return
             }
             #if DEBUG
-            //return;
+            if true {
+                //return
+            }
             #endif
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
             for entry in view.0.entries {

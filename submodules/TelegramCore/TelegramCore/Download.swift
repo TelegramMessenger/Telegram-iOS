@@ -12,6 +12,7 @@ import Foundation
     #endif
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 private func roundUp(_ value: Int, to multiple: Int) -> Int {
     if multiple == 0 {

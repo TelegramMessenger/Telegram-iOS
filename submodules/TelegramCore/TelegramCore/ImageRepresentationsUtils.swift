@@ -4,6 +4,7 @@
     import Postbox
     import UIKit
 #endif
+import TelegramApi
 
 public func smallestImageRepresentation(_ representations: [TelegramMediaImageRepresentation]) -> TelegramMediaImageRepresentation? {
     if representations.count == 0 {

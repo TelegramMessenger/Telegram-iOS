@@ -1,6 +1,8 @@
 import Foundation
 import TelegramCore
 import Postbox
+import TelegramPresentationData
+import TelegramUIPreferences
 
 extension Peer {
     func displayTitle(strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) -> String {

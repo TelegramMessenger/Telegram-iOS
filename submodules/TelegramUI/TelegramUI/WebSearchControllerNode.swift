@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 import LegacyComponents
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private struct WebSearchContextResultStableId: Hashable {
     let result: ChatContextResult

@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public struct ChangeAccountPhoneNumberData: Equatable {
     public let type: SentAuthorizationCodeType

@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 final class ChannelState: PeerChatState, Equatable, CustomStringConvertible {
     let pts: Int32

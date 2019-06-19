@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class DataAndStorageControllerArguments {
     let openStorageUsage: () -> Void

@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import TelegramPresentationData
 
 final class ChatListTitleLockView: UIView {
     private let topView: UIImageView

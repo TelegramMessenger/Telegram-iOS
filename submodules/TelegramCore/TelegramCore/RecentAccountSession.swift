@@ -1,4 +1,5 @@
 import Foundation
+import TelegramApi
 
 public struct AccountSessionFlags: OptionSet {
     public var rawValue: Int32

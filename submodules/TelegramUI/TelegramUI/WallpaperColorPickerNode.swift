@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import Display
+import TelegramPresentationData
 
 private let shadowImage: UIImage = {
     return generateImage(CGSize(width: 45.0, height: 45.0), opaque: false, scale: nil, rotatedContext: { size, context in

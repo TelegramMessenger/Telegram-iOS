@@ -3,6 +3,7 @@ import UIKit
 import TelegramCore
 import SwiftSignalKit
 import Display
+import TelegramPresentationData
 
 enum ChatMediaInputPanelAuxiliaryNamespace: Int32 {
     case savedStickers = 2

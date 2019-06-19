@@ -4,6 +4,8 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []

@@ -13,6 +13,7 @@ import Foundation
     #endif
     import UIKit
 #endif
+import TelegramApi
 
 func addSecretChatOutgoingOperation(transaction: Transaction, peerId: PeerId, operation: SecretChatOutgoingOperationContents, state: SecretChatState) -> SecretChatState {
     var updatedState = state

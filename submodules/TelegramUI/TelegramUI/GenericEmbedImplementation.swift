@@ -1,6 +1,7 @@
 import Foundation
 import WebKit
 import SwiftSignalKit
+import UniversalMediaPlayer
 
 final class GenericEmbedImplementation: WebEmbedImplementation {
     private var evalImpl: ((String) -> Void)?

@@ -1,14 +1,12 @@
 #import "TGGroupInfoHeaderController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGStringUtils.h"
 
 #import "WKInterfaceGroup+Signals.h"
 #import "TGBridgeMediaSignals.h"
-
-#import "TGBridgeChat.h"
-#import "TGBridgeUser.h"
-
-#import "TGBridgeContext.h"
 
 NSString *const TGGroupInfoHeaderIdentifier = @"TGGroupInfoHeader";
 

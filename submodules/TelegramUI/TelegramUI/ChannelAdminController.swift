@@ -4,6 +4,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private final class ChannelAdminControllerArguments {
     let account: Account
@@ -256,7 +257,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
     func item(_ arguments: ChannelAdminControllerArguments) -> ListViewItem {
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rightsTitle(theme, text):
@@ -464,11 +465,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
             }
             
-            if let admin = admin as? TelegramUser, admin.botInfo == nil && channel.flags.contains(.isCreator) && areAllAdminRightsEnabled(currentRightsFlags, group: isGroup) {
+            if let admin = admin as? TelegramUser, admin.botInfo == nil && !admin.isDeleted && channel.flags.contains(.isCreator) && areAllAdminRightsEnabled(currentRightsFlags, group: isGroup) {
                 entries.append(.transfer(presentationData.theme, isGroup ? presentationData.strings.Group_EditAdmin_TransferOwnership : presentationData.strings.Channel_EditAdmin_TransferOwnership))
             }
         
-            if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty {
+            if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty && admin.id != accountPeerId {
                 var canDismiss = false
                 if channel.flags.contains(.isCreator) {
                     canDismiss = true
@@ -534,11 +535,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
         }
     
-        if let admin = admin as? TelegramUser, admin.botInfo == nil && group.role == .creator && areAllAdminRightsEnabled(currentRightsFlags, group: true) {
+        if let admin = admin as? TelegramUser, admin.botInfo == nil && !admin.isDeleted && group.role == .creator && areAllAdminRightsEnabled(currentRightsFlags, group: true) {
             entries.append(.transfer(presentationData.theme, presentationData.strings.Group_EditAdmin_TransferOwnership))
         }
         
-        if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty {
+        if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty && admin.id != accountPeerId {
             entries.append(.dismiss(presentationData.theme, presentationData.strings.Channel_Moderator_AccessLevelRevoke))
         }
     }
@@ -588,47 +589,21 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                 return
             }
             
-            var signal: Signal<Never, ChannelOwnershipTransferError> = .complete()
-            if let channel = peer as? TelegramChannel {
-                signal = updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: channel.id, memberId: adminId, password: nil)
-            } else if let _ = peer as? TelegramGroup {
-                signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
-                |> map(Optional.init)
-                |> mapError { _ in ChannelOwnershipTransferError.generic }
-                |> mapToSignal { upgradedPeerId -> Signal<Never, ChannelOwnershipTransferError> in
-                    guard let upgradedPeerId = upgradedPeerId else {
-                        return .fail(.generic)
-                    }
-                    upgradedToSupergroupImpl(upgradedPeerId, {})
-                    
-                    return updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: upgradedPeerId, memberId: adminId, password: nil)
-                }
-            }
-            
-            transferOwnershipDisposable.set((signal |> deliverOnMainQueue).start(error: { error in
-                let currentPeerId = actualPeerId.with { $0 }
-                let channel: Signal<Peer?, NoError>
-                if currentPeerId == peerId {
-                    channel = .single(peer)
-                } else {
-                    channel = context.account.postbox.transaction { transaction -> Peer? in
-                        return transaction.getPeer(currentPeerId)
-                    }
-                }
-                
-                let _ = (channel |> deliverOnMainQueue).start(next: { channel in
-                    guard let channel = channel as? TelegramChannel else {
-                        return
-                    }
-                    
-                    let controller = channelOwnershipTransferController(context: context, channel: channel, member: member, initialError: error, present: { c, a in
-                        presentControllerImpl?(c, a)
-                    }, completion: {
+            transferOwnershipDisposable.set((checkOwnershipTranfserAvailability(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, memberId: adminId) |> deliverOnMainQueue).start(error: { error in
+                let controller = channelOwnershipTransferController(context: context, peer: peer, member: member, initialError: error, present: { c, a in
+                    presentControllerImpl?(c, a)
+                }, completion: { upgradedPeerId in
+                    if let upgradedPeerId = upgradedPeerId {
+                        upgradedToSupergroupImpl(upgradedPeerId, {
+                            dismissImpl?()
+                            transferedOwnership(member.id)
+                        })
+                    } else {
                         dismissImpl?()
                         transferedOwnership(member.id)
-                    })
-                    presentControllerImpl?(controller, nil)
+                    }
                 })
+                presentControllerImpl?(controller, nil)
             }))
         })
     }, dismissAdmin: {
@@ -777,6 +752,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     }
                                     presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
+                                dismissImpl?()
                             }, completed: {
                                 updated(TelegramChatAdminRights(flags: updateFlags))
                                 dismissImpl?()
@@ -803,7 +779,13 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 return current.withUpdatedUpdating(true)
                             }
                             updateRightsDisposable.set((addGroupAdmin(account: context.account, peerId: peerId, adminId: adminId)
-                            |> deliverOnMainQueue).start(completed: {
+                            |> deliverOnMainQueue).start(error: { error in
+                                if case let .addMemberError(error) = error, case .privacy = error, let admin = adminView.peers[adminView.peerId] {
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                }
+                                
+                                dismissImpl?()
+                            }, completed: {
                                 dismissImpl?()
                             }))
                         } else if updateFlags != defaultFlags {
@@ -838,9 +820,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 
-                                updateState { current in
-                                    return current.withUpdatedUpdating(false)
-                                }
+                                dismissImpl?()
                             }))
                         } else {
                             dismissImpl?()

@@ -1,13 +1,10 @@
 #import "TGNeoReplyHeaderViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGNeoLabelViewModel.h"
 #import "TGNeoAttachmentViewModel.h"
-
-#import "TGBridgeMessage.h"
-#import "TGBridgeChat.h"
-#import "TGBridgeUser.h"
-#import "TGBridgeReplyMessageMediaAttachment.h"
-#import "TGBridgeVideoMediaAttachment.h"
 
 const CGFloat TGNeoReplyHeaderHeight = 29.0f;
 const CGFloat TGNeoReplyHeaderLineWidth = 2.0f;

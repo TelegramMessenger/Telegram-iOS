@@ -8,6 +8,8 @@ import MtProtoKit
 #else
 import MtProtoKitDynamic
 #endif
+import TelegramPresentationData
+import TelegramUIPreferences
 
 enum ParsedInternalPeerUrlParameter {
     case botStart(String)
@@ -22,6 +24,7 @@ enum WallpaperUrlParameter {
 
 enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
+    case peerId(PeerId)
     case privateMessage(MessageId)
     case stickerPack(String)
     case join(String)
@@ -153,6 +156,8 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                             }
                         }
                     }
+                } else if pathComponents[0].hasPrefix(phonebookUsernamePathPrefix), let idValue = Int32(String(pathComponents[0][pathComponents[0].index(pathComponents[0].startIndex, offsetBy: phonebookUsernamePathPrefix.count)...])) {
+                    return .peerId(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
                 }
                 return .peerName(peerName, nil)
             } else if pathComponents.count == 2 || pathComponents.count == 3 {
@@ -272,6 +277,17 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                     }
                 } else {
                     return .peer(nil, .info)
+                }
+            }
+        case let .peerId(peerId):
+            return account.postbox.transaction { transaction -> Peer? in
+                return transaction.getPeer(peerId)
+            }
+            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
+                if let peer = peer {
+                    return .single(.peer(peer.id, .chat(textInputState: nil, messageId: nil)))
+                } else {
+                    return .single(.inaccessiblePeer)
                 }
             }
         case let .privateMessage(messageId):

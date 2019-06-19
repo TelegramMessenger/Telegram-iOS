@@ -11,6 +11,9 @@ import MtProtoKit
 #else
 import MtProtoKitDynamic
 #endif
+import TelegramPresentationData
+import TelegramUIPreferences
+import DeviceAccess
 
 private let maximumNumberOfAccounts = 3
 
@@ -338,7 +341,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     func item(_ arguments: SettingsItemArguments) -> ListViewItem {
         switch self {
             case let .userInfo(account, theme, strings, dateTimeFormat, peer, cachedData, state, updatingImage):
-                return ItemListAvatarAndNameInfoItem(account: account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .settings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(account: account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .settings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                     arguments.avatarTapAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingImage, action: {
@@ -395,39 +398,39 @@ private enum SettingsEntry: ItemListNodeEntry {
             case let .proxy(theme, image, text, value):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openProxy()
-                })
+                }, clearHighlightAutomatically: false)
             case let .savedMessages(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openSavedMessages()
-                })
+                }, clearHighlightAutomatically: false)
             case let .recentCalls(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openRecentCalls()
-                })
+                }, clearHighlightAutomatically: false)
             case let .stickers(theme, image, text, value, archivedPacks):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, labelStyle: .badge(theme.list.itemAccentColor), sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openStickerPacks(archivedPacks)
-                })
+                }, clearHighlightAutomatically: false)
             case let .notificationsAndSounds(theme, image, text, exceptionsList, warning):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: warning ? "!" : "", labelStyle: warning ? .badge(theme.list.itemDestructiveColor) : .text, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openNotificationsAndSounds(exceptionsList)
-                })
+                }, clearHighlightAutomatically: false)
             case let .privacyAndSecurity(theme, image, text, privacySettings):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openPrivacyAndSecurity(privacySettings)
-                })
+                }, clearHighlightAutomatically: false)
             case let .dataAndStorage(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openDataAndStorage()
-                })
+                }, clearHighlightAutomatically: false)
             case let .themes(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openThemes()
-                })
+                }, clearHighlightAutomatically: false)
             case let .language(theme, image, text, value):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openLanguage()
-                })
+                }, clearHighlightAutomatically: false)
             case let .passport(theme, image, text, value):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openPassport()
@@ -435,7 +438,7 @@ private enum SettingsEntry: ItemListNodeEntry {
             case let .watch(theme, image, text, value):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openWatch()
-                })
+                }, clearHighlightAutomatically: false)
             case let .askAQuestion(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openSupport()
@@ -443,7 +446,7 @@ private enum SettingsEntry: ItemListNodeEntry {
             case let .faq(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openFaq(nil)
-                })
+                }, clearHighlightAutomatically: false)
         }
     }
 }
@@ -1036,7 +1039,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             |> then(
                 contextValue.get()
                 |> mapToSignal { context -> Signal<AccessType, NoError> in
-                    return DeviceAccess.authorizationStatus(context: context, subject: .notifications)
+                    return DeviceAccess.authorizationStatus(applicationInForeground: context.sharedContext.applicationBindings.applicationInForeground, subject: .notifications)
                 }
             )
         )
@@ -1071,7 +1074,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             |> mapToSignal { context -> Signal<NotificationExceptionsList?, NoError> in
                 return .single(NotificationExceptionsList(peers: [:], settings: [:]))
                 |> then(
-                    notificationExceptionsList(network: context.account.network)
+                    notificationExceptionsList(postbox: context.account.postbox, network: context.account.network)
                     |> map(Optional.init)
                 )
             }
@@ -1429,7 +1432,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }
     }
     
-    controller.didDisappear = { _ in
+    controller.didDisappear = { [weak controller] _ in
+        controller?.clearItemNodesHighlight(animated: true)
         setDisplayNavigationBarImpl?(true)
         updateState { state in
             var state = state

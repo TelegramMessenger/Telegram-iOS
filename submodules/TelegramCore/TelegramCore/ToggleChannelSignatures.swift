@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public func toggleShouldChannelMessagesSignatures(account:Account, peerId:PeerId, enabled: Bool) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in

@@ -5,6 +5,9 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
+import DeviceAccess
 
 private let dropDownIcon = { () -> UIImage in
     UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)
@@ -214,7 +217,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     interaction.authorize()
                 })
             case let .option(_, option, header, theme, _):
-                return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, header: header, action: option.action)
+                return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, clearHighlightAutomatically: false, header: header, action: option.action)
             case let .peer(_, peer, presence, header, selection, theme, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, enabled):
                 let status: ContactsPeerItemStatus
                 let itemPeer: ContactsPeerItemPeer
@@ -829,7 +832,7 @@ final class ContactListNode: ASDisplayNode {
         
         let contactsAuthorization = Promise<AccessType>()
         contactsAuthorization.set(.single(.allowed)
-        |> then(DeviceAccess.authorizationStatus(context: context, subject: .contacts)))
+        |> then(DeviceAccess.authorizationStatus(subject: .contacts)))
         
         let contactsWarningSuppressed = Promise<(Bool, Bool)>()
         contactsWarningSuppressed.set(.single((false, false))
@@ -852,7 +855,7 @@ final class ContactListNode: ASDisplayNode {
         var authorizeImpl: (() -> Void)?
         var openPrivacyPolicyImpl: (() -> Void)?
         
-        self.authorizationNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: .contacts, icon: UIImage(bundleImageName: "Settings/Permissions/Contacts"), title: self.presentationData.strings.Contacts_PermissionsTitle, text: self.presentationData.strings.Contacts_PermissionsText, buttonTitle: self.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
+        self.authorizationNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: PermissionKind.contacts.rawValue, icon: UIImage(bundleImageName: "Settings/Permissions/Contacts"), title: self.presentationData.strings.Contacts_PermissionsTitle, text: self.presentationData.strings.Contacts_PermissionsText, buttonTitle: self.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
             authorizeImpl?()
         }, openPrivacyPolicy: {
             openPrivacyPolicyImpl?()
@@ -1006,7 +1009,7 @@ final class ContactListNode: ASDisplayNode {
                         |> map { ($0.0, $0.1) }
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     )
-                    let foundDeviceContacts: Signal<[DeviceContactStableId: DeviceContactBasicData], NoError>
+                    let foundDeviceContacts: Signal<[DeviceContactStableId: (DeviceContactBasicData, PeerId?)], NoError>
                     if searchDeviceContacts {
                         foundDeviceContacts = context.sharedContext.contactDataManager?.search(query: query) ?? .single([:])
                     } else {
@@ -1103,13 +1106,18 @@ final class ContactListNode: ASDisplayNode {
                             }
                             
                             outer: for (stableId, contact) in deviceContacts {
-                                inner: for phoneNumber in contact.phoneNumbers {
+                                inner: for phoneNumber in contact.0.phoneNumbers {
                                     let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
                                     if existingNormalizedPhoneNumbers.contains(normalizedNumber) {
                                         continue outer
                                     }
                                 }
-                                peers.append(.deviceContact(stableId, contact))
+                                if let peerId = contact.1 {
+                                    if existingPeerIds.contains(peerId) {
+                                        continue outer
+                                    }
+                                }
+                                peers.append(.deviceContact(stableId, contact.0))
                             }
                             
                             let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: (true, true), displaySortOptions: false)
@@ -1253,7 +1261,7 @@ final class ContactListNode: ASDisplayNode {
                     
                     let authorizationPreviousHidden = strongSelf.authorizationNode.isHidden
                     strongSelf.authorizationNode.removeFromSupernode()
-                    strongSelf.authorizationNode = PermissionContentNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, kind: .contacts, icon: UIImage(bundleImageName: "Settings/Permissions/Contacts"), title: strongSelf.presentationData.strings.Contacts_PermissionsTitle, text: strongSelf.presentationData.strings.Contacts_PermissionsText, buttonTitle: strongSelf.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
+                    strongSelf.authorizationNode = PermissionContentNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, kind: PermissionKind.contacts.rawValue, icon: UIImage(bundleImageName: "Settings/Permissions/Contacts"), title: strongSelf.presentationData.strings.Contacts_PermissionsTitle, text: strongSelf.presentationData.strings.Contacts_PermissionsText, buttonTitle: strongSelf.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
                         authorizeImpl?()
                     }, openPrivacyPolicy: {
                         openPrivacyPolicyImpl?()
@@ -1297,12 +1305,12 @@ final class ContactListNode: ASDisplayNode {
         }
         
         authorizeImpl = {
-            let _ = (DeviceAccess.authorizationStatus(context: context, subject: .contacts)
+            let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
             |> take(1)
             |> deliverOnMainQueue).start(next: { status in
                 switch status {
                     case .notDetermined:
-                        DeviceAccess.authorizeAccess(to: .contacts, context: context)
+                        DeviceAccess.authorizeAccess(to: .contacts)
                     case .denied, .restricted:
                         context.sharedContext.applicationBindings.openSettings()
                     default:

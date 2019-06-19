@@ -6,6 +6,7 @@ import WebKit
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramPresentationData
 
 private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()

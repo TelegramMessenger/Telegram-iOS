@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import TelegramPresentationData
 
 private func convertIndicatorColor(_ color: UIColor) -> UIColor {
     if color.isEqual(UIColor(rgb: 0x007ee5)) {

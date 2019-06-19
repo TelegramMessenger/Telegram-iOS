@@ -4,6 +4,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class SelectivePrivacyPeersControllerArguments {
     let account: Account

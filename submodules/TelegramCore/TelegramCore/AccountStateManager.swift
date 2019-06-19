@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 private enum AccountStateManagerOperationContent {
     case pollDifference(AccountFinalStateEvents)

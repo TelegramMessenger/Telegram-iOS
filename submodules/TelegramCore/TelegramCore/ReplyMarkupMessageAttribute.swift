@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
     case text

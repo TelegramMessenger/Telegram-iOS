@@ -6,6 +6,8 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import SafariServices
+import TelegramPresentationData
+import TelegramUIPreferences
 
 public class PeerMediaCollectionController: TelegramController {
     private var validLayout: ContainerViewLayout?
@@ -371,6 +373,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, updateInputLanguage: { _ in
         }, unarchiveChat: {
         }, openLinkEditing: {
+        }, reportPeerIrrelevantGeoLocation: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

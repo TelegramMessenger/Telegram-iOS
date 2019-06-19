@@ -1,10 +1,10 @@
 #import "TGBridgeUserCache.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGFileCache.h"
 
 #import <libkern/OSAtomic.h>
-
-#import "TGBridgeUser.h"
-#import "TGBridgeBotInfo.h"
 
 @interface TGBridgeUserCache ()
 {

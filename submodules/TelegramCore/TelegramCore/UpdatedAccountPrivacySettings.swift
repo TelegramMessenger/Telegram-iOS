@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPrivacySettings, NoError> {
     let lastSeenPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyStatusTimestamp))

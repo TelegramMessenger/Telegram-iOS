@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import Display
+import TelegramPresentationData
 
 enum SearchDisplayControllerMode {
     case list

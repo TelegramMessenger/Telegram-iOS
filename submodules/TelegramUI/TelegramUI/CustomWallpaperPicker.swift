@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
+import TelegramUIPreferences
 
 func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (ViewController) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }

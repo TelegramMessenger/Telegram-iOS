@@ -6,6 +6,7 @@ import SwiftSignalKitMac
 import Postbox
 import SwiftSignalKit
 #endif
+import TelegramApi
 
 private final class ManagedSynchronizeGroupMessageStatsState {
     private var synchronizeDisposables: [PeerGroupAndNamespace: Disposable] = [:]

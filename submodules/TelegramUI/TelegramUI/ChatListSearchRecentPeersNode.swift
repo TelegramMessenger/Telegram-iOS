@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private func calculateItemCustomWidth(width: CGFloat) -> CGFloat {
     let itemInsets = UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 6.0)

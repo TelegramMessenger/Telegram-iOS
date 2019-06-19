@@ -5,6 +5,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import Display
+import TelegramPresentationData
 
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
     for media in message.media {

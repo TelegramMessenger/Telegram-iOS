@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramPresentationData
 
 final class ChatFeedNavigationInputPanelNode: ChatInputPanelNode {
     private let button: HighlightableButtonNode

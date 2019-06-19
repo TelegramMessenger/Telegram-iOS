@@ -12,6 +12,7 @@ import SwiftSignalKit
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 private final class ManagedSynchronizeEmojiKeywordsOperationHelper {
     var operationDisposables: [Int32: Disposable] = [:]

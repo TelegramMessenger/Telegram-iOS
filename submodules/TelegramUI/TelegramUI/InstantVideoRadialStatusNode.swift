@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-
+import UniversalMediaPlayer
 import LegacyComponents
 
 private final class InstantVideoRadialStatusNodeParameters: NSObject {

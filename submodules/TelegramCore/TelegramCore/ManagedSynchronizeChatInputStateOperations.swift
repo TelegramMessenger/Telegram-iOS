@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 private final class ManagedSynchronizeChatInputStateOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]

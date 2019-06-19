@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 
@@ -478,7 +479,15 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
             contentSize.height += height
         }
         
-        let contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width, y: layout.size.height - 66.0 - layout.intrinsicInsets.bottom - contentSize.height)
+        let insets = layout.insets(options: .input)
+        
+        let contentOrigin: CGPoint
+        if let sourceNode = self.sourceNodes.first, let screenFrame = sourceNode.supernode?.convert(sourceNode.frame, to: nil) {
+            contentOrigin = CGPoint(x: screenFrame.maxX - contentSize.width + 8.0, y: layout.size.height - 66.0 - insets.bottom - contentSize.height)
+        } else {
+            contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width, y: layout.size.height - 66.0 - layout.intrinsicInsets.bottom - contentSize.height)
+        }
+
         transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: contentOrigin, size: contentSize))
         var nextY: CGFloat = 0.0
         for (itemNode, height, apply) in applyNodes {

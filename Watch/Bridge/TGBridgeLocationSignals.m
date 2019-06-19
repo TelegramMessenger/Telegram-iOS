@@ -1,7 +1,7 @@
 #import "TGBridgeLocationSignals.h"
-#import "TGBridgeCommon.h"
-#import "TGBridgeSubscriptions.h"
-#import "TGBridgeLocationVenue.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGBridgeClient.h"
 
 #import <CoreLocation/CoreLocation.h>

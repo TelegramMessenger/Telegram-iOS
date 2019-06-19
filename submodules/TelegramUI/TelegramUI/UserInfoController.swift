@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
+import TelegramPresentationData
 
 private final class UserInfoControllerArguments {
     let account: Account
@@ -648,23 +649,24 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         
         if !(peer is TelegramSecretChat) {
             entries.append(UserInfoEntry.sendMessage(presentationData.theme, presentationData.strings.UserInfo_SendMessage))
-            if let user = peer as? TelegramUser, user.botInfo == nil {
-                if view.peerIsContact {
-                    if let phone = user.phone, !phone.isEmpty {
-                        entries.append(UserInfoEntry.shareContact(presentationData.theme, presentationData.strings.UserInfo_ShareContact))
-                    }
-                } else {
-                    entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.Conversation_AddToContacts))
+        }
+        
+        if user.botInfo == nil {
+            if view.peerIsContact {
+                if let phone = user.phone, !phone.isEmpty {
+                    entries.append(UserInfoEntry.shareContact(presentationData.theme, presentationData.strings.UserInfo_ShareContact))
                 }
+            } else {
+                entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.Conversation_AddToContacts))
             }
+        }
             
-            if let cachedUserData = cachedPeerData as? CachedUserData, let peerStatusSettings = cachedUserData.peerStatusSettings, peerStatusSettings.contains(.canShareContact) {
-                entries.append(UserInfoEntry.shareMyContact(presentationData.theme, presentationData.strings.UserInfo_ShareMyContactInfo))
-            }
-            
-            if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                entries.append(UserInfoEntry.startSecretChat(presentationData.theme, presentationData.strings.UserInfo_StartSecretChat))
-            }
+        if let cachedUserData = cachedPeerData as? CachedUserData, let peerStatusSettings = cachedUserData.peerStatusSettings, peerStatusSettings.contains(.canShareContact) {
+            entries.append(UserInfoEntry.shareMyContact(presentationData.theme, presentationData.strings.UserInfo_ShareMyContactInfo))
+        }
+        
+        if let peer = peer as? TelegramUser, peer.botInfo == nil {
+            entries.append(UserInfoEntry.startSecretChat(presentationData.theme, presentationData.strings.UserInfo_StartSecretChat))
         }
         
         if let peer = peer as? TelegramUser, let botInfo = peer.botInfo {
@@ -771,6 +773,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     var botAddToGroupImpl: (() -> Void)?
     var shareBotImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
+    var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -967,12 +970,12 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
                     }
-                    var reportSpam = true
-                    var deleteChat = true
+                    var reportSpam = false
+                    var deleteChat = false
                     controller.setItemGroups([
                         ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: presentationData.strings.UserInfo_BlockConfirmationTitle(peer.compactDisplayTitle).0),
-                            ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: reportSpam, action: { [weak controller] checkValue in
+                            /*ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: reportSpam, action: { [weak controller] checkValue in
                                 reportSpam = checkValue
                                 controller?.updateItem(groupIndex: 0, itemIndex: 1, { item in
                                     if let item = item as? ActionSheetCheckboxItem {
@@ -989,7 +992,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                                     }
                                     return item
                                 })
-                            }),
+                            }),*/
                             ActionSheetButtonItem(title: presentationData.strings.UserInfo_BlockActionTitle(peer.compactDisplayTitle).0, color: .destructive, action: {
                                 dismissAction()
                                 updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: context.account, peerId: peer.id, isBlocked: true).start())
@@ -1064,7 +1067,9 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                         }
                         
                         updatePeerBlockedDisposable.set((deleteSignal
-                        |> deliverOnMainQueue).start())
+                        |> deliverOnMainQueue).start(completed: {
+                            dismissImpl?()
+                        }))
                     })
                 })
             ]),
@@ -1285,6 +1290,12 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
+    }
+    dismissImpl = { [weak controller] in
+        guard let controller = controller else {
+            return
+        }
+        (controller.navigationController as? NavigationController)?.filterController(controller, animated: true)
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window(.root), with: presentationArguments, blockInteraction: true)

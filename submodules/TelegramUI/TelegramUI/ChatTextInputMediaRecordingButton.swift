@@ -4,7 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
-
+import TelegramPresentationData
 import LegacyComponents
 
 private let offsetThreshold: CGFloat = 10.0

@@ -12,6 +12,7 @@ import Postbox
     #endif
 import SwiftSignalKit
 #endif
+import TelegramApi
 
 final class CachedSecureIdConfiguration: PostboxCoding {
     let value: SecureIdConfiguration

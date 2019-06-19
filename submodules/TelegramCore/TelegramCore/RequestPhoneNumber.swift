@@ -6,6 +6,7 @@ import SwiftSignalKitMac
 import Postbox
 import SwiftSignalKit
 #endif
+import TelegramApi
 
 public func requestPhoneNumber(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
     return .never()

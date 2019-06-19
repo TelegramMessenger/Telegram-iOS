@@ -3,6 +3,8 @@ import UIKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private extension TelegramWallpaper {
     var mainResource: MediaResource? {

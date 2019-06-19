@@ -7,6 +7,8 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
 import Photos
+import TelegramPresentationData
+import TelegramUIPreferences
 
 enum WallpaperListType {
     case wallpapers(WallpaperPresentationOptions?)

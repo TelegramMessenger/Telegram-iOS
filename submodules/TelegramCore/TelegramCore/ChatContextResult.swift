@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public enum ChatContextResultMessage: PostboxCoding, Equatable {
     case auto(caption: String, entities: TextEntitiesMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)

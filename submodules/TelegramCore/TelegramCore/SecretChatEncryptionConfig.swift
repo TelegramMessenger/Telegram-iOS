@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public final class SecretChatEncryptionConfig: PostboxCoding {
     let g: Int32

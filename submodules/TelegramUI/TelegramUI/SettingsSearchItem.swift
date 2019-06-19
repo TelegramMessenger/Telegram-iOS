@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 extension NavigationBarSearchContentNode: ItemListControllerSearchNavigationContentNode {
     func activate() {

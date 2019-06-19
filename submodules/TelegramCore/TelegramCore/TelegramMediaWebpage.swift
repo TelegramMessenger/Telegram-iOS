@@ -5,6 +5,7 @@ import Foundation
     import Postbox
     import UIKit
 #endif
+import TelegramApi
 
 public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     public let url: String

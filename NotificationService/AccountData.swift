@@ -1,5 +1,6 @@
 import Foundation
 import CommonCrypto
+import LightweightAccountData
 
 private func sha256Digest(_ data: Data) -> Data {
     let length = data.count

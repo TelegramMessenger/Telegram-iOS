@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
 import Postbox
+import TelegramPresentationData
 
 final class ChannelStatsController: ViewController {
     private var controllerNode: ChannelStatsControllerNode {

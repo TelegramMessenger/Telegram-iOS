@@ -3,6 +3,7 @@ import UIKit
 import Postbox
 import TelegramCore
 import AsyncDisplayKit
+import TelegramPresentationData
 
 final class InstantPageSlideshowItem: InstantPageItem {
     var frame: CGRect

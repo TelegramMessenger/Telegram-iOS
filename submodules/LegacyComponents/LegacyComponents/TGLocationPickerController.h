@@ -14,7 +14,7 @@ typedef enum {
 
 @interface TGLocationPickerController : TGLocationMapViewController
 
-@property (nonatomic, copy) void (^locationPicked)(CLLocationCoordinate2D coordinate, TGVenueAttachment *venue);
+@property (nonatomic, copy) void (^locationPicked)(CLLocationCoordinate2D coordinate, TGVenueAttachment *venue, NSString *address);
 
 @property (nonatomic, copy) SSignal *(^nearbyPlacesSignal)(NSString *query, CLLocation *coordinate);
 

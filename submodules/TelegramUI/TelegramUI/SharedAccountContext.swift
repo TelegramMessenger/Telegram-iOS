@@ -3,6 +3,9 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
+import TelegramPresentationData
+import TelegramCallsUI
+import TelegramUIPreferences
 
 private enum CallStatusText: Equatable {
     case none
@@ -36,12 +39,6 @@ public final class AccountWithInfo: Equatable {
         }
         return true
     }
-}
-
-private func pathFromLegacyFile(basePath: String, fileId: Int64, isLocal: Bool, fileName: String) -> String {
-    let documentsPath = basePath + "/Documents"
-    let filePath = documentsPath + "/files/" + (isLocal ? "local" : "") + "\(String(fileId, radix: 16))/\(fileName)"
-    return filePath
 }
 
 private func preFetchedLegacyResourcePath(basePath: String, resource: MediaResource, cache: LegacyCache) -> String? {
@@ -199,7 +196,7 @@ public final class SharedAccountContext {
         
         self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
         |> then(
-            updatedPresentationData(accountManager: self.accountManager, applicationBindings: self.applicationBindings)
+            updatedPresentationData(accountManager: self.accountManager, applicationInForeground: self.applicationBindings.applicationInForeground)
         ))
         self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])

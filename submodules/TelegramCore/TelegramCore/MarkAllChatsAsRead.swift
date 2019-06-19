@@ -12,6 +12,7 @@ import SwiftSignalKit
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public func markAllChatsAsRead(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.getDialogUnreadMarks())

@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramUIPreferences
 
 struct InstantPageMediaPlaylistItemId: SharedMediaPlaylistItemId {
     let index: Int

@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 private final class ManagedCloudChatRemoveMessagesOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]

@@ -4,6 +4,7 @@ import PostboxMac
 #else
 import Postbox
 #endif
+import TelegramApi
 
 func updateMessageMedia(transaction: Transaction, id: MediaId, media: Media?) {
     let updatedMessageIndices = transaction.updateMedia(id, update: media)

@@ -2,6 +2,42 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:submodules/LightweightAccountData/LightweightAccountData_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/WatchCommon/WatchCommon_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/BuildConfig/BuildConfig_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/MediaPlayer/UniversalMediaPlayer_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/DeviceAccess/DeviceAccess_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/TelegramPresentationData/TelegramPresentationData_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/TelegramAudio/TelegramAudio_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/TelegramVoip/TelegramVoip_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/TelegramUIPreferences/TelegramUIPreferences_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/GZip/GZip_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/RMIntro/RMIntro_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/TelegramCallsUI/TelegramCallsUI_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:submodules/AsyncDisplayKit/AsyncDisplayKit_Xcode.xcodeproj">
    </FileRef>
    <FileRef
@@ -15,6 +51,9 @@
    </FileRef>
    <FileRef
       location = "group:submodules/SSignalKit/SSignalKit_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:submodules/TelegramApi/TelegramApi_Xcode.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:submodules/TelegramCore/TelegramCore_Xcode.xcodeproj">

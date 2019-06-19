@@ -6,6 +6,7 @@ import Display
 import UIKit
 import SwiftSignalKit
 import MobileCoreServices
+import TelegramVoip
 
 private struct MessageContextMenuData {
     let starStatus: Bool?

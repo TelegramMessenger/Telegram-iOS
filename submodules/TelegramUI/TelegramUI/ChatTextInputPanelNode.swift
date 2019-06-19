@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import MobileCoreServices
+import TelegramPresentationData
 
 private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
@@ -201,7 +202,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let textInputContainer: ASDisplayNode
     var textInputNode: EditableTextNode?
     
-    let textInputBackgroundView: UIImageView
+    let textInputBackgroundNode: ASImageNode
     let actionButtons: ChatTextInputActionButtonsNode
     var mediaRecordingAccessibilityArea: AccessibilityAreaNode?
     
@@ -321,7 +322,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textInputContainer.clipsToBounds = true
         self.textInputContainer.backgroundColor = theme.chat.inputPanel.inputBackgroundColor
         
-        self.textInputBackgroundView = UIImageView()
+        self.textInputBackgroundNode = ASImageNode()
+        self.textInputBackgroundNode.displaysAsynchronously = false
+        self.textInputBackgroundNode.displayWithoutProcessing = true
         self.textPlaceholderNode = ImmediateTextNode()
         self.textPlaceholderNode.maximumNumberOfLines = 1
         self.textPlaceholderNode.isUserInteractionEnabled = false
@@ -406,21 +409,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.searchLayoutClearButton.addSubview(self.searchLayoutProgressView)
         
         self.addSubnode(self.textInputContainer)
-        self.view.addSubview(self.textInputBackgroundView)
+        self.addSubnode(self.textInputBackgroundNode)
         
         self.addSubnode(self.textPlaceholderNode)
         
         self.view.addSubview(self.searchLayoutClearButton)
         
-        self.textInputBackgroundView.clipsToBounds = true
+        self.textInputBackgroundNode.clipsToBounds = true
         let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
         recognizer.touchDown = { [weak self] in
             if let strongSelf = self {
                 strongSelf.ensureFocused()
             }
         }
-        self.textInputBackgroundView.addGestureRecognizer(recognizer)
-        self.textInputBackgroundView.isUserInteractionEnabled = true
+        self.textInputBackgroundNode.isUserInteractionEnabled = true
+        self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -489,8 +492,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             textInputNode.frame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right + accessoryButtonsWidth), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
         }
         
-        self.textInputBackgroundView.isUserInteractionEnabled = false
-        self.textInputBackgroundView.removeGestureRecognizer(self.textInputBackgroundView.gestureRecognizers![0])
+        self.textInputBackgroundNode.isUserInteractionEnabled = false
+        self.textInputBackgroundNode.view.removeGestureRecognizer(self.textInputBackgroundNode.view.gestureRecognizers![0])
         
         let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
         recognizer.touchDown = { [weak self] in
@@ -646,7 +649,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 let textFieldMinHeight = calclulateTextFieldMinHeight(interfaceState, metrics: metrics)
                 let minimalInputHeight: CGFloat = 2.0 + textFieldMinHeight
-                self.textInputBackgroundView.image = textInputBackgroundImage(backgroundColor: interfaceState.theme.chat.inputPanel.panelBackgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
+                self.textInputBackgroundNode.image = textInputBackgroundImage(backgroundColor: interfaceState.theme.chat.inputPanel.panelBackgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
                 
                 self.searchLayoutClearButton.setImage(PresentationResourcesChat.chatInputTextFieldClearImage(interfaceState.theme), for: [])
                 
@@ -798,7 +801,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var audioRecordingItemsVerticalOffset: CGFloat = 0.0
         if let mediaRecordingState = interfaceState.inputTextPanelState.mediaRecordingState {
             audioRecordingItemsVerticalOffset = panelHeight * 2.0
-            transition.updateAlpha(layer: self.textInputBackgroundView.layer, alpha: 0.0)
+            transition.updateAlpha(layer: self.textInputBackgroundNode.layer, alpha: 0.0)
             if let textInputNode = self.textInputNode {
                 transition.updateAlpha(node: textInputNode, alpha: 0.0)
             }
@@ -907,7 +910,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         } else {
             self.actionButtons.micButton.audioRecorder = nil
             self.actionButtons.micButton.videoRecordingStatus = nil
-            transition.updateAlpha(layer: self.textInputBackgroundView.layer, alpha: 1.0)
+            transition.updateAlpha(layer: self.textInputBackgroundNode.layer, alpha: 1.0)
             if let textInputNode = self.textInputNode {
                 transition.updateAlpha(node: textInputNode, alpha: 1.0)
             }
@@ -1055,7 +1058,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + audioRecordingItemsVerticalOffset + UIScreenPixel), size: self.textPlaceholderNode.frame.size))
         
-        transition.updateFrame(layer: self.textInputBackgroundView.layer, frame: CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top + audioRecordingItemsVerticalOffset, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
+        transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top + audioRecordingItemsVerticalOffset, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
         
         var nextButtonTopRight = CGPoint(x: width - rightInset - textFieldInsets.right - accessoryButtonInset, y: panelHeight - textFieldInsets.bottom - minimalInputHeight + audioRecordingItemsVerticalOffset)
         for (_, button) in self.accessoryItemButtons.reversed() {

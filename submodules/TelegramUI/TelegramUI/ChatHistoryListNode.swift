@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private let historyMessageCount: Int = 100
 
@@ -458,7 +460,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         //self.snapToBottomInsetUntilFirstInteraction = true
         
-        let messageViewQueue = self.messageViewQueue
+        let messageViewQueue = Queue.mainQueue() //self.messageViewQueue
         
         let fixedCombinedReadStates = Atomic<MessageHistoryViewReadState?>(value: nil)
         
@@ -528,12 +530,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if let filteredEntries = historyView?.filteredEntries, let visibleRange = displayRange.visibleRange {
                             let lastEntry = filteredEntries[filteredEntries.count - 1 - visibleRange.lastIndex]
                             
-                            strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: 0)
+                            strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                         } else {
                             if let messageId = messageId {
-                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60), id: 0)
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else {
-                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: 60), id: 0)
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: 60), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             }
                         }
                     }
@@ -991,11 +993,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
             if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {
-                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: 0)
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: (self.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
             } else if loaded.firstIndex < 5, historyView.originalView.laterId == nil, !historyView.originalView.holeLater, let chatHistoryLocationValue = self.chatHistoryLocationValue, !chatHistoryLocationValue.isAtUpperBound, historyView.originalView.anchorIndex != .upperBound {
-                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .upperBound, anchorIndex: .upperBound, count: historyMessageCount), id: 0)
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .upperBound, anchorIndex: .upperBound, count: historyMessageCount), id: (self.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
             } else if loaded.lastIndex >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
-                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount), id: 0)
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount), id: (self.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
             }
         }
         

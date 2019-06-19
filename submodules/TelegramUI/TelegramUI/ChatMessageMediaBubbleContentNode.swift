@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramUIPreferences
 
 class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override var supportsMosaic: Bool {

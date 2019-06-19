@@ -4,6 +4,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private let maxTextLength = 255
 private let maxOptionLength = 100

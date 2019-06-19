@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 public func requestStartBot(account: Account, botPeerId: PeerId, payload: String?) -> Signal<Void, NoError> {
     if let payload = payload, !payload.isEmpty {

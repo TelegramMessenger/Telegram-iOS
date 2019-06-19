@@ -6,6 +6,7 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 extension StickerPackReference {
     init(_ stickerPackInfo: StickerPackCollectionInfo) {

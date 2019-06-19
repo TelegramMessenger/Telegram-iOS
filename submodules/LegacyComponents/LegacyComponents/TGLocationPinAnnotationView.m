@@ -429,12 +429,13 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
 
 - (void)setPinRaised:(bool)raised
 {
-    [self setPinRaised:raised animated:false completion:nil];
+    [self setPinRaised:raised avatar:false animated:false completion:nil];
 }
 
-- (void)setPinRaised:(bool)raised animated:(bool)animated completion:(void (^)(void))completion
+- (void)setPinRaised:(bool)raised avatar:(bool)avatar animated:(bool)animated completion:(void (^)(void))completion
 {
     _pinRaised = raised;
+    avatar = false;
     
     [_shadowView.layer removeAllAnimations];
     if (iosMajorVersion() < 7)
@@ -447,6 +448,8 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             [UIView animateWithDuration:0.2 delay:0.0 options:7 << 16 | UIViewAnimationOptionAllowAnimatedContent animations:^
             {
                 _shadowView.center = CGPointMake(TGScreenPixel, -66.0f);
+                if (avatar)
+                    _avatarView.center = CGPointMake(TGScreenPixel, -71.0f);
             } completion:^(BOOL finished) {
                 if (finished && completion != nil)
                     completion();
@@ -457,6 +460,8 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             [UIView animateWithDuration:0.2 delay:0.0 usingSpringWithDamping:0.6 initialSpringVelocity:0.0 options:UIViewAnimationOptionAllowAnimatedContent animations:^
             {
                 _shadowView.center = CGPointMake(TGScreenPixel, -36.0f);
+                if (avatar)
+                    _avatarView.center = CGPointMake(TGScreenPixel, -41.0f);
             } completion:^(BOOL finished)
             {
                 if (finished && completion != nil)
@@ -467,6 +472,8 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     else
     {
         _shadowView.center = CGPointMake(TGScreenPixel, raised ? -66.0f : -36.0f);
+        if (avatar)
+            _avatarView.center = CGPointMake(TGScreenPixel, raised ? -71.0 : -41.0f);
         
         if (completion != nil)
             completion();
@@ -485,6 +492,9 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         _iconView.image = image;
         [_backgroundView addSubview:_avatarView];
         _avatarView.center = CGPointMake(_backgroundView.frame.size.width / 2.0f, _backgroundView.frame.size.height / 2.0f - 5.0f);
+        _shadowView.center = CGPointMake(TGScreenPixel, -36.0f);
+        _backgroundView.center = CGPointMake(_shadowView.frame.size.width / 2.0f, _shadowView.frame.size.height / 2.0f);
+        _iconView.center = CGPointMake(_shadowView.frame.size.width / 2.0f, _shadowView.frame.size.height / 2.0f - 5.0f);
         
         TGDispatchAfter(0.01, dispatch_get_main_queue(), ^
         {
@@ -498,8 +508,11 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
                  if (!customPin)
                      [self addSubview:_avatarView];
                  _animating = false;
+                 [self setNeedsLayout];
              }];
         });
+        
+        [self setNeedsLayout];
     }
     else
     {

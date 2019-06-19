@@ -3,6 +3,7 @@ import UIKit
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramUIPreferences
 
 public func freeMediaFileInteractiveFetched(account: Account, fileReference: FileMediaReference) -> Signal<FetchResourceSourceType, FetchResourceError> {
     return fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource))

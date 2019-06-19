@@ -1,6 +1,8 @@
 import Foundation
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 public enum MessageContentKindKey {
     case text

@@ -2,12 +2,14 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import DeviceAccess
 
 public enum PermissionKind: Int32 {
     case contacts
     case notifications
     case siri
     case cellularData
+    case nearbyLocation
 }
 
 public enum PermissionRequestStatus {
@@ -35,6 +37,7 @@ public enum PermissionState: Equatable {
     case notifications(status: PermissionRequestStatus)
     case siri(status: PermissionRequestStatus)
     case cellularData
+    case nearbyLocation(status: PermissionRequestStatus)
     
     var kind: PermissionKind {
         switch self {
@@ -46,6 +49,8 @@ public enum PermissionState: Equatable {
                 return .siri
             case .cellularData:
                 return .cellularData
+            case .nearbyLocation:
+                return .nearbyLocation
         }
     }
     
@@ -59,12 +64,16 @@ public enum PermissionState: Equatable {
                 return status
             case .cellularData:
                 return .unreachable
+            case let .nearbyLocation(status):
+                return status
         }
     }
 }
 
 public func requiredPermissions(context: AccountContext) -> Signal<(PermissionState, PermissionState, PermissionState), NoError> {
-    return combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), DeviceAccess.authorizationStatus(context: context, subject: .notifications), DeviceAccess.authorizationStatus(context: context, subject: .siri))
+    return combineLatest(DeviceAccess.authorizationStatus(subject: .contacts), DeviceAccess.authorizationStatus(applicationInForeground: context.sharedContext.applicationBindings.applicationInForeground, subject: .notifications), DeviceAccess.authorizationStatus(siriAuthorization: {
+        return context.sharedContext.applicationBindings.siriAuthorization()
+    }, subject: .siri))
     |> map { contactsStatus, notificationsStatus, siriStatus in
         return (.contacts(status: PermissionRequestStatus(accessType: contactsStatus)), .notifications(status: PermissionRequestStatus(accessType: notificationsStatus)), .siri(status: PermissionRequestStatus(accessType: siriStatus)))
     }

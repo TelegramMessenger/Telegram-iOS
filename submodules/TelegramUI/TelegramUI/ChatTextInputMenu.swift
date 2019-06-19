@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import TelegramPresentationData
 
 enum ChatTextInputMenuState {
     case inactive

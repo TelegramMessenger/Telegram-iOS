@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public enum GroupParticipant: PostboxCoding, Equatable {
     case member(id: PeerId, invitedBy: PeerId, invitedAt: Int32)

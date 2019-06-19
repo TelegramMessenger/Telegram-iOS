@@ -7,6 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 import TelegramCorePrivateModule
+import TelegramApi
 
 private func md5(_ data: Data) -> Data {
     return data.withUnsafeBytes { bytes -> Data in

@@ -6,12 +6,13 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: MessageId) -> Signal<Peer?, NoError> {
     return account.postbox.transaction { transaction -> Signal<Peer?, NoError> in
         if let peer = transaction.getPeer(peerId) {
             if let user = peer as? TelegramUser {
-                if user.accessHash != 0 {
+                if let accessHash = user.accessHash, accessHash.value != 0 {
                     return .single(user)
                 } else {
                     let messageSignal: Signal<Api.messages.Messages?, NoError>?
@@ -49,7 +50,7 @@ public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: M
                                     
                                     for user in apiUsers {
                                         let telegramUser = TelegramUser(user: user)
-                                        if telegramUser.id == peerId && telegramUser.accessHash != 0 {
+                                        if telegramUser.id == peerId, let accessHash =  telegramUser.accessHash, accessHash.value != 0 {
                                             if let presence = TelegramUserPresence(apiUser: user) {
                                                 updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: [telegramUser.id: presence])
                                             }

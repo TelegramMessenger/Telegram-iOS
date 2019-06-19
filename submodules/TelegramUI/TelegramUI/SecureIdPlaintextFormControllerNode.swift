@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import CoreTelephony
+import TelegramPresentationData
 
 private func cleanPhoneNumber(_ text: String?) -> String {
     var cleanNumber = ""

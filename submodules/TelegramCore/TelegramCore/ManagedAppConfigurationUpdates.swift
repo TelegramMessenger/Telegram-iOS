@@ -12,6 +12,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import TelegramApi
 
 func managedAppConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in

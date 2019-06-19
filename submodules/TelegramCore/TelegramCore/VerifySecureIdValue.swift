@@ -12,6 +12,7 @@ import Foundation
     #endif
     import SwiftSignalKit
 #endif
+import TelegramApi
 
 public enum SecureIdPreparePhoneVerificationError {
     case generic

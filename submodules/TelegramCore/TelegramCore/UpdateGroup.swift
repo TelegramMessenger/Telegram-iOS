@@ -1,4 +1,5 @@
 import Foundation
+import TelegramApi
 
 enum UpdateGroup {
     case withPts(updates: [Api.Update], users: [Api.User], chats: [Api.Chat])

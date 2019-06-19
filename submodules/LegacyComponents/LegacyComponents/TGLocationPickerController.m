@@ -345,7 +345,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         coordinate = [self mapCenterCoordinateForPickerPin];
     
     if (self.locationPicked != nil)
-        self.locationPicked(coordinate, nil);
+        self.locationPicked(coordinate, nil, _customAddress);
 }
 
 - (void)searchButtonPressed
@@ -373,7 +373,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
     _pinMovedFromUserLocation = false;
     
     [self hidePickerAnnotationAnimated:true];
-    [_pickerPinView setPinRaised:true animated:true completion:nil];
+    [_pickerPinView setPinRaised:true avatar:_intent == TGLocationPickerControllerCustomLocationIntent animated:true completion:nil];
     
     MKCoordinateSpan span = _fullScreenMapSpan != nil ? _fullScreenMapSpan.MKCoordinateSpanValue : TGLocationDefaultSpan;
     [self setMapCenterCoordinate:_mapView.userLocation.location.coordinate span:span offset:TGLocationPickerPinOffset animated:true];
@@ -399,7 +399,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
                 [self switchToFullscreen];
             }
             
-            [_pickerPinView setPinRaised:true animated:true completion:nil];
+            [_pickerPinView setPinRaised:true avatar:_intent == TGLocationPickerControllerCustomLocationIntent animated:true completion:nil];
             
             _pinMovedFromUserLocation = true;
             _updatePinAnnotation = false;
@@ -435,7 +435,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
 - (void)pinPinView
 {
     __weak TGLocationPickerController *weakSelf = self;
-    [_pickerPinView setPinRaised:false animated:true completion:^
+    [_pickerPinView setPinRaised:false avatar:_intent == TGLocationPickerControllerCustomLocationIntent animated:true completion:^
     {
         __strong TGLocationPickerController *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -520,7 +520,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         
         NSString *address = @"";
         if (result != nil)
-            address = result.displayAddress;
+            address = result.fullAddress;
         
         strongSelf->_customAddress = address;
         [strongSelf updateCurrentLocationCell];
@@ -662,7 +662,9 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
     
     _ownLocationView.hidden = true;
     _pickerPinWrapper.hidden = false;
-    [_pickerPinView setCustomPin:true animated:true];
+    //if (_intent != TGLocationPickerControllerCustomLocationIntent) {
+        [_pickerPinView setCustomPin:true animated:true];
+    //}
     
     _mapView.tapEnabled = false;
     _mapView.longPressAsTapEnabled = false;
@@ -767,6 +769,9 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
 
 - (UIBarButtonItem *)controllerRightBarButtonItem
 {
+    if (_intent == TGLocationPickerControllerCustomLocationIntent) {
+        return nil;
+    }
     if (iosMajorVersion() < 7)
     {
         TGModernBarButton *searchButton = [[TGModernBarButton alloc] initWithImage:TGComponentsImageNamed(@"NavigationSearchIcon.png")];
@@ -944,7 +949,9 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
                 if (_currentUserLocation != nil)
                     [self fetchNearbyVenuesWithLocation:_currentUserLocation];
             }
-            [cell configureWithTitle:TGLocalized(@"Map.ChooseAPlace")];
+            if (_intent != TGLocationPickerControllerCustomLocationIntent) {
+                [cell configureWithTitle:TGLocalized(@"Map.ChooseAPlace")];
+            }
             
             if (scrollView.contentOffset.y > -scrollView.contentInset.top + TGLocationSectionHeaderHeight)
             {
@@ -975,7 +982,9 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         else
         {
             _activityIndicator.alpha = 0.0f;
-            [cell configureWithTitle:TGLocalized(@"Map.PullUpForPlaces")];
+            if (_intent != TGLocationPickerControllerCustomLocationIntent) {
+                [cell configureWithTitle:TGLocalized(@"Map.PullUpForPlaces")];
+            }
             
             if (_safeAreaCurtainView != nil)
             {
@@ -1004,10 +1013,14 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
     {
         TGLocationCurrentLocationCell *locationCell = (TGLocationCurrentLocationCell *)cell;
         
-        if (_mapInFullScreenMode)
-            [locationCell configureForCustomLocationWithAddress:_customAddress];
-        else
-            [locationCell configureForCurrentLocationWithAccuracy:_currentUserLocation.horizontalAccuracy];
+        if (_intent == TGLocationPickerControllerCustomLocationIntent) {
+            [locationCell configureForGroupLocationWithAddress:_customAddress];
+        } else {
+            if (_mapInFullScreenMode)
+                [locationCell configureForCustomLocationWithAddress:_customAddress];
+            else
+                [locationCell configureForCurrentLocationWithAccuracy:_currentUserLocation.horizontalAccuracy];
+        }
     }
     
     cell = [_tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:1 inSection:0]];
@@ -1096,7 +1109,9 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         }
         else if ((_allowLiveLocationSharing && indexPath.row == 2) || (!_allowLiveLocationSharing && indexPath.row == 1))
         {
-            [self _presentVenuesList];
+            if (_intent != TGLocationPickerControllerCustomLocationIntent) {
+                [self _presentVenuesList];
+            }
         }
     }
     else
@@ -1113,7 +1128,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         }
         
         if (self.locationPicked != nil)
-            self.locationPicked(venue.coordinate, [venue venueAttachment]);
+            self.locationPicked(venue.coordinate, [venue venueAttachment], _customAddress);
     }
 }
 
@@ -1151,10 +1166,14 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         locationCell.pallete = self.pallete;
         locationCell.edgeView = _edgeHighlightView;
         
-        if (_mapInFullScreenMode)
-            [locationCell configureForCustomLocationWithAddress:_customAddress];
-        else
-            [locationCell configureForCurrentLocationWithAccuracy:_currentUserLocation.horizontalAccuracy];
+        if (_intent == TGLocationPickerControllerCustomLocationIntent) {
+            [locationCell configureForGroupLocationWithAddress:_customAddress];
+        } else {
+            if (_mapInFullScreenMode)
+                [locationCell configureForCustomLocationWithAddress:_customAddress];
+            else
+                [locationCell configureForCurrentLocationWithAccuracy:_currentUserLocation.horizontalAccuracy];
+        }
         
         cell = locationCell;
     }
@@ -1180,10 +1199,12 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
             sectionCell = [[TGLocationSectionHeaderCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:TGLocationSectionHeaderKind];
         sectionCell.pallete = self.pallete;
         
-        if (tableView.contentOffset.y > -tableView.contentInset.top)
-            [sectionCell configureWithTitle:TGLocalized(@"Map.ChooseAPlace")];
-        else
-            [sectionCell configureWithTitle:TGLocalized(@"Map.PullUpForPlaces")];
+        if (_intent != TGLocationPickerControllerCustomLocationIntent) {
+            if (tableView.contentOffset.y > -tableView.contentInset.top)
+                [sectionCell configureWithTitle:TGLocalized(@"Map.ChooseAPlace")];
+            else
+                [sectionCell configureWithTitle:TGLocalized(@"Map.PullUpForPlaces")];
+        }
         
         cell = sectionCell;
     }

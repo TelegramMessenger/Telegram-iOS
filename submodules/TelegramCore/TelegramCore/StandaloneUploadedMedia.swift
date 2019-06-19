@@ -7,6 +7,7 @@ import Foundation
     import SwiftSignalKit
     import UIKit
 #endif
+import TelegramApi
 
 public enum StandaloneUploadMediaError {
     case generic

@@ -4,12 +4,14 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private enum ChatReportPeerTitleButton: Equatable {
     case block
     case addContact(String?)
     case shareMyPhoneNumber
     case reportSpam
+    case reportIrrelevantGeoLocation
     
     func title(strings: PresentationStrings) -> String {
         switch self {
@@ -24,7 +26,9 @@ private enum ChatReportPeerTitleButton: Equatable {
             case .shareMyPhoneNumber:
                 return strings.Conversation_ShareMyPhoneNumber
             case .reportSpam:
-                return strings.Conversation_ReportSpam
+                return strings.Conversation_ReportSpamAndLeave
+            case .reportIrrelevantGeoLocation:
+                return strings.Conversation_ReportGroupLocation
         }
     }
 }
@@ -50,7 +54,11 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
             }
         }
     } else if let _ = state.renderedPeer?.chatMainPeer {
-        buttons.append(.reportSpam)
+        if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+            buttons.append(.reportIrrelevantGeoLocation)
+        } else {
+            buttons.append(.reportSpam)
+        }
     }
     return buttons
 }
@@ -123,11 +131,12 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 let view = UIButton()
                 view.setTitle(button.title(strings: interfaceState.strings), for: [])
                 view.titleLabel?.font = Font.regular(16.0)
-                if case .block = button {
+                switch button {
+                    case .block, .reportSpam:
                     view.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlDestructiveColor, for: [])
                     view.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlDestructiveColor.withAlphaComponent(0.7), for: [.highlighted])
-                } else {
-                view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor, for: [])
+                    default:
+                    view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor, for: [])
                     view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.7), for: [.highlighted])
                 }
                 view.addTarget(self, action: #selector(self.buttonPressed(_:)), for: [.touchUpInside])
@@ -146,7 +155,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                     nextButtonOrigin += buttonWidth
                 }
             } else {
-                let additionalRightInset: CGFloat = 18.0
+                let additionalRightInset: CGFloat = 36.0
                 let areaWidth = width - maxInset * 2.0 - additionalRightInset
                 let maxButtonWidth = floor(areaWidth / CGFloat(self.buttons.count))
                 let buttonSizes = self.buttons.map { button -> CGFloat in
@@ -181,6 +190,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                         self.interfaceInteraction?.reportPeer()
                     case .addContact:
                         self.interfaceInteraction?.presentPeerContact()
+                    case .reportIrrelevantGeoLocation:
+                        self.interfaceInteraction?.reportPeerIrrelevantGeoLocation()
                 }
                 break
             }

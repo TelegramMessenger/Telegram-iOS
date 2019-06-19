@@ -6,6 +6,7 @@ import SwiftSignalKitMac
 import Postbox
 import SwiftSignalKit
 #endif
+import TelegramApi
 
 public struct LocalizationListState: PreferencesEntry, Equatable {
     public var availableOfficialLocalizations: [LocalizationInfo]

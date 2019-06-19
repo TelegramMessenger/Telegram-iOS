@@ -4,6 +4,7 @@ import Foundation
 #else
     import Postbox
 #endif
+import TelegramApi
 
 public struct MessageNotificationSettings: PostboxCoding, Equatable {
     public var enabled: Bool

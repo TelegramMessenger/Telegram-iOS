@@ -4,6 +4,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class ChannelVisibilityControllerArguments {
     let account: Account
@@ -36,6 +38,7 @@ private enum ChannelVisibilitySection: Int32 {
     case type
     case link
     case linkActions
+    case location
 }
 
 private enum ChannelVisibilityEntryTag: ItemListItemTag {
@@ -57,6 +60,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     case typePrivate(PresentationTheme, String, Bool)
     case typeInfo(PresentationTheme, String)
     
+    case publicLinkHeader(PresentationTheme, String)
     case publicLinkAvailability(PresentationTheme, String, Bool)
     case privateLink(PresentationTheme, String, String?)
     case editablePublicLink(PresentationTheme, String)
@@ -74,7 +78,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
         switch self {
             case .typeHeader, .typePublic, .typePrivate, .typeInfo:
                 return ChannelVisibilitySection.type.rawValue
-            case .publicLinkAvailability, .privateLink, .editablePublicLink, .privateLinkInfo, .publicLinkInfo, .publicLinkStatus:
+            case .publicLinkHeader, .publicLinkAvailability, .privateLink, .editablePublicLink, .privateLinkInfo, .publicLinkInfo, .publicLinkStatus:
                 return ChannelVisibilitySection.link.rawValue
             case .privateLinkCopy, .privateLinkRevoke, .privateLinkShare:
                 return ChannelVisibilitySection.linkActions.rawValue
@@ -93,29 +97,30 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return 2
             case .typeInfo:
                 return 3
-            
-            case .publicLinkAvailability:
+            case .publicLinkHeader:
                 return 4
-            case .privateLink:
+            case .publicLinkAvailability:
                 return 5
-            case .editablePublicLink:
+            case .privateLink:
                 return 6
-            case .privateLinkInfo:
+            case .editablePublicLink:
                 return 7
-            case .privateLinkCopy:
+            case .privateLinkInfo:
                 return 8
-            case .privateLinkRevoke:
+            case .privateLinkCopy:
                 return 9
-            case .privateLinkShare:
+            case .privateLinkRevoke:
                 return 10
-            case .publicLinkStatus:
+            case .privateLinkShare:
                 return 11
-            case .publicLinkInfo:
+            case .publicLinkStatus:
                 return 12
-            case .existingLinksInfo:
+            case .publicLinkInfo:
                 return 13
+            case .existingLinksInfo:
+                return 14
             case let .existingLinkPeerItem(index, _, _, _, _, _, _, _):
-                return 14 + index
+                return 15 + index
         }
     }
     
@@ -141,6 +146,12 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 }
             case let .typeInfo(lhsTheme, lhsText):
                 if case let .typeInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .publicLinkHeader(lhsTheme, lhsTitle):
+                if case let .publicLinkHeader(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
                     return true
                 } else {
                     return false
@@ -256,6 +267,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 })
             case let .typeInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .publicLinkHeader(theme, title):
+                return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
             case let .publicLinkAvailability(theme, text, value):
                 let attr = NSMutableAttributedString(string: text, textColor: value ? theme.list.freeTextColor : theme.list.freeTextErrorColor)
                 attr.addAttribute(.font, value: Font.regular(13), range: NSMakeRange(0, attr.length))
@@ -330,6 +343,11 @@ private enum CurrentChannelType {
     case privateChannel
 }
 
+private enum CurrentChannelLocation: Equatable {
+    case removed
+    case location(PeerGeoLocation)
+}
+
 private struct ChannelVisibilityControllerState: Equatable {
     let selectedType: CurrentChannelType?
     let editingPublicLinkText: String?
@@ -338,6 +356,7 @@ private struct ChannelVisibilityControllerState: Equatable {
     let revealedRevokePeerId: PeerId?
     let revokingPeerId: PeerId?
     let revokingPrivateLink: Bool
+    let editingLocation: CurrentChannelLocation?
     
     init() {
         self.selectedType = nil
@@ -347,9 +366,10 @@ private struct ChannelVisibilityControllerState: Equatable {
         self.revealedRevokePeerId = nil
         self.revokingPeerId = nil
         self.revokingPrivateLink = false
+        self.editingLocation = nil
     }
     
-    init(selectedType: CurrentChannelType?, editingPublicLinkText: String?, addressNameValidationStatus: AddressNameValidationStatus?, updatingAddressName: Bool, revealedRevokePeerId: PeerId?, revokingPeerId: PeerId?, revokingPrivateLink: Bool) {
+    init(selectedType: CurrentChannelType?, editingPublicLinkText: String?, addressNameValidationStatus: AddressNameValidationStatus?, updatingAddressName: Bool, revealedRevokePeerId: PeerId?, revokingPeerId: PeerId?, revokingPrivateLink: Bool, editingLocation: CurrentChannelLocation?) {
         self.selectedType = selectedType
         self.editingPublicLinkText = editingPublicLinkText
         self.addressNameValidationStatus = addressNameValidationStatus
@@ -357,6 +377,7 @@ private struct ChannelVisibilityControllerState: Equatable {
         self.revealedRevokePeerId = revealedRevokePeerId
         self.revokingPeerId = revokingPeerId
         self.revokingPrivateLink = revokingPrivateLink
+        self.editingLocation = editingLocation
     }
     
     static func ==(lhs: ChannelVisibilityControllerState, rhs: ChannelVisibilityControllerState) -> Bool {
@@ -381,36 +402,42 @@ private struct ChannelVisibilityControllerState: Equatable {
         if lhs.revokingPrivateLink != rhs.revokingPrivateLink {
             return false
         }
-        
+        if lhs.editingLocation != rhs.editingLocation {
+            return false
+        }
         return true
     }
     
     func withUpdatedSelectedType(_ selectedType: CurrentChannelType?) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink)
+        return ChannelVisibilityControllerState(selectedType: selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, editingLocation: self.editingLocation)
     }
     
     func withUpdatedEditingPublicLinkText(_ editingPublicLinkText: String?) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, editingLocation: self.editingLocation)
     }
     
     func withUpdatedAddressNameValidationStatus(_ addressNameValidationStatus: AddressNameValidationStatus?) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, editingLocation: self.editingLocation)
     }
     
     func withUpdatedUpdatingAddressName(_ updatingAddressName: Bool) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, editingLocation: self.editingLocation)
     }
     
     func withUpdatedRevealedRevokePeerId(_ revealedRevokePeerId: PeerId?) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, editingLocation: self.editingLocation)
     }
     
     func withUpdatedRevokingPeerId(_ revokingPeerId: PeerId?) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: revokingPeerId, revokingPrivateLink: self.revokingPrivateLink)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, editingLocation: self.editingLocation)
     }
     
     func withUpdatedRevokingPrivateLink(_ revokingPrivateLink: Bool) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: revokingPrivateLink)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: revokingPrivateLink, editingLocation: self.editingLocation)
+    }
+    
+    func withUpdatedEditingLocation(_ editingLocation: CurrentChannelLocation?) -> ChannelVisibilityControllerState {
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, editingLocation: editingLocation)
     }
 }
 
@@ -432,6 +459,8 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             } else {
                 if let addressName = peer.addressName, !addressName.isEmpty {
                     selectedType = .publicChannel
+                } else if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil  {
+                    selectedType = .publicChannel
                 } else {
                     selectedType = .privateChannel
                 }
@@ -449,30 +478,33 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             }
         }
         
-        switch mode {
-            case .privateLink:
-                break
-            case .initialSetup, .generic:
-                entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader : presentationData.strings.Channel_Edit_LinkItem))
-                entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
-                entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
-        
-                switch selectedType {
-                    case .publicChannel:
-                        if isGroup {
-                            entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
-                        } else {
-                            entries.append(.typeInfo(presentationData.theme, presentationData.strings.Channel_Setup_TypePublicHelp))
-                        }
-                    case .privateChannel:
-                        if isGroup {
-                            entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePrivateHelp))
-                        } else {
-                            entries.append(.typeInfo(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivateHelp))
-                        }
-                }
+        if let _ = (view.cachedData as? CachedChannelData)?.peerGeoLocation {
+        } else {
+            switch mode {
+                case .privateLink:
+                    break
+                case .initialSetup, .generic:
+                    entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader : presentationData.strings.Channel_Edit_LinkItem))
+                    entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
+                    entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
+            
+                    switch selectedType {
+                        case .publicChannel:
+                            if isGroup {
+                                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
+                            } else {
+                                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Channel_Setup_TypePublicHelp))
+                            }
+                        case .privateChannel:
+                            if isGroup {
+                                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePrivateHelp))
+                            } else {
+                                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivateHelp))
+                            }
+                    }
+            }
         }
-
+        
         switch selectedType {
             case .publicChannel:
                 var displayAvailability = false
@@ -698,6 +730,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
     
     return entries
 }
+
 private func effectiveChannelType(state: ChannelVisibilityControllerState, peer: TelegramChannel) -> CurrentChannelType {
     let selectedType: CurrentChannelType
     if let current = state.selectedType {
@@ -772,18 +805,20 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     let peersDisablingAddressNameAssignment = Promise<[Peer]?>()
     peersDisablingAddressNameAssignment.set(.single(nil) |> then(channelAddressNameAssignmentAvailability(account: context.account, peerId: peerId.namespace == Namespaces.Peer.CloudChannel ? peerId : nil) |> mapToSignal { result -> Signal<[Peer]?, NoError> in
         if case .addressNameLimitReached = result {
-            return adminedPublicChannels(account: context.account)
-                |> map(Optional.init)
+            return adminedPublicChannels(account: context.account, location: false)
+            |> map(Optional.init)
         } else {
             return .single([])
         }
     }))
     
     var dismissImpl: (() -> Void)?
+    var dismissInputImpl: (() -> Void)?
     var nextImpl: (() -> Void)?
     var displayPrivateLinkMenuImpl: ((String) -> Void)?
     var scrollToPublicLinkTextImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var clearHighlightImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -793,13 +828,16 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     let updateAddressNameDisposable = MetaDisposable()
     actionsDisposable.add(updateAddressNameDisposable)
     
+    let updateLocationDisposable = MetaDisposable()
+    actionsDisposable.add(updateLocationDisposable)
+    
     let revokeAddressNameDisposable = MetaDisposable()
     actionsDisposable.add(revokeAddressNameDisposable)
     
     let revokeLinkDisposable = MetaDisposable()
     actionsDisposable.add(revokeLinkDisposable)
     
-    actionsDisposable.add( (context.account.viewTracker.peerView(peerId) |> filter { $0.cachedData != nil } |> take(1) |> mapToSignal { view -> Signal<Void, NoError> in
+    actionsDisposable.add((context.account.viewTracker.peerView(peerId) |> filter { $0.cachedData != nil } |> take(1) |> mapToSignal { view -> Signal<Void, NoError> in
         return ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId)
     }).start())
     
@@ -824,11 +862,11 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             }
             
             checkAddressNameDisposable.set((validateAddressNameInteractive(account: context.account, domain: .peer(peerId), name: text)
-                |> deliverOnMainQueue).start(next: { result in
-                    updateState { state in
-                        return state.withUpdatedAddressNameValidationStatus(result)
-                    }
-                }))
+            |> deliverOnMainQueue).start(next: { result in
+                updateState { state in
+                    return state.withUpdatedAddressNameValidationStatus(result)
+                }
+            }))
         }
     }, scrollToPublicLinkText: {
         scrollToPublicLinkTextImpl?()
@@ -926,7 +964,6 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         })
     })
     
-    
     let peerView = context.account.viewTracker.peerView(peerId)
     |> deliverOnMainQueue
     
@@ -945,6 +982,11 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                     case .privateChannel:
                         break
                     case .publicChannel:
+                        var hasLocation = false
+                        if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
+                            hasLocation = true
+                        }
+                        
                         if let addressNameValidationStatus = state.addressNameValidationStatus {
                             switch addressNameValidationStatus {
                                 case .availability(.available):
@@ -953,16 +995,42 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                     doneEnabled = false
                             }
                         } else {
-                            doneEnabled = !(peer.addressName?.isEmpty ?? true)
+                            doneEnabled = !(peer.addressName?.isEmpty ?? true) || hasLocation
                         }
                 }
             }
             
             rightNavigationButton = ItemListNavigationButton(content: .text(mode == .initialSetup ? presentationData.strings.Common_Next : presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
                 var updatedAddressNameValue: String?
+                var updatedLocation: CurrentChannelLocation?
                 updateState { state in
                     updatedAddressNameValue = updatedAddressName(state: state, peer: peer)
+                    updatedLocation = state.editingLocation
                     return state
+                }
+                
+                let updateLocation: (@escaping (Bool) -> Void) -> Void = { completion in
+                    guard let updatedLocation = updatedLocation else {
+                        completion(true)
+                        return
+                    }
+                    
+                    switch updatedLocation {
+                        case let .location(location):
+                            updateLocationDisposable.set((updateChannelGeoLocation(postbox: context.account.postbox, network: context.account.network, channelId: peerId, coordinate: (location.latitude, location.longitude), address: location.address)
+                            |> deliverOnMainQueue).start(error: { error in
+                                completion(false)
+                            }, completed: {
+                                completion(true)
+                            }))
+                        case .removed:
+                            updateLocationDisposable.set((updateChannelGeoLocation(postbox: context.account.postbox, network: context.account.network, channelId: peerId, coordinate: nil, address: nil)
+                            |> deliverOnMainQueue).start(error: { error in
+                                completion(false)
+                            }, completed: {
+                                completion(true)
+                            }))
+                    }
                 }
                 
                 if let updatedAddressNameValue = updatedAddressNameValue {
@@ -984,12 +1052,14 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                     return state.withUpdatedUpdatingAddressName(false)
                                 }
                                 
-                                switch mode {
-                                case .initialSetup:
-                                    nextImpl?()
-                                case .generic, .privateLink:
-                                    dismissImpl?()
-                                }
+                                updateLocation({ success in
+                                    switch mode {
+                                        case .initialSetup:
+                                            nextImpl?()
+                                        case .generic, .privateLink:
+                                            dismissImpl?()
+                                    }
+                                })
                             }))
                         
                     }
@@ -1002,12 +1072,14 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         }
                     })
                 } else {
-                    switch mode {
-                        case .initialSetup:
-                            nextImpl?()
-                        case .generic, .privateLink:
-                            dismissImpl?()
-                    }
+                    updateLocation({ success in
+                        switch mode {
+                            case .initialSetup:
+                                nextImpl?()
+                            case .generic, .privateLink:
+                                dismissImpl?()
+                        }
+                    })
                 }
             })
         } else if let peer = peer as? TelegramGroup {
@@ -1135,6 +1207,8 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 } else {
                     if let addressName = peer.addressName, !addressName.isEmpty {
                         selectedType = .publicChannel
+                    } else if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil  {
+                        selectedType = .publicChannel
                     } else {
                         selectedType = .privateChannel
                     }
@@ -1164,6 +1238,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     nextImpl = { [weak controller] in
         if let controller = controller {
@@ -1259,6 +1336,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    clearHighlightImpl = { [weak controller] in
+        controller?.clearItemNodesHighlight(animated: true)
     }
     return controller
 }

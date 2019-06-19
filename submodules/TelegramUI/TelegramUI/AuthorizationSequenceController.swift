@@ -12,6 +12,7 @@ import MtProtoKitDynamic
 #endif
 import MessageUI
 import CoreTelephony
+import TelegramPresentationData
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)

@@ -4,6 +4,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
     let account: Account
@@ -233,7 +235,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             guard let peer = peer else {
                 return
             }
-            pushControllerImpl?(createGroupController(context: context, peerIds: [], initialTitle: peer.displayTitle + " Chat", supergroup: true, completion: { groupId, dismiss in
+            pushControllerImpl?(createGroupController(context: context, peerIds: [], initialTitle: peer.displayTitle + " Chat", mode: .supergroup, completion: { groupId, dismiss in
                 var applySignal = updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: groupId)
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in

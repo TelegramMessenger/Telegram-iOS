@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 final class ProgressNavigationButtonNode: ASDisplayNode {
     private var indicatorNode: ActivityIndicator

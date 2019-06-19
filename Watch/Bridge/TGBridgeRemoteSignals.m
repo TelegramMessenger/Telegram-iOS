@@ -1,5 +1,7 @@
 #import "TGBridgeRemoteSignals.h"
-#import "TGBridgeSubscriptions.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGBridgeClient.h"
 
 @implementation TGBridgeRemoteSignals

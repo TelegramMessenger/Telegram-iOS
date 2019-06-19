@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 private func fixGridScrolling(_ gridNode: GridNode) {
     var searchItemNode: GridItemNode?

@@ -5,6 +5,7 @@ import TelegramCore
 import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
+import TelegramPresentationData
 
 final class StickerPaneSearchStickerSection: GridSection {
     let code: String

@@ -1,14 +1,11 @@
 #import "TGNeoBubbleMessageViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGNeoBackgroundViewModel.h"
 
 #import "TGExtensionDelegate.h"
 #import "TGWatchColor.h"
-
-#import "TGBridgeContext.h"
-#import "TGBridgeMessage.h"
-#import "TGBridgeUser.h"
-
-#import "TGBridgePeerIdAdapter.h"
 
 const UIEdgeInsets TGNeoBubbleMessageViewModelInsets = { 4.5, 11, 9, 11 };
 const CGFloat TGNeoBubbleMessageMetaSpacing = 5.0f;

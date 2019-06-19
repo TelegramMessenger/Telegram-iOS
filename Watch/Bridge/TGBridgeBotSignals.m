@@ -1,11 +1,10 @@
 #import "TGBridgeBotSignals.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGBridgeUserCache.h"
 
 #import "TGBridgeClient.h"
-#import "TGBridgeSubscriptions.h"
-
-#import "TGBridgeUser.h"
-#import "TGBridgeBotInfo.h"
 
 @implementation TGBridgeBotSignals
 

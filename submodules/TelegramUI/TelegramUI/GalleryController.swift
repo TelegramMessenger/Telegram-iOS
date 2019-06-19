@@ -7,6 +7,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
 import SafariServices
+import TelegramPresentationData
 
 private func tagsForMessage(_ message: Message) -> MessageTags? {
     for media in message.media {

@@ -4,6 +4,9 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
+import DeviceAccess
 
 private final class NotificationsAndSoundsArguments {
     let context: AccountContext
@@ -822,12 +825,14 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     }, pushController: { controller in
         pushControllerImpl?(controller)
     }, soundSelectionDisposable: MetaDisposable(), authorizeNotifications: {
-        let _ = (DeviceAccess.authorizationStatus(context: context, subject: .notifications)
+        let _ = (DeviceAccess.authorizationStatus(applicationInForeground: context.sharedContext.applicationBindings.applicationInForeground, subject: .notifications)
         |> take(1)
         |> deliverOnMainQueue).start(next: { status in
             switch status {
                 case .notDetermined:
-                    DeviceAccess.authorizeAccess(to: .notifications, context: context)
+                    DeviceAccess.authorizeAccess(to: .notifications, registerForNotifications: { result in
+                        context.sharedContext.applicationBindings.registerForNotifications(result)
+                    })
                 case .denied, .restricted:
                     context.sharedContext.applicationBindings.openSettings()
                 case .unreachable:
@@ -997,7 +1002,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     let sharedData = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
     let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
     
-    let exceptionsSignal = Signal<NotificationExceptionsList?, NoError>.single(exceptionsList) |> then(notificationExceptionsList(network: context.account.network) |> map(Optional.init))
+    let exceptionsSignal = Signal<NotificationExceptionsList?, NoError>.single(exceptionsList) |> then(notificationExceptionsList(postbox: context.account.postbox, network: context.account.network) |> map(Optional.init))
     
     notificationExceptions.set(exceptionsSignal |> map { list -> (NotificationExceptionMode, NotificationExceptionMode, NotificationExceptionMode) in
         var users:[PeerId : NotificationExceptionWrapper] = [:]
@@ -1063,7 +1068,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     }
     |> distinctUntilChanged
     
-    let signal = combineLatest(context.sharedContext.presentationData, sharedData, preferences, notificationExceptions.get(), DeviceAccess.authorizationStatus(context: context, subject: .notifications), notificationsWarningSuppressed.get(), hasMoreThanOneAccount)
+    let signal = combineLatest(context.sharedContext.presentationData, sharedData, preferences, notificationExceptions.get(), DeviceAccess.authorizationStatus(applicationInForeground: context.sharedContext.applicationBindings.applicationInForeground, subject: .notifications), notificationsWarningSuppressed.get(), hasMoreThanOneAccount)
         |> map { presentationData, sharedData, view, exceptions, authorizationStatus, warningSuppressed, hasMoreThanOneAccount -> (ItemListControllerState, (ItemListNodeState<NotificationsAndSoundsEntry>, NotificationsAndSoundsEntry.ItemGenerationArguments)) in
             
             let viewSettings: GlobalNotificationSettingsSet

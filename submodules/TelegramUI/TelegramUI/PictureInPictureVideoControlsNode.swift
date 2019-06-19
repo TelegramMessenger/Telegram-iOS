@@ -3,7 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-
+import UniversalMediaPlayer
 import LegacyComponents
 
 private let leaveImage = UIImage(bundleImageName: "Media Gallery/PictureInPictureLeave")?.precomposed()

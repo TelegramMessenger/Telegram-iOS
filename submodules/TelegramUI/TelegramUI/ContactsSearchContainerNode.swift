@@ -5,6 +5,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private enum ContactListSearchGroup {
     case contacts
@@ -186,7 +188,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                     foundRemoteContacts = .single(([], []))
                 }
                 let searchDeviceContacts = categories.contains(.deviceContacts)
-                let foundDeviceContacts: Signal<[DeviceContactStableId: DeviceContactBasicData]?, NoError>
+                let foundDeviceContacts: Signal<[DeviceContactStableId: (DeviceContactBasicData, PeerId?)]?, NoError>
                 if searchDeviceContacts, let contactDataManager = context.sharedContext.contactDataManager {
                     foundDeviceContacts = contactDataManager.search(query: query)
                     |> map(Optional.init)
@@ -269,13 +271,18 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                     }
                     if let _ = remotePeers, let deviceContacts = deviceContacts {
                         outer: for (stableId, contact) in deviceContacts {
-                            inner: for phoneNumber in contact.phoneNumbers {
+                            inner: for phoneNumber in contact.0.phoneNumbers {
                                 let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
                                 if existingNormalizedPhoneNumbers.contains(normalizedNumber) {
                                     continue outer
                                 }
                             }
-                            entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .deviceContact(stableId, contact), presence: nil, group: .deviceContacts, enabled: true))
+                            if let peerId = contact.1 {
+                                if existingPeerIds.contains(peerId) {
+                                    continue outer
+                                }
+                            }
+                            entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .deviceContact(stableId, contact.0), presence: nil, group: .deviceContacts, enabled: true))
                             index += 1
                         }
                     }

@@ -4,6 +4,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramUIPreferences
+import TelegramCallsUI
 
 private let maximumNumberOfAccounts = 3
 

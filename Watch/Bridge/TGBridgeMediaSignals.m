@@ -1,7 +1,7 @@
 #import "TGBridgeMediaSignals.h"
-#import "TGBridgeImageMediaAttachment.h"
-#import "TGBridgeVideoMediaAttachment.h"
-#import "TGBridgeDocumentMediaAttachment.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGBridgeClient.h"
 #import "TGFileCache.h"
 
