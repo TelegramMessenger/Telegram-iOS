@@ -3,9 +3,11 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
@@ -14,7 +16,7 @@ import Foundation
     import UIKit
 #endif
 import TelegramCorePrivateModule
-import TelegramApi
+
 
 public protocol AccountState: PostboxCoding {
     func equalsTo(_ other: AccountState) -> Bool

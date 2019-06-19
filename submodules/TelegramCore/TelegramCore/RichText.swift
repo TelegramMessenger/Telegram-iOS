@@ -1,11 +1,12 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
     import UIKit
+    import TelegramApi
 #endif
-import TelegramApi
 
 private enum RichTextTypes: Int32 {
     case empty = 0

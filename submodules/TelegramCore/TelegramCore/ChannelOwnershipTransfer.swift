@@ -2,11 +2,13 @@ import Foundation
 #if os(macOS)
 import SwiftSignalKitMac
 import PostboxMac
+import TelegramApiMac
 #else
 import SwiftSignalKit
 import Postbox
-#endif
 import TelegramApi
+#endif
+
 
 public enum ChannelOwnershipTransferError {
     case generic

@@ -2,11 +2,12 @@ import Foundation
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
     import SwiftSignalKit
 #endif
-import TelegramApi
 
 public func requestRecentAccountSessions(account: Account) -> Signal<[RecentAccountSession], NoError> {
     return account.network.request(Api.functions.account.getAuthorizations())

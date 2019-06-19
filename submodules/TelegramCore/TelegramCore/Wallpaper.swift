@@ -2,11 +2,12 @@ import Foundation
 #if os(macOS)
 import PostboxMac
 import SwiftSignalKitMac
+import TelegramApiMac
 #else
 import Postbox
 import SwiftSignalKit
-#endif
 import TelegramApi
+#endif
 
 public struct WallpaperSettings: PostboxCoding, Equatable {
     public let blur: Bool

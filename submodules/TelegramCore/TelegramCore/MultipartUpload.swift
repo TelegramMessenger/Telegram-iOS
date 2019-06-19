@@ -3,8 +3,10 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
     import SwiftSignalKit
     #if BUCK
         import MtProtoKit
@@ -13,7 +15,6 @@ import Foundation
     #endif
 #endif
 import TelegramCorePrivateModule
-import TelegramApi
 
 #if os(macOS)
     private typealias SignalKitTimer = SwiftSignalKitMac.Timer

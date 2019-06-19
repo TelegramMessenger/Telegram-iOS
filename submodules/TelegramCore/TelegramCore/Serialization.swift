@@ -1,14 +1,16 @@
 import Foundation
 #if os(macOS)
     import MtProtoKitMac
+    import TelegramApiMac
 #else
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
         import MtProtoKitDynamic
     #endif
 #endif
-import TelegramApi
+
 
 #if os(macOS)
 private let apiPrefix = "TelegramCoreMac.Api."

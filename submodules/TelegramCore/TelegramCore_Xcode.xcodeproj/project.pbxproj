@@ -673,6 +673,7 @@
 		D0CA8E4B227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA8E4A227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift */; };
 		D0CA8E4C227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA8E4A227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift */; };
 		D0CAF2EA1D75EC600011F558 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */; };
+		D0CC4ADC22BA47280088F36D /* TelegramApiMac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CC4ADB22BA47280088F36D /* TelegramApiMac.framework */; };
 		D0D1026C2212FE52003ADA5E /* AccountSortOrderAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */; };
 		D0D1026D2212FE52003ADA5E /* AccountSortOrderAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */; };
 		D0D748021E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */; };
@@ -1180,6 +1181,8 @@
 		D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPadding.swift; sourceTree = "<group>"; };
 		D0CA8E4A227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeGroupMessageStats.swift; sourceTree = "<group>"; };
 		D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0CC4AA322BA44960088F36D /* TelegramApi.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramApi.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0CC4ADB22BA47280088F36D /* TelegramApiMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramApiMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSortOrderAttribute.swift; sourceTree = "<group>"; };
 		D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPackInteractiveOperations.swift; sourceTree = "<group>"; };
 		D0DA1D311F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedPendingPeerNotificationSettings.swift; sourceTree = "<group>"; };
@@ -1270,6 +1273,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0CC4ADC22BA47280088F36D /* TelegramApiMac.framework in Frameworks */,
 				D0B4187F1D7E054E004562A4 /* MtProtoKitMac.framework in Frameworks */,
 				D0B418721D7E0409004562A4 /* PostboxMac.framework in Frameworks */,
 				D0B418731D7E0409004562A4 /* SwiftSignalKitMac.framework in Frameworks */,
@@ -1730,6 +1734,8 @@
 		D06706631D512ADA00DED3E3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0CC4ADB22BA47280088F36D /* TelegramApiMac.framework */,
+				D0CC4AA322BA44960088F36D /* TelegramApi.framework */,
 				D035732E22B5C24F00F0920D /* TelegramApi.framework */,
 				D0AF32371FAE8C910097362B /* MultipeerConnectivity.framework */,
 				D0B4187E1D7E054E004562A4 /* MtProtoKitMac.framework */,

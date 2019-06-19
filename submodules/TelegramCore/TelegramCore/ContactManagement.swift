@@ -2,12 +2,13 @@ import Foundation
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
+    import TelegramApiMac
 #else
+    import TelegramApi
     import Postbox
     import SwiftSignalKit
 #endif
 import TelegramCorePrivateModule
-import TelegramApi
 
 private func md5(_ data: Data) -> Data {
     return data.withUnsafeBytes { bytes -> Data in
