@@ -1170,7 +1170,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 } else {
                     if let addressName = peer.addressName, !addressName.isEmpty {
                         selectedType = .publicChannel
-                    } else if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil  {
+                    } else if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
                         selectedType = .publicChannel
                     } else {
                         selectedType = .privateChannel
@@ -1193,8 +1193,16 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 title = isGroup ? presentationData.strings.GroupInfo_GroupType : presentationData.strings.Channel_TypeSetup_Title
             }
         }
+        
+        let entries = channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, state: state)
+        
+        var focusItemTag: ItemListItemTag?
+        if entries.count > 1, let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
+            focusItemTag = ChannelVisibilityEntryTag.publicLink
+        }
+        
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, state: state), style: .blocks, crossfadeState: crossfade, animateChanges: false)
+        let listState = ItemListNodeState(entries: entries, style: .blocks, focusItemTag: focusItemTag, crossfadeState: crossfade, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

@@ -200,7 +200,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .group(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text("\(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), \(strings.Conversation_StatusMembers(memberCount))")
+                    text = .text("\(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), \(memberCount > 0 ? strings.Conversation_StatusMembers(memberCount) : strings.PeopleNearby_NoMembers)")
                 } else {
                     text = .text(strings.Map_DistanceAway(stringForDistance(peer.distance)).0)
                 }
@@ -271,7 +271,6 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationDa
     }
 
     if let data = data, !data.channels.isEmpty {
-        entries.append(.channelsHeader(presentationData.theme, presentationData.strings.PeopleNearby_Channels.uppercased()))
         var i: Int32 = 0
         for channel in data.channels {
             entries.append(.channel(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, channel))
@@ -312,8 +311,6 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         guard let coordinate = coordinate else {
             return .single(nil)
         }
-        
-        print("TTTTT: \(CFAbsoluteTimeGetCurrent())")
         
         return Signal { subscriber in
             let peersNearbyContext = PeersNearbyContext(network: context.account.network, accountStateManager: context.account.stateManager, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude))

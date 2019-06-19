@@ -2027,7 +2027,9 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 |> mapToSignal { address -> Signal<Bool, NoError> in
                     return updateChannelGeoLocation(postbox: context.account.postbox, network: context.account.network, channelId: peer.id, coordinate: (coordinate.latitude, coordinate.longitude), address: address)
                 }
-                |> deliverOnMainQueue).start()
+                |> deliverOnMainQueue).start(error: { errror in
+                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                })
             }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
                 clearHighlightImpl?()
             })

@@ -1532,7 +1532,7 @@
 "Forward.ChannelReadOnly" = "Sorry, you can't post to this channel.";
 
 "Channel.ErrorAccessDenied" = "Sorry, this channel is private.";
-"Group.ErrorAccessDenied" = "Sorry, this channel is private.";
+"Group.ErrorAccessDenied" = "Sorry, this group is private.";
 "Conversation.InputTextBroadcastPlaceholder" = "Broadcast";
 
 "Channel.NotificationLoading" = "Loading...";
@@ -4409,7 +4409,7 @@ Any member of this group will be able to see messages in the channel.";
 "PeopleNearby.UsersEmpty" = "Looking for users around you...";
 "PeopleNearby.Groups" = "Groups Nearby";
 "PeopleNearby.CreateGroup" = "Create a Group Here";
-"PeopleNearby.Channels" = "Channels Nearby";
+"PeopleNearby.NoMembers" = "no members";
 
 "Channel.Management.LabelOwner" = "Owner";
 "Channel.Management.LabelAdministrator" = "Administrator";

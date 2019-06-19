@@ -250,7 +250,8 @@ class ItemListAddressItemNode: ListViewItemNode {
                     strongSelf.imageNode.frame = imageFrame
                     
                     if let icon = strongSelf.iconNode.image {
-                         strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - icon.size.width) / 2.0), y: imageFrame.minY + floorToScreenPixels((imageFrame.height - icon.size.height) / 2.0) - 7.0), size: icon.size)
+                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - icon.size.width) / 2.0), y: imageFrame.minY + floorToScreenPixels((imageFrame.height - icon.size.height) / 2.0) - 7.0), size: icon.size)
+                        strongSelf.iconNode.isHidden = imageSize.height < 50.0
                     }
                     
                     let leftInset: CGFloat

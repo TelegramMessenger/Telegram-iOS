@@ -7,7 +7,7 @@ import TelegramPresentationData
 final class PermissionContentNode: ASDisplayNode {
     private var theme: PresentationTheme
     let kind: Int32
-    
+
     private let iconNode: ASImageNode
     private let nearbyIconNode: PeersNearbyIconNode?
     private let titleNode: ImmediateTextNode
@@ -18,9 +18,12 @@ final class PermissionContentNode: ASDisplayNode {
     private let privacyPolicyButton: HighlightableButtonNode
     
     private var title: String
+    private var text: String
     
     var buttonAction: (() -> Void)?
     var openPrivacyPolicy: (() -> Void)?
+    
+    var validLayout: (CGSize, UIEdgeInsets)?
     
     init(theme: PresentationTheme, strings: PresentationStrings, kind: Int32, icon: UIImage?, title: String, subtitle: String? = nil, text: String, buttonTitle: String, footerText: String? = nil, buttonAction: @escaping () -> Void, openPrivacyPolicy: (() -> Void)?) {
         self.theme = theme
@@ -30,6 +33,7 @@ final class PermissionContentNode: ASDisplayNode {
         self.openPrivacyPolicy = openPrivacyPolicy
         
         self.title = title
+        self.text = text
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -107,11 +111,37 @@ final class PermissionContentNode: ASDisplayNode {
         self.privacyPolicyButton.addTarget(self, action: #selector(self.privacyPolicyPressed), forControlEvents: .touchUpInside)
     }
     
+    func updatePresentationData(_ presentationData: PresentationData) {
+        let theme = presentationData.theme
+        self.theme = theme
+        
+        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor)
+        let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemAccentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
+        self.textNode.attributedText = parseMarkdownIntoAttributedString(self.text.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
+        
+        if let subtitle = self.subtitleNode.attributedText?.string {
+            self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
+        }
+        if let footerText = self.footerNode.attributedText?.string {
+            self.footerNode.attributedText = NSAttributedString(string: footerText, font: Font.regular(13.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
+        }
+        
+        if let privacyPolicyTitle = self.privacyPolicyButton.attributedTitle(for: .normal)?.string {
+            self.privacyPolicyButton.setTitle(privacyPolicyTitle, with: Font.regular(16.0), with: theme.list.itemAccentColor, for: .normal)
+        }
+        
+        if let validLayout = self.validLayout {
+            self.updateLayout(size: validLayout.0, insets: validLayout.1, transition: .immediate)
+        }
+    }
+    
     @objc func privacyPolicyPressed() {
         self.openPrivacyPolicy?()
     }
     
     func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, insets)
+        
         let sidePadding: CGFloat
         let fontSize: CGFloat
         if min(size.width, size.height) > 330.0 {
@@ -159,7 +189,12 @@ final class PermissionContentNode: ASDisplayNode {
 
         let privacySpacing: CGFloat = max(30.0 + privacyButtonSize.height, (availableHeight - titleTextSpacing - buttonSpacing - imageSize.height - imageSpacing) / 2.0)
         
-        let contentOrigin = insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0) - availableHeight * 0.05
+        var verticalOffset: CGFloat = 0.0
+        if size.height >= 568.0 {
+            verticalOffset = availableHeight * 0.05
+        }
+        
+        let contentOrigin = insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0) - verticalOffset
         let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: contentOrigin), size: imageSize)
         let nearbyIconFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: contentOrigin), size: imageSize)
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: iconFrame.maxY + imageSpacing), size: titleSize)
@@ -188,5 +223,7 @@ final class PermissionContentNode: ASDisplayNode {
         transition.updateFrame(node: self.actionButton, frame: buttonFrame)
         transition.updateFrame(node: self.footerNode, frame: footerFrame)
         transition.updateFrame(node: self.privacyPolicyButton, frame: privacyButtonFrame)
+        
+        self.footerNode.isHidden = size.height < 568.0
     }
 }

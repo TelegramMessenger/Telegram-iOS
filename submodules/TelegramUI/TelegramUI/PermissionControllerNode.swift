@@ -95,6 +95,7 @@ final class PermissionControllerNode: ASDisplayNode {
     
     private func applyPresentationData() {
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+        
     }
     
     func animateIn(completion: (() -> Void)? = nil) {
