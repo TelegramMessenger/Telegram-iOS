@@ -831,7 +831,9 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             
             if isCreator || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
                 if cachedChannelData.peerGeoLocation != nil {
-                     entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_PublicLink, channel.addressName ?? presentationData.strings.GroupInfo_PublicLinkAdd))
+                    if isCreator {
+                        entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_PublicLink, channel.addressName ?? presentationData.strings.GroupInfo_PublicLinkAdd))
+                    }
                 } else {
                     if cachedChannelData.flags.contains(.canChangeUsername) {
                         entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
@@ -1563,7 +1565,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     }
                 } else if let channel = groupPeer as? TelegramChannel {
                     if channel.hasPermission(.inviteMembers) {
-                        if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                        if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.username == nil) {
                             canCreateInviteLink = true
                         }
                     }
