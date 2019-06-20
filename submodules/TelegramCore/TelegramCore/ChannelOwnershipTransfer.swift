@@ -56,7 +56,7 @@ public func checkOwnershipTranfserAvailability(postbox: Postbox, network: Networ
                 }
             } else if error.errorDescription == "CHANNELS_ADMIN_PUBLIC_TOO_MUCH" {
                 return .userPublicChannelsTooMuch
-            } else if error.errorDescription == "CHANNELS_ADMIN_LOCATED_TOO_MUCHs" {
+            } else if error.errorDescription == "CHANNELS_ADMIN_LOCATED_TOO_MUCH" {
                 return .userLocatedGroupsTooMuch
             } else if error.errorDescription == "ADMINS_TOO_MUCH" {
                 return .adminsTooMuch
