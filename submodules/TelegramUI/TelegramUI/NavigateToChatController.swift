@@ -10,7 +10,7 @@ public enum NavigateToChatKeepStack {
     case never
 }
 
-public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, parentGroupId: PeerGroupId? = nil, completion: @escaping () -> Void = {}) {
+public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, parentGroupId: PeerGroupId? = nil, completion: @escaping () -> Void = {}) {
     var found = false
     var isFirst = true
     for controller in navigationController.viewControllers.reversed() {
@@ -35,6 +35,9 @@ public func navigateToChatController(navigationController: NavigationController,
                 completion()
             }
             controller.purposefulAction = purposefulAction
+            if activateInput {
+                controller.activateInput()
+            }
             found = true
             break
         }
@@ -79,6 +82,9 @@ public func navigateToChatController(navigationController: NavigationController,
             } else {
                 navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: animated, completion: completion)
             }
+        }
+        if activateInput {
+            controller.activateInput()
         }
     }
     

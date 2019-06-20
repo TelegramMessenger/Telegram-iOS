@@ -40,7 +40,7 @@ private func createChannel(account: Account, title: String, description: String?
         
         return account.network.request(Api.functions.channels.createChannel(flags: flags, title: title, about: description ?? "", geoPoint: geoPoint, address: address), automaticFloodWait: false)
         |> mapError { error -> CreateChannelError in
-            if error.errorDescription == "" {
+            if error.errorDescription == "CHANNELS_ADMIN_LOCATED_TOO_MUCH" {
                 return .tooMuchLocationBasedGroups
             } else if error.errorDescription == "USER_RESTRICTED" {
                 return .restricted

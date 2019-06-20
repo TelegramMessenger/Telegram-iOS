@@ -253,9 +253,7 @@ final class PeerChannelMemberCategoriesContextsManager {
                 strongSelf.impl.with { impl in
                     for (contextPeerId, context) in impl.contexts {
                         if peerId == contextPeerId {
-                            for (previous, updated) in results {
-                                context.replayUpdates([(previous, updated, nil)])
-                            }
+                            context.replayUpdates(results.map { ($0.0, $0.1, nil) })
                         }
                     }
                 }

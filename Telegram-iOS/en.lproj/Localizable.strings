@@ -1532,7 +1532,7 @@
 "Forward.ChannelReadOnly" = "Sorry, you can't post to this channel.";
 
 "Channel.ErrorAccessDenied" = "Sorry, this channel is private.";
-"Group.ErrorAccessDenied" = "Sorry, this channel is private.";
+"Group.ErrorAccessDenied" = "Sorry, this group is private.";
 "Conversation.InputTextBroadcastPlaceholder" = "Broadcast";
 
 "Channel.NotificationLoading" = "Loading...";
@@ -4409,7 +4409,7 @@ Any member of this group will be able to see messages in the channel.";
 "PeopleNearby.UsersEmpty" = "Looking for users around you...";
 "PeopleNearby.Groups" = "Groups Nearby";
 "PeopleNearby.CreateGroup" = "Create a Group Here";
-"PeopleNearby.Channels" = "Channels Nearby";
+"PeopleNearby.NoMembers" = "no members";
 
 "Channel.Management.LabelOwner" = "Owner";
 "Channel.Management.LabelAdministrator" = "Administrator";
@@ -4425,7 +4425,6 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.AdminLog.MessageTransferedNameUsername" = "transferred ownership to %1$@ (%2$@)";
 
 "Channel.AdminLog.MessageChangedGroupGeoLocation" = "changed group location to \"%@\"";
-"Channel.AdminLog.MessageRemovedGroupGeoLocation" = "%@ removed group location";
 
 "Map.SetThisLocation" = "Set This Location";
 
@@ -4450,6 +4449,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Group.PublicLink.Title" = "Public Link";
 "Group.PublicLink.Placeholder" = "link";
-"Group.PublicLink.Info" = "People can share this link with others and find your group using Telegram search.\n\nYou can use use **a-z**, **0-9** and undescores. Minimum length is **5** characters.";
+"Group.PublicLink.Info" = "People can share this link with others and find your group using Telegram search.\n\nYou can use **a-z**, **0-9** and underscores. Minimum length is **5** characters.";
 
 "CreateGroup.ErrorLocatedGroupsTooMuch" = "Sorry, you have too many location-based groups already. Please delete one of your existing ones first.";
+
+"GroupInfo.LabelOwner" = "owner";

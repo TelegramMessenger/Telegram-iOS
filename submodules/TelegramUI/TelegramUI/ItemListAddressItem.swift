@@ -184,12 +184,13 @@ class ItemListAddressItemNode: ListViewItemNode {
             let string = stringWithAppliedEntities(item.text, entities: [], baseColor: baseColor, linkColor: item.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, fixedFont: textFixedFont)
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset - 98.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            var padding: CGFloat = !item.label.isEmpty ? 39.0 : 20.0
-            let contentSize = CGSize(width: params.width, height: textLayout.size.height + padding)
+            let padding: CGFloat = !item.label.isEmpty ? 39.0 : 20.0
             
-            let imageSide = min(90.0, contentSize.height - 18.0)
+            let imageSide = min(90.0, max(46.0, textLayout.size.height + padding - 18.0))
             let imageSize = CGSize(width: imageSide, height: imageSide)
             let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(radius: 4.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
+            
+            let contentSize = CGSize(width: params.width, height: max(textLayout.size.height + padding, imageSize.height + 18.0))
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             return (nodeLayout, { [weak self] animation in
@@ -250,7 +251,8 @@ class ItemListAddressItemNode: ListViewItemNode {
                     strongSelf.imageNode.frame = imageFrame
                     
                     if let icon = strongSelf.iconNode.image {
-                         strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - icon.size.width) / 2.0), y: imageFrame.minY + floorToScreenPixels((imageFrame.height - icon.size.height) / 2.0) - 7.0), size: icon.size)
+                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - icon.size.width) / 2.0), y: imageFrame.minY + floorToScreenPixels((imageFrame.height - icon.size.height) / 2.0) - 7.0), size: icon.size)
+                        strongSelf.iconNode.isHidden = imageSize.height < 50.0
                     }
                     
                     let leftInset: CGFloat

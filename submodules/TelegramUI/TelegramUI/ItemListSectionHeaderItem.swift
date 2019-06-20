@@ -19,15 +19,17 @@ class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
     let multiline: Bool
+    let activityIndicator: Bool
     let accessoryText: ItemListSectionHeaderAccessoryText?
     let sectionId: ItemListSectionId
     
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, text: String, multiline: Bool = false, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, text: String, multiline: Bool = false, activityIndicator: Bool = false, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
         self.theme = theme
         self.text = text
         self.multiline = multiline
+        self.activityIndicator = activityIndicator
         self.accessoryText = accessoryText
         self.sectionId = sectionId
     }
@@ -72,8 +74,11 @@ class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
 private let titleFont = Font.regular(14.0)
 
 class ItemListSectionHeaderItemNode: ListViewItemNode {
+    private var item: ItemListSectionHeaderItem?
+    
     private let titleNode: TextNode
     private let accessoryTextNode: TextNode
+    private var activityIndicator: ActivityIndicator?
     
     private let activateArea: AccessibilityAreaNode
     
@@ -101,6 +106,8 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: ItemListSectionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeAccessoryTextLayout = TextNode.asyncLayout(self.accessoryTextNode)
+        
+        let previousItem = self.item
         
         return { item, params, neighbors in
             let leftInset: CGFloat = 15.0 + params.leftInset
@@ -136,6 +143,8 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    strongSelf.item = item
+                    
                     let _ = titleApply()
                     let _ = accessoryApply()
                     
@@ -144,6 +153,31 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: titleLayout.size)
                     strongSelf.accessoryTextNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - accessoryLayout.size.width, y: 7.0), size: accessoryLayout.size)
+                    
+                    if previousItem?.activityIndicator != item.activityIndicator {
+                        if item.activityIndicator {
+                            let activityIndicator: ActivityIndicator
+                            if let currentActivityIndicator = strongSelf.activityIndicator {
+                                activityIndicator = currentActivityIndicator
+                            } else {
+                                activityIndicator = ActivityIndicator(type: .custom(item.theme.list.sectionHeaderTextColor, 18.0, 1.0, false))
+                                strongSelf.addSubnode(activityIndicator)
+                                strongSelf.activityIndicator = activityIndicator
+                            }
+                            activityIndicator.isHidden = false
+                            if previousItem != nil {
+                                activityIndicator.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false)
+                            }
+                        } else if let activityIndicator = strongSelf.activityIndicator {
+                            activityIndicator.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { finished in
+                                if finished {
+                                    activityIndicator.isHidden = true
+                                }
+                            })
+                        }
+                    }
+                    
+                    strongSelf.activityIndicator?.frame = CGRect(origin: CGPoint(x: strongSelf.titleNode.frame.maxX + 6.0, y: 7.0 - UIScreenPixel), size: CGSize(width: 18.0, height: 18.0))
                 }
             })
         }

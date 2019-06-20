@@ -94,6 +94,7 @@ private enum GroupInfoEntryTag {
 private enum GroupInfoMemberStatus {
     case member
     case admin
+    case owner
 }
 
 private enum GroupEntryStableId: Hashable, Equatable {
@@ -529,6 +530,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case let .member(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, peer, participant, presence, memberStatus, editing, actions, enabled, selectable):
                 let label: String?
                 switch memberStatus {
+                    case .owner:
+                        label = strings.GroupInfo_LabelOwner
                     case .admin:
                         label = strings.GroupInfo_LabelAdmin
                     case .member:
@@ -831,7 +834,9 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             
             if isCreator || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
                 if cachedChannelData.peerGeoLocation != nil {
-                     entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_PublicLink, channel.addressName ?? presentationData.strings.GroupInfo_PublicLinkAdd))
+                    if isCreator {
+                        entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_PublicLink, channel.addressName ?? presentationData.strings.GroupInfo_PublicLinkAdd))
+                    }
                 } else {
                     if cachedChannelData.flags.contains(.canChangeUsername) {
                         entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
@@ -1128,7 +1133,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             let memberStatus: GroupInfoMemberStatus
             switch participant.participant {
                 case .creator:
-                    memberStatus = .admin
+                    memberStatus = .owner
                 case let .member(_, _, adminInfo, _):
                     if adminInfo != nil {
                         memberStatus = .admin
@@ -1563,7 +1568,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     }
                 } else if let channel = groupPeer as? TelegramChannel {
                     if channel.hasPermission(.inviteMembers) {
-                        if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                        if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.username == nil) {
                             canCreateInviteLink = true
                         }
                     }
@@ -2027,7 +2032,9 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 |> mapToSignal { address -> Signal<Bool, NoError> in
                     return updateChannelGeoLocation(postbox: context.account.postbox, network: context.account.network, channelId: peer.id, coordinate: (coordinate.latitude, coordinate.longitude), address: address)
                 }
-                |> deliverOnMainQueue).start()
+                |> deliverOnMainQueue).start(error: { errror in
+                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                })
             }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
                 clearHighlightImpl?()
             })

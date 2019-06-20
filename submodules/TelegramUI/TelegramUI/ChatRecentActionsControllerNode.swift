@@ -772,7 +772,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             strongSelf.openPeer(peerId: peerId, peer: nil)
                         }
                     case .inaccessiblePeer:
-                        strongSelf.controllerInteraction.presentController(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                        strongSelf.controllerInteraction.presentController(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                     case .botStart:
                         break
                         //strongSelf.openPeer(peerId: peerId, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)), fromMessage: nil)

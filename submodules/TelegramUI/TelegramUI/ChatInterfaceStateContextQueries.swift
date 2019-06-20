@@ -83,7 +83,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     case .installed:
                         scope = [.installed]
                 }
-                return searchStickers(account: context.account, query: query, scope: scope)
+                return searchStickers(account: context.account, query: query.trimmedEmoji, scope: scope)
             }
             |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 return { _ in

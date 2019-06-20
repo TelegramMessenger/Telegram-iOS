@@ -136,7 +136,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     } else {
                         text = presentationInterfaceState.strings.Group_ErrorAccessDenied
                     }
-                    strongSelf.interfaceInteraction?.presentController(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationInterfaceState.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationInterfaceState.strings.Common_OK, action: {})]), nil)
+                    strongSelf.interfaceInteraction?.presentController(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationInterfaceState.strings.Common_OK, action: {})]), nil)
                 }))
             case .kicked:
                 break

@@ -407,9 +407,6 @@
 		D0642EFC1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EFB1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift */; };
 		D064EF871F69A06F00AC0398 /* MessageContentKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = D064EF861F69A06F00AC0398 /* MessageContentKind.swift */; };
 		D0671F2D2145AB28000A8AE7 /* LegacyAvatarPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0671F2C2145AB28000A8AE7 /* LegacyAvatarPicker.swift */; };
-		D067B4A5211C911C00796039 /* LegacyChannelIntroController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D067B4A4211C911C00796039 /* LegacyChannelIntroController.swift */; };
-		D067B4AA211C916300796039 /* TGChannelIntroController.h in Headers */ = {isa = PBXBuildFile; fileRef = D067B4A6211C916200796039 /* TGChannelIntroController.h */; };
-		D067B4AD211C916300796039 /* TGChannelIntroController.m in Sources */ = {isa = PBXBuildFile; fileRef = D067B4A9211C916200796039 /* TGChannelIntroController.m */; };
 		D0684A041F6C3AD50059F570 /* ChatListTypingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0684A031F6C3AD50059F570 /* ChatListTypingNode.swift */; };
 		D06887F01F72DEE6000AB936 /* ShareInputFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06887EF1F72DEE6000AB936 /* ShareInputFieldNode.swift */; };
 		D069F5D0212700B90000565A /* StickerPanePeerSpecificSetupGridItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D069F5CF212700B90000565A /* StickerPanePeerSpecificSetupGridItem.swift */; };
@@ -1733,9 +1730,6 @@
 		D0642EFB1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryNavigationButtons.swift; sourceTree = "<group>"; };
 		D064EF861F69A06F00AC0398 /* MessageContentKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageContentKind.swift; sourceTree = "<group>"; };
 		D0671F2C2145AB28000A8AE7 /* LegacyAvatarPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyAvatarPicker.swift; sourceTree = "<group>"; };
-		D067B4A4211C911C00796039 /* LegacyChannelIntroController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyChannelIntroController.swift; sourceTree = "<group>"; };
-		D067B4A6211C916200796039 /* TGChannelIntroController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGChannelIntroController.h; sourceTree = "<group>"; };
-		D067B4A9211C916200796039 /* TGChannelIntroController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGChannelIntroController.m; sourceTree = "<group>"; };
 		D0684A031F6C3AD50059F570 /* ChatListTypingNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListTypingNode.swift; sourceTree = "<group>"; };
 		D06879541DB8F1FC00424BBD /* CachedResourceRepresentations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedResourceRepresentations.swift; sourceTree = "<group>"; };
 		D06879561DB8F22200424BBD /* FetchCachedRepresentations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchCachedRepresentations.swift; sourceTree = "<group>"; };
@@ -3267,16 +3261,6 @@
 			name = "Setup Two Step Verification";
 			sourceTree = "<group>";
 		};
-		D067B4AE211C916D00796039 /* Channel Intro */ = {
-			isa = PBXGroup;
-			children = (
-				D067B4A4211C911C00796039 /* LegacyChannelIntroController.swift */,
-				D067B4A6211C916200796039 /* TGChannelIntroController.h */,
-				D067B4A9211C916200796039 /* TGChannelIntroController.m */,
-			);
-			name = "Channel Intro";
-			sourceTree = "<group>";
-		};
 		D0736F261DF4D2F300F2C02A /* Telegram Controller */ = {
 			isa = PBXGroup;
 			children = (
@@ -3336,7 +3320,6 @@
 		D07551891DDA4C7C0073E051 /* Legacy Components */ = {
 			isa = PBXGroup;
 			children = (
-				D067B4AE211C916D00796039 /* Channel Intro */,
 				D0AE2FDB22B1D3610058D3BC /* Bridge Audio */,
 				D075518A1DDA4D7D0073E051 /* LegacyController.swift */,
 				D075518C1DDA4E0B0073E051 /* LegacyControllerNode.swift */,
@@ -4899,7 +4882,6 @@
 				D0E9BACB1F05738600F079A4 /* STPAPIPostRequest.h in Headers */,
 				D0E9BA561F055A0B00F079A4 /* STPFormTextField.h in Headers */,
 				D008177C22B46B7E008A895F /* TGItemProviderSignals.h in Headers */,
-				D067B4AA211C916300796039 /* TGChannelIntroController.h in Headers */,
 				D0E9BABE1F05735F00F079A4 /* STPPaymentConfiguration+Private.h in Headers */,
 				D0E9BACA1F05738600F079A4 /* STPAPIClient+Private.h in Headers */,
 				D0E9BA251F05578900F079A4 /* STPCardBrand.h in Headers */,
@@ -5232,7 +5214,6 @@
 				D0AB263321C3DFEA008F6685 /* CreatePollOptionActionItem.swift in Sources */,
 				09FFBCDB22849CB500C33B4B /* PDF.swift in Sources */,
 				09D968A1221F7FF100B1458A /* ChatTypingActivityContentNode.swift in Sources */,
-				D067B4AD211C916300796039 /* TGChannelIntroController.m in Sources */,
 				D0BE303220601FFC00FBE6D8 /* LocationBroadcastActionSheetItem.swift in Sources */,
 				090E778E22AA863A00CD99F5 /* PeersNearbyIconNode.swift in Sources */,
 				D0EC6CF41EB9F58800EBF1C3 /* ManagedMediaId.swift in Sources */,
@@ -5959,7 +5940,6 @@
 				091417F421EF4F5F00C8325A /* WallpaperGalleryItem.swift in Sources */,
 				D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */,
 				D0EC6E461EB9F58900EBF1C3 /* ItemListLoadingIndicatorEmptyStateItem.swift in Sources */,
-				D067B4A5211C911C00796039 /* LegacyChannelIntroController.swift in Sources */,
 				D00817CF22B47A14008A895F /* LegacyFileImport.swift in Sources */,
 				D01A21AF1F39EA2E00DDA104 /* InstantPageTheme.swift in Sources */,
 				D0EC6E471EB9F58900EBF1C3 /* ItemListTextEmptyStateItem.swift in Sources */,

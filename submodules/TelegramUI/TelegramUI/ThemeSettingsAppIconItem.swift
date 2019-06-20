@@ -190,16 +190,19 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
         self.scrollNode.view.showsHorizontalScrollIndicator = false
     }
     
+    private func scrollToNode(_ node: ThemeSettingsAppIconNode, animated: Bool) {
+        let bounds = self.scrollNode.view.bounds
+        let frame = node.frame.insetBy(dx: -48.0, dy: 0.0)
+        
+        if frame.minX < bounds.minX || frame.maxX > bounds.maxX {
+            self.scrollNode.view.scrollRectToVisible(frame, animated: animated)
+        }
+    }
+    
     func asyncLayout() -> (_ item: ThemeSettingsAppIconItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
         return { item, params, neighbors in
-            var themeUpdated = false
-            if currentItem?.theme !== item.theme {
-                themeUpdated = true
-                
-            }
-            
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
@@ -255,6 +258,9 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                     let nodeSize = CGSize(width: 80.0, height: 112.0)
                     var nodeOffset = nodeInset
                     
+                    var updated = false
+                    var selectedNode: ThemeSettingsAppIconNode?
+                    
                     var i = 0
                     for icon in item.icons {
                         let imageNode: ThemeSettingsAppIconNode
@@ -264,10 +270,14 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                             imageNode = ThemeSettingsAppIconNode()
                             strongSelf.nodes.append(imageNode)
                             strongSelf.scrollNode.addSubnode(imageNode)
+                            updated = true
                         }
                         
                         if let image = UIImage(named: icon.imageName, in: Bundle.main, compatibleWith: nil) {
                             let selected = icon.name == item.currentIconName
+                            if selected {
+                                selectedNode = imageNode
+                            }
                             
                             var name = "Icon"
                             var bordered = true
@@ -292,8 +302,11 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     break
                             }
                         
-                            imageNode.setup(theme: item.theme, icon: image, title: NSAttributedString(string: name, font: textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: bordered, selected: selected, action: {
+                            imageNode.setup(theme: item.theme, icon: image, title: NSAttributedString(string: name, font: textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: bordered, selected: selected, action: { [weak self, weak imageNode] in
                                 item.updated(icon.name)
+                                if let imageNode = imageNode {
+                                    self?.scrollToNode(imageNode, animated: true)
+                                }
                             })
                         }
                         
@@ -308,6 +321,10 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                         if strongSelf.scrollNode.view.contentSize != contentSize {
                             strongSelf.scrollNode.view.contentSize = contentSize
                         }
+                    }
+                    
+                    if updated, let selectedNode = selectedNode {
+                        strongSelf.scrollToNode(selectedNode, animated: false)
                     }
                 }
             })
