@@ -31,14 +31,15 @@ public final class PeersNearbyContext {
     private var entries: [PeerNearby]?
    
     public init(network: Network, accountStateManager: AccountStateManager, coordinate: (latitude: Double, longitude: Double)) {
-        let expiryThreshold: Double = 10.0
+        let expiryExtension: Double = 10.0
         
         let poll = network.request(Api.functions.contacts.getLocated(geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude)))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { updates -> Signal<[PeerNearby], NoError> in
+        |> introduceError(Void.self)
+        |> mapToSignal { updates -> Signal<[PeerNearby], Void> in
             var peersNearby: [PeerNearby] = []
             if let updates = updates {
                 switch updates {
@@ -56,18 +57,31 @@ public final class PeersNearbyContext {
                 accountStateManager.addUpdates(updates)
             }
             return .single(peersNearby)
-            |> then(accountStateManager.updatedPeersNearby())
+            |> then(
+                accountStateManager.updatedPeersNearby()
+                |> introduceError(Void.self)
+            )
         }
         
-        self.disposable.set((((poll |> then(.complete() |> suspendAwareDelay(25.0, queue: self.queue))) |> restart)
+        let error: Signal<Void, Void> = .single(Void()) |> then(Signal.fail(Void()) |> suspendAwareDelay(25.0, queue: self.queue))
+        let combined = combineLatest(poll, error)
+        |> map { data, _ -> [PeerNearby] in
+            return data
+        }
+        |> restartIfError
+        |> `catch` { _ -> Signal<[PeerNearby], NoError> in
+            return .single([])
+        }
+        
+        self.disposable.set((combined
         |> deliverOn(self.queue)).start(next: { [weak self] updatedEntries in
             guard let strongSelf = self else {
                 return
             }
             
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            var entries = strongSelf.entries?.filter { Double($0.expires) + expiryThreshold > timestamp } ?? []
-            let updatedEntries = updatedEntries.filter { Double($0.expires) + expiryThreshold > timestamp }
+            var entries = strongSelf.entries?.filter { Double($0.expires) + expiryExtension > timestamp } ?? []
+            let updatedEntries = updatedEntries.filter { Double($0.expires) + expiryExtension > timestamp }
             
             var existingPeerIds: [PeerId: Int] = [:]
             for i in 0 ..< entries.count {
@@ -83,7 +97,6 @@ public final class PeersNearbyContext {
             }
             
             strongSelf.entries = entries
-            
             for subscriber in strongSelf.subscribers.copyItems() {
                 subscriber(strongSelf.entries)
             }
@@ -95,7 +108,10 @@ public final class PeersNearbyContext {
             }
             
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            strongSelf.entries = strongSelf.entries?.filter { Double($0.expires) + expiryThreshold > timestamp }
+            strongSelf.entries = strongSelf.entries?.filter { Double($0.expires) + expiryExtension > timestamp }
+            for subscriber in strongSelf.subscribers.copyItems() {
+                subscriber(strongSelf.entries)
+            }
         }, queue: self.queue)
         self.timer?.start()
     }

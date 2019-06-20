@@ -356,23 +356,9 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
             }
         }
     }
-    
-//    let errorSignal: Signal<Void, Void> = .single(Void()) |> then( Signal.fail(Void()) |> suspendAwareDelay(25.0, queue: Queue.concurrentDefaultQueue()) )
-//    let combinedSignal = combineLatest(dataSignal, errorSignal) |> map { data, _ -> PeersNearbyData? in
-//        return data
-//    }
-//    |> restartIfError
-//    |> `catch` { _ -> Signal<PeersNearbyData?, NoError> in
-//        return .single(nil)
-//    } |> filter { value in
-//        return value != nil
-//    }
-//    dataPromise.set(.single(nil) |> then(combinedSignal))
-
     dataPromise.set(dataSignal)
     
     let previousData = Atomic<PeersNearbyData?>(value: nil)
-    
     let displayLoading: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(1.0, queue: Queue.mainQueue()))
     
     let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), displayLoading)
