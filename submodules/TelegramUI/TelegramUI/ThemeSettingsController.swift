@@ -316,7 +316,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     
     let availableAppIcons: Signal<[PresentationAppIcon], NoError> = .single(context.sharedContext.applicationBindings.getAvailableAlternateIcons())
     let currentAppIconName = ValuePromise<String?>()
-    currentAppIconName.set(context.sharedContext.applicationBindings.getAlternateIconName() ?? "Black")
+    currentAppIconName.set(context.sharedContext.applicationBindings.getAlternateIconName() ?? "Blue")
     
     let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { index in
         let theme: PresentationThemeReference
