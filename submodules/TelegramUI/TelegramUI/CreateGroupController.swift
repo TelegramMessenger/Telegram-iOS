@@ -443,7 +443,7 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                     case .tooMuchLocationBasedGroups:
                         text = presentationData.strings.CreateGroup_ErrorLocatedGroupsTooMuch
                 }
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }))
         }
     }, changeProfilePhoto: {

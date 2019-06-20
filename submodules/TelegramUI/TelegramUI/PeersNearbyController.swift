@@ -289,6 +289,8 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     var navigateToChatImpl: ((Peer) -> Void)?
     
     let actionsDisposable = DisposableSet()
+    let checkCreationAvailabilityDisposable = MetaDisposable()
+    actionsDisposable.add(checkCreationAvailabilityDisposable)
     
     let dataPromise = Promise<PeersNearbyData?>(nil)
     let addressPromise = Promise<String?>(nil)
@@ -297,12 +299,43 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         navigateToChatImpl?(peer)
     }, openCreateGroup: { latitude, longitude, address in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = PermissionController(context: context, splashScreen: true)
-        controller.setState(.custom(icon: PermissionControllerCustomIcon(light: UIImage(bundleImageName: "Location/LocalGroupLightIcon"), dark: UIImage(bundleImageName: "Location/LocalGroupDarkIcon")), title: presentationData.strings.LocalGroup_Title, subtitle: address, text: presentationData.strings.LocalGroup_Text, buttonTitle: presentationData.strings.LocalGroup_ButtonTitle, footerText: presentationData.strings.LocalGroup_IrrelevantWarning), animated: false)
-        controller.proceed = { result in
-            replaceTopControllerImpl?(createGroupController(context: context, peerIds: [], mode: .locatedGroup(latitude: latitude, longitude: longitude, address: address)))
+
+        var cancelImpl: (() -> Void)?
+        let progressSignal = Signal<Never, NoError> { subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            presentControllerImpl?(controller, nil)
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
         }
-        pushControllerImpl?(controller)
+        |> runOn(Queue.mainQueue())
+        |> delay(0.5, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        cancelImpl = {
+            checkCreationAvailabilityDisposable.set(nil)
+        }
+        checkCreationAvailabilityDisposable.set((checkPublicChannelCreationAvailability(account: context.account, location: true)
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        |> deliverOnMainQueue).start(next: { available in
+            if available {
+                let controller = PermissionController(context: context, splashScreen: true)
+                controller.setState(.custom(icon: PermissionControllerCustomIcon(light: UIImage(bundleImageName: "Location/LocalGroupLightIcon"), dark: UIImage(bundleImageName: "Location/LocalGroupDarkIcon")), title: presentationData.strings.LocalGroup_Title, subtitle: address, text: presentationData.strings.LocalGroup_Text, buttonTitle: presentationData.strings.LocalGroup_ButtonTitle, footerText: presentationData.strings.LocalGroup_IrrelevantWarning), animated: false)
+                controller.proceed = { result in
+                    replaceTopControllerImpl?(createGroupController(context: context, peerIds: [], mode: .locatedGroup(latitude: latitude, longitude: longitude, address: address)))
+                }
+                pushControllerImpl?(controller)
+            } else {
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CreateGroup_ErrorLocatedGroupsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            }
+        }))
     })
     
     let dataSignal: Signal<PeersNearbyData?, NoError> = currentLocationManagerCoordinate(manager: context.sharedContext.locationManager!, timeout: 5.0)
@@ -359,7 +392,11 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     dataPromise.set(dataSignal)
     
     let previousData = Atomic<PeersNearbyData?>(value: nil)
-    let displayLoading: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(1.0, queue: Queue.mainQueue()))
+    let displayLoading: Signal<Bool, NoError> = .single(false)
+    |> then(
+        .single(true)
+        |> delay(1.0, queue: Queue.mainQueue())
+    )
     
     let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), displayLoading)
     |> deliverOnMainQueue

@@ -158,6 +158,22 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
     } |> mapError { _ -> UpdateAddressNameError in return .generic } |> switchToLatest
 }
 
+public func checkPublicChannelCreationAvailability(account: Account, location: Bool = false) -> Signal<Bool, NoError> {
+    var flags: Int32 = (1 << 1)
+    if location {
+        flags |= (1 << 0)
+    }
+    
+    return account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: flags))
+    |> retryRequest
+    |> map { _ -> Bool in
+        return true
+    }
+    |> `catch` { error -> Signal<Bool, NoError> in
+        return .single(false)
+    }
+}
+
 public func adminedPublicChannels(account: Account, location: Bool = false) -> Signal<[Peer], NoError> {
     var flags: Int32 = 0
     if location {
