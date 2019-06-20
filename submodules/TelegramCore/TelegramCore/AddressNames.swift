@@ -165,7 +165,6 @@ public func checkPublicChannelCreationAvailability(account: Account, location: B
     }
     
     return account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: flags))
-    |> retryRequest
     |> map { _ -> Bool in
         return true
     }
