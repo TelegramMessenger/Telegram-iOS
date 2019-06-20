@@ -85,10 +85,17 @@ public func updateChannelOwnership(account: Account, accountStateManager: Accoun
     }
     |> mapToSignal { currentCreator, currentParticipant -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> in
         return account.postbox.transaction { transaction -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> in
-            if let channel = transaction.getPeer(channelId), let inputChannel = apiInputChannel(channel), let accountUser = transaction.getPeer(account.peerId), let user = transaction.getPeer(memberId), let inputUser = apiInputUser(user) {
+            if let channel = transaction.getPeer(channelId) as? TelegramChannel, let inputChannel = apiInputChannel(channel), let accountUser = transaction.getPeer(account.peerId), let user = transaction.getPeer(memberId), let inputUser = apiInputUser(user) {
+                
+                var flags: TelegramChatAdminRightsFlags
+                if case .broadcast = channel.info {
+                    flags = TelegramChatAdminRightsFlags.broadcastSpecific
+                } else {
+                    flags = TelegramChatAdminRightsFlags.groupSpecific
+                }
                 
                 let updatedParticipant = ChannelParticipant.creator(id: user.id)
-                let updatedPreviousCreator = ChannelParticipant.member(id: accountUser.id, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags:[]), promotedBy: accountUser.id, canBeEditedByAccountPeer: false), banInfo: nil)
+                let updatedPreviousCreator = ChannelParticipant.member(id: accountUser.id, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: flags), promotedBy: accountUser.id, canBeEditedByAccountPeer: false), banInfo: nil)
                 
                 let checkPassword = twoStepAuthData(account.network)
                 |> mapError { error -> ChannelOwnershipTransferError in

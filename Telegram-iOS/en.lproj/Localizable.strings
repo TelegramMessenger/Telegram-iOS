@@ -4452,3 +4452,5 @@ Any member of this group will be able to see messages in the channel.";
 "Group.PublicLink.Info" = "People can share this link with others and find your group using Telegram search.\n\nYou can use **a-z**, **0-9** and underscores. Minimum length is **5** characters.";
 
 "CreateGroup.ErrorLocatedGroupsTooMuch" = "Sorry, you have too many location-based groups already. Please delete one of your existing ones first.";
+
+"GroupInfo.LabelOwner" = "owner";

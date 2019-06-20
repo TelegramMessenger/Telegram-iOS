@@ -94,6 +94,7 @@ private enum GroupInfoEntryTag {
 private enum GroupInfoMemberStatus {
     case member
     case admin
+    case owner
 }
 
 private enum GroupEntryStableId: Hashable, Equatable {
@@ -529,6 +530,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case let .member(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, peer, participant, presence, memberStatus, editing, actions, enabled, selectable):
                 let label: String?
                 switch memberStatus {
+                    case .owner:
+                        label = strings.GroupInfo_LabelOwner
                     case .admin:
                         label = strings.GroupInfo_LabelAdmin
                     case .member:
@@ -1130,7 +1133,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             let memberStatus: GroupInfoMemberStatus
             switch participant.participant {
                 case .creator:
-                    memberStatus = .admin
+                    memberStatus = .owner
                 case let .member(_, _, adminInfo, _):
                     if adminInfo != nil {
                         memberStatus = .admin
