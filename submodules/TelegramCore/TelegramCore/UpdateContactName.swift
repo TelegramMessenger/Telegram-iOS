@@ -21,26 +21,19 @@ public enum UpdateContactNameError {
 
 public func updateContactName(account: Account, peerId: PeerId, firstName: String, lastName: String) -> Signal<Void, UpdateContactNameError> {
     return account.postbox.transaction { transaction -> Signal<Void, UpdateContactNameError> in
-        if let peer = transaction.getPeer(peerId) as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
-            return account.network.request(Api.functions.contacts.importContacts(contacts: [Api.InputContact.inputPhoneContact(clientId: 1, phone: phone, firstName: firstName, lastName: lastName)]))
-                |> mapError { _ -> UpdateContactNameError in
-                    return .generic
-                }
-                |> mapToSignal { result -> Signal<Void, UpdateContactNameError> in
-                    return account.postbox.transaction { transaction -> Void in
-                        switch result {
-                            case let .importedContacts(_, _, _, users):
-                                if let first = users.first {
-                                    let user = TelegramUser(user: first)
-                                    updatePeers(transaction: transaction, peers: [user], update: { _, updated in
-                                        return updated
-                                    })
-                                }
-                        }
-                    } |> mapError { _ -> UpdateContactNameError in return .generic }
-                }
+        if let peer = transaction.getPeer(peerId) as? TelegramUser, let inputUser = apiInputUser(peer) {
+            return account.network.request(Api.functions.contacts.addContact(flags: 0, id: inputUser, firstName: firstName, lastName: lastName, phone: ""))
+            |> mapError { _ -> UpdateContactNameError in
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<Void, UpdateContactNameError> in
+                account.stateManager.addUpdates(result)
+                return .complete()
+            }
         } else {
             return .fail(.generic)
         }
-    } |> mapError { _ -> UpdateContactNameError in return .generic } |> switchToLatest
+    }
+    |> mapError { _ -> UpdateContactNameError in return .generic }
+    |> switchToLatest
 }
