@@ -138,6 +138,8 @@ public func updateChannelOwnership(account: Account, accountStateManager: Accoun
                             }
                         } else if error.errorDescription == "CHANNELS_ADMIN_PUBLIC_TOO_MUCH" {
                             return .userPublicChannelsTooMuch
+                        } else if error.errorDescription == "CHANNELS_ADMIN_LOCATED_TOO_MUCH" {
+                            return .userLocatedGroupsTooMuch
                         } else if error.errorDescription == "ADMINS_TOO_MUCH" {
                             return .adminsTooMuch
                         } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
