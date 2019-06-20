@@ -34,6 +34,8 @@ func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageT
                 string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
             case .Code, .Pre:
                 string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
+            case .Strikethrough:
+                string.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: range)
             default:
                 break
         }
@@ -121,6 +123,8 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                     nsString = text as NSString
                 }
                 string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention), value: nsString!.substring(with: range), range: range)
+            case .Strikethrough:
+                string.addAttribute(NSAttributedStringKey.strikethroughStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
             case let .TextMention(peerId):
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if underlineLinks && underlineAllLinks {

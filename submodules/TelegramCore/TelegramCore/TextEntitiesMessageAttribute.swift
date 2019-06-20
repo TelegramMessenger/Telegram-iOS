@@ -305,13 +305,10 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
                 break
             case .Strikethrough:
                 apiEntities.append(.messageEntityStrike(offset: offset, length: length))
-                break
             case .BlockQuote:
                 apiEntities.append(.messageEntityBlockquote(offset: offset, length: length))
-                break
             case .Underline:
                 apiEntities.append(.messageEntityUnderline(offset: offset, length: length))
-                break
             case .Custom:
                 break
         }

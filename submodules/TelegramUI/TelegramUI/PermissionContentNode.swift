@@ -4,6 +4,20 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 
+enum PermissionContentIcon {
+    case image(UIImage?)
+    case icon(PermissionControllerCustomIcon)
+    
+    func imageForTheme(_ theme: PresentationTheme) -> UIImage? {
+        switch self {
+            case let .image(image):
+                return image
+            case let .icon(icon):
+                return theme.overallDarkAppearance ? (icon.dark ?? icon.light) : icon.light
+        }
+    }
+}
+
 final class PermissionContentNode: ASDisplayNode {
     private var theme: PresentationTheme
     let kind: Int32
@@ -17,6 +31,7 @@ final class PermissionContentNode: ASDisplayNode {
     private let footerNode: ImmediateTextNode
     private let privacyPolicyButton: HighlightableButtonNode
     
+    private let icon: PermissionContentIcon
     private var title: String
     private var text: String
     
@@ -25,13 +40,14 @@ final class PermissionContentNode: ASDisplayNode {
     
     var validLayout: (CGSize, UIEdgeInsets)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, kind: Int32, icon: UIImage?, title: String, subtitle: String? = nil, text: String, buttonTitle: String, footerText: String? = nil, buttonAction: @escaping () -> Void, openPrivacyPolicy: (() -> Void)?) {
+    init(theme: PresentationTheme, strings: PresentationStrings, kind: Int32, icon: PermissionContentIcon, title: String, subtitle: String? = nil, text: String, buttonTitle: String, footerText: String? = nil, buttonAction: @escaping () -> Void, openPrivacyPolicy: (() -> Void)?) {
         self.theme = theme
         self.kind = kind
         
         self.buttonAction = buttonAction
         self.openPrivacyPolicy = openPrivacyPolicy
         
+        self.icon = icon
         self.title = title
         self.text = text
         
@@ -75,7 +91,7 @@ final class PermissionContentNode: ASDisplayNode {
         
         super.init()
         
-        self.iconNode.image = icon
+        self.iconNode.image = icon.imageForTheme(theme)
         self.title = title
         
         let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor)
@@ -114,6 +130,8 @@ final class PermissionContentNode: ASDisplayNode {
     func updatePresentationData(_ presentationData: PresentationData) {
         let theme = presentationData.theme
         self.theme = theme
+        
+        self.iconNode.image = self.icon.imageForTheme(theme)
         
         let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor)
         let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemAccentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])

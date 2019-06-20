@@ -84,18 +84,14 @@ final class PermissionControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.applyPresentationData()
+        self.updatePresentationData(self.presentationData)
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.applyPresentationData()
-    }
-    
-    private func applyPresentationData() {
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-        
+        self.contentNode?.updatePresentationData(self.presentationData)
     }
     
     func animateIn(completion: (() -> Void)? = nil) {
@@ -208,7 +204,7 @@ final class PermissionControllerNode: ASDisplayNode {
                                     hasPrivacyPolicy = false
                             }
                             
-                            let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind.rawValue, icon: icon, title: title, text: text, buttonTitle: buttonTitle, buttonAction: { [weak self] in
+                            let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind.rawValue, icon: .image(icon), title: title, text: text, buttonTitle: buttonTitle, buttonAction: { [weak self] in
                                 self?.allow?()
                                 }, openPrivacyPolicy: hasPrivacyPolicy ? self.openPrivacyPolicy : nil)
                             self.insertSubnode(contentNode, at: 0)
@@ -237,15 +233,8 @@ final class PermissionControllerNode: ASDisplayNode {
                     if let contentNode = self.contentNode {
                         transition.updateFrame(node: contentNode, frame: contentFrame)
                         contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: transition)
-                    } else {
-                        let iconImage: UIImage?
-                        if self.presentationData.theme.overallDarkAppearance {
-                            iconImage = icon.dark ?? icon.light
-                        } else {
-                            iconImage = icon.light
-                        }
-                        
-                        let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: 0, icon: iconImage, title: title, subtitle: subtitle, text: text, buttonTitle: buttonTitle, footerText: footerText, buttonAction: { [weak self] in
+                    } else {                        
+                        let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: 0, icon: .icon(icon), title: title, subtitle: subtitle, text: text, buttonTitle: buttonTitle, footerText: footerText, buttonAction: { [weak self] in
                             self?.allow?()
                         }, openPrivacyPolicy: nil)
                         self.insertSubnode(contentNode, at: 0)

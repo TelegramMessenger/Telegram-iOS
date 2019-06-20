@@ -12,7 +12,6 @@ module TelegramUIPrivateModule {
     header "../DeviceProximityManager.h"
     header "../RaiseToListenActivator.h"
     header "../TGMimeTypeMap.h"
-    header "../TGChannelIntroController.h"
     header "../Bridge Audio/TGBridgeAudioDecoder.h"
     header "../Bridge Audio/TGBridgeAudioEncoder.h"
     header "../TGContactModel.h"

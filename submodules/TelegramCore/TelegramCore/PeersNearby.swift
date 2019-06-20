@@ -31,6 +31,8 @@ public final class PeersNearbyContext {
     private var entries: [PeerNearby]?
    
     public init(network: Network, accountStateManager: AccountStateManager, coordinate: (latitude: Double, longitude: Double)) {
+        let expiryThreshold: Double = 10.0
+        
         self.disposable.set((network.request(Api.functions.contacts.getLocated(geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude)))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
@@ -62,8 +64,8 @@ public final class PeersNearbyContext {
             }
             
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            var entries = strongSelf.entries?.filter { Double($0.expires) > timestamp } ?? []
-            let updatedEntries = updatedEntries.filter { Double($0.expires) > timestamp }
+            var entries = strongSelf.entries?.filter { Double($0.expires) + expiryThreshold > timestamp } ?? []
+            let updatedEntries = updatedEntries.filter { Double($0.expires) + expiryThreshold > timestamp }
             
             var existingPeerIds: [PeerId: Int] = [:]
             for i in 0 ..< entries.count {
@@ -91,7 +93,7 @@ public final class PeersNearbyContext {
             }
             
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            strongSelf.entries = strongSelf.entries?.filter { Double($0.expires) > timestamp }
+            strongSelf.entries = strongSelf.entries?.filter { Double($0.expires) + expiryThreshold > timestamp }
         }, queue: self.queue)
         self.timer?.start()
     }

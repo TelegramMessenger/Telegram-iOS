@@ -56,11 +56,11 @@ private enum PeersNearbySection: Int32 {
 private enum PeersNearbyEntry: ItemListNodeEntry {
     case header(PresentationTheme, String)
    
-    case usersHeader(PresentationTheme, String)
-    case empty(PresentationTheme, String, Bool)
+    case usersHeader(PresentationTheme, String, Bool)
+    case empty(PresentationTheme, String)
     case user(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PeerNearbyEntry)
     
-    case groupsHeader(PresentationTheme, String)
+    case groupsHeader(PresentationTheme, String, Bool)
     case createGroup(PresentationTheme, String, Double?, Double?, String?)
     case group(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PeerNearbyEntry)
     
@@ -111,14 +111,14 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .usersHeader(lhsTheme, lhsText):
-                if case let .usersHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .usersHeader(lhsTheme, lhsText, lhsLoading):
+                if case let .usersHeader(rhsTheme, rhsText, rhsLoading) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsLoading == rhsLoading {
                     return true
                 } else {
                     return false
                 }
-            case let .empty(lhsTheme, lhsText, lhsLoading):
-                if case let .empty(rhsTheme, rhsText, rhsLoading) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsLoading == rhsLoading {
+            case let .empty(lhsTheme, lhsText):
+                if case let .empty(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -129,8 +129,8 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .groupsHeader(lhsTheme, lhsText):
-                if case let .groupsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .groupsHeader(lhsTheme, lhsText, lhsLoading):
+                if case let .groupsHeader(rhsTheme, rhsText, rhsLoading) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsLoading == rhsLoading {
                     return true
                 } else {
                     return false
@@ -181,16 +181,16 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
         switch self {
             case let .header(theme, text):
                 return PeersNearbyHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .usersHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .empty(theme, text, _):
+            case let .usersHeader(theme, text, loading):
+                return ItemListSectionHeaderItem(theme: theme, text: text, activityIndicator: loading, sectionId: self.section)
+            case let .empty(theme, text):
                 return ItemListPlaceholderItem(theme: theme, text: text, sectionId: self.section, style: .blocks)
             case let .user(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
                 return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, hasTopGroupInset: false, tag: nil)
-            case let .groupsHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .groupsHeader(theme, text, loading):
+                return ItemListSectionHeaderItem(theme: theme, text: text, activityIndicator: loading, sectionId: self.section)
             case let .createGroup(theme, title, latitude, longitude, address):
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.createGroupIcon(theme), title: title, alwaysPlain: false, sectionId: self.section, editing: false, action: {
                     if let latitude = latitude, let longitude = longitude {
@@ -249,7 +249,7 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationDa
     var entries: [PeersNearbyEntry] = []
     
     entries.append(.header(presentationData.theme, presentationData.strings.PeopleNearby_Description))
-    entries.append(.usersHeader(presentationData.theme, presentationData.strings.PeopleNearby_Users.uppercased()))
+    entries.append(.usersHeader(presentationData.theme, presentationData.strings.PeopleNearby_Users.uppercased(), data == nil))
     if let data = data, !data.users.isEmpty {
         var i: Int32 = 0
         for user in data.users {
@@ -257,10 +257,10 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationDa
             i += 1
         }
     } else {
-        entries.append(.empty(presentationData.theme, presentationData.strings.PeopleNearby_UsersEmpty, data == nil))
+        entries.append(.empty(presentationData.theme, presentationData.strings.PeopleNearby_UsersEmpty))
     }
     
-    entries.append(.groupsHeader(presentationData.theme, presentationData.strings.PeopleNearby_Groups.uppercased()))
+    entries.append(.groupsHeader(presentationData.theme, presentationData.strings.PeopleNearby_Groups.uppercased(), data == nil))
     entries.append(.createGroup(presentationData.theme, presentationData.strings.PeopleNearby_CreateGroup, data?.latitude, data?.longitude, data?.address))
     if let data = data, !data.groups.isEmpty {
         var i: Int32 = 0
