@@ -16,7 +16,6 @@ import TelegramVoip
 import BuildConfig
 
 private let handleVoipNotifications = false
-
 private var testIsLaunched = false
 
 private func encodeText(_ string: String, _ key: Int) -> String {
