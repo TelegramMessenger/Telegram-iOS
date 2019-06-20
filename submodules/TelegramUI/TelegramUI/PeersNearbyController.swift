@@ -305,9 +305,8 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         pushControllerImpl?(controller)
     })
     
-    let dataSignal: Signal<PeersNearbyData?, Void> = currentLocationManagerCoordinate(manager: context.sharedContext.locationManager!, timeout: 5.0)
-    |> introduceError(Void.self)
-    |> mapToSignal { coordinate -> Signal<PeersNearbyData?, Void> in
+    let dataSignal: Signal<PeersNearbyData?, NoError> = currentLocationManagerCoordinate(manager: context.sharedContext.locationManager!, timeout: 5.0)
+    |> mapToSignal { coordinate -> Signal<PeersNearbyData?, NoError> in
         guard let coordinate = coordinate else {
             return .single(nil)
         }
@@ -315,20 +314,18 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         return Signal { subscriber in
             let peersNearbyContext = PeersNearbyContext(network: context.account.network, accountStateManager: context.account.stateManager, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude))
             
-            let peersNearby: Signal<PeersNearbyData?, Void> = combineLatest(peersNearbyContext.get(), addressPromise.get())
-            |> introduceError(Void.self)
-            |> mapToSignal { peersNearby, address -> Signal<([PeerNearby]?, String?), Void> in
+            let peersNearby: Signal<PeersNearbyData?, NoError> = combineLatest(peersNearbyContext.get(), addressPromise.get())
+            |> mapToSignal { peersNearby, address -> Signal<([PeerNearby]?, String?), NoError> in
                 if let address = address {
                     return .single((peersNearby, address))
                 } else {
                     return reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-                    |> introduceError(Void.self)
                     |> map { placemark in
                         return (peersNearby, placemark?.fullAddress)
                     }
                 }
             }
-            |> mapToSignal { peersNearby, address -> Signal<PeersNearbyData?, Void> in
+            |> mapToSignal { peersNearby, address -> Signal<PeersNearbyData?, NoError> in
                 guard let peersNearby = peersNearby else {
                     return .single(nil)
                 }
@@ -347,7 +344,6 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
                     }
                     return PeersNearbyData(latitude: coordinate.latitude, longitude: coordinate.longitude, address: address, users: users, groups: groups, channels: [])
                 }
-                |> introduceError(Void.self)
             }
             
             let disposable = peersNearby.start(next: { data in
@@ -361,18 +357,19 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         }
     }
     
-    let errorSignal: Signal<Void, Void> = .single(Void()) |> then( Signal.fail(Void()) |> suspendAwareDelay(25.0, queue: Queue.concurrentDefaultQueue()) )
-    let combinedSignal = combineLatest(dataSignal, errorSignal) |> map { data, _ -> PeersNearbyData? in
-        return data
-    }
-    |> restartIfError
-    |> `catch` { _ -> Signal<PeersNearbyData?, NoError> in
-        return .single(nil)
-    } |> filter { value in
-        return value != nil
-    }
-    dataPromise.set(.single(nil) |> then(combinedSignal))
-    
+//    let errorSignal: Signal<Void, Void> = .single(Void()) |> then( Signal.fail(Void()) |> suspendAwareDelay(25.0, queue: Queue.concurrentDefaultQueue()) )
+//    let combinedSignal = combineLatest(dataSignal, errorSignal) |> map { data, _ -> PeersNearbyData? in
+//        return data
+//    }
+//    |> restartIfError
+//    |> `catch` { _ -> Signal<PeersNearbyData?, NoError> in
+//        return .single(nil)
+//    } |> filter { value in
+//        return value != nil
+//    }
+//    dataPromise.set(.single(nil) |> then(combinedSignal))
+
+    dataPromise.set(dataSignal)
     
     let previousData = Atomic<PeersNearbyData?>(value: nil)
     

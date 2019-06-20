@@ -33,7 +33,7 @@ public final class PeersNearbyContext {
     public init(network: Network, accountStateManager: AccountStateManager, coordinate: (latitude: Double, longitude: Double)) {
         let expiryThreshold: Double = 10.0
         
-        self.disposable.set((network.request(Api.functions.contacts.getLocated(geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude)))
+        let poll = network.request(Api.functions.contacts.getLocated(geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude)))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
@@ -58,6 +58,8 @@ public final class PeersNearbyContext {
             return .single(peersNearby)
             |> then(accountStateManager.updatedPeersNearby())
         }
+        
+        self.disposable.set((((poll |> then(.complete() |> suspendAwareDelay(25.0, queue: self.queue))) |> restart)
         |> deliverOn(self.queue)).start(next: { [weak self] updatedEntries in
             guard let strongSelf = self else {
                 return
