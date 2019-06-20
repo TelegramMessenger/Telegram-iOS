@@ -288,7 +288,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             }
         })
         
-        self.scrubberNode.seek = { [weak self] value in
+        self.scrubberNode.seek = { [weak self] value, _ in
             self?.control?(.seek(value))
         }
         

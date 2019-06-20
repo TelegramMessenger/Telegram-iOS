@@ -137,7 +137,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         assert(Queue.mainQueue().isCurrent())
     }
     
-    func seek(_ timestamp: Double) {
+    func seek(_ timestamp: Double, mediaScrubState: MediaScrubState = .unknown) {
         assert(Queue.mainQueue().isCurrent())
         self.seekId += 1
         self.playerNode.seek(timestamp: timestamp)

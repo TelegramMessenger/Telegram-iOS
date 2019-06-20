@@ -538,7 +538,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 if strongSelf.waveformScrubbingNode == nil {
                                     let waveformScrubbingNode = MediaPlayerScrubbingNode(content: .custom(backgroundNode: strongSelf.waveformNode, foregroundContentNode: strongSelf.waveformForegroundNode))
                                     waveformScrubbingNode.hitTestSlop = UIEdgeInsetsMake(-10.0, 0.0, -10.0, 0.0)
-                                    waveformScrubbingNode.seek = { timestamp in
+                                    waveformScrubbingNode.seek = { timestamp, _ in
                                         if let strongSelf = self, let context = strongSelf.context, let message = strongSelf.message, let type = peerMessageMediaPlayerType(message) {
                                             context.sharedContext.mediaManager.playlistControl(.seek(timestamp), type: type)
                                         }

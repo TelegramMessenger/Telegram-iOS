@@ -173,6 +173,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var item: UniversalVideoGalleryItem?
     
     private let statusDisposable = MetaDisposable()
+    private let mediaScrubStateDisposable = MetaDisposable()
     
     private let fetchDisposable = MetaDisposable()
     private var fetchStatus: MediaResourceStatus?
@@ -199,8 +200,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         super.init()
         
-        self.scrubberView.seek = { [weak self] timecode in
-            self?.videoNode?.seek(timecode)
+        self.scrubberView.seek = { [weak self] timecode, mediaScrubState in
+            self?.videoNode?.seek(timecode, mediaScrubState: mediaScrubState)
         }
         
         self.statusButtonNode.addSubnode(self.statusNode)
@@ -259,6 +260,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     deinit {
         self.statusDisposable.dispose()
+        self.fetchDisposable.dispose()
+        self.mediaScrubStateDisposable.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {
@@ -380,6 +383,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     })
                 }
             }
+            
+            self.mediaScrubStateDisposable.set((videoNode.lastMediaScrubState
+            |> deliverOnMainQueue).start(next: { [weak self] mediaScrubState in
+                if let strongSelf = self,
+                    let mediaScrubState = mediaScrubState {
+                    // hide fetching/buffering status UI updates while seek is in progress (and updates frequently)
+                    if  mediaScrubState == .inProgress {
+                        strongSelf.statusNode.isHidden = true
+                    } else {
+                        strongSelf.statusNode.isHidden = false
+                    }
+                }
+            }))
 
             self.statusDisposable.set((combineLatest(videoNode.status, mediaFileStatus)
             |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in

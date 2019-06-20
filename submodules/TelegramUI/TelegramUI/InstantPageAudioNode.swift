@@ -130,7 +130,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
             }
         }
         
-        self.scrubbingNode.seek = { [weak self] timestamp in
+        self.scrubbingNode.seek = { [weak self] timestamp, _ in
             if let strongSelf = self {
                 if let _ = strongSelf.playbackState {
                     strongSelf.context.sharedContext.mediaManager.playlistControl(.seek(timestamp), type: strongSelf.playlistType)

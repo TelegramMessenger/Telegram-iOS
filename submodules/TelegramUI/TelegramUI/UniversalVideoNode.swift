@@ -19,7 +19,7 @@ protocol UniversalVideoContentNode: class {
     func pause()
     func togglePlayPause()
     func setSoundEnabled(_ value: Bool)
-    func seek(_ timestamp: Double)
+    func seek(_ timestamp: Double, mediaScrubState: MediaScrubState)
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool)
     func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
@@ -113,6 +113,11 @@ final class UniversalVideoNode: ASDisplayNode {
     private let _ready = Promise<Void>()
     var ready: Signal<Void, NoError> {
         return self._ready.get()
+    }
+    
+    private let _lastMediaScrubState = Promise<MediaScrubState?>()
+    var lastMediaScrubState: Signal<MediaScrubState?, NoError> {
+        return self._lastMediaScrubState.get()
     }
     
     var canAttachContent: Bool = false {
@@ -266,10 +271,11 @@ final class UniversalVideoNode: ASDisplayNode {
         })
     }
     
-    func seek(_ timestamp: Double) {
+    func seek(_ timestamp: Double, mediaScrubState: MediaScrubState = .unknown) {
+        self._lastMediaScrubState.set(.single(mediaScrubState))
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
-                contentNode.seek(timestamp)
+                contentNode.seek(timestamp, mediaScrubState: mediaScrubState)
             }
         })
     }

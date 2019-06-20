@@ -290,6 +290,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     private var preferSoftwareDecoding: Bool = false
     fileprivate var fetchAutomatically: Bool = true
     fileprivate var maximumFetchSize: Int? = nil
+    fileprivate var mediaScrubState: MediaScrubState = .unknown
     fileprivate var touchedRanges = IndexSet()
     
     let currentSemaphore = Atomic<DispatchSemaphore?>(value: nil)
@@ -305,7 +306,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.fetchedFullDataDisposable.dispose()
     }
     
-    func initializeState(postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?) {
+    func initializeState(postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?, mediaScrubState: MediaScrubState) {
         if self.readingError || self.initializedState != nil {
             return
         }
@@ -320,6 +321,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.fetchAutomatically = fetchAutomatically
         self.maximumFetchSize = maximumFetchSize
+        self.mediaScrubState = mediaScrubState
         
         var preferSoftwareAudioDecoding = false
         if case let .media(media, _) = resourceReference, let file = media.media as? TelegramMediaFile {
@@ -352,10 +354,12 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             self.readingError = true
             return
         }
-        
-        if !avFormatContext.findStreamInfo() {
-            self.readingError = true;
-            return
+        if (mediaScrubState != .inProgress) {
+            // do the most expensive call in FFMPEG seeking pipeline only when it is not "in progress" scrubbing
+            if !avFormatContext.findStreamInfo() {
+                self.readingError = true;
+                return
+            }
         }
         
         var videoStream: StreamContext?
@@ -382,6 +386,9 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             if self.preferSoftwareDecoding {
                 if let codec = FFMpegAVCodec.find(forId: codecId) {
                     let codecContext = FFMpegAVCodecContext(codec: codec)
+                    if (mediaScrubState == .inProgress) {
+                        codecContext.flushBuffers()
+                    }
                     if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
                         if codecContext.open() {
                             videoStream = StreamContext(index: Int(streamIndex), codecContext: codecContext, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext), rotationAngle: rotationAngle, aspect: aspect)
@@ -408,6 +415,12 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         }
         
         for streamIndexNumber in avFormatContext.streamIndices(for: FFMpegAVFormatStreamTypeAudio) {
+            
+            if (mediaScrubState == .inProgress) {
+                // audio is not required when scrubbing is in progress
+                continue
+            }
+            
             let streamIndex = streamIndexNumber.int32Value
             let codecId = avFormatContext.codecId(atStreamIndex: streamIndex)
             
@@ -588,8 +601,18 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                     }
                 }
             } else if let videoStream = initializedState.videoStream {
+                let extraVideoFramesLimitSeconds: Double = {
+                    if (mediaScrubState == .inProgress) {
+                        // Higher values produce more CPU overhead.
+                        // Also values smaller than 1.0/videoFPS (e.g. 0.01) produce +5-10% CPU overhead.
+                        return 0.05
+                    } else {
+                        return 0.5
+                    }
+                }()
+                
                 let targetPts = CMTimeMakeWithSeconds(Float64(timestamp), preferredTimescale: videoStream.timebase.timescale)
-                let limitPts = CMTimeMakeWithSeconds(Float64(timestamp + 0.5), preferredTimescale: videoStream.timebase.timescale)
+                let limitPts = CMTimeMakeWithSeconds(Float64(timestamp + extraVideoFramesLimitSeconds), preferredTimescale: videoStream.timebase.timescale)
                 var audioPackets: [FFMpegPacket] = []
                 while !self.readingError {
                     if let packet = self.readPacket() {
@@ -640,10 +663,6 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         } else {
             completed(nil)
         }
-    }
-    
-    func close() {
-        self.closed = true
     }
 }
 

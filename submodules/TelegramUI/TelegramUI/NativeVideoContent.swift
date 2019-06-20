@@ -182,6 +182,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     deinit {
         self.player.pause()
         self.fetchDisposable.dispose()
+        self.statusDisposable.dispose()
     }
     
     private func performActionAtEnd() {
@@ -228,9 +229,62 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         }
     }
     
-    func seek(_ timestamp: Double) {
+    private let statusDisposable = MetaDisposable()
+    private var lastPlaybackStatus: MediaPlayerPlaybackStatus?
+    private var isSubscribedToPlaybackStatusUpdates: Bool = false
+    func seek(_ timestamp: Double, mediaScrubState: MediaScrubState = .unknown) {
         assert(Queue.mainQueue().isCurrent())
-        self.player.seek(timestamp: timestamp)
+        
+        // update last playback status
+        switch mediaScrubState {
+        case .unknown:
+            break
+        case .inProgress:
+            // get value while seeking
+            if lastPlaybackStatus == nil && !isSubscribedToPlaybackStatusUpdates {
+                isSubscribedToPlaybackStatusUpdates = true
+                self.statusDisposable.set((self.player.status
+                    |> deliverOnMainQueue |> take(1)).start(next: { [weak self] status in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.lastPlaybackStatus = status.status
+                    }))
+            }
+        case .ended:
+            isSubscribedToPlaybackStatusUpdates = false
+            break
+        }
+        
+        // determine play/pause action after seek
+        let shouldPlay: Bool? = {
+            switch mediaScrubState {
+            case .unknown:
+                // no changes
+                return nil
+            case .inProgress:
+                // force pause
+                return false
+            case .ended:
+                defer {
+                    lastPlaybackStatus = nil
+                }
+                if let lastPlaybackStatus = lastPlaybackStatus {
+                    if lastPlaybackStatus == .paused {
+                        // pause if was paused before
+                        return false
+                    } else {
+                        // else play
+                        return true
+                    }
+                } else {
+                    // no changes when playback status not available
+                    return nil
+                }
+            }
+        }()
+        
+        self.player.seek(timestamp: timestamp, play: shouldPlay, mediaScrubState: mediaScrubState)
     }
     
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
