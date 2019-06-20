@@ -6769,7 +6769,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                             return state.updatedInterfaceState { interfaceState in
                                 return interfaceState.withUpdatedEffectiveInputState(interfaceState.effectiveInputState)
-                                }.updatedInputMode({ _ in ChatInputMode.text })
+                                }.updatedInputMode({ _ in .text })
                             })
                     }
                 }),
@@ -6780,7 +6780,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 return state.updatedInterfaceState { interfaceState in
                                     let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "/"))
                                     return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
-                                }.updatedInputMode({ _ in ChatInputMode.text })
+                                }.updatedInputMode({ _ in .text })
                             } else {
                                 return state
                             }
@@ -6794,7 +6794,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 return state.updatedInterfaceState { interfaceState in
                                     let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "@"))
                                     return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
-                                }.updatedInputMode({ _ in ChatInputMode.text })
+                                }.updatedInputMode({ _ in .text })
                             } else {
                                 return state
                             }
@@ -6808,7 +6808,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 return state.updatedInterfaceState { interfaceState in
                                     let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "#"))
                                     return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
-                                }.updatedInputMode({ _ in ChatInputMode.text })
+                                }.updatedInputMode({ _ in .text })
                             } else {
                                 return state
                             }
@@ -6884,6 +6884,12 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         } else {
             return nil
         }
+    }
+    
+    func activateInput() {
+        self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+            return state.updatedInputMode({ _ in .text })
+        })
     }
     
     private func clearInputText() {

@@ -58,7 +58,7 @@ final class AuthorizedApplicationContext {
     let rootController: TelegramRootController
     let notificationController: NotificationContainerController
     
-    private var scheduledOperChatWithPeerId: PeerId?
+    private var scheduledOperChatWithPeerId: (PeerId, MessageId?, Bool)?
     private var scheduledOpenExternalUrl: URL?
         
     private let passcodeStatusDisposable = MetaDisposable()
@@ -268,9 +268,9 @@ final class AuthorizedApplicationContext {
                         strongSelf.notificationController.view.isHidden = false
                         if strongSelf.rootController.rootTabController == nil {
                             strongSelf.rootController.addRootControllers(showCallsTab: strongSelf.showCallsTab)
-                            if let peerId = strongSelf.scheduledOperChatWithPeerId {
+                            if let (peerId, messageId, activateInput) = strongSelf.scheduledOperChatWithPeerId {
                                 strongSelf.scheduledOperChatWithPeerId = nil
-                                strongSelf.openChatWithPeerId(peerId: peerId)
+                                strongSelf.openChatWithPeerId(peerId: peerId, messageId: messageId, activateInput: activateInput)
                             }
                             
                             if let url = strongSelf.scheduledOpenExternalUrl {
@@ -782,7 +782,7 @@ final class AuthorizedApplicationContext {
         self.permissionsDisposable.dispose()
     }
     
-    func openChatWithPeerId(peerId: PeerId, messageId: MessageId? = nil) {
+    func openChatWithPeerId(peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {
         var visiblePeerId: PeerId?
         if let controller = self.rootController.topViewController as? ChatController, case let .peer(peerId) = controller.chatLocation {
             visiblePeerId = peerId
@@ -790,9 +790,9 @@ final class AuthorizedApplicationContext {
         
         if visiblePeerId != peerId || messageId != nil {
             if self.rootController.rootTabController != nil {
-                navigateToChatController(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), messageId: messageId)
+                navigateToChatController(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), messageId: messageId, activateInput: activateInput)
             } else {
-                self.scheduledOperChatWithPeerId = peerId
+                self.scheduledOperChatWithPeerId = (peerId, messageId, activateInput)
             }
         }
     }

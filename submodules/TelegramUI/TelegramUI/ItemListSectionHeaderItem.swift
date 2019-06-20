@@ -166,10 +166,10 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
                             }
                             activityIndicator.isHidden = false
                             if previousItem != nil {
-                                activityIndicator.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                activityIndicator.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false)
                             }
                         } else if let activityIndicator = strongSelf.activityIndicator {
-                            activityIndicator.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { finished in
+                            activityIndicator.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { finished in
                                 if finished {
                                     activityIndicator.isHidden = true
                                 }

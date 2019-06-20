@@ -1641,8 +1641,8 @@ final class SharedApplicationContext {
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                    if let id = Int32(string), let context = self.contextValue {
-                        navigateToChatController(navigationController: context.rootController, context: context.context, chatLocation: .peer(PeerId(namespace: Namespaces.Peer.CloudUser, id: id)))
+                    if let id = Int32(string) {
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), activateInput: true)
                     }
                 }
             }
@@ -1689,7 +1689,7 @@ final class SharedApplicationContext {
         })
     }
     
-    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, messageId: MessageId? = nil) {
+    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {
         let signal = self.sharedContextPromise.get()
         |> take(1)
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
@@ -1707,7 +1707,7 @@ final class SharedApplicationContext {
         }
         self.openChatWhenReadyDisposable.set((signal
         |> deliverOnMainQueue).start(next: { context in
-            context.openChatWithPeerId(peerId: peerId, messageId: messageId)
+            context.openChatWithPeerId(peerId: peerId, messageId: messageId, activateInput: activateInput)
         }))
     }
     

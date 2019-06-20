@@ -245,11 +245,11 @@ private struct PeersNearbyData: Equatable {
     }
 }
 
-private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationData: PresentationData) -> [PeersNearbyEntry] {
+private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationData: PresentationData, displayLoading: Bool) -> [PeersNearbyEntry] {
     var entries: [PeersNearbyEntry] = []
     
     entries.append(.header(presentationData.theme, presentationData.strings.PeopleNearby_Description))
-    entries.append(.usersHeader(presentationData.theme, presentationData.strings.PeopleNearby_Users.uppercased(), data == nil))
+    entries.append(.usersHeader(presentationData.theme, presentationData.strings.PeopleNearby_Users.uppercased(), displayLoading && data == nil))
     if let data = data, !data.users.isEmpty {
         var i: Int32 = 0
         for user in data.users {
@@ -260,7 +260,7 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationDa
         entries.append(.empty(presentationData.theme, presentationData.strings.PeopleNearby_UsersEmpty))
     }
     
-    entries.append(.groupsHeader(presentationData.theme, presentationData.strings.PeopleNearby_Groups.uppercased(), data == nil))
+    entries.append(.groupsHeader(presentationData.theme, presentationData.strings.PeopleNearby_Groups.uppercased(), displayLoading && data == nil))
     entries.append(.createGroup(presentationData.theme, presentationData.strings.PeopleNearby_CreateGroup, data?.latitude, data?.longitude, data?.address))
     if let data = data, !data.groups.isEmpty {
         var i: Int32 = 0
@@ -376,9 +376,11 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     
     let previousData = Atomic<PeersNearbyData?>(value: nil)
     
-    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get())
+    let displayLoading: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(1.0, queue: Queue.mainQueue()))
+    
+    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), displayLoading)
     |> deliverOnMainQueue
-    |> map { presentationData, data -> (ItemListControllerState, (ItemListNodeState<PeersNearbyEntry>, PeersNearbyEntry.ItemGenerationArguments)) in
+    |> map { presentationData, data, displayLoading -> (ItemListControllerState, (ItemListNodeState<PeersNearbyEntry>, PeersNearbyEntry.ItemGenerationArguments)) in
         let previous = previousData.swap(data)
         
         var crossfade = false
@@ -390,7 +392,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PeopleNearby_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(entries: peersNearbyControllerEntries(data: data, presentationData: presentationData), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: !crossfade, userInteractionEnabled: true)
+        let listState = ItemListNodeState(entries: peersNearbyControllerEntries(data: data, presentationData: presentationData, displayLoading: displayLoading), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: !crossfade, userInteractionEnabled: true)
         
         return (controllerState, (listState, arguments))
     }
