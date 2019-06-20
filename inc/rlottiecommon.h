@@ -226,6 +226,7 @@ typedef struct LOTLayerNode {
     LOTMatteType mMatte;
     int          mVisible;
     int          mAlpha;
+    const char  *name;
 
 } LOTLayerNode;
 
