@@ -33,7 +33,7 @@ template<typename T>
 class dyn_array
 {
 public:
-    dyn_array(size_t size):mCapacity(size),mData(std::make_unique<T[]>(mCapacity)){}
+    explicit dyn_array(size_t size):mCapacity(size),mData(std::make_unique<T[]>(mCapacity)){}
     void reserve(size_t size)
     {
         if (mCapacity > size) return;
@@ -235,11 +235,6 @@ void FTOutline::end()
         ft.n_contours++;
     }
 }
-
-struct SpanInfo {
-    VRle::Span *spans;
-    int         size;
-};
 
 static void rleGenerationCb(int count, const SW_FT_Span *spans, void *user)
 {

@@ -360,7 +360,7 @@ public:
         Trim,
         Repeater
     };
-    LOTData(LOTData::Type  type): mType(type){}
+    explicit LOTData(LOTData::Type  type): mType(type){}
     inline LOTData::Type type() const {return mType;}
     bool isStatic() const{return mStatic;}
     void setStatic(bool value) {mStatic = value;}
@@ -376,7 +376,7 @@ public:
 class LOTGroupData: public LOTData
 {
 public:
-    LOTGroupData(LOTData::Type  type):LOTData(type){}
+    explicit LOTGroupData(LOTData::Type  type):LOTData(type){}
 public:
     std::vector<std::shared_ptr<LOTData>>  mChildren;
     std::shared_ptr<LOTTransformData>      mTransform;
@@ -671,7 +671,7 @@ inline LottieGradient operator*(float m, const LottieGradient &g)
 class LOTGradient : public LOTData
 {
 public:
-    LOTGradient(LOTData::Type  type):LOTData(type){}
+    explicit LOTGradient(LOTData::Type  type):LOTData(type){}
     inline float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
     void update(std::unique_ptr<VGradient> &grad, int frameNo);
 
@@ -719,7 +719,7 @@ public:
 class LOTPath : public LOTData
 {
 public:
-    LOTPath(LOTData::Type  type):LOTData(type){}
+    explicit LOTPath(LOTData::Type  type):LOTData(type){}
     VPath::Direction direction() { if (mDirection == 3) return VPath::Direction::CCW;
                                    else return VPath::Direction::CW;}
 public:

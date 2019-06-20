@@ -524,8 +524,6 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
     float              currentAngle = (startAngle - 90.0) * M_PI / 180.0;
     float              x;
     float              y;
-    float              previousX;
-    float              previousY;
     float              partialPointRadius = 0;
     float              anglePerPoint = (float)(2.0 * M_PI / points);
     float              halfAnglePerPoint = anglePerPoint / 2.0;
@@ -573,8 +571,8 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
         if (partialPointRadius != 0 && i == numPoints - 1) {
             radius = partialPointRadius;
         }
-        previousX = x;
-        previousY = y;
+        float previousX = x;
+        float previousY = y;
         x = (float)(radius * cos(currentAngle));
         y = (float)(radius * sin(currentAngle));
 
@@ -632,8 +630,6 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
     float              currentAngle = (startAngle - 90.0) * M_PI / 180.0;
     float              x;
     float              y;
-    float              previousX;
-    float              previousY;
     float              anglePerPoint = (float)(2.0 * M_PI / floor(points));
     int                numPoints = (int)floor(points);
     float              angleDir = ((dir == VPath::Direction::CW) ? 1.0 : -1.0);
@@ -656,8 +652,8 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
     moveTo(x + cx, y + cy);
 
     for (int i = 0; i < numPoints; i++) {
-        previousX = x;
-        previousY = y;
+        float previousX = x;
+        float previousY = y;
         x = (float)(radius * cos(currentAngle));
         y = (float)(radius * sin(currentAngle));
 

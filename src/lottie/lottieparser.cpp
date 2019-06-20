@@ -145,7 +145,7 @@ public:
     }
 
 protected:
-    LookaheadParserHandler(char *str);
+    explicit LookaheadParserHandler(char *str);
     void ParseNext();
 
 protected:
@@ -715,7 +715,7 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
     if (asset->mAssetType == LOTAsset::Type::Image) {
         if (embededResource) {
             // embeder resource should start with "data:"
-            if (filename.find("data:", 0) == 0) {
+            if (filename.compare(0, 5,"data:") == 0) {
                 asset->loadImageData(convertFromBase64(filename));
             }
         } else {
@@ -832,7 +832,6 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
     LOTLayerData *layer = sharedLayer.get();
     curLayerRef = layer;
     bool ddd = true;
-    std::string layerName;
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "ty")) { /* Type of layer*/

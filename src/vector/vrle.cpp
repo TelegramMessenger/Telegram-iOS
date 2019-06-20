@@ -128,16 +128,16 @@ void VRle::VRleData::updateBbox() const
 
     mBboxDirty = false;
 
-    int i, l = 0, t = 0, r = 0, b = 0, sz;
-    l = std::numeric_limits<int>::max();
+    int l = std::numeric_limits<int>::max();
     const VRle::Span *span = mSpans.data();
 
     mBbox = VRect();
-    sz = mSpans.size();
+    size_t sz = mSpans.size();
     if (sz) {
-        t = span[0].y;
-        b = span[sz - 1].y;
-        for (i = 0; i < sz; i++) {
+        int t = span[0].y;
+        int b = span[sz - 1].y;
+        int r = 0;
+        for (size_t i = 0; i < sz; i++) {
             if (span[i].x < l) l = span[i].x;
             if (span[i].x + span[i].len > r) r = span[i].x + span[i].len;
         }
@@ -511,11 +511,10 @@ static void rleIntersectWithRect(const VRect &clip, VRleHelper *tmp_obj,
 void blitXor(VRle::Span *spans, int count, uchar *buffer,
                         int offsetX)
 {
-    uchar *ptr;
     while (count--) {
         int x = spans->x + offsetX;
         int l = spans->len;
-        ptr = buffer + x;
+        uchar *ptr = buffer + x;
         while (l--) {
             int da = *ptr;
             *ptr = divBy255((255 - spans->coverage) * (da) + spans->coverage * (255 - da));
@@ -528,11 +527,10 @@ void blitXor(VRle::Span *spans, int count, uchar *buffer,
 void blitDestinationOut(VRle::Span *spans, int count, uchar *buffer,
                         int offsetX)
 {
-    uchar *ptr;
     while (count--) {
         int x = spans->x + offsetX;
         int l = spans->len;
-        ptr = buffer + x;
+        uchar *ptr = buffer + x;
         while (l--) {
             *ptr = divBy255((255 - spans->coverage) * (*ptr));
             ptr++;
@@ -543,11 +541,10 @@ void blitDestinationOut(VRle::Span *spans, int count, uchar *buffer,
 
 void blitSrcOver(VRle::Span *spans, int count, uchar *buffer, int offsetX)
 {
-    uchar *ptr;
     while (count--) {
         int x = spans->x + offsetX;
         int l = spans->len;
-        ptr = buffer + x;
+        uchar *ptr = buffer + x;
         while (l--) {
             *ptr = spans->coverage + divBy255((255 - spans->coverage) * (*ptr));
             ptr++;
@@ -558,11 +555,10 @@ void blitSrcOver(VRle::Span *spans, int count, uchar *buffer, int offsetX)
 
 void blit(VRle::Span *spans, int count, uchar *buffer, int offsetX)
 {
-    uchar *ptr;
     while (count--) {
         int x = spans->x + offsetX;
         int l = spans->len;
-        ptr = buffer + x;
+        uchar *ptr = buffer + x;
         while (l--) {
             *ptr = std::max(spans->coverage, *ptr);
             ptr++;

@@ -93,23 +93,18 @@ LOTCompItem::createLayerItem(LOTLayerData *layerData)
     switch (layerData->mLayerType) {
     case LayerType::Precomp: {
         return std::make_unique<LOTCompLayerItem>(layerData);
-        break;
     }
     case LayerType::Solid: {
         return std::make_unique<LOTSolidLayerItem>(layerData);
-        break;
     }
     case LayerType::Shape: {
         return std::make_unique<LOTShapeLayerItem>(layerData);
-        break;
     }
     case LayerType::Null: {
         return std::make_unique<LOTNullLayerItem>(layerData);
-        break;
     }
     case LayerType::Image: {
         return std::make_unique<LOTImageLayerItem>(layerData);
-        break;
     }
     default:
         return nullptr;
@@ -859,9 +854,9 @@ LOTNullLayerItem::LOTNullLayerItem(LOTLayerData *layerData)
 void LOTNullLayerItem::updateContent() {}
 
 LOTShapeLayerItem::LOTShapeLayerItem(LOTLayerData *layerData)
-    : LOTLayerItem(layerData)
+    : LOTLayerItem(layerData),
+      mRoot(std::make_unique<LOTContentGroupItem>(nullptr))
 {
-    mRoot = std::make_unique<LOTContentGroupItem>(nullptr);
     mRoot->addChildren(layerData);
 
     std::vector<LOTPathDataItem *> list;
@@ -880,47 +875,36 @@ LOTShapeLayerItem::createContentItem(LOTData *contentData)
     case LOTData::Type::ShapeGroup: {
         return std::make_unique<LOTContentGroupItem>(
             static_cast<LOTGroupData *>(contentData));
-        break;
     }
     case LOTData::Type::Rect: {
         return std::make_unique<LOTRectItem>(static_cast<LOTRectData *>(contentData));
-        break;
     }
     case LOTData::Type::Ellipse: {
         return std::make_unique<LOTEllipseItem>(static_cast<LOTEllipseData *>(contentData));
-        break;
     }
     case LOTData::Type::Shape: {
         return std::make_unique<LOTShapeItem>(static_cast<LOTShapeData *>(contentData));
-        break;
     }
     case LOTData::Type::Polystar: {
         return std::make_unique<LOTPolystarItem>(static_cast<LOTPolystarData *>(contentData));
-        break;
     }
     case LOTData::Type::Fill: {
         return std::make_unique<LOTFillItem>(static_cast<LOTFillData *>(contentData));
-        break;
     }
     case LOTData::Type::GFill: {
         return std::make_unique<LOTGFillItem>(static_cast<LOTGFillData *>(contentData));
-        break;
     }
     case LOTData::Type::Stroke: {
         return std::make_unique<LOTStrokeItem>(static_cast<LOTStrokeData *>(contentData));
-        break;
     }
     case LOTData::Type::GStroke: {
         return std::make_unique<LOTGStrokeItem>(static_cast<LOTGStrokeData *>(contentData));
-        break;
     }
     case LOTData::Type::Repeater: {
         return std::make_unique<LOTRepeaterItem>(static_cast<LOTRepeaterData *>(contentData));
-        break;
     }
     case LOTData::Type::Trim: {
         return std::make_unique<LOTTrimItem>(static_cast<LOTTrimData *>(contentData));
-        break;
     }
     default:
         return nullptr;
