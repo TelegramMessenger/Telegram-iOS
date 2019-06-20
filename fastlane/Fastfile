@@ -63,4 +63,6 @@ lane :build_for_appstore do |options|
   )
 end
 
-import "../../Telegram-iOS-Shared/fastlane/Fastfile"
+if File.exists?("../../Telegram-iOS-Shared/fastlane/Fastfile")
+  import "../../Telegram-iOS-Shared/fastlane/Fastfile"
+end
