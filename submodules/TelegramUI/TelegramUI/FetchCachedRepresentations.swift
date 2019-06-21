@@ -889,7 +889,7 @@ private func fetchAnimatedStickerRepresentation(account: Account, resource: Medi
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if #available(iOS 9.0, *) {
-                return experimentalConvertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: 400.0, height: 400.0)).start(next: { path in
+                return experimentalConvertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: 320.0, height: 320.0)).start(next: { path in
                     subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
                     subscriber.putCompletion()
                 })

@@ -44,42 +44,8 @@ int iosMajorVersion()
 {
     static bool initialized = false;
     static int version = 7;
-    if (!initialized)
-    {
-        switch ([[[UIDevice currentDevice] systemVersion] intValue])
-        {
-            case 4:
-                version = 4;
-                break;
-            case 5:
-                version = 5;
-                break;
-            case 6:
-                version = 6;
-                break;
-            case 7:
-                version = 7;
-                break;
-            case 8:
-                version = 8;
-                break;
-            case 9:
-                version = 9;
-                break;
-            case 10:
-                version = 10;
-                break;
-            case 11:
-                version = 11;
-                break;
-            case 12:
-                version = 12;
-                break;
-            default:
-                version = 9;
-                break;
-        }
-        
+    if (!initialized) {
+        version = [[[UIDevice currentDevice] systemVersion] intValue];
         initialized = true;
     }
     return version;
@@ -93,8 +59,9 @@ int iosMinorVersion()
     {
         NSString *versionString = [[UIDevice currentDevice] systemVersion];
         NSRange range = [versionString rangeOfString:@"."];
-        if (range.location != NSNotFound)
+        if (range.location != NSNotFound) {
             version = [[versionString substringFromIndex:range.location + 1] intValue];
+        }
         
         initialized = true;
     }

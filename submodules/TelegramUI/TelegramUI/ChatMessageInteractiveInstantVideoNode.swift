@@ -61,14 +61,14 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private let fetchedThumbnailDisposable = MetaDisposable()
     
     private var shouldAcquireVideoContext: Bool {
-        if case .visible = self.visibility {
+        if self.visibility {
             return true
         } else {
             return false
         }
     }
     
-    var visibility: ListViewItemNodeVisibility = .none {
+    var visibility: Bool = false {
         didSet {
             if self.visibility != oldValue {
                 self.videoNode?.canAttachContent = self.shouldAcquireVideoContext
