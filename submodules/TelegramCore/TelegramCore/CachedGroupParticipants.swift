@@ -1,10 +1,11 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
 #endif
-import TelegramApi
 
 public enum GroupParticipant: PostboxCoding, Equatable {
     case member(id: PeerId, invitedBy: PeerId, invitedAt: Int32)

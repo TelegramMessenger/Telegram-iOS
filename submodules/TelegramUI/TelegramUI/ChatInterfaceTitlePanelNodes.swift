@@ -37,7 +37,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                 displayActionsPanel = true
             } else if peerStatusSettings.contains(.canShareContact) {
                 displayActionsPanel = true
-            } else if peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+            } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                 displayActionsPanel = true
             }
         }

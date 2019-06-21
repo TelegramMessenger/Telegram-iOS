@@ -3,16 +3,17 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
         import MtProtoKitDynamic
     #endif
 #endif
-import TelegramApi
 
 public enum AddressNameFormatError {
     case startsWithUnderscore
@@ -157,8 +158,28 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
     } |> mapError { _ -> UpdateAddressNameError in return .generic } |> switchToLatest
 }
 
-public func adminedPublicChannels(account: Account) -> Signal<[Peer], NoError> {
-    return account.network.request(Api.functions.channels.getAdminedPublicChannels())
+public func checkPublicChannelCreationAvailability(account: Account, location: Bool = false) -> Signal<Bool, NoError> {
+    var flags: Int32 = (1 << 1)
+    if location {
+        flags |= (1 << 0)
+    }
+    
+    return account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: flags))
+    |> map { _ -> Bool in
+        return true
+    }
+    |> `catch` { error -> Signal<Bool, NoError> in
+        return .single(false)
+    }
+}
+
+public func adminedPublicChannels(account: Account, location: Bool = false) -> Signal<[Peer], NoError> {
+    var flags: Int32 = 0
+    if location {
+        flags |= (1 << 0)
+    }
+    
+    return account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: flags))
     |> retryRequest
     |> mapToSignal { result -> Signal<[Peer], NoError> in
         var peers: [Peer] = []

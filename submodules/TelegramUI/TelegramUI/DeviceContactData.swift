@@ -470,7 +470,7 @@ extension DeviceContactExtendedData {
         }
         var phoneNumbers: [DeviceContactPhoneNumberData] = []
         if let phone = user.phone, !phone.isEmpty {
-            phoneNumbers.append(DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: phone))
+            phoneNumbers.append(DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phone))
         }
         self.init(basicData: DeviceContactBasicData(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumbers: phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
     }

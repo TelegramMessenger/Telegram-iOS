@@ -3,21 +3,23 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
         import MtProtoKitDynamic
     #endif
 #endif
-import TelegramApi
 
 public enum CreateGroupError {
     case generic
     case privacy
     case restricted
+    case tooMuchLocationBasedGroups
 }
 
 public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> Signal<PeerId?, CreateGroupError> {

@@ -3,16 +3,17 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
         import MtProtoKitDynamic
     #endif
 #endif
-import TelegramApi
 
 public func requestStartBot(account: Account, botPeerId: PeerId, payload: String?) -> Signal<Void, NoError> {
     if let payload = payload, !payload.isEmpty {

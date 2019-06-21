@@ -949,14 +949,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     
                     let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: text, attributes: [], media: [mediaMap], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                     return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(isAdmin: false, isContact: false)))
-                } else {
-                    appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageRemovedGroupGeoLocation(author?.displayTitle ?? ""), generateEntities: { index in
-                        if index == 0, let author = author {
-                            return [.TextMention(peerId: author.id)]
-                        }
-                        return []
-                    }, to: &text, entities: &entities)
-                    
+                } else {                    
                     let action = TelegramMediaActionType.customText(text: text, entities: entities)
                     
                     let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])

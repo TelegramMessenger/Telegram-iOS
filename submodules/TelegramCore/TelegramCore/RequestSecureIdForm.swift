@@ -3,8 +3,10 @@ import Foundation
     import PostboxMac
     import MtProtoKitMac
     import SwiftSignalKitMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
@@ -12,7 +14,6 @@ import Foundation
     #endif
     import SwiftSignalKit
 #endif
-import TelegramApi
 
 public enum RequestSecureIdFormError {
     case generic

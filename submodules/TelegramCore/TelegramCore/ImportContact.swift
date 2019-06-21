@@ -1,11 +1,12 @@
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
     import SwiftSignalKit
 #endif
-import TelegramApi
 
 public func importContact(account: Account, firstName: String, lastName: String, phoneNumber: String) -> Signal<PeerId?, NoError> {
     

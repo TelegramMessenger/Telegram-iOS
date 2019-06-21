@@ -57,6 +57,7 @@ public enum ThemeSettingsEntryTag: ItemListItemTag {
 }
 
 private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
+    case themeListHeader(PresentationTheme, String)
     case fontSizeHeader(PresentationTheme, String)
     case fontSize(PresentationTheme, PresentationFontSize)
     case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder)
@@ -73,7 +74,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .chatPreview, .themeItem, .accentColor:
+            case .themeListHeader, .chatPreview, .themeItem, .accentColor:
                 return ThemeSettingsControllerSection.chatPreview.rawValue
             case .fontSizeHeader, .fontSize:
                 return ThemeSettingsControllerSection.fontSize.rawValue
@@ -88,32 +89,34 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .chatPreview:
+            case .themeListHeader:
                 return 0
-            case .themeItem:
+            case .chatPreview:
                 return 1
-            case .accentColor:
+            case .themeItem:
                 return 2
-            case .wallpaper:
+            case .accentColor:
                 return 3
-            case .autoNightTheme:
+            case .wallpaper:
                 return 4
-            case .fontSizeHeader:
+            case .autoNightTheme:
                 return 5
-            case .fontSize:
+            case .fontSizeHeader:
                 return 6
-            case .iconHeader:
+            case .fontSize:
                 return 7
-            case .iconItem:
+            case .iconHeader:
                 return 8
-            case .otherHeader:
+            case .iconItem:
                 return 9
-            case .largeEmoji:
+            case .otherHeader:
                 return 10
-            case .animations:
+            case .largeEmoji:
                 return 11
-            case .animationsInfo:
+            case .animations:
                 return 12
+            case .animationsInfo:
+                return 13
         }
     }
     
@@ -139,6 +142,12 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 }
             case let .autoNightTheme(lhsTheme, lhsText, lhsValue):
                 if case let .autoNightTheme(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .themeListHeader(lhsTheme, lhsText):
+                if case let .themeListHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -226,6 +235,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: nil, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openAutoNightTheme()
                 })
+            case let .themeListHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .themeItem(theme, strings, themes, currentTheme, themeAccentColor):
                 return ThemeSettingsThemeItem(theme: theme, strings: strings, sectionId: self.section, themes: themes.map { ($0, $0 == .day ? themeAccentColor : nil) }, currentTheme: currentTheme, updated: { theme in
                     arguments.selectTheme(theme.rawValue)
@@ -255,6 +266,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
 private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeAccentColor: Int32?, autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool, availableAppIcons: [PresentationAppIcon], currentAppIconName: String?) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
+    entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme.uppercased()))
     entries.append(.chatPreview(presentationData.theme, theme, wallpaper, fontSize, presentationData.strings, dateTimeFormat, presentationData.nameDisplayOrder))
     if case let .builtin(theme) = theme.name {
         entries.append(.themeItem(presentationData.theme, presentationData.strings, [.dayClassic, .day, .nightAccent, .nightGrayscale], theme.reference, themeAccentColor != nil ? UIColor(rgb: UInt32(bitPattern: themeAccentColor!)) : nil))
@@ -294,6 +306,8 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
+private let themeColors = [UIColor(rgb: 0x007aff), UIColor(rgb: 0x70bb23), UIColor(rgb: 0xeb6ca4), UIColor(rgb: 0xf08200), UIColor(rgb: 0x9472ee), UIColor(rgb: 0xd33213), UIColor(rgb: 0xedb400), UIColor(rgb: 0x6d839e), UIColor(rgb: 0x000000)]
+
 public func themeSettingsController(context: AccountContext, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
@@ -302,7 +316,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     
     let availableAppIcons: Signal<[PresentationAppIcon], NoError> = .single(context.sharedContext.applicationBindings.getAvailableAlternateIcons())
     let currentAppIconName = ValuePromise<String?>()
-    currentAppIconName.set(context.sharedContext.applicationBindings.getAlternateIconName() ?? "Black")
+    currentAppIconName.set(context.sharedContext.applicationBindings.getAlternateIconName() ?? "Blue")
     
     let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { index in
         let theme: PresentationThemeReference

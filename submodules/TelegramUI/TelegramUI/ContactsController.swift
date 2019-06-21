@@ -277,7 +277,7 @@ public class ContactsController: ViewController {
                         presentPeersNearby()
                     default:
                         let controller = PermissionController(context: strongSelf.context, splashScreen: false)
-                        controller.setState(.nearbyLocation(status: PermissionRequestStatus(accessType: status)), animated: false)
+                        controller.setState(.permission(.nearbyLocation(status: PermissionRequestStatus(accessType: status))), animated: false)
                         controller.proceed = { result in
                             if result {
                                 presentPeersNearby()

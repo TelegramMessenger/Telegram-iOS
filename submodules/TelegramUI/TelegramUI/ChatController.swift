@@ -223,6 +223,10 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     private var screenCaptureEventsDisposable: Disposable?
     private let chatAdditionalDataDisposable = MetaDisposable()
     
+    private var reportIrrelvantGeoNoticePromise = Promise<Bool?>()
+    private var reportIrrelvantGeoNotice: Bool?
+    private var reportIrrelvantGeoDisposable: Disposable?
+    
     private var volumeButtonsListener: VolumeButtonsListener?
     
     private var beginMediaRecordingRequestId: Int = 0
@@ -1449,17 +1453,32 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         }
                         onlineMemberCount = recentOnlineSignal
                         |> map(Optional.init)
+                        
+                        self.reportIrrelvantGeoNoticePromise.set(context.account.postbox.transaction { transaction -> Bool? in
+                            if let _ = transaction.getNoticeEntry(key: ApplicationSpecificNotice.irrelevantPeerGeoReportKey(peerId: peerId)) as? ApplicationSpecificBoolNotice {
+                                return true
+                            } else {
+                                return false
+                            }
+                        })
+                    } else {
+                        self.reportIrrelvantGeoNoticePromise.set(.single(nil))
                     }
-                    self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount)
-                    |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount in
+                    
+                    self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, self.reportIrrelvantGeoNoticePromise.get())
+                    |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, peerReportNotice in
                         if let strongSelf = self {
                             if let peer = peerViewMainPeer(peerView) {
                                 strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount)
                                 (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: peer.isDeleted ? .deletedIcon : .none)
                             }
-                            if strongSelf.peerView === peerView {
+                            
+                            if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice {
                                 return
                             }
+                            
+                            strongSelf.reportIrrelvantGeoNotice = peerReportNotice
+                            
                             var upgradedToPeerId: PeerId?
                             if let previous = strongSelf.peerView, let group = previous.peers[previous.peerId] as? TelegramGroup, group.migrationReference == nil, let updatedGroup = peerView.peers[peerView.peerId] as? TelegramGroup, let migrationReference = updatedGroup.migrationReference {
                                 upgradedToPeerId = migrationReference.peerId
@@ -1516,11 +1535,18 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             var contactStatus: ChatContactStatus?
                             if let peer = peerView.peers[peerView.peerId] {
                                 if let cachedData = peerView.cachedData as? CachedUserData {
-                                    contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, peerStatusSettings: cachedData.peerStatusSettings)
+                                    contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings)
                                 } else if let cachedData = peerView.cachedData as? CachedGroupData {
-                                    contactStatus = ChatContactStatus(canAddContact: false, peerStatusSettings: cachedData.peerStatusSettings)
+                                    contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings)
                                 } else if let cachedData = peerView.cachedData as? CachedChannelData {
-                                    contactStatus = ChatContactStatus(canAddContact: false, peerStatusSettings: cachedData.peerStatusSettings)
+                                    var canReportIrrelevantLocation = true
+                                    if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, peer.participationStatus == .member {
+                                        canReportIrrelevantLocation = false
+                                    }
+                                    if let peerReportNotice = peerReportNotice, peerReportNotice {
+                                        canReportIrrelevantLocation = false
+                                    }
+                                    contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings)
                                 }
                                 
                                 var peers = SimpleDictionary<PeerId, Peer>()
@@ -1581,7 +1607,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                         didDisplayActionsPanel = true
                                     } else if peerStatusSettings.contains(.canShareContact) {
                                         didDisplayActionsPanel = true
-                                    } else if peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                    } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                         didDisplayActionsPanel = true
                                     }
                                 }
@@ -1596,7 +1622,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                         displayActionsPanel = true
                                     } else if peerStatusSettings.contains(.canShareContact) {
                                         displayActionsPanel = true
-                                    } else if peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                    } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                                         displayActionsPanel = true
                                     }
                                 }
@@ -1932,6 +1958,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         self.shareStatusDisposable?.dispose()
         self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeTarget(self)
         self.preloadHistoryPeerIdDisposable.dispose()
+        self.reportIrrelvantGeoDisposable?.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -2258,7 +2285,10 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             insertItems.append(ListViewInsertItem(index: item.index, previousIndex: item.previousIndex, item: item.item, directionHint: item.directionHint == .Down ? .Up : nil))
                         }
                         
-                        let scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: 0.2), directionHint: .Up)
+                        var scrollToItem: ListViewScrollToItem?
+                        if transition.historyView.originalView.laterId == nil {
+                            scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: 0.2), directionHint: .Up)
+                        }
                         
                         var stationaryItemRange: (Int, Int)?
                         if let maxInsertedItem = maxInsertedItem {
@@ -2280,7 +2310,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
                 strongSelf.commitPurposefulAction()
                 
-                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages(messages)) |> deliverOnMainQueue).start(next: { _ in
+                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages(messages))
+                |> deliverOnMainQueue).start(next: { _ in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }
@@ -3441,15 +3472,28 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInputMode({ _ in return .none }) })
             }
         }, reportPeerIrrelevantGeoLocation: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.chatDisplayNode.dismissInput()
-                
-                let actions = [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.ReportGroupLocation_Report, action: {
-                    
-                })]
-                strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.ReportGroupLocation_Title, text: strongSelf.presentationData.strings.ReportGroupLocation_Text, actions: actions), in: .window(.root))
+            guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
+                return
             }
+            
+            strongSelf.chatDisplayNode.dismissInput()
+            
+            let actions = [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+            }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.ReportGroupLocation_Report, action: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.reportIrrelvantGeoDisposable = (TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peerId, reason: .irrelevantLocation)
+                |> deliverOnMainQueue).start(completed: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.reportIrrelvantGeoNoticePromise.set(.single(true))
+                        let _ = ApplicationSpecificNotice.setIrrelevantPeerGeoReport(postbox: strongSelf.context.account.postbox, peerId: peerId).start()
+                        
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction(type: TextAlertActionType.defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    }
+                })
+            })]
+            strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.ReportGroupLocation_Title, text: strongSelf.presentationData.strings.ReportGroupLocation_Text, actions: actions), in: .window(.root))
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
         switch self.chatLocation {
@@ -4744,7 +4788,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
             
             strongSelf.chatDisplayNode.dismissInput()
-            strongSelf.present(legacyLocationPickerController(context: strongSelf.context, selfPeer: selfPeer, peer: peer, sendLocation: { coordinate, venue in
+            strongSelf.present(legacyLocationPickerController(context: strongSelf.context, selfPeer: selfPeer, peer: peer, sendLocation: { coordinate, venue, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -4797,7 +4841,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
                             return
                         }
-                        let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName ?? "", lastName: contact.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
+                        let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName ?? "", lastName: contact.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
                         let context = strongSelf.context
                         dataSignal = (strongSelf.context.sharedContext.contactDataManager?.basicData() ?? .single([:]))
                         |> take(1)
@@ -6725,7 +6769,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                             return state.updatedInterfaceState { interfaceState in
                                 return interfaceState.withUpdatedEffectiveInputState(interfaceState.effectiveInputState)
-                                }.updatedInputMode({ _ in ChatInputMode.text })
+                                }.updatedInputMode({ _ in .text })
                             })
                     }
                 }),
@@ -6736,7 +6780,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 return state.updatedInterfaceState { interfaceState in
                                     let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "/"))
                                     return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
-                                }.updatedInputMode({ _ in ChatInputMode.text })
+                                }.updatedInputMode({ _ in .text })
                             } else {
                                 return state
                             }
@@ -6750,7 +6794,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 return state.updatedInterfaceState { interfaceState in
                                     let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "@"))
                                     return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
-                                }.updatedInputMode({ _ in ChatInputMode.text })
+                                }.updatedInputMode({ _ in .text })
                             } else {
                                 return state
                             }
@@ -6764,7 +6808,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 return state.updatedInterfaceState { interfaceState in
                                     let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "#"))
                                     return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
-                                }.updatedInputMode({ _ in ChatInputMode.text })
+                                }.updatedInputMode({ _ in .text })
                             } else {
                                 return state
                             }
@@ -6840,6 +6884,12 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         } else {
             return nil
         }
+    }
+    
+    func activateInput() {
+        self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+            return state.updatedInputMode({ _ in .text })
+        })
     }
     
     private func clearInputText() {

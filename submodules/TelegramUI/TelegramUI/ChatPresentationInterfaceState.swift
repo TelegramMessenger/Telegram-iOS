@@ -322,6 +322,7 @@ final class ChatRecordedMediaPreview: Equatable {
 
 struct ChatContactStatus: Equatable {
     var canAddContact: Bool
+    var canReportIrrelevantLocation: Bool
     var peerStatusSettings: PeerStatusSettings?
     
     var isEmpty: Bool {
@@ -330,6 +331,9 @@ struct ChatContactStatus: Equatable {
         }
         if !self.canAddContact {
             peerStatusSettings.remove(.canAddContact)
+        }
+        if !self.canReportIrrelevantLocation {
+            peerStatusSettings.remove(.canReportIrrelevantGeoLocation)
         }
         return peerStatusSettings.isEmpty
     }

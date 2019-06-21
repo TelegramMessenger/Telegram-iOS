@@ -2,11 +2,12 @@ import Foundation
 #if os(macOS)
 import PostboxMac
 import SwiftSignalKitMac
+import TelegramApiMac
 #else
 import Postbox
 import SwiftSignalKit
-#endif
 import TelegramApi
+#endif
 
 final class CachedWallpapersConfiguration: PostboxCoding {
     let hash: Int32

@@ -3,22 +3,46 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
         import MtProtoKitDynamic
     #endif
 #endif
-import TelegramApi
 
-private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool) -> Signal<PeerId, CreateChannelError> {
+public enum CreateChannelError {
+    case generic
+    case restricted
+    case tooMuchLocationBasedGroups
+}
+
+private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool, location: (latitude: Double, longitude: Double, address: String)? = nil) -> Signal<PeerId, CreateChannelError> {
     return account.postbox.transaction { transaction -> Signal<PeerId, CreateChannelError> in
-        return account.network.request(Api.functions.channels.createChannel(flags: isSupergroup ? 1 << 1 : 1 << 0, title: title, about: description ?? ""), automaticFloodWait: false)
+        var flags: Int32 = 0
+        if isSupergroup {
+            flags |= (1 << 1)
+        } else {
+            flags |= (1 << 0)
+        }
+        
+        var geoPoint: Api.InputGeoPoint?
+        var address: String?
+        if let location = location {
+            flags |= (1 << 2)
+            geoPoint = .inputGeoPoint(lat: location.latitude, long: location.longitude)
+            address = location.address
+        }
+        
+        return account.network.request(Api.functions.channels.createChannel(flags: flags, title: title, about: description ?? "", geoPoint: geoPoint, address: address), automaticFloodWait: false)
         |> mapError { error -> CreateChannelError in
-            if error.errorDescription == "USER_RESTRICTED" {
+            if error.errorDescription == "CHANNELS_ADMIN_LOCATED_TOO_MUCH" {
+                return .tooMuchLocationBasedGroups
+            } else if error.errorDescription == "USER_RESTRICTED" {
                 return .restricted
             } else {
                 return .generic
@@ -46,17 +70,12 @@ private func createChannel(account: Account, title: String, description: String?
     |> switchToLatest
 }
 
-public enum CreateChannelError {
-    case generic
-    case restricted
-}
-
 public func createChannel(account: Account, title: String, description: String?) -> Signal<PeerId, CreateChannelError> {
     return createChannel(account: account, title: title, description: description, isSupergroup: false)
 }
 
-public func createSupergroup(account: Account, title: String, description: String?) -> Signal<PeerId, CreateChannelError> {
-    return createChannel(account: account, title: title, description: description, isSupergroup: true)
+public func createSupergroup(account: Account, title: String, description: String?, location: (latitude: Double, longitude: Double, address: String)? = nil) -> Signal<PeerId, CreateChannelError> {
+    return createChannel(account: account, title: title, description: description, isSupergroup: true, location: location)
 }
 
 public enum DeleteChannelError {

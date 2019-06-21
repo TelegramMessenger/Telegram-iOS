@@ -34,10 +34,10 @@ public final class Timer {
         
         if self.`repeat` {
             let time: DispatchTime = DispatchTime.now() + self.timeout
-            timer.scheduleRepeating(deadline: time, interval: self.timeout)
+            timer.schedule(deadline: time, repeating: self.timeout)
         } else {
             let time: DispatchTime = DispatchTime.now() + self.timeout
-            timer.scheduleOneshot(deadline: time)
+            timer.schedule(deadline: time)
         }
         
         timer.resume()

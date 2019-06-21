@@ -2,11 +2,12 @@ import Foundation
 #if os(macOS)
     import PostboxMac
     import SwiftSignalKitMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
     import SwiftSignalKit
 #endif
-import TelegramApi
 
 public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: MessageId) -> Signal<Peer?, NoError> {
     return account.postbox.transaction { transaction -> Signal<Peer?, NoError> in

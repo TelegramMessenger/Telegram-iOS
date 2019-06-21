@@ -1,10 +1,11 @@
 import Foundation
 #if os(macOS)
 import PostboxMac
+import TelegramApiMac
 #else
 import Postbox
-#endif
 import TelegramApi
+#endif
 
 func updateMessageMedia(transaction: Transaction, id: MediaId, media: Media?) {
     let updatedMessageIndices = transaction.updateMedia(id, update: media)

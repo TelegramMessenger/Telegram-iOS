@@ -3073,22 +3073,6 @@ public extension Api {
                     })
                 }
             
-                public static func createChannel(flags: Int32, title: String, about: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-192332417)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    serializeString(about, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "channels.createChannel", parameters: [("flags", flags), ("title", title), ("about", about)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
                 public static func editTitle(channel: Api.InputChannel, title: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1450044624)
@@ -3236,20 +3220,6 @@ public extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getAdminedPublicChannels() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1920105769)
-                    
-                    return (FunctionDescription(name: "channels.getAdminedPublicChannels", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Chats?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Chats
                         }
                         return result
                     })
@@ -3499,6 +3469,38 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func createChannel(flags: Int32, title: String, about: String, geoPoint: Api.InputGeoPoint?, address: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1029681423)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(about, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {geoPoint!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(address!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "channels.createChannel", parameters: [("flags", flags), ("title", title), ("about", about), ("geoPoint", geoPoint), ("address", address)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getAdminedPublicChannels(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-122669393)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "channels.getAdminedPublicChannels", parameters: [("flags", flags)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Chats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Chats
                         }
                         return result
                     })

@@ -10,7 +10,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
     
     public var description: String {
         get {
-            return "\(namespace):\(id)"
+            return "\(namespace)_\(id)"
         }
     }
     

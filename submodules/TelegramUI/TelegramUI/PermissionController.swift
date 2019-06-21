@@ -10,7 +10,7 @@ import DeviceAccess
 public final class PermissionController : ViewController {
     private let context: AccountContext
     private let splitTest: PermissionUISplitTest?
-    private var state: PermissionState?
+    private var state: PermissionControllerContent?
     private var splashScreen = false
     
     private var controllerNode: PermissionControllerNode {
@@ -101,95 +101,103 @@ public final class PermissionController : ViewController {
         self.context.sharedContext.applicationBindings.openSettings()
     }
     
-    public func setState(_ state: PermissionState, animated: Bool) {
+    public func setState(_ state: PermissionControllerContent, animated: Bool) {
         guard state != self.state else {
             return
         }
         
         self.state = state
-        switch state {
-            case let .contacts(status):
-                self.splitTest?.addEvent(.ContactsModalRequest)
-                
-                self.allow = { [weak self] in
-                    if let strongSelf = self {
-                        switch status {
-                            case .requestable:
-                                strongSelf.splitTest?.addEvent(.ContactsRequest)
-                                DeviceAccess.authorizeAccess(to: .contacts, { [weak self] result in
-                                    if let strongSelf = self {
-                                        if result {
-                                            strongSelf.splitTest?.addEvent(.ContactsAllowed)
-                                        } else {
-                                            strongSelf.splitTest?.addEvent(.ContactsDenied)
+        if case let .permission(permission) = state, let state = permission {
+            switch state {
+                case let .contacts(status):
+                    self.splitTest?.addEvent(.ContactsModalRequest)
+                    
+                    self.allow = { [weak self] in
+                        if let strongSelf = self {
+                            switch status {
+                                case .requestable:
+                                    strongSelf.splitTest?.addEvent(.ContactsRequest)
+                                    DeviceAccess.authorizeAccess(to: .contacts, { [weak self] result in
+                                        if let strongSelf = self {
+                                            if result {
+                                                strongSelf.splitTest?.addEvent(.ContactsAllowed)
+                                            } else {
+                                                strongSelf.splitTest?.addEvent(.ContactsDenied)
+                                            }
+                                            strongSelf.proceed?(true)
                                         }
-                                        strongSelf.proceed?(true)
-                                    }
-                                })
-                            case .denied:
-                                strongSelf.openAppSettings()
-                                strongSelf.proceed?(true)
-                            default:
-                                break
+                                    })
+                                case .denied:
+                                    strongSelf.openAppSettings()
+                                    strongSelf.proceed?(true)
+                                default:
+                                    break
+                            }
                         }
                     }
-                }
-            case let .notifications(status):
-                self.splitTest?.addEvent(.NotificationsModalRequest)
-                
-                self.allow = { [weak self] in
-                    if let strongSelf = self {
-                        switch status {
-                            case .requestable:
-                                strongSelf.splitTest?.addEvent(.NotificationsRequest)
-                                let context = strongSelf.context
-                                DeviceAccess.authorizeAccess(to: .notifications, registerForNotifications: { [weak context] result in
-                                    context?.sharedContext.applicationBindings.registerForNotifications(result)
-                                }, { [weak self] result in
-                                    if let strongSelf = self {
-                                        if result {
-                                            strongSelf.splitTest?.addEvent(.NotificationsAllowed)
-                                        } else {
-                                            strongSelf.splitTest?.addEvent(.NotificationsDenied)
+                case let .notifications(status):
+                    self.splitTest?.addEvent(.NotificationsModalRequest)
+                    
+                    self.allow = { [weak self] in
+                        if let strongSelf = self {
+                            switch status {
+                                case .requestable:
+                                    strongSelf.splitTest?.addEvent(.NotificationsRequest)
+                                    let context = strongSelf.context
+                                    DeviceAccess.authorizeAccess(to: .notifications, registerForNotifications: { [weak context] result in
+                                        context?.sharedContext.applicationBindings.registerForNotifications(result)
+                                    }, { [weak self] result in
+                                        if let strongSelf = self {
+                                            if result {
+                                                strongSelf.splitTest?.addEvent(.NotificationsAllowed)
+                                            } else {
+                                                strongSelf.splitTest?.addEvent(.NotificationsDenied)
+                                            }
+                                            strongSelf.proceed?(true)
                                         }
-                                        strongSelf.proceed?(true)
-                                    }
-                                })
+                                    })
+                                case .denied, .unreachable:
+                                    strongSelf.openAppSettings()
+                                    strongSelf.proceed?(true)
+                                default:
+                                    break
+                            }
+                        }
+                    }
+                case .siri:
+                    self.allow = { [weak self] in
+                        self?.proceed?(true)
+                    }
+                case .cellularData:
+                    self.allow = { [weak self] in
+                        self?.proceed?(true)
+                    }
+                case let .nearbyLocation(status):
+                    self.title = self.presentationData.strings.Permissions_PeopleNearbyTitle_v0
+                    self.navigationItem.rightBarButtonItem = nil
+                    
+                    self.allow = { [weak self] in
+                        if let strongSelf = self {
+                            switch status {
+                                case .requestable:
+                                    DeviceAccess.authorizeAccess(to: .location(.tracking), presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, { [weak self] result in
+                                        self?.proceed?(result)
+                                    })
                             case .denied, .unreachable:
                                 strongSelf.openAppSettings()
-                                strongSelf.proceed?(true)
+                                strongSelf.proceed?(false)
                             default:
                                 break
+                            }
                         }
                     }
+            }
+        } else {
+            self.allow = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.proceed?(true)
                 }
-            case .siri:
-                self.allow = { [weak self] in
-                    self?.proceed?(true)
-                }
-            case .cellularData:
-                self.allow = { [weak self] in
-                    self?.proceed?(true)
-                }
-            case let .nearbyLocation(status):
-                self.title = self.presentationData.strings.Permissions_PeopleNearbyTitle_v0
-                self.navigationItem.rightBarButtonItem = nil
-                
-                self.allow = { [weak self] in
-                    if let strongSelf = self {
-                        switch status {
-                            case .requestable:
-                                DeviceAccess.authorizeAccess(to: .location(.tracking), presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, { [weak self] result in
-                                    self?.proceed?(result)
-                                })
-                        case .denied, .unreachable:
-                            strongSelf.openAppSettings()
-                            strongSelf.proceed?(false)
-                        default:
-                            break
-                        }
-                    }
-                }
+            }
         }
         
         self.skip = { [weak self] in

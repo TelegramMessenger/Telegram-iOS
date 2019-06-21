@@ -1,11 +1,12 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
     import UIKit
+    import TelegramApi
 #endif
-import TelegramApi
 
 public enum TelegramMediaImageReference: PostboxCoding, Equatable {
     case cloud(imageId: Int64, accessHash: Int64, fileReference: Data?)

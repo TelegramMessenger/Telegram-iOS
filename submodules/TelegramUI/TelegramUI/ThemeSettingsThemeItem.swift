@@ -240,15 +240,19 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         self.scrollNode.view.showsHorizontalScrollIndicator = false
     }
     
+    private func scrollToNode(_ node: ThemeSettingsThemeItemIconNode, animated: Bool) {
+        let bounds = self.scrollNode.view.bounds
+        let frame = node.frame.insetBy(dx: -48.0, dy: 0.0)
+        
+        if frame.minX < bounds.minX || frame.maxX > bounds.maxX {
+            self.scrollNode.view.scrollRectToVisible(frame, animated: animated)
+        }
+    }
+    
     func asyncLayout() -> (_ item: ThemeSettingsThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
         return { item, params, neighbors in
-            var themeUpdated = false
-            if currentItem?.theme !== item.theme {
-                themeUpdated = true
-            }
-            
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
@@ -304,6 +308,9 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     let nodeSize = CGSize(width: 116.0, height: 112.0)
                     var nodeOffset = nodeInset
                     
+                    var updated = false
+                    var selectedNode: ThemeSettingsThemeItemIconNode?
+                    
                     var i = 0
                     for (theme, accentColor) in item.themes {
                         let imageNode: ThemeSettingsThemeItemIconNode
@@ -313,9 +320,14 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                             imageNode = ThemeSettingsThemeItemIconNode()
                             strongSelf.nodes.append(imageNode)
                             strongSelf.scrollNode.addSubnode(imageNode)
+                            updated = true
                         }
 
                         let selected = theme == item.currentTheme
+                        if selected {
+                            selectedNode = imageNode
+                        }
+                        
                         let name: String
                         switch theme {
                             case .dayClassic:
@@ -328,8 +340,11 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                                 name = item.strings.Appearance_ThemeCarouselNightBlue
                         }
                         
-                        imageNode.setup(theme: item.theme, icon: generateThemeIconImage(theme: theme, accentColor: accentColor), title: NSAttributedString(string: name, font: textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: {
+                        imageNode.setup(theme: item.theme, icon: generateThemeIconImage(theme: theme, accentColor: accentColor), title: NSAttributedString(string: name, font: textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: { [weak self, weak imageNode] in
                             item.updated(theme)
+                            if let imageNode = imageNode {
+                                self?.scrollToNode(imageNode, animated: true)
+                            }
                         })
                         
                         imageNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 0.0), size: nodeSize)
@@ -343,6 +358,10 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                         if strongSelf.scrollNode.view.contentSize != contentSize {
                             strongSelf.scrollNode.view.contentSize = contentSize
                         }
+                    }
+                    
+                    if updated, let selectedNode = selectedNode {
+                        strongSelf.scrollToNode(selectedNode, animated: false)
                     }
                 }
             })

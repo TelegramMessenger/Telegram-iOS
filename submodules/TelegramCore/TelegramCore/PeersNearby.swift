@@ -2,11 +2,19 @@ import Foundation
 #if os(macOS)
 import SwiftSignalKitMac
 import PostboxMac
+import TelegramApiMac
 #else
 import SwiftSignalKit
 import Postbox
-#endif
 import TelegramApi
+#endif
+
+#if os(macOS)
+private typealias SignalKitTimer = SwiftSignalKitMac.Timer
+#else
+private typealias SignalKitTimer = SwiftSignalKit.Timer
+#endif
+
 
 public struct PeerNearby {
     public let id: PeerId
@@ -16,19 +24,22 @@ public struct PeerNearby {
 
 public final class PeersNearbyContext {
     private let queue: Queue = Queue.mainQueue()
-    private var subscribers = Bag<([PeerNearby]) -> Void>()
+    private var subscribers = Bag<([PeerNearby]?) -> Void>()
     private let disposable = MetaDisposable()
-    private var timer: SwiftSignalKit.Timer?
+    private var timer: SignalKitTimer?
     
-    private var entries: [PeerNearby] = []
+    private var entries: [PeerNearby]?
    
     public init(network: Network, accountStateManager: AccountStateManager, coordinate: (latitude: Double, longitude: Double)) {
-        self.disposable.set((network.request(Api.functions.contacts.getLocated(geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude)))
+        let expiryExtension: Double = 10.0
+        
+        let poll = network.request(Api.functions.contacts.getLocated(geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude)))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { updates -> Signal<[PeerNearby], NoError> in
+        |> introduceError(Void.self)
+        |> mapToSignal { updates -> Signal<[PeerNearby], Void> in
             var peersNearby: [PeerNearby] = []
             if let updates = updates {
                 switch updates {
@@ -46,15 +57,31 @@ public final class PeersNearbyContext {
                 accountStateManager.addUpdates(updates)
             }
             return .single(peersNearby)
-            |> then(accountStateManager.updatedPeersNearby())
-        }).start(next: { [weak self] updatedEntries in
+            |> then(
+                accountStateManager.updatedPeersNearby()
+                |> introduceError(Void.self)
+            )
+        }
+        
+        let error: Signal<Void, Void> = .single(Void()) |> then(Signal.fail(Void()) |> suspendAwareDelay(25.0, queue: self.queue))
+        let combined = combineLatest(poll, error)
+        |> map { data, _ -> [PeerNearby] in
+            return data
+        }
+        |> restartIfError
+        |> `catch` { _ -> Signal<[PeerNearby], NoError> in
+            return .single([])
+        }
+        
+        self.disposable.set((combined
+        |> deliverOn(self.queue)).start(next: { [weak self] updatedEntries in
             guard let strongSelf = self else {
                 return
             }
             
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            var entries = strongSelf.entries.filter { Double($0.expires) > timestamp }
-            let updatedEntries = updatedEntries.filter { Double($0.expires) > timestamp }
+            var entries = strongSelf.entries?.filter { Double($0.expires) + expiryExtension > timestamp } ?? []
+            let updatedEntries = updatedEntries.filter { Double($0.expires) + expiryExtension > timestamp }
             
             var existingPeerIds: [PeerId: Int] = [:]
             for i in 0 ..< entries.count {
@@ -70,19 +97,21 @@ public final class PeersNearbyContext {
             }
             
             strongSelf.entries = entries
-            
             for subscriber in strongSelf.subscribers.copyItems() {
                 subscriber(strongSelf.entries)
             }
         }))
         
-        self.timer = SwiftSignalKit.Timer(timeout: 5.0, repeat: true, completion: { [weak self] in
+        self.timer = SignalKitTimer(timeout: 2.0, repeat: true, completion: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            strongSelf.entries = strongSelf.entries.filter { Double($0.expires) > timestamp }
+            strongSelf.entries = strongSelf.entries?.filter { Double($0.expires) + expiryExtension > timestamp }
+            for subscriber in strongSelf.subscribers.copyItems() {
+                subscriber(strongSelf.entries)
+            }
         }, queue: self.queue)
         self.timer?.start()
     }
@@ -92,7 +121,7 @@ public final class PeersNearbyContext {
         self.timer?.invalidate()
     }
     
-    public func get() -> Signal<[PeerNearby], NoError> {
+    public func get() -> Signal<[PeerNearby]?, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {

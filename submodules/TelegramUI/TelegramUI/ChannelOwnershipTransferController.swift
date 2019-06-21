@@ -436,7 +436,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
         
         let signal: Signal<PeerId?, ChannelOwnershipTransferError>
         if let peer = peer as? TelegramChannel {
-            signal = updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: peer.id, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
+            signal = context.peerChannelMemberCategoriesContextsManager.transferOwnership(account: context.account, peerId: peer.id, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
                 return .complete()
             }
             |> then(.single(nil))
@@ -449,7 +449,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
                 guard let upgradedPeerId = upgradedPeerId else {
                     return .fail(.generic)
                 }
-                return updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: upgradedPeerId, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
+                return context.peerChannelMemberCategoriesContextsManager.transferOwnership(account: context.account, peerId: upgradedPeerId, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
                     return .complete()
                 }
                 |> then(.single(upgradedPeerId))
@@ -477,6 +477,8 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
                     errorTextAndActions = (isGroup ? presentationData.strings.Group_OwnershipTransfer_ErrorAdminsTooMuch :  presentationData.strings.Channel_OwnershipTransfer_ErrorAdminsTooMuch, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                 case .userPublicChannelsTooMuch:
                     errorTextAndActions = (presentationData.strings.Channel_OwnershipTransfer_ErrorPublicChannelsTooMuch, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                case .userLocatedGroupsTooMuch:
+                    errorTextAndActions = (presentationData.strings.Group_OwnershipTransfer_ErrorLocatedGroupsTooMuch, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                 case .userBlocked, .restricted:
                     errorTextAndActions = (isGroup ? presentationData.strings.Group_OwnershipTransfer_ErrorPrivacyRestricted :  presentationData.strings.Channel_OwnershipTransfer_ErrorPrivacyRestricted, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                 default:
@@ -517,17 +519,10 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
     let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
     
-    var dismissImpl: (() -> Void)?
-    
     let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Channel_OwnershipTransfer_ChangeOwner, action: {
-        dismissImpl?()
         present(commitChannelOwnershipTransferController(context: context, peer: peer, member: member, present: present, completion: completion), nil)
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
-        dismissImpl?()
     })], actionLayout: .vertical)
-    dismissImpl = { [weak controller] in
-        controller?.dismissAnimated()
-    }
     return controller
 }
 

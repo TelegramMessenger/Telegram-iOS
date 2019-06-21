@@ -2,11 +2,12 @@ import Foundation
 #if os(macOS)
 import SwiftSignalKitMac
 import PostboxMac
+import TelegramApiMac
 #else
 import SwiftSignalKit
 import Postbox
-#endif
 import TelegramApi
+#endif
 
 public final class NotificationExceptionsList: Equatable {
     public let peers: [PeerId: Peer]

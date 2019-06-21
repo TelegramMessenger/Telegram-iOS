@@ -1,10 +1,11 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
 #endif
-import TelegramApi
 
 public enum MessageTextEntityType: Equatable {
     public typealias CustomEntityType = Int32
@@ -304,13 +305,10 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
                 break
             case .Strikethrough:
                 apiEntities.append(.messageEntityStrike(offset: offset, length: length))
-                break
             case .BlockQuote:
                 apiEntities.append(.messageEntityBlockquote(offset: offset, length: length))
-                break
             case .Underline:
                 apiEntities.append(.messageEntityUnderline(offset: offset, length: length))
-                break
             case .Custom:
                 break
         }

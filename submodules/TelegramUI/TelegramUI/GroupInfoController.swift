@@ -39,9 +39,10 @@ private final class GroupInfoArguments {
     let openGroupTypeSetup: () -> Void
     let openLinkedChannelSetup: () -> Void
     let openLocation: (PeerGeoLocation) -> Void
+    let changeLocation: () -> Void
     let displayLocationContextMenu: (String) -> Void
     
-    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void, openLinkedChannelSetup: @escaping () -> Void, openLocation: @escaping (PeerGeoLocation) -> Void, displayLocationContextMenu: @escaping (String) -> Void) {
+    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void, openLinkedChannelSetup: @escaping () -> Void, openLocation: @escaping (PeerGeoLocation) -> Void, changeLocation: @escaping () -> Void, displayLocationContextMenu: @escaping (String) -> Void) {
         self.context = context
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
@@ -69,6 +70,7 @@ private final class GroupInfoArguments {
         self.openGroupTypeSetup = openGroupTypeSetup
         self.openLinkedChannelSetup = openLinkedChannelSetup
         self.openLocation = openLocation
+        self.changeLocation = changeLocation
         self.displayLocationContextMenu = displayLocationContextMenu
     }
 }
@@ -92,6 +94,7 @@ private enum GroupInfoEntryTag {
 private enum GroupInfoMemberStatus {
     case member
     case admin
+    case owner
 }
 
 private enum GroupEntryStableId: Hashable, Equatable {
@@ -141,9 +144,10 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setGroupPhoto(PresentationTheme, String)
     case groupDescriptionSetup(PresentationTheme, String, String)
-    case aboutHeader(PresentationTheme, String)
     case about(PresentationTheme, String)
+    case locationHeader(PresentationTheme, String)
     case location(PresentationTheme, PeerGeoLocation)
+    case changeLocation(PresentationTheme, String)
     case link(PresentationTheme, String)
     case sharedMedia(PresentationTheme, String)
     case notifications(PresentationTheme, String, String)
@@ -159,9 +163,9 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .info, .setGroupPhoto, .groupDescriptionSetup:
+            case .info, .setGroupPhoto, .groupDescriptionSetup, .about:
                 return GroupInfoSection.info.rawValue
-            case .aboutHeader, .about, .link, .location:
+            case .locationHeader, .location, .changeLocation, .link:
                 return GroupInfoSection.about.rawValue
             case .groupTypeSetup, .linkedChannelSetup, .preHistory, .stickerPack:
                 return GroupInfoSection.infoManagement.rawValue
@@ -237,26 +241,32 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .aboutHeader(lhsTheme, lhsText):
-                if case let .aboutHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
             case let .about(lhsTheme, lhsText):
                 if case let .about(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .link(lhsTheme, lhsText):
-                if case let .link(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .locationHeader(lhsTheme, lhsText):
+                if case let .locationHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
             case let .location(lhsTheme, lhsLocation):
                 if case let .location(rhsTheme, rhsLocation) = rhs, lhsTheme === rhsTheme, lhsLocation == rhsLocation {
+                    return true
+                } else {
+                    return false
+                }
+            case let .changeLocation(lhsTheme, lhsText):
+                if case let .changeLocation(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .link(lhsTheme, lhsText):
+                if case let .link(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -399,13 +409,15 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return 1
             case .groupDescriptionSetup:
                 return 2
-            case .aboutHeader:
-                return 4
             case .about:
-                return 5
-            case .link:
-                return 6
+                return 3
+            case .locationHeader:
+                return 4
             case .location:
+                return 5
+            case .changeLocation:
+                return 6
+            case .link:
                 return 7
             case .groupTypeSetup:
                 return 8
@@ -424,11 +436,11 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case .administrators:
                 return 15
             case .addMember:
-                return 17
+                return 16
             case let .member(_, _, _, _, index, _, _, _, _, _, _, _, _, _):
                 return 20 + index
             case .leave:
-                return 100000 + 1
+                return 200000 + 1
         }
     }
     
@@ -448,27 +460,31 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
-            case let .aboutHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .about(theme, text):
                 return ItemListMultilineTextItem(theme: theme, text: foldMultipleLineBreaks(text), enabledEntitiyTypes: [.url, .mention, .hashtag], sectionId: self.section, style: .blocks, longTapAction: {
                     arguments.displayAboutContextMenu(text)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)
                 }, tag: GroupInfoEntryTag.about)
-            case let .link(theme, url):
-                return ItemListActionItem(theme: theme, title: url, kind: .neutral, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    arguments.displayUsernameShareMenu(url)
-                }, longTapAction: {
-                    arguments.displayUsernameContextMenu(url)
-                }, tag: GroupInfoEntryTag.link)
+            case let .locationHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .location(theme, location):
                 let imageSignal = chatMapSnapshotImage(account: arguments.context.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
-                return ItemListAddressItem(theme: theme, label: "", text: location.address, imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: {
+                return ItemListAddressItem(theme: theme, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: {
                     arguments.openLocation(location)
                 }, longTapAction: {
                     arguments.displayLocationContextMenu(location.address.replacingOccurrences(of: "\n", with: ", "))
                 }, tag: GroupInfoEntryTag.location)
+            case let .changeLocation(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.changeLocation()
+                }, clearHighlightAutomatically: false)
+            case let .link(theme, url):
+                return ItemListActionItem(theme: theme, title: url, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.displayUsernameShareMenu(url)
+                }, longTapAction: {
+                    arguments.displayUsernameContextMenu(url)
+                }, tag: GroupInfoEntryTag.link)
             case let .notifications(theme, title, text):
                 return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.changeNotificationMuteSettings()
@@ -514,6 +530,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case let .member(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, peer, participant, presence, memberStatus, editing, actions, enabled, selectable):
                 let label: String?
                 switch memberStatus {
+                    case .owner:
+                        label = strings.GroupInfo_LabelOwner
                     case .admin:
                         label = strings.GroupInfo_LabelAdmin
                     case .member:
@@ -806,21 +824,35 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 entries.append(.administrators(presentationData.theme, presentationData.strings.GroupInfo_Administrators, ""))
             }
         } else if let channel = view.peers[view.peerId] as? TelegramChannel, let cachedChannelData = view.cachedData as? CachedChannelData {
-            if isCreator || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
-                if cachedChannelData.flags.contains(.canChangeUsername) {
-                    entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
-                    if let linkedDiscussionPeerId = cachedChannelData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
-                        let peerTitle: String
-                        if let addressName = peer.addressName, !addressName.isEmpty {
-                            peerTitle = "@\(addressName)"
-                        } else {
-                            peerTitle = peer.displayTitle
-                        }
-                        entries.append(GroupInfoEntry.linkedChannelSetup(presentationData.theme, presentationData.strings.Group_LinkedChannel, peerTitle))
-                    }
+            if isCreator, let location = cachedChannelData.peerGeoLocation {
+                entries.append(.locationHeader(presentationData.theme, presentationData.strings.GroupInfo_Location.uppercased()))
+                entries.append(.location(presentationData.theme, location))
+                if cachedChannelData.flags.contains(.canChangePeerGeoLocation) {
+                    entries.append(.changeLocation(presentationData.theme, presentationData.strings.Group_Location_ChangeLocation))
                 }
-                if !isPublic && cachedChannelData.linkedDiscussionPeerId == nil {
-                    entries.append(GroupInfoEntry.preHistory(presentationData.theme, presentationData.strings.GroupInfo_GroupHistory, cachedChannelData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden))
+            }
+            
+            if isCreator || (channel.adminRights != nil && channel.hasPermission(.pinMessages)) {
+                if cachedChannelData.peerGeoLocation != nil {
+                    if isCreator {
+                        entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_PublicLink, channel.addressName ?? presentationData.strings.GroupInfo_PublicLinkAdd))
+                    }
+                } else {
+                    if cachedChannelData.flags.contains(.canChangeUsername) {
+                        entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
+                        if let linkedDiscussionPeerId = cachedChannelData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
+                            let peerTitle: String
+                            if let addressName = peer.addressName, !addressName.isEmpty {
+                                peerTitle = "@\(addressName)"
+                            } else {
+                                peerTitle = peer.displayTitle
+                            }
+                            entries.append(GroupInfoEntry.linkedChannelSetup(presentationData.theme, presentationData.strings.Group_LinkedChannel, peerTitle))
+                        }
+                    }
+                    if !isPublic && cachedChannelData.linkedDiscussionPeerId == nil {
+                        entries.append(GroupInfoEntry.preHistory(presentationData.theme, presentationData.strings.GroupInfo_GroupHistory, cachedChannelData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden))
+                    }
                 }
             }
             
@@ -855,24 +887,23 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
         }
     } else {
         if let peer = peerViewMainPeer(view), peer.isScam {
-            entries.append(.aboutHeader(presentationData.theme, presentationData.strings.Channel_About_Title.uppercased()))
             entries.append(.about(presentationData.theme, presentationData.strings.GroupInfo_ScamGroupWarning))
         }
         else if let cachedChannelData = view.cachedData as? CachedChannelData {
             if let about = cachedChannelData.about, !about.isEmpty {
-                entries.append(.aboutHeader(presentationData.theme, presentationData.strings.Channel_About_Title.uppercased()))
                 entries.append(.about(presentationData.theme, about))
             }
-            if let peer = view.peers[view.peerId] as? TelegramChannel, let username = peer.username, !username.isEmpty {
-                entries.append(.link(presentationData.theme, "t.me/" + username))
-                
+            if let peer = view.peers[view.peerId] as? TelegramChannel {
                 if let location = cachedChannelData.peerGeoLocation {
+                    entries.append(.locationHeader(presentationData.theme, presentationData.strings.GroupInfo_Location.uppercased()))
                     entries.append(.location(presentationData.theme, location))
+                }
+                if let username = peer.username, !username.isEmpty {
+                    entries.append(.link(presentationData.theme, "t.me/" + username))
                 }
             }
         } else if let cachedGroupData = view.cachedData as? CachedGroupData {
             if let about = cachedGroupData.about, !about.isEmpty {
-                entries.append(.aboutHeader(presentationData.theme, presentationData.strings.Channel_About_Title.uppercased()))
                 entries.append(.about(presentationData.theme, about))
             }
         }
@@ -1102,7 +1133,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             let memberStatus: GroupInfoMemberStatus
             switch participant.participant {
                 case .creator:
-                    memberStatus = .admin
+                    memberStatus = .owner
                 case let .member(_, _, adminInfo, _):
                     if adminInfo != nil {
                         memberStatus = .admin
@@ -1239,6 +1270,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     var endEditingImpl: (() -> Void)?
     var removePeerChatImpl: ((Peer, Bool) -> Void)?
     var errorImpl: (() -> Void)?
+    var clearHighlightImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -1536,7 +1568,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     }
                 } else if let channel = groupPeer as? TelegramChannel {
                     if channel.hasPermission(.inviteMembers) {
-                        if channel.adminRights != nil {
+                        if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.username == nil) {
                             canCreateInviteLink = true
                         }
                     }
@@ -1745,8 +1777,13 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 
                 inviteByLinkImpl = { [weak contactsController] in
                     contactsController?.dismiss()
-                    
-                    presentControllerImpl?(channelVisibilityController(context: context, peerId: peerView.peerId, mode: .privateLink, upgradedToSupergroup: { updatedPeerId, f in
+                    let mode: ChannelVisibilityControllerMode
+                    if groupPeer.addressName != nil {
+                        mode = .generic
+                    } else {
+                        mode = .privateLink
+                    }
+                    presentControllerImpl?(channelVisibilityController(context: context, peerId: peerView.peerId, mode: mode, upgradedToSupergroup: { updatedPeerId, f in
                         upgradedToSupergroupImpl?(updatedPeerId, f)
                     }), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 }
@@ -1966,6 +2003,42 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: MapVenue(title: peer.displayTitle, address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
             let controller = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, isModal: false, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { _ in })
             pushControllerImpl?(controller)
+        })
+    }, changeLocation: {
+        let _ = (peerView.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peerView in
+            guard let peer = peerView.peers[peerView.peerId] else {
+                return
+            }
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let controller = legacyLocationPickerController(context: context, selfPeer: peer, peer: peer, sendLocation: { coordinate, _, address in
+                let addressSignal: Signal<String, NoError>
+                if let address = address {
+                    addressSignal = .single(address)
+                } else {
+                    addressSignal = reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                    |> map { placemark in
+                        if let placemark = placemark {
+                            return placemark.fullAddress
+                        } else {
+                            return "\(coordinate.latitude), \(coordinate.longitude)"
+                        }
+                    }
+                }
+                
+                let _ = (addressSignal
+                |> mapToSignal { address -> Signal<Bool, NoError> in
+                    return updateChannelGeoLocation(postbox: context.account.postbox, network: context.account.network, channelId: peer.id, coordinate: (coordinate.latitude, coordinate.longitude), address: address)
+                }
+                |> deliverOnMainQueue).start(error: { errror in
+                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                })
+            }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
+                clearHighlightImpl?()
+            })
+            presentControllerImpl?(controller, nil)
         })
     }, displayLocationContextMenu: { text in
         displayCopyContextMenuImpl?(text, .location)
@@ -2319,6 +2392,9 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     endEditingImpl = {
         [weak controller] in
         controller?.view.endEditing(true)
+    }
+    clearHighlightImpl = { [weak controller] in
+        controller?.clearItemNodesHighlight(animated: true)
     }
     
     let hapticFeedback = HapticFeedback()

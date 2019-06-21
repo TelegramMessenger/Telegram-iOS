@@ -340,12 +340,14 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
 
 - (void)_sendLocation
 {
+    _tableView.userInteractionEnabled = false;
+    
     CLLocationCoordinate2D coordinate = _currentUserLocation.coordinate;
     if (_mapInFullScreenMode)
         coordinate = [self mapCenterCoordinateForPickerPin];
     
     if (self.locationPicked != nil)
-        self.locationPicked(coordinate, nil);
+        self.locationPicked(coordinate, nil, _customAddress);
 }
 
 - (void)searchButtonPressed
@@ -520,7 +522,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         
         NSString *address = @"";
         if (result != nil)
-            address = result.displayAddress;
+            address = result.fullAddress;
         
         strongSelf->_customAddress = address;
         [strongSelf updateCurrentLocationCell];
@@ -662,9 +664,9 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
     
     _ownLocationView.hidden = true;
     _pickerPinWrapper.hidden = false;
-    if (_intent != TGLocationPickerControllerCustomLocationIntent) {
+    //if (_intent != TGLocationPickerControllerCustomLocationIntent) {
         [_pickerPinView setCustomPin:true animated:true];
-    }
+    //}
     
     _mapView.tapEnabled = false;
     _mapView.longPressAsTapEnabled = false;
@@ -1128,7 +1130,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         }
         
         if (self.locationPicked != nil)
-            self.locationPicked(venue.coordinate, [venue venueAttachment]);
+            self.locationPicked(venue.coordinate, [venue venueAttachment], _customAddress);
     }
 }
 

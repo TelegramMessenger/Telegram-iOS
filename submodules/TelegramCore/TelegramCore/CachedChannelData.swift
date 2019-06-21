@@ -1,10 +1,11 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
 #endif
-import TelegramApi
 
 public struct CachedChannelFlags: OptionSet {
     public var rawValue: Int32
@@ -22,6 +23,7 @@ public struct CachedChannelFlags: OptionSet {
     public static let canSetStickerSet = CachedChannelFlags(rawValue: 1 << 2)
     public static let preHistoryEnabled = CachedChannelFlags(rawValue: 1 << 3)
     public static let canViewStats = CachedChannelFlags(rawValue: 1 << 4)
+    public static let canChangePeerGeoLocation = CachedChannelFlags(rawValue: 1 << 5)
 }
 
 public struct CachedChannelParticipantsSummary: PostboxCoding, Equatable {

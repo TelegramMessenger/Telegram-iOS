@@ -1,10 +1,11 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
 #endif
-import TelegramApi
 
 private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource, Data)]? {
     switch photo {

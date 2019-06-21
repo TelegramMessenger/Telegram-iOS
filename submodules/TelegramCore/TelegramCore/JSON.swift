@@ -1,10 +1,11 @@
 import Foundation
 #if os(macOS)
 import PostboxMac
+import TelegramApiMac
 #else
 import Postbox
-#endif
 import TelegramApi
+#endif
 
 public indirect enum JSON: PostboxCoding, Equatable {
     case null

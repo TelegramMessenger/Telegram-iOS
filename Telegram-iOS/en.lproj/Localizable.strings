@@ -1532,7 +1532,7 @@
 "Forward.ChannelReadOnly" = "Sorry, you can't post to this channel.";
 
 "Channel.ErrorAccessDenied" = "Sorry, this channel is private.";
-"Group.ErrorAccessDenied" = "Sorry, this channel is private.";
+"Group.ErrorAccessDenied" = "Sorry, this group is private.";
 "Conversation.InputTextBroadcastPlaceholder" = "Broadcast";
 
 "Channel.NotificationLoading" = "Loading...";
@@ -4387,6 +4387,7 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.OwnershipTransfer.ChangeOwner" = "Change Owner";
 
 "Channel.OwnershipTransfer.ErrorPublicChannelsTooMuch" = "Sorry, the target user has too many public groups or channels already. Please ask them to make one of their existing groups or channels private first.";
+"Group.OwnershipTransfer.ErrorLocatedGroupsTooMuch" = "Sorry, the target user has too many location-based groups already. Please ask them to delete or transfer one of their existing ones first.";
 
 "Group.OwnershipTransfer.ErrorAdminsTooMuch" = "Sorry, this group has too many admins and the new owner can't be added. Please remove one of the existing admins first.";
 "Channel.OwnershipTransfer.ErrorAdminsTooMuch" = "Sorry, this channel has too many admins and the new owner can't be added. Please remove one of the existing admins first.";
@@ -4403,12 +4404,12 @@ Any member of this group will be able to see messages in the channel.";
 "Contacts.AddPeopleNearby" = "Add People Nearby";
 
 "PeopleNearby.Title" = "People Nearby";
-"PeopleNearby.Description" = "Use this section to quickly find people and groups near you.";
-"PeopleNearby.Users" = "People Around You";
-"PeopleNearby.UsersEmpty" = "No one else is viewing \"People Nearby\" around you now";
-"PeopleNearby.Groups" = "Groups Around You";
-"PeopleNearby.CreateGroup" = "Start a Group Chat Here";
-"PeopleNearby.Channels" = "Channels Around You";
+"PeopleNearby.Description" = "Ask your friend nearby to open this page to exchange phone numbers.";
+"PeopleNearby.Users" = "People Nearby";
+"PeopleNearby.UsersEmpty" = "Looking for users around you...";
+"PeopleNearby.Groups" = "Groups Nearby";
+"PeopleNearby.CreateGroup" = "Create a Group Here";
+"PeopleNearby.NoMembers" = "no members";
 
 "Channel.Management.LabelOwner" = "Owner";
 "Channel.Management.LabelAdministrator" = "Administrator";
@@ -4417,18 +4418,13 @@ Any member of this group will be able to see messages in the channel.";
 "Common.ActionNotAllowedError" = "Sorry, you are not allowed to do this.";
 
 "Group.Location.Title" = "Location";
-"Group.Location.SetLocation" = "Set Location";
 "Group.Location.ChangeLocation" = "Change Location";
-"Group.Location.RemoveLocation" = "Remove Location";
-"Group.Location.Info" = "People will be able to find your group in the Groups Nearby section (Contacts > Add People Nearby).";
-
-"Group.Username.Title" = "Username";
+"Group.Location.Info" = "People can find your group using People Nearby section.";
 
 "Channel.AdminLog.MessageTransferedName" = "transferred ownership to %1$@";
 "Channel.AdminLog.MessageTransferedNameUsername" = "transferred ownership to %1$@ (%2$@)";
 
 "Channel.AdminLog.MessageChangedGroupGeoLocation" = "changed group location to \"%@\"";
-"Channel.AdminLog.MessageRemovedGroupGeoLocation" = "%@ removed group location";
 
 "Map.SetThisLocation" = "Set This Location";
 
@@ -4437,9 +4433,24 @@ Any member of this group will be able to see messages in the channel.";
 "Permissions.PeopleNearbyAllow.v0" = "Allow Access";
 "Permissions.PeopleNearbyAllowInSettings.v0" = "Allow in Settings";
 
-"Conversation.ReportGroupLocation" = "Group unrelated to tocation?";
+"Conversation.ReportGroupLocation" = "Group unrelated to location?";
 "ReportGroupLocation.Title" = "Report Unrelated Group";
 "ReportGroupLocation.Text" = "Please tell us if this group is not related to this location.";
 "ReportGroupLocation.Report" = "Report";
 
-"Group.Setup.TypePublicWithLocationHelp" = "Public groups can be found in search, chat history is available to everyone and anyone can join.\n\nTo make your group public, set a username or add a location.";
+"LocalGroup.Title" = "Create a Local Group";
+"LocalGroup.Text" = "Anyone close to this location (neighbors, co-workers, fellow students, event attendees, visitors of a venue) will see your group in the People Nearby section.";
+"LocalGroup.ButtonTitle" = "Start Group";
+"LocalGroup.IrrelevantWarning" = "If you start an unrelated group at this location, you may get restricted in creating new location-based groups.";
+
+"GroupInfo.Location" = "Location";
+"GroupInfo.PublicLink" = "Public Link";
+"GroupInfo.PublicLinkAdd" = "Add";
+
+"Group.PublicLink.Title" = "Public Link";
+"Group.PublicLink.Placeholder" = "link";
+"Group.PublicLink.Info" = "People can share this link with others and find your group using Telegram search.\n\nYou can use **a-z**, **0-9** and underscores. Minimum length is **5** characters.";
+
+"CreateGroup.ErrorLocatedGroupsTooMuch" = "Sorry, you have too many location-based groups already. Please delete one of your existing ones first.";
+
+"GroupInfo.LabelOwner" = "owner";
