@@ -1,7 +1,18 @@
 import Foundation
 import UIKit
 
-let deviceColorSpace = CGColorSpaceCreateDeviceRGB()
+private let deviceColorSpace: CGColorSpace = {
+    if #available(iOSApplicationExtension 9.3, *) {
+        if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
+            return colorSpace
+        } else {
+            return CGColorSpaceCreateDeviceRGB()
+        }
+    } else {
+        return CGColorSpaceCreateDeviceRGB()
+    }
+}()
+
 let deviceScale = UIScreen.main.scale
 
 public func generateImagePixel(_ size: CGSize, scale: CGFloat, pixelGenerator: (CGSize, UnsafeMutablePointer<UInt8>) -> Void) -> UIImage? {
