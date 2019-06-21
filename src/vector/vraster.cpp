@@ -41,7 +41,7 @@ public:
         mData = std::make_unique<T[]>(mCapacity);
     }
     T* data() const {return mData.get();}
-
+    dyn_array& operator=(dyn_array &&) noexcept = delete;
 private:
     size_t                 mCapacity{0};
     std::unique_ptr<T[]>   mData{nullptr};

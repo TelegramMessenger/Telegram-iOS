@@ -103,6 +103,7 @@ class LOTLayerItem
 {
 public:
    virtual ~LOTLayerItem() = default;
+   LOTLayerItem& operator=(LOTLayerItem&&) noexcept = delete;
    LOTLayerItem(LOTLayerData *layerData);
    int id() const {return mLayerData->id();}
    int parentId() const {return mLayerData->parentId();}
@@ -265,6 +266,7 @@ class LOTContentItem
 {
 public:
    virtual ~LOTContentItem() = default;
+   LOTContentItem& operator=(LOTContentItem&&) noexcept = delete;
    LOTContentItem(ContentType type=ContentType::Unknown):mType(type) {}
    virtual void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) = 0;
    virtual void renderList(std::vector<VDrawable *> &){}
