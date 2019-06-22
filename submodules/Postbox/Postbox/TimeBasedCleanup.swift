@@ -59,6 +59,9 @@ private final class TimeBasedCleanupImpl {
     public func setMaxStoreTime(_ maxStoreTime: Int32) {
         if self.maxStoreTime != maxStoreTime {
             self.maxStoreTime = maxStoreTime
+            #if DEBUG
+            return;
+            #endif
             self.resetScan(maxStoreTime: maxStoreTime)
         }
     }

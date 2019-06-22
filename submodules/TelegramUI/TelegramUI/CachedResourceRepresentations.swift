@@ -217,7 +217,7 @@ final class CachedEmojiRepresentation: CachedMediaResourceRepresentation {
 
 final class CachedAnimatedStickerRepresentation: CachedMediaResourceRepresentation {
     var uniqueId: String {
-        return "animated-sticker-v2"
+        return "animated-sticker-v3"
     }
     
     func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
