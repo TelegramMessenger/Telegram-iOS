@@ -265,6 +265,18 @@
 		D01590AB22BD467B0017C33E /* AnimationRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01590AA22BD467B0017C33E /* AnimationRenderer.swift */; };
 		D01590AE22BD58AD0017C33E /* YUV.h in Headers */ = {isa = PBXBuildFile; fileRef = D01590AC22BD58AD0017C33E /* YUV.h */; };
 		D01590AF22BD58AD0017C33E /* YUV.m in Sources */ = {isa = PBXBuildFile; fileRef = D01590AD22BD58AD0017C33E /* YUV.m */; };
+		D01590BA22BDAEBC0017C33E /* ColorVec.h in Headers */ = {isa = PBXBuildFile; fileRef = D01590B022BDAEB30017C33E /* ColorVec.h */; };
+		D01590BB22BDAEBC0017C33E /* BC1Compression.h in Headers */ = {isa = PBXBuildFile; fileRef = D01590B122BDAEBB0017C33E /* BC1Compression.h */; };
+		D01590BC22BDAEBC0017C33E /* BMPImage.h in Headers */ = {isa = PBXBuildFile; fileRef = D01590B222BDAEBB0017C33E /* BMPImage.h */; };
+		D01590BD22BDAEBC0017C33E /* DDSImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D01590B322BDAEBB0017C33E /* DDSImage.cpp */; };
+		D01590BE22BDAEBC0017C33E /* Image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D01590B422BDAEBB0017C33E /* Image.cpp */; };
+		D01590BF22BDAEBC0017C33E /* Image.h in Headers */ = {isa = PBXBuildFile; fileRef = D01590B522BDAEBC0017C33E /* Image.h */; };
+		D01590C022BDAEBC0017C33E /* BC1Compression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D01590B622BDAEBC0017C33E /* BC1Compression.cpp */; };
+		D01590C122BDAEBC0017C33E /* DDSImage.h in Headers */ = {isa = PBXBuildFile; fileRef = D01590B722BDAEBC0017C33E /* DDSImage.h */; };
+		D01590C222BDAEBC0017C33E /* TypeDefinitions.h in Headers */ = {isa = PBXBuildFile; fileRef = D01590B822BDAEBC0017C33E /* TypeDefinitions.h */; };
+		D01590C322BDAEBC0017C33E /* BMPImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D01590B922BDAEBC0017C33E /* BMPImage.cpp */; };
+		D01590C722BE61CB0017C33E /* TextureCompression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D01590C522BE61CB0017C33E /* TextureCompression.cpp */; };
+		D01590C922BE62C40017C33E /* TextureCompression.h in Headers */ = {isa = PBXBuildFile; fileRef = D01590C822BE62C40017C33E /* TextureCompression.h */; };
 		D015E04F225D2E5900CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04E225D2E5900CB9E8A /* WebP.framework */; };
 		D017734C22049BF800DA06A7 /* UpgradedAccounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017734B22049BF800DA06A7 /* UpgradedAccounts.swift */; };
 		D01776B31F1D69A80044446D /* RadialStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776B21F1D69A80044446D /* RadialStatusNode.swift */; };
@@ -1466,6 +1478,18 @@
 		D01590AA22BD467B0017C33E /* AnimationRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimationRenderer.swift; sourceTree = "<group>"; };
 		D01590AC22BD58AD0017C33E /* YUV.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = YUV.h; sourceTree = "<group>"; };
 		D01590AD22BD58AD0017C33E /* YUV.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = YUV.m; sourceTree = "<group>"; };
+		D01590B022BDAEB30017C33E /* ColorVec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ColorVec.h; path = "third-party/bc1/ColorVec.h"; sourceTree = SOURCE_ROOT; };
+		D01590B122BDAEBB0017C33E /* BC1Compression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BC1Compression.h; path = "third-party/bc1/BC1Compression.h"; sourceTree = SOURCE_ROOT; };
+		D01590B222BDAEBB0017C33E /* BMPImage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BMPImage.h; path = "third-party/bc1/BMPImage.h"; sourceTree = SOURCE_ROOT; };
+		D01590B322BDAEBB0017C33E /* DDSImage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DDSImage.cpp; path = "third-party/bc1/DDSImage.cpp"; sourceTree = SOURCE_ROOT; };
+		D01590B422BDAEBB0017C33E /* Image.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Image.cpp; path = "third-party/bc1/Image.cpp"; sourceTree = SOURCE_ROOT; };
+		D01590B522BDAEBC0017C33E /* Image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Image.h; path = "third-party/bc1/Image.h"; sourceTree = SOURCE_ROOT; };
+		D01590B622BDAEBC0017C33E /* BC1Compression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BC1Compression.cpp; path = "third-party/bc1/BC1Compression.cpp"; sourceTree = SOURCE_ROOT; };
+		D01590B722BDAEBC0017C33E /* DDSImage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DDSImage.h; path = "third-party/bc1/DDSImage.h"; sourceTree = SOURCE_ROOT; };
+		D01590B822BDAEBC0017C33E /* TypeDefinitions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TypeDefinitions.h; path = "third-party/bc1/TypeDefinitions.h"; sourceTree = SOURCE_ROOT; };
+		D01590B922BDAEBC0017C33E /* BMPImage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BMPImage.cpp; path = "third-party/bc1/BMPImage.cpp"; sourceTree = SOURCE_ROOT; };
+		D01590C522BE61CB0017C33E /* TextureCompression.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = TextureCompression.cpp; path = "../third-party/bc1/TextureCompression.cpp"; sourceTree = "<group>"; };
+		D01590C822BE62C40017C33E /* TextureCompression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TextureCompression.h; path = "third-party/bc1/TextureCompression.h"; sourceTree = SOURCE_ROOT; };
 		D015E04E225D2E5900CB9E8A /* WebP.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WebP.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D017494D1E1059570057C89A /* StringWithAppliedEntities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringWithAppliedEntities.swift; sourceTree = "<group>"; };
 		D01749501E1067E40057C89A /* HashtagSearchController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HashtagSearchController.swift; sourceTree = "<group>"; };
@@ -2801,11 +2825,23 @@
 		D01590A922BD46690017C33E /* Animation */ = {
 			isa = PBXGroup;
 			children = (
+				D01590B622BDAEBC0017C33E /* BC1Compression.cpp */,
+				D01590B122BDAEBB0017C33E /* BC1Compression.h */,
+				D01590B922BDAEBC0017C33E /* BMPImage.cpp */,
+				D01590B222BDAEBB0017C33E /* BMPImage.h */,
+				D01590B022BDAEB30017C33E /* ColorVec.h */,
+				D01590B322BDAEBB0017C33E /* DDSImage.cpp */,
+				D01590B722BDAEBC0017C33E /* DDSImage.h */,
+				D01590B422BDAEBB0017C33E /* Image.cpp */,
+				D01590B522BDAEBC0017C33E /* Image.h */,
+				D01590B822BDAEBC0017C33E /* TypeDefinitions.h */,
 				D01590AA22BD467B0017C33E /* AnimationRenderer.swift */,
 				D01590A522BD460C0017C33E /* MetalAnimationRenderer.swift */,
 				D01590A722BD462C0017C33E /* SoftwareAnimationRenderer.swift */,
 				D01590AC22BD58AD0017C33E /* YUV.h */,
 				D01590AD22BD58AD0017C33E /* YUV.m */,
+				D01590C822BE62C40017C33E /* TextureCompression.h */,
+				D01590C522BE61CB0017C33E /* TextureCompression.cpp */,
 			);
 			name = Animation;
 			sourceTree = "<group>";
@@ -4872,6 +4908,7 @@
 				D0E9BA591F055A2200F079A4 /* STPWeakStrongMacros.h in Headers */,
 				D0E9BADE1F0574D800F079A4 /* STPBackendAPIAdapter.h in Headers */,
 				D0E9BAD11F0573C000F079A4 /* STPToken.h in Headers */,
+				D01590C222BDAEBC0017C33E /* TypeDefinitions.h in Headers */,
 				D0AE303622B1D3620058D3BC /* TGBridgeAudioDecoder.h in Headers */,
 				D0E9BAE71F0574FF00F079A4 /* STPCustomer.h in Headers */,
 				D0208AD51FA33D14001F0D5F /* RaiseToListenActivator.h in Headers */,
@@ -4881,6 +4918,7 @@
 				D0E9BA511F0559DA00F079A4 /* STPImageLibrary.h in Headers */,
 				D0E9BA4C1F0559C700F079A4 /* NSString+Stripe_CardBrands.h in Headers */,
 				D00817E022B47A14008A895F /* UIImage+ImageEffects.h in Headers */,
+				D01590BA22BDAEBC0017C33E /* ColorVec.h in Headers */,
 				D0E9BAE11F0574D800F079A4 /* STPBankAccount.h in Headers */,
 				D0E9BACE1F0573AF00F079A4 /* STPBlocks.h in Headers */,
 				D0E9BA2A1F0557A600F079A4 /* STPFormEncoder.h in Headers */,
@@ -4905,9 +4943,12 @@
 				D00817CD22B47A14008A895F /* TGAutoDownloadPreferences.h in Headers */,
 				D0E9BACB1F05738600F079A4 /* STPAPIPostRequest.h in Headers */,
 				D0E9BA561F055A0B00F079A4 /* STPFormTextField.h in Headers */,
+				D01590C122BDAEBC0017C33E /* DDSImage.h in Headers */,
 				D008177C22B46B7E008A895F /* TGItemProviderSignals.h in Headers */,
 				D0E9BABE1F05735F00F079A4 /* STPPaymentConfiguration+Private.h in Headers */,
+				D01590BB22BDAEBC0017C33E /* BC1Compression.h in Headers */,
 				D0E9BACA1F05738600F079A4 /* STPAPIClient+Private.h in Headers */,
+				D01590BC22BDAEBC0017C33E /* BMPImage.h in Headers */,
 				D0E9BA251F05578900F079A4 /* STPCardBrand.h in Headers */,
 				D0E9BAC81F05738600F079A4 /* STPAPIClient+ApplePay.h in Headers */,
 				D0E9BA451F0559A500F079A4 /* STPAPIResponseDecodable.h in Headers */,
@@ -4916,10 +4957,12 @@
 				D00817D722B47A14008A895F /* TGBridgeServer.h in Headers */,
 				D00817CE22B47A14008A895F /* TGProxyItem.h in Headers */,
 				D0E9BA401F0558FE00F079A4 /* StripeError.h in Headers */,
+				D01590C922BE62C40017C33E /* TextureCompression.h in Headers */,
 				D0E9BA191F05574500F079A4 /* STPPaymentCardTextField.h in Headers */,
 				D0E9BA3F1F0558FE00F079A4 /* STPSource.h in Headers */,
 				D008177A22B46B7E008A895F /* TGShareLocationSignals.h in Headers */,
 				D0E9BABC1F05735F00F079A4 /* STPPaymentConfiguration.h in Headers */,
+				D01590BF22BDAEBC0017C33E /* Image.h in Headers */,
 				D0E9BA2E1F0557D400F079A4 /* STPAddress.h in Headers */,
 				D0E9BA5C1F055A3300F079A4 /* STPBINRange.h in Headers */,
 				D0E9BA3A1F0558E800F079A4 /* NSString+Stripe.h in Headers */,
@@ -5278,6 +5321,7 @@
 				0910B0EF21FA532D00F8F87D /* WallpaperResources.swift in Sources */,
 				09E4A807223D4B860038140F /* AccountUtils.swift in Sources */,
 				D069F5D0212700B90000565A /* StickerPanePeerSpecificSetupGridItem.swift in Sources */,
+				D01590C022BDAEBC0017C33E /* BC1Compression.cpp in Sources */,
 				D0750C8322B2E4EE00BE5F6E /* SharedNotificationManager.swift in Sources */,
 				D0EC6D041EB9F58800EBF1C3 /* opusenc.m in Sources */,
 				D0A8998D217A294100759EE6 /* SaveIncomingMediaController.swift in Sources */,
@@ -5349,6 +5393,7 @@
 				D09D88731F86D56B00BEB4C9 /* AuthorizationLayout.swift in Sources */,
 				D0EC6D281EB9F58800EBF1C3 /* MediaResources.swift in Sources */,
 				D0E9BA671F055B5500F079A4 /* BotCheckoutNativeCardEntryControllerNode.swift in Sources */,
+				D01590C722BE61CB0017C33E /* TextureCompression.cpp in Sources */,
 				D0EC6D291EB9F58800EBF1C3 /* FetchVideoMediaResource.swift in Sources */,
 				09EDAD2E221164440012A50B /* AutodownloadSizeLimitItem.swift in Sources */,
 				D0AFCC791F4C8D2C000720C6 /* InstantPageSlideshowItem.swift in Sources */,
@@ -5406,6 +5451,7 @@
 				D0EB42011F30ED4F00838FE6 /* LegacyImageProcessors.m in Sources */,
 				D087BFAF1F741BB7003FD209 /* ShareLoadingContainerNode.swift in Sources */,
 				D0EC6D3F1EB9F58800EBF1C3 /* MediaNavigationAccessoryPanel.swift in Sources */,
+				D01590C322BDAEBC0017C33E /* BMPImage.cpp in Sources */,
 				D0E9BA3B1F0558E800F079A4 /* NSString+Stripe.m in Sources */,
 				D0CE8CE51F6F354400AA2DB0 /* ChatTextInputAccessoryItem.swift in Sources */,
 				D0EC6D401EB9F58800EBF1C3 /* MediaNavigationAccessoryContainerNode.swift in Sources */,
@@ -5535,6 +5581,7 @@
 				D0FFF7F81F55B83600BEBC01 /* InstantPageAudioNode.swift in Sources */,
 				D0B37C5E1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift in Sources */,
 				D01590A822BD462C0017C33E /* SoftwareAnimationRenderer.swift in Sources */,
+				D01590BE22BDAEBC0017C33E /* Image.cpp in Sources */,
 				D093D7DB2062CFF500BC3599 /* SecureIdAuthFormContentNode.swift in Sources */,
 				D0EC6D821EB9F58800EBF1C3 /* ChatControllerInteraction.swift in Sources */,
 				D0EC6D831EB9F58800EBF1C3 /* ChatControllerNode.swift in Sources */,
@@ -5832,6 +5879,7 @@
 				D0EC6E031EB9F58900EBF1C3 /* GalleryFooterContentNode.swift in Sources */,
 				D0E9BA0A1F0457DD00F079A4 /* BotCheckoutWebInteractionController.swift in Sources */,
 				D0EC6E041EB9F58900EBF1C3 /* SecretMediaPreviewController.swift in Sources */,
+				D01590BD22BDAEBC0017C33E /* DDSImage.cpp in Sources */,
 				09F2158D225CF5BC00AEDF6D /* Pasteboard.swift in Sources */,
 				D0C26D571FDF2388004ABF18 /* OpenChatMessage.swift in Sources */,
 				D00817CA22B47A14008A895F /* WatchRequestHandlers.swift in Sources */,

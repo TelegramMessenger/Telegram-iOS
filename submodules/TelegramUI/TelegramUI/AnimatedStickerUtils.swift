@@ -123,8 +123,12 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize) 
                             let previousFrameData = malloc(frameLength)!
                             memset(previousFrameData, 0, frameLength)
                             
+                            let bc1FrameData = malloc(frameLength)!
+                            memset(bc1FrameData, 0, frameLength)
+                            
                             defer {
                                 free(previousFrameData)
+                                free(bc1FrameData)
                             }
                             
                             var compressedFrameData = Data(count: frameLength)
@@ -155,7 +159,6 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize) 
                                 
                                 drawingTime += CACurrentMediaTime() - drawStartTime
                                 
-                                let appendStartTime = CACurrentMediaTime()
                                 compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                                     let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousFrameData.assumingMemoryBound(to: UInt8.self), frameLength, scratchData, COMPRESSION_LZ4)
                                     var frameLengthValue: Int32 = Int32(length)
@@ -164,6 +167,10 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize) 
                                 }
                                 
                                 memcpy(previousFrameData, singleContext.bytes, frameLength)
+                                
+                                let appendStartTime = CACurrentMediaTime()
+                                
+                                compressRGBAToBC1(previousFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), bc1FrameData.assumingMemoryBound(to: UInt8.self))
                                 
                                 appendingTime += CACurrentMediaTime() - appendStartTime
                                 currentFrame += 1
