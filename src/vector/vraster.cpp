@@ -155,7 +155,7 @@ void FTOutline::convert(CapStyle cap, JoinStyle join, float width,
         ftJoin = SW_FT_STROKER_LINEJOIN_ROUND;
         break;
     default:
-        ftJoin = SW_FT_STROKER_LINEJOIN_MITER;
+        ftJoin = SW_FT_STROKER_LINEJOIN_MITER_FIXED;
         break;
     }
 }
