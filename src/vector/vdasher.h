@@ -24,7 +24,7 @@ V_BEGIN_NAMESPACE
 
 class VDasher {
 public:
-    VDasher(const float *dashArray, int size);
+    VDasher(const float *dashArray, size_t size);
     VPath dashed(const VPath &path);
 
 private:
@@ -42,9 +42,9 @@ private:
         float gap;
     };
     const VDasher::Dash *mDashArray;
-    int                  mArraySize{0};
+    size_t               mArraySize{0};
     VPointF              mCurPt;
-    int                  mIndex{0}; /* index to the dash Array */
+    size_t               mIndex{0}; /* index to the dash Array */
     float                mCurrentLength;
     bool                 mDiscard;
     float                mDashOffset{0};

@@ -84,7 +84,7 @@ private:
 };
 
 struct FrameInfo {
-    FrameInfo(uint32_t frame): _frameNo(frame){}
+    explicit FrameInfo(uint32_t frame): _frameNo(frame){}
     uint32_t curFrame() const {return _frameNo;}
 private:
     uint32_t _frameNo;

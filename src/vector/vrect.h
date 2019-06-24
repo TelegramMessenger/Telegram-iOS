@@ -28,7 +28,7 @@ class VRect {
 public:
     VRect() = default;
     VRect(int x, int y, int w, int h):x1(x),y1(y),x2(x+w),y2(y+h){}
-    VRect(const VRectF &r);
+    explicit VRect(const VRectF &r);
     V_CONSTEXPR bool empty() const {return x1 >= x2 || y1 >= y2;}
     V_CONSTEXPR int left() const {return x1;}
     V_CONSTEXPR int top() const {return y1;}
@@ -122,8 +122,8 @@ class VRectF {
 public:
     VRectF() = default;
     VRectF(float x, float y, float w, float h):x1(x),y1(y),x2(x+w),y2(y+h){}
-    VRectF(const VRect &r):x1(r.left()),y1(r.top()),
-                           x2(r.right()),y2(r.bottom()){}
+    explicit VRectF(const VRect &r):x1(r.left()),y1(r.top()),
+                                    x2(r.right()),y2(r.bottom()){}
 
     V_CONSTEXPR bool  empty() const {return x1 >= x2 || y1 >= y2;}
     V_CONSTEXPR float left() const {return x1;}

@@ -16,13 +16,16 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "vdasher.h"
 #include "vbezier.h"
+
+#include <cmath>
+
+#include "vdasher.h"
 #include "vline.h"
 
 V_BEGIN_NAMESPACE
 
-VDasher::VDasher(const float *dashArray, int size)
+VDasher::VDasher(const float *dashArray, size_t size)
 {
     mDashArray = reinterpret_cast<const VDasher::Dash *>(dashArray);
     mArraySize = size / 2;
@@ -42,16 +45,16 @@ void VDasher::moveTo(const VPointF &p)
 
     if (!vCompare(mDashOffset, 0.0f)) {
         float totalLength = 0.0;
-        for (int i = 0; i < mArraySize; i++) {
+        for (size_t i = 0; i < mArraySize; i++) {
             totalLength = mDashArray[i].length + mDashArray[i].gap;
         }
-        float normalizeLen = fmod(mDashOffset, totalLength);
-        if (normalizeLen < 0.0) {
+        float normalizeLen = std::fmod(mDashOffset, totalLength);
+        if (normalizeLen < 0.0f) {
             normalizeLen = totalLength + normalizeLen;
         }
         // now the length is less than total length and +ve
         // findout the current dash index , dashlength and gap.
-        for (int i = 0; i < mArraySize; i++) {
+        for (size_t i = 0; i < mArraySize; i++) {
             if (normalizeLen < mDashArray[i].length) {
                 mIndex = i;
                 mCurrentLength = mDashArray[i].length - normalizeLen;
@@ -120,13 +123,13 @@ void VDasher::lineTo(const VPointF &p)
             mCurPt = line.p1();
         }
         // handle remainder
-        if (length > 1.0) {
+        if (length > 1.0f) {
             mCurrentLength -= length;
             addLine(line.p2());
         }
     }
 
-    if (mCurrentLength < 1.0) updateActiveSegment();
+    if (mCurrentLength < 1.0f) updateActiveSegment();
 
     mCurPt = p;
 }
@@ -145,9 +148,8 @@ void VDasher::addCubic(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
 void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
 {
     VBezier left, right;
-    float   bezLen = 0.0;
     VBezier b = VBezier::fromPoints(mCurPt, cp1, cp2, e);
-    bezLen = b.length();
+    float bezLen = b.length();
 
     if (bezLen <= mCurrentLength) {
         mCurrentLength -= bezLen;
@@ -164,13 +166,13 @@ void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
             mCurPt = b.pt1();
         }
         // handle remainder
-        if (bezLen > 1.0) {
+        if (bezLen > 1.0f) {
             mCurrentLength -= bezLen;
             addCubic(b.pt2(), b.pt3(), b.pt4());
         }
     }
 
-    if (mCurrentLength < 1.0) updateActiveSegment();
+    if (mCurrentLength < 1.0f) updateActiveSegment();
 
     mCurPt = e;
 }
@@ -206,8 +208,6 @@ VPath VDasher::dashed(const VPath &path)
             // no need to do anything here.
             break;
         }
-        default:
-            break;
         }
     }
     return std::move(mResult);

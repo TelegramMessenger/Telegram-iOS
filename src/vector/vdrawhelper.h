@@ -40,7 +40,7 @@ typedef void (*CompositionFunction)(uint32_t *dest, const uint32_t *src,
 typedef void (*SourceFetchProc)(uint32_t *buffer, const Operator *o,
                                 const VSpanData *data, int y, int x,
                                 int length);
-typedef void (*ProcessRleSpan)(int count, const VRle::Span *spans,
+typedef void (*ProcessRleSpan)(size_t count, const VRle::Span *spans,
                                void *userData);
 
 extern void memfill32(uint32_t *dest, uint32_t value, int count);

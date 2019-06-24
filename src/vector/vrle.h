@@ -35,12 +35,12 @@ public:
         ushort len;
         uchar  coverage;
     };
-    typedef void (*VRleSpanCb)(int count, const VRle::Span *spans,
+    typedef void (*VRleSpanCb)(size_t count, const VRle::Span *spans,
                                void *userData);
     bool  empty() const;
     VRect boundingRect() const;
     void setBoundingRect(const VRect &bbox);
-    void  addSpan(const VRle::Span *span, int count);
+    void  addSpan(const VRle::Span *span, size_t count);
 
     void reset();
     void translate(const VPoint &p);
@@ -69,7 +69,7 @@ private:
             Xor
         };
         bool  empty() const { return mSpans.empty(); }
-        void  addSpan(const VRle::Span *span, int count);
+        void  addSpan(const VRle::Span *span, size_t count);
         void  updateBbox() const;
         VRect bbox() const;
         void setBbox(const VRect &bbox) const;
@@ -99,7 +99,7 @@ inline bool VRle::empty() const
     return d->empty();
 }
 
-inline void VRle::addSpan(const VRle::Span *span, int count)
+inline void VRle::addSpan(const VRle::Span *span, size_t count)
 {
     d.write().addSpan(span, count);
 }

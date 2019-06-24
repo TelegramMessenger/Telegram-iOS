@@ -63,7 +63,7 @@ public:
 class LOTCompItem
 {
 public:
-   LOTCompItem(LOTModel *model);
+   explicit LOTCompItem(LOTModel *model);
    static std::unique_ptr<LOTLayerItem> createLayerItem(LOTLayerData *layerData);
    bool update(int frameNo);
    void resize(const VSize &size);
@@ -88,7 +88,7 @@ class LOTLayerMaskItem;
 class LOTClipperItem
 {
 public:
-    LOTClipperItem(VSize size): mSize(size){}
+    explicit LOTClipperItem(VSize size): mSize(size){}
     void update(const VMatrix &matrix);
     VRle rle();
 public:
@@ -148,7 +148,7 @@ protected:
 class LOTCompLayerItem: public LOTLayerItem
 {
 public:
-   LOTCompLayerItem(LOTLayerData *layerData);
+   explicit LOTCompLayerItem(LOTLayerData *layerData);
    void renderList(std::vector<VDrawable *> &list)final;
    void render(VPainter *painter, const VRle &mask, const VRle &matteRle) final;
    void buildLayerNode() final;
@@ -168,7 +168,7 @@ private:
 class LOTSolidLayerItem: public LOTLayerItem
 {
 public:
-   LOTSolidLayerItem(LOTLayerData *layerData);
+   explicit LOTSolidLayerItem(LOTLayerData *layerData);
    void buildLayerNode() final;
 protected:
    void updateContent() final;
@@ -183,7 +183,7 @@ class LOTContentGroupItem;
 class LOTShapeLayerItem: public LOTLayerItem
 {
 public:
-   LOTShapeLayerItem(LOTLayerData *layerData);
+   explicit LOTShapeLayerItem(LOTLayerData *layerData);
    static std::unique_ptr<LOTContentItem> createContentItem(LOTData *contentData);
    void renderList(std::vector<VDrawable *> &list)final;
    void buildLayerNode() final;
@@ -197,7 +197,7 @@ protected:
 class LOTNullLayerItem: public LOTLayerItem
 {
 public:
-   LOTNullLayerItem(LOTLayerData *layerData);
+   explicit LOTNullLayerItem(LOTLayerData *layerData);
 protected:
    void updateContent() final;
 };
@@ -205,7 +205,7 @@ protected:
 class LOTImageLayerItem: public LOTLayerItem
 {
 public:
-   LOTImageLayerItem(LOTLayerData *layerData);
+   explicit LOTImageLayerItem(LOTLayerData *layerData);
    void buildLayerNode() final;
 protected:
    void updateContent() final;
@@ -218,13 +218,13 @@ private:
 class LOTMaskItem
 {
 public:
-    LOTMaskItem(LOTMaskData *data): mData(data), mCombinedAlpha(0){}
+    explicit LOTMaskItem(LOTMaskData *data): mData(data){}
     void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag);
     LOTMaskData::Mode maskMode() const { return mData->mMode;}
     VRle rle();
 public:
     LOTMaskData             *mData;
-    float                    mCombinedAlpha;
+    float                    mCombinedAlpha{0};
     VMatrix                  mCombinedMatrix;
     VPath                    mLocalPath;
     VPath                    mFinalPath;
@@ -238,7 +238,7 @@ public:
 class LOTLayerMaskItem
 {
 public:
-    LOTLayerMaskItem(LOTLayerData *layerData);
+    explicit LOTLayerMaskItem(LOTLayerData *layerData);
     void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag);
     bool isStatic() const {return mStatic;}
     VRle maskRle(const VRect &clipRect);
@@ -282,7 +282,7 @@ private:
 class LOTContentGroupItem: public LOTContentItem
 {
 public:
-   LOTContentGroupItem(LOTGroupData *data=nullptr);
+   explicit LOTContentGroupItem(LOTGroupData *data=nullptr);
    void addChildren(LOTGroupData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) override;
    void applyTrim();
@@ -336,7 +336,7 @@ private:
 class LOTRectItem: public LOTPathDataItem
 {
 public:
-   LOTRectItem(LOTRectData *data);
+   explicit LOTRectItem(LOTRectData *data);
 protected:
    void updatePath(VPath& path, int frameNo) final;
    LOTRectData           *mData;
@@ -351,7 +351,7 @@ protected:
 class LOTEllipseItem: public LOTPathDataItem
 {
 public:
-   LOTEllipseItem(LOTEllipseData *data);
+   explicit LOTEllipseItem(LOTEllipseData *data);
 private:
    void updatePath(VPath& path, int frameNo) final;
    LOTEllipseData           *mData;
@@ -364,7 +364,7 @@ private:
 class LOTShapeItem: public LOTPathDataItem
 {
 public:
-   LOTShapeItem(LOTShapeData *data);
+   explicit LOTShapeItem(LOTShapeData *data);
 private:
    void updatePath(VPath& path, int frameNo) final;
    LOTShapeData             *mData;
@@ -376,7 +376,7 @@ private:
 class LOTPolystarItem: public LOTPathDataItem
 {
 public:
-   LOTPolystarItem(LOTPolystarData *data);
+   explicit LOTPolystarItem(LOTPolystarData *data);
 private:
    void updatePath(VPath& path, int frameNo) final;
    LOTPolystarData             *mData;
@@ -419,7 +419,7 @@ protected:
 class LOTFillItem : public LOTPaintDataItem
 {
 public:
-   LOTFillItem(LOTFillData *data);
+   explicit LOTFillItem(LOTFillData *data);
 protected:
    void updateContent(int frameNo) final;
    void updateRenderNode() final;
@@ -432,7 +432,7 @@ private:
 class LOTGFillItem : public LOTPaintDataItem
 {
 public:
-   LOTGFillItem(LOTGFillData *data);
+   explicit LOTGFillItem(LOTGFillData *data);
 protected:
    void updateContent(int frameNo) final;
    void updateRenderNode() final;
@@ -446,7 +446,7 @@ private:
 class LOTStrokeItem : public LOTPaintDataItem
 {
 public:
-   LOTStrokeItem(LOTStrokeData *data);
+   explicit LOTStrokeItem(LOTStrokeData *data);
 protected:
    void updateContent(int frameNo) final;
    void updateRenderNode() final;
@@ -462,7 +462,7 @@ private:
 class LOTGStrokeItem : public LOTPaintDataItem
 {
 public:
-   LOTGStrokeItem(LOTGStrokeData *data);
+   explicit LOTGStrokeItem(LOTGStrokeData *data);
 protected:
    void updateContent(int frameNo) final;
    void updateRenderNode() final;
@@ -510,11 +510,11 @@ private:
 class LOTRepeaterItem : public LOTContentGroupItem
 {
 public:
-   LOTRepeaterItem(LOTRepeaterData *data);
+   explicit LOTRepeaterItem(LOTRepeaterData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
    void renderList(std::vector<VDrawable *> &list) final;
 private:
-   LOTRepeaterData             *mData;
+   LOTRepeaterData             *mRepeaterData;
    bool                         mHidden{false};
    int                          mCopies{0};
 };

@@ -36,7 +36,7 @@ public:
         Shear = 0x08,
         Project = 0x10
     };
-
+    VMatrix() = default;
     bool         isAffine() const;
     bool         isIdentity() const;
     bool         isInvertible() const;

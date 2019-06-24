@@ -59,6 +59,7 @@ public:
     void close();
     void end();
     void transform(const VMatrix &m);
+    SW_FT_Pos TO_FT_COORD(float x) { return SW_FT_Pos(x*64);}  // to freetype 26.6 coordinate.
     SW_FT_Outline          ft;
     bool                   closed{false};
     SW_FT_Stroker_LineCap  ftCap;
@@ -116,8 +117,6 @@ void FTOutline::convert(const VPath &path)
         case VPath::Element::Close:
             close();
             break;
-        default:
-            break;
         }
     }
     end();
@@ -128,7 +127,7 @@ void FTOutline::convert(CapStyle cap, JoinStyle join, float width,
 {
     // map strokeWidth to freetype. It uses as the radius of the pen not the
     // diameter
-    width = width / 2.0;
+    width = width / 2.0f;
     // convert to freetype co-ordinate
     // IMP: stroker takes radius in 26.6 co-ordinate
     ftWidth = SW_FT_Fixed(width * (1 << 6));
@@ -159,8 +158,6 @@ void FTOutline::convert(CapStyle cap, JoinStyle join, float width,
         break;
     }
 }
-
-#define TO_FT_COORD(x) ((x)*64)  // to freetype 26.6 coordinate.
 
 void FTOutline::moveTo(const VPointF &pt)
 {
@@ -238,20 +235,21 @@ void FTOutline::end()
 
 static void rleGenerationCb(int count, const SW_FT_Span *spans, void *user)
 {
-    VRle *      rle = (VRle *)user;
-    VRle::Span *rleSpan = (VRle::Span *)spans;
+    VRle *      rle = static_cast<VRle *>(user);
+    auto *rleSpan = reinterpret_cast<const VRle::Span *>(spans);
     rle->addSpan(rleSpan, count);
 }
 
 static void bboxCb(int x, int y, int w, int h, void *user)
 {
-    VRle *      rle = (VRle *)user;
+    VRle *      rle = static_cast<VRle *>(user);
     rle->setBoundingRect({x, y, w, h});
 }
 
 
 class SharedRle {
 public:
+    SharedRle() = default;
     VRle& unsafe(){ return _rle;}
     void notify() {
         {

@@ -34,8 +34,8 @@ enum class Operation {
 };
 
 struct VRleHelper {
-    ushort      alloc;
-    ushort      size;
+    size_t      alloc;
+    size_t      size;
     VRle::Span *spans;
 };
 static void rleIntersectWithRle(VRleHelper *, int, int, VRleHelper *,
@@ -49,7 +49,7 @@ static inline uchar divBy255(int x)
     return (x + (x >> 8) + 0x80) >> 8;
 }
 
-inline static void copyArrayToVector(const VRle::Span *span, int count,
+inline static void copyArrayToVector(const VRle::Span *span, size_t count,
                                      std::vector<VRle::Span> &v)
 {
     // make sure enough memory available
@@ -57,7 +57,7 @@ inline static void copyArrayToVector(const VRle::Span *span, int count,
     std::copy(span, span + count, back_inserter(v));
 }
 
-void VRle::VRleData::addSpan(const VRle::Span *span, int count)
+void VRle::VRleData::addSpan(const VRle::Span *span, size_t count)
 {
     copyArrayToVector(span, count, mSpans);
     mBboxDirty = true;
@@ -109,7 +109,7 @@ void VRle::VRleData::addRect(const VRect &rect)
     int width = rect.width();
     int height = rect.height();
 
-    mSpans.reserve(height);
+    mSpans.reserve(size_t(height));
 
     VRle::Span span;
     for (int i = 0; i < height; i++) {
@@ -208,12 +208,12 @@ void VRle::VRleData::opSubstract(const VRle::VRleData &a,
 
         // 1. forward till both y intersect
         while ((aPtr != aEnd) && (aPtr->y < bPtr->y)) aPtr++;
-        int sizeA = aPtr - a.mSpans.data();
+        size_t sizeA = size_t(aPtr - a.mSpans.data());
         if (sizeA) copyArrayToVector(a.mSpans.data(), sizeA, mSpans);
 
         // 2. forward b till it intersect with a.
         while ((bPtr != bEnd) && (bPtr->y < aPtr->y)) bPtr++;
-        int sizeB = bPtr - b.mSpans.data();
+        size_t sizeB = size_t(bPtr - b.mSpans.data());
 
         // 2. calculate the intersect region
         VRleHelper                  tresult, aObj, bObj;
@@ -271,12 +271,12 @@ void VRle::VRleData::opGeneric(const VRle::VRleData &a, const VRle::VRleData &b,
 
         // 1. forward a till it intersects with b
         while ((aPtr != aEnd) && (aPtr->y < bPtr->y)) aPtr++;
-        int sizeA = aPtr - a.mSpans.data();
+        size_t sizeA = size_t(aPtr - a.mSpans.data());
         if (sizeA) copyArrayToVector(a.mSpans.data(), sizeA, mSpans);
 
         // 2. forward b till it intersects with a
         while ((bPtr != bEnd) && (bPtr->y < aPtr->y)) bPtr++;
-        int sizeB = bPtr - b.mSpans.data();
+        size_t sizeB = size_t(bPtr - b.mSpans.data());
         if (sizeB) copyArrayToVector(b.mSpans.data(), sizeB, mSpans);
 
         // 3. calculate the intersect region
@@ -304,8 +304,6 @@ void VRle::VRleData::opGeneric(const VRle::VRleData &a, const VRle::VRleData &b,
         case OpCode::Xor:
             op = Operation::Xor;
             break;
-        default:
-            break;
         }
         // run till all the spans are processed
         while (aObj.size && bObj.size) {
@@ -327,7 +325,7 @@ void VRle::VRleData::opGeneric(const VRle::VRleData &a, const VRle::VRleData &b,
     mBboxDirty = false;
 }
 
-static void  rle_cb(int count, const VRle::Span *spans, void *userData)
+static void  rle_cb(size_t count, const VRle::Span *spans, void *userData)
 {
     auto vector = static_cast<std::vector<VRle::Span> *>(userData);
     copyArrayToVector(spans, count, *vector);
@@ -422,11 +420,11 @@ static void rleIntersectWithRle(VRleHelper *tmp_clip, int clip_offset_x,
             ++spans;
             continue;
         }
-        x = VMAX(sx1, cx1);
-        len = VMIN(sx2, cx2) - x;
+        x = std::max(sx1, cx1);
+        len = std::min(sx2, cx2) - x;
         if (len) {
-            out->x = VMAX(sx1, cx1);
-            out->len = (VMIN(sx2, cx2) - out->x);
+            out->x = std::max(sx1, cx1);
+            out->len = (std::min(sx2, cx2) - out->x);
             out->y = spans->y;
             out->coverage = divBy255(spans->coverage * clipSpans->coverage);
             ++out;
@@ -567,9 +565,9 @@ void blit(VRle::Span *spans, int count, uchar *buffer, int offsetX)
     }
 }
 
-int bufferToRle(uchar *buffer, int size, int offsetX, int y, VRle::Span *out)
+size_t bufferToRle(uchar *buffer, int size, int offsetX, int y, VRle::Span *out)
 {
-    int   count = 0;
+    size_t   count = 0;
     uchar value = buffer[0];
     int   curIndex = 0;
 
@@ -604,7 +602,7 @@ static void rleOpGeneric(VRleHelper *a, VRleHelper *b, VRleHelper *result, Opera
 {
     std::array<VRle::Span, 256> temp;
     VRle::Span *                out = result->spans;
-    int                         available = result->alloc;
+    size_t                      available = result->alloc;
     VRle::Span *                aPtr = a->spans;
     VRle::Span *                aEnd = a->spans + a->size;
     VRle::Span *                bPtr = b->spans;
@@ -637,7 +635,7 @@ static void rleOpGeneric(VRleHelper *a, VRleHelper *b, VRleHelper *result, Opera
             else if (op == Operation::Xor)
                 blitXor(bStart, (bPtr - bStart), array.data(), -offset);
             VRle::Span *tResult = temp.data();
-            int size = bufferToRle(array.data(), std::max(aLength, bLength),
+            size_t size = bufferToRle(array.data(), std::max(aLength, bLength),
                                    offset, y, tResult);
             if (available >= size) {
                 while (size--) {
@@ -668,7 +666,7 @@ static void rleSubstractWithRle(VRleHelper *a, VRleHelper *b,
 {
     std::array<VRle::Span, 256> temp;
     VRle::Span *                out = result->spans;
-    int                         available = result->alloc;
+    size_t                      available = result->alloc;
     VRle::Span *                aPtr = a->spans;
     VRle::Span *                aEnd = a->spans + a->size;
     VRle::Span *                bPtr = b->spans;
@@ -697,7 +695,7 @@ static void rleSubstractWithRle(VRleHelper *a, VRleHelper *b,
             blit(aStart, (aPtr - aStart), array.data(), -offset);
             blitDestinationOut(bStart, (bPtr - bStart), array.data(), -offset);
             VRle::Span *tResult = temp.data();
-            int size = bufferToRle(array.data(), std::max(aLength, bLength),
+            size_t size = bufferToRle(array.data(), std::max(aLength, bLength),
                                    offset, y, tResult);
             if (available >= size) {
                 while (size--) {
@@ -713,11 +711,11 @@ static void rleSubstractWithRle(VRleHelper *a, VRleHelper *b,
     }
     // update the span list that yet to be processed
     a->spans = aPtr;
-    a->size = aEnd - aPtr;
+    a->size = size_t(aEnd - aPtr);
 
     // update the clip list that yet to be processed
     b->spans = bPtr;
-    b->size = bEnd - bPtr;
+    b->size = size_t(bEnd - bPtr);
 
     // update the result
     result->size = result->alloc - available;

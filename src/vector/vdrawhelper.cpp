@@ -497,7 +497,7 @@ void fetch_radial_gradient(uint32_t *buffer, const Operator *op,
 }
 
 static inline Operator getOperator(const VSpanData * data,
-                                   const VRle::Span *, int)
+                                   const VRle::Span *, size_t)
 {
     Operator op;
     bool     solidSource = false;
@@ -532,7 +532,7 @@ static inline Operator getOperator(const VSpanData * data,
     return op;
 }
 
-static void blendColorARGB(int count, const VRle::Span *spans, void *userData)
+static void blendColorARGB(size_t count, const VRle::Span *spans, void *userData)
 {
     VSpanData *data = (VSpanData *)(userData);
     Operator   op = getOperator(data, spans, count);
@@ -563,7 +563,7 @@ static void blendColorARGB(int count, const VRle::Span *spans, void *userData)
 }
 
 #define BLEND_GRADIENT_BUFFER_SIZE 2048
-static void blendGradientARGB(int count, const VRle::Span *spans,
+static void blendGradientARGB(size_t count, const VRle::Span *spans,
                               void *userData)
 {
     VSpanData *data = (VSpanData *)(userData);
@@ -595,7 +595,7 @@ constexpr const T& clamp( const T& v, const T& lo, const T& hi)
 
 static const int buffer_size = 1024;
 static const int fixed_scale = 1 << 16;
-static void blend_transformed_argb(int count, const VRle::Span *spans, void *userData)
+static void blend_transformed_argb(size_t count, const VRle::Span *spans, void *userData)
 {
     VSpanData *data = reinterpret_cast<VSpanData *>(userData);
     if (data->mBitmap.format != VBitmap::Format::ARGB32_Premultiplied
@@ -692,7 +692,7 @@ static void blend_transformed_argb(int count, const VRle::Span *spans, void *use
     }
 }
 
-static void blend_untransformed_argb(int count, const VRle::Span *spans, void *userData)
+static void blend_untransformed_argb(size_t count, const VRle::Span *spans, void *userData)
 {
     VSpanData *data = reinterpret_cast<VSpanData *>(userData);
     if (data->mBitmap.format != VBitmap::Format::ARGB32_Premultiplied

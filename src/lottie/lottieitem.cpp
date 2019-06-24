@@ -1525,14 +1525,14 @@ void LOTTrimItem::addPathItems(std::vector<LOTPathDataItem *> &list, int startOf
 }
 
 
-LOTRepeaterItem::LOTRepeaterItem(LOTRepeaterData *data) : mData(data)
+LOTRepeaterItem::LOTRepeaterItem(LOTRepeaterData *data) : mRepeaterData(data)
 {
-    assert(mData->content());
+    assert(mRepeaterData->content());
 
-    mCopies = mData->maxCopies();
+    mCopies = mRepeaterData->maxCopies();
 
     for (int i= 0; i < mCopies; i++) {
-        auto content = std::make_unique<LOTContentGroupItem>(mData->content());
+        auto content = std::make_unique<LOTContentGroupItem>(mRepeaterData->content());
         content->setParent(this);
         mContents.push_back(std::move(content));
     }
@@ -1543,7 +1543,7 @@ void LOTRepeaterItem::update(int frameNo, const VMatrix &parentMatrix, float par
 
     DirtyFlag newFlag = flag;
 
-    float copies = mData->copies(frameNo);
+    float copies = mRepeaterData->copies(frameNo);
     int visibleCopies = int(copies);
 
     if (visibleCopies == 0) {
@@ -1553,11 +1553,11 @@ void LOTRepeaterItem::update(int frameNo, const VMatrix &parentMatrix, float par
         mHidden = false;
     }
 
-    if (!mData->isStatic()) newFlag |= DirtyFlagBit::Matrix;
+    if (!mRepeaterData->isStatic()) newFlag |= DirtyFlagBit::Matrix;
 
-    float offset = mData->offset(frameNo);
-    float startOpacity = mData->mTransform.startOpacity(frameNo);
-    float endOpacity = mData->mTransform.endOpacity(frameNo);
+    float offset = mRepeaterData->offset(frameNo);
+    float startOpacity = mRepeaterData->mTransform.startOpacity(frameNo);
+    float endOpacity = mRepeaterData->mTransform.endOpacity(frameNo);
 
     newFlag |= DirtyFlagBit::Alpha;
 
@@ -1567,7 +1567,7 @@ void LOTRepeaterItem::update(int frameNo, const VMatrix &parentMatrix, float par
         // hide rest of the copies , @TODO find a better solution.
         if ( i >= visibleCopies) newAlpha = 0;
 
-        VMatrix result = mData->mTransform.matrix(frameNo, i + offset) * parentMatrix;
+        VMatrix result = mRepeaterData->mTransform.matrix(frameNo, i + offset) * parentMatrix;
         mContents[i]->update(frameNo, result, newAlpha, newFlag);
     }
 }
@@ -1640,9 +1640,6 @@ void LOTDrawable::sync()
             break;
         case CapStyle::Round:
             mCNode->mStroke.cap = LOTCapStyle::CapRound;
-            break;
-        default:
-            mCNode->mStroke.cap = LOTCapStyle::CapFlat;
             break;
         }
 

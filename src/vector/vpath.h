@@ -45,8 +45,8 @@ public:
                 bool forceMoveTo);
     void  close();
     void  reset();
-    void  reserve(int pts, int elms);
-    int   segments() const;
+    void  reserve(size_t pts, size_t elms);
+    size_t segments() const;
     void  addCircle(float cx, float cy, float radius,
                     VPath::Direction dir = Direction::CW);
     void  addOval(const VRectF &rect, VPath::Direction dir = Direction::CW);
@@ -80,9 +80,9 @@ private:
         void  cubicTo(float cx1, float cy1, float cx2, float cy2, float ex, float ey);
         void  close();
         void  reset();
-        void  reserve(int, int);
+        void  reserve(size_t, size_t);
         void  checkNewSegment();
-        int   segments() const;
+        size_t segments() const;
         void  transform(const VMatrix &m);
         float length() const;
         void  addRoundRect(const VRectF &, float, float, VPath::Direction);
@@ -107,7 +107,7 @@ private:
         const std::vector<VPointF> &points() const { return m_points; }
         std::vector<VPointF>        m_points;
         std::vector<VPath::Element> m_elements;
-        int                         m_segments;
+        unsigned int                m_segments;
         VPointF                     mStartPoint;
         mutable float               mLength{0};
         mutable bool                mLengthDirty{true};
@@ -150,12 +150,12 @@ inline void VPath::reset()
     d.write().reset();
 }
 
-inline void VPath::reserve(int pts, int elms)
+inline void VPath::reserve(size_t pts, size_t elms)
 {
     d.write().reserve(pts, elms);
 }
 
-inline int VPath::segments() const
+inline size_t VPath::segments() const
 {
     return d->segments();
 }

@@ -42,7 +42,7 @@ float VPath::VPathData::length() const
     mLengthDirty = false;
     mLength = 0.0;
 
-    int   i = 0;
+    size_t i = 0;
     for (auto e : m_elements) {
         switch (e) {
         case VPath::Element::MoveTo:
@@ -128,12 +128,12 @@ void VPath::VPathData::reset()
     mLengthDirty = false;
 }
 
-int VPath::VPathData::segments() const
+size_t VPath::VPathData::segments() const
 {
     return m_segments;
 }
 
-void VPath::VPathData::reserve(int pts, int elms)
+void VPath::VPathData::reserve(size_t pts, size_t elms)
 {
     if (m_points.capacity() < m_points.size() + pts)
         m_points.reserve(m_points.size() + pts);
@@ -141,13 +141,14 @@ void VPath::VPathData::reserve(int pts, int elms)
         m_elements.reserve(m_elements.size() + elms);
 }
 
-static VPointF curvesForArc(const VRectF &, float, float, VPointF *, int *);
-static constexpr float PATH_KAPPA = 0.5522847498;
+static VPointF curvesForArc(const VRectF &, float, float, VPointF *, size_t *);
+static constexpr float PATH_KAPPA = 0.5522847498f;
+static constexpr float K_PI = M_PIf32;
 
 void VPath::VPathData::arcTo(const VRectF &rect, float startAngle,
                              float sweepLength, bool forceMoveTo)
 {
-    int     point_count = 0;
+    size_t     point_count = 0;
     VPointF pts[15];
     VPointF curve_start =
         curvesForArc(rect, startAngle, sweepLength, pts, &point_count);
@@ -158,7 +159,7 @@ void VPath::VPathData::arcTo(const VRectF &rect, float startAngle,
     } else {
         lineTo(curve_start.x(), curve_start.y());
     }
-    for (int i = 0; i < point_count; i += 3) {
+    for (size_t i = 0; i < point_count; i += 3) {
         cubicTo(pts[i].x(), pts[i].y(), pts[i + 1].x(), pts[i + 1].y(),
                 pts[i + 2].x(), pts[i + 2].y());
     }
@@ -248,8 +249,8 @@ void VPath::VPathData::addRect(const VRectF &rect, VPath::Direction dir)
 void VPath::VPathData::addRoundRect(const VRectF &rect, float roundness,
                                     VPath::Direction dir)
 {
-    if (2 * roundness > rect.width()) roundness = rect.width()/2.0;
-    if (2 * roundness > rect.height()) roundness = rect.height()/2.0;
+    if (2 * roundness > rect.width()) roundness = rect.width()/2.0f;
+    if (2 * roundness > rect.height()) roundness = rect.height()/2.0f;
     addRoundRect(rect, roundness, roundness, dir);
 }
 
@@ -308,7 +309,7 @@ void         findEllipseCoords(const VRectF &r, float angle, float length,
     for (int i = 0; i < 2; ++i) {
         if (!points[i]) continue;
 
-        float theta = angles[i] - 360 * floor(angles[i] / 360);
+        float theta = angles[i] - 360 * floorf(angles[i] / 360);
         float t = theta / 90;
         // truncate
         int quadrant = int(t);
@@ -340,10 +341,10 @@ static float tForArcAngle(float angle)
     if (vCompare(angle, 0.f)) return 0;
     if (vCompare(angle, 90.0f)) return 1;
 
-    radians = (angle / 180) * M_PI;
+    radians = (angle / 180) * K_PI;
 
-    cos_angle = cos(radians);
-    sin_angle = sin(radians);
+    cos_angle = cosf(radians);
+    sin_angle = sinf(radians);
 
     // initial guess
     tc = angle / 90;
@@ -378,14 +379,14 @@ static float tForArcAngle(float angle)
 
     // use the average of the t that best approximates cos_angle
     // and the t that best approximates sin_angle
-    t = 0.5 * (tc + ts);
+    t = 0.5f * (tc + ts);
     return t;
 }
 
 // The return value is the starting point of the arc
 static VPointF curvesForArc(const VRectF &rect, float startAngle,
                             float sweepLength, VPointF *curves,
-                            int *point_count)
+                            size_t *point_count)
 {
     if (rect.empty()) {
         return {};
@@ -427,18 +428,18 @@ static VPointF curvesForArc(const VRectF &rect, float startAngle,
         sweepLength = -360;
 
     // Special case fast paths
-    if (startAngle == 0.0) {
-        if (sweepLength == 360.0) {
+    if (startAngle == 0.0f) {
+        if (vCompare(sweepLength, 360)) {
             for (int i = 11; i >= 0; --i) curves[(*point_count)++] = points[i];
             return points[12];
-        } else if (sweepLength == -360.0) {
+        } else if (vCompare(sweepLength, -360)) {
             for (int i = 1; i <= 12; ++i) curves[(*point_count)++] = points[i];
             return points[0];
         }
     }
 
-    int startSegment = int(floor(startAngle / 90));
-    int endSegment = int(floor((startAngle + sweepLength) / 90));
+    int startSegment = int(floorf(startAngle / 90.0f));
+    int endSegment = int(floorf((startAngle + sweepLength) / 90.0f));
 
     float startT = (startAngle - startSegment * 90) / 90;
     float endT = (startAngle + sweepLength - endSegment * 90) / 90;
@@ -520,36 +521,36 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
                                    float outerRoundness, float startAngle,
                                    float cx, float cy, VPath::Direction dir)
 {
-    const static float POLYSTAR_MAGIC_NUMBER = 0.47829 / 0.28;
-    float              currentAngle = (startAngle - 90.0) * M_PI / 180.0;
+    const static float POLYSTAR_MAGIC_NUMBER = 0.47829f / 0.28f;
+    float              currentAngle = (startAngle - 90.0f) * K_PI / 180.0f;
     float              x;
     float              y;
     float              partialPointRadius = 0;
-    float              anglePerPoint = (float)(2.0 * M_PI / points);
-    float              halfAnglePerPoint = anglePerPoint / 2.0;
-    float              partialPointAmount = points - (int)points;
+    float              anglePerPoint = (2.0f * K_PI / points);
+    float              halfAnglePerPoint = anglePerPoint / 2.0f;
+    float              partialPointAmount = points - floorf(points);
     bool               longSegment = false;
-    int                numPoints = (int)ceil(points) * 2.0;
+    size_t             numPoints = size_t(ceilf(points) * 2);
     float              angleDir = ((dir == VPath::Direction::CW) ? 1.0 : -1.0);
     bool               hasRoundness = false;
 
-    innerRoundness /= 100.0;
-    outerRoundness /= 100.0;
+    innerRoundness /= 100.0f;
+    outerRoundness /= 100.0f;
 
-    if (partialPointAmount != 0) {
+    if (!vCompare(partialPointAmount, 0)) {
         currentAngle +=
-            halfAnglePerPoint * (1.0 - partialPointAmount) * angleDir;
+            halfAnglePerPoint * (1.0f - partialPointAmount) * angleDir;
     }
 
-    if (partialPointAmount != 0) {
+    if (!vCompare(partialPointAmount, 0)) {
         partialPointRadius =
             innerRadius + partialPointAmount * (outerRadius - innerRadius);
-        x = (float)(partialPointRadius * cos(currentAngle));
-        y = (float)(partialPointRadius * sin(currentAngle));
-        currentAngle += anglePerPoint * partialPointAmount / 2.0 * angleDir;
+        x = partialPointRadius * cosf(currentAngle);
+        y = partialPointRadius * sinf(currentAngle);
+        currentAngle += anglePerPoint * partialPointAmount / 2.0f * angleDir;
     } else {
-        x = (float)(outerRadius * cos(currentAngle));
-        y = (float)(outerRadius * sin(currentAngle));
+        x = outerRadius * cosf(currentAngle);
+        y = outerRadius * sinf(currentAngle);
         currentAngle += halfAnglePerPoint * angleDir;
     }
 
@@ -562,28 +563,28 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
 
     moveTo(x + cx, y + cy);
 
-    for (int i = 0; i < numPoints; i++) {
+    for (size_t i = 0; i < numPoints; i++) {
         float radius = longSegment ? outerRadius : innerRadius;
         float dTheta = halfAnglePerPoint;
-        if (partialPointRadius != 0 && i == numPoints - 2) {
-            dTheta = anglePerPoint * partialPointAmount / 2.0;
+        if (!vIsZero(partialPointRadius) && i == numPoints - 2) {
+            dTheta = anglePerPoint * partialPointAmount / 2.0f;
         }
-        if (partialPointRadius != 0 && i == numPoints - 1) {
+        if (!vIsZero(partialPointRadius) && i == numPoints - 1) {
             radius = partialPointRadius;
         }
         float previousX = x;
         float previousY = y;
-        x = (float)(radius * cos(currentAngle));
-        y = (float)(radius * sin(currentAngle));
+        x = radius * cosf(currentAngle);
+        y = radius * sinf(currentAngle);
 
         if (hasRoundness) {
             float cp1Theta =
-                (float)(atan2(previousY, previousX) - M_PI / 2.0 * angleDir);
-            float cp1Dx = (float)cos(cp1Theta);
-            float cp1Dy = (float)sin(cp1Theta);
-            float cp2Theta = (float)(atan2(y, x) - M_PI / 2.0 * angleDir);
-            float cp2Dx = (float)cos(cp2Theta);
-            float cp2Dy = (float)sin(cp2Theta);
+                (atan2f(previousY, previousX) - K_PI / 2.0f * angleDir);
+            float cp1Dx = cosf(cp1Theta);
+            float cp1Dy = sinf(cp1Theta);
+            float cp2Theta = (atan2f(y, x) - K_PI / 2.0f * angleDir);
+            float cp2Dx = cosf(cp2Theta);
+            float cp2Dy = sinf(cp2Theta);
 
             float cp1Roundness = longSegment ? innerRoundness : outerRoundness;
             float cp2Roundness = longSegment ? outerRoundness : innerRoundness;
@@ -599,7 +600,7 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
             float cp2y = cp2Radius * cp2Roundness * POLYSTAR_MAGIC_NUMBER *
                          cp2Dy / points;
 
-            if ((partialPointAmount != 0) &&
+            if (!vIsZero(partialPointAmount) &&
                 ((i == 0) || (i == numPoints - 1))) {
                 cp1x *= partialPointAmount;
                 cp1y *= partialPointAmount;
@@ -627,19 +628,19 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
 {
     // TODO: Need to support floating point number for number of points
     const static float POLYGON_MAGIC_NUMBER = 0.25;
-    float              currentAngle = (startAngle - 90.0) * M_PI / 180.0;
+    float              currentAngle = (startAngle - 90.0f) * K_PI / 180.0f;
     float              x;
     float              y;
-    float              anglePerPoint = (float)(2.0 * M_PI / floor(points));
-    int                numPoints = (int)floor(points);
+    float              anglePerPoint = 2.0f * K_PI / floorf(points);
+    size_t             numPoints = size_t(floorf(points));
     float              angleDir = ((dir == VPath::Direction::CW) ? 1.0 : -1.0);
     bool               hasRoundness = false;
 
-    roundness /= 100.0;
+    roundness /= 100.0f;
 
-    currentAngle = (currentAngle - 90.0) * M_PI / 180.0;
-    x = (float)(radius * cos(currentAngle));
-    y = (float)(radius * sin(currentAngle));
+    currentAngle = (currentAngle - 90.0f) * K_PI / 180.0f;
+    x = radius * cosf(currentAngle);
+    y = radius * sinf(currentAngle);
     currentAngle += anglePerPoint * angleDir;
 
     if (vIsZero(roundness)) {
@@ -651,20 +652,20 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
 
     moveTo(x + cx, y + cy);
 
-    for (int i = 0; i < numPoints; i++) {
+    for (size_t i = 0; i < numPoints; i++) {
         float previousX = x;
         float previousY = y;
-        x = (float)(radius * cos(currentAngle));
-        y = (float)(radius * sin(currentAngle));
+        x = (radius * cosf(currentAngle));
+        y = (radius * sinf(currentAngle));
 
         if (hasRoundness) {
             float cp1Theta =
-                (float)(atan2(previousY, previousX) - M_PI / 2.0 * angleDir);
-            float cp1Dx = (float)cos(cp1Theta);
-            float cp1Dy = (float)sin(cp1Theta);
-            float cp2Theta = (float)(atan2(y, x) - M_PI / 2.0 * angleDir);
-            float cp2Dx = (float)cos(cp2Theta);
-            float cp2Dy = (float)sin(cp2Theta);
+                (atan2f(previousY, previousX) - K_PI / 2.0f * angleDir);
+            float cp1Dx = cosf(cp1Theta);
+            float cp1Dy = sinf(cp1Theta);
+            float cp2Theta = atan2f(y, x) - K_PI / 2.0f * angleDir;
+            float cp2Dx = cosf(cp2Theta);
+            float cp2Dy = sinf(cp2Theta);
 
             float cp1x = radius * roundness * POLYGON_MAGIC_NUMBER * cp1Dx;
             float cp1y = radius * roundness * POLYGON_MAGIC_NUMBER * cp1Dy;
@@ -685,7 +686,7 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
 
 void VPath::VPathData::addPath(const VPathData &path)
 {
-    int segment = path.segments();
+    size_t segment = path.segments();
 
     // make sure enough memory available
     if (m_points.capacity() < m_points.size() + path.m_points.size())
