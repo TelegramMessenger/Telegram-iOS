@@ -25,6 +25,15 @@ else
 	exit 1
 fi
 
+COMMIT_ID=$(git rev-parse HEAD)
+if [ -z "$2" ]; then
+	COMMIT_COUNT=$(git rev-list --count HEAD)
+	COMMIT_COUNT="$(($COMMIT_COUNT+1000))"
+	BUILD_NUMBER="$COMMIT_COUNT"
+else
+	BUILD_NUMBER="$2"
+fi
+
 BASE_DIR=$(pwd)
 
 if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
@@ -87,7 +96,7 @@ else
 fi
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
-ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
+ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
 
 if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	ARCHIVE_PATH="$HOME/telegram-builds-archive"

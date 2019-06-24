@@ -1,5 +1,15 @@
 #!/bin/sh
 
+if [ -z "BUILD_NUMBER" ]; then
+	echo "BUILD_NUMBER is not set"
+	exit 1
+fi
+
+if [ -z "COMMIT_ID" ]; then
+	echo "COMMIT_ID is not set"
+	exit 1
+fi
+
 if [ "$1" == "hockeyapp" ]; then
 	FASTLANE_BUILD_CONFIGURATION="internalhockeyapp"
 	CERTS_PATH="codesigning_data/certs"
@@ -68,5 +78,5 @@ else
 	tar -xf "source.tar"
 
 	cd "$SOURCE_PATH"
-	FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION"
+	FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID"
 fi
