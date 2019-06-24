@@ -1,19 +1,19 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "vbezier.h"
@@ -29,8 +29,7 @@ VDasher::VDasher(const float *dashArray, size_t size)
 {
     mDashArray = reinterpret_cast<const VDasher::Dash *>(dashArray);
     mArraySize = size / 2;
-    if (size % 2)
-        mDashOffset = dashArray[size - 1];
+    if (size % 2) mDashOffset = dashArray[size - 1];
     mIndex = 0;
     mCurrentLength = 0;
     mDiscard = false;
@@ -78,13 +77,13 @@ void VDasher::moveTo(const VPointF &p)
 
 void VDasher::addLine(const VPointF &p)
 {
-   if (mDiscard) return;
+    if (mDiscard) return;
 
-   if (mStartNewSegment) {
+    if (mStartNewSegment) {
         mResult.moveTo(mCurPt);
         mStartNewSegment = false;
-   }
-   mResult.lineTo(p);
+    }
+    mResult.lineTo(p);
 }
 
 void VDasher::updateActiveSegment()
@@ -149,7 +148,7 @@ void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
 {
     VBezier left, right;
     VBezier b = VBezier::fromPoints(mCurPt, cp1, cp2, e);
-    float bezLen = b.length();
+    float   bezLen = b.length();
 
     if (bezLen <= mCurrentLength) {
         mCurrentLength -= bezLen;

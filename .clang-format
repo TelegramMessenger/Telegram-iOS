@@ -1,6 +1,6 @@
 ---
 Language:        Cpp
-# BasedOnStyle:  Tizen
+BasedOnStyle:  Google
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: false

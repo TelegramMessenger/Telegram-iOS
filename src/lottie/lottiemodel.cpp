@@ -1,27 +1,27 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "lottiemodel.h"
-#include "vline.h"
-#include "vimageloader.h"
 #include <cassert>
+#include <iterator>
 #include <stack>
-#include <iterator>  
+#include "vimageloader.h"
+#include "vline.h"
 
 /*
  * We process the iterator objects in the children list
@@ -30,19 +30,23 @@
  * under a new shape group object which we add it as children to the repeater
  * object.
  * Then we visit the childrens of the newly created shape group object to
- * process the remaining repeater object(when children list contains more than one
- * repeater).
+ * process the remaining repeater object(when children list contains more than
+ * one repeater).
  *
  */
 class LottieRepeaterProcesser {
 public:
-    void visitChildren(LOTGroupData *obj) {
-        for (auto i = obj->mChildren.rbegin(); i != obj->mChildren.rend(); ++i ) {
+    void visitChildren(LOTGroupData *obj)
+    {
+        for (auto i = obj->mChildren.rbegin(); i != obj->mChildren.rend();
+             ++i) {
             auto child = (*i).get();
             if (child->type() == LOTData::Type::Repeater) {
-                LOTRepeaterData *repeater = static_cast<LOTRepeaterData *>(child);
+                LOTRepeaterData *repeater =
+                    static_cast<LOTRepeaterData *>(child);
                 // check if this repeater is already processed
-                // can happen if the layer is an asset and referenced by multiple layer.
+                // can happen if the layer is an asset and referenced by
+                // multiple layer.
                 if (repeater->content()) continue;
 
                 repeater->setContent(std::make_shared<LOTShapeGroupData>());
@@ -51,28 +55,28 @@ public:
                 //   object before the repeater
                 ++i;
                 // 2. move all the children till repater to the group
-                std::move(obj->mChildren.begin(),
-                          i.base(), back_inserter(content->mChildren));
+                std::move(obj->mChildren.begin(), i.base(),
+                          back_inserter(content->mChildren));
                 // 3. erase the objects from the original children list
-                obj->mChildren.erase(obj->mChildren.begin(),
-                                     i.base());
+                obj->mChildren.erase(obj->mChildren.begin(), i.base());
 
-                // 5. visit newly created group to process remaining repeater object.
+                // 5. visit newly created group to process remaining repeater
+                // object.
                 visitChildren(content);
                 // 6. exit the loop as the current iterators are invalid
                 break;
             } else {
                 visit(child);
             }
-
         }
     }
 
-    void visit(LOTData *obj) {
+    void visit(LOTData *obj)
+    {
         switch (obj->mType) {
         case LOTData::Type::Repeater:
         case LOTData::Type::ShapeGroup:
-        case LOTData::Type::Layer:{
+        case LOTData::Type::Layer: {
             visitChildren(static_cast<LOTGroupData *>(obj));
             break;
         }
@@ -81,7 +85,6 @@ public:
         }
     }
 };
-
 
 void LOTCompositionData::processRepeaterObjects()
 {
@@ -96,10 +99,10 @@ VMatrix LOTRepeaterTransform::matrix(int frameNo, float multiplier) const
     scale.setY(std::pow(scale.y(), multiplier));
     VMatrix m;
     m.translate(mPosition.value(frameNo) * multiplier)
-     .translate(mAnchor.value(frameNo))
-     .scale(scale)
-     .rotate(mRotation.value(frameNo) * multiplier)
-     .translate(-mAnchor.value(frameNo));
+        .translate(mAnchor.value(frameNo))
+        .scale(scale)
+        .rotate(mRotation.value(frameNo) * multiplier)
+        .translate(-mAnchor.value(frameNo));
 
     return m;
 }
@@ -325,7 +328,8 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
 
 void LOTAsset::loadImageData(std::string data)
 {
-    if (!data.empty()) mBitmap = VImageLoader::instance().load(data.c_str(), data.length());
+    if (!data.empty())
+        mBitmap = VImageLoader::instance().load(data.c_str(), data.length());
 }
 
 void LOTAsset::loadImagePath(std::string path)

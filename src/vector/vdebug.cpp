@@ -1,19 +1,19 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "vdebug.h"
@@ -54,7 +54,8 @@ void format_timestamp(std::ostream& os, uint64_t timestamp)
     char        buffer[32];
     strftime(buffer, 32, "%Y-%m-%d %T.", gmtime);
     char microseconds[7];
-    snprintf(microseconds, 7, "%06llu", (long long unsigned int)timestamp % 1000000);
+    snprintf(microseconds, 7, "%06llu",
+             (long long unsigned int)timestamp % 1000000);
     os << '[' << buffer << microseconds << ']';
 }
 
@@ -456,10 +457,12 @@ private:
     size_t const              m_size;
     Item*                     m_ring;
     std::atomic<unsigned int> m_write_index;
+
 public:
-    char                      pad[64];
+    char pad[64];
+
 private:
-    unsigned int              m_read_index;
+    unsigned int m_read_index;
 };
 
 class Buffer {
@@ -722,7 +725,7 @@ void initialize(NonGuaranteedLogger ngl, std::string const& log_directory,
                 uint32_t           log_file_roll_size_mb)
 {
     nanologger = std::make_unique<NanoLogger>(ngl, log_directory, log_file_name,
-                                    log_file_roll_size_mb);
+                                              log_file_roll_size_mb);
     atomic_nanologger.store(nanologger.get(), std::memory_order_seq_cst);
 }
 
@@ -731,7 +734,7 @@ void initialize(GuaranteedLogger gl, std::string const& log_directory,
                 uint32_t           log_file_roll_size_mb)
 {
     nanologger = std::make_unique<NanoLogger>(gl, log_directory, log_file_name,
-                                    log_file_roll_size_mb);
+                                              log_file_roll_size_mb);
     atomic_nanologger.store(nanologger.get(), std::memory_order_seq_cst);
 }
 
@@ -748,4 +751,4 @@ bool is_logged(LogLevel level)
            loglevel.load(std::memory_order_relaxed);
 }
 
-#endif //LOTTIE_LOGGING_SUPPORT
+#endif  // LOTTIE_LOGGING_SUPPORT

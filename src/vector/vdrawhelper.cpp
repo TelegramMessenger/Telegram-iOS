@@ -1,19 +1,19 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 /****************************************************************************
@@ -51,11 +51,11 @@
 ****************************************************************************/
 
 #include "vdrawhelper.h"
+#include <algorithm>
 #include <climits>
 #include <cstring>
 #include <mutex>
 #include <unordered_map>
-#include <algorithm>
 
 class VGradientCache {
 public:
@@ -65,14 +65,15 @@ public:
     };
     using VCacheData = std::shared_ptr<const CacheInfo>;
     using VCacheKey = int64_t;
-    using VGradientColorTableHash = std::unordered_multimap<VCacheKey, VCacheData>;
+    using VGradientColorTableHash =
+        std::unordered_multimap<VCacheKey, VCacheData>;
 
     bool generateGradientColorTable(const VGradientStops &stops, float alpha,
                                     uint32_t *colorTable, int size);
     VCacheData getBuffer(const VGradient &gradient)
     {
-        VCacheKey   hash_val = 0;
-        VCacheData info;
+        VCacheKey             hash_val = 0;
+        VCacheData            info;
         const VGradientStops &stops = gradient.mStops;
         for (uint i = 0; i < stops.size() && i <= 2; i++)
             hash_val += (stops[i].second.premulARGB() * gradient.alpha());
@@ -111,20 +112,19 @@ public:
     }
 
 protected:
-    uint maxCacheSize() const { return 60; }
+    uint       maxCacheSize() const { return 60; }
     VCacheData addCacheElement(VCacheKey hash_val, const VGradient &gradient)
     {
         if (mCache.size() == maxCacheSize()) {
-            uint count = maxCacheSize()/10;
+            uint count = maxCacheSize() / 10;
             while (count--) {
                 mCache.erase(mCache.begin());
             }
         }
         auto cache_entry = std::make_shared<CacheInfo>(gradient.mStops);
-        cache_entry->alpha = generateGradientColorTable(gradient.mStops,
-                                                        gradient.alpha(),
-                                                        cache_entry->buffer32,
-                                                        VGradient::colorTableSize);
+        cache_entry->alpha = generateGradientColorTable(
+            gradient.mStops, gradient.alpha(), cache_entry->buffer32,
+            VGradient::colorTableSize);
         mCache.insert(std::make_pair(hash_val, cache_entry));
         return cache_entry;
     }
@@ -133,7 +133,8 @@ protected:
     std::mutex              mMutex;
 };
 
-bool VGradientCache::generateGradientColorTable(const VGradientStops &stops, float opacity,
+bool VGradientCache::generateGradientColorTable(const VGradientStops &stops,
+                                                float                 opacity,
                                                 uint32_t *colorTable, int size)
 {
     int                  dist, idist, pos = 0, i;
@@ -496,8 +497,8 @@ void fetch_radial_gradient(uint32_t *buffer, const Operator *op,
     }
 }
 
-static inline Operator getOperator(const VSpanData * data,
-                                   const VRle::Span *, size_t)
+static inline Operator getOperator(const VSpanData *data, const VRle::Span *,
+                                   size_t)
 {
     Operator op;
     bool     solidSource = false;
@@ -532,7 +533,8 @@ static inline Operator getOperator(const VSpanData * data,
     return op;
 }
 
-static void blendColorARGB(size_t count, const VRle::Span *spans, void *userData)
+static void blendColorARGB(size_t count, const VRle::Span *spans,
+                           void *userData)
 {
     VSpanData *data = (VSpanData *)(userData);
     Operator   op = getOperator(data, spans, count);
@@ -587,25 +589,26 @@ static void blendGradientARGB(size_t count, const VRle::Span *spans,
     }
 }
 
-template<class T>
-constexpr const T& clamp( const T& v, const T& lo, const T& hi)
+template <class T>
+constexpr const T &clamp(const T &v, const T &lo, const T &hi)
 {
     return v < lo ? lo : hi < v ? hi : v;
 }
 
 static const int buffer_size = 1024;
 static const int fixed_scale = 1 << 16;
-static void blend_transformed_argb(size_t count, const VRle::Span *spans, void *userData)
+static void      blend_transformed_argb(size_t count, const VRle::Span *spans,
+                                        void *userData)
 {
     VSpanData *data = reinterpret_cast<VSpanData *>(userData);
-    if (data->mBitmap.format != VBitmap::Format::ARGB32_Premultiplied
-        && data->mBitmap.format != VBitmap::Format::ARGB32) {
+    if (data->mBitmap.format != VBitmap::Format::ARGB32_Premultiplied &&
+        data->mBitmap.format != VBitmap::Format::ARGB32) {
         //@TODO other formats not yet handled.
         return;
     }
 
     Operator op = getOperator(data, spans, count);
-    uint buffer[buffer_size];
+    uint     buffer[buffer_size];
 
     const int image_x1 = data->mBitmap.x1;
     const int image_y1 = data->mBitmap.y1;
@@ -623,21 +626,23 @@ static void blend_transformed_argb(size_t count, const VRle::Span *spans, void *
             const float cx = spans->x + float(0.5);
             const float cy = spans->y + float(0.5);
 
-            int x = int((data->m21 * cy
-                         + data->m11 * cx + data->dx) * fixed_scale);
-            int y = int((data->m22 * cy
-                         + data->m12 * cx + data->dy) * fixed_scale);
+            int x =
+                int((data->m21 * cy + data->m11 * cx + data->dx) * fixed_scale);
+            int y =
+                int((data->m22 * cy + data->m12 * cx + data->dy) * fixed_scale);
 
-            int length = spans->len;
-            const int coverage = (spans->coverage * data->mBitmap.const_alpha) >> 8;
+            int       length = spans->len;
+            const int coverage =
+                (spans->coverage * data->mBitmap.const_alpha) >> 8;
             while (length) {
-                int l = std::min(length, buffer_size);
+                int         l = std::min(length, buffer_size);
                 const uint *end = buffer + l;
-                uint *b = buffer;
+                uint *      b = buffer;
                 while (b < end) {
                     int px = clamp(x >> 16, image_x1, image_x2);
                     int py = clamp(y >> 16, image_y1, image_y2);
-                    *b = reinterpret_cast<const uint *>(data->mBitmap.scanLine(py))[px];
+                    *b = reinterpret_cast<const uint *>(
+                        data->mBitmap.scanLine(py))[px];
 
                     x += fdx;
                     y += fdy;
@@ -663,20 +668,24 @@ static void blend_transformed_argb(size_t count, const VRle::Span *spans, void *
             float y = data->m22 * cy + data->m12 * cx + data->dy;
             float w = data->m23 * cy + data->m13 * cx + data->m33;
 
-            int length = spans->len;
-            const int coverage = (spans->coverage * data->mBitmap.const_alpha) >> 8;
+            int       length = spans->len;
+            const int coverage =
+                (spans->coverage * data->mBitmap.const_alpha) >> 8;
             while (length) {
-                int l = std::min(length, buffer_size);
+                int         l = std::min(length, buffer_size);
                 const uint *end = buffer + l;
-                uint *b = buffer;
+                uint *      b = buffer;
                 while (b < end) {
                     const float iw = w == 0 ? 1 : 1 / w;
                     const float tx = x * iw;
                     const float ty = y * iw;
-                    const int px = clamp(int(tx) - (tx < 0), image_x1, image_x2);
-                    const int py = clamp(int(ty) - (ty < 0), image_y1, image_y2);
+                    const int   px =
+                        clamp(int(tx) - (tx < 0), image_x1, image_x2);
+                    const int py =
+                        clamp(int(ty) - (ty < 0), image_y1, image_y2);
 
-                    *b = reinterpret_cast<const uint *>(data->mBitmap.scanLine(py))[px];
+                    *b = reinterpret_cast<const uint *>(
+                        data->mBitmap.scanLine(py))[px];
                     x += fdx;
                     y += fdy;
                     w += fdw;
@@ -692,11 +701,12 @@ static void blend_transformed_argb(size_t count, const VRle::Span *spans, void *
     }
 }
 
-static void blend_untransformed_argb(size_t count, const VRle::Span *spans, void *userData)
+static void blend_untransformed_argb(size_t count, const VRle::Span *spans,
+                                     void *userData)
 {
     VSpanData *data = reinterpret_cast<VSpanData *>(userData);
-    if (data->mBitmap.format != VBitmap::Format::ARGB32_Premultiplied
-        && data->mBitmap.format != VBitmap::Format::ARGB32) {
+    if (data->mBitmap.format != VBitmap::Format::ARGB32_Premultiplied &&
+        data->mBitmap.format != VBitmap::Format::ARGB32) {
         //@TODO other formats not yet handled.
         return;
     }
@@ -720,12 +730,12 @@ static void blend_untransformed_argb(size_t count, const VRle::Span *spans, void
                 length += sx;
                 sx = 0;
             }
-            if (sx + length > image_width)
-                length = image_width - sx;
+            if (sx + length > image_width) length = image_width - sx;
             if (length > 0) {
-                const int coverage = (spans->coverage * data->mBitmap.const_alpha) >> 8;
+                const int coverage =
+                    (spans->coverage * data->mBitmap.const_alpha) >> 8;
                 const uint *src = (const uint *)data->mBitmap.scanLine(sy) + sx;
-                uint *dest = data->buffer(x, spans->y);
+                uint *      dest = data->buffer(x, spans->y);
                 op.func(dest, src, length, coverage);
             }
         }
@@ -776,8 +786,9 @@ void VSpanData::setup(const VBrush &brush, VPainter::CompositionMode /*mode*/,
     }
     case VBrush::Type::Texture: {
         mType = VSpanData::Type::Texture;
-        initTexture(&brush.mTexture, 255, VBitmapData::Plain,
-                    VRect(0, 0, brush.mTexture.width(), brush.mTexture.height()));
+        initTexture(
+            &brush.mTexture, 255, VBitmapData::Plain,
+            VRect(0, 0, brush.mTexture.width(), brush.mTexture.height()));
         setupMatrix(brush.mMatrix);
         break;
     }
@@ -801,19 +812,15 @@ void VSpanData::setupMatrix(const VMatrix &matrix)
     dy = inv.mty;
     transformType = inv.type();
 
-    const bool affine = inv.isAffine();
+    const bool  affine = inv.isAffine();
     const float f1 = m11 * m11 + m21 * m21;
     const float f2 = m12 * m12 + m22 * m22;
-    fast_matrix = affine
-        && f1 < 1e4
-        && f2 < 1e4
-        && f1 > (1.0 / 65536)
-        && f2 > (1.0 / 65536)
-        && fabs(dx) < 1e4
-        && fabs(dy) < 1e4;
+    fast_matrix = affine && f1 < 1e4 && f2 < 1e4 && f1 > (1.0 / 65536) &&
+                  f2 > (1.0 / 65536) && fabs(dx) < 1e4 && fabs(dy) < 1e4;
 }
 
-void VSpanData::initTexture(const VBitmap *bitmap, int alpha, VBitmapData::Type type, const VRect &sourceRect)
+void VSpanData::initTexture(const VBitmap *bitmap, int alpha,
+                            VBitmapData::Type type, const VRect &sourceRect)
 {
     mType = VSpanData::Type::Texture;
 
@@ -849,7 +856,7 @@ void VSpanData::updateSpanFunc()
     }
     case VSpanData::Type::Texture: {
         //@TODO update proper image function.
-        if (transformType <= VMatrix::MatrixType::Translate){
+        if (transformType <= VMatrix::MatrixType::Translate) {
             mUnclippedBlendFunc = &blend_untransformed_argb;
         } else {
             mUnclippedBlendFunc = &blend_transformed_argb;

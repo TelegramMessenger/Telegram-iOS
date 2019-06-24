@@ -1,23 +1,22 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "lottieparser.h"
-
 
 //#define DEBUG_PARSER
 
@@ -174,8 +173,9 @@ protected:
 class LottieParserImpl : protected LookaheadParserHandler {
 public:
     LottieParserImpl(char *str, const char *dir_path)
-        :LookaheadParserHandler(str),
-         mDirPath(dir_path){}
+        : LookaheadParserHandler(str), mDirPath(dir_path)
+    {
+    }
 
 public:
     bool        EnterObject();
@@ -267,8 +267,8 @@ public:
     void resolveLayerRefs();
 
 protected:
-    std::unordered_map<std::string,
-                       std::shared_ptr<VInterpolator>> mInterpolatorCache;
+    std::unordered_map<std::string, std::shared_ptr<VInterpolator>>
+                                               mInterpolatorCache;
     std::shared_ptr<LOTCompositionData>        mComposition;
     LOTCompositionData *                       compRef{nullptr};
     LOTLayerData *                             curLayerRef{nullptr};
@@ -498,7 +498,7 @@ int LottieParserImpl::PeekType()
     return -1;
 }
 
-void LottieParserImpl::Skip(const char */*key*/)
+void LottieParserImpl::Skip(const char * /*key*/)
 {
     if (PeekType() == kArrayType) {
         EnterArray();
@@ -534,7 +534,7 @@ LottieBlendMode LottieParserImpl::getBlendMode()
 
 void LottieParserImpl::resolveLayerRefs()
 {
-    for (const auto& i : mLayersToUpdate) {
+    for (const auto &i : mLayersToUpdate) {
         LOTLayerData *layer = i.get();
         auto          search = compRef->mAssets.find(layer->mPreCompRefId);
         if (search != compRef->mAssets.end()) {
@@ -542,7 +542,8 @@ void LottieParserImpl::resolveLayerRefs()
                 layer->mAsset = search->second;
             } else if (layer->mLayerType == LayerType::Precomp) {
                 layer->mChildren = search->second->mLayers;
-                layer->setStatic(layer->isStatic() && search->second->isStatic());
+                layer->setStatic(layer->isStatic() &&
+                                 search->second->isStatic());
             }
         }
     }
@@ -607,35 +608,34 @@ void LottieParserImpl::parseAssets(LOTCompositionData *composition)
     // update the precomp layers with the actual layer object
 }
 
-static constexpr const unsigned char B64index[256] = { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 62, 63, 62, 62, 63, 52, 53, 54, 55,
-56, 57, 58, 59, 60, 61,  0,  0,  0,  0,  0,  0,  0,  0,  1,  2,  3,  4,  5,  6,
-7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,  0,
-0,  0,  0, 63,  0, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51 };
+static constexpr const unsigned char B64index[256] = {
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  62, 63, 62, 62, 63, 52, 53, 54, 55, 56, 57,
+    58, 59, 60, 61, 0,  0,  0,  0,  0,  0,  0,  0,  1,  2,  3,  4,  5,  6,
+    7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+    25, 0,  0,  0,  0,  63, 0,  26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+    37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51};
 
-std::string b64decode(const void* data, const size_t len)
+std::string b64decode(const void *data, const size_t len)
 {
-    unsigned char* p = (unsigned char*)data;
-    int pad = len > 0 && (len % 4 || p[len - 1] == '=');
-    const size_t L = ((len + 3) / 4 - pad) * 4;
-    std::string str(L / 4 * 3 + pad, '\0');
+    unsigned char *p = (unsigned char *)data;
+    int            pad = len > 0 && (len % 4 || p[len - 1] == '=');
+    const size_t   L = ((len + 3) / 4 - pad) * 4;
+    std::string    str(L / 4 * 3 + pad, '\0');
 
-    for (size_t i = 0, j = 0; i < L; i += 4)
-    {
-        int n = B64index[p[i]] << 18 | B64index[p[i + 1]] << 12 | B64index[p[i + 2]] << 6 | B64index[p[i + 3]];
+    for (size_t i = 0, j = 0; i < L; i += 4) {
+        int n = B64index[p[i]] << 18 | B64index[p[i + 1]] << 12 |
+                B64index[p[i + 2]] << 6 | B64index[p[i + 3]];
         str[j++] = n >> 16;
         str[j++] = n >> 8 & 0xFF;
         str[j++] = n & 0xFF;
     }
-    if (pad)
-    {
+    if (pad) {
         int n = B64index[p[L]] << 18 | B64index[p[L + 1]] << 12;
         str[str.size() - 1] = n >> 16;
 
-        if (len > L + 2 && p[L + 2] != '=')
-        {
+        if (len > L + 2 && p[L + 2] != '=') {
             n |= B64index[p[L + 2]] << 6;
             str.push_back(n >> 8 & 0xFF);
         }
@@ -643,13 +643,12 @@ std::string b64decode(const void* data, const size_t len)
     return str;
 }
 
-static std::string
-convertFromBase64(const std::string &str)
+static std::string convertFromBase64(const std::string &str)
 {
     // usual header look like "data:image/png;base64,"
     // so need to skip till ','.
     int startIndex = str.find(",", 0);
-    startIndex += 1; // skip ","
+    startIndex += 1;  // skip ","
     int length = str.length() - startIndex;
 
     const char *b64Data = str.c_str() + startIndex;
@@ -666,9 +665,9 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
     RAPIDJSON_ASSERT(PeekType() == kObjectType);
     std::shared_ptr<LOTAsset> sharedAsset = std::make_shared<LOTAsset>();
     LOTAsset *                asset = sharedAsset.get();
-    std::string    filename;
-    std::string    relativePath;
-    bool           embededResource = false;
+    std::string               filename;
+    std::string               relativePath;
+    bool                      embededResource = false;
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "w")) {
@@ -715,7 +714,7 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
     if (asset->mAssetType == LOTAsset::Type::Image) {
         if (embededResource) {
             // embeder resource should start with "data:"
-            if (filename.compare(0, 5,"data:") == 0) {
+            if (filename.compare(0, 5, "data:") == 0) {
                 asset->loadImageData(convertFromBase64(filename));
             }
         } else {
@@ -745,11 +744,11 @@ void LottieParserImpl::parseLayers(LOTCompositionData *comp)
 LottieColor LottieParserImpl::toColor(const char *str)
 {
     LottieColor color;
-    int len = strlen(str);
+    int         len = strlen(str);
 
     // some resource has empty color string
     // return a default color for those cases.
-    if (!len) return  color;
+    if (!len) return color;
 
     RAPIDJSON_ASSERT(len == 7);
     RAPIDJSON_ASSERT(str[0] == '#');
@@ -846,7 +845,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
         } else if (0 == strcmp(key, "ddd")) { /*3d layer */
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
             ddd = GetInt();
-        } else if (0 == strcmp(key, "parent")) { /*Layer Parent. Uses "ind" of parent.*/
+        } else if (0 ==
+                   strcmp(key,
+                          "parent")) { /*Layer Parent. Uses "ind" of parent.*/
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
             layer->mParentId = GetInt();
         } else if (0 == strcmp(key, "refId")) { /*preComp Layer reference id*/
@@ -918,18 +919,19 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
 
     // update the static property of layer
     bool staticFlag = true;
-    for (const auto& child : layer->mChildren) {
+    for (const auto &child : layer->mChildren) {
         staticFlag &= child.get()->isStatic();
     }
 
-    for (const auto& mask : layer->mMasks) {
+    for (const auto &mask : layer->mMasks) {
         staticFlag &= mask->isStatic();
     }
 
     layer->setStatic(staticFlag && layer->mTransform->isStatic());
 
     if (record) {
-        mLayerInfoList.push_back(LayerInfo(layer->mName, layer->mInFrame, layer->mOutFrame));
+        mLayerInfoList.push_back(
+            LayerInfo(layer->mName, layer->mInFrame, layer->mOutFrame));
     }
     return sharedLayer;
 }
@@ -1028,7 +1030,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseObjectTypeAttr()
     } else if (0 == strcmp(type, "rp")) {
         curLayerRef->mHasRepeater = true;
         return parseReapeaterObject();
-    }  else if (0 == strcmp(type, "mm")) {
+    } else if (0 == strcmp(type, "mm")) {
         vWarning << "Merge Path is not supported yet";
         return nullptr;
     } else {
@@ -1079,7 +1081,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGroupObject()
         }
     }
     bool staticFlag = true;
-    for (const auto& child : group->mChildren) {
+    for (const auto &child : group->mChildren) {
         staticFlag &= child.get()->isStatic();
     }
 
@@ -1298,7 +1300,6 @@ void LottieParserImpl::getValue(LOTRepeaterTransform &obj)
     }
 }
 
-
 std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
 {
     std::shared_ptr<LOTRepeaterData> sharedRepeater =
@@ -1310,9 +1311,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
             obj->mName = GetString();
         } else if (0 == strcmp(key, "c")) {
             parseProperty(obj->mCopies);
-            float maxCopy= 0.0;
+            float maxCopy = 0.0;
             if (!obj->mCopies.isStatic()) {
-                for(auto &keyFrame : obj->mCopies.animation().mKeyFrames) {
+                for (auto &keyFrame : obj->mCopies.animation().mKeyFrames) {
                     if (maxCopy < keyFrame.mValue.mStartValue)
                         maxCopy = keyFrame.mValue.mStartValue;
                     if (maxCopy < keyFrame.mValue.mEndValue)
@@ -1344,7 +1345,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
 /*
  * https://github.com/airbnb/lottie-web/blob/master/docs/json/shapes/transform.json
  */
-std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(bool ddd)
+std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(
+    bool ddd)
 {
     std::shared_ptr<LOTTransformData> sharedTransform =
         std::make_shared<LOTTransformData>();
@@ -1368,7 +1370,7 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(bool dd
                     parseProperty(obj->mX);
                 } else if (obj->mSeparate && (0 == strcmp(key, "y"))) {
                     parseProperty(obj->mY);
-                }else {
+                } else {
                     Skip(key);
                 }
             }
@@ -1400,7 +1402,8 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(bool dd
                          obj->mX.isStatic() && obj->mY.isStatic();
     if (obj->m3D) {
         obj->mStaticMatrix = obj->mStaticMatrix && obj->m3D->mRx.isStatic() &&
-                             obj->m3D->mRy.isStatic() && obj->m3D->mRz.isStatic();
+                             obj->m3D->mRy.isStatic() &&
+                             obj->m3D->mRz.isStatic();
     }
 
     obj->setStatic(obj->mStaticMatrix && obj->mOpacity.isStatic());
@@ -1429,7 +1432,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseFillObject()
             obj->mEnabled = GetBool();
         } else if (0 == strcmp(key, "r")) {
             obj->mFillRule = getFillRule();
-        }  else if (0 == strcmp(key, "hd")) {
+        } else if (0 == strcmp(key, "hd")) {
             obj->mHidden = GetBool();
         } else {
 #ifdef DEBUG_PARSER
@@ -1693,7 +1696,7 @@ void LottieParserImpl::getValue(float &val)
     if (PeekType() == kArrayType) {
         EnterArray();
         if (NextArrayValue()) val = GetDouble();
-        //discard rest
+        // discard rest
         while (NextArrayValue()) {
             GetDouble();
         }
@@ -1829,14 +1832,16 @@ VPointF LottieParserImpl::parseInperpolatorPoint()
 }
 
 template <typename T>
-bool LottieParserImpl::parseKeyFrameValue(const char *,
-                                          LOTKeyFrameValue<T> &){ return false;}
+bool LottieParserImpl::parseKeyFrameValue(const char *, LOTKeyFrameValue<T> &)
+{
+    return false;
+}
 
 template <>
-bool LottieParserImpl::parseKeyFrameValue(const char * key,
+bool LottieParserImpl::parseKeyFrameValue(const char *               key,
                                           LOTKeyFrameValue<VPointF> &value)
 {
-   if (0 == strcmp(key, "ti")) {
+    if (0 == strcmp(key, "ti")) {
         value.mPathKeyFrame = true;
         getValue(value.mInTangent);
     } else if (0 == strcmp(key, "to")) {
@@ -1848,13 +1853,13 @@ bool LottieParserImpl::parseKeyFrameValue(const char * key,
     return true;
 }
 
-std::shared_ptr<VInterpolator>
-LottieParserImpl::interpolator(VPointF inTangent, VPointF outTangent, std::string key)
+std::shared_ptr<VInterpolator> LottieParserImpl::interpolator(
+    VPointF inTangent, VPointF outTangent, std::string key)
 {
     if (key.empty()) {
         std::array<char, 20> temp;
-        snprintf(temp.data(), temp.size(), "%.2f_%.2f_%.2f_%.2f",
-                 inTangent.x(), inTangent.y(), outTangent.x(), outTangent.y());
+        snprintf(temp.data(), temp.size(), "%.2f_%.2f_%.2f_%.2f", inTangent.x(),
+                 inTangent.y(), outTangent.x(), outTangent.y());
         key = temp.data();
     }
 
@@ -1862,8 +1867,9 @@ LottieParserImpl::interpolator(VPointF inTangent, VPointF outTangent, std::strin
     if (search != mInterpolatorCache.end()) {
         return search->second;
     } else {
-        auto obj = std::make_shared<VInterpolator>(VInterpolator(outTangent, inTangent));
-        mInterpolatorCache[std::move(key)] =  obj;
+        auto obj = std::make_shared<VInterpolator>(
+            VInterpolator(outTangent, inTangent));
+        mInterpolatorCache[std::move(key)] = obj;
         return obj;
     }
 }
@@ -1876,10 +1882,10 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
 {
     struct ParsedField {
         std::string interpolatorKey;
-        bool interpolator{false};
-        bool value{false};
-        bool hold{false};
-        bool noEndValue{true};
+        bool        interpolator{false};
+        bool        value{false};
+        bool        hold{false};
+        bool        noEndValue{true};
     };
 
     EnterObject();
@@ -1900,7 +1906,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
             parsed.value = true;
             getValue(keyframe.mValue.mStartValue);
             continue;
-        }  else if (0 == strcmp(key, "e")) {
+        } else if (0 == strcmp(key, "e")) {
             parsed.noEndValue = false;
             getValue(keyframe.mValue.mEndValue);
             continue;
@@ -1915,7 +1921,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
                     if (parsed.interpolatorKey.empty()) {
                         parsed.interpolatorKey = GetString();
                     } else {
-                        //skip rest of the string
+                        // skip rest of the string
                         GetString();
                     }
                 }
@@ -1938,9 +1944,9 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
         // update the endFrame value of current keyframe
         obj.mKeyFrames.back().mEndFrame = keyframe.mStartFrame;
         // if no end value provided, copy start value to previous frame
-        if (parsed.value &&
-            parsed.noEndValue) {
-            obj.mKeyFrames.back().mValue.mEndValue = keyframe.mValue.mStartValue;
+        if (parsed.value && parsed.noEndValue) {
+            obj.mKeyFrames.back().mValue.mEndValue =
+                keyframe.mValue.mStartValue;
         }
     }
 
@@ -1949,10 +1955,11 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
         keyframe.mEndFrame = keyframe.mStartFrame;
         obj.mKeyFrames.push_back(keyframe);
     } else if (parsed.interpolator) {
-        keyframe.mInterpolator = interpolator(inTangent, outTangent, std::move(parsed.interpolatorKey));
+        keyframe.mInterpolator = interpolator(
+            inTangent, outTangent, std::move(parsed.interpolatorKey));
         obj.mKeyFrames.push_back(keyframe);
     } else {
-        //its the last frame discard.
+        // its the last frame discard.
     }
 }
 
@@ -2038,15 +2045,11 @@ class LOTDataInspector {
 public:
     void visit(LOTCompositionData *obj, std::string level)
     {
-        vDebug << " { "
-               << level
-               << "Composition:: a: " << !obj->isStatic()
-               << ", v: " << obj->mVersion
-               << ", stFm: " << obj->startFrame()
+        vDebug << " { " << level << "Composition:: a: " << !obj->isStatic()
+               << ", v: " << obj->mVersion << ", stFm: " << obj->startFrame()
                << ", endFm: " << obj->endFrame()
                << ", W: " << obj->size().width()
-               << ", H: " << obj->size().height()
-               << "\n";
+               << ", H: " << obj->size().height() << "\n";
         level.append("\t");
         visit(obj->mRootLayer.get(), level);
         level.erase(level.end() - 1, level.end());
@@ -2054,53 +2057,44 @@ public:
     }
     void visit(LOTLayerData *obj, std::string level)
     {
-        vDebug << level
-               << "{ "
-               << layerType(obj->mLayerType)
-               << ", name: "<< obj->name()
-               << ", id:" << obj->mId << " Pid:" << obj->mParentId
-               << ", a:" << !obj->isStatic()
-               << ", "<<matteType(obj->mMatteType)
-               << ", mask:"<<obj->hasMask()
-               << ", inFm:" << obj->mInFrame
-               << ", outFm:" << obj->mOutFrame
-               << ", stFm:" << obj->mStartFrame
-               << ", ts:" << obj->mTimeStreatch
-               << ", ao:" << obj->autoOrient()
+        vDebug << level << "{ " << layerType(obj->mLayerType)
+               << ", name: " << obj->name() << ", id:" << obj->mId
+               << " Pid:" << obj->mParentId << ", a:" << !obj->isStatic()
+               << ", " << matteType(obj->mMatteType)
+               << ", mask:" << obj->hasMask() << ", inFm:" << obj->mInFrame
+               << ", outFm:" << obj->mOutFrame << ", stFm:" << obj->mStartFrame
+               << ", ts:" << obj->mTimeStreatch << ", ao:" << obj->autoOrient()
                << ", ddd:" << (obj->mTransform ? obj->mTransform->ddd() : false)
                << ", W:" << obj->layerSize().width()
                << ", H:" << obj->layerSize().height();
 
         if (obj->mLayerType == LayerType::Image)
-            vDebug << level
-                   << "\t{ "
+            vDebug << level << "\t{ "
                    << "ImageInfo:"
                    << " W :" << obj->mAsset->mWidth
-                   << ", H :" << obj->mAsset->mHeight
-                   <<" }"
+                   << ", H :" << obj->mAsset->mHeight << " }"
                    << "\n";
         else {
-            vDebug<< level;
+            vDebug << level;
         }
         visitChildren(static_cast<LOTGroupData *>(obj), level);
-        vDebug << level
-               << "} "
-               << layerType(obj->mLayerType).c_str()
+        vDebug << level << "} " << layerType(obj->mLayerType).c_str()
                << ", id: " << obj->mId << "\n";
     }
     void visitChildren(LOTGroupData *obj, std::string level)
     {
         level.append("\t");
-        for (const auto& child : obj->mChildren) visit(child.get(), level);
-        if (obj->mTransform)
-            visit(obj->mTransform.get(), level);
+        for (const auto &child : obj->mChildren) visit(child.get(), level);
+        if (obj->mTransform) visit(obj->mTransform.get(), level);
     }
 
-    void visit(LOTData *obj, std::string level) {
+    void visit(LOTData *obj, std::string level)
+    {
         switch (obj->mType) {
         case LOTData::Type::Repeater: {
             auto r = static_cast<LOTRepeaterData *>(obj);
-            vDebug << level << "{ Repeater: name: "<<obj->name()<<" , a:" << !obj->isStatic()
+            vDebug << level << "{ Repeater: name: " << obj->name()
+                   << " , a:" << !obj->isStatic()
                    << ", copies:" << r->maxCopies()
                    << ", offset:" << r->offset(0);
             visitChildren(r->mContent.get(), level);
@@ -2108,55 +2102,66 @@ public:
             break;
         }
         case LOTData::Type::ShapeGroup: {
-            vDebug << level << "{ ShapeGroup: name: "<<obj->name()<<" , a:" << !obj->isStatic();
+            vDebug << level << "{ ShapeGroup: name: " << obj->name()
+                   << " , a:" << !obj->isStatic();
             visitChildren(static_cast<LOTGroupData *>(obj), level);
             vDebug << level << "} ShapeGroup";
             break;
         }
-        case LOTData::Type::Layer:{
+        case LOTData::Type::Layer: {
             visit(static_cast<LOTLayerData *>(obj), level);
             break;
         }
-        case LOTData::Type::Trim:{
-            vDebug << level << "{ Trim: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
+        case LOTData::Type::Trim: {
+            vDebug << level << "{ Trim: name: " << obj->name()
+                   << " , a:" << !obj->isStatic() << " }";
             break;
         }
-        case LOTData::Type::Rect:{
-            vDebug << level << "{ Rect: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
+        case LOTData::Type::Rect: {
+            vDebug << level << "{ Rect: name: " << obj->name()
+                   << " , a:" << !obj->isStatic() << " }";
             break;
         }
-        case LOTData::Type::Ellipse:{
-            vDebug << level << "{ Ellipse: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
+        case LOTData::Type::Ellipse: {
+            vDebug << level << "{ Ellipse: name: " << obj->name()
+                   << " , a:" << !obj->isStatic() << " }";
             break;
         }
-        case LOTData::Type::Shape:{
-            vDebug << level << "{ Shape: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
+        case LOTData::Type::Shape: {
+            vDebug << level << "{ Shape: name: " << obj->name()
+                   << " , a:" << !obj->isStatic() << " }";
             break;
         }
-        case LOTData::Type::Polystar:{
-            vDebug << level << "{ Polystar: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
+        case LOTData::Type::Polystar: {
+            vDebug << level << "{ Polystar: name: " << obj->name()
+                   << " , a:" << !obj->isStatic() << " }";
             break;
         }
-        case LOTData::Type::Transform:{
-            vDebug << level << "{ Transform: name: "<<obj->name()<<" , a: " << !obj->isStatic() << " }";
+        case LOTData::Type::Transform: {
+            vDebug << level << "{ Transform: name: " << obj->name()
+                   << " , a: " << !obj->isStatic() << " }";
             break;
         }
-        case LOTData::Type::Stroke:{
-            vDebug << level << "{ Stroke: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
+        case LOTData::Type::Stroke: {
+            vDebug << level << "{ Stroke: name: " << obj->name()
+                   << " , a:" << !obj->isStatic() << " }";
             break;
         }
-        case LOTData::Type::GStroke:{
-            vDebug << level << "{ GStroke: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
+        case LOTData::Type::GStroke: {
+            vDebug << level << "{ GStroke: name: " << obj->name()
+                   << " , a:" << !obj->isStatic() << " }";
             break;
         }
-        case LOTData::Type::Fill:{
-            vDebug << level << "{ Fill: name: "<<obj->name()<<" , a:" << !obj->isStatic() << " }";
+        case LOTData::Type::Fill: {
+            vDebug << level << "{ Fill: name: " << obj->name()
+                   << " , a:" << !obj->isStatic() << " }";
             break;
         }
-        case LOTData::Type::GFill:{
+        case LOTData::Type::GFill: {
             auto f = static_cast<LOTGFillData *>(obj);
-            vDebug << level << "{ GFill: name: "<<obj->name()<<" , a:" << !f->isStatic()
-                   << ", ty:" << f->mGradientType << ", s:" << f->mStartPoint.value(0)
+            vDebug << level << "{ GFill: name: " << obj->name()
+                   << " , a:" << !f->isStatic() << ", ty:" << f->mGradientType
+                   << ", s:" << f->mStartPoint.value(0)
                    << ", e:" << f->mEndPoint.value(0) << " }";
             break;
         }
@@ -2223,7 +2228,8 @@ LottieParser::~LottieParser()
     delete d;
 }
 
-LottieParser::LottieParser(char *str, const char *dir_path) : d(new LottieParserImpl(str, dir_path))
+LottieParser::LottieParser(char *str, const char *dir_path)
+    : d(new LottieParserImpl(str, dir_path))
 {
     d->parseComposition();
 }

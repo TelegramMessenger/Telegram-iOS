@@ -1,29 +1,29 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "vpath.h"
 #include <cassert>
+#include <iterator>
 #include <vector>
-#include <iterator> 
 #include "vbezier.h"
 #include "vdebug.h"
-#include "vrect.h"
 #include "vline.h"
+#include "vrect.h"
 
 V_BEGIN_NAMESPACE
 
@@ -49,13 +49,14 @@ float VPath::VPathData::length() const
             i++;
             break;
         case VPath::Element::LineTo: {
-            mLength += VLine( m_points[i-1], m_points[i]).length();
+            mLength += VLine(m_points[i - 1], m_points[i]).length();
             i++;
             break;
         }
         case VPath::Element::CubicTo: {
-            mLength += VBezier::fromPoints(m_points[i-1], m_points[i],
-                                       m_points[i+1], m_points[i+2]).length();
+            mLength += VBezier::fromPoints(m_points[i - 1], m_points[i],
+                                           m_points[i + 1], m_points[i + 2])
+                           .length();
             i += 3;
             break;
         }
@@ -75,26 +76,26 @@ void VPath::VPathData::checkNewSegment()
     }
 }
 
-void  VPath::VPathData::moveTo(float x, float y)
+void VPath::VPathData::moveTo(float x, float y)
 {
     mStartPoint = {x, y};
     mNewSegment = false;
     m_elements.emplace_back(VPath::Element::MoveTo);
-    m_points.emplace_back(x,y);
+    m_points.emplace_back(x, y);
     m_segments++;
     mLengthDirty = true;
 }
 
-void  VPath::VPathData::lineTo(float x, float y)
+void VPath::VPathData::lineTo(float x, float y)
 {
     checkNewSegment();
     m_elements.emplace_back(VPath::Element::LineTo);
-    m_points.emplace_back(x,y);
+    m_points.emplace_back(x, y);
     mLengthDirty = true;
 }
 
-void  VPath::VPathData::cubicTo(float cx1, float cy1, float cx2, float cy2,
-                                float ex, float ey)
+void VPath::VPathData::cubicTo(float cx1, float cy1, float cx2, float cy2,
+                               float ex, float ey)
 {
     checkNewSegment();
     m_elements.emplace_back(VPath::Element::CubicTo);
@@ -148,7 +149,7 @@ static constexpr float K_PI = float(M_PI);
 void VPath::VPathData::arcTo(const VRectF &rect, float startAngle,
                              float sweepLength, bool forceMoveTo)
 {
-    size_t     point_count = 0;
+    size_t  point_count = 0;
     VPointF pts[15];
     VPointF curve_start =
         curvesForArc(rect, startAngle, sweepLength, pts, &point_count);
@@ -191,32 +192,24 @@ void VPath::VPathData::addOval(const VRectF &rect, VPath::Direction dir)
         // moveto 12 o'clock.
         moveTo(x + w2, y);
         // 12 -> 3 o'clock
-        cubicTo(x + w2 + w2k, y, x + w, y + h2 - h2k,
-                x + w, y + h2);
+        cubicTo(x + w2 + w2k, y, x + w, y + h2 - h2k, x + w, y + h2);
         // 3 -> 6 o'clock
-        cubicTo(x + w, y + h2 + h2k, x + w2 + w2k, y + h,
-                x + w2, y + h);
+        cubicTo(x + w, y + h2 + h2k, x + w2 + w2k, y + h, x + w2, y + h);
         // 6 -> 9 o'clock
-        cubicTo(x + w2 - w2k, y + h, x, y + h2 + h2k,
-                x, y + h2);
+        cubicTo(x + w2 - w2k, y + h, x, y + h2 + h2k, x, y + h2);
         // 9 -> 12 o'clock
-        cubicTo(x, y + h2 - h2k, x + w2 - w2k, y,
-                x + w2, y);
+        cubicTo(x, y + h2 - h2k, x + w2 - w2k, y, x + w2, y);
     } else {
         // moveto 12 o'clock.
         moveTo(x + w2, y);
         // 12 -> 9 o'clock
-        cubicTo(x + w2 - w2k, y, x, y + h2 - h2k,
-                x, y + h2);
+        cubicTo(x + w2 - w2k, y, x, y + h2 - h2k, x, y + h2);
         // 9 -> 6 o'clock
-        cubicTo(x, y + h2 + h2k, x + w2 - w2k, y + h,
-                x + w2, y + h);
+        cubicTo(x, y + h2 + h2k, x + w2 - w2k, y + h, x + w2, y + h);
         // 6 -> 3 o'clock
-        cubicTo(x + w2 + w2k, y + h, x + w, y + h2 + h2k,
-                x + w, y + h2);
+        cubicTo(x + w2 + w2k, y + h, x + w, y + h2 + h2k, x + w, y + h2);
         // 3 -> 12 o'clock
-        cubicTo(x + w, y + h2 - h2k, x + w2 + w2k, y,
-                x + w2, y);
+        cubicTo(x + w, y + h2 - h2k, x + w2 + w2k, y, x + w2, y);
     }
     close();
 }
@@ -249,8 +242,8 @@ void VPath::VPathData::addRect(const VRectF &rect, VPath::Direction dir)
 void VPath::VPathData::addRoundRect(const VRectF &rect, float roundness,
                                     VPath::Direction dir)
 {
-    if (2 * roundness > rect.width()) roundness = rect.width()/2.0f;
-    if (2 * roundness > rect.height()) roundness = rect.height()/2.0f;
+    if (2 * roundness > rect.width()) roundness = rect.width() / 2.0f;
+    if (2 * roundness > rect.height()) roundness = rect.height() / 2.0f;
     addRoundRect(rect, roundness, roundness, dir);
 }
 
@@ -608,9 +601,8 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
                 cp2y *= partialPointAmount;
             }
 
-            cubicTo(previousX - cp1x + cx, previousY - cp1y + cy,
-                    x + cp2x + cx, y + cp2y + cy,
-                    x + cx, y + cy);
+            cubicTo(previousX - cp1x + cx, previousY - cp1y + cy, x + cp2x + cx,
+                    y + cp2y + cy, x + cx, y + cy);
         } else {
             lineTo(x + cx, y + cy);
         }
@@ -672,8 +664,8 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
             float cp2x = radius * roundness * POLYGON_MAGIC_NUMBER * cp2Dx;
             float cp2y = radius * roundness * POLYGON_MAGIC_NUMBER * cp2Dy;
 
-            cubicTo(previousX - cp1x + cx, previousY - cp1y + cy,
-                    x + cp2x + cx, y + cp2y + cy, x, y);
+            cubicTo(previousX - cp1x + cx, previousY - cp1y + cy, x + cp2x + cx,
+                    y + cp2y + cy, x, y);
         } else {
             lineTo(x + cx, y + cy);
         }
@@ -695,8 +687,10 @@ void VPath::VPathData::addPath(const VPathData &path)
     if (m_elements.capacity() < m_elements.size() + path.m_elements.size())
         m_elements.reserve(m_elements.size() + path.m_elements.size());
 
-    std::copy(path.m_points.begin(), path.m_points.end(), back_inserter(m_points));
-    std::copy(path.m_elements.begin(), path.m_elements.end(), back_inserter(m_elements));
+    std::copy(path.m_points.begin(), path.m_points.end(),
+              back_inserter(m_points));
+    std::copy(path.m_elements.begin(), path.m_elements.end(),
+              back_inserter(m_elements));
 
     m_segments += segment;
     mLengthDirty = true;

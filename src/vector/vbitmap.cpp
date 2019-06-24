@@ -1,54 +1,54 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "vbitmap.h"
 #include <string.h>
-#include "vglobal.h"
 #include "vdrawhelper.h"
+#include "vglobal.h"
 
 V_BEGIN_NAMESPACE
 
 struct VBitmap::Impl {
-    uchar *             mData{nullptr};
-    uint                mWidth{0};
-    uint                mHeight{0};
-    uint                mStride{0};
-    uint                mBytes{0};
-    uint                mDepth{0};
-    VBitmap::Format     mFormat{VBitmap::Format::Invalid};
-    bool                mOwnData;
-    bool                mRoData;
+    uchar *         mData{nullptr};
+    uint            mWidth{0};
+    uint            mHeight{0};
+    uint            mStride{0};
+    uint            mBytes{0};
+    uint            mDepth{0};
+    VBitmap::Format mFormat{VBitmap::Format::Invalid};
+    bool            mOwnData;
+    bool            mRoData;
 
-    Impl() = delete ;
+    Impl() = delete;
 
-    Impl(uint width, uint height, VBitmap::Format format):
-        mOwnData(true),
-        mRoData(false)
+    Impl(uint width, uint height, VBitmap::Format format)
+        : mOwnData(true), mRoData(false)
     {
         reset(width, height, format);
     }
 
     void reset(uint width, uint height, VBitmap::Format format)
     {
-        if (mOwnData && mData) delete(mData);
+        if (mOwnData && mData) delete (mData);
 
         mDepth = depth(format);
-        uint stride = ((width * mDepth + 31) >> 5) << 2; // bytes per scanline (must be multiple of 4)
+        uint stride = ((width * mDepth + 31) >> 5)
+                      << 2;  // bytes per scanline (must be multiple of 4)
 
         mWidth = width;
         mHeight = height;
@@ -58,9 +58,8 @@ struct VBitmap::Impl {
         mData = reinterpret_cast<uchar *>(::operator new(mBytes));
     }
 
-    Impl(uchar *data, uint w, uint h, uint bytesPerLine, VBitmap::Format format):
-        mOwnData(false),
-        mRoData(false)
+    Impl(uchar *data, uint w, uint h, uint bytesPerLine, VBitmap::Format format)
+        : mOwnData(false), mRoData(false)
     {
         mWidth = w;
         mHeight = h;
@@ -76,11 +75,11 @@ struct VBitmap::Impl {
         if (mOwnData && mData) ::operator delete(mData);
     }
 
-    uint stride() const {return mStride;}
-    uint width() const {return mWidth;}
-    uint height() const {return mHeight;}
-    VBitmap::Format format() const {return mFormat;}
-    uchar* data() { return mData;}
+    uint            stride() const { return mStride; }
+    uint            width() const { return mWidth; }
+    uint            height() const { return mHeight; }
+    VBitmap::Format format() const { return mFormat; }
+    uchar *         data() { return mData; }
 
     static uint depth(VBitmap::Format format)
     {
@@ -103,12 +102,13 @@ struct VBitmap::Impl {
         //@TODO
     }
 
-    void updateLuma() {
+    void updateLuma()
+    {
         if (mFormat != VBitmap::Format::ARGB32_Premultiplied) return;
 
-        for (uint col = 0 ; col < mHeight ; col++) {
-            uint *pixel = (uint *) (mData + mStride * col);
-            for (uint row = 0 ; row < mWidth; row++) {
+        for (uint col = 0; col < mHeight; col++) {
+            uint *pixel = (uint *)(mData + mStride * col);
+            for (uint row = 0; row < mWidth; row++) {
                 int alpha = vAlpha(*pixel);
                 if (alpha == 0) {
                     pixel++;
@@ -120,12 +120,12 @@ struct VBitmap::Impl {
                 int blue = vBlue(*pixel);
 
                 if (alpha != 255) {
-                    //un multiply
+                    // un multiply
                     red = (red * 255) / alpha;
                     green = (green * 255) / alpha;
                     blue = (blue * 255) / alpha;
                 }
-                int luminosity = (0.299*red + 0.587*green + 0.114*blue);
+                int luminosity = (0.299 * red + 0.587 * green + 0.114 * blue);
                 *pixel = luminosity << 24;
                 pixel++;
             }
@@ -135,19 +135,17 @@ struct VBitmap::Impl {
 
 VBitmap::VBitmap(uint width, uint height, VBitmap::Format format)
 {
-    if (width <=0 || height <=0 || format == Format::Invalid) return;
+    if (width <= 0 || height <= 0 || format == Format::Invalid) return;
 
     mImpl = std::make_shared<Impl>(width, height, format);
-
 }
 
 VBitmap::VBitmap(uchar *data, uint width, uint height, uint bytesPerLine,
                  VBitmap::Format format)
 {
-    if (!data ||
-        width <=0 || height <=0 ||
-        bytesPerLine <=0 ||
-        format == Format::Invalid) return;
+    if (!data || width <= 0 || height <= 0 || bytesPerLine <= 0 ||
+        format == Format::Invalid)
+        return;
 
     mImpl = std::make_shared<Impl>(data, width, height, bytesPerLine, format);
 }
@@ -155,8 +153,7 @@ VBitmap::VBitmap(uchar *data, uint width, uint height, uint bytesPerLine,
 void VBitmap::reset(uint w, uint h, VBitmap::Format format)
 {
     if (mImpl) {
-        if (w == mImpl->width() &&
-            h == mImpl->height() &&
+        if (w == mImpl->width() && h == mImpl->height() &&
             format == mImpl->format()) {
             return;
         }

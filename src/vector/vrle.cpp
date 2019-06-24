@@ -1,19 +1,19 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "vrle.h"
@@ -28,10 +28,7 @@
 
 V_BEGIN_NAMESPACE
 
-enum class Operation {
-    Add,
-    Xor
-};
+enum class Operation { Add, Xor };
 
 struct VRleHelper {
     size_t      alloc;
@@ -41,7 +38,8 @@ struct VRleHelper {
 static void rleIntersectWithRle(VRleHelper *, int, int, VRleHelper *,
                                 VRleHelper *);
 static void rleIntersectWithRect(const VRect &, VRleHelper *, VRleHelper *);
-static void rleOpGeneric(VRleHelper *, VRleHelper *, VRleHelper *, Operation op);
+static void rleOpGeneric(VRleHelper *, VRleHelper *, VRleHelper *,
+                         Operation op);
 static void rleSubstractWithRle(VRleHelper *, VRleHelper *, VRleHelper *);
 
 static inline uchar divBy255(int x)
@@ -128,7 +126,7 @@ void VRle::VRleData::updateBbox() const
 
     mBboxDirty = false;
 
-    int l = std::numeric_limits<int>::max();
+    int               l = std::numeric_limits<int>::max();
     const VRle::Span *span = mSpans.data();
 
     mBbox = VRect();
@@ -170,7 +168,7 @@ void VRle::VRleData::opIntersect(const VRect &r, VRle::VRleSpanCb cb,
         return;
     }
 
-    VRect clip = r;
+    VRect                       clip = r;
     VRleHelper                  tresult, tmp_obj;
     std::array<VRle::Span, 256> array;
 
@@ -247,7 +245,8 @@ void VRle::VRleData::opSubstract(const VRle::VRleData &a,
     mBboxDirty = true;
 }
 
-void VRle::VRleData::opGeneric(const VRle::VRleData &a, const VRle::VRleData &b, OpCode code)
+void VRle::VRleData::opGeneric(const VRle::VRleData &a, const VRle::VRleData &b,
+                               OpCode code)
 {
     // This routine assumes, obj1(span_y) < obj2(span_y).
 
@@ -325,14 +324,13 @@ void VRle::VRleData::opGeneric(const VRle::VRleData &a, const VRle::VRleData &b,
     mBboxDirty = false;
 }
 
-static void  rle_cb(size_t count, const VRle::Span *spans, void *userData)
+static void rle_cb(size_t count, const VRle::Span *spans, void *userData)
 {
     auto vector = static_cast<std::vector<VRle::Span> *>(userData);
     copyArrayToVector(spans, count, *vector);
 }
 
-void opIntersectHelper(const VRle::VRleData &obj1,
-                       const VRle::VRleData &obj2,
+void opIntersectHelper(const VRle::VRleData &obj1, const VRle::VRleData &obj2,
                        VRle::VRleSpanCb cb, void *userData)
 {
     VRleHelper                  result, source, clip;
@@ -367,7 +365,6 @@ void VRle::VRleData::opIntersect(const VRle::VRleData &obj1,
     opIntersectHelper(obj1, obj2, rle_cb, &mSpans);
     updateBbox();
 }
-
 
 #define VMIN(a, b) ((a) < (b) ? (a) : (b))
 #define VMAX(a, b) ((a) > (b) ? (a) : (b))
@@ -506,16 +503,16 @@ static void rleIntersectWithRect(const VRect &clip, VRleHelper *tmp_obj,
     result->size = result->alloc - available;
 }
 
-void blitXor(VRle::Span *spans, int count, uchar *buffer,
-                        int offsetX)
+void blitXor(VRle::Span *spans, int count, uchar *buffer, int offsetX)
 {
     while (count--) {
-        int x = spans->x + offsetX;
-        int l = spans->len;
+        int    x = spans->x + offsetX;
+        int    l = spans->len;
         uchar *ptr = buffer + x;
         while (l--) {
             int da = *ptr;
-            *ptr = divBy255((255 - spans->coverage) * (da) + spans->coverage * (255 - da));
+            *ptr = divBy255((255 - spans->coverage) * (da) +
+                            spans->coverage * (255 - da));
             ptr++;
         }
         spans++;
@@ -526,8 +523,8 @@ void blitDestinationOut(VRle::Span *spans, int count, uchar *buffer,
                         int offsetX)
 {
     while (count--) {
-        int x = spans->x + offsetX;
-        int l = spans->len;
+        int    x = spans->x + offsetX;
+        int    l = spans->len;
         uchar *ptr = buffer + x;
         while (l--) {
             *ptr = divBy255((255 - spans->coverage) * (*ptr));
@@ -540,8 +537,8 @@ void blitDestinationOut(VRle::Span *spans, int count, uchar *buffer,
 void blitSrcOver(VRle::Span *spans, int count, uchar *buffer, int offsetX)
 {
     while (count--) {
-        int x = spans->x + offsetX;
-        int l = spans->len;
+        int    x = spans->x + offsetX;
+        int    l = spans->len;
         uchar *ptr = buffer + x;
         while (l--) {
             *ptr = spans->coverage + divBy255((255 - spans->coverage) * (*ptr));
@@ -554,8 +551,8 @@ void blitSrcOver(VRle::Span *spans, int count, uchar *buffer, int offsetX)
 void blit(VRle::Span *spans, int count, uchar *buffer, int offsetX)
 {
     while (count--) {
-        int x = spans->x + offsetX;
-        int l = spans->len;
+        int    x = spans->x + offsetX;
+        int    l = spans->len;
         uchar *ptr = buffer + x;
         while (l--) {
             *ptr = std::max(spans->coverage, *ptr);
@@ -567,9 +564,9 @@ void blit(VRle::Span *spans, int count, uchar *buffer, int offsetX)
 
 size_t bufferToRle(uchar *buffer, int size, int offsetX, int y, VRle::Span *out)
 {
-    size_t   count = 0;
-    uchar value = buffer[0];
-    int   curIndex = 0;
+    size_t count = 0;
+    uchar  value = buffer[0];
+    int    curIndex = 0;
 
     size = offsetX < 0 ? size + offsetX : size;
     for (int i = 0; i < size; i++) {
@@ -598,7 +595,8 @@ size_t bufferToRle(uchar *buffer, int size, int offsetX, int y, VRle::Span *out)
     return count;
 }
 
-static void rleOpGeneric(VRleHelper *a, VRleHelper *b, VRleHelper *result, Operation op)
+static void rleOpGeneric(VRleHelper *a, VRleHelper *b, VRleHelper *result,
+                         Operation op)
 {
     std::array<VRle::Span, 256> temp;
     VRle::Span *                out = result->spans;
@@ -636,7 +634,7 @@ static void rleOpGeneric(VRleHelper *a, VRleHelper *b, VRleHelper *result, Opera
                 blitXor(bStart, (bPtr - bStart), array.data(), -offset);
             VRle::Span *tResult = temp.data();
             size_t size = bufferToRle(array.data(), std::max(aLength, bLength),
-                                   offset, y, tResult);
+                                      offset, y, tResult);
             if (available >= size) {
                 while (size--) {
                     *out++ = *tResult++;
@@ -696,7 +694,7 @@ static void rleSubstractWithRle(VRleHelper *a, VRleHelper *b,
             blitDestinationOut(bStart, (bPtr - bStart), array.data(), -offset);
             VRle::Span *tResult = temp.data();
             size_t size = bufferToRle(array.data(), std::max(aLength, bLength),
-                                   offset, y, tResult);
+                                      offset, y, tResult);
             if (available >= size) {
                 while (size--) {
                     *out++ = *tResult++;

@@ -1,24 +1,24 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "vpainter.h"
-#include "vdrawhelper.h"
 #include <algorithm>
+#include "vdrawhelper.h"
 
 V_BEGIN_NAMESPACE
 
@@ -26,8 +26,13 @@ class VPainterImpl {
 public:
     void drawRle(const VPoint &pos, const VRle &rle);
     void drawRle(const VRle &rle, const VRle &clip);
-    void setCompositionMode(VPainter::CompositionMode mode) { mSpanData.mCompositionMode = mode;}
-    void  drawBitmapUntransform(const VRect &target, const VBitmap &bitmap, const VRect &source, uint8_t const_alpha);
+    void setCompositionMode(VPainter::CompositionMode mode)
+    {
+        mSpanData.mCompositionMode = mode;
+    }
+    void drawBitmapUntransform(const VRect &target, const VBitmap &bitmap,
+                               const VRect &source, uint8_t const_alpha);
+
 public:
     VRasterBuffer mBuffer;
     VSpanData     mSpanData;
@@ -51,8 +56,7 @@ void VPainterImpl::drawRle(const VRle &rle, const VRle &clip)
 
     if (!mSpanData.mUnclippedBlendFunc) return;
 
-    rle.intersect(clip, mSpanData.mUnclippedBlendFunc,
-                  &mSpanData);
+    rle.intersect(clip, mSpanData.mUnclippedBlendFunc, &mSpanData);
 }
 
 static void fillRect(const VRect &r, VSpanData *data)
@@ -64,10 +68,9 @@ static void fillRect(const VRect &r, VSpanData *data)
     y1 = std::max(r.y(), 0);
     y2 = std::min(r.y() + r.height(), data->mDrawableSize.height());
 
-    if (x2 <= x1 || y2 <= y1)
-        return;
+    if (x2 <= x1 || y2 <= y1) return;
 
-    const int nspans = 256;
+    const int  nspans = 256;
     VRle::Span spans[nspans];
 
     int y = y1;
@@ -87,13 +90,13 @@ static void fillRect(const VRect &r, VSpanData *data)
     }
 }
 
-void  VPainterImpl::drawBitmapUntransform(const VRect &target,
-                                          const VBitmap &bitmap,
-                                          const VRect &source, uint8_t const_alpha)
+void VPainterImpl::drawBitmapUntransform(const VRect &  target,
+                                         const VBitmap &bitmap,
+                                         const VRect &  source,
+                                         uint8_t        const_alpha)
 {
     mSpanData.initTexture(&bitmap, const_alpha, VBitmapData::Plain, source);
-    if (!mSpanData.mUnclippedBlendFunc)
-        return;
+    if (!mSpanData.mUnclippedBlendFunc) return;
     mSpanData.dx = -target.x();
     mSpanData.dy = -target.y();
 
@@ -101,8 +104,6 @@ void  VPainterImpl::drawBitmapUntransform(const VRect &target,
 
     fillRect(rr, &mSpanData);
 }
-
-
 
 VPainter::~VPainter()
 {
@@ -129,18 +130,17 @@ bool VPainter::begin(VBitmap *buffer)
 }
 void VPainter::end() {}
 
-void  VPainter::setDrawRegion(const VRect &region)
+void VPainter::setDrawRegion(const VRect &region)
 {
     mImpl->mSpanData.setDrawRegion(region);
 }
-
 
 void VPainter::setBrush(const VBrush &brush)
 {
     mImpl->mSpanData.setup(brush);
 }
 
-void  VPainter::setCompositionMode(CompositionMode mode)
+void VPainter::setCompositionMode(CompositionMode mode)
 {
     mImpl->setCompositionMode(mode);
 }
@@ -155,13 +155,13 @@ void VPainter::drawRle(const VRle &rle, const VRle &clip)
     mImpl->drawRle(rle, clip);
 }
 
-
 VRect VPainter::clipBoundingRect() const
 {
     return mImpl->mSpanData.clipRect();
 }
 
-void  VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap, const VRect &source, uint8_t const_alpha)
+void VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap,
+                          const VRect &source, uint8_t const_alpha)
 {
     if (!bitmap.valid()) return;
 
@@ -169,7 +169,8 @@ void  VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap, const VRe
                bitmap, source, const_alpha);
 }
 
-void  VPainter::drawBitmap(const VRect &target, const VBitmap &bitmap, const VRect &source, uint8_t const_alpha)
+void VPainter::drawBitmap(const VRect &target, const VBitmap &bitmap,
+                          const VRect &source, uint8_t const_alpha)
 {
     if (!bitmap.valid()) return;
 
@@ -183,19 +184,23 @@ void  VPainter::drawBitmap(const VRect &target, const VBitmap &bitmap, const VRe
     }
 }
 
-void  VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap, uint8_t const_alpha)
+void VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap,
+                          uint8_t const_alpha)
 {
     if (!bitmap.valid()) return;
 
     drawBitmap(VRect(point.x(), point.y(), bitmap.width(), bitmap.height()),
-               bitmap, VRect(0, 0, bitmap.width(), bitmap.height()), const_alpha);
+               bitmap, VRect(0, 0, bitmap.width(), bitmap.height()),
+               const_alpha);
 }
 
-void  VPainter::drawBitmap(const VRect &rect, const VBitmap &bitmap, uint8_t const_alpha)
+void VPainter::drawBitmap(const VRect &rect, const VBitmap &bitmap,
+                          uint8_t const_alpha)
 {
     if (!bitmap.valid()) return;
 
-    drawBitmap(rect, bitmap, VRect(0, 0, bitmap.width(), bitmap.height()), const_alpha);
+    drawBitmap(rect, bitmap, VRect(0, 0, bitmap.width(), bitmap.height()),
+               const_alpha);
 }
 
 V_END_NAMESPACE

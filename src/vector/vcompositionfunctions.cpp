@@ -1,19 +1,19 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "vdrawhelper.h"
@@ -60,7 +60,8 @@ void comp_func_solid_SourceOver(uint32_t *dest, int length, uint32_t color,
   dest = d * sa * ca + d * cia
        = d * (sa * ca + cia)
 */
-static void comp_func_solid_DestinationIn(uint *dest, int length, uint color, uint const_alpha)
+static void comp_func_solid_DestinationIn(uint *dest, int length, uint color,
+                                          uint const_alpha)
 {
     uint a = vAlpha(color);
     if (const_alpha != 255) {
@@ -76,11 +77,11 @@ static void comp_func_solid_DestinationIn(uint *dest, int length, uint color, ui
   dest = d * sia * ca + d * cia
        = d * (sia * ca + cia)
 */
-static void comp_func_solid_DestinationOut(uint *dest, int length, uint color, uint const_alpha)
+static void comp_func_solid_DestinationOut(uint *dest, int length, uint color,
+                                           uint const_alpha)
 {
     uint a = vAlpha(~color);
-    if (const_alpha != 255)
-        a = BYTE_MUL(a, const_alpha) + 255 - const_alpha;
+    if (const_alpha != 255) a = BYTE_MUL(a, const_alpha) + 255 - const_alpha;
     for (int i = 0; i < length; ++i) {
         dest[i] = BYTE_MUL(dest[i], a);
     }
@@ -130,7 +131,8 @@ void comp_func_SourceOver(uint32_t *dest, const uint32_t *src, int length,
     }
 }
 
-void comp_func_DestinationIn(uint *dest, const uint *src, int length, uint const_alpha)
+void comp_func_DestinationIn(uint *dest, const uint *src, int length,
+                             uint const_alpha)
 {
     if (const_alpha == 255) {
         for (int i = 0; i < length; ++i) {
@@ -145,7 +147,8 @@ void comp_func_DestinationIn(uint *dest, const uint *src, int length, uint const
     }
 }
 
-void comp_func_DestinationOut(uint *dest, const uint *src, int length, uint const_alpha)
+void comp_func_DestinationOut(uint *dest, const uint *src, int length,
+                              uint const_alpha)
 {
     if (const_alpha == 255) {
         for (int i = 0; i < length; ++i) {
@@ -161,16 +164,11 @@ void comp_func_DestinationOut(uint *dest, const uint *src, int length, uint cons
 }
 
 CompositionFunctionSolid COMP_functionForModeSolid_C[] = {
-                                                            comp_func_solid_Source,
-                                                            comp_func_solid_SourceOver,
-                                                            comp_func_solid_DestinationIn,
-                                                            comp_func_solid_DestinationOut
-                                                        };
+    comp_func_solid_Source, comp_func_solid_SourceOver,
+    comp_func_solid_DestinationIn, comp_func_solid_DestinationOut};
 
-CompositionFunction COMP_functionForMode_C[] = {comp_func_Source,
-                                                comp_func_SourceOver,
-                                                comp_func_DestinationIn,
-                                                comp_func_DestinationOut
-                                               };
+CompositionFunction COMP_functionForMode_C[] = {
+    comp_func_Source, comp_func_SourceOver, comp_func_DestinationIn,
+    comp_func_DestinationOut};
 
 void vInitBlendFunctions() {}

@@ -1,19 +1,19 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "vrect.h"
@@ -21,8 +21,7 @@
 
 VRect VRect::operator&(const VRect &r) const
 {
-    if (empty())
-        return VRect();
+    if (empty()) return VRect();
 
     int l1 = x1;
     int r1 = x1;
@@ -38,8 +37,7 @@ VRect VRect::operator&(const VRect &r) const
     else
         r2 = r.x2;
 
-    if (l1 > r2 || l2 > r1)
-        return VRect();
+    if (l1 > r2 || l2 > r1) return VRect();
 
     int t1 = y1;
     int b1 = y1;
@@ -55,8 +53,7 @@ VRect VRect::operator&(const VRect &r) const
     else
         b2 = r.y2;
 
-    if (t1 > b2 || t2 > b1)
-        return VRect();
+    if (t1 > b2 || t2 > b1) return VRect();
 
     VRect tmp;
     tmp.x1 = std::max(l1, l2);

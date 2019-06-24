@@ -1,50 +1,53 @@
-/* 
+/*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All rights reserved.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "vraster.h"
 #include <cstring>
 #include <memory>
+#include "config.h"
 #include "v_ft_raster.h"
 #include "v_ft_stroker.h"
 #include "vdebug.h"
 #include "vmatrix.h"
 #include "vpath.h"
 #include "vrle.h"
-#include "config.h"
 
 V_BEGIN_NAMESPACE
 
-template<typename T>
-class dyn_array
-{
+template <typename T>
+class dyn_array {
 public:
-    explicit dyn_array(size_t size):mCapacity(size),mData(std::make_unique<T[]>(mCapacity)){}
+    explicit dyn_array(size_t size)
+        : mCapacity(size), mData(std::make_unique<T[]>(mCapacity))
+    {
+    }
     void reserve(size_t size)
     {
         if (mCapacity > size) return;
         mCapacity = size;
         mData = std::make_unique<T[]>(mCapacity);
     }
-    T* data() const {return mData.get();}
-    dyn_array& operator=(dyn_array &&) noexcept = delete;
+    T *        data() const { return mData.get(); }
+    dyn_array &operator=(dyn_array &&) noexcept = delete;
+
 private:
-    size_t                 mCapacity{0};
-    std::unique_ptr<T[]>   mData{nullptr};
+    size_t               mCapacity{0};
+    std::unique_ptr<T[]> mData{nullptr};
 };
 
 struct FTOutline {
@@ -59,13 +62,16 @@ public:
     void close();
     void end();
     void transform(const VMatrix &m);
-    SW_FT_Pos TO_FT_COORD(float x) { return SW_FT_Pos(x*64);}  // to freetype 26.6 coordinate.
-    SW_FT_Outline          ft;
-    bool                   closed{false};
-    SW_FT_Stroker_LineCap  ftCap;
-    SW_FT_Stroker_LineJoin ftJoin;
-    SW_FT_Fixed            ftWidth;
-    SW_FT_Fixed            ftMeterLimit;
+    SW_FT_Pos TO_FT_COORD(float x)
+    {
+        return SW_FT_Pos(x * 64);
+    }  // to freetype 26.6 coordinate.
+    SW_FT_Outline           ft;
+    bool                    closed{false};
+    SW_FT_Stroker_LineCap   ftCap;
+    SW_FT_Stroker_LineJoin  ftJoin;
+    SW_FT_Fixed             ftWidth;
+    SW_FT_Fixed             ftMeterLimit;
     dyn_array<SW_FT_Vector> mPointMemory{100};
     dyn_array<char>         mTagMemory{100};
     dyn_array<short>        mContourMemory{10};
@@ -235,63 +241,65 @@ void FTOutline::end()
 
 static void rleGenerationCb(int count, const SW_FT_Span *spans, void *user)
 {
-    VRle *      rle = static_cast<VRle *>(user);
+    VRle *rle = static_cast<VRle *>(user);
     auto *rleSpan = reinterpret_cast<const VRle::Span *>(spans);
     rle->addSpan(rleSpan, count);
 }
 
 static void bboxCb(int x, int y, int w, int h, void *user)
 {
-    VRle *      rle = static_cast<VRle *>(user);
+    VRle *rle = static_cast<VRle *>(user);
     rle->setBoundingRect({x, y, w, h});
 }
-
 
 class SharedRle {
 public:
     SharedRle() = default;
-    VRle& unsafe(){ return _rle;}
-    void notify() {
+    VRle &unsafe() { return _rle; }
+    void  notify()
+    {
         {
             std::lock_guard<std::mutex> lock(_mutex);
             _ready = true;
         }
         _cv.notify_one();
     }
-    VRle& get(){
-
+    VRle &get()
+    {
         if (!_pending) return _rle;
 
         std::unique_lock<std::mutex> lock(_mutex);
-        while(!_ready) _cv.wait(lock);
+        while (!_ready) _cv.wait(lock);
         _pending = false;
         return _rle;
     }
 
-    void reset() {
+    void reset()
+    {
         _ready = false;
         _pending = true;
     }
+
 private:
-    VRle                     _rle;
-    std::mutex               _mutex;
-    std::condition_variable  _cv;
-    bool                     _ready{true};
-    bool                     _pending{false};
+    VRle                    _rle;
+    std::mutex              _mutex;
+    std::condition_variable _cv;
+    bool                    _ready{true};
+    bool                    _pending{false};
 };
 
 struct VRleTask {
-    SharedRle     mRle;
-    VPath         mPath;
-    float         mStrokeWidth;
-    float         mMeterLimit;
-    VRect         mClip;
-    FillRule      mFillRule;
-    CapStyle      mCap;
-    JoinStyle     mJoin;
-    bool          mGenerateStroke;
+    SharedRle mRle;
+    VPath     mPath;
+    float     mStrokeWidth;
+    float     mMeterLimit;
+    VRect     mClip;
+    FillRule  mFillRule;
+    CapStyle  mCap;
+    JoinStyle mJoin;
+    bool      mGenerateStroke;
 
-    VRle& rle() { return mRle.get();}
+    VRle &rle() { return mRle.get(); }
 
     void update(VPath path, FillRule fillRule, const VRect &clip)
     {
@@ -302,7 +310,8 @@ struct VRleTask {
         mGenerateStroke = false;
     }
 
-    void update(VPath path, CapStyle cap, JoinStyle join, float width, float meterLimit, const VRect &clip)
+    void update(VPath path, CapStyle cap, JoinStyle join, float width,
+                float meterLimit, const VRect &clip)
     {
         mRle.reset();
         mPath = std::move(path);
@@ -328,10 +337,10 @@ struct VRleTask {
         if (!mClip.empty()) {
             params.flags |= SW_FT_RASTER_FLAG_CLIP;
 
-            params.clip_box.xMin =  mClip.left();
-            params.clip_box.yMin =  mClip.top();
-            params.clip_box.xMax =  mClip.right();
-            params.clip_box.yMax =  mClip.bottom();
+            params.clip_box.xMin = mClip.left();
+            params.clip_box.yMin = mClip.top();
+            params.clip_box.xMax = mClip.right();
+            params.clip_box.yMax = mClip.bottom();
         }
         // compute rle
         sw_ft_grays_raster.raster_render(nullptr, &params);
@@ -345,8 +354,8 @@ struct VRleTask {
 
             uint points, contors;
 
-            SW_FT_Stroker_Set(stroker, outRef.ftWidth, outRef.ftCap, outRef.ftJoin,
-                              outRef.ftMeterLimit);
+            SW_FT_Stroker_Set(stroker, outRef.ftWidth, outRef.ftCap,
+                              outRef.ftJoin, outRef.ftMeterLimit);
             SW_FT_Stroker_ParseOutline(stroker, &outRef.ft);
             SW_FT_Stroker_GetCounts(stroker, &points, &contors);
 
@@ -380,14 +389,14 @@ using VTask = std::shared_ptr<VRleTask>;
 
 #ifdef LOTTIE_THREAD_SUPPORT
 
-#include "vtaskqueue.h"
 #include <thread>
+#include "vtaskqueue.h"
 
 class RleTaskScheduler {
-    const unsigned                  _count{std::thread::hardware_concurrency()};
-    std::vector<std::thread>        _threads;
-    std::vector<TaskQueue<VTask>>   _q{_count};
-    std::atomic<unsigned>           _index{0};
+    const unsigned                _count{std::thread::hardware_concurrency()};
+    std::vector<std::thread>      _threads;
+    std::vector<TaskQueue<VTask>> _q{_count};
+    std::atomic<unsigned>         _index{0};
 
     void run(unsigned i)
     {
@@ -425,11 +434,12 @@ class RleTaskScheduler {
             _threads.emplace_back([&, n] { run(n); });
         }
     }
+
 public:
-    static RleTaskScheduler& instance()
+    static RleTaskScheduler &instance()
     {
-         static RleTaskScheduler singleton;
-         return singleton;
+        static RleTaskScheduler singleton;
+        return singleton;
     }
 
     ~RleTaskScheduler()
@@ -459,48 +469,38 @@ class RleTaskScheduler {
 public:
     FTOutline     outlineRef;
     SW_FT_Stroker stroker;
+
 public:
-    static RleTaskScheduler& instance()
+    static RleTaskScheduler &instance()
     {
-         static RleTaskScheduler singleton;
-         return singleton;
+        static RleTaskScheduler singleton;
+        return singleton;
     }
 
-    RleTaskScheduler()
-    {
-        SW_FT_Stroker_New(&stroker);
-    }
+    RleTaskScheduler() { SW_FT_Stroker_New(&stroker); }
 
-    ~RleTaskScheduler()
-    {
-        SW_FT_Stroker_Done(stroker);
-    }
+    ~RleTaskScheduler() { SW_FT_Stroker_Done(stroker); }
 
-    void process(VTask task)
-    {
-        (*task)(outlineRef, stroker);
-    }
+    void process(VTask task) { (*task)(outlineRef, stroker); }
 };
 #endif
 
-
-struct VRasterizer::VRasterizerImpl
-{
+struct VRasterizer::VRasterizerImpl {
     VRleTask mTask;
 
-    VRle& rle(){ return mTask.rle(); }
-    VRleTask& task(){ return mTask; }
+    VRle &    rle() { return mTask.rle(); }
+    VRleTask &task() { return mTask; }
 };
 
 VRle VRasterizer::rle()
 {
-    if(!d) return VRle();
+    if (!d) return VRle();
     return d->rle();
 }
 
 void VRasterizer::init()
 {
-    if(!d) d = std::make_shared<VRasterizerImpl>();
+    if (!d) d = std::make_shared<VRasterizerImpl>();
 }
 
 void VRasterizer::updateRequest()
@@ -520,7 +520,8 @@ void VRasterizer::rasterize(VPath path, FillRule fillRule, const VRect &clip)
     updateRequest();
 }
 
-void VRasterizer::rasterize(VPath path, CapStyle cap, JoinStyle join, float width, float meterLimit, const VRect &clip)
+void VRasterizer::rasterize(VPath path, CapStyle cap, JoinStyle join,
+                            float width, float meterLimit, const VRect &clip)
 {
     init();
     if (path.empty() || vIsZero(width)) {
