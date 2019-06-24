@@ -13,7 +13,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.fork.telegram.Telegram-iOS</string>
+		<string>group.fork.telegram.Fork</string>
 	</array>
 </dict>
 </plist>
