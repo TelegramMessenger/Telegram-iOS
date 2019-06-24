@@ -20,8 +20,8 @@ elif [ "$1" == "appstore" ]; then
 	PROFILES_PATH="codesigning_data/profiles"
 elif [ "$1" == "verify" ]; then
 	FASTLANE_BUILD_CONFIGURATION="build_for_appstore"
-	CERTS_PATH="buildbox/fake-codesigning/certs"
-	PROFILES_PATH="buildbox/fake-codesigning/profiles"
+	CERTS_PATH="codesigning_data/certs"
+	PROFILES_PATH="codesigning_data/profiles"
 elif [ "$1" == "verify-local" ]; then
 	FASTLANE_BUILD_CONFIGURATION="build_for_appstore"
 	CERTS_PATH="buildbox/fake-codesigning/certs"
