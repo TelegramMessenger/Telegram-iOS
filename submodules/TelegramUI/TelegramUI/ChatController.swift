@@ -232,15 +232,11 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     private var beginMediaRecordingRequestId: Int = 0
     private var lockMediaRecordingRequestId: Int?
 
-    public override var navigationCustomData: Any? {
+    public override var customData: Any? {
         return self.chatLocation
     }
     
     var purposefulAction: (() -> Void)?
-    
-    public override var customData: Any? {
-        return self.chatLocation
-    }
     
     public init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
         let _ = ChatControllerCount.modify { value in
