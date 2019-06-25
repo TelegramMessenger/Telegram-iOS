@@ -92,6 +92,8 @@ final class SinglePhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     var numberUpdated: ((String) -> Void)?
+    var beginEditing: (() -> Void)?
+    var endEditing: (() -> Void)?
     
     private let phoneFormatter = InteractivePhoneFormatter()
     
@@ -129,6 +131,14 @@ final class SinglePhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         return self.enableEditing
+    }
+    
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.beginEditing?()
+    }
+    
+    func textFieldDidEndEditing(_ textField: UITextField) {
+        self.endEditing?()
     }
     
     private func updateNumberFromTextFields() {

@@ -116,7 +116,8 @@ private let list = PresentationThemeList(
     ),
     mediaPlaceholderColor: UIColor(rgb: 0x1c1c1d),
     scrollIndicatorColor: UIColor(white: 1.0, alpha: 0.3),
-    pageIndicatorInactiveColor: UIColor(white: 1.0, alpha: 0.3)
+    pageIndicatorInactiveColor: UIColor(white: 1.0, alpha: 0.3),
+    inputClearButtonColor: UIColor(rgb: 0x8B9197)
 )
 
 private let chatList = PresentationThemeChatList(
