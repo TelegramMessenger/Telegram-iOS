@@ -271,6 +271,8 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
             effectiveTheme = themeSettings.theme
         }
         
+        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color ?? defaultDayAccentColor
+        
         switch effectiveTheme {
             case let .builtin(reference):
                 switch reference {
@@ -281,7 +283,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
                     case .nightAccent:
                         themeValue = defaultDarkAccentPresentationTheme
                     case .day:
-                        themeValue = makeDefaultDayPresentationTheme(accentColor: themeSettings.themeAccentColor ?? defaultDayAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
+                        themeValue = makeDefaultDayPresentationTheme(accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
                 }
         }
         let dateTimeFormat = currentDateTimeFormat()
@@ -550,6 +552,8 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                             effectiveTheme = themeSettings.theme
                         }
                         
+                        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color ?? defaultDayAccentColor
+                        
                         let themeValue: PresentationTheme
                         switch effectiveTheme {
                             case let .builtin(reference):
@@ -561,7 +565,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                                     case .nightAccent:
                                         themeValue = defaultDarkAccentPresentationTheme
                                     case .day:
-                                        themeValue = makeDefaultDayPresentationTheme(accentColor: themeSettings.themeAccentColor ?? defaultDayAccentColor, serviceBackgroundColor: serviceBackgroundColor)
+                                        themeValue = makeDefaultDayPresentationTheme(accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor)
                                 }
                         }
                         
