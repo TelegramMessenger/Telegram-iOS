@@ -129,11 +129,27 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case archiveChatTips = 10
     case archiveIntroDismissed = 11
     case callsTabTip = 12
+    case cellularDataPermissionWarning = 13
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
         v.setInt32(0, value: self.rawValue)
         return v
+    }
+}
+
+private extension PermissionKind {
+    var noticeKey: NoticeEntryKey? {
+        switch self {
+            case .contacts:
+                return ApplicationSpecificNoticeKeys.contactsPermissionWarning()
+            case .notifications:
+                return ApplicationSpecificNoticeKeys.notificationsPermissionWarning()
+            case .cellularData:
+                return ApplicationSpecificNoticeKeys.cellularDataPermissionWarning()
+            default:
+                return nil
+        }
     }
 }
 
@@ -193,6 +209,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func notificationsPermissionWarning() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: permissionsNamespace), key: ApplicationSpecificGlobalNotice.notificationsPermissionWarning.key)
+    }
+    
+    static func cellularDataPermissionWarning() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: permissionsNamespace), key: ApplicationSpecificGlobalNotice.cellularDataPermissionWarning.key)
     }
     
     static func volumeButtonToUnmuteTip() -> NoticeEntryKey {
@@ -408,18 +428,17 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    public static func contactsPermissionWarningKey() -> NoticeEntryKey {
-        return ApplicationSpecificNoticeKeys.contactsPermissionWarning()
+    public static func permissionWarningKey(permission: PermissionKind) -> NoticeEntryKey? {
+        return permission.noticeKey
     }
     
-    public static func setContactsPermissionWarning(accountManager: AccountManager, value: Int32) {
+    public static func setPermissionWarning(accountManager: AccountManager, permission: PermissionKind, value: Int32) {
+        guard let noticeKey = permission.noticeKey else {
+            return
+        }
         let _ =  accountManager.transaction { transaction -> Void in
-            transaction.setNotice(ApplicationSpecificNoticeKeys.contactsPermissionWarning(), ApplicationSpecificTimestampNotice(value: value))
+            transaction.setNotice(noticeKey, ApplicationSpecificTimestampNotice(value: value))
         }.start()
-    }
-    
-    public static func notificationsPermissionWarningKey() -> NoticeEntryKey {
-        return ApplicationSpecificNoticeKeys.notificationsPermissionWarning()
     }
     
     public static func getTimestampValue(_ entry: NoticeEntry) -> Int32? {
@@ -428,12 +447,6 @@ public struct ApplicationSpecificNotice {
         } else {
             return nil
         }
-    }
-    
-    public static func setNotificationsPermissionWarning(accountManager: AccountManager, value: Int32) {
-        let _ = accountManager.transaction { transaction -> Void in
-            transaction.setNotice(ApplicationSpecificNoticeKeys.notificationsPermissionWarning(), ApplicationSpecificTimestampNotice(value: value))
-        }.start()
     }
     
     static func getVolumeButtonToUnmute(accountManager: AccountManager) -> Signal<Bool, NoError> {

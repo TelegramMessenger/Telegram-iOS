@@ -1052,7 +1052,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             |> then(
                 contextValue.get()
                 |> mapToSignal { context -> Signal<Bool, NoError> in
-                    return context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.notificationsPermissionWarningKey())
+                    return context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .notifications)!)
                     |> map { noticeView -> Bool in
                         let timestamp = noticeView.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                         if let timestamp = timestamp, timestamp > 0 {
