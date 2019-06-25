@@ -80,6 +80,7 @@ private let labelFont = Font.regular(14.0)
 private let textFont = Font.regular(17.0)
 private let textBoldFont = Font.medium(17.0)
 private let textItalicFont = Font.italic(17.0)
+private let textBoldItalicFont = Font.semiboldItalic(17.0)
 private let textFixedFont = Font.regular(17.0)
 
 class ItemListAddressItemNode: ListViewItemNode {
@@ -181,7 +182,7 @@ class ItemListAddressItemNode: ListViewItemNode {
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor: labelColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let baseColor = item.theme.list.itemPrimaryTextColor
-            let string = stringWithAppliedEntities(item.text, entities: [], baseColor: baseColor, linkColor: item.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, fixedFont: textFixedFont)
+            let string = stringWithAppliedEntities(item.text, entities: [], baseColor: baseColor, linkColor: item.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont)
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset - 98.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let padding: CGFloat = !item.label.isEmpty ? 39.0 : 20.0
