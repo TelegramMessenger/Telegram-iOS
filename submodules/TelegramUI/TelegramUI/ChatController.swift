@@ -238,6 +238,10 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     
     var purposefulAction: (() -> Void)?
     
+    public override var customData: Any? {
+        return self.chatLocation
+    }
+    
     public init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
@@ -4234,6 +4238,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             if updatedChatPresentationInterfaceState.interfaceState.selectionState != controllerInteraction.selectionState {
                 controllerInteraction.selectionState = updatedChatPresentationInterfaceState.interfaceState.selectionState
                 self.updateItemNodesSelectionStates(animated: transition.isAnimated)
+                (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(controllerInteraction.selectionState != nil ? .master : nil, transition: transition)
             }
         }
         
