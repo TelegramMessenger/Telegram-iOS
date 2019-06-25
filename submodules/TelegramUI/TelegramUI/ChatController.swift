@@ -232,6 +232,10 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     private var beginMediaRecordingRequestId: Int = 0
     private var lockMediaRecordingRequestId: Int?
     
+    public override var navigationCustomData: Any? {
+        return self.chatLocation
+    }
+    
     var purposefulAction: (() -> Void)?
     
     public init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
@@ -4768,6 +4772,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
         })
     }
+    
+    
     
     private func presentMapPicker(editingMessage: Bool) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
