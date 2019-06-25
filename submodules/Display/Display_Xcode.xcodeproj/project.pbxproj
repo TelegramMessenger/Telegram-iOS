@@ -23,6 +23,7 @@
 		D015F7581D1B467200E269B5 /* ActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7571D1B467200E269B5 /* ActionSheetController.swift */; };
 		D015F75A1D1B46B600E269B5 /* ActionSheetControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7591D1B46B600E269B5 /* ActionSheetControllerNode.swift */; };
 		D01847661FFA72E000075256 /* ContainedViewLayoutTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01847651FFA72E000075256 /* ContainedViewLayoutTransition.swift */; };
+		D01E1F0222B28D9400AD6DAE /* WallpaperBackgroundNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E1F0122B28D9400AD6DAE /* WallpaperBackgroundNode.swift */; };
 		D01E2BDE1D9049620066BF65 /* GridNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E2BDD1D9049620066BF65 /* GridNode.swift */; };
 		D01E2BE01D90498E0066BF65 /* GridNodeScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E2BDF1D90498E0066BF65 /* GridNodeScroller.swift */; };
 		D01E2BE21D9049F60066BF65 /* GridItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E2BE11D9049F60066BF65 /* GridItemNode.swift */; };
@@ -198,6 +199,7 @@
 		D015F7591D1B46B600E269B5 /* ActionSheetControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetControllerNode.swift; sourceTree = "<group>"; };
 		D01847651FFA72E000075256 /* ContainedViewLayoutTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainedViewLayoutTransition.swift; sourceTree = "<group>"; };
 		D01C06C61FC2558F001561AB /* SwiftSignalKitMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKitMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D01E1F0122B28D9400AD6DAE /* WallpaperBackgroundNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperBackgroundNode.swift; sourceTree = "<group>"; };
 		D01E2BDD1D9049620066BF65 /* GridNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GridNode.swift; sourceTree = "<group>"; };
 		D01E2BDF1D90498E0066BF65 /* GridNodeScroller.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GridNodeScroller.swift; sourceTree = "<group>"; };
 		D01E2BE11D9049F60066BF65 /* GridItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GridItemNode.swift; sourceTree = "<group>"; };
@@ -468,6 +470,7 @@
 				D0CA3F892073F7650042D2B6 /* LinkHighlightingNode.swift */,
 				D04554A921BDB93E007A6DD9 /* CollectionIndexNode.swift */,
 				09DD88EA21BCA5E0000766BC /* EditableTextNode.swift */,
+				D01E1F0122B28D9400AD6DAE /* WallpaperBackgroundNode.swift */,
 			);
 			name = Nodes;
 			sourceTree = "<group>";
@@ -949,6 +952,7 @@
 				D033874E223D3E86007A2CE4 /* AccessibilityAreaNode.swift in Sources */,
 				D015F75A1D1B46B600E269B5 /* ActionSheetControllerNode.swift in Sources */,
 				D01847661FFA72E000075256 /* ContainedViewLayoutTransition.swift in Sources */,
+				D01E1F0222B28D9400AD6DAE /* WallpaperBackgroundNode.swift in Sources */,
 				D03725C11D6DF594007FC290 /* ContextMenuNode.swift in Sources */,
 				D03AA4DB202DA6D60056C405 /* PeekControllerContent.swift in Sources */,
 				D053CB611D22B4F200DD41DF /* CATracingLayer.m in Sources */,

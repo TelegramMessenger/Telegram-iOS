@@ -26,16 +26,44 @@ public final class TelegramRootController: NavigationController {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        super.init(mode: .automaticMasterDetail, theme: NavigationControllerTheme(presentationTheme: self.presentationData.theme))
+        let navigationDetailsBackgroundMode: NavigationEmptyDetailsBackgoundMode?
+        switch presentationData.chatWallpaper {
+        case .color:
+            let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationData.theme.chatList.messageTextColor.withAlphaComponent(0.2))
+            navigationDetailsBackgroundMode = image != nil ? .image(image!) : nil
+        default:
+            let image = chatControllerBackgroundImage(wallpaper: presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox)
+            navigationDetailsBackgroundMode = image != nil ? .wallpaper(image!) : nil
+        }
+        
+        super.init(mode: .automaticMasterDetail, theme: NavigationControllerTheme(presentationTheme: self.presentationData.theme), backgroundDetailsMode: navigationDetailsBackgroundMode)
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
+                
+                if presentationData.chatWallpaper != strongSelf.presentationData.chatWallpaper {
+                    let navigationDetailsBackgroundMode: NavigationEmptyDetailsBackgoundMode?
+                    switch presentationData.chatWallpaper {
+                    case .color:
+                        let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationData.theme.chatList.messageTextColor.withAlphaComponent(0.2))
+                        navigationDetailsBackgroundMode = image != nil ? .image(image!) : nil
+                    default:
+                        let image = chatControllerBackgroundImage(wallpaper: presentationData.chatWallpaper, mediaBox: strongSelf.context.account.postbox.mediaBox)
+                        navigationDetailsBackgroundMode = image != nil ? .wallpaper(image!) : nil
+                    }
+                    strongSelf.updateBackgroundDetailsMode(navigationDetailsBackgroundMode, transition: .immediate)
+                }
+                
+                
+                
                 let previousTheme = strongSelf.presentationData.theme
                 strongSelf.presentationData = presentationData
                 if previousTheme !== presentationData.theme {
                     strongSelf.rootTabController?.updateTheme(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData), theme: TabBarControllerTheme(rootControllerTheme: presentationData.theme))
                     strongSelf.rootTabController?.statusBar.statusBarStyle = presentationData.theme.rootController.statusBar.style.style
+                    
+                    
                 }
             }
         })

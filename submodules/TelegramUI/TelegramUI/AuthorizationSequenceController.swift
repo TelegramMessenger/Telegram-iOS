@@ -48,7 +48,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         self.theme = theme
         self.openUrl = openUrl
         
-        super.init(mode: .single, theme: NavigationControllerTheme(navigationBar: AuthorizationSequenceController.navigationBarTheme(theme), emptyAreaColor: .black, emptyDetailIcon: nil))
+        super.init(mode: .single, theme: NavigationControllerTheme(navigationBar: AuthorizationSequenceController.navigationBarTheme(theme), emptyAreaColor: .black))
         
         self.stateDisposable = (account.postbox.stateView()
         |> map { view -> InnerState in

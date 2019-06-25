@@ -59,6 +59,7 @@ public class ContactsController: ViewController {
     private var contactsNode: ContactsControllerNode {
         return self.displayNode as! ContactsControllerNode
     }
+    private var validLayout: ContainerViewLayout?
     
     private let index: PeerNameIndex = .lastNameFirst
     
@@ -75,6 +76,12 @@ public class ContactsController: ViewController {
     private var searchContentNode: NavigationBarSearchContentNode?
     
     var switchToChatsController: (() -> Void)?
+    
+    public override var navigationCustomData: Any? {
+        didSet {
+            self.contactsNode.contactListNode.updateSelectedChatLocation(self.navigationCustomData as? ChatLocation, progress: 1, transition: .immediate)
+        }
+    }
     
     public init(context: AccountContext) {
         self.context = context
@@ -198,12 +205,19 @@ public class ContactsController: ViewController {
                 switch peer {
                     case let .peer(peer, _, _):
                         if let navigationController = strongSelf.navigationController as? NavigationController {
+                            
+                            var scrollToEndIfExists = false
+                            if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
+                                scrollToEndIfExists = true
+                            }
+                            
+                            
                             navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
                                 if fromSearch {
                                     self?.deactivateSearch(animated: false)
                                     self?.switchToChatsController?()
                                 }
-                            }, completion: { [weak self] in
+                                }, scrollToEndIfExists: scrollToEndIfExists, options: [.removeOnMasterDetails], completion: { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                                 }

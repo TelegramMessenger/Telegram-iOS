@@ -96,6 +96,12 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
+    public override var navigationCustomData: Any? {
+        didSet {
+            self.chatListDisplayNode.chatListNode.updateSelectedChatLocation(self.navigationCustomData as? ChatLocation, progress: 1, transition: .immediate)
+        }
+    }
+    
     public init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false) {
         self.context = context
         self.controlsHistoryPreload = controlsHistoryPreload
@@ -686,9 +692,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                         scrollToEndIfExists = true
                     }
                     
-                    let animated: Bool = !scrollToEndIfExists || strongSelf.groupId != PeerGroupId.root
-                    
-                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), scrollToEndIfExists: animated, animated: animated, parentGroupId: strongSelf.groupId, completion: { [weak self] in
+                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] in
                         self?.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                     })
                 }
@@ -728,9 +732,16 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeerId in
                     if let strongSelf = strongSelf {
                         if let navigationController = strongSelf.navigationController as? NavigationController {
+                            
+                            var scrollToEndIfExists = false
+                            if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
+                                scrollToEndIfExists = true
+                            }
+                            
+                            
                             navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), messageId: messageId, purposefulAction: {
                                 self?.deactivateSearch(animated: false)
-                            })
+                            }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [])
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                         }
                     }
@@ -750,12 +761,18 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf {
                         if dismissSearch {
-                            strongSelf.dismissSearchOnDisappear = true
+                            strongSelf.deactivateSearch(animated: true)
                         }
+                        
+                        var scrollToEndIfExists = false
+                        if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
+                            scrollToEndIfExists = true
+                        }
+                        
                         if let navigationController = strongSelf.navigationController as? NavigationController {
                             navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
                                 self?.deactivateSearch(animated: false)
-                            })
+                            }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [])
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                         }
                     }
@@ -1097,10 +1114,6 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     
     override public func navigationStackConfigurationUpdated(next: [ViewController]) {
         super.navigationStackConfigurationUpdated(next: next)
-        
-        let chatLocation = (next.first as? ChatController)?.chatLocation
-        
-        self.chatListDisplayNode.chatListNode.updateSelectedChatLocation(chatLocation, progress: 1.0, transition: .immediate)
     }
     
     @objc func editPressed() {
@@ -1112,6 +1125,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             self.navigationItem.rightBarButtonItem = editItem
         }
         self.searchContentNode?.setIsEnabled(false, animated: true)
+        (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(.details, transition: .animated(duration: 0.5, curve: .spring))
         self.chatListDisplayNode.chatListNode.updateState { state in
             var state = state
             state.editing = true
@@ -1128,6 +1142,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         } else {
             self.navigationItem.rightBarButtonItem = editItem
         }
+        (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(nil, transition: .animated(duration: 0.4, curve: .spring))
         self.searchContentNode?.setIsEnabled(true, animated: true)
         self.chatListDisplayNode.chatListNode.updateState { state in
             var state = state
