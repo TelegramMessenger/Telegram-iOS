@@ -353,7 +353,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         loop: for media in self.message.media {
             if let telegramFile = media as? TelegramMediaFile {
-                if let fileName = telegramFile.fileName, fileName.hasSuffix(".tgs") && telegramFile.mimeType == "application/x-tgsticker", let size = telegramFile.size, size > 0 && size <= 64 * 1024, !telegramFile.previewRepresentations.isEmpty {
+                if telegramFile.isAnimatedSticker, let size = telegramFile.size, size > 0 && size <= 64 * 1024, !telegramFile.previewRepresentations.isEmpty {
                     viewClassName = ChatMessageAnimatedStickerItemNode.self
                     break loop
                 }

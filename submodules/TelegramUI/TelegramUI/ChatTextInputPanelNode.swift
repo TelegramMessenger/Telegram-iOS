@@ -317,10 +317,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     private let accessoryButtonSpacing: CGFloat = 0.0
     private let accessoryButtonInset: CGFloat = 2.0
     
-    init(theme: PresentationTheme, presentController: @escaping (ViewController) -> Void) {
+    init(presentationInterfaceState: ChatPresentationInterfaceState, presentController: @escaping (ViewController) -> Void) {
+        self.presentationInterfaceState = presentationInterfaceState
+        
         self.textInputContainer = ASDisplayNode()
         self.textInputContainer.clipsToBounds = true
-        self.textInputContainer.backgroundColor = theme.chat.inputPanel.inputBackgroundColor
+        self.textInputContainer.backgroundColor = presentationInterfaceState.theme.chat.inputPanel.inputBackgroundColor
         
         self.textInputBackgroundNode = ASImageNode()
         self.textInputBackgroundNode.displaysAsynchronously = false
@@ -335,7 +337,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.searchLayoutProgressView = UIImageView(image: searchLayoutProgressImage)
         self.searchLayoutProgressView.isHidden = true
         
-        self.actionButtons = ChatTextInputActionButtonsNode(theme: theme, presentController: presentController)
+        self.actionButtons = ChatTextInputActionButtonsNode(theme: presentationInterfaceState.theme, presentController: presentController)
         
         super.init()
         

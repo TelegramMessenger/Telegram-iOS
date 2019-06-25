@@ -52,7 +52,7 @@ namespace DTX1CompressorDecompressor
 			{
 				unsigned int index = (height - 1 - row) * width + col; // image is reversed in rows (upside down), so row = 0 is the bottom of the image
 				std::memcpy(&pixelData[index].bgra, dtaPtr, 3);
-				dtaPtr += 3; 
+				dtaPtr += 4;
 			}
 		}
 
@@ -106,7 +106,8 @@ namespace DTX1CompressorDecompressor
 		}
 
 		// copy pixel data to the actual bmp image
-		unsigned char* bmpImgData = new unsigned char[3 * width * height];
+		unsigned char* bmpImgData = new unsigned char[4 * width * height];
+        memset(bmpImgData, 0xff, 4 * width * height);
 		unsigned char* bmpDataPtr = bmpImgData;
 
 		for (unsigned int row = 0; row < height; ++row)
@@ -115,7 +116,7 @@ namespace DTX1CompressorDecompressor
 			{
 				unsigned int index = (height - 1 - row) * width + col; // image is reversed in rows (upside down), so row = 0 is the bottom of the image
 				std::memcpy(bmpDataPtr, &pixelData[index].bgra, 3);
-				bmpDataPtr += 3;
+				bmpDataPtr += 4;
 			}
 		}
 
