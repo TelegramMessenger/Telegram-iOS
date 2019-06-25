@@ -1527,7 +1527,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let textDeltaX = textFrame.origin.x - contentRect.origin.x
             transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textDeltaX, y: 0.0))
             textFrame.origin.x = contentRect.origin.x
-            self.textNode.frame = textFrame
+            transition.updateFrame(node: textNode, frame: textFrame)
             
             var contentImageFrame = self.contentImageNode.frame
             contentImageFrame.origin = textFrame.origin.offsetBy(dx: 1.0, dy: 0.0)
