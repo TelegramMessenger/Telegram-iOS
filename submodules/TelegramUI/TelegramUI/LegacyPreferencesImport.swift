@@ -189,7 +189,8 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                             settings.theme = .builtin(.day)
                            
                             if presentationState.userInfo != 0 {
-                                settings.themeAccentColor = presentationState.userInfo
+                                //themeSpecificAccentColors: current.themeSpecificAccentColors
+                                //settings.themeAccentColor = presentationState.userInfo
                             }
                             settings.chatWallpaper = .color(0xffffff)
                         case 2:
@@ -214,7 +215,8 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                     settings.fontSize = fontSizeMap[presentationState.fontSize] ?? .regular
                     
                     if presentationState.userInfo != 0 {
-                        settings.themeAccentColor = presentationState.userInfo
+                        //themeSpecificAccentColors: current.themeSpecificAccentColors
+                        //settings.themeAccentColor = presentationState.userInfo
                     }
                 }
                 

@@ -37,8 +37,11 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
     })?.stretchableImage(withLeftCapWidth: 15, topCapHeight: 15)
 }
 
-private func generateThemeIconImage(theme: PresentationBuiltinThemeReference, accentColor: UIColor?) -> UIImage {
+private func generateThemeIconImage(theme: PresentationThemeReference, accentColor: Int32?) -> UIImage {
     return generateImage(CGSize(width: 98.0, height: 62.0), rotatedContext: { size, context in
+        guard case let .builtin(theme) = theme else {
+            return
+        }
         let bounds = CGRect(origin: CGPoint(), size: size)
         
         let background: UIColor
@@ -53,7 +56,7 @@ private func generateThemeIconImage(theme: PresentationBuiltinThemeReference, ac
                 background = .white
                 incomingBubble = UIColor(rgb: 0xd5dde6)
                 if let accentColor = accentColor {
-                    outgoingBubble = accentColor
+                    outgoingBubble = UIColor(rgb: UInt32(bitPattern: accentColor))
                 } else {
                     outgoingBubble = UIColor(rgb: 0x007aff)
                 }
@@ -66,7 +69,7 @@ private func generateThemeIconImage(theme: PresentationBuiltinThemeReference, ac
                 incomingBubble = UIColor(rgb: 0x32475e)
                 outgoingBubble = UIColor(rgb: 0x3d6a97)
         }
-        
+            
         context.setFillColor(background.cgColor)
         context.fill(bounds)
         
@@ -91,15 +94,17 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let themes: [(PresentationBuiltinThemeReference, UIColor?)]
-    let currentTheme: PresentationBuiltinThemeReference
-    let updated: (PresentationBuiltinThemeReference) -> Void
+    let themes: [PresentationThemeReference]
+    let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
+    let currentTheme: PresentationThemeReference
+    let updated: (PresentationThemeReference) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [(PresentationBuiltinThemeReference, UIColor?)], currentTheme: PresentationBuiltinThemeReference, updated: @escaping (PresentationBuiltinThemeReference) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updated: @escaping (PresentationThemeReference) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.themes = themes
+        self.themeSpecificAccentColors = themeSpecificAccentColors
         self.currentTheme = currentTheme
         self.updated = updated
         self.tag = tag
@@ -312,7 +317,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     var selectedNode: ThemeSettingsThemeItemIconNode?
                     
                     var i = 0
-                    for (theme, accentColor) in item.themes {
+                    for theme in item.themes {
                         let imageNode: ThemeSettingsThemeItemIconNode
                         if strongSelf.nodes.count > i {
                             imageNode = strongSelf.nodes[i]
@@ -328,27 +333,34 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                             selectedNode = imageNode
                         }
                         
-                        let name: String
-                        switch theme {
-                            case .dayClassic:
-                                name = item.strings.Appearance_ThemeCarouselClassic
-                            case .day:
-                                name = item.strings.Appearance_ThemeCarouselDay
-                            case .nightGrayscale:
-                                name = item.strings.Appearance_ThemeCarouselNight
-                            case .nightAccent:
-                                name = item.strings.Appearance_ThemeCarouselNightBlue
+                        let name: String?
+                        if case let .builtin(theme) = theme {
+                            switch theme {
+                                case .dayClassic:
+                                    name = item.strings.Appearance_ThemeCarouselClassic
+                                case .day:
+                                    name = item.strings.Appearance_ThemeCarouselDay
+                                case .nightGrayscale:
+                                    name = item.strings.Appearance_ThemeCarouselNight
+                                case .nightAccent:
+                                    name = item.strings.Appearance_ThemeCarouselNightBlue
+                            }
+                        } else {
+                            name = nil
                         }
                         
-                        imageNode.setup(theme: item.theme, icon: generateThemeIconImage(theme: theme, accentColor: accentColor), title: NSAttributedString(string: name, font: textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: { [weak self, weak imageNode] in
-                            item.updated(theme)
-                            if let imageNode = imageNode {
-                                self?.scrollToNode(imageNode, animated: true)
-                            }
-                        })
                         
-                        imageNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 0.0), size: nodeSize)
-                        nodeOffset += nodeSize.width + 2.0
+                        if let name = name {
+                            imageNode.setup(theme: item.theme, icon: generateThemeIconImage(theme: theme, accentColor: item.themeSpecificAccentColors[theme.index]?.color), title: NSAttributedString(string: name, font: textFont, textColor: selected ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: { [weak self, weak imageNode] in
+                                item.updated(theme)
+                                if let imageNode = imageNode {
+                                    self?.scrollToNode(imageNode, animated: true)
+                                }
+                            })
+                            
+                            imageNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 0.0), size: nodeSize)
+                            nodeOffset += nodeSize.width + 2.0
+                        }
                         
                         i += 1
                     }
