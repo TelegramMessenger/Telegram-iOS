@@ -2001,7 +2001,9 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 return
             }
             let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: MapVenue(title: peer.displayTitle, address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
-            let controller = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, isModal: false, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { _ in })
+            let controller = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, isModal: false, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { url in
+                context.sharedContext.applicationBindings.openUrl(url)
+            })
             pushControllerImpl?(controller)
         })
     }, changeLocation: {

@@ -836,7 +836,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
                 case .denied, .restricted:
                     context.sharedContext.applicationBindings.openSettings()
                 case .unreachable:
-                    ApplicationSpecificNotice.setNotificationsPermissionWarning(accountManager: context.sharedContext.accountManager, value: Int32(Date().timeIntervalSince1970))
+                    ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .notifications, value: Int32(Date().timeIntervalSince1970))
                     context.sharedContext.applicationBindings.openSettings()
                 default:
                     break
@@ -845,7 +845,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     }, suppressWarning: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Notifications_PermissionsSuppressWarningTitle, text: presentationData.strings.Notifications_PermissionsSuppressWarningText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Notifications_PermissionsKeepDisabled, action: {
-            ApplicationSpecificNotice.setNotificationsPermissionWarning(accountManager: context.sharedContext.accountManager, value: Int32(Date().timeIntervalSince1970))
+            ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .notifications, value: Int32(Date().timeIntervalSince1970))
         }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Notifications_PermissionsEnable, action: {
             context.sharedContext.applicationBindings.openSettings()
         })]), nil)
@@ -1051,7 +1051,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
         notificationsWarningSuppressed.set(.single(true)
         |> then(
-            context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.notificationsPermissionWarningKey())
+            context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .notifications)!)
             |> map { noticeView -> Bool in
                 let timestamp = noticeView.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if let timestamp = timestamp, timestamp > 0 {

@@ -837,7 +837,7 @@ final class ContactListNode: ASDisplayNode {
         let contactsWarningSuppressed = Promise<(Bool, Bool)>()
         contactsWarningSuppressed.set(.single((false, false))
         |> then(
-            combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.contactsPermissionWarningKey()), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]))
+            combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .contacts)!), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]))
             |> map { noticeView, preferences -> (Bool, Bool) in
                 let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings ?? ContactsSettings.defaultSettings
                 let synchronizeDeviceContacts: Bool = settings.synchronizeContacts
