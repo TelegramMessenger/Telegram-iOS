@@ -138,7 +138,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
             case let .connectionHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .connectionServer(theme, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: text, placeholder: placeholder, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.host = value

@@ -5,6 +5,10 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
+private func generateClearIcon(color: UIColor) -> UIImage? {
+    return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
+}
+
 struct UserInfoEditingPhoneItemEditing {
     let editable: Bool
     let hasActiveRevealControls: Bool
@@ -87,6 +91,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
     private let editableControlNode: ItemListEditableControlNode
     private let labelSeparatorNode: ASDisplayNode
     private let phoneNode: SinglePhoneInputNode
+    private let clearButton: HighlightableButtonNode
     
     private var item: UserInfoEditingPhoneItem?
     private var layoutParams: ListViewItemLayoutParams?
@@ -120,6 +125,12 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
         
         self.phoneNode = SinglePhoneInputNode(fontSize: 17.0)
         
+        self.clearButton = HighlightableButtonNode()
+        self.clearButton.imageNode.displaysAsynchronously = false
+        self.clearButton.imageNode.displayWithoutProcessing = true
+        self.clearButton.displaysAsynchronously = false
+        self.clearButton.isHidden = true
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.editableControlNode)
@@ -127,6 +138,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
         self.addSubnode(self.labelButtonNode)
         self.addSubnode(self.labelSeparatorNode)
         self.addSubnode(self.phoneNode)
+        self.addSubnode(self.clearButton)
         
         self.labelButtonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -150,7 +162,18 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
         
         self.phoneNode.numberUpdated = { [weak self] number in
             self?.item?.updated(number)
+            self?.updateClearButtonVisibility()
         }
+        
+        self.phoneNode.beginEditing = { [weak self] in
+            self?.updateClearButtonVisibility()
+        }
+        
+        self.phoneNode.endEditing = { [weak self] in
+            self?.updateClearButtonVisibility()
+        }
+        
+        self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
     }
     
     override func didLoad() {
@@ -208,6 +231,8 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                         
                         strongSelf.phoneNode.numberField?.textField.textColor = updatedTheme.list.itemPrimaryTextColor
                         strongSelf.phoneNode.numberField?.textField.keyboardAppearance = updatedTheme.chatList.searchBarKeyboardColor.keyboardAppearance
+                        
+                        strongSelf.clearButton.setImage(generateClearIcon(color: updatedTheme.list.inputClearButtonColor), for: [])
                     }
                     
                     let revealOffset = strongSelf.revealOffset
@@ -245,6 +270,10 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                     strongSelf.phoneNode.frame = phoneFrame
                     strongSelf.phoneNode.updateLayout(size: phoneFrame.size)
                     strongSelf.phoneNode.number = item.value
+                    
+                    if let image = strongSelf.clearButton.image(for: []) {
+                        strongSelf.clearButton.frame = CGRect(origin: CGPoint(x: phoneFrame.maxX - image.size.width - 23.0, y: phoneFrame.minY + floor((phoneFrame.size.height - image.size.height) / 2.0) - 1.0 + UIScreenPixel), size: image.size)
+                    }
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
@@ -295,6 +324,17 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
     
     @objc func labelPressed() {
         self.item?.selectLabel?()
+    }
+    
+    @objc func clearPressed() {
+        self.phoneNode.numberField?.textField.text = "+"
+        self.updateClearButtonVisibility()
+    }
+    
+    private func updateClearButtonVisibility() {
+        let text = self.phoneNode.numberField?.textField.text ?? ""
+        let isEmpty = text.isEmpty || text == "+"
+        self.clearButton.isHidden = isEmpty || !(self.phoneNode.numberField?.textField.isFirstResponder ?? false)
     }
     
     func focus() {

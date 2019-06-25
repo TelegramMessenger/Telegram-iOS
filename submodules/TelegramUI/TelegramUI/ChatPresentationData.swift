@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -28,7 +29,7 @@ extension PresentationFontSize {
 extension TelegramWallpaper {
     var isEmpty: Bool {
         switch self {
-            case .builtin, .image:
+            case .image:
                 return false
             case let .file(file):
                 if file.isPattern, file.settings.color == 0xffffff {
@@ -38,6 +39,8 @@ extension TelegramWallpaper {
                 }
             case let .color(color):
                 return color == 0xffffff
+            default:
+                return false
         }
     }
     var isBuiltin: Bool {
@@ -79,6 +82,7 @@ public final class ChatPresentationData {
     let messageEmojiFont3: UIFont
     let messageBoldFont: UIFont
     let messageItalicFont: UIFont
+    let messageBoldItalicFont: UIFont
     let messageFixedFont: UIFont
     
     init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool) {
@@ -97,6 +101,7 @@ public final class ChatPresentationData {
         self.messageEmojiFont3 = UIFont.systemFont(ofSize: 24.0)
         self.messageBoldFont = UIFont.boldSystemFont(ofSize: baseFontSize)
         self.messageItalicFont = UIFont.italicSystemFont(ofSize: baseFontSize)
+        self.messageBoldItalicFont = Font.semiboldItalic(baseFontSize)
         self.messageFixedFont = UIFont(name: "Menlo-Regular", size: baseFontSize - 1.0) ?? UIFont.systemFont(ofSize: baseFontSize)
     }
 }

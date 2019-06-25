@@ -9,6 +9,10 @@ import TelegramPresentationData
 
 private let updatingAvatarOverlayImage = generateFilledCircleImage(diameter: 66.0, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
 
+private func generateClearIcon(color: UIColor) -> UIImage? {
+    return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
+}
+
 enum ItemListAvatarAndNameInfoItemTitleType {
     case group
     case channel
@@ -164,6 +168,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let style: ItemListAvatarAndNameInfoItemStyle
     let editingNameUpdated: (ItemListAvatarAndNameInfoItemName) -> Void
+    let editingNameCompleted: () -> Void
     let avatarTapped: () -> Void
     let context: ItemListAvatarAndNameInfoItemContext?
     let updatingImage: ItemListAvatarAndNameInfoItemUpdatingAvatar?
@@ -174,7 +179,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     
     let selectable: Bool
 
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, mode: ItemListAvatarAndNameInfoItemMode, peer: Peer?, presence: PeerPresence?, label: String? = nil, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListAvatarAndNameInfoItemStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, avatarTapped: @escaping () -> Void, context: ItemListAvatarAndNameInfoItemContext? = nil, updatingImage: ItemListAvatarAndNameInfoItemUpdatingAvatar? = nil, call: (() -> Void)? = nil, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, tag: ItemListItemTag? = nil) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, mode: ItemListAvatarAndNameInfoItemMode, peer: Peer?, presence: PeerPresence?, label: String? = nil, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListAvatarAndNameInfoItemStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, editingNameCompleted: @escaping () -> Void = {}, avatarTapped: @escaping () -> Void, context: ItemListAvatarAndNameInfoItemContext? = nil, updatingImage: ItemListAvatarAndNameInfoItemUpdatingAvatar? = nil, call: (() -> Void)? = nil, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, tag: ItemListItemTag? = nil) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -188,6 +193,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.editingNameUpdated = editingNameUpdated
+        self.editingNameCompleted = editingNameCompleted
         self.avatarTapped = avatarTapped
         self.context = context
         self.updatingImage = updatingImage
@@ -248,7 +254,7 @@ private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 28.0)!
 private let nameFont = Font.medium(19.0)
 private let statusFont = Font.regular(15.0)
 
-class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, ItemListItemFocusableNode {
+class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, ItemListItemFocusableNode, UITextFieldDelegate {
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -269,6 +275,9 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
     private var inputSeparator: ASDisplayNode?
     private var inputFirstField: UITextField?
     private var inputSecondField: UITextField?
+    
+    private var inputFirstClearButton: HighlightableButtonNode?
+    private var inputSecondClearButton: HighlightableButtonNode?
     
     private var item: ItemListAvatarAndNameInfoItem?
     private var layoutWidthAndNeighbors: (width: ListViewItemLayoutParams, neighbors: ItemListNeighbors)?
@@ -547,6 +556,9 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                         strongSelf.inputSeparator?.backgroundColor = itemSeparatorColor
                         strongSelf.callButton.setImage(PresentationResourcesChat.chatInfoCallButtonImage(item.theme), for: [])
                         
+                        strongSelf.inputFirstClearButton?.setImage(generateClearIcon(color: item.theme.list.inputClearButtonColor), for: [])
+                        strongSelf.inputSecondClearButton?.setImage(generateClearIcon(color: item.theme.list.inputClearButtonColor), for: [])
+                        
                         updatedArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.theme)
                     }
                     
@@ -708,6 +720,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                 
                                 if strongSelf.inputFirstField == nil {
                                     let inputFirstField = TextFieldNodeView()
+                                    inputFirstField.delegate = self
                                     inputFirstField.font = Font.regular(17.0)
                                     inputFirstField.autocorrectionType = .no
                                     inputFirstField.returnKeyType = .next
@@ -725,8 +738,20 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                     strongSelf.inputFirstField?.keyboardAppearance = keyboardAppearance
                                 }
                                 
+                                if strongSelf.inputFirstClearButton == nil {
+                                    strongSelf.inputFirstClearButton = HighlightableButtonNode()
+                                    strongSelf.inputFirstClearButton?.imageNode.displaysAsynchronously = false
+                                    strongSelf.inputFirstClearButton?.imageNode.displayWithoutProcessing = true
+                                    strongSelf.inputFirstClearButton?.displaysAsynchronously = false
+                                    strongSelf.inputFirstClearButton?.setImage(generateClearIcon(color: item.theme.list.inputClearButtonColor), for: [])
+                                    strongSelf.inputFirstClearButton?.addTarget(strongSelf, action: #selector(strongSelf.firstClearPressed), forControlEvents: .touchUpInside)
+                                    strongSelf.inputFirstClearButton?.isHidden = true
+                                    strongSelf.addSubnode(strongSelf.inputFirstClearButton!)
+                                }
+                                
                                 if strongSelf.inputSecondField == nil {
                                     let inputSecondField = TextFieldNodeView()
+                                    inputSecondField.delegate = self
                                     inputSecondField.font = Font.regular(17.0)
                                     inputSecondField.autocorrectionType = .no
                                     inputSecondField.returnKeyType = .done
@@ -744,9 +769,27 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                     strongSelf.inputSecondField?.keyboardAppearance = keyboardAppearance
                                 }
                                 
+                                if strongSelf.inputSecondClearButton == nil {
+                                    strongSelf.inputSecondClearButton = HighlightableButtonNode()
+                                    strongSelf.inputSecondClearButton?.imageNode.displaysAsynchronously = false
+                                    strongSelf.inputSecondClearButton?.imageNode.displayWithoutProcessing = true
+                                    strongSelf.inputSecondClearButton?.displaysAsynchronously = false
+                                    strongSelf.inputSecondClearButton?.setImage(generateClearIcon(color: item.theme.list.inputClearButtonColor), for: [])
+                                    strongSelf.inputSecondClearButton?.addTarget(strongSelf, action: #selector(strongSelf.secondClearPressed), forControlEvents: .touchUpInside)
+                                    strongSelf.inputSecondClearButton?.isHidden = true
+                                    strongSelf.addSubnode(strongSelf.inputSecondClearButton!)
+                                }
+                                
                                 strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 46.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 100.0, height: separatorHeight))
-                                strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 12.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 8.0, height: 30.0))
-                                strongSelf.inputSecondField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 52.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 8.0, height: 30.0))
+                                strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 12.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 36.0, height: 30.0))
+                                strongSelf.inputSecondField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 52.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 36.0, height: 30.0))
+                                
+                                if let image = strongSelf.inputFirstClearButton?.image(for: []), let inputFieldFrame = strongSelf.inputFirstField?.frame {
+                                    strongSelf.inputFirstClearButton?.frame = CGRect(origin: CGPoint(x: inputFieldFrame.maxX, y: inputFieldFrame.minY + floor((inputFieldFrame.size.height - image.size.height) / 2.0) - 1.0 + UIScreenPixel), size: image.size)
+                                }
+                                if let image = strongSelf.inputSecondClearButton?.image(for: []), let inputFieldFrame = strongSelf.inputSecondField?.frame {
+                                    strongSelf.inputSecondClearButton?.frame = CGRect(origin: CGPoint(x: inputFieldFrame.maxX, y: inputFieldFrame.minY + floor((inputFieldFrame.size.height - image.size.height) / 2.0) - 1.0 + UIScreenPixel), size: image.size)
+                                }
                                 
                                 if animated && animateIn {
                                     strongSelf.inputSeparator?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
@@ -764,6 +807,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                 
                                 if strongSelf.inputFirstField == nil {
                                     let inputFirstField = TextFieldNodeView()
+                                    inputFirstField.delegate = self
                                     inputFirstField.font = Font.regular(17.0)
                                     inputFirstField.autocorrectionType = .no
                                     inputFirstField.attributedText = NSAttributedString(string: title, font: Font.regular(19.0), textColor: item.theme.list.itemPrimaryTextColor)
@@ -786,8 +830,23 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                     strongSelf.inputFirstField?.keyboardAppearance = keyboardAppearance
                                 }
                                 
+                                if strongSelf.inputFirstClearButton == nil {
+                                    strongSelf.inputFirstClearButton = HighlightableButtonNode()
+                                    strongSelf.inputFirstClearButton?.imageNode.displaysAsynchronously = false
+                                    strongSelf.inputFirstClearButton?.imageNode.displayWithoutProcessing = true
+                                    strongSelf.inputFirstClearButton?.displaysAsynchronously = false
+                                    strongSelf.inputFirstClearButton?.setImage(generateClearIcon(color: item.theme.list.inputClearButtonColor), for: [])
+                                    strongSelf.inputFirstClearButton?.addTarget(strongSelf, action: #selector(strongSelf.firstClearPressed), forControlEvents: .touchUpInside)
+                                    strongSelf.inputFirstClearButton?.isHidden = true
+                                    strongSelf.addSubnode(strongSelf.inputFirstClearButton!)
+                                }
+                                
                                 strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 62.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 100.0, height: separatorHeight))
-                                strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 102.0, y: 26.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 102.0 - 8.0, height: 35.0))
+                                strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 26.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 36.0, height: 35.0))
+                                
+                                if let image = strongSelf.inputFirstClearButton?.image(for: []), let inputFieldFrame = strongSelf.inputFirstField?.frame {
+                                    strongSelf.inputFirstClearButton?.frame = CGRect(origin: CGPoint(x: inputFieldFrame.maxX, y: inputFieldFrame.minY + floor((inputFieldFrame.size.height - image.size.height) / 2.0) - 1.0 + UIScreenPixel), size: image.size)
+                                }
                                 
                                 if animated && animateIn {
                                     strongSelf.inputSeparator?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
@@ -835,6 +894,17 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                             } else {
                                 inputFirstField.removeFromSuperview()
                             }
+                            
+                            if let inputFirstClearButton = strongSelf.inputFirstClearButton {
+                                strongSelf.inputFirstClearButton = nil
+                                if animated {
+                                    inputFirstClearButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputFirstClearButton] _ in
+                                        inputFirstClearButton?.removeFromSupernode()
+                                    })
+                                } else {
+                                    inputFirstClearButton.removeFromSupernode()
+                                }
+                            }
                         }
                         if let inputSecondField = strongSelf.inputSecondField {
                             strongSelf.inputSecondField = nil
@@ -844,6 +914,17 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                 })
                             } else {
                                 inputSecondField.removeFromSuperview()
+                            }
+                            
+                            if let inputSecondClearButton = strongSelf.inputSecondClearButton {
+                                strongSelf.inputSecondClearButton = nil
+                                if animated {
+                                    inputSecondClearButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputSecondClearButton] _ in
+                                        inputSecondClearButton?.removeFromSupernode()
+                                    })
+                                } else {
+                                    inputSecondClearButton.removeFromSupernode()
+                                }
                             }
                         }
                         if animated && animateOut {
@@ -928,6 +1009,13 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
         }
     }
     
+    private func updateClearButtonVisibility(_ button: HighlightableButtonNode?, textField: UITextField?) {
+        guard let button = button, let textField = textField else {
+            return
+        }
+        button.isHidden = !textField.isFirstResponder || (textField.text?.isEmpty ?? true)
+    }
+    
     @objc func textFieldDidChange(_ inputField: UITextField) {
         if let item = self.item, let currentEditingName = item.state.editingName {
             var editingName: ItemListAvatarAndNameInfoItemName?
@@ -942,6 +1030,41 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                 item.editingNameUpdated(editingName)
             }
         }
+        
+        if inputField == self.inputFirstField {
+            self.updateClearButtonVisibility(self.inputFirstClearButton, textField: inputField)
+        } else if inputField == self.inputSecondField {
+            self.updateClearButtonVisibility(self.inputSecondClearButton, textField: inputField)
+        }
+    }
+    
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        if textField == self.inputFirstField {
+            self.updateClearButtonVisibility(self.inputFirstClearButton, textField: textField)
+        } else if textField == self.inputSecondField {
+            self.updateClearButtonVisibility(self.inputSecondClearButton, textField: textField)
+        }
+    }
+    
+    func textFieldDidEndEditing(_ textField: UITextField) {
+        if textField == self.inputFirstField {
+            self.updateClearButtonVisibility(self.inputFirstClearButton, textField: textField)
+        } else if textField == self.inputSecondField {
+            self.updateClearButtonVisibility(self.inputSecondClearButton, textField: textField)
+        }
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        if textField == self.inputFirstField {
+            if let inputSecondField = self.inputSecondField {
+                inputSecondField.becomeFirstResponder()
+            } else {
+                self.item?.editingNameCompleted()
+            }
+        } else if textField == self.inputSecondField {
+            self.item?.editingNameCompleted()
+        }
+        return true
     }
     
     @objc func avatarTapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -973,6 +1096,16 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
     
     @objc func callButtonPressed() {
         self.item?.call?()
+    }
+    
+    @objc func firstClearPressed() {
+        self.inputFirstField?.text = nil
+        self.updateClearButtonVisibility(self.inputFirstClearButton, textField: self.inputFirstField)
+    }
+    
+    @objc func secondClearPressed() {
+        self.inputSecondField?.text = nil
+        self.updateClearButtonVisibility(self.inputSecondClearButton, textField: self.inputSecondField)
     }
     
     func focus() {
