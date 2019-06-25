@@ -1,12 +1,11 @@
 #import "TGMessageViewWebPageRowController.h"
 
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "WKInterfaceGroup+Signals.h"
 #import "TGBridgeMediaSignals.h"
-#import "TGBridgeMessage.h"
 
 #import "TGMessageViewModel.h"
-#import "TGBridgeImageMediaAttachment.h"
-#import "TGBridgeWebPageMediaAttachment.h"
 
 NSString *const TGMessageViewWebPageRowIdentifier = @"TGMessageViewWebPageRow";
 

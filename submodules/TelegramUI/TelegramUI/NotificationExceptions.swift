@@ -4,6 +4,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 public class NotificationExceptionsController: ViewController {
     private let context: AccountContext
@@ -157,7 +158,7 @@ public class NotificationExceptionsController: ViewController {
     }
     
     @objc private func removeAllPressed() {
-        self.controllerNode
+        self.controllerNode.removeAll()
     }
     
     @objc private func editPressed() {

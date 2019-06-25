@@ -1,8 +1,10 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
+    import TelegramApi
 #endif
 
 func updatePeerChatInclusionWithMinTimestamp(transaction: Transaction, id: PeerId, minTimestamp: Int32, forceRootGroupIfNotExists: Bool) {
@@ -134,5 +136,36 @@ func updatePeerPresenceLastActivities(transaction: Transaction, accountPeerId: P
             }
             return previous
         })
+    }
+}
+
+func updateContacts(transaction: Transaction, apiUsers: [Api.User]) {
+    if apiUsers.isEmpty {
+        return
+    }
+    var contactIds = transaction.getContactPeerIds()
+    var updated = false
+    for user in apiUsers {
+        let isContact: Bool
+        switch user {
+            case let .user(user):
+                isContact = (user.flags & (1 << 11)) != 0
+            case .userEmpty:
+                isContact = false
+        }
+        if isContact {
+            if !contactIds.contains(user.peerId) {
+                contactIds.insert(user.peerId)
+                updated = true
+            }
+        } else {
+            if contactIds.contains(user.peerId) {
+                contactIds.remove(user.peerId)
+                updated = true
+            }
+        }
+    }
+    if updated {
+        transaction.replaceContactPeerIds(contactIds)
     }
 }

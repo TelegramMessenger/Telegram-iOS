@@ -5,6 +5,7 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
 
 enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
@@ -859,7 +860,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     statusState = .clock(PresentationResourcesChatList.clockFrameImage(item.presentationData.theme), PresentationResourcesChatList.clockMinImage(item.presentationData.theme))
                 } else if message.id.peerId != account.peerId {
                     if message.flags.contains(.Failed) {
-                        statusState = .none
+                        statusState = .failed(item.presentationData.theme.chatList.failedFillColor, item.presentationData.theme.chatList.failedForegroundColor)
                     } else {
                         if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
                             statusState = .read(item.presentationData.theme.chatList.checkmarkColor)

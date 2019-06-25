@@ -3,7 +3,9 @@ import Foundation
 import PostboxMac
 import SwiftSignalKitMac
 import MtProtoKitMac
+import TelegramApiMac
 #else
+import TelegramApi
 import Postbox
 import SwiftSignalKit
 #if BUCK

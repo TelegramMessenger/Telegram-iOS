@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import WebKit
 import TelegramCore
+import UniversalMediaPlayer
 
 protocol WebEmbedImplementation {
     func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void)

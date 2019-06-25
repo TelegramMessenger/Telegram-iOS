@@ -1,6 +1,7 @@
 #import "TGBridgeUserInfoSignals.h"
-#import "TGBridgeSubscriptions.h"
-#import "TGBridgeUser.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGBridgeClient.h"
 
 @implementation TGBridgeUserInfoSignals

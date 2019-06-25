@@ -5,7 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-
+import TelegramPresentationData
 import LegacyComponents
 import TelegramUIPrivateModule
 
@@ -267,16 +267,30 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if query.isSingleEmoji {
-                    signals = .single([searchStickers(account: account, query: text)
+                    signals = .single([searchStickers(account: account, query: text.trimmedEmoji)
                     |> take(1)
                     |> map { (nil, $0) }])
                 } else if query.count > 1, let languageCode = languageCode, !languageCode.isEmpty && languageCode != "emoji" {
-                    signals = searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
+                    var signal = searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
+                    if !languageCode.lowercased().hasPrefix("en") {
+                        signal = signal
+                        |> mapToSignal { keywords in
+                            return .single(keywords)
+                            |> then(
+                                searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: "en-US", query: query.lowercased(), completeMatch: query.count < 3)
+                                |> map { englishKeywords in
+                                    return keywords + englishKeywords
+                                }
+                            )
+                        }
+                    }
+                    
+                    signals = signal
                     |> map { keywords -> [Signal<(String?, [FoundStickerItem]), NoError>] in
                         var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                         let emoticons = keywords.flatMap { $0.emoticons }
                         for emoji in emoticons {
-                            signals.append(searchStickers(account: self.context.account, query: emoji)
+                            signals.append(searchStickers(account: self.context.account, query: emoji.trimmedEmoji)
                             |> take(1)
                             |> map { (emoji, $0) })
                         }

@@ -1,10 +1,13 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
+import Postbox
 import Display
 import AVFoundation
 import Lottie
 import TelegramUIPrivateModule
+import Compression
+import GZip
 
 private func validateAnimationItems(_ items: [Any]?, shapes: Bool = true) -> Bool {
     if let items = items {
@@ -77,6 +80,180 @@ func validateAnimationComposition(json: [AnyHashable: Any]) -> Bool {
     return true
 }
 
+@available(iOS 9.0, *)
+func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<String, NoError> {
+    return Signal({ subscriber in
+        let queue = Queue()
+        
+        queue.async {
+            let startTime = CACurrentMediaTime()
+            var drawingTime: Double = 0
+            var appendingTime: Double = 0
+            
+            let decompressedData = TGGUnzipData(data)
+            if let decompressedData = decompressedData, let json = (try? JSONSerialization.jsonObject(with: decompressedData, options: [])) as? [AnyHashable: Any] {
+                if validateAnimationComposition(json: json) {
+                    let model = LOTComposition(json: json)
+                    if let startFrame = model.startFrame?.int32Value, let endFrame = model.endFrame?.int32Value {
+                        print("read at \(CACurrentMediaTime() - startTime)")
+                        
+                        var randomId: Int64 = 0
+                        arc4random_buf(&randomId, 8)
+                        let path = NSTemporaryDirectory() + "\(randomId).lz4v"
+                        guard let fileContext = ManagedFile(queue: queue, path: path, mode: .readwrite) else {
+                            return
+                        }
+                        
+                        let videoSize = CGSize(width: size.width, height: size.height * 2.0)
+                        let scale = size.width / 512.0
+                        
+                        var currentFrame: Int32 = 0
+                        
+                        let container = LOTAnimationLayerContainer(model: model, size: size)
+                        
+                        let singleContext = DrawingContext(size: size, scale: 1.0, clear: true)
+                        
+                        var fps: Int32 = model.framerate?.int32Value ?? 30
+                        let _ = fileContext.write(&fps, count: 4)
+                        
+                        if true {
+                            let frameLength = singleContext.length
+                            assert(frameLength % 16 == 0)
+                            
+                            let previousFrameData = malloc(frameLength)!
+                            memset(previousFrameData, 0, frameLength)
+                            
+                            defer {
+                                free(previousFrameData)
+                            }
+                            
+                            var compressedFrameData = Data(count: frameLength)
+                            let compressedFrameDataLength = compressedFrameData.count
+                            
+                            let scratchData = malloc(compression_encode_scratch_buffer_size(COMPRESSION_LZ4))!
+                            defer {
+                                free(scratchData)
+                            }
+                            
+                            while startFrame + currentFrame < endFrame {
+                                let drawStartTime = CACurrentMediaTime()
+                                singleContext.withContext { context in
+                                    context.clear(CGRect(origin: CGPoint(), size: size))
+                                    context.saveGState()
+                                    context.scaleBy(x: scale, y: scale)
+                                    container?.renderFrame(startFrame + currentFrame, in: context)
+                                    context.restoreGState()
+                                }
+                                
+                                var lhs = previousFrameData.assumingMemoryBound(to: UInt64.self)
+                                var rhs = singleContext.bytes.assumingMemoryBound(to: UInt64.self)
+                                for _ in 0 ..< frameLength / 8 {
+                                    lhs.pointee = rhs.pointee ^ lhs.pointee
+                                    lhs = lhs.advanced(by: 1)
+                                    rhs = rhs.advanced(by: 1)
+                                }
+                                
+                                drawingTime += CACurrentMediaTime() - drawStartTime
+                                
+                                let appendStartTime = CACurrentMediaTime()
+                                compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                    let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousFrameData.assumingMemoryBound(to: UInt8.self), frameLength, scratchData, COMPRESSION_LZ4)
+                                    var frameLengthValue: Int32 = Int32(length)
+                                    let _ = fileContext.write(&frameLengthValue, count: 4)
+                                    let _ = fileContext.write(bytes, count: length)
+                                }
+                                
+                                memcpy(previousFrameData, singleContext.bytes, frameLength)
+                                
+                                appendingTime += CACurrentMediaTime() - appendStartTime
+                                currentFrame += 1
+                            }
+                            
+                            if startFrame + currentFrame >= endFrame {
+                                subscriber.putNext(path)
+                                subscriber.putCompletion()
+                                print("animation render time \(CACurrentMediaTime() - startTime)")
+                                print("of which drawing time \(drawingTime)")
+                                print("of which appending time \(appendingTime)")
+                            }
+                        } else {
+                            let bgrg422Length = Int(size.width) * 2 * Int(size.height)
+                            let aLength = Int(size.width) * Int(size.height)
+                            let frameLength = bgrg422Length + aLength
+                            
+                            assert(frameLength % 16 == 0)
+                            
+                            let currentFrameData = malloc(frameLength)!
+                            let previousFrameData = malloc(frameLength)!
+                            memset(previousFrameData, 0, frameLength)
+                            
+                            defer {
+                                free(currentFrameData)
+                                free(previousFrameData)
+                            }
+                        
+                            let fps: Int32 = model.framerate?.int32Value ?? 30
+                            
+                            var compressedFrameData = Data(count: bgrg422Length + aLength)
+                            let compressedFrameDataLength = compressedFrameData.count
+                            
+                            let scratchData = malloc(compression_encode_scratch_buffer_size(COMPRESSION_LZ4))!
+                            defer {
+                                free(scratchData)
+                            }
+                        
+                            while startFrame + currentFrame < endFrame {
+                                let drawStartTime = CACurrentMediaTime()
+                                singleContext.withContext { context in
+                                    context.clear(CGRect(origin: CGPoint(), size: size))
+                                    context.saveGState()
+                                    context.scaleBy(x: scale, y: scale)
+                                    container?.renderFrame(startFrame + currentFrame, in: context)
+                                    context.restoreGState()
+                                }
+                                
+                                encodeRGBAToBRGR422A(currentFrameData.assumingMemoryBound(to: UInt8.self).advanced(by: 0), currentFrameData.assumingMemoryBound(to: UInt8.self).advanced(by: bgrg422Length), singleContext.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height))
+                                
+                                var lhs = previousFrameData.assumingMemoryBound(to: UInt64.self)
+                                var rhs = currentFrameData.assumingMemoryBound(to: UInt64.self)
+                                for _ in 0 ..< frameLength / 8 {
+                                    lhs.pointee = rhs.pointee ^ lhs.pointee
+                                    lhs = lhs.advanced(by: 1)
+                                    rhs = rhs.advanced(by: 1)
+                                }
+                                
+                                drawingTime += CACurrentMediaTime() - drawStartTime
+                                
+                                let appendStartTime = CACurrentMediaTime()
+                                compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                    let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousFrameData.assumingMemoryBound(to: UInt8.self), frameLength, scratchData, COMPRESSION_LZ4)
+                                    var frameLengthValue: Int32 = Int32(length)
+                                    let _ = fileContext.write(&frameLengthValue, count: 4)
+                                    let _ = fileContext.write(bytes, count: length)
+                                }
+                                
+                                memcpy(previousFrameData, currentFrameData, frameLength)
+                                
+                                appendingTime += CACurrentMediaTime() - appendStartTime
+                                currentFrame += 1
+                            }
+                        
+                            if startFrame + currentFrame >= endFrame {
+                                subscriber.putNext(path)
+                                subscriber.putCompletion()
+                                print("animation render time \(CACurrentMediaTime() - startTime)")
+                                print("of which drawing time \(drawingTime)")
+                                print("of which appending time \(appendingTime)")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return EmptyDisposable
+    })
+}
+
 func convertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<String, NoError> {
     return Signal({ subscriber in
         let startTime = CACurrentMediaTime()
@@ -129,6 +306,7 @@ func convertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<St
                                         let lastFrameTime = CMTimeMake(Int64(currentFrame - startFrame), fps)
                                         let presentationTime = currentFrame == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
                                         
+                                        let drawStartTime = CACurrentMediaTime()
                                         singleContext.withContext { context in
                                             context.clear(CGRect(origin: CGPoint(), size: size))
                                             context.saveGState()
@@ -138,7 +316,7 @@ func convertCompressedLottieToCombinedMp4(data: Data, size: CGSize) -> Signal<St
                                         }
                                         
                                         if let image = singleContext.generateImage()?.cgImage {
-                                            let drawStartTime = CACurrentMediaTime()
+                                            
                                             let maskDecode = [
                                                 CGFloat(1.0), CGFloat(1.0),
                                                 CGFloat(1.0), CGFloat(1.0),

@@ -2,11 +2,12 @@ import Foundation
 #if os(macOS)
 import PostboxMac
 import SwiftSignalKitMac
+import TelegramApiMac
 #else
 import Postbox
 import SwiftSignalKit
+import TelegramApi
 #endif
-
 private final class ManagedSynchronizeGroupMessageStatsState {
     private var synchronizeDisposables: [PeerGroupAndNamespace: Disposable] = [:]
     

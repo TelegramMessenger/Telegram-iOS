@@ -135,4 +135,12 @@ extension String {
         }
         return string
     }
+    
+    var trimmedEmoji: String {
+        if self.unicodeScalars.count > 1, self.unicodeScalars.first?.value == 0x2764 {
+            return String(self.unicodeScalars.prefix(self.unicodeScalars.count - 1))
+        } else {
+            return self
+        }
+    }
 }

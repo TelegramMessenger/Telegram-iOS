@@ -3,9 +3,11 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
@@ -89,6 +91,7 @@ public enum ReportReason: Equatable {
     case porno
     case childAbuse
     case copyright
+    case irrelevantLocation
     case custom(String)
 }
 
@@ -105,6 +108,8 @@ private extension ReportReason {
                 return .inputReportReasonChildAbuse
             case .copyright:
                 return .inputReportReasonCopyright
+            case .irrelevantLocation:
+                return .inputReportReasonGeoIrrelevant
             case let .custom(text):
                 return .inputReportReasonOther(text: text)
         }

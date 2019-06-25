@@ -1,5 +1,4 @@
 #import <SSignalKit/SSignalKit.h>
-#import "TGBridgePeerNotificationSettings.h"
 
 @interface TGBridgePeerSettingsSignals : NSObject
 

@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import Display
+import TelegramPresentationData
 
 private var currentTextInputBackgroundImage: (UIColor, UIColor, UIColor, CGFloat, UIImage)?
 private func textInputBackgroundImage(backgroundColor: UIColor, fieldColor: UIColor, strokeColor: UIColor, diameter: CGFloat) -> UIImage? {

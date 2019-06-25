@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import Postbox
+import TelegramPresentationData
 
 enum ShareLoadingState {
     case preparing

@@ -4,6 +4,7 @@ import TelegramCore
 import WebKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 private class WeakInstantPageWebEmbedNodeMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()

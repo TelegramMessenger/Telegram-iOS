@@ -5,6 +5,9 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 
+import BuildConfig
+import LightweightAccountData
+
 struct ImageResource {
     let datacenterId: Int
     let volumeId: Int64

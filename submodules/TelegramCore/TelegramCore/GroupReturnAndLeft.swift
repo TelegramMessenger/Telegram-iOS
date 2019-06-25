@@ -3,16 +3,17 @@
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
         import MtProtoKitDynamic
     #endif
 #endif
-
 
 public func returnGroup(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.loadedPeerWithId(account.peerId)

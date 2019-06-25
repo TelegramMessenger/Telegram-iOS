@@ -2,14 +2,17 @@ import Foundation
 #if os(macOS)
 import SwiftSignalKitMac
 import MtProtoKitMac
+import TelegramApiMac
 #else
 import SwiftSignalKit
+import TelegramApi
 #if BUCK
         import MtProtoKit
     #else
         import MtProtoKitDynamic
     #endif
 #endif
+
 
 public enum ConfirmTwoStepRecoveryEmailError {
     case invalidEmail

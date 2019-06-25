@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 import Postbox
+import TelegramPresentationData
 
 public final class PeerSelectionController: ViewController {
     private let context: AccountContext

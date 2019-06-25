@@ -6,6 +6,7 @@ import Postbox
 import AsyncDisplayKit
 import UIKit
 import SwiftSignalKit
+import TelegramPresentationData
 
 public final class ProxyServerActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?

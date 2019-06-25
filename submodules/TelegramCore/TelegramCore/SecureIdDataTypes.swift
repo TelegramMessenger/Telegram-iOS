@@ -1,4 +1,9 @@
 import Foundation
+#if os(macOS)
+import TelegramApiMac
+#else
+import TelegramApi
+#endif
 
 public struct SecureIdPersonName: Equatable {
     public let firstName: String

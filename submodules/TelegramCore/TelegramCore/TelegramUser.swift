@@ -1,9 +1,11 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
     import UIKit
+    import TelegramApi
 #endif
 
 public struct UserInfoFlags: OptionSet {
@@ -60,15 +62,11 @@ public struct BotUserInfo: PostboxCoding, Equatable {
             encoder.encodeNil(forKey: "ip")
         }
     }
-    
-    public static func ==(lhs: BotUserInfo, rhs: BotUserInfo) -> Bool {
-        return lhs.flags == rhs.flags && lhs.inlinePlaceholder == rhs.inlinePlaceholder
-    }
 }
 
 public final class TelegramUser: Peer {
     public let id: PeerId
-    public let accessHash: Int64?
+    public let accessHash: TelegramPeerAccessHash?
     public let firstName: String?
     public let lastName: String?
     public let username: String?
@@ -99,7 +97,7 @@ public final class TelegramUser: Peer {
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
-    public init(id: PeerId, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?, restrictionInfo: PeerAccessRestrictionInfo?, flags: UserInfoFlags) {
+    public init(id: PeerId, accessHash: TelegramPeerAccessHash?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?, restrictionInfo: PeerAccessRestrictionInfo?, flags: UserInfoFlags) {
         self.id = id
         self.accessHash = accessHash
         self.firstName = firstName
@@ -116,8 +114,13 @@ public final class TelegramUser: Peer {
         self.id = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
         
         let accessHash: Int64 = decoder.decodeInt64ForKey("ah", orElse: 0)
+        let accessHashType: Int32 = decoder.decodeInt32ForKey("aht", orElse: 0)
         if accessHash != 0 {
-            self.accessHash = accessHash
+            if accessHashType == 0 {
+                self.accessHash = .personal(accessHash)
+            } else {
+                self.accessHash = .genericPublic(accessHash)
+            }
         } else {
             self.accessHash = nil
         }
@@ -145,7 +148,14 @@ public final class TelegramUser: Peer {
         encoder.encodeInt64(self.id.toInt64(), forKey: "i")
         
         if let accessHash = self.accessHash {
-            encoder.encodeInt64(accessHash, forKey: "ah")
+            switch accessHash {
+            case let .personal(value):
+                encoder.encodeInt64(value, forKey: "ah")
+                encoder.encodeInt32(0, forKey: "aht")
+            case let .genericPublic(value):
+                encoder.encodeInt64(value, forKey: "ah")
+                encoder.encodeInt32(1, forKey: "aht")
+            }
         }
         
         if let firstName = self.firstName {
@@ -241,7 +251,7 @@ public final class TelegramUser: Peer {
 func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto) -> [TelegramMediaImageRepresentation] {
     var representations: [TelegramMediaImageRepresentation] = []
     switch photo {
-        case let .userProfilePhoto(photoId, photoSmall, photoBig, dcId):
+        case let .userProfilePhoto(_, photoSmall, photoBig, dcId):
             let smallResource: TelegramMediaResource
             let fullSizeResource: TelegramMediaResource
             switch photoSmall {
@@ -265,6 +275,15 @@ extension TelegramUser {
         switch user {
         case let .user(flags, id, accessHash, firstName, lastName, username, phone, photo, _, _, restrictionReason, botInlinePlaceholder, _):
             let representations: [TelegramMediaImageRepresentation] = photo.flatMap(parsedTelegramProfilePhoto) ?? []
+            
+            let isMin = (flags & (1 << 20)) != 0
+            let accessHashValue = accessHash.flatMap { value -> TelegramPeerAccessHash in
+                if isMin {
+                    return .genericPublic(value)
+                } else {
+                    return .personal(value)
+                }
+            }
             
             var userFlags: UserInfoFlags = []
             if (flags & (1 << 17)) != 0 {
@@ -294,7 +313,7 @@ extension TelegramUser {
             
             let restrictionInfo: PeerAccessRestrictionInfo? = restrictionReason.flatMap(PeerAccessRestrictionInfo.init)
             
-            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: accessHash, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: representations, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags)
+            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: accessHashValue, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: representations, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags)
         case let .userEmpty(id):
             self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         }
@@ -302,8 +321,9 @@ extension TelegramUser {
     
     static func merge(_ lhs: TelegramUser?, rhs: Api.User) -> TelegramUser? {
         switch rhs {
-            case let .user(flags, _, accessHash, _, _, username, _, photo, _, _, restrictionReason, botInlinePlaceholder, _):
-                if let _ = accessHash {
+            case let .user(flags, _, rhsAccessHash, _, _, username, _, photo, _, _, restrictionReason, botInlinePlaceholder, _):
+                let isMin = (flags & (1 << 20)) != 0
+                if !isMin {
                     return TelegramUser(user: rhs)
                 } else {
                     let telegramPhoto = photo.flatMap(parsedTelegramProfilePhoto) ?? []
@@ -336,7 +356,22 @@ extension TelegramUser {
                         
                         let restrictionInfo: PeerAccessRestrictionInfo? = restrictionReason.flatMap(PeerAccessRestrictionInfo.init)
                         
-                        return TelegramUser(id: lhs.id, accessHash: lhs.accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: username, phone: lhs.phone, photo: telegramPhoto, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags)
+                        let rhsAccessHashValue = rhsAccessHash.flatMap { value -> TelegramPeerAccessHash in
+                            if isMin {
+                                return .genericPublic(value)
+                            } else {
+                                return .personal(value)
+                            }
+                        }
+                        
+                        let accessHash: TelegramPeerAccessHash?
+                        if let rhsAccessHashValue = rhsAccessHashValue, case .personal = rhsAccessHashValue {
+                            accessHash = rhsAccessHashValue
+                        } else {
+                            accessHash = lhs.accessHash ?? rhsAccessHashValue
+                        }
+                        
+                        return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: username, phone: lhs.phone, photo: telegramPhoto, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags)
                     } else {
                         return TelegramUser(user: rhs)
                     }

@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramUIPreferences
 
 class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override var supportsMosaic: Bool {
@@ -21,7 +22,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
-            self.interactiveImageNode.visibility = self.visibility
+            self.interactiveImageNode.visibility = self.visibility != .none
         }
     }
     

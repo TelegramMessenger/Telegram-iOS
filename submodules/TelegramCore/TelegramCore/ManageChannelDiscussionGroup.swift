@@ -2,10 +2,13 @@ import Foundation
 #if os(macOS)
 import SwiftSignalKitMac
 import PostboxMac
+import TelegramApiMac
 #else
 import SwiftSignalKit
 import Postbox
+import TelegramApi
 #endif
+
 
 public enum AvailableChannelDiscussionGroupError {
     case generic
@@ -41,7 +44,6 @@ public enum ChannelDiscussionGroupError {
 }
 
 public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, channelId: PeerId, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {
-    
     return postbox.transaction { transaction -> (channel: Peer?, group: Peer?) in
         return (channel: transaction.getPeer(channelId), group: groupId != nil ? transaction.getPeer(groupId!) : nil)
     }
@@ -101,5 +103,4 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
             return .single(result)
         }
     }
-    
 }

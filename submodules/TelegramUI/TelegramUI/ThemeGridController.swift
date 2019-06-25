@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import LegacyComponents
+import TelegramPresentationData
+import TelegramUIPreferences
 
 final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {

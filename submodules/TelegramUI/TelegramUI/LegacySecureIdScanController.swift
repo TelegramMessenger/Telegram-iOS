@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import LegacyComponents
+import TelegramPresentationData
 
 func legacySecureIdScanController(theme: PresentationTheme, strings: PresentationStrings, finished: @escaping (SecureIdRecognizedDocumentData?) -> Void) -> ViewController {
     let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: theme, strings: strings)

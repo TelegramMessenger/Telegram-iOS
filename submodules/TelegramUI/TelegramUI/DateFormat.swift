@@ -1,4 +1,6 @@
 import Foundation
+import TelegramPresentationData
+import TelegramUIPreferences
 
 func stringForShortTimestamp(hours: Int32, minutes: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
     switch dateTimeFormat.timeFormat {

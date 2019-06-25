@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 private func generateLoupeIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: color)

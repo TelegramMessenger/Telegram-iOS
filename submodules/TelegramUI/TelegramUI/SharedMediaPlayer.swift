@@ -3,8 +3,10 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-
+import TelegramUIPreferences
 import TelegramUIPrivateModule
+import UniversalMediaPlayer
+import TelegramAudio
 
 enum SharedMediaPlayerPlaybackControlAction {
     case play

@@ -5,6 +5,10 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 import Postbox
+import TelegramPresentationData
+import UniversalMediaPlayer
+import TelegramUIPreferences
+import TelegramAudio
 
 final class OverlayInstantVideoNode: OverlayMediaItemNode {
     private let content: UniversalVideoContent

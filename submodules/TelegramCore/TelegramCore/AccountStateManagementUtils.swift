@@ -3,9 +3,11 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
@@ -1291,10 +1293,10 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                             updatedState.updatePeerChatInclusion(peerId: peer.peerId, groupId: PeerGroupId(rawValue: folderId), changedGroup: true)
                     }
                 }
-            case let .updateContactLocated(contacts):
+            case let .updatePeerLocated(peers):
                 var peersNearby: [PeerNearby] = []
-                for case let .contactLocated(userId, expires, distance) in contacts {
-                    peersNearby.append(PeerNearby(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), expires: expires, distance: distance))
+                for case let .peerLocated(peer, expires, distance) in peers {
+                    peersNearby.append(PeerNearby(id: peer.peerId, expires: expires, distance: distance))
                 }
                 updatedState.updatePeersNearby(peersNearby)
             default:
@@ -2423,6 +2425,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                     return updated
                 })
+                updateContacts(transaction: transaction, apiUsers: users)
             case let .UpdatePeer(id, f):
                 if let peer = f(transaction.getPeer(id)) {
                     updatePeers(transaction: transaction, peers: [peer], update: { _, updated in

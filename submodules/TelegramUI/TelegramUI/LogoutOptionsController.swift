@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
+import TelegramPresentationData
 
 private struct LogoutOptionsItemArguments {
     let addAccount: () -> Void

@@ -4,6 +4,9 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
+import TelegramCallsUI
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account

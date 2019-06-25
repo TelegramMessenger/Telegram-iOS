@@ -4,6 +4,8 @@ import UIKit
 import Postbox
 import TelegramCore
 import Display
+import DeviceAccess
+import TelegramPresentationData
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void

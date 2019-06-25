@@ -4,6 +4,8 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private func generateArrowImage(color: UIColor) -> UIImage? {
     let smallRadius: CGFloat = 5.0

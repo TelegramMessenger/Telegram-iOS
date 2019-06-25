@@ -5,6 +5,7 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
 
 private let titleFont = Font.regular(17.0)
 private let statusFont = Font.regular(14.0)
@@ -23,7 +24,7 @@ private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, botto
     if let topItem = topItem {
         if let item = item as? ItemListItem, let topItem = topItem as? ItemListItem {
             if topItem.sectionId != item.sectionId {
-                topNeighbor = .otherSection(requestsNoInset: topItem.requestsNoInset)
+                topNeighbor = .otherSection(topItem.requestsNoInset ? .none : .full)
             } else {
                 topNeighbor = .sameSection(alwaysPlain: topItem.isAlwaysPlain)
             }
@@ -31,7 +32,7 @@ private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, botto
             if item is CallListCallItem && topItem is CallListCallItem {
                 topNeighbor = .sameSection(alwaysPlain: false)
             } else {
-                topNeighbor = .otherSection(requestsNoInset: false)
+                topNeighbor = .otherSection(.full)
             }
         }
     } else {
@@ -42,7 +43,7 @@ private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, botto
     if let bottomItem = bottomItem {
         if let item = item as? ItemListItem, let bottomItem = bottomItem as? ItemListItem {
             if bottomItem.sectionId != item.sectionId {
-                bottomNeighbor = .otherSection(requestsNoInset: bottomItem.requestsNoInset)
+                bottomNeighbor = .otherSection(bottomItem.requestsNoInset ? .none : .full)
             } else {
                 bottomNeighbor = .sameSection(alwaysPlain: bottomItem.isAlwaysPlain)
             }
@@ -50,7 +51,7 @@ private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, botto
             if item is CallListCallItem && bottomItem is CallListCallItem {
                 bottomNeighbor = .sameSection(alwaysPlain: false)
             } else {
-                bottomNeighbor = .otherSection(requestsNoInset: false)
+                bottomNeighbor = .otherSection(.full)
             }
         }
     } else {

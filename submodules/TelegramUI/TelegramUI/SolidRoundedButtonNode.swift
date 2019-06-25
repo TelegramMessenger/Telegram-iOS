@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 private let textFont: UIFont = Font.regular(16.0)
 
@@ -65,6 +66,14 @@ final class SolidRoundedButtonNode: ASDisplayNode {
                 }
             }
         }
+    }
+    
+    func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
+        
+        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: cornerRadius, color: theme.list.itemCheckColors.fillColor)
+        self.buttonGlossNode.color = theme.list.itemCheckColors.foregroundColor
+        self.labelNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.medium(17.0), textColor: theme.list.itemCheckColors.foregroundColor)
     }
     
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {

@@ -4,6 +4,7 @@ import TelegramCore
 import Display
 import Postbox
 import AsyncDisplayKit
+import TelegramPresentationData
 
 final class InstantPageUrlItem: Equatable {
     let url: String

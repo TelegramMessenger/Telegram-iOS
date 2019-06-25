@@ -4,6 +4,7 @@ import Display
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramPresentationData
 
 final class ChatRecentActionsController: TelegramController {
     private var controllerNode: ChatRecentActionsControllerNode {
@@ -100,6 +101,7 @@ final class ChatRecentActionsController: TelegramController {
         }, updateInputLanguage: { _ in
         }, unarchiveChat: {
         }, openLinkEditing: {  
+        }, reportPeerIrrelevantGeoLocation: {
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView

@@ -3,6 +3,7 @@ import UIKit
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import UniversalMediaPlayer
 
 enum FileMediaResourcePlaybackStatus {
     case playing

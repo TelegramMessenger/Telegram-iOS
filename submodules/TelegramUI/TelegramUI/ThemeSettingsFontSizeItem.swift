@@ -4,7 +4,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-
+import TelegramPresentationData
+import TelegramUIPreferences
 import LegacyComponents
 
 class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {

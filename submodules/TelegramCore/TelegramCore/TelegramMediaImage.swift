@@ -1,9 +1,11 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
     import UIKit
+    import TelegramApi
 #endif
 
 public enum TelegramMediaImageReference: PostboxCoding, Equatable {

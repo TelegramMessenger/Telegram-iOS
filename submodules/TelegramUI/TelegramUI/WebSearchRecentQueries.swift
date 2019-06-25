@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import SwiftSignalKit
+import TelegramUIPreferences
 
 private struct WebSearchRecentQueryItemId {
     public let rawValue: MemoryBuffer

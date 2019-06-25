@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 private let detailsInset: CGFloat = 17.0
 private let titleInset: CGFloat = 22.0

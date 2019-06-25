@@ -1,5 +1,7 @@
 import Postbox
 
+import TelegramUIPreferences
+
 private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(InAppNotificationSettings.self, f: { InAppNotificationSettings(decoder: $0) })
     declareEncodable(ChatInterfaceState.self, f: { ChatInterfaceState(decoder: $0) })

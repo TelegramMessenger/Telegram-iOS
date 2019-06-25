@@ -5,6 +5,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private let nameFont = Font.medium(14.0)
 
@@ -37,8 +39,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
-            if self.visibility != oldValue {
-                self.interactiveVideoNode.visibility = self.visibility
+            let wasVisible = oldValue != .none
+            let isVisible = self.visibility != .none
+            
+            if wasVisible != isVisible {
+                self.interactiveVideoNode.visibility = isVisible
             }
         }
     }

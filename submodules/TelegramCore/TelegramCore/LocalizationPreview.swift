@@ -2,7 +2,9 @@
 import PostboxMac
 import SwiftSignalKitMac
 import MtProtoKitMac
+import TelegramApiMac
 #else
+import TelegramApi
 import Postbox
 import SwiftSignalKit
     #if BUCK
@@ -11,6 +13,7 @@ import SwiftSignalKit
         import MtProtoKitDynamic
     #endif
 #endif
+
 
 public enum RequestLocalizationPreviewError {
     case generic

@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import TelegramPresentationData
 
 struct UserInfoEditingPhoneItemEditing {
     let editable: Bool
@@ -19,11 +20,11 @@ class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let setPhoneIdWithRevealedOptions: (Int64?, Int64?) -> Void
     let updated: (String) -> Void
-    let selectLabel: () -> Void
+    let selectLabel: (() -> Void)?
     let delete: () -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, id: Int64, label: String, value: String, editing: UserInfoEditingPhoneItemEditing, sectionId: ItemListSectionId, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, updated: @escaping (String) -> Void, selectLabel: @escaping () -> Void, delete: @escaping () -> Void, tag: ItemListItemTag?) {
+    init(theme: PresentationTheme, strings: PresentationStrings, id: Int64, label: String, value: String, editing: UserInfoEditingPhoneItemEditing, sectionId: ItemListSectionId, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, updated: @escaping (String) -> Void, selectLabel: (() -> Void)?, delete: @escaping () -> Void, tag: ItemListItemTag?) {
         self.theme = theme
         self.strings = strings
         self.id = id
@@ -236,6 +237,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                     let labelFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset + 30.0, y: 12.0), size: labelLayout.size)
                     strongSelf.labelNode.frame = labelFrame
                     strongSelf.labelButtonNode.frame = labelFrame
+                    strongSelf.labelButtonNode.isUserInteractionEnabled = item.selectLabel != nil
                     strongSelf.labelSeparatorNode.frame = CGRect(origin: CGPoint(x: labelFrame.maxX + 8.0, y: 0.0), size: CGSize(width: UIScreenPixel, height: layout.contentSize.height))
                     
                     let phoneX = labelFrame.maxX + 16.0
@@ -292,7 +294,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
     }
     
     @objc func labelPressed() {
-        self.item?.selectLabel()
+        self.item?.selectLabel?()
     }
     
     func focus() {

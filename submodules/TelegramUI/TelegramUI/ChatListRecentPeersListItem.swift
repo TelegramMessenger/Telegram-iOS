@@ -5,6 +5,7 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
 
 class ChatListRecentPeersListItem: ListViewItem {
     let theme: PresentationTheme

@@ -1,7 +1,8 @@
 #import "TGBridgeStickersSignals.h"
-#import "TGBridgeSubscriptions.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGBridgeStickerPack.h"
-#import "TGBridgeDocumentMediaAttachment.h"
 #import "TGBridgeClient.h"
 
 @implementation TGBridgeStickersSignals

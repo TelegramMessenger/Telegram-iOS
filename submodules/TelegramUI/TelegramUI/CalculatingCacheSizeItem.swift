@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import TelegramPresentationData
 
 class CalculatingCacheSizeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
@@ -132,6 +133,7 @@ class CalculatingCacheSizeItemNode: ListViewItemNode {
                         activityIndicator = current
                     } else {
                         activityIndicator = ActivityIndicator(type: .custom(item.theme.list.itemAccentColor, 20.0, 2.0, false), speed: ActivityIndicatorSpeed.slow)
+                        strongSelf.activityIndicator = activityIndicator
                         strongSelf.addSubnode(activityIndicator)
                     }
                     

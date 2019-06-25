@@ -5,7 +5,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-
+import TelegramAudio
+import UniversalMediaPlayer
 import LegacyComponents
 
 final class WebEmbedVideoContent: UniversalVideoContent {

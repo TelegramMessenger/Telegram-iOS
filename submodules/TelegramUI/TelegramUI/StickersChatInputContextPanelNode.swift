@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import Display
 import SwiftSignalKit
+import TelegramPresentationData
 
 private struct StickersChatInputContextPanelEntryStableId: Hashable {
     let ids: [MediaId]

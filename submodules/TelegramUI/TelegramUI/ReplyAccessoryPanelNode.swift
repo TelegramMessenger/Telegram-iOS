@@ -5,6 +5,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import Display
+import TelegramPresentationData
+import TelegramUIPreferences
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()

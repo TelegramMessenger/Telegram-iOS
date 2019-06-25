@@ -1,4 +1,9 @@
 import Foundation
+#if os(macOS)
+import TelegramApiMac
+#else
+import TelegramApi
+#endif
 
 public struct AccountSessionFlags: OptionSet {
     public var rawValue: Int32

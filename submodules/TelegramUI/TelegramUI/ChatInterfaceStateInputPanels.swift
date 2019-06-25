@@ -58,23 +58,6 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
     
     var displayInputTextPanel = false
     
-    /*if case .group = chatPresentationInterfaceState.chatLocation {
-        if chatPresentationInterfaceState.interfaceState.editMessage != nil {
-            displayInputTextPanel = true
-        } else {
-            if let currentPanel = currentPanel as? ChatFeedNavigationInputPanelNode {
-                currentPanel.interfaceInteraction = interfaceInteraction
-                currentPanel.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
-                return currentPanel
-            } else {
-                let panel = ChatFeedNavigationInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
-                panel.context = context
-                panel.interfaceInteraction = interfaceInteraction
-                return panel
-            }
-        }
-    }*/
-    
     if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
         if let secretChat = peer as? TelegramSecretChat {
             switch secretChat.embeddedState {
@@ -100,7 +83,24 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                     break
             }
         } else if let channel = peer as? TelegramChannel {
-            if channel.hasBannedPermission(.banSendMessages) != nil {
+            var isMember: Bool = false
+            switch channel.participationStatus {
+            case .kicked:
+                if let currentPanel = currentPanel as? DeleteChatInputPanelNode {
+                    return currentPanel
+                } else {
+                    let panel = DeleteChatInputPanelNode()
+                    panel.context = context
+                    panel.interfaceInteraction = interfaceInteraction
+                    return panel
+                }
+            case .member:
+                isMember = true
+            case .left:
+                break
+            }
+            
+            if isMember && channel.hasBannedPermission(.banSendMessages) != nil {
                 if let currentPanel = currentPanel as? ChatRestrictedInputPanelNode {
                     return currentPanel
                 } else {
@@ -111,61 +111,48 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 }
             }
             
-            switch channel.participationStatus {
-                case .kicked:
-                    if let currentPanel = currentPanel as? DeleteChatInputPanelNode {
+            switch channel.info {
+            case .broadcast:
+                if chatPresentationInterfaceState.interfaceState.editMessage != nil, channel.hasPermission(.editAllMessages) {
+                    displayInputTextPanel = true
+                } else if !channel.hasPermission(.sendMessages) {
+                    if let currentPanel = currentPanel as? ChatChannelSubscriberInputPanelNode {
                         return currentPanel
                     } else {
-                        let panel = DeleteChatInputPanelNode()
-                        panel.context = context
+                        let panel = ChatChannelSubscriberInputPanelNode()
                         panel.interfaceInteraction = interfaceInteraction
+                        panel.context = context
                         return panel
                     }
-                case .member, .left:
+                }
+            case .group:
+                switch channel.participationStatus {
+                case .kicked, .left:
+                    if let currentPanel = currentPanel as? ChatChannelSubscriberInputPanelNode {
+                        return currentPanel
+                    } else {
+                        let panel = ChatChannelSubscriberInputPanelNode()
+                        panel.interfaceInteraction = interfaceInteraction
+                        panel.context = context
+                        return panel
+                    }
+                case .member:
                     break
-            }
-            switch channel.info {
-                case .broadcast:
-                    if chatPresentationInterfaceState.interfaceState.editMessage != nil, channel.hasPermission(.editAllMessages) {
-                        displayInputTextPanel = true
-                    } else if !channel.hasPermission(.sendMessages) {
-                        if let currentPanel = currentPanel as? ChatChannelSubscriberInputPanelNode {
-                            return currentPanel
-                        } else {
-                            let panel = ChatChannelSubscriberInputPanelNode()
-                            panel.interfaceInteraction = interfaceInteraction
-                            panel.context = context
-                            return panel
-                        }
-                    }
-                case .group:
-                    switch channel.participationStatus {
-                        case .kicked, .left:
-                            if let currentPanel = currentPanel as? ChatChannelSubscriberInputPanelNode {
-                                return currentPanel
-                            } else {
-                                let panel = ChatChannelSubscriberInputPanelNode()
-                                panel.interfaceInteraction = interfaceInteraction
-                                panel.context = context
-                                return panel
-                            }
-                        case .member:
-                            break
-                    }
+                }
             }
         } else if let group = peer as? TelegramGroup {
             switch group.membership {
-                case .Removed, .Left:
-                    if let currentPanel = currentPanel as? DeleteChatInputPanelNode {
-                        return currentPanel
-                    } else {
-                        let panel = DeleteChatInputPanelNode()
-                        panel.context = context
-                        panel.interfaceInteraction = interfaceInteraction
-                        return panel
-                    }
-                case .Member:
-                    break
+            case .Removed, .Left:
+                if let currentPanel = currentPanel as? DeleteChatInputPanelNode {
+                    return currentPanel
+                } else {
+                    let panel = DeleteChatInputPanelNode()
+                    panel.context = context
+                    panel.interfaceInteraction = interfaceInteraction
+                    return panel
+                }
+            case .Member:
+                break
             }
             
             if group.hasBannedPermission(.banSendMessages) {

@@ -6,6 +6,7 @@ import Display
 import SwiftSignalKit
 import WebKit
 import TelegramCore
+import TelegramPresentationData
 
 class ChatDocumentGalleryItem: GalleryItem {
     let context: AccountContext

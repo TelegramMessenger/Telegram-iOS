@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import LegacyComponents
+import TelegramPresentationData
+import TelegramUIPreferences
 
 enum ChatTitleContent {
     case peer(peerView: PeerView, onlineMemberCount: Int32?)
@@ -178,7 +180,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             if peerView.peerId == self.account.peerId {
                                 string = NSAttributedString(string: self.strings.Conversation_SavedMessages, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                             } else {
-                                if !peerView.peerIsContact, let user = peer as? TelegramUser, let phone = user.phone, !phone.isEmpty {
+                                if !peerView.peerIsContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
                                     string = NSAttributedString(string: formatPhoneNumber(phone), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                                 } else {
                                     string = NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)

@@ -1,6 +1,7 @@
 import Foundation
 import WebKit
 import SwiftSignalKit
+import UniversalMediaPlayer
 
 func extractYoutubeVideoIdAndTimestamp(url: String) -> (String, Int)? {
     guard let url = URL(string: url), let host = url.host?.lowercased() else {

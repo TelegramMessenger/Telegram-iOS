@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import MessageUI
+import TelegramPresentationData
 
 private enum DeviceContactInfoAction {
     case sendMessage
@@ -15,6 +16,7 @@ private enum DeviceContactInfoAction {
 
 private final class DeviceContactInfoControllerArguments {
     let account: Account
+    let isPlain: Bool
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updatePhone: (Int64, String) -> Void
     let updatePhoneLabel: (Int64, String) -> Void
@@ -27,9 +29,11 @@ private final class DeviceContactInfoControllerArguments {
     let openUrl: (String) -> Void
     let openAddress: (DeviceContactAddressData) -> Void
     let displayCopyContextMenu: (DeviceContactInfoEntryTag, String) -> Void
+    let updateShareViaException: (Bool) -> Void
     
-    init(account: Account, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void) {
+    init(account: Account, isPlain: Bool, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void, updateShareViaException: @escaping (Bool) -> Void) {
         self.account = account
+        self.isPlain = isPlain
         self.updateEditingName = updateEditingName
         self.updatePhone = updatePhone
         self.updatePhoneLabel = updatePhoneLabel
@@ -42,6 +46,7 @@ private final class DeviceContactInfoControllerArguments {
         self.openUrl = openUrl
         self.openAddress = openAddress
         self.displayCopyContextMenu = displayCopyContextMenu
+        self.updateShareViaException = updateShareViaException
     }
 }
 
@@ -49,6 +54,7 @@ private enum DeviceContactInfoSection: ItemListSectionId {
     case info
     case editing
     case data
+    case share
 }
 
 private enum DeviceContactInfoEntryTag: Equatable, ItemListItemTag {
@@ -82,6 +88,8 @@ private enum DeviceContactInfoConstantEntryId: Hashable {
     case birthday
     case addPhoneNumber
     case phoneNumberSharingInfo
+    case phoneNumberShareViaException
+    case phoneNumberShareViaExceptionInfo
 }
 
 private enum DeviceContactInfoEntryId: Hashable {
@@ -96,7 +104,7 @@ private enum DeviceContactInfoEntryId: Hashable {
 }
 
 private enum DeviceContactInfoEntry: ItemListNodeEntry {
-    case info(Int, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer, state: ItemListAvatarAndNameInfoItemState, job: String?)
+    case info(Int, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer, state: ItemListAvatarAndNameInfoItemState, job: String?, isPlain: Bool)
     
     case invite(Int, PresentationTheme, String)
     case sendMessage(Int, PresentationTheme, String)
@@ -107,6 +115,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     case phoneNumber(Int, Int, PresentationTheme, String, String, String, Bool?, Bool)
     case editingPhoneNumber(Int, PresentationTheme, PresentationStrings, Int64, String, String, String, Bool)
     case phoneNumberSharingInfo(Int, PresentationTheme, String)
+    case phoneNumberShareViaException(Int, PresentationTheme, String, Bool)
+    case phoneNumberShareViaExceptionInfo(Int, PresentationTheme, String)
     case addPhoneNumber(Int, PresentationTheme, String)
     case email(Int, Int, PresentationTheme, String, String, String, Bool?)
     case url(Int, Int, PresentationTheme, String, String, String, Bool?)
@@ -123,6 +133,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 return DeviceContactInfoSection.editing.rawValue
             case .invite, .sendMessage, .createContact, .addToExisting:
                 return DeviceContactInfoSection.info.rawValue
+            case .phoneNumberShareViaException, .phoneNumberShareViaExceptionInfo:
+                return DeviceContactInfoSection.share.rawValue
             default:
                 return DeviceContactInfoSection.data.rawValue
         }
@@ -146,6 +158,10 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 return .phoneNumber(catIndex)
             case .phoneNumberSharingInfo:
                 return .constant(.phoneNumberSharingInfo)
+            case .phoneNumberShareViaException:
+                return .constant(.phoneNumberShareViaException)
+            case .phoneNumberShareViaExceptionInfo:
+                return .constant(.phoneNumberShareViaExceptionInfo)
             case let .editingPhoneNumber(_, _, _, id, _, _, _, _):
                 return .editingPhoneNumber(id)
             case .addPhoneNumber:
@@ -167,8 +183,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     
     static func ==(lhs: DeviceContactInfoEntry, rhs: DeviceContactInfoEntry) -> Bool {
         switch lhs {
-            case let .info(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsState, lhsJobSummary):
-                if case let .info(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsState, rhsJobSummary) = rhs {
+            case let .info(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsState, lhsJobSummary, lhsIsPlain):
+                if case let .info(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsState, rhsJobSummary, rhsIsPlain) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -188,6 +204,9 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsJobSummary != rhsJobSummary {
+                        return false
+                    }
+                    if lhsIsPlain != rhsIsPlain {
                         return false
                     }
                     return true
@@ -232,6 +251,18 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 }
             case let .phoneNumberSharingInfo(lhsIndex, lhsTheme, lhsText):
                 if case let .phoneNumberSharingInfo(rhsIndex, rhsTheme, rhsText) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .phoneNumberShareViaException(lhsIndex, lhsTheme, lhsText, lhsValue):
+                if case let .phoneNumberShareViaException(rhsIndex, rhsTheme, rhsText, rhsValue) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .phoneNumberShareViaExceptionInfo(lhsIndex, lhsTheme, lhsText):
+                if case let .phoneNumberShareViaExceptionInfo(rhsIndex, rhsTheme, rhsText) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -289,7 +320,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     
     private var sortIndex: Int {
         switch self {
-            case let .info(index, _, _, _, _, _, _):
+            case let .info(index, _, _, _, _, _, _, _):
                 return index
             case let .sendMessage(index, _, _):
                 return index
@@ -304,6 +335,10 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
             case let .phoneNumber(index, _, _, _, _, _, _, _):
                 return index
             case let .phoneNumberSharingInfo(index, _, _):
+                return index
+            case let .phoneNumberShareViaException(index, _, _, _):
+                return index
+            case let .phoneNumberShareViaExceptionInfo(index, _, _):
                 return index
             case let .editingPhoneNumber(index, _, _, _, _, _, _, _):
                 return index
@@ -330,52 +365,58 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     
     func item(_ arguments: DeviceContactInfoControllerArguments) -> ListViewItem {
         switch self {
-            case let .info(_, theme, strings, dateTimeFormat, peer, state, jobSummary):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+            case let .info(_, theme, strings, dateTimeFormat, peer, state, jobSummary, isPlain):
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, context: nil, call: nil)
             case let .sendMessage(_, theme, title):
-                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, action: {
                     arguments.performAction(.sendMessage)
                 })
             case let .invite(_, theme, title):
-                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, action: {
                     arguments.performAction(.invite)
                 })
             case let .createContact(_, theme, title):
-                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, action: {
                     arguments.performAction(.createContact)
                 })
             case let .addToExisting(_, theme, title):
-                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, action: {
                     arguments.performAction(.addToExisting)
                 })
             case let .company(_, theme, title, value, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                 }, tag: nil)
             case let .phoneNumber(_, index, theme, title, label, value, selected, isInteractionEnabled):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: isInteractionEnabled ? {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: isInteractionEnabled ? {
                     if selected != nil {
                         arguments.toggleSelection(.phoneNumber(label, value))
                     } else {
                         arguments.callPhone(value)
                     }
-                    } : nil, longTapAction: {
+                } : nil, longTapAction: isInteractionEnabled ? {
                     if selected == nil {
                         arguments.displayCopyContextMenu(.info(index), value)
                     }
-                }, tag: DeviceContactInfoEntryTag.info(index))
+                } : nil, tag: DeviceContactInfoEntryTag.info(index))
             case let .phoneNumberSharingInfo(_, theme, text):
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
+            case let .phoneNumberShareViaException(_, theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, updated: { value in
+                    arguments.updateShareViaException(value)
+                })
+            case let .phoneNumberShareViaExceptionInfo(_, theme, text):
                 return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
             case let .editingPhoneNumber(_, theme, strings, id, title, label, value, hasActiveRevealControls):
                 return UserInfoEditingPhoneItem(theme: theme, strings: strings, id: id, label: title, value: value, editing: UserInfoEditingPhoneItemEditing(editable: true, hasActiveRevealControls: hasActiveRevealControls), sectionId: self.section, setPhoneIdWithRevealedOptions: { lhs, rhs in
                     arguments.setPhoneIdWithRevealedOptions(lhs, rhs)
                 }, updated: { value in
                     arguments.updatePhone(id, value)
-                }, selectLabel: {
+                }, selectLabel: nil /*{
                     arguments.updatePhoneLabel(id, label)
-                }, delete: {
+                }*/, delete: {
                     arguments.deletePhone(id)
                 }, tag: DeviceContactInfoEntryTag.editingPhone(id))
             case let .addPhoneNumber(_, theme, title):
@@ -383,7 +424,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     arguments.addPhoneNumber()
                 })
             case let .email(_, index, theme, title, label, value, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.email(label, value))
                     } else {
@@ -395,7 +436,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
             case let .url(_, index, theme, title, label, value, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.url(label, value))
                     } else {
@@ -422,7 +463,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 combineComponent(string: &string, component: value.city)
                 combineComponent(string: &string, component: value.country)
                 combineComponent(string: &string, component: value.postcode)
-                return ItemListAddressItem(theme: theme, label: title, text: string, imageSignal: imageSignal, selected: selected, sectionId: self.section, action: {
+                return ItemListAddressItem(theme: theme, label: title, text: string, imageSignal: imageSignal, selected: selected, sectionId: self.section, style: .plain, action: {
                     if selected != nil {
                         arguments.toggleSelection(.address(value))
                     } else {
@@ -434,7 +475,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
             case let .birthday(_, theme, title, value, text, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.birthday)
                     } else {
@@ -463,7 +504,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     }
                 }, tag: DeviceContactInfoEntryTag.birthday)
             case let .socialProfile(_, index, theme, title, value, text, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.socialProfile(value))
                     } else if value.url.count > 0 {
@@ -475,7 +516,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
             case let .instantMessenger(_, index, theme, title, value, text, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.instantMessenger(value))
                     }
@@ -500,6 +541,7 @@ private struct EditingPhoneNumber: Equatable {
 
 private struct DeviceContactInfoState: Equatable {
     var savingData: Bool = false
+    var addToPrivacyExceptions: Bool = true
     var editingState: DeviceContactInfoEditingState? = nil
     var excludedComponents = Set<DeviceContactInfoDataId>()
     var phoneNumbers: [EditingPhoneNumber] = []
@@ -532,7 +574,7 @@ private func filteredContactData(contactData: DeviceContactExtendedData, exclude
     return DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumbers: phoneNumbers), middleName: contactData.middleName, prefix: contactData.prefix, suffix: contactData.suffix, organization: includeJob ? contactData.organization : "", jobTitle: includeJob ? contactData.jobTitle : "", department: includeJob ? contactData.department : "", emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: includeBirthday ? contactData.birthdayDate : nil, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles)
 }
 
-private func deviceContactInfoEntries(account: Account, presentationData: PresentationData, peer: Peer?, isShare: Bool, contactData: DeviceContactExtendedData, isContact: Bool, state: DeviceContactInfoState, selecting: Bool, editingPhoneNumbers: Bool) -> [DeviceContactInfoEntry] {
+private func deviceContactInfoEntries(account: Account, presentationData: PresentationData, peer: Peer?, isShare: Bool, shareViaException: Bool, contactData: DeviceContactExtendedData, isContact: Bool, state: DeviceContactInfoState, selecting: Bool, editingPhoneNumbers: Bool) -> [DeviceContactInfoEntry] {
     var entries: [DeviceContactInfoEntry] = []
     
     var editingName: ItemListAvatarAndNameInfoItemName?
@@ -565,7 +607,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     
     let isOrganization = personName.0.isEmpty && personName.1.isEmpty && !contactData.organization.isEmpty
     
-    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: isOrganization ? contactData.organization : personName.0, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary))
+    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: isOrganization ? contactData.organization : personName.0, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare))
     
     if !selecting {
         if let _ = peer {
@@ -592,10 +634,21 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
             numberIndex += 1
         }
         if let peer = peer {
-            if contactData.basicData.phoneNumbers.isEmpty {
-                entries.append(.phoneNumberSharingInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_ContactWillBeSharedAfterMutual(peer.compactDisplayTitle).0))
+            let personCompactName: String
+            if !personName.0.isEmpty {
+                personCompactName = personName.0
+            } else if !personName.1.isEmpty {
+                personCompactName = personName.1
             } else {
-                entries.append(.phoneNumberSharingInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_ContactWillBeSharedNow(peer.compactDisplayTitle).0))
+                personCompactName = peer.compactDisplayTitle
+            }
+            
+            if contactData.basicData.phoneNumbers.isEmpty {
+                entries.append(.phoneNumberSharingInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_ContactWillBeSharedAfterMutual(personCompactName).0))
+            }
+            if shareViaException {
+                entries.append(.phoneNumberShareViaException(entries.count, presentationData.theme, presentationData.strings.AddContact_SharedContactException, state.addToPrivacyExceptions))
+                entries.append(.phoneNumberShareViaExceptionInfo(entries.count, presentationData.theme, presentationData.strings.AddContact_SharedContactExceptionInfo(personCompactName).0))
             }
         }
     } else {
@@ -691,7 +744,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
 public enum DeviceContactInfoSubject {
     case vcard(Peer?, DeviceContactStableId?, DeviceContactExtendedData)
     case filter(peer: Peer?, contactId: DeviceContactStableId?, contactData: DeviceContactExtendedData, completion: (Peer?, DeviceContactExtendedData) -> Void)
-    case create(peer: Peer?, contactData: DeviceContactExtendedData, isSharing: Bool, completion: (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void)
+    case create(peer: Peer?, contactData: DeviceContactExtendedData, isSharing: Bool, shareViaException: Bool, completion: (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void)
     
     var peer: Peer? {
         switch self {
@@ -710,7 +763,7 @@ public enum DeviceContactInfoSubject {
                 return data
             case let .filter(_, _, data, _):
                 return data
-            case let .create(_, data, _, _):
+            case let .create(_, data, _, _, _):
                 return data
         }
     }
@@ -746,7 +799,7 @@ private final class DeviceContactInfoController: ItemListController<DeviceContac
 
 public func deviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)? = nil, cancelled: (() -> Void)? = nil) -> ViewController {
     var initialState = DeviceContactInfoState()
-    if case let .create(peer, contactData, _, _) = subject {
+    if case let .create(peer, contactData, _, _, _) = subject {
         var peerPhoneNumber: String?
         var firstName = contactData.basicData.firstName
         var lastName = contactData.basicData.lastName
@@ -840,7 +893,21 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         })
     }
     
-    let arguments = DeviceContactInfoControllerArguments(account: context.account, updateEditingName: { editingName in
+    let contactData: Signal<(Peer?, DeviceContactStableId?, DeviceContactExtendedData), NoError>
+    var isShare = false
+    var shareViaException = false
+    switch subject {
+    case let .vcard(peer, id, data):
+        contactData = .single((peer, id, data))
+    case let .filter(peer, id, data, _):
+        contactData = .single((peer, id, data))
+    case let .create(peer, data, share, shareViaExceptionValue, _):
+        contactData = .single((peer, nil, data))
+        isShare = share
+        shareViaException = shareViaExceptionValue
+    }
+    
+    let arguments = DeviceContactInfoControllerArguments(account: context.account, isPlain: !isShare, updateEditingName: { editingName in
         updateState { state in
             var state = state
             if let _ = state.editingState {
@@ -917,7 +984,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             case .createContact:
-                presentControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: subject.peer, contactData: subject.contactData, isSharing: false, completion: { peer, stableId, contactData in
+                presentControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: subject.peer, contactData: subject.contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
                     dismissImpl?(false)
                     if let peer = peer {
                         
@@ -950,19 +1017,13 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         openAddressImpl?(address)
     }, displayCopyContextMenu: { tag, value in
         displayCopyContextMenuImpl?(tag, value)
+    }, updateShareViaException: { value in
+        updateState { state in
+            var state = state
+            state.addToPrivacyExceptions = value
+            return state
+        }
     })
-    
-    let contactData: Signal<(Peer?, DeviceContactStableId?, DeviceContactExtendedData), NoError>
-    var isShare = false
-    switch subject {
-        case let .vcard(peer, id, data):
-            contactData = .single((peer, id, data))
-        case let .filter(peer, id, data, _):
-            contactData = .single((peer, id, data))
-        case let .create(peer, data, share, _):
-            contactData = .single((peer, nil, data))
-            isShare = share
-    }
     
     let previousEditingPhoneIds = Atomic<Set<Int64>?>(value: nil)
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), contactData)
@@ -987,7 +1048,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                 completion(peerAndContactData.0, filteredData)
                 dismissImpl?(true)
             })
-        } else if case let .create(createForPeer, _, _, completion) = subject {
+        } else if case let .create(createForPeer, _, _, _, completion) = subject {
             let filteredData = filteredContactData(contactData: peerAndContactData.2, excludedComponents: state.excludedComponents)
             var filteredPhoneNumbers: [DeviceContactPhoneNumberData] = []
             for phoneNumber in state.phoneNumbers {
@@ -997,34 +1058,36 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
             }
             var composedContactData: DeviceContactExtendedData?
             if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
-                var instantMessagingProfiles = filteredData.instantMessagingProfiles
+                var urls = filteredData.urls
                 if let createForPeer = createForPeer {
-                    let appProfile = DeviceContactInstantMessagingProfileData(appProfile: createForPeer.id)
+                    let appProfile = DeviceContactUrlData(appProfile: createForPeer.id)
                     var found = false
-                    for profile in instantMessagingProfiles {
-                        if profile.service == appProfile.service && profile.username == appProfile.username {
+                    for url in urls {
+                        if url.label == appProfile.label && url.value == appProfile.value {
                             found = true
                             break
                         }
                     }
                     if !found {
-                        instantMessagingProfiles.append(appProfile)
+                        urls.append(appProfile)
                     }
                 }
-                composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: filteredData.urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: instantMessagingProfiles)
+                composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: filteredData.instantMessagingProfiles)
             }
             rightNavigationButton = ItemListNavigationButton(content: .text(isShare ? presentationData.strings.Common_Done : presentationData.strings.Compose_Create), style: .bold, enabled: (isShare || !filteredPhoneNumbers.isEmpty) && composedContactData != nil, action: {
                 if let composedContactData = composedContactData {
+                    var addToPrivacyExceptions = false
                     updateState { state in
                         var state = state
                         state.savingData = true
+                        addToPrivacyExceptions = state.addToPrivacyExceptions
                         return state
                     }
                     if let contactDataManager = context.sharedContext.contactDataManager {
                         switch subject {
-                            case let .create(peer, _, share, _):
+                            case let .create(peer, _, share, shareViaException, _):
                                 if share, filteredPhoneNumbers.count <= 1, let peer = peer {
-                                    addContactDisposable.set((addContactInteractively(account: context.account, peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "")
+                                    addContactDisposable.set((addContactInteractively(account: context.account, peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "", addToPrivacyExceptions: shareViaException && addToPrivacyExceptions)
                                     |> deliverOnMainQueue).start(error: { _ in
                                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }, completed: {
@@ -1056,9 +1119,9 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                             }
                             if filteredPhoneNumbers.count <= 1 {
                                 switch subject {
-                                    case let .create(peer, _, share, _):
+                                    case let .create(peer, _, share, shareViaException, _):
                                         if share, let peer = peer {
-                                            return addContactInteractively(account: context.account, peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "")
+                                            return addContactInteractively(account: context.account, peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "", addToPrivacyExceptions: shareViaException && addToPrivacyExceptions)
                                             |> mapToSignal { _ -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                                                 return .complete()
                                             }
@@ -1146,7 +1209,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
             focusItemTag = DeviceContactInfoEntryTag.editingPhone(insertedPhoneId)
         }
         
-        let listState = ItemListNodeState(entries: deviceContactInfoEntries(account: context.account, presentationData: presentationData, peer: peerAndContactData.0, isShare: isShare, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones), style: .plain, focusItemTag: focusItemTag)
+        let listState = ItemListNodeState(entries: deviceContactInfoEntries(account: context.account, presentationData: presentationData, peer: peerAndContactData.0, isShare: isShare, shareViaException: shareViaException, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones), style: isShare ? .blocks : .plain, focusItemTag: focusItemTag)
         
         return (controllerState, (listState, arguments))
     }
@@ -1269,7 +1332,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
             let _ = (dataSignal
             |> deliverOnMainQueue).start(next: { peer, stableId in
                 guard let stableId = stableId else {
-                    parentController.present(deviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, isSharing: false, completion: { peer, stableId, contactData in
+                    parentController.present(deviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
                         
                     })), in: .window(.root))
                     return
@@ -1315,7 +1378,7 @@ func addContactOptionsController(context: AccountContext, peer: Peer?, contactDa
     controller.setItemGroups([
         ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Profile_CreateNewContact, action: { [weak controller] in
-                controller?.present(deviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, isSharing: peer != nil, completion: { peer, stableId, contactData in
+                controller?.present(deviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, isSharing: peer != nil, shareViaException: false, completion: { peer, stableId, contactData in
                     if let peer = peer {
                         
                     } else {

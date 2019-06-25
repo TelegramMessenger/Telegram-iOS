@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import Lottie
+import TelegramPresentationData
 
 class ChatAnimationGalleryItem: GalleryItem {
     let context: AccountContext

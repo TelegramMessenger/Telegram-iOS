@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import UniversalMediaPlayer
 
 final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     private let nativeSize: CGSize

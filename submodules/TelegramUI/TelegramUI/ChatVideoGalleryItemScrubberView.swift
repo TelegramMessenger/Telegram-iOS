@@ -5,6 +5,8 @@ import SwiftSignalKit
 import TelegramCore
 import Postbox
 import Display
+import UniversalMediaPlayer
+import TelegramPresentationData
 
 private let textFont = Font.regular(13.0)
 

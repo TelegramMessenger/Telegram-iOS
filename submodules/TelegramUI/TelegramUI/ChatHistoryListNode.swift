@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private let historyMessageCount: Int = 100
 
@@ -323,7 +325,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let messageViewQueue = Queue(name: "ChatHistoryListNode processing")
     
     private var dequeuedInitialTransitionOnLayout = false
-    private var enqueuedHistoryViewTransition: (ChatHistoryListViewTransition, () -> Void)?
+    private var enqueuedHistoryViewTransitions: [ChatHistoryListViewTransition] = []
+    private var hasActiveTransition = false
     var layoutActionOnViewTransition: ((ChatHistoryListViewTransition) -> (ChatHistoryListViewTransition, ListViewUpdateSizeAndInsets?))?
     
     public let historyState = ValuePromise<ChatHistoryNodeHistoryState>()
@@ -457,7 +460,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         //self.snapToBottomInsetUntilFirstInteraction = true
         
-        let messageViewQueue = self.messageViewQueue
+        let messageViewQueue = Queue.mainQueue() //self.messageViewQueue
         
         let fixedCombinedReadStates = Atomic<MessageHistoryViewReadState?>(value: nil)
         
@@ -518,9 +521,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let nextTransitionVersion = Atomic<Int>(value: 0)
         
-        let historyViewTransition = combineLatest(queue: messageViewQueue, historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get())
-        |> introduceError(Void.self)
-        |> mapToQueue { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared -> Signal<(ChatHistoryListViewTransition, Int), Void> in
+        let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue, historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get()).start(next: { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -529,12 +530,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if let filteredEntries = historyView?.filteredEntries, let visibleRange = displayRange.visibleRange {
                             let lastEntry = filteredEntries[filteredEntries.count - 1 - visibleRange.lastIndex]
                             
-                            strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: 0)
+                            strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                         } else {
                             if let messageId = messageId {
-                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60), id: 0)
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else {
-                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: 60), id: 0)
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: 60), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             }
                         }
                     }
@@ -543,140 +544,115 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             let initialData: ChatHistoryCombinedInitialData?
             switch update.0 {
-                case let .Loading(combinedInitialData, type):
-                    if case .Generic(.FillHole) = type {
-                        applyHole()
-                        return .fail(Void())
-                    }
-                    
-                    initialData = combinedInitialData
-                    Queue.mainQueue().async {
-                        if let strongSelf = self {
-                            if !strongSelf.didSetInitialData {
-                                strongSelf.didSetInitialData = true
-                                strongSelf._initialData.set(.single(combinedInitialData))
-                            }
-                            
-                            strongSelf._cachedPeerDataAndMessages.set(.single((nil, nil)))
-                            
-                            let loadState: ChatHistoryNodeLoadState = .loading
-                            if strongSelf.loadState != loadState {
-                                strongSelf.loadState = loadState
-                                strongSelf.loadStateUpdated?(loadState, false)
-                            }
-                            
-                            let historyState: ChatHistoryNodeHistoryState = .loading
-                            if strongSelf.currentHistoryState != historyState {
-                                strongSelf.currentHistoryState = historyState
-                                strongSelf.historyState.set(historyState)
-                            }
-                        }
-                    }
-                    return .complete()
-                case let .HistoryView(view, type, scrollPosition, flashIndicators, originalScrollPosition, data, id):
-                    if case .Generic(.FillHole) = type {
-                        applyHole()
-                        return .fail(Void())
-                    }
-                    
-                    initialData = data
-                    var updatedScrollPosition = scrollPosition
-                    
-                    var reverse = false
-                    var includeSearchEntry = false
-                    if case let .list(search, reverseValue) = mode {
-                        includeSearchEntry = search
-                        reverse = reverseValue
-                    }
-                    
-                    let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType)
-                    
-                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared), associatedData: associatedData, id: id)
-                    let previousValueAndVersion = previousView.swap((processedView, update.1))
-                    let previous = previousValueAndVersion?.0
-                    
-                    if let previousVersion = previousValueAndVersion?.1 {
-                        if !GlobalExperimentalSettings.isAppStoreBuild {
-                            precondition(update.1 >= previousVersion)
-                        }
-                        assert(update.1 >= previousVersion)
-                    }
-                    
-                    if scrollPosition == nil, let originalScrollPosition = originalScrollPosition {
-                        switch originalScrollPosition {
-                            case let .index(index, position, _, _):
-                                if case .upperBound = index {
-                                    if let previous = previous, previous.filteredEntries.isEmpty {
-                                        updatedScrollPosition = .index(index: index, position: position, directionHint: .Down, animated: false)
-                                    }
-                                }
-                            default:
-                                break
-                        }
-                    }
-                    
-                    let reason: ChatHistoryViewTransitionReason
-                    var prepareOnMainQueue = false
-                    
-                    let previousHistoryAppearsClearedValue = previousHistoryAppearsCleared.swap(historyAppearsCleared)
-                    if previousHistoryAppearsClearedValue != nil && previousHistoryAppearsClearedValue != historyAppearsCleared && !historyAppearsCleared {
-                        reason = ChatHistoryViewTransitionReason.Initial(fadeIn: !processedView.filteredEntries.isEmpty)
-                    } else if let previous = previous, previous.id == processedView.id, previous.originalView.entries == processedView.originalView.entries {
-                        reason = ChatHistoryViewTransitionReason.InteractiveChanges
-                        updatedScrollPosition = nil
-                    } else {
-                        switch type {
-                            case let .Initial(fadeIn):
-                                reason = ChatHistoryViewTransitionReason.Initial(fadeIn: fadeIn)
-                                prepareOnMainQueue = !fadeIn
-                            case let .Generic(genericType):
-                                switch genericType {
-                                    case .InitialUnread, .Initial:
-                                        reason = ChatHistoryViewTransitionReason.Initial(fadeIn: false)
-                                    case .Generic:
-                                        reason = ChatHistoryViewTransitionReason.InteractiveChanges
-                                    case .UpdateVisible:
-                                        reason = ChatHistoryViewTransitionReason.Reload
-                                    case .FillHole:
-                                        reason = ChatHistoryViewTransitionReason.HoleReload
-                                }
-                        }
-                    }
-                    let transitionVersion = nextTransitionVersion.modify { $0 + 1 }
-                    return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators)
-                    |> map({
-                        (mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, transition: $0), transitionVersion)
-                    })
-                    |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
-                    |> introduceError(Void.self)
-            }
-        }
-        
-        let appliedTransitionVersion = Atomic<Int?>(value: nil)
-        
-        let appliedTransition = historyViewTransition
-        |> deliverOnMainQueue
-        |> mapToQueue { [weak self] (transition, version) -> Signal<Void, Void> in
-            if let strongSelf = self {
-                let previousAppliedVersion = appliedTransitionVersion.swap(version) ?? 0
-                if !GlobalExperimentalSettings.isAppStoreBuild {
-                    precondition(version == previousAppliedVersion + 1)
+            case let .Loading(combinedInitialData, type):
+                if case .Generic(.FillHole) = type {
+                    applyHole()
+                    return
                 }
-                assert(version == previousAppliedVersion + 1)
-                return strongSelf.enqueueHistoryViewTransition(transition)
-                |> introduceError(Void.self)
+                
+                initialData = combinedInitialData
+                Queue.mainQueue().async {
+                    if let strongSelf = self {
+                        if !strongSelf.didSetInitialData {
+                            strongSelf.didSetInitialData = true
+                            strongSelf._initialData.set(.single(combinedInitialData))
+                        }
+                        
+                        strongSelf._cachedPeerDataAndMessages.set(.single((nil, nil)))
+                        
+                        let loadState: ChatHistoryNodeLoadState = .loading
+                        if strongSelf.loadState != loadState {
+                            strongSelf.loadState = loadState
+                            strongSelf.loadStateUpdated?(loadState, false)
+                        }
+                        
+                        let historyState: ChatHistoryNodeHistoryState = .loading
+                        if strongSelf.currentHistoryState != historyState {
+                            strongSelf.currentHistoryState = historyState
+                            strongSelf.historyState.set(historyState)
+                        }
+                    }
+                }
+                return
+            case let .HistoryView(view, type, scrollPosition, flashIndicators, originalScrollPosition, data, id):
+                if case .Generic(.FillHole) = type {
+                    applyHole()
+                    return
+                }
+                
+                initialData = data
+                var updatedScrollPosition = scrollPosition
+                
+                var reverse = false
+                var includeSearchEntry = false
+                if case let .list(search, reverseValue) = mode {
+                    includeSearchEntry = search
+                    reverse = reverseValue
+                }
+                
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType)
+                
+                let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared), associatedData: associatedData, id: id)
+                let previousValueAndVersion = previousView.swap((processedView, update.1))
+                let previous = previousValueAndVersion?.0
+                
+                if let previousVersion = previousValueAndVersion?.1 {
+                    if !GlobalExperimentalSettings.isAppStoreBuild {
+                        precondition(update.1 >= previousVersion)
+                    }
+                    assert(update.1 >= previousVersion)
+                }
+                
+                if scrollPosition == nil, let originalScrollPosition = originalScrollPosition {
+                    switch originalScrollPosition {
+                    case let .index(index, position, _, _):
+                        if case .upperBound = index {
+                            if let previous = previous, previous.filteredEntries.isEmpty {
+                                updatedScrollPosition = .index(index: index, position: position, directionHint: .Down, animated: false)
+                            }
+                        }
+                    default:
+                        break
+                    }
+                }
+                
+                let reason: ChatHistoryViewTransitionReason
+                
+                let previousHistoryAppearsClearedValue = previousHistoryAppearsCleared.swap(historyAppearsCleared)
+                if previousHistoryAppearsClearedValue != nil && previousHistoryAppearsClearedValue != historyAppearsCleared && !historyAppearsCleared {
+                    reason = ChatHistoryViewTransitionReason.Initial(fadeIn: !processedView.filteredEntries.isEmpty)
+                } else if let previous = previous, previous.id == processedView.id, previous.originalView.entries == processedView.originalView.entries {
+                    reason = ChatHistoryViewTransitionReason.InteractiveChanges
+                    updatedScrollPosition = nil
+                } else {
+                    switch type {
+                    case let .Initial(fadeIn):
+                        reason = ChatHistoryViewTransitionReason.Initial(fadeIn: fadeIn)
+                    case let .Generic(genericType):
+                        switch genericType {
+                        case .InitialUnread, .Initial:
+                            reason = ChatHistoryViewTransitionReason.Initial(fadeIn: false)
+                        case .Generic:
+                            reason = ChatHistoryViewTransitionReason.InteractiveChanges
+                        case .UpdateVisible:
+                            reason = ChatHistoryViewTransitionReason.Reload
+                        case .FillHole:
+                            reason = ChatHistoryViewTransitionReason.HoleReload
+                        }
+                    }
+                }
+                let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators)
+                let mappedTransition = mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, transition: rawTransition)
+                Queue.mainQueue().async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.enqueueHistoryViewTransition(mappedTransition)
+                }
             }
-            return .complete()
-        }
+        })
         
-        let restartedTransition = (
-            appliedTransition
-            |> `catch` { _ -> Signal<Void, Void> in
-                return .complete()
-            }
-        )
-        |> restart
-        self.historyDisposable.set(restartedTransition.start())
+        self.historyDisposable.set(historyViewTransitionDisposable)
         
         let previousMaxIncomingMessageIndexByNamespace = Atomic<[MessageId.Namespace: MessageIndex]>(value: [:])
         let readHistory = combineLatest(self.maxVisibleIncomingMessageIndex.get(), self.canReadHistory.get())
@@ -743,7 +719,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
             if let strongSelf = self, let transactionState = opaqueTransactionState as? ChatHistoryTransactionOpaqueState {
-                self?.processDisplayedItemRangeChanged(displayedRange: displayedRange, transactionState: transactionState)
+                strongSelf.processDisplayedItemRangeChanged(displayedRange: displayedRange, transactionState: transactionState)
             }
         }
         
@@ -1017,11 +993,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
             if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {
-                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: 0)
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: (self.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
             } else if loaded.firstIndex < 5, historyView.originalView.laterId == nil, !historyView.originalView.holeLater, let chatHistoryLocationValue = self.chatHistoryLocationValue, !chatHistoryLocationValue.isAtUpperBound, historyView.originalView.anchorIndex != .upperBound {
-                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .upperBound, anchorIndex: .upperBound, count: historyMessageCount), id: 0)
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .upperBound, anchorIndex: .upperBound, count: historyMessageCount), id: (self.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
             } else if loaded.lastIndex >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
-                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount), id: 0)
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount), id: (self.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
             }
         }
         
@@ -1204,143 +1180,132 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.maxVisibleIncomingMessageIndex.set(index)
     }
     
-    private func enqueueHistoryViewTransition(_ transition: ChatHistoryListViewTransition) -> Signal<Void, NoError> {
-        return Signal { [weak self] subscriber in
+    private func enqueueHistoryViewTransition(_ transition: ChatHistoryListViewTransition) {
+        self.enqueuedHistoryViewTransitions.append(transition)
+        self.prefetchManager.updateOptions(InChatPrefetchOptions(networkType: transition.networkType, peerType: transition.peerType))
+                
+        if !self.didSetInitialData {
+            self.didSetInitialData = true
+            self._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData)))
+        }
+                
+        if self.isNodeLoaded {
+            self.dequeueHistoryViewTransitions()
+        } else {
+            self._cachedPeerDataAndMessages.set(.single((transition.cachedData, transition.cachedDataMessages)))
+            
+            let loadState: ChatHistoryNodeLoadState
+            if transition.historyView.filteredEntries.isEmpty {
+                loadState = .empty
+            } else {
+                loadState = .messages
+            }
+            if self.loadState != loadState {
+                self.loadState = loadState
+                self.loadStateUpdated?(loadState, transition.options.contains(.AnimateInsertion))
+            }
+            
+            let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
+            if self.currentHistoryState != historyState {
+                self.currentHistoryState = historyState
+                self.historyState.set(historyState)
+            }
+        }
+    }
+    
+    private func dequeueHistoryViewTransitions() {
+        if self.enqueuedHistoryViewTransitions.isEmpty || self.hasActiveTransition {
+            return
+        }
+        self.hasActiveTransition = true
+        let transition = self.enqueuedHistoryViewTransitions.removeFirst()
+        
+        let animated = transition.options.contains(.AnimateInsertion)
+        
+        let completion: (ListViewDisplayedItemRange) -> Void = { [weak self] visibleRange in
             if let strongSelf = self {
-                if let _ = strongSelf.enqueuedHistoryViewTransition {
-                    preconditionFailure()
-                }
+                strongSelf.historyView = transition.historyView
                 
-                strongSelf.prefetchManager.updateOptions(InChatPrefetchOptions(networkType: transition.networkType, peerType: transition.peerType))
-                
-                if !strongSelf.didSetInitialData {
-                    strongSelf.didSetInitialData = true
-                    strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData)))
-                }
-                
-                strongSelf.enqueuedHistoryViewTransition = (transition, {
-                    if let scrolledToIndex = transition.scrolledToIndex {
-                        if let strongSelf = self {
-                            strongSelf.scrolledToIndex?(scrolledToIndex)
-                        }
-                    }
-                    subscriber.putCompletion()
-                })
-                
-                if strongSelf.isNodeLoaded {
-                    strongSelf.dequeueHistoryViewTransition()
-                } else {
-                    strongSelf._cachedPeerDataAndMessages.set(.single((transition.cachedData, transition.cachedDataMessages)))
-                    
-                    let loadState: ChatHistoryNodeLoadState
-                    if transition.historyView.filteredEntries.isEmpty {
+                let loadState: ChatHistoryNodeLoadState
+                if let historyView = strongSelf.historyView {
+                    if historyView.filteredEntries.isEmpty {
                         loadState = .empty
                     } else {
                         loadState = .messages
                     }
-                    if strongSelf.loadState != loadState {
-                        strongSelf.loadState = loadState
-                        strongSelf.loadStateUpdated?(loadState, transition.options.contains(.AnimateInsertion))
-                    }
-                    
-                    let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
-                    if strongSelf.currentHistoryState != historyState {
-                        strongSelf.currentHistoryState = historyState
-                        strongSelf.historyState.set(historyState)
-                    }
+                } else {
+                    loadState = .loading
                 }
-            } else {
-                subscriber.putCompletion()
-            }
-            
-            return EmptyDisposable
-        } |> runOn(Queue.mainQueue())
-    }
-    
-    private func dequeueHistoryViewTransition() {
-        if let (transition, completion) = self.enqueuedHistoryViewTransition {
-            self.enqueuedHistoryViewTransition = nil
-            
-            let animated = transition.options.contains(.AnimateInsertion)
-            
-            let completion: (ListViewDisplayedItemRange) -> Void = { [weak self] visibleRange in
-                if let strongSelf = self {
-                    strongSelf.historyView = transition.historyView
-                    
-                    let loadState: ChatHistoryNodeLoadState
-                    if let historyView = strongSelf.historyView {
-                        if historyView.filteredEntries.isEmpty {
-                            loadState = .empty
-                        } else {
-                            loadState = .messages
-                        }
-                    } else {
-                        loadState = .loading
-                    }
-                    
-                    if strongSelf.loadState != loadState {
-                        strongSelf.loadState = loadState
-                        strongSelf.loadStateUpdated?(loadState, animated)
-                    }
-                    
-                    if let range = visibleRange.loadedRange {
-                        if let visible = visibleRange.visibleRange {
-                            var visibleFirstIndex = visible.firstIndex
-                            /*if !visible.firstIndexFullyVisible {
-                                visibleFirstIndex += 1
-                            }*/
-                            if visibleFirstIndex <= visible.lastIndex {
-                                let (messageIndex, _) =  maxMessageIndexForEntries(transition.historyView, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
-                                if let messageIndex = messageIndex {
-                                    strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
-                                }
+                
+                if strongSelf.loadState != loadState {
+                    strongSelf.loadState = loadState
+                    strongSelf.loadStateUpdated?(loadState, animated)
+                }
+                
+                if let range = visibleRange.loadedRange {
+                    if let visible = visibleRange.visibleRange {
+                        var visibleFirstIndex = visible.firstIndex
+                        /*if !visible.firstIndexFullyVisible {
+                            visibleFirstIndex += 1
+                        }*/
+                        if visibleFirstIndex <= visible.lastIndex {
+                            let (messageIndex, _) =  maxMessageIndexForEntries(transition.historyView, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
+                            if let messageIndex = messageIndex {
+                                strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
                             }
                         }
                     }
-                    if !strongSelf.didSetInitialData {
-                        strongSelf.didSetInitialData = true
-                        strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData)))
-                    }
-                    strongSelf._cachedPeerDataAndMessages.set(.single((transition.cachedData, transition.cachedDataMessages)))
-                    let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
-                    if strongSelf.currentHistoryState != historyState {
-                        strongSelf.currentHistoryState = historyState
-                        strongSelf.historyState.set(historyState)
-                    }
-                    
-                    var buttonKeyboardMessageUpdated = false
-                    if let currentButtonKeyboardMessage = strongSelf.currentButtonKeyboardMessage, let buttonKeyboardMessage = transition.keyboardButtonsMessage {
-                        if currentButtonKeyboardMessage.id != buttonKeyboardMessage.id || currentButtonKeyboardMessage.stableVersion != buttonKeyboardMessage.stableVersion {
-                            buttonKeyboardMessageUpdated = true
-                        }
-                    } else if (strongSelf.currentButtonKeyboardMessage != nil) != (transition.keyboardButtonsMessage != nil) {
+                }
+                if !strongSelf.didSetInitialData {
+                    strongSelf.didSetInitialData = true
+                    strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData)))
+                }
+                strongSelf._cachedPeerDataAndMessages.set(.single((transition.cachedData, transition.cachedDataMessages)))
+                let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
+                if strongSelf.currentHistoryState != historyState {
+                    strongSelf.currentHistoryState = historyState
+                    strongSelf.historyState.set(historyState)
+                }
+                
+                var buttonKeyboardMessageUpdated = false
+                if let currentButtonKeyboardMessage = strongSelf.currentButtonKeyboardMessage, let buttonKeyboardMessage = transition.keyboardButtonsMessage {
+                    if currentButtonKeyboardMessage.id != buttonKeyboardMessage.id || currentButtonKeyboardMessage.stableVersion != buttonKeyboardMessage.stableVersion {
                         buttonKeyboardMessageUpdated = true
                     }
-                    if buttonKeyboardMessageUpdated {
-                        strongSelf.currentButtonKeyboardMessage = transition.keyboardButtonsMessage
-                        strongSelf._buttonKeyboardMessage.set(.single(transition.keyboardButtonsMessage))
-                    }
-                    
-                    if transition.animateIn {
-                        strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-                    }
-                    
-                    completion()
+                } else if (strongSelf.currentButtonKeyboardMessage != nil) != (transition.keyboardButtonsMessage != nil) {
+                    buttonKeyboardMessageUpdated = true
                 }
-            }
-            
-            if let layoutActionOnViewTransition = self.layoutActionOnViewTransition {
-                self.layoutActionOnViewTransition = nil
-                let (mappedTransition, updateSizeAndInsets) = layoutActionOnViewTransition(transition)
+                if buttonKeyboardMessageUpdated {
+                    strongSelf.currentButtonKeyboardMessage = transition.keyboardButtonsMessage
+                    strongSelf._buttonKeyboardMessage.set(.single(transition.keyboardButtonsMessage))
+                }
                 
-                self.transaction(deleteIndices: mappedTransition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: mappedTransition.options, scrollToItem: mappedTransition.scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: mappedTransition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: completion)
-            } else {
-                self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: completion)
+                if transition.animateIn {
+                    strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
+                
+                if let scrolledToIndex = transition.scrolledToIndex {
+                    if let strongSelf = self {
+                        strongSelf.scrolledToIndex?(scrolledToIndex)
+                    }
+                }
+                
+                strongSelf.hasActiveTransition = false
+                strongSelf.dequeueHistoryViewTransitions()
             }
+        }
+        
+        if let layoutActionOnViewTransition = self.layoutActionOnViewTransition {
+            self.layoutActionOnViewTransition = nil
+            let (mappedTransition, updateSizeAndInsets) = layoutActionOnViewTransition(transition)
             
-            if transition.flashIndicators {
-                //self.flashHeaderItems()
-            }
+            self.transaction(deleteIndices: mappedTransition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: mappedTransition.options, scrollToItem: mappedTransition.scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: mappedTransition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: completion)
+        } else {
+            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: completion)
+        }
+        
+        if transition.flashIndicators {
+            //self.flashHeaderItems()
         }
     }
     
@@ -1357,7 +1322,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true
-            self.dequeueHistoryViewTransition()
+            self.dequeueHistoryViewTransitions()
         }
     }
     

@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Photos
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
@@ -75,7 +77,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         var nameText: String?
         var dateText: String?
         switch entry {
-            case let .image(_, _, peer, date, _):
+            case let .image(_, _, peer, date, _, _):
                 nameText = peer.displayTitle
                 dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
             default:

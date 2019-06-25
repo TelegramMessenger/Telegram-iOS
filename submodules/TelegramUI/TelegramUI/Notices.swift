@@ -141,9 +141,14 @@ private struct ApplicationSpecificNoticeKeys {
     private static let botPaymentLiabilityNamespace: Int32 = 1
     private static let globalNamespace: Int32 = 2
     private static let permissionsNamespace: Int32 = 3
+    private static let peerReportNamespace: Int32 = 4
     
     static func botPaymentLiabilityNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: botPaymentLiabilityNamespace), key: noticeKey(peerId: peerId, key: 0))
+    }
+    
+    static func irrelevantPeerGeoNotice(peerId: PeerId) -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: peerReportNamespace), key: noticeKey(peerId: peerId, key: 0))
     }
     
     static func secretChatInlineBotUsage() -> NoticeEntryKey {
@@ -200,6 +205,16 @@ private struct ApplicationSpecificNoticeKeys {
 }
 
 public struct ApplicationSpecificNotice {
+    static func irrelevantPeerGeoReportKey(peerId: PeerId) -> NoticeEntryKey {
+        return ApplicationSpecificNoticeKeys.irrelevantPeerGeoNotice(peerId: peerId)
+    }
+    
+    static func setIrrelevantPeerGeoReport(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
+        return postbox.transaction { transaction -> Void in
+            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.irrelevantPeerGeoNotice(peerId: peerId), value: ApplicationSpecificBoolNotice())
+        }
+    }
+    
     static func getBotPaymentLiability(accountManager: AccountManager, peerId: PeerId) -> Signal<Bool, NoError> {
         return accountManager.transaction { transaction -> Bool in
             if let _ = transaction.getNotice(ApplicationSpecificNoticeKeys.botPaymentLiabilityNotice(peerId: peerId)) as? ApplicationSpecificBoolNotice {

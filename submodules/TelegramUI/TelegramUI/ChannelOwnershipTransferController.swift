@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
@@ -396,7 +397,7 @@ private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     }
 }
 
-private func commitChannelOwnershipTransferController(context: AccountContext, channel: TelegramChannel, member: TelegramUser, completion: @escaping () -> Void) -> ViewController {
+private func commitChannelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: (() -> Void)?
@@ -409,6 +410,10 @@ private func commitChannelOwnershipTransferController(context: AccountContext, c
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Done, action: {
         proceedImpl?()
     })])
+    
+    contentNode.complete = {
+        proceedImpl?()
+    }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), contentNode: contentNode)
     let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
@@ -428,29 +433,85 @@ private func commitChannelOwnershipTransferController(context: AccountContext, c
             return
         }
         contentNode.updateIsChecking(true)
-        disposable.set((updateChannelOwnership(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, channelId: channel.id, memberId: member.id, password: contentNode.password) |> deliverOnMainQueue).start(error: { [weak contentNode] error in
-            contentNode?.updateIsChecking(false)
-            contentNode?.animateError()
-        }, completed: {
+        
+        let signal: Signal<PeerId?, ChannelOwnershipTransferError>
+        if let peer = peer as? TelegramChannel {
+            signal = context.peerChannelMemberCategoriesContextsManager.transferOwnership(account: context.account, peerId: peer.id, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
+                return .complete()
+            }
+            |> then(.single(nil))
+        } else if let peer = peer as? TelegramGroup {
+            signal = convertGroupToSupergroup(account: context.account, peerId: peer.id)
+            |> map(Optional.init)
+            |> mapError { _ in ChannelOwnershipTransferError.generic }
+            |> deliverOnMainQueue
+            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ChannelOwnershipTransferError> in
+                guard let upgradedPeerId = upgradedPeerId else {
+                    return .fail(.generic)
+                }
+                return context.peerChannelMemberCategoriesContextsManager.transferOwnership(account: context.account, peerId: upgradedPeerId, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
+                    return .complete()
+                }
+                |> then(.single(upgradedPeerId))
+            }
+        } else {
+            signal = .never()
+        }
+        
+        disposable.set((signal |> deliverOnMainQueue).start(next: { upgradedPeerId in
             dismissImpl?()
-            completion()
+            completion(upgradedPeerId)
+        }, error: { [weak contentNode] error in
+            var isGroup = true
+            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                isGroup = false
+            }
+            
+            var errorTextAndActions: (String, [TextAlertAction])?
+            switch error {
+                case .invalidPassword:
+                    contentNode?.animateError()
+                case .limitExceeded:
+                    errorTextAndActions = (presentationData.strings.TwoStepAuth_FloodError, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                case .adminsTooMuch:
+                    errorTextAndActions = (isGroup ? presentationData.strings.Group_OwnershipTransfer_ErrorAdminsTooMuch :  presentationData.strings.Channel_OwnershipTransfer_ErrorAdminsTooMuch, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                case .userPublicChannelsTooMuch:
+                    errorTextAndActions = (presentationData.strings.Channel_OwnershipTransfer_ErrorPublicChannelsTooMuch, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                case .userLocatedGroupsTooMuch:
+                    errorTextAndActions = (presentationData.strings.Group_OwnershipTransfer_ErrorLocatedGroupsTooMuch, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                case .userBlocked, .restricted:
+                    errorTextAndActions = (isGroup ? presentationData.strings.Group_OwnershipTransfer_ErrorPrivacyRestricted :  presentationData.strings.Channel_OwnershipTransfer_ErrorPrivacyRestricted, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                default:
+                    errorTextAndActions = (presentationData.strings.Login_UnknownError, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+            }
+            contentNode?.updateIsChecking(false)
+            
+            if let (text, actions) = errorTextAndActions {
+                dismissImpl?()
+                present(textAlertController(context: context, title: nil, text: text, actions: actions), nil)
+            }
         }))
     }
     return controller
 }
 
-private func confirmChannelOwnershipTransferController(context: AccountContext, channel: TelegramChannel, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping () -> Void) -> ViewController {
+private func confirmChannelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationTheme: presentationData.theme)
     
+    var isGroup = true
+    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+        isGroup = false
+    }
+    
     var title: String
     var text: String
-    if case .group = channel.info {
+    if isGroup {
         title = presentationData.strings.Group_OwnershipTransfer_Title
-        text = presentationData.strings.Group_OwnershipTransfer_DescriptionInfo(channel.displayTitle, member.displayTitle).0
+        text = presentationData.strings.Group_OwnershipTransfer_DescriptionInfo(peer.displayTitle, member.displayTitle).0
     } else {
         title = presentationData.strings.Channel_OwnershipTransfer_Title
-        text = presentationData.strings.Channel_OwnershipTransfer_DescriptionInfo(channel.displayTitle, member.displayTitle).0
+        text = presentationData.strings.Channel_OwnershipTransfer_DescriptionInfo(peer.displayTitle, member.displayTitle).0
     }
     
     let attributedTitle = NSAttributedString(string: title, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
@@ -458,38 +519,30 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
     let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
     
-    var dismissImpl: (() -> Void)?
-    
     let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Channel_OwnershipTransfer_ChangeOwner, action: {
-        dismissImpl?()
-        present(commitChannelOwnershipTransferController(context: context, channel: channel, member: member, completion: completion), nil)
+        present(commitChannelOwnershipTransferController(context: context, peer: peer, member: member, present: present, completion: completion), nil)
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
-        dismissImpl?()
     })], actionLayout: .vertical)
-    dismissImpl = { [weak controller] in
-        controller?.dismissAnimated()
-    }
     return controller
 }
 
-func channelOwnershipTransferController(context: AccountContext, channel: TelegramChannel, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping () -> Void) -> ViewController {
+func channelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationTheme: presentationData.theme)
     
     var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
     
     var text = presentationData.strings.OwnershipTransfer_SecurityRequirements
-    var isGroup = false
-    if case .group = channel.info {
-        isGroup = true
+    var isGroup = true
+    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+        isGroup = false
     }
     
-    var dismissImpl: (() -> Void)?
     var actions: [TextAlertAction] = []
     
     switch initialError {
         case .requestPassword:
-            return confirmChannelOwnershipTransferController(context: context, channel: channel, member: member, present: present, completion: completion)
+            return confirmChannelOwnershipTransferController(context: context, peer: peer, member: member, present: present, completion: completion)
         case .twoStepAuthTooFresh, .authSessionTooFresh:
             text = text + presentationData.strings.OwnershipTransfer_ComeBackLater
             actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
@@ -524,9 +577,5 @@ func channelOwnershipTransferController(context: AccountContext, channel: Telegr
     let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
     
-    let controller = richTextAlertController(context: context, title: title, text: attributedText, actions: actions)
-    dismissImpl = { [weak controller] in
-        controller?.dismissAnimated()
-    }
-    return controller
+    return richTextAlertController(context: context, title: title, text: attributedText, actions: actions)
 }

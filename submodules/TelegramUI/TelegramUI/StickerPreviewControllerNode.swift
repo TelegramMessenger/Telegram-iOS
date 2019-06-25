@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext

@@ -4,6 +4,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import Display
+import TelegramPresentationData
+import TelegramUIPreferences
 
 final class InstantPageController: ViewController {
     private let context: AccountContext

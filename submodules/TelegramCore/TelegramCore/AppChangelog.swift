@@ -3,10 +3,12 @@ import Foundation
 import PostboxMac
 import SwiftSignalKitMac
 import MtProtoKitMac
+import TelegramApiMac
 #else
 import Postbox
+import TelegramApi
 import SwiftSignalKit
-#if BUCK
+    #if BUCK
         import MtProtoKit
     #else
         import MtProtoKitDynamic

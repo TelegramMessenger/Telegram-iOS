@@ -13,6 +13,20 @@ public func removePeerChat(account: Account, peerId: PeerId, reportChatSpam: Boo
     }
 }
 
+public func terminateSecretChat(transaction: Transaction, peerId: PeerId) {
+    if let state = transaction.getPeerChatState(peerId) as? SecretChatState, state.embeddedState != .terminated {
+        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate(reportSpam: false), state: state).withUpdatedEmbeddedState(.terminated)
+        if updatedState != state {
+            transaction.setPeerChatState(peerId, state: updatedState)
+            if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
+                updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                    return updated
+                })
+            }
+        }
+    }
+}
+
 public func removePeerChat(account: Account, transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool) {
     if let _ = transaction.getPeerChatInterfaceState(peerId) {
         transaction.updatePeerChatInterfaceState(peerId, update: { current in
@@ -24,8 +38,7 @@ public func removePeerChat(account: Account, transaction: Transaction, mediaBox:
         })
     }
     if peerId.namespace == Namespaces.Peer.SecretChat {
-        if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
-            
+        if let state = transaction.getPeerChatState(peerId) as? SecretChatState, state.embeddedState != .terminated {
             let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.terminate(reportSpam: reportChatSpam), state: state).withUpdatedEmbeddedState(.terminated)
             if updatedState != state {
                 transaction.setPeerChatState(peerId, state: updatedState)

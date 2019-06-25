@@ -5,6 +5,8 @@ import Display
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 public final class ChatMessageNotificationItem: NotificationItem {
     let context: AccountContext

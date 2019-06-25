@@ -1,8 +1,10 @@
 import Foundation
 #if os(macOS)
 import SwiftSignalKitMac
+import TelegramApiMac
 #else
 import SwiftSignalKit
+import TelegramApi
 #endif
 
 public struct DeepLinkInfo {

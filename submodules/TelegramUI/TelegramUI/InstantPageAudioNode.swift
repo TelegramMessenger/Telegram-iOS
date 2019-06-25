@@ -5,6 +5,8 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
+import UniversalMediaPlayer
 
 private func generatePlayButton(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 48.0, height: 48.0), rotatedContext: { size, context in

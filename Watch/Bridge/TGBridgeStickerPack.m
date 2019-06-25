@@ -1,5 +1,6 @@
 #import "TGBridgeStickerPack.h"
-#import "TGBridgeDocumentMediaAttachment.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
 
 NSString *const TGBridgeStickerPackBuiltInKey = @"builtin";
 NSString *const TGBridgeStickerPackTitleKey = @"title";

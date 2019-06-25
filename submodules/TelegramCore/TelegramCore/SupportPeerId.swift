@@ -2,16 +2,17 @@
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
         import MtProtoKitDynamic
     #endif
 #endif
-
 
 public func supportPeerId(account:Account) -> Signal<PeerId?, NoError> {
     return account.network.request(Api.functions.help.getSupport())

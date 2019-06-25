@@ -1,10 +1,13 @@
 import Foundation
 #if os(macOS)
     import PostboxMac
+    import TelegramApiMac
 #else
     import Postbox
     import UIKit
+    import TelegramApi
 #endif
+
 
 private let typeFileName: Int32 = 0
 private let typeSticker: Int32 = 1

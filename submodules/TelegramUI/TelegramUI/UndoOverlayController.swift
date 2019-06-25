@@ -3,6 +3,7 @@ import UIKit
 import Display
 import TelegramCore
 import Postbox
+import TelegramPresentationData
 
 public enum UndoOverlayContent {
     case removedChat(text: String)

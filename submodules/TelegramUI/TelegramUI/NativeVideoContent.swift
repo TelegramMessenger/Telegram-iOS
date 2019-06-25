@@ -5,6 +5,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramAudio
+import UniversalMediaPlayer
 
 enum NativeVideoContentId: Hashable {
     case message(MessageId, UInt32, MediaId)

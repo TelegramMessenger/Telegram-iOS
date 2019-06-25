@@ -4,7 +4,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-
+import TelegramPresentationData
 import LegacyComponents
 
 private struct CreateChannelArguments {
@@ -127,7 +127,7 @@ private enum CreateChannelEntry: ItemListNodeEntry {
     func item(_ arguments: CreateChannelArguments) -> ListViewItem {
         switch self {
             case let .channelInfo(theme, strings, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, updatingImage: avatar, tag: CreateChannelEntryTag.info)
@@ -260,7 +260,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text: String
                 switch error {
-                    case .generic:
+                    case .generic, .tooMuchLocationBasedGroups:
                         text = presentationData.strings.Login_UnknownError
                     case .restricted:
                         text = presentationData.strings.Common_ActionNotAllowedError

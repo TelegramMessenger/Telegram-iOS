@@ -294,19 +294,22 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             }
             switch self.category {
                 case let .admins(query):
-                    if let updated = updated, let _ = updated.participant.adminInfo, (query == nil || updated.peer.indexName.matchesByTokens(query!)) {
-                        var found = false
-                        loop: for i in 0 ..< list.count {
-                            if list[i].peer.id == updated.peer.id {
-                                list[i] = updated
-                                found = true
-                                updatedList = true
-                                break loop
+                    if let updated = updated, (query == nil || updated.peer.indexName.matchesByTokens(query!)) {
+                        if case let .member(_, _, adminInfo, _) = updated.participant, adminInfo == nil {
+                        } else {
+                            var found = false
+                            loop: for i in 0 ..< list.count {
+                                if list[i].peer.id == updated.peer.id {
+                                    list[i] = updated
+                                    found = true
+                                    updatedList = true
+                                    break loop
+                                }
                             }
-                        }
-                        if !found {
-                            list.insert(updated, at: 0)
-                            updatedList = true
+                            if !found {
+                                list.insert(updated, at: 0)
+                                updatedList = true
+                            }
                         }
                     } else if let previous = previous, let _ = previous.adminInfo {
                         loop: for i in 0 ..< list.count {
@@ -315,6 +318,10 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                                 updatedList = true
                                 break loop
                             }
+                        }
+                        if let updated = updated, case .creator = updated.participant {
+                            list.insert(updated, at: 0)
+                            updatedList = true
                         }
                     }
                 case .restricted:

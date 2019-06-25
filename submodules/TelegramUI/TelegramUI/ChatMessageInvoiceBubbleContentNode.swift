@@ -5,6 +5,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import TelegramUIPreferences
 
 private let titleFont: UIFont = Font.semibold(15.0)
 private let textFont: UIFont = Font.regular(15.0)

@@ -5,6 +5,7 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     private let context: AccountContext

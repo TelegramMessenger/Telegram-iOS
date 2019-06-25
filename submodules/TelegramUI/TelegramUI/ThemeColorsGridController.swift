@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import LegacyComponents
+import TelegramPresentationData
 
 private func availableColors() -> [Int32] {
     return [

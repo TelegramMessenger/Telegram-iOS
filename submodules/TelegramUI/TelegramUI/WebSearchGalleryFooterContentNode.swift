@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import LegacyComponents
+import TelegramPresentationData
 
 final class WebSearchGalleryFooterContentNode: GalleryFooterContentNode {
     private let context: AccountContext

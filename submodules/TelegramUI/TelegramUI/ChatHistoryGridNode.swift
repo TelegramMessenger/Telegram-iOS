@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import TelegramPresentationData
 
 private class ChatGridLiveSelectorRecognizer: UIPanGestureRecognizer {
     private let selectionGestureActivationThreshold: CGFloat = 2.0
@@ -262,7 +263,8 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         
         let previousView = Atomic<ChatHistoryView?>(value: nil)
         
-        let historyViewTransition = combineLatest(historyViewUpdate, self.chatPresentationDataPromise.get()) |> mapToQueue { [weak self] update, chatPresentationData -> Signal<ChatHistoryGridViewTransition, NoError> in
+        let historyViewTransition = combineLatest(queue: messageViewQueue, historyViewUpdate, self.chatPresentationDataPromise.get())
+        |> mapToQueue { [weak self] update, chatPresentationData -> Signal<ChatHistoryGridViewTransition, NoError> in
             switch update {
                 case .Loading:
                     Queue.mainQueue().async { [weak self] in
@@ -283,11 +285,9 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     return .complete()
                 case let .HistoryView(view, type, scrollPosition, flashIndicators, _, _, id):
                     let reason: ChatHistoryViewTransitionReason
-                    var prepareOnMainQueue = false
                     switch type {
                         case let .Initial(fadeIn):
                             reason = ChatHistoryViewTransitionReason.Initial(fadeIn: fadeIn)
-                            prepareOnMainQueue = !fadeIn
                         case let .Generic(genericType):
                             switch genericType {
                                 case .InitialUnread, .Initial:
@@ -304,7 +304,9 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                     let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: .peer(peerId), view: view, includeUnreadEntry: false, includeEmptyEntry: false, includeChatInfoEntry: false, includeSearchEntry: false, reverse: false, groupMessages: false, selectedMessages: nil, presentationData: chatPresentationData, historyAppearsCleared: false), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: false), id: id)
                     let previous = previousView.swap(processedView)
                     
-                    return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: false, chatLocation: .peer(peerId), controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil, flashIndicators: flashIndicators) |> map({ mappedChatHistoryViewListTransition(context: context, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0, from: previous, presentationData: chatPresentationData) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
+                    let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: false, chatLocation: .peer(peerId), controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil, flashIndicators: flashIndicators)
+                    let mappedTransition = mappedChatHistoryViewListTransition(context: context, peerId: peerId, controllerInteraction: controllerInteraction, transition: rawTransition, from: previous, presentationData: chatPresentationData)
+                    return .single(mappedTransition)
             }
         }
         

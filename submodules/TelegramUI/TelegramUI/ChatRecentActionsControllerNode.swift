@@ -5,7 +5,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import Display
-
+import TelegramPresentationData
+import TelegramUIPreferences
 import SafariServices
 
 private final class ChatRecentActionsListOpaqueState {
@@ -412,6 +413,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.eventLogContext.loadMoreEntries()
         
         let historyViewUpdate = self.eventLogContext.get()
+        |> map { (entries, hasEarlier, type, hasEntries) in
+            return (entries.filter { entry in
+                if case let .participantToggleAdmin(prev, new) = entry.event.action, case .creator = prev.participant, case .member = new.participant {
+                    return false
+                }
+                return true
+            }, hasEarlier, type, hasEntries)
+        }
         
         let previousView = Atomic<[ChatRecentActionsEntry]?>(value: nil)
         
@@ -419,14 +428,6 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         |> mapToQueue { update, chatPresentationData -> Signal<ChatRecentActionsHistoryTransition, NoError> in
             let processedView = chatRecentActionsEntries(entries: update.0, presentationData: chatPresentationData)
             let previous = previousView.swap(processedView)
-                        
-            var prepareOnMainQueue = false
-            
-            if let previous = previous, previous == processedView {
-                
-            } else {
-                
-            }
             
             return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: update.2, canLoadEarlier: update.1, displayingResults: update.3, context: context, peer: peer, controllerInteraction: controllerInteraction))
         }
@@ -452,7 +453,6 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     }
                 }
                 
-                //if controllerInteraction.hiddenMedia != messageIdAndMedia {
                 controllerInteraction.hiddenMedia = messageIdAndMedia
                 
                 strongSelf.listNode.forEachItemNode { itemNode in
@@ -460,15 +460,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         itemNode.updateHiddenMedia()
                     }
                 }
-                //}
             }
         }))
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                let previousTheme = strongSelf.presentationData.theme
-                
                 strongSelf.presentationData = presentationData
                 strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: presentationData.largeEmoji)))
                 
@@ -775,7 +772,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             strongSelf.openPeer(peerId: peerId, peer: nil)
                         }
                     case .inaccessiblePeer:
-                        strongSelf.controllerInteraction.presentController(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                        strongSelf.controllerInteraction.presentController(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                     case .botStart:
                         break
                         //strongSelf.openPeer(peerId: peerId, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)), fromMessage: nil)
@@ -807,7 +804,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }, dismissInput: {
                             self?.view.endEditing(true)
                         })
-                    case let .wallpaper(slug):
+                    case .wallpaper:
                         break
                 }
             }

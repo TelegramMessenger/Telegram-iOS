@@ -3,9 +3,11 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
@@ -19,7 +21,7 @@ public enum ConvertGroupToSupergroupError {
 
 public func convertGroupToSupergroup(account: Account, peerId: PeerId) -> Signal<PeerId, ConvertGroupToSupergroupError> {
     return account.network.request(Api.functions.messages.migrateChat(chatId: peerId.id))
-        |> mapError { _ -> ConvertGroupToSupergroupError in
+        |> mapError { error -> ConvertGroupToSupergroupError in
             return .generic
         }
         |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))

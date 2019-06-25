@@ -5,6 +5,8 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramVoip
 
 private final class CallRatingAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings

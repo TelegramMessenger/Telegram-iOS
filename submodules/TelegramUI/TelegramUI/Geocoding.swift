@@ -19,12 +19,37 @@ func geocodeLocation(dictionary: [String: String]) -> Signal<(Double, Double)?, 
     }
 }
 
-func reverseGeocodeLocation(latitude: Double, longitude: Double) -> Signal<String, NoError> {
+struct ReverseGeocodedPlacemark {
+    let street: String?
+    let city: String?
+    let country: String?
+    
+    var fullAddress: String {
+        var components: [String] = []
+        if let street = self.street {
+            components.append(street)
+        }
+        if let city = self.city {
+            components.append(city)
+        }
+        if let country = self.country {
+            components.append(country)
+        }
+        
+        return components.joined(separator: ", ")
+    }
+}
+
+func reverseGeocodeLocation(latitude: Double, longitude: Double) -> Signal<ReverseGeocodedPlacemark?, NoError> {
     return Signal { subscriber in
         let geocoder = CLGeocoder()
         geocoder.reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude), completionHandler: { placemarks, _ in
-            if let placemarks = placemarks, let locality = placemarks.first?.locality {
-                subscriber.putNext(locality)
+            if let placemarks = placemarks, let placemark = placemarks.first {
+                let result = ReverseGeocodedPlacemark(street: placemark.thoroughfare, city: placemark.locality, country: placemark.country)
+                subscriber.putNext(result)
+                subscriber.putCompletion()
+            } else {
+                subscriber.putNext(nil)
                 subscriber.putCompletion()
             }
         })

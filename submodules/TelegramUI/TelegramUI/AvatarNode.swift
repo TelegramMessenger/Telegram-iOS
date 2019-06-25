@@ -5,6 +5,7 @@ import Postbox
 import Display
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
 private let savedMessagesIcon = UIImage(bundleImageName: "Avatar/SavedMessagesIcon")?.precomposed()

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 enum ChatNavigationButtonAction {
     case openChatInfo
@@ -27,7 +28,7 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
             let canClear: Bool
             if peer is TelegramUser || peer is TelegramGroup || peer is TelegramSecretChat {
                 canClear = true
-            } else if let peer = peer as? TelegramChannel, case .group = peer.info, peer.addressName == nil {
+            } else if let peer = peer as? TelegramChannel, case .group = peer.info, peer.addressName == nil && presentationInterfaceState.peerGeoLocation == nil {
                 canClear = true
             } else {
                 canClear = false

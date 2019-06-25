@@ -5,14 +5,18 @@ import LegacyComponents
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramPresentationData
 
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
 
-func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme) -> ViewController {
+func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?, String?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme, customLocationPicker: Bool = false, presentationCompleted: @escaping () -> Void = {}) -> ViewController {
     let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: theme)
-    let controller = TGLocationPickerController(context: legacyController.context, intent: TGLocationPickerControllerDefaultIntent)!
+    legacyController.presentationCompleted = {
+        presentationCompleted()
+    }
+    let controller = TGLocationPickerController(context: legacyController.context, intent: customLocationPicker ? TGLocationPickerControllerCustomLocationIntent : TGLocationPickerControllerDefaultIntent)!
     controller.peer = makeLegacyPeer(selfPeer)
     controller.receivingPeer = makeLegacyPeer(peer)
     controller.pallete = legacyLocationPalette(from: theme)
@@ -21,7 +25,7 @@ func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, pee
         Namespaces.Peer.CloudGroup,
         Namespaces.Peer.CloudUser
     ])
-    if namespacesWithEnabledLiveLocation.contains(peer.id.namespace) {
+    if namespacesWithEnabledLiveLocation.contains(peer.id.namespace) && !customLocationPicker {
         controller.allowLiveLocationSharing = true
     }
     let navigationController = TGNavigationController(controllers: [controller])!
@@ -30,10 +34,10 @@ func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, pee
     }, rootController: nil)
     legacyController.bind(controller: navigationController)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
-    controller.locationPicked = { [weak legacyController] coordinate, venue in
+    controller.locationPicked = { [weak legacyController] coordinate, venue, address in
         sendLocation(coordinate, venue.flatMap { venue in
             return MapVenue(title: venue.title, address: venue.address, provider: venue.provider, id: venue.venueId, type: venue.type)
-        })
+        }, address)
         legacyController?.dismiss()
     }
     controller.liveLocationStarted = { [weak legacyController] coordinate, period in

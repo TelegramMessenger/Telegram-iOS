@@ -5,6 +5,9 @@ import UIKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
+import TelegramUIPreferences
+import DeviceAccess
 
 final class ContactsControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode
@@ -80,7 +83,7 @@ final class ContactsControllerNode: ASDisplayNode {
         }
         
         inviteImpl = { [weak self] in
-            let _ = (DeviceAccess.authorizationStatus(context: context, subject: .contacts)
+            let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
             |> take(1)
             |> deliverOnMainQueue).start(next: { value in
                 guard let strongSelf = self else {
@@ -91,7 +94,7 @@ final class ContactsControllerNode: ASDisplayNode {
                     case .allowed:
                         strongSelf.openInvite?()
                     case .notDetermined:
-                        DeviceAccess.authorizeAccess(to: .contacts, context: strongSelf.context)
+                        DeviceAccess.authorizeAccess(to: .contacts)
                     default:
                         let presentationData = strongSelf.presentationData
                         present(textAlertController(context: strongSelf.context, title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {

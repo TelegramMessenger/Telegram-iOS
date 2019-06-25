@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
@@ -78,7 +79,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
         switch self.entry {
             case let .topImage(representations, _):
                 content = representations
-            case let .image(_, representations, _, _, _):
+            case let .image(_, representations, _, _, _, _):
                 content = representations
         }
         
@@ -167,7 +168,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 switch entry {
                     case let .topImage(topRepresentations, _):
                         representations = topRepresentations
-                    case let .image(_, imageRepresentations, _, _, _):
+                    case let .image(_, imageRepresentations, _, _, _, _):
                         representations = imageRepresentations
                 }
                 self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations), dispatchOnDisplayLink: false)
@@ -335,7 +336,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     switch entry {
                         case let .topImage(topRepresentations, _):
                             representations = topRepresentations
-                        case let .image(_, imageRepresentations, _, _, _):
+                        case let .image(_, imageRepresentations, _, _, _, _):
                             representations = imageRepresentations
                     }
                     

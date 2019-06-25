@@ -4,6 +4,9 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
+import UniversalMediaPlayer
 
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)

@@ -4,6 +4,8 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
@@ -1536,6 +1538,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         var contentNodeIndex = 0
         for (relativeFrame, _, apply) in contentNodeFramesPropertiesAndApply {
             apply(animation, synchronousLoads)
+            
+            if contentNodeIndex >= strongSelf.contentNodes.count {
+                break
+            }
             
             let contentNode = strongSelf.contentNodes[contentNodeIndex]
             let contentNodeFrame = relativeFrame.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)

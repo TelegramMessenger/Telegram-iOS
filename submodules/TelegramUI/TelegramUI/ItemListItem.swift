@@ -35,9 +35,15 @@ protocol ItemListItemFocusableNode {
     func focus()
 }
 
+enum ItemListInsetWithOtherSection {
+    case none
+    case full
+    case reduced
+}
+
 enum ItemListNeighbor {
     case none
-    case otherSection(requestsNoInset: Bool)
+    case otherSection(ItemListInsetWithOtherSection)
     case sameSection(alwaysPlain: Bool)
 }
 
@@ -50,7 +56,17 @@ func itemListNeighbors(item: ItemListItem, topItem: ItemListItem?, bottomItem: I
     let topNeighbor: ItemListNeighbor
     if let topItem = topItem {
         if topItem.sectionId != item.sectionId {
-            topNeighbor = .otherSection(requestsNoInset: topItem.requestsNoInset)
+            let topInset: ItemListInsetWithOtherSection
+            if topItem.requestsNoInset {
+                topInset = .none
+            } else {
+                if topItem is ItemListTextItem {
+                    topInset = .reduced
+                } else {
+                    topInset = .full
+                }
+            }
+            topNeighbor = .otherSection(topInset)
         } else {
             topNeighbor = .sameSection(alwaysPlain: topItem.isAlwaysPlain)
         }
@@ -61,7 +77,13 @@ func itemListNeighbors(item: ItemListItem, topItem: ItemListItem?, bottomItem: I
     let bottomNeighbor: ItemListNeighbor
     if let bottomItem = bottomItem {
         if bottomItem.sectionId != item.sectionId {
-            bottomNeighbor = .otherSection(requestsNoInset: bottomItem.requestsNoInset)
+            let bottomInset: ItemListInsetWithOtherSection
+            if bottomItem.requestsNoInset {
+                bottomInset = .none
+            } else {
+                bottomInset = .full
+            }
+            bottomNeighbor = .otherSection(bottomInset)
         } else {
             bottomNeighbor = .sameSection(alwaysPlain: bottomItem.isAlwaysPlain)
         }
@@ -96,11 +118,14 @@ func itemListNeighborsGroupedInsets(_ neighbors: ItemListNeighbors) -> UIEdgeIns
             topInset = UIScreenPixel + 35.0
         case .sameSection:
             topInset = 0.0
-        case let .otherSection(requestsNoInset):
-            if requestsNoInset {
-                topInset = 0.0
-            } else {
-                topInset = UIScreenPixel + 35.0
+        case let .otherSection(otherInset):
+            switch otherInset {
+                case .none:
+                    topInset = 0.0
+                case .full:
+                    topInset = UIScreenPixel + 35.0
+                case .reduced:
+                    topInset = UIScreenPixel + 16.0
             }
     }
     let bottomInset: CGFloat

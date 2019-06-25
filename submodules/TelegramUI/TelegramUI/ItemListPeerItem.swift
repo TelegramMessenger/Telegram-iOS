@@ -5,6 +5,8 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
 
 struct ItemListPeerItemEditing: Equatable {
     let editable: Bool

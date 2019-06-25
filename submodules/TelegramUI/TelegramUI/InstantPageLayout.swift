@@ -3,6 +3,8 @@ import UIKit
 import TelegramCore
 import Postbox
 import Display
+import TelegramPresentationData
+import TelegramUIPreferences
 
 final class InstantPageLayout {
     let origin: CGPoint

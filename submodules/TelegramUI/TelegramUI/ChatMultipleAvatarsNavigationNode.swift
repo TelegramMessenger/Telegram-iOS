@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import Postbox
+import TelegramPresentationData
 
 final class ChatMultipleAvatarsNavigationNode: ASDisplayNode {
     private let multipleAvatarsNode: MultipleAvatarsNode

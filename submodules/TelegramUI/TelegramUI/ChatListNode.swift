@@ -5,6 +5,8 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import Postbox
+import TelegramPresentationData
+import TelegramUIPreferences
 
 public struct ChatListNodePeersFilter: OptionSet {
     public var rawValue: Int32

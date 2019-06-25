@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 import Postbox
+import TelegramPresentationData
 
 enum BotCheckoutNativeCardEntryStatus {
     case notReady

@@ -1,4 +1,7 @@
 #import "TGNeoRowController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 #import "TGNeoConversationRowController.h"
 #import "TGNeoConversationSimpleRowController.h"
@@ -11,8 +14,6 @@
 #import "TGNeoMessageViewModel.h"
 #import "TGNeoBubbleMessageViewModel.h"
 #import "TGNeoStickerMessageViewModel.h"
-
-#import "TGBridgeMessage.h"
 
 #import "WKInterfaceGroup+Signals.h"
 #import "TGBridgeMediaSignals.h"

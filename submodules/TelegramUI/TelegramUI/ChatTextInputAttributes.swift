@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import Postbox
+import TelegramPresentationData
 
 private let alphanumericCharacters = CharacterSet.alphanumerics
 
@@ -10,6 +11,7 @@ struct ChatTextInputAttributes {
     static let bold = NSAttributedStringKey(rawValue: "Attribute__Bold")
     static let italic = NSAttributedStringKey(rawValue: "Attribute__Italic")
     static let monospace = NSAttributedStringKey(rawValue: "Attribute__Monospace")
+    static let strikethrough = NSAttributedStringKey(rawValue: "Attribute__Strikethrough")
     static let textMention = NSAttributedStringKey(rawValue: "Attribute__TextMention")
     static let textUrl = NSAttributedStringKey(rawValue: "Attribute__TextUrl")
 }
@@ -22,7 +24,7 @@ func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedStr
         for (key, value) in attributes {
             if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl {
                 result.addAttribute(key, value: value, range: range)
-            } else if key == ChatTextInputAttributes.bold || key == ChatTextInputAttributes.italic || key == ChatTextInputAttributes.monospace {
+            } else if key == ChatTextInputAttributes.bold || key == ChatTextInputAttributes.italic || key == ChatTextInputAttributes.monospace || key == ChatTextInputAttributes.strikethrough {
                 result.addAttribute(key, value: value, range: range)
             }
         }
@@ -36,7 +38,6 @@ private struct FontAttributes: OptionSet {
     static let bold = FontAttributes(rawValue: 1 << 0)
     static let italic = FontAttributes(rawValue: 1 << 1)
     static let monospace = FontAttributes(rawValue: 1 << 2)
-    static let strikethrough = FontAttributes(rawValue: 1 << 3)
 }
 
 func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor) -> NSAttributedString {
@@ -65,13 +66,20 @@ func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize:
             } else if key == ChatTextInputAttributes.monospace {
                 result.addAttribute(key, value: value, range: range)
                 fontAttributes.insert(.monospace)
+            } else if key == ChatTextInputAttributes.strikethrough {
+                result.addAttribute(key, value: value, range: range)
+                result.addAttribute(NSAttributedStringKey.strikethroughStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
             }
         }
             
         if !fontAttributes.isEmpty {
             var font: UIFont?
             if fontAttributes == [.bold, .italic, .monospace] {
-                
+                font = Font.semiboldItalicMonospace(fontSize)
+            } else if fontAttributes == [.bold, .monospace] {
+                font = Font.semiboldMonospace(fontSize)
+            } else if fontAttributes == [.italic, .monospace] {
+                font = Font.italicMonospace(fontSize)
             } else if fontAttributes == [.bold, .italic] {
                 font = Font.semiboldItalic(fontSize)
             } else if fontAttributes == [.bold] {
@@ -383,7 +391,7 @@ private func refreshTextUrls(text: NSString, initialAttributedText: NSAttributed
 }
 
 func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat) {
-    guard var initialAttributedText = textNode.attributedText, initialAttributedText.length != 0 else {
+    guard let initialAttributedText = textNode.attributedText, initialAttributedText.length != 0 else {
         return
     }
     
@@ -405,6 +413,7 @@ func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: Prese
         textNode.textView.textStorage.removeAttribute(NSAttributedStringKey.font, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedStringKey.foregroundColor, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedStringKey.underlineStyle, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(NSAttributedStringKey.strikethroughStyle, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textUrl, range: fullRange)
         
@@ -431,6 +440,9 @@ func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: Prese
                 } else if key == ChatTextInputAttributes.monospace {
                     textNode.textView.textStorage.addAttribute(key, value: value, range: range)
                     fontAttributes.insert(.monospace)
+                } else if key == ChatTextInputAttributes.strikethrough {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textNode.textView.textStorage.addAttribute(NSAttributedStringKey.strikethroughStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
             }
                 
@@ -491,8 +503,8 @@ func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, attribute:
             for (key, _) in attributes {
                 if key == attribute && range == nsRange {
                     addAttribute = false
+                    attributesToRemove.append(key)
                 }
-                attributesToRemove.append(key)
             }
         }
         
@@ -633,7 +645,7 @@ func breakChatInputText(_ text: NSAttributedString) -> [NSAttributedString] {
     }
 }
 
-private let markdownRegexFormat = "(^|\\s|\\n)(````?)([\\s\\S]+?)(````?)([\\s\\n\\.,:?!;]|$)|(^|\\s)(`|\\*\\*|__)([^\\n]+?)\\7([\\s\\.,:?!;]|$)|@(\\d+)\\s*\\((.+?)\\)"
+private let markdownRegexFormat = "(^|\\s|\\n)(````?)([\\s\\S]+?)(````?)([\\s\\n\\.,:?!;]|$)|(^|\\s)(`|\\*\\*|__|~~)([^\\n]+?)\\7([\\s\\.,:?!;]|$)|@(\\d+)\\s*\\((.+?)\\)"
 private let markdownRegex = try? NSRegularExpression(pattern: markdownRegexFormat, options: [.caseInsensitive, .anchorsMatchLines])
 
 func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttributedString {
@@ -676,6 +688,9 @@ func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttributedStri
                         offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
                     case "__":
                         result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.italic: true as NSNumber]))
+                        offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
+                    case "~~":
+                        result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.strikethrough: true as NSNumber]))
                         offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
                     default:
                         break

@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import TelegramPresentationData
 
 private func generateArrowImage(_ theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 7.0, height: 13.0), rotatedContext: { size, context in
@@ -104,6 +105,12 @@ struct PresentationResourcesItemList {
     static func addPersonIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddPersonIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Contact List/AddMemberIcon"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    static func createGroupIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListCreateGroupIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Location/CreateGroupIcon"), color: theme.list.itemAccentColor)
         })
     }
     

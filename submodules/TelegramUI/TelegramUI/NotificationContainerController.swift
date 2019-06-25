@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
+import TelegramPresentationData
 
 public final class NotificationContainerController: ViewController {
     private var controllerNode: NotificationContainerControllerNode {

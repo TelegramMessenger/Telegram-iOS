@@ -1,13 +1,13 @@
 #import "TGGroupInfoController.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGWatchCommon.h"
 
 #import "TGStringUtils.h"
 
-#import "TGBridgeContext.h"
 #import "TGBridgeConversationSignals.h"
 #import "TGBridgePeerSettingsSignals.h"
-#import "TGBridgeChat.h"
-#import "TGBridgeUser.h"
 
 #import "WKInterfaceTable+TGDataDrivenTable.h"
 #import "TGTableDeltaUpdater.h"

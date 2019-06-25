@@ -1,8 +1,10 @@
 import Foundation
 #if os(macOS)
 import PostboxMac
+import TelegramApiMac
 #else
 import Postbox
+import TelegramApi
 #endif
 
 func updateMessageMedia(transaction: Transaction, id: MediaId, media: Media?) {

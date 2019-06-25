@@ -3,8 +3,10 @@ import Foundation
 import PostboxMac
 import MtProtoKitMac
 import SwiftSignalKitMac
+import TelegramApiMac
 #else
 import Postbox
+import TelegramApi
 #if BUCK
         import MtProtoKit
     #else
@@ -12,6 +14,7 @@ import Postbox
     #endif
 import SwiftSignalKit
 #endif
+
 
 private let minLayer: Int32 = 65
 

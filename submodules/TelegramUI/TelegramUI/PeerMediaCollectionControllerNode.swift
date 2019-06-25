@@ -5,6 +5,7 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
+import TelegramPresentationData
 
 struct PeerMediaCollectionMessageForGallery {
     let message: Message

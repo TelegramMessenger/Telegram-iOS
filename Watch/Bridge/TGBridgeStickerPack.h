@@ -1,4 +1,4 @@
-#import "TGBridgeCommon.h"
+#import <WatchCommonWatch/WatchCommonWatch.h>
 
 @interface TGBridgeStickerPack : NSObject <NSCoding>
 {

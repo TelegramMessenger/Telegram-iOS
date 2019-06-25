@@ -6,7 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import PassKit
-
+import TelegramPresentationData
 import TelegramUIPrivateModule
 
 final class BotCheckoutControllerArguments {

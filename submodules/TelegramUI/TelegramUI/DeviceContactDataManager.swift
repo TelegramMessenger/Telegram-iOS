@@ -4,6 +4,8 @@ import Postbox
 import TelegramCore
 import Contacts
 import AddressBook
+import TelegramUIPreferences
+import DeviceAccess
 
 public typealias DeviceContactStableId = String
 
@@ -55,7 +57,7 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
     }
     
     private func retrieveContacts() -> ([DeviceContactStableId: DeviceContactBasicData], [PeerId: DeviceContactBasicDataWithReference]) {
-        let keysToFetch: [CNKeyDescriptor] = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactInstantMessageAddressesKey as CNKeyDescriptor]
+        let keysToFetch: [CNKeyDescriptor] = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactUrlAddressesKey as CNKeyDescriptor]
         
         let request = CNContactFetchRequest(keysToFetch: keysToFetch)
         request.unifyResults = true
@@ -65,8 +67,8 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
         let _ = try? self.store.enumerateContacts(with: request, usingBlock: { contact, _ in
             let stableIdAndContact = DeviceContactDataModernContext.parseContact(contact)
             result[stableIdAndContact.0] = stableIdAndContact.1
-            for address in contact.instantMessageAddresses {
-                if address.value.service == "Telegram", let peerId = parseAppSpecificContactReference(address.value.username) {
+            for address in contact.urlAddresses {
+                if address.label == "Telegram", let peerId = parseAppSpecificContactReference(address.value as String) {
                     references[peerId] = DeviceContactBasicDataWithReference(stableId: stableIdAndContact.0, basicData: stableIdAndContact.1)
                 }
             }
@@ -483,6 +485,7 @@ private final class DeviceContactDataManagerImpl {
     private var stableIdToBasicContactData: [DeviceContactStableId: DeviceContactBasicData] = [:]
     private var normalizedPhoneNumberToStableId: [DeviceContactNormalizedPhoneNumber: [DeviceContactStableId]] = [:]
     private var appSpecificReferences: [PeerId: DeviceContactBasicDataWithReference] = [:]
+    private var stableIdToAppSpecificReference: [DeviceContactStableId: PeerId] = [:]
     
     private var importableContacts: [DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData] = [:]
     
@@ -614,6 +617,11 @@ private final class DeviceContactDataManagerImpl {
     
     private func updateAppSpecificReferences(appSpecificReferences: [PeerId: DeviceContactBasicDataWithReference]) {
         self.appSpecificReferences = appSpecificReferences
+        var stableIdToAppSpecificReference: [DeviceContactStableId: PeerId] = [:]
+        for (peerId, value) in appSpecificReferences {
+            stableIdToAppSpecificReference[value.stableId] = peerId
+        }
+        self.stableIdToAppSpecificReference = stableIdToAppSpecificReference
         for f in self.appSpecificReferencesSubscribers.copyItems() {
             f(appSpecificReferences)
         }
@@ -719,12 +727,12 @@ private final class DeviceContactDataManagerImpl {
         }
     }
     
-    func search(query: String, updated: @escaping ([DeviceContactStableId: DeviceContactBasicData]) -> Void) -> Disposable {
+    func search(query: String, updated: @escaping ([DeviceContactStableId: (DeviceContactBasicData, PeerId?)]) -> Void) -> Disposable {
         let normalizedQuery = query.lowercased()
-        var result: [DeviceContactStableId: DeviceContactBasicData] = [:]
+        var result: [DeviceContactStableId: (DeviceContactBasicData, PeerId?)] = [:]
         for (stableId, basicData) in self.stableIdToBasicContactData {
             if basicData.firstName.lowercased().hasPrefix(normalizedQuery) || basicData.lastName.lowercased().hasPrefix(normalizedQuery) {
-                result[stableId] = basicData
+                result[stableId] = (basicData, self.stableIdToAppSpecificReference[stableId])
             }
         }
         updated(result)
@@ -835,7 +843,7 @@ public final class DeviceContactDataManager {
         }
     }
     
-    public func search(query: String) -> Signal<[DeviceContactStableId: DeviceContactBasicData], NoError> {
+    public func search(query: String) -> Signal<[DeviceContactStableId: (DeviceContactBasicData, PeerId?)], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with({ impl in

@@ -192,17 +192,20 @@ public final class DeviceContactInstantMessagingProfileData: Equatable, Hashable
     }
 }
 
-public extension DeviceContactInstantMessagingProfileData {
+public let phonebookUsernamePathPrefix = "@id"
+private let phonebookUsernamePrefix = "https://t.me/" + phonebookUsernamePathPrefix
+
+public extension DeviceContactUrlData {
     convenience init(appProfile: PeerId) {
-        self.init(label: "mobile", service: "Telegram", username: "@id\(appProfile.id)")
+        self.init(label: "Telegram", value: "\(phonebookUsernamePrefix)\(appProfile.id)")
     }
 }
 
 func parseAppSpecificContactReference(_ value: String) -> PeerId? {
-    if !value.hasPrefix("@id") {
+    if !value.hasPrefix(phonebookUsernamePrefix) {
         return nil
     }
-    let idString = String(value[value.index(value.startIndex, offsetBy: 3)...])
+    let idString = String(value[value.index(value.startIndex, offsetBy: phonebookUsernamePrefix.count)...])
     if let id = Int32(idString) {
         return PeerId(namespace: Namespaces.Peer.CloudUser, id: id)
     }
@@ -467,7 +470,7 @@ extension DeviceContactExtendedData {
         }
         var phoneNumbers: [DeviceContactPhoneNumberData] = []
         if let phone = user.phone, !phone.isEmpty {
-            phoneNumbers.append(DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: phone))
+            phoneNumbers.append(DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phone))
         }
         self.init(basicData: DeviceContactBasicData(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumbers: phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
     }

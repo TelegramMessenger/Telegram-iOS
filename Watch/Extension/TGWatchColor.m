@@ -1,5 +1,5 @@
 #import "TGWatchColor.h"
-#import "TGBridgePeerIdAdapter.h"
+#import <WatchCommonWatch/WatchCommonWatch.h>
 #import <CommonCrypto/CommonDigest.h>
 
 @implementation UIColor (TGColor)

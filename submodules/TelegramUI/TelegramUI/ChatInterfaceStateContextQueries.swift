@@ -3,7 +3,7 @@ import UIKit
 import SwiftSignalKit
 import TelegramCore
 import Postbox
-
+import TelegramUIPreferences
 import TelegramUIPrivateModule
 import LegacyComponents
 
@@ -83,7 +83,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     case .installed:
                         scope = [.installed]
                 }
-                return searchStickers(account: context.account, query: query, scope: scope)
+                return searchStickers(account: context.account, query: query.trimmedEmoji, scope: scope)
             }
             |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 return { _ in
@@ -264,7 +264,21 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             
             return signal |> then(contextBot)
         case let .emojiSearch(query, languageCode, range):
-            return searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: languageCode, query: query, completeMatch: query.count < 3)
+            var signal = searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: languageCode, query: query, completeMatch: query.count < 3)
+            if !languageCode.lowercased().hasPrefix("en") {
+                signal = signal
+                |> mapToSignal { keywords in
+                    return .single(keywords)
+                    |> then(
+                        searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: "en-US", query: query, completeMatch: query.count < 3)
+                        |> map { englishKeywords in
+                            return keywords + englishKeywords
+                        }
+                    )
+                }
+            }
+            
+            return signal
             |> map { keywords -> [(String, String)] in
                 var result: [(String, String)] = []
                 for keyword in keywords {

@@ -72,8 +72,6 @@ apple_library(
         'TelegramUI/DeviceProximityManager.h',
         'TelegramUI/RaiseToListenActivator.h',
         'TelegramUI/TGMimeTypeMap.h',
-        'TelegramUI/TGEmojiSuggestions.h',
-        'TelegramUI/TGChannelIntroController.h',
         'TelegramUI/EDSunriseSet.h',
         'TelegramUI/TGBridgeAudioDecoder.h',
         'TelegramUI/TGBridgeAudioEncoder.h',

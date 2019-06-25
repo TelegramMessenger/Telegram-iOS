@@ -29,13 +29,15 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     }
     
     var displayActionsPanel = false
-    if let contactStatus = chatPresentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
+    if !chatPresentationInterfaceState.peerIsBlocked, let contactStatus = chatPresentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
         if !peerStatusSettings.isEmpty {
             if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
                 displayActionsPanel = true
             } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {
                 displayActionsPanel = true
             } else if peerStatusSettings.contains(.canShareContact) {
+                displayActionsPanel = true
+            } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
                 displayActionsPanel = true
             }
         }

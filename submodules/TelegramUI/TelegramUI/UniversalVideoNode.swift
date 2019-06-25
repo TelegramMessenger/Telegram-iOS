@@ -5,6 +5,8 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import Display
+import TelegramAudio
+import UniversalMediaPlayer
 
 protocol UniversalVideoContentNode: class {
     var ready: Signal<Void, NoError> { get }

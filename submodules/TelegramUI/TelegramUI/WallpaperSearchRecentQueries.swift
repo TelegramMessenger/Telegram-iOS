@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import TelegramUIPreferences
 
 private struct WallpaperSearchRecentQueryItemId {
     public let rawValue: MemoryBuffer

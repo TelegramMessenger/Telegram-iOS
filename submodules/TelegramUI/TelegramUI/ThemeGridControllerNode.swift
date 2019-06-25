@@ -5,6 +5,9 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import UniversalMediaPlayer
+import TelegramPresentationData
+import TelegramUIPreferences
 
 private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpaper) -> Bool {
     switch lhs {

@@ -3,9 +3,11 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
@@ -167,16 +169,6 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
         try mutableUrl.setResourceValues(resourceValues)
     } catch let e {
         print("\(e)")
-    }
-    
-    if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: appGroupPath), includingPropertiesForKeys: [], options: []) {
-        for url in files {
-            if url.lastPathComponent == "accounts-metadata" ||
-                url.lastPathComponent.hasSuffix("logs") ||
-                url.lastPathComponent.hasPrefix("account-") {
-                let _ = try? FileManager.default.moveItem(at: url, to: URL(fileURLWithPath: rootPath + "/" + url.lastPathComponent))
-            }
-        }
     }
 }
 

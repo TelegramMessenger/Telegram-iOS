@@ -3,6 +3,7 @@ import SwiftSignalKit
 import TelegramCore
 import Postbox
 import Photos
+import TelegramUIPreferences
 
 private func appSpecificAssetCollection() -> Signal<PHAssetCollection, NoError> {
     return Signal { subscriber in

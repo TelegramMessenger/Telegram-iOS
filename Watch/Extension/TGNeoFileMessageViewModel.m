@@ -1,6 +1,8 @@
 #import "TGNeoFileMessageViewModel.h"
+
+#import <WatchCommonWatch/WatchCommonWatch.h>
+
 #import "TGNeoImageViewModel.h"
-#import "TGBridgeMessage.h"
 
 #import "TGStringUtils.h"
 

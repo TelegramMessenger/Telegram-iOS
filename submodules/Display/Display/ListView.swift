@@ -759,7 +759,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         return additionalInverseTopInset
     }
     
-    private func snapToBounds(snapTopItem: Bool, stackFromBottom: Bool, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, scrollToItem: ListViewScrollToItem? = nil) -> (snappedTopInset: CGFloat, offset: CGFloat) {
+    private func snapToBounds(snapTopItem: Bool, stackFromBottom: Bool, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, scrollToItem: ListViewScrollToItem? = nil, isExperimentalSnapToScrollToItem: Bool = false) -> (snappedTopInset: CGFloat, offset: CGFloat) {
         if self.itemNodes.count == 0 {
             return (0.0, 0.0)
         }
@@ -819,7 +819,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         var transition: ContainedViewLayoutTransition = .immediate
         if let updateSizeAndInsets = updateSizeAndInsets {
-            if !updateSizeAndInsets.duration.isZero {
+            if !updateSizeAndInsets.duration.isZero && !isExperimentalSnapToScrollToItem {
                 switch updateSizeAndInsets.curve {
                     case let .Spring(duration):
                         transition = .animated(duration: duration, curve: .spring)
@@ -828,15 +828,17 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             }
         } else if let scrollToItem = scrollToItem {
-            switch scrollToItem.curve {
-                case let .Spring(duration):
-                    transition = .animated(duration: duration, curve: .spring)
-                case let .Default(duration):
-                    if let duration = duration, duration.isZero {
-                        transition = .immediate
-                    } else {
-                        transition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
-                    }
+            if scrollToItem.animated {
+                switch scrollToItem.curve {
+                    case let .Spring(duration):
+                        transition = .animated(duration: duration, curve: .spring)
+                    case let .Default(duration):
+                        if let duration = duration, duration.isZero {
+                            transition = .immediate
+                        } else {
+                            transition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
+                        }
+                }
             }
         }
         
@@ -2484,7 +2486,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     itemNode.position = CGPoint(x: position.x, y: position.y + offsetFix)
                 }
                 
-                let (snappedTopInset, snapToBoundsOffset) = self.snapToBounds(snapTopItem: scrollToItem != nil, stackFromBottom: self.stackFromBottom, updateSizeAndInsets: updateSizeAndInsets)
+                let (snappedTopInset, snapToBoundsOffset) = self.snapToBounds(snapTopItem: scrollToItem != nil, stackFromBottom: self.stackFromBottom, updateSizeAndInsets: updateSizeAndInsets, isExperimentalSnapToScrollToItem: isExperimentalSnapToScrollToItem)
                 
                 if !snappedTopInset.isZero && (previousVisibleSize.height.isZero || previousApparentFrames.isEmpty) {
                     offsetFix += snappedTopInset
@@ -2504,7 +2506,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 sizeAndInsetsOffset = offsetFix
                 completeOffset += snapToBoundsOffset
                 
-                if !updateSizeAndInsets.duration.isZero {
+                if !updateSizeAndInsets.duration.isZero && !isExperimentalSnapToScrollToItem {
                     let animation: CABasicAnimation
                     switch updateSizeAndInsets.curve {
                         case let .Spring(duration):

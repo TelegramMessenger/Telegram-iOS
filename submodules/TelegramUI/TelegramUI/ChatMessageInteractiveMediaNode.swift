@@ -5,6 +5,9 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
+import UniversalMediaPlayer
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -83,26 +86,21 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private var secretTimer: SwiftSignalKit.Timer?
     
     var visibilityPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
-    var visibility: ListViewItemNodeVisibility = .none {
+    var visibility: Bool = false {
         didSet {
             if let videoNode = self.videoNode {
-                switch self.visibility {
-                    case .visible:
-                        if !videoNode.canAttachContent {
-                            videoNode.canAttachContent = true
-                            if videoNode.hasAttachedContext {
-                                videoNode.play()
-                            }
+                if self.visibility {
+                    if !videoNode.canAttachContent {
+                        videoNode.canAttachContent = true
+                        if videoNode.hasAttachedContext {
+                            videoNode.play()
                         }
-                    case .none:
-                        videoNode.canAttachContent = false
+                    }
+                } else {
+                    videoNode.canAttachContent = false
                 }
             }
-            var isVisible = false
-            if case .visible = self.visibility {
-                isVisible = true
-            }
-            self.visibilityPromise.set(isVisible)
+            self.visibilityPromise.set(self.visibility)
         }
     }
     
@@ -635,7 +633,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 videoNode.updateLayout(size: arguments.drawingSize, transition: .immediate)
                                 videoNode.frame = imageFrame
                                 
-                                if case .visible = strongSelf.visibility {
+                                if strongSelf.visibility {
                                     if !videoNode.canAttachContent {
                                         videoNode.canAttachContent = true
                                         if videoNode.hasAttachedContext {

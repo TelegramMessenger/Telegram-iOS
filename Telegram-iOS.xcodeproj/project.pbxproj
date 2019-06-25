@@ -12,7 +12,6 @@
 		090E777622A6945900CD99F5 /* BlackClassicIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 090E777222A6945800CD99F5 /* BlackClassicIcon@3x.png */; };
 		090E777722A6945900CD99F5 /* BlueClassicIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 090E777322A6945800CD99F5 /* BlueClassicIcon@2x.png */; };
 		092F368521542D6C001A9F49 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 092F368321542D6C001A9F49 /* Localizable.strings */; };
-		0956AF2C217B4642008106D0 /* WatchCommunicationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0956AF2B217B4642008106D0 /* WatchCommunicationManager.swift */; };
 		0956AF2F217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0956AF2E217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m */; };
 		0972C6E021791D950069E98A /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0972C6DF21791D950069E98A /* UserNotifications.framework */; };
 		0972C6E421792D130069E98A /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0972C6E221792D120069E98A /* InfoPlist.strings */; };
@@ -22,6 +21,12 @@
 		09A218F122A1570A00DE6898 /* BlackFilledIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A218EB22A1570900DE6898 /* BlackFilledIcon@3x.png */; };
 		09A218F222A1570A00DE6898 /* BlueFilledIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A218EC22A1570900DE6898 /* BlueFilledIcon@2x.png */; };
 		09A218F322A1570A00DE6898 /* BlueIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A218ED22A1570900DE6898 /* BlueIcon@3x.png */; };
+		09A4193022B7A4D500637EB4 /* BlueClassicIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A4192A22B7A4D300637EB4 /* BlueClassicIconIpad@2x.png */; };
+		09A4193122B7A4D500637EB4 /* BlackClassicIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A4192B22B7A4D400637EB4 /* BlackClassicIconLargeIpad@2x.png */; };
+		09A4193222B7A4D500637EB4 /* BlueClassicIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A4192C22B7A4D400637EB4 /* BlueClassicIconIpad.png */; };
+		09A4193322B7A4D500637EB4 /* BlueClassicIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A4192D22B7A4D400637EB4 /* BlueClassicIconLargeIpad@2x.png */; };
+		09A4193422B7A4D500637EB4 /* BlackClassicIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A4192E22B7A4D400637EB4 /* BlackClassicIconIpad.png */; };
+		09A4193522B7A4D500637EB4 /* BlackClassicIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09A4192F22B7A4D400637EB4 /* BlackClassicIconIpad@2x.png */; };
 		09C50DE721729D7C009E676F /* TGBridgeAudioSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572C1217292BA00BDF00F /* TGBridgeAudioSignals.m */; };
 		09C50DE821729D7C009E676F /* TGBridgeBotSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572BB217292B900BDF00F /* TGBridgeBotSignals.m */; };
 		09C50DE921729D7C009E676F /* TGBridgeChatListSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572AF217292B900BDF00F /* TGBridgeChatListSignals.m */; };
@@ -40,13 +45,7 @@
 		09C50E0321729DB5009E676F /* TGBotCommandController.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C571F6217287EF00BDF00F /* TGBotCommandController.m */; };
 		09C50E0421729DB5009E676F /* TGBotKeyboardController.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C571F8217287F000BDF00F /* TGBotKeyboardController.m */; };
 		09C50E0521729DE6009E676F /* TGBotKeyboardButtonController.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C571F4217287E500BDF00F /* TGBotKeyboardButtonController.m */; };
-		09C50E7B21738178009E676F /* TGBridgeServer.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C50E7A21738178009E676F /* TGBridgeServer.m */; };
-		09C50E8321738514009E676F /* TGBridgeContext.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C573072172953700BDF00F /* TGBridgeContext.m */; };
-		09C50E842173853E009E676F /* TGBridgeCommon.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572CE2172939F00BDF00F /* TGBridgeCommon.m */; };
 		09C50E88217385CF009E676F /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09C50E87217385CF009E676F /* WatchConnectivity.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
-		09C50E8A2173AEDB009E676F /* WatchRequestHandlers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C50E892173AEDB009E676F /* WatchRequestHandlers.swift */; };
-		09C50E912173B247009E676F /* TGBridgeSubscriptions.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C50E8F2173B247009E676F /* TGBridgeSubscriptions.m */; };
-		09C50E922173B247009E676F /* TGBridgeSubscriptions.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C50E8F2173B247009E676F /* TGBridgeSubscriptions.m */; };
 		09C56F8F2172797200BDF00F /* Interface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 09C56F8D2172797200BDF00F /* Interface.storyboard */; };
 		09C56F912172797400BDF00F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 09C56F902172797400BDF00F /* Assets.xcassets */; };
 		09C56F982172797500BDF00F /* Watch Extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 09C56F972172797400BDF00F /* Watch Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -166,62 +165,14 @@
 		09C5728C21728D3700BDF00F /* STimer.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C5726221728CFF00BDF00F /* STimer.m */; };
 		09C5728D21728D3700BDF00F /* SVariable.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C5725B21728CFE00BDF00F /* SVariable.m */; };
 		09C572D2217293D400BDF00F /* TGBridgeClient.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572D02172939F00BDF00F /* TGBridgeClient.m */; };
-		09C572D3217293D400BDF00F /* TGBridgeCommon.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572CE2172939F00BDF00F /* TGBridgeCommon.m */; };
 		09C573162172953800BDF00F /* TGBridgeMessage+TGTableItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572D72172953300BDF00F /* TGBridgeMessage+TGTableItem.m */; };
 		09C573182172953800BDF00F /* TGBridgeBotReplyMarkup.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572D92172953300BDF00F /* TGBridgeBotReplyMarkup.m */; };
-		09C573192172953800BDF00F /* TGBridgeContactMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572DE2172953300BDF00F /* TGBridgeContactMediaAttachment.m */; };
-		09C5731A2172953800BDF00F /* TGBridgeMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572DF2172953300BDF00F /* TGBridgeMessage.m */; };
-		09C5731B2172953800BDF00F /* TGBridgeAudioMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572E02172953300BDF00F /* TGBridgeAudioMediaAttachment.m */; };
-		09C5731C2172953800BDF00F /* TGBridgeActionMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572E22172953300BDF00F /* TGBridgeActionMediaAttachment.m */; };
 		09C5731D2172953800BDF00F /* TGBridgeStickerPack.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572E32172953400BDF00F /* TGBridgeStickerPack.m */; };
-		09C5731E2172953800BDF00F /* TGBridgeVideoMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572E42172953400BDF00F /* TGBridgeVideoMediaAttachment.m */; };
-		09C573202172953800BDF00F /* TGBridgeForwardedMessageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572E62172953400BDF00F /* TGBridgeForwardedMessageMediaAttachment.m */; };
 		09C573212172953800BDF00F /* TGBridgeUser+TGTableItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572E92172953400BDF00F /* TGBridgeUser+TGTableItem.m */; };
-		09C573222172953800BDF00F /* TGBridgeUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572ED2172953400BDF00F /* TGBridgeUser.m */; };
-		09C573232172953800BDF00F /* TGBridgeBotCommandInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572EF2172953500BDF00F /* TGBridgeBotCommandInfo.m */; };
-		09C573242172953800BDF00F /* TGBridgeImageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F22172953500BDF00F /* TGBridgeImageMediaAttachment.m */; };
-		09C573252172953800BDF00F /* TGBridgeLocationVenue.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F32172953500BDF00F /* TGBridgeLocationVenue.m */; };
-		09C573262172953800BDF00F /* TGBridgeMessageEntities.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F42172953500BDF00F /* TGBridgeMessageEntities.m */; };
-		09C573272172953800BDF00F /* TGBridgeWebPageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F52172953500BDF00F /* TGBridgeWebPageMediaAttachment.m */; };
 		09C573282172953800BDF00F /* TGBridgeChat+TGTableItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F62172953500BDF00F /* TGBridgeChat+TGTableItem.m */; };
-		09C573292172953900BDF00F /* TGBridgeMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F92172953600BDF00F /* TGBridgeMediaAttachment.m */; };
-		09C5732A2172953900BDF00F /* TGBridgeDocumentMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572FB2172953600BDF00F /* TGBridgeDocumentMediaAttachment.m */; };
-		09C5732B2172953900BDF00F /* TGBridgePeerNotificationSettings.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572FC2172953600BDF00F /* TGBridgePeerNotificationSettings.m */; };
-		09C5732C2172953900BDF00F /* TGBridgeReplyMessageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572FD2172953600BDF00F /* TGBridgeReplyMessageMediaAttachment.m */; };
 		09C5732D2172953900BDF00F /* TGBridgeLocationVenue+TGTableItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572FF2172953600BDF00F /* TGBridgeLocationVenue+TGTableItem.m */; };
-		09C5732E2172953900BDF00F /* TGBridgeLocationMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C573002172953600BDF00F /* TGBridgeLocationMediaAttachment.m */; };
-		09C5732F2172953900BDF00F /* TGBridgeContext.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C573072172953700BDF00F /* TGBridgeContext.m */; };
-		09C573302172953900BDF00F /* TGBridgeChat.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C573092172953700BDF00F /* TGBridgeChat.m */; };
-		09C573312172953900BDF00F /* TGBridgeMessageEntitiesAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C5730A2172953700BDF00F /* TGBridgeMessageEntitiesAttachment.m */; };
-		09C573322172953900BDF00F /* TGBridgeChatMessages.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C5730C2172953700BDF00F /* TGBridgeChatMessages.m */; };
-		09C573332172953900BDF00F /* TGBridgeReplyMarkupMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C5730D2172953800BDF00F /* TGBridgeReplyMarkupMediaAttachment.m */; };
-		09C573342172953900BDF00F /* TGBridgeUnsupportedMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C5730F2172953800BDF00F /* TGBridgeUnsupportedMediaAttachment.m */; };
-		09C573352172953900BDF00F /* TGBridgeBotInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C573102172953800BDF00F /* TGBridgeBotInfo.m */; };
 		09CFB212217299E80083F7A3 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09CFB211217299E80083F7A3 /* CoreLocation.framework */; };
 		09D30420217418EC00C00567 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D09DCBB51D0C856B00F51FFE /* Localizable.strings */; };
-		09D304222174335F00C00567 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304212174335F00C00567 /* WatchBridge.swift */; };
-		09D304232174340900C00567 /* TGBridgeUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572ED2172953400BDF00F /* TGBridgeUser.m */; };
-		09D304242174340E00C00567 /* TGBridgeMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572DF2172953300BDF00F /* TGBridgeMessage.m */; };
-		09D304252174341200C00567 /* TGBridgeMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F92172953600BDF00F /* TGBridgeMediaAttachment.m */; };
-		09D304262174341A00C00567 /* TGBridgeLocationVenue.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F32172953500BDF00F /* TGBridgeLocationVenue.m */; };
-		09D304272174341E00C00567 /* TGBridgeChatMessages.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C5730C2172953700BDF00F /* TGBridgeChatMessages.m */; };
-		09D304282174342E00C00567 /* TGBridgeChat.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C573092172953700BDF00F /* TGBridgeChat.m */; };
-		09D304292174343300C00567 /* TGBridgeBotInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C573102172953800BDF00F /* TGBridgeBotInfo.m */; };
-		09D3042A2174343B00C00567 /* TGBridgeBotCommandInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572EF2172953500BDF00F /* TGBridgeBotCommandInfo.m */; };
-		09D3042C2174344900C00567 /* TGBridgeActionMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572E22172953300BDF00F /* TGBridgeActionMediaAttachment.m */; };
-		09D3042D2174344900C00567 /* TGBridgeAudioMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572E02172953300BDF00F /* TGBridgeAudioMediaAttachment.m */; };
-		09D3042E2174344900C00567 /* TGBridgeContactMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572DE2172953300BDF00F /* TGBridgeContactMediaAttachment.m */; };
-		09D3042F2174344900C00567 /* TGBridgeDocumentMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572FB2172953600BDF00F /* TGBridgeDocumentMediaAttachment.m */; };
-		09D304302174344900C00567 /* TGBridgeForwardedMessageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572E62172953400BDF00F /* TGBridgeForwardedMessageMediaAttachment.m */; };
-		09D304312174344900C00567 /* TGBridgeImageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F22172953500BDF00F /* TGBridgeImageMediaAttachment.m */; };
-		09D304322174344900C00567 /* TGBridgeLocationMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C573002172953600BDF00F /* TGBridgeLocationMediaAttachment.m */; };
-		09D304332174344900C00567 /* TGBridgeMessageEntitiesAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C5730A2172953700BDF00F /* TGBridgeMessageEntitiesAttachment.m */; };
-		09D304342174344900C00567 /* TGBridgeReplyMarkupMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C5730D2172953800BDF00F /* TGBridgeReplyMarkupMediaAttachment.m */; };
-		09D304352174344900C00567 /* TGBridgeReplyMessageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572FD2172953600BDF00F /* TGBridgeReplyMessageMediaAttachment.m */; };
-		09D304362174344900C00567 /* TGBridgeUnsupportedMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C5730F2172953800BDF00F /* TGBridgeUnsupportedMediaAttachment.m */; };
-		09D304372174344900C00567 /* TGBridgeVideoMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572E42172953400BDF00F /* TGBridgeVideoMediaAttachment.m */; };
-		09D304382174344900C00567 /* TGBridgeWebPageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F52172953500BDF00F /* TGBridgeWebPageMediaAttachment.m */; };
-		09D304392174344900C00567 /* TGBridgeMessageEntities.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F42172953500BDF00F /* TGBridgeMessageEntities.m */; };
 		09EBE2A522B004EA00F670AB /* BlueFilledIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE29922B004E800F670AB /* BlueFilledIconIpad.png */; };
 		09EBE2A622B004EA00F670AB /* BlueIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE29A22B004E800F670AB /* BlueIconIpad@2x.png */; };
 		09EBE2A722B004EA00F670AB /* BlueIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE29B22B004E900F670AB /* BlueIconIpad.png */; };
@@ -237,7 +188,13 @@
 		09FDAEE62140477F00BF856F /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */; };
 		D000CACF21FB6E380011B15D /* NotificationService.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D000CAC821FB6E370011B15D /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D001D5AA1F878DA300DF975A /* PhoneCountries.txt in Resources */ = {isa = PBXBuildFile; fileRef = D001D5A91F878DA300DF975A /* PhoneCountries.txt */; };
-		D00859A21B28189D00EAF753 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00859A11B28189D00EAF753 /* AppDelegate.swift */; };
+		D008185022B5797A008A895F /* BuildConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008184F22B5797A008A895F /* BuildConfig.framework */; };
+		D008185222B57986008A895F /* BuildConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008185122B57986008A895F /* BuildConfig.framework */; };
+		D008185422B57994008A895F /* BuildConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008185322B57994008A895F /* BuildConfig.framework */; };
+		D008185622B579A1008A895F /* BuildConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008185522B579A1008A895F /* BuildConfig.framework */; };
+		D008185822B579AD008A895F /* BuildConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008185722B579AD008A895F /* BuildConfig.framework */; };
+		D00818A522B58CCB008A895F /* WatchCommonWatch.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00818A422B58CCB008A895F /* WatchCommonWatch.framework */; };
+		D00818CF22B595DB008A895F /* LightweightAccountData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00818CE22B595DB008A895F /* LightweightAccountData.framework */; };
 		D00859A91B28189D00EAF753 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D00859A81B28189D00EAF753 /* Images.xcassets */; };
 		D00859AC1B28189D00EAF753 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = D00859AA1B28189D00EAF753 /* LaunchScreen.xib */; };
 		D00ED75A1FE94630001F38BD /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = D00ED7581FE94630001F38BD /* AppIntentVocabulary.plist */; };
@@ -247,7 +204,6 @@
 		D015E04D225D2D8F00CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D015E050225D303F00CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; };
 		D015E051225D303F00CB9E8A /* WebP.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		D01A47551F4DBED700383CC1 /* HockeySDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01A47541F4DBED700383CC1 /* HockeySDK.framework */; };
 		D021D4D9219CAEDD0064BEBA /* Config-Fork.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */; };
 		D02CF5FD215D9ABF00E0F56A /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AA1A671D568BA400152314 /* UserNotifications.framework */; };
 		D02CF5FE215D9ABF00E0F56A /* UserNotificationsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AA1A691D568BA400152314 /* UserNotificationsUI.framework */; };
@@ -257,9 +213,7 @@
 		D02CF617215DA24900E0F56A /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02CF616215DA24900E0F56A /* Postbox.framework */; };
 		D02CF619215DA24900E0F56A /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02CF618215DA24900E0F56A /* SwiftSignalKit.framework */; };
 		D02CF61B215DA24900E0F56A /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02CF61A215DA24900E0F56A /* TelegramCore.framework */; };
-		D02CF61C215E51D500E0F56A /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
 		D02E31231BD803E800CD3F01 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = D02E31221BD803E800CD3F01 /* main.m */; };
-		D0338736223A9A9A007A2CE4 /* Config-Hockeyapp-Internal.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */; };
 		D03B0E7B1D63484500955575 /* ShareRootController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0E7A1D63484500955575 /* ShareRootController.swift */; };
 		D03B0E821D63484500955575 /* Share.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D03B0E781D63484500955575 /* Share.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D03B0E8A1D634B1100955575 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03B0E871D634B1100955575 /* Display.framework */; };
@@ -297,16 +251,9 @@
 		D04FA1CF2145E3810006EF45 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D04FA1C32145E3810006EF45 /* InfoPlist.strings */; };
 		D04FA1D02145E3810006EF45 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D04FA1C62145E3810006EF45 /* InfoPlist.strings */; };
 		D051DB0B215E5D1C00F30F92 /* TelegramUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0400ED81D5B8F97007931CE /* TelegramUI.framework */; };
-		D051DB5D21602D6E00F30F92 /* LegacyDataImportSplash.swift in Sources */ = {isa = PBXBuildFile; fileRef = D051DB5C21602D6E00F30F92 /* LegacyDataImportSplash.swift */; };
 		D052974622B0073F004ABAF6 /* WhiteFilledIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D052974422B0073E004ABAF6 /* WhiteFilledIcon@3x.png */; };
 		D052974722B0073F004ABAF6 /* WhiteFilledIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D052974522B0073F004ABAF6 /* WhiteFilledIcon@2x.png */; };
-		D053DAD32018ED2B00993D32 /* LockedWindowCoveringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D053DAD22018ED2B00993D32 /* LockedWindowCoveringView.swift */; };
 		D055BD441B7E216400F06C0A /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D055BD431B7E216400F06C0A /* MapKit.framework */; };
-		D05B37F51FEA5F6E0041D2A5 /* SnapshotEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05B37F41FEA5F6E0041D2A5 /* SnapshotEnvironment.swift */; };
-		D05B37F71FEA8C640041D2A5 /* SnapshotSecretChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05B37F61FEA8C640041D2A5 /* SnapshotSecretChat.swift */; };
-		D05B37F91FEA8CF00041D2A5 /* SnapshotSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05B37F81FEA8CF00041D2A5 /* SnapshotSettings.swift */; };
-		D05B37FB1FEA8D020041D2A5 /* SnapshotAppearanceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05B37FA1FEA8D020041D2A5 /* SnapshotAppearanceSettings.swift */; };
-		D05B37FD1FEA8D870041D2A5 /* SnapshotResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05B37FC1FEA8D870041D2A5 /* SnapshotResources.swift */; };
 		D05B380A1FEA8E3D0041D2A5 /* Bitmap2.png in Resources */ = {isa = PBXBuildFile; fileRef = D05B37FF1FEA8E3D0041D2A5 /* Bitmap2.png */; };
 		D05B380B1FEA8E3D0041D2A5 /* Bitmap3.png in Resources */ = {isa = PBXBuildFile; fileRef = D05B38001FEA8E3D0041D2A5 /* Bitmap3.png */; };
 		D05B380C1FEA8E3D0041D2A5 /* Bitmap1.png in Resources */ = {isa = PBXBuildFile; fileRef = D05B38011FEA8E3D0041D2A5 /* Bitmap1.png */; };
@@ -322,15 +269,9 @@
 		D0612E491D58B478000C8F02 /* Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0612E481D58B478000C8F02 /* Application.swift */; };
 		D06706611D51185400DED3E3 /* TelegramCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D06706601D51185400DED3E3 /* TelegramCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D06706621D5118F500DED3E3 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706601D51185400DED3E3 /* TelegramCore.framework */; };
-		D06E4C2F21347D9200088087 /* UIImage+ImageEffects.m in Sources */ = {isa = PBXBuildFile; fileRef = D06E4C2E21347D9200088087 /* UIImage+ImageEffects.m */; };
 		D073E52021FF7CE900742DDD /* Crypto.m in Sources */ = {isa = PBXBuildFile; fileRef = D073E51F21FF7CE900742DDD /* Crypto.m */; };
 		D073E52222003E1E00742DDD /* Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073E52122003E1E00742DDD /* Data.swift */; };
-		D084023220E1883500065674 /* ApplicationShortcutItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D084023120E1883500065674 /* ApplicationShortcutItem.swift */; };
-		D08410451FABDC5D008FFE92 /* TGItemProviderSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D08410441FABDC5C008FFE92 /* TGItemProviderSignals.m */; };
-		D084104E1FABDCFD008FFE92 /* TGContactModel.m in Sources */ = {isa = PBXBuildFile; fileRef = D084104C1FABDCFD008FFE92 /* TGContactModel.m */; };
-		D084104F1FABDCFD008FFE92 /* TGMimeTypeMap.m in Sources */ = {isa = PBXBuildFile; fileRef = D084104D1FABDCFD008FFE92 /* TGMimeTypeMap.m */; };
 		D08410501FABDD54008FFE92 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08410511FABDD54008FFE92 /* MtProtoKitDynamic.framework */; };
-		D08410541FABE428008FFE92 /* ShareItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08410531FABE428008FFE92 /* ShareItems.swift */; };
 		D08611B21F5711080047111E /* HockeySDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D01A47541F4DBED700383CC1 /* HockeySDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D08984FE2118B3F100918162 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08984FD2118B3F100918162 /* MtProtoKitDynamic.framework */; };
 		D08985002118B3F100918162 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08984FF2118B3F100918162 /* Postbox.framework */; };
@@ -364,41 +305,24 @@
 		D08DB0BE213F4D1D00F2ADBF /* start_arrow_ipad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D050F2331E49DEDE00988324 /* start_arrow_ipad@2x.png */; };
 		D08DB0BF213F4D1D00F2ADBF /* telegram_plane1@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D050F2341E49DEDE00988324 /* telegram_plane1@2x.png */; };
 		D08DB0C0213F4D1D00F2ADBF /* telegram_sphere@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D050F2351E49DEDE00988324 /* telegram_sphere@2x.png */; };
-		D09250021FE52D2A003F693F /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
 		D096C2BE1CC3C021006D814E /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D096C2BD1CC3C021006D814E /* Display.framework */; };
 		D096C2BF1CC3C021006D814E /* Display.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D096C2BD1CC3C021006D814E /* Display.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D096C2C21CC3C104006D814E /* Postbox.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D096C2C01CC3C104006D814E /* Postbox.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D096C2C51CC3C11A006D814E /* SwiftSignalKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D096C2C31CC3C11A006D814E /* SwiftSignalKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D09A59601B5858DB00FC3724 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D09A595F1B5858DB00FC3724 /* SystemConfiguration.framework */; };
-		D09B79C52219C784003B1F9D /* SharedAccountInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09B79C42219C784003B1F9D /* SharedAccountInfo.swift */; };
-		D09B79C62219C784003B1F9D /* SharedAccountInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09B79C42219C784003B1F9D /* SharedAccountInfo.swift */; };
-		D09B79C82219C7AE003B1F9D /* ManageSharedAccountInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09B79C72219C7AE003B1F9D /* ManageSharedAccountInfo.swift */; };
 		D09DCBB71D0C856B00F51FFE /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D09DCBB51D0C856B00F51FFE /* Localizable.strings */; };
 		D0A18D631E149043004C6734 /* PushKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0A18D621E149043004C6734 /* PushKit.framework */; };
-		D0A18D651E15C020004C6734 /* WakeupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A18D641E15C020004C6734 /* WakeupManager.swift */; };
-		D0ADF958212B56DC00310BBC /* LegacyUserDataImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF957212B56DC00310BBC /* LegacyUserDataImport.swift */; };
-		D0ADF95A212B5AC600310BBC /* LegacyResourceImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF959212B5AC600310BBC /* LegacyResourceImport.swift */; };
-		D0ADF95C212B636D00310BBC /* LegacyChatImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF95B212B636D00310BBC /* LegacyChatImport.swift */; };
-		D0ADF95E212C818F00310BBC /* LegacyPreferencesImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF95D212C818F00310BBC /* LegacyPreferencesImport.swift */; };
-		D0ADF961212C8DF600310BBC /* TGAutoDownloadPreferences.m in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF95F212C8DF600310BBC /* TGAutoDownloadPreferences.m */; };
-		D0ADF964212C9AA900310BBC /* TGProxyItem.m in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF963212C9AA900310BBC /* TGProxyItem.m */; };
 		D0AF32291FACA1920097362B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D17E891CAAD66600C4750B /* Accelerate.framework */; };
 		D0AF322C1FACA1B00097362B /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B8445F1DACF561005F29E1 /* libc++.tbd */; };
-		D0AF322F1FACBA280097362B /* TGShareLocationSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0AF322D1FACBA270097362B /* TGShareLocationSignals.m */; };
-		D0B21B0D2203A9A1003F741D /* SharedWakeupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B0C2203A9A1003F741D /* SharedWakeupManager.swift */; };
-		D0B21B0F220438E9003F741D /* SharedNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */; };
 		D0B2F738204F4C9900D3BFB9 /* NotificationCenter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E41A381D65A69C00FBFC00 /* NotificationCenter.framework */; };
 		D0B2F742204F4C9900D3BFB9 /* Widget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D0B2F737204F4C9900D3BFB9 /* Widget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0B2F74A204F4D6100D3BFB9 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B2F74F204F4D6100D3BFB9 /* Postbox.framework */; };
 		D0B2F74B204F4D6100D3BFB9 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B2F750204F4D6100D3BFB9 /* SwiftSignalKit.framework */; };
 		D0B2F74C204F4D6100D3BFB9 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B2F751204F4D6100D3BFB9 /* TelegramCore.framework */; };
-		D0B2F755204F4EAF00D3BFB9 /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
 		D0B2F7602050102600D3BFB9 /* PeerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F75F2050102600D3BFB9 /* PeerNode.swift */; };
-		D0B3B53B21666C0000FC60A0 /* LegacyFileImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B3B53A21666C0000FC60A0 /* LegacyFileImport.swift */; };
 		D0B4AF8F1EC122A700D51FF6 /* TelegramUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0400ED81D5B8F97007931CE /* TelegramUI.framework */; };
 		D0B4AF901EC122A700D51FF6 /* TelegramUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0400ED81D5B8F97007931CE /* TelegramUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0B844601DACF561005F29E1 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B8445F1DACF561005F29E1 /* libc++.tbd */; };
-		D0BEAF731E54C9A900BD963D /* ApplicationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF721E54C9A900BD963D /* ApplicationContext.swift */; };
 		D0C2DFF81CC4D1BA0044FF83 /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C2DFF71CC4D1BA0044FF83 /* MobileCoreServices.framework */; };
 		D0CAD6A421C03BEB001E3055 /* FFMpeg.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */; };
 		D0CAD6A521C03BEB001E3055 /* FFMpeg.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -406,7 +330,6 @@
 		D0CCD61D222EFFB000EE1E08 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CCD61C222EFFB000EE1E08 /* MtProtoKitDynamic.framework */; };
 		D0CD17B51CC3AE14007C5650 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CD17B41CC3AE14007C5650 /* AsyncDisplayKit.framework */; };
 		D0CD17B61CC3AE14007C5650 /* AsyncDisplayKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0CD17B41CC3AE14007C5650 /* AsyncDisplayKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		D0CE6F1C213ED11100BCD44B /* TGPresentationAutoNightPreferences.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CE6F1B213ED11100BCD44B /* TGPresentationAutoNightPreferences.m */; };
 		D0CE6F55213EDA4400BCD44B /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0CE6F1E213EDA4200BCD44B /* Localizable.strings */; };
 		D0CE6F56213EDA4400BCD44B /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0CE6F20213EDA4200BCD44B /* InfoPlist.strings */; };
 		D0CE6F57213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = D0CE6F22213EDA4200BCD44B /* AppIntentVocabulary.plist */; };
@@ -432,11 +355,7 @@
 		D0CE6F6B213EDA4400BCD44B /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0CE6F51213EDA4400BCD44B /* InfoPlist.strings */; };
 		D0CE6F6C213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = D0CE6F53213EDA4400BCD44B /* AppIntentVocabulary.plist */; };
 		D0CFBB931FD88C2900B65C0D /* begin_record.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0CFBB921FD88C2900B65C0D /* begin_record.caf */; };
-		D0D102682212E9E6003ADA5E /* SharedWakeupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B0C2203A9A1003F741D /* SharedWakeupManager.swift */; };
-		D0D102692212F719003ADA5E /* SharedNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */; };
-		D0D1026A2212F804003ADA5E /* ClearNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EB243A201B77C400F6CC13 /* ClearNotificationsManager.swift */; };
 		D0D17E8A1CAAD66600C4750B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D17E891CAAD66600C4750B /* Accelerate.framework */; };
-		D0D2276F212739120028F943 /* LegacyDataImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D2276E212739120028F943 /* LegacyDataImport.swift */; };
 		D0D268791D79A70A00C422DA /* IntentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D268781D79A70A00C422DA /* IntentHandler.swift */; };
 		D0D2688E1D79A70B00C422DA /* SiriIntents.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D0D268761D79A70A00C422DA /* SiriIntents.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0E2CE642227F0680084E3DD /* ManagedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E2CE632227F0680084E3DD /* ManagedFile.swift */; };
@@ -447,14 +366,9 @@
 		D0E8B8B12044496C00605593 /* voip_busy.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8AC2044496C00605593 /* voip_busy.caf */; };
 		D0E8C2DE2285EA55009F26E8 /* BlackIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E8C2DD2285EA55009F26E8 /* BlackIcon@2x.png */; };
 		D0E8C2E02285EA6A009F26E8 /* BlackIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E8C2DF2285EA6A009F26E8 /* BlackIcon@3x.png */; };
-		D0EA97941FE84F2D00792DD6 /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
-		D0EA97951FE84F2E00792DD6 /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
-		D0EB243B201B77C400F6CC13 /* ClearNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EB243A201B77C400F6CC13 /* ClearNotificationsManager.swift */; };
 		D0ECCB7F1FE9C38500609802 /* Telegram_iOS_UITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB7E1FE9C38500609802 /* Telegram_iOS_UITests.swift */; };
 		D0ECCB8A1FE9C4AC00609802 /* SnapshotHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB891FE9C4AC00609802 /* SnapshotHelper.swift */; };
-		D0ECCB8D1FE9CE3F00609802 /* SnapshotChatList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB8C1FE9CE3F00609802 /* SnapshotChatList.swift */; };
 		D0ED633A21FF3EDF001D4648 /* AccountData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED633921FF3EDF001D4648 /* AccountData.swift */; };
-		D0ED633B21FF3EFD001D4648 /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
 		D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0400EE41D5B912E007931CE /* NotificationService.swift */; };
 		D0ED633F21FF46E4001D4648 /* ImageData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED633E21FF46E4001D4648 /* ImageData.swift */; };
 		D0ED634121FF4786001D4648 /* Serialization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED634021FF4786001D4648 /* Serialization.swift */; };
@@ -599,13 +513,17 @@
 		09A218EB22A1570900DE6898 /* BlackFilledIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackFilledIcon@3x.png"; sourceTree = "<group>"; };
 		09A218EC22A1570900DE6898 /* BlueFilledIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueFilledIcon@2x.png"; sourceTree = "<group>"; };
 		09A218ED22A1570900DE6898 /* BlueIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueIcon@3x.png"; sourceTree = "<group>"; };
+		09A4192A22B7A4D300637EB4 /* BlueClassicIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicIconIpad@2x.png"; sourceTree = "<group>"; };
+		09A4192B22B7A4D400637EB4 /* BlackClassicIconLargeIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicIconLargeIpad@2x.png"; sourceTree = "<group>"; };
+		09A4192C22B7A4D400637EB4 /* BlueClassicIconIpad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueClassicIconIpad.png; sourceTree = "<group>"; };
+		09A4192D22B7A4D400637EB4 /* BlueClassicIconLargeIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicIconLargeIpad@2x.png"; sourceTree = "<group>"; };
+		09A4192E22B7A4D400637EB4 /* BlackClassicIconIpad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlackClassicIconIpad.png; sourceTree = "<group>"; };
+		09A4192F22B7A4D400637EB4 /* BlackClassicIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicIconIpad@2x.png"; sourceTree = "<group>"; };
 		09C50E7921738178009E676F /* TGBridgeServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeServer.h; sourceTree = "<group>"; };
 		09C50E7A21738178009E676F /* TGBridgeServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeServer.m; sourceTree = "<group>"; };
 		09C50E852173854D009E676F /* WatchKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchKit.framework; path = System/Library/Frameworks/WatchKit.framework; sourceTree = SDKROOT; };
 		09C50E87217385CF009E676F /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
 		09C50E892173AEDB009E676F /* WatchRequestHandlers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRequestHandlers.swift; sourceTree = "<group>"; };
-		09C50E8F2173B247009E676F /* TGBridgeSubscriptions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeSubscriptions.m; path = Bridge/TGBridgeSubscriptions.m; sourceTree = "<group>"; };
-		09C50E902173B247009E676F /* TGBridgeSubscriptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeSubscriptions.h; path = Bridge/TGBridgeSubscriptions.h; sourceTree = "<group>"; };
 		09C56F8B2172797200BDF00F /* Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		09C56F8E2172797200BDF00F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Interface.storyboard; sourceTree = "<group>"; };
 		09C56F902172797400BDF00F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -870,70 +788,19 @@
 		09C572C9217292BB00BDF00F /* TGBridgeStateSignal.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeStateSignal.m; path = Bridge/TGBridgeStateSignal.m; sourceTree = "<group>"; };
 		09C572CA217292BB00BDF00F /* TGBridgeUserInfoSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeUserInfoSignals.m; path = Bridge/TGBridgeUserInfoSignals.m; sourceTree = "<group>"; };
 		09C572CC2172939F00BDF00F /* TGBridgeClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeClient.h; path = Bridge/TGBridgeClient.h; sourceTree = "<group>"; };
-		09C572CE2172939F00BDF00F /* TGBridgeCommon.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeCommon.m; path = Bridge/TGBridgeCommon.m; sourceTree = "<group>"; };
-		09C572CF2172939F00BDF00F /* TGBridgeCommon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeCommon.h; path = Bridge/TGBridgeCommon.h; sourceTree = "<group>"; };
 		09C572D02172939F00BDF00F /* TGBridgeClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeClient.m; path = Bridge/TGBridgeClient.m; sourceTree = "<group>"; };
-		09C572D62172953200BDF00F /* TGBridgeMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeMediaAttachment.h; path = Bridge/TGBridgeMediaAttachment.h; sourceTree = "<group>"; };
 		09C572D72172953300BDF00F /* TGBridgeMessage+TGTableItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "TGBridgeMessage+TGTableItem.m"; path = "Bridge/TGBridgeMessage+TGTableItem.m"; sourceTree = "<group>"; };
 		09C572D92172953300BDF00F /* TGBridgeBotReplyMarkup.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeBotReplyMarkup.m; path = Bridge/TGBridgeBotReplyMarkup.m; sourceTree = "<group>"; };
-		09C572DA2172953300BDF00F /* TGBridgeContactMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeContactMediaAttachment.h; path = Bridge/TGBridgeContactMediaAttachment.h; sourceTree = "<group>"; };
 		09C572DB2172953300BDF00F /* TGBridgeChat+TGTableItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "TGBridgeChat+TGTableItem.h"; path = "Bridge/TGBridgeChat+TGTableItem.h"; sourceTree = "<group>"; };
-		09C572DC2172953300BDF00F /* TGBridgeActionMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeActionMediaAttachment.h; path = Bridge/TGBridgeActionMediaAttachment.h; sourceTree = "<group>"; };
 		09C572DD2172953300BDF00F /* TGBridgeBotReplyMarkup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeBotReplyMarkup.h; path = Bridge/TGBridgeBotReplyMarkup.h; sourceTree = "<group>"; };
-		09C572DE2172953300BDF00F /* TGBridgeContactMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeContactMediaAttachment.m; path = Bridge/TGBridgeContactMediaAttachment.m; sourceTree = "<group>"; };
-		09C572DF2172953300BDF00F /* TGBridgeMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeMessage.m; path = Bridge/TGBridgeMessage.m; sourceTree = "<group>"; };
-		09C572E02172953300BDF00F /* TGBridgeAudioMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeAudioMediaAttachment.m; path = Bridge/TGBridgeAudioMediaAttachment.m; sourceTree = "<group>"; };
-		09C572E12172953300BDF00F /* TGBridgeReplyMarkupMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeReplyMarkupMediaAttachment.h; path = Bridge/TGBridgeReplyMarkupMediaAttachment.h; sourceTree = "<group>"; };
-		09C572E22172953300BDF00F /* TGBridgeActionMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeActionMediaAttachment.m; path = Bridge/TGBridgeActionMediaAttachment.m; sourceTree = "<group>"; };
 		09C572E32172953400BDF00F /* TGBridgeStickerPack.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeStickerPack.m; path = Bridge/TGBridgeStickerPack.m; sourceTree = "<group>"; };
-		09C572E42172953400BDF00F /* TGBridgeVideoMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeVideoMediaAttachment.m; path = Bridge/TGBridgeVideoMediaAttachment.m; sourceTree = "<group>"; };
-		09C572E62172953400BDF00F /* TGBridgeForwardedMessageMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeForwardedMessageMediaAttachment.m; path = Bridge/TGBridgeForwardedMessageMediaAttachment.m; sourceTree = "<group>"; };
-		09C572E72172953400BDF00F /* TGBridgeLocationMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeLocationMediaAttachment.h; path = Bridge/TGBridgeLocationMediaAttachment.h; sourceTree = "<group>"; };
-		09C572E82172953400BDF00F /* TGBridgeBotInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeBotInfo.h; path = Bridge/TGBridgeBotInfo.h; sourceTree = "<group>"; };
 		09C572E92172953400BDF00F /* TGBridgeUser+TGTableItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "TGBridgeUser+TGTableItem.m"; path = "Bridge/TGBridgeUser+TGTableItem.m"; sourceTree = "<group>"; };
-		09C572EA2172953400BDF00F /* TGBridgeBotCommandInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeBotCommandInfo.h; path = Bridge/TGBridgeBotCommandInfo.h; sourceTree = "<group>"; };
-		09C572EB2172953400BDF00F /* TGBridgeUser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeUser.h; path = Bridge/TGBridgeUser.h; sourceTree = "<group>"; };
-		09C572EC2172953400BDF00F /* TGBridgeReplyMessageMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeReplyMessageMediaAttachment.h; path = Bridge/TGBridgeReplyMessageMediaAttachment.h; sourceTree = "<group>"; };
-		09C572ED2172953400BDF00F /* TGBridgeUser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeUser.m; path = Bridge/TGBridgeUser.m; sourceTree = "<group>"; };
-		09C572EE2172953400BDF00F /* TGBridgeImageMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeImageMediaAttachment.h; path = Bridge/TGBridgeImageMediaAttachment.h; sourceTree = "<group>"; };
-		09C572EF2172953500BDF00F /* TGBridgeBotCommandInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeBotCommandInfo.m; path = Bridge/TGBridgeBotCommandInfo.m; sourceTree = "<group>"; };
-		09C572F02172953500BDF00F /* TGBridgeDocumentMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeDocumentMediaAttachment.h; path = Bridge/TGBridgeDocumentMediaAttachment.h; sourceTree = "<group>"; };
-		09C572F12172953500BDF00F /* TGBridgeChat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeChat.h; path = Bridge/TGBridgeChat.h; sourceTree = "<group>"; };
-		09C572F22172953500BDF00F /* TGBridgeImageMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeImageMediaAttachment.m; path = Bridge/TGBridgeImageMediaAttachment.m; sourceTree = "<group>"; };
-		09C572F32172953500BDF00F /* TGBridgeLocationVenue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeLocationVenue.m; path = Bridge/TGBridgeLocationVenue.m; sourceTree = "<group>"; };
-		09C572F42172953500BDF00F /* TGBridgeMessageEntities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeMessageEntities.m; path = Bridge/TGBridgeMessageEntities.m; sourceTree = "<group>"; };
-		09C572F52172953500BDF00F /* TGBridgeWebPageMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeWebPageMediaAttachment.m; path = Bridge/TGBridgeWebPageMediaAttachment.m; sourceTree = "<group>"; };
 		09C572F62172953500BDF00F /* TGBridgeChat+TGTableItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "TGBridgeChat+TGTableItem.m"; path = "Bridge/TGBridgeChat+TGTableItem.m"; sourceTree = "<group>"; };
 		09C572F72172953500BDF00F /* TGBridgeMessage+TGTableItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "TGBridgeMessage+TGTableItem.h"; path = "Bridge/TGBridgeMessage+TGTableItem.h"; sourceTree = "<group>"; };
-		09C572F82172953500BDF00F /* TGBridgeMessageEntitiesAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeMessageEntitiesAttachment.h; path = Bridge/TGBridgeMessageEntitiesAttachment.h; sourceTree = "<group>"; };
-		09C572F92172953600BDF00F /* TGBridgeMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeMediaAttachment.m; path = Bridge/TGBridgeMediaAttachment.m; sourceTree = "<group>"; };
-		09C572FA2172953600BDF00F /* TGBridgeMessageEntities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeMessageEntities.h; path = Bridge/TGBridgeMessageEntities.h; sourceTree = "<group>"; };
-		09C572FB2172953600BDF00F /* TGBridgeDocumentMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeDocumentMediaAttachment.m; path = Bridge/TGBridgeDocumentMediaAttachment.m; sourceTree = "<group>"; };
-		09C572FC2172953600BDF00F /* TGBridgePeerNotificationSettings.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgePeerNotificationSettings.m; path = Bridge/TGBridgePeerNotificationSettings.m; sourceTree = "<group>"; };
-		09C572FD2172953600BDF00F /* TGBridgeReplyMessageMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeReplyMessageMediaAttachment.m; path = Bridge/TGBridgeReplyMessageMediaAttachment.m; sourceTree = "<group>"; };
-		09C572FE2172953600BDF00F /* TGBridgeForwardedMessageMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeForwardedMessageMediaAttachment.h; path = Bridge/TGBridgeForwardedMessageMediaAttachment.h; sourceTree = "<group>"; };
 		09C572FF2172953600BDF00F /* TGBridgeLocationVenue+TGTableItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "TGBridgeLocationVenue+TGTableItem.m"; path = "Bridge/TGBridgeLocationVenue+TGTableItem.m"; sourceTree = "<group>"; };
-		09C573002172953600BDF00F /* TGBridgeLocationMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeLocationMediaAttachment.m; path = Bridge/TGBridgeLocationMediaAttachment.m; sourceTree = "<group>"; };
-		09C573022172953600BDF00F /* TGBridgePeerNotificationSettings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgePeerNotificationSettings.h; path = Bridge/TGBridgePeerNotificationSettings.h; sourceTree = "<group>"; };
-		09C573032172953600BDF00F /* TGBridgeContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeContext.h; path = Bridge/TGBridgeContext.h; sourceTree = "<group>"; };
-		09C573042172953700BDF00F /* TGBridgeMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeMessage.h; path = Bridge/TGBridgeMessage.h; sourceTree = "<group>"; };
 		09C573052172953700BDF00F /* TGBridgeUser+TGTableItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "TGBridgeUser+TGTableItem.h"; path = "Bridge/TGBridgeUser+TGTableItem.h"; sourceTree = "<group>"; };
-		09C573062172953700BDF00F /* TGBridgeVideoMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeVideoMediaAttachment.h; path = Bridge/TGBridgeVideoMediaAttachment.h; sourceTree = "<group>"; };
-		09C573072172953700BDF00F /* TGBridgeContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeContext.m; path = Bridge/TGBridgeContext.m; sourceTree = "<group>"; };
-		09C573082172953700BDF00F /* TGBridgeAudioMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeAudioMediaAttachment.h; path = Bridge/TGBridgeAudioMediaAttachment.h; sourceTree = "<group>"; };
-		09C573092172953700BDF00F /* TGBridgeChat.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeChat.m; path = Bridge/TGBridgeChat.m; sourceTree = "<group>"; };
-		09C5730A2172953700BDF00F /* TGBridgeMessageEntitiesAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeMessageEntitiesAttachment.m; path = Bridge/TGBridgeMessageEntitiesAttachment.m; sourceTree = "<group>"; };
-		09C5730B2172953700BDF00F /* TGBridgeLocationVenue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeLocationVenue.h; path = Bridge/TGBridgeLocationVenue.h; sourceTree = "<group>"; };
-		09C5730C2172953700BDF00F /* TGBridgeChatMessages.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeChatMessages.m; path = Bridge/TGBridgeChatMessages.m; sourceTree = "<group>"; };
-		09C5730D2172953800BDF00F /* TGBridgeReplyMarkupMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeReplyMarkupMediaAttachment.m; path = Bridge/TGBridgeReplyMarkupMediaAttachment.m; sourceTree = "<group>"; };
-		09C5730F2172953800BDF00F /* TGBridgeUnsupportedMediaAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeUnsupportedMediaAttachment.m; path = Bridge/TGBridgeUnsupportedMediaAttachment.m; sourceTree = "<group>"; };
-		09C573102172953800BDF00F /* TGBridgeBotInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TGBridgeBotInfo.m; path = Bridge/TGBridgeBotInfo.m; sourceTree = "<group>"; };
-		09C573112172953800BDF00F /* TGBridgeUnsupportedMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeUnsupportedMediaAttachment.h; path = Bridge/TGBridgeUnsupportedMediaAttachment.h; sourceTree = "<group>"; };
-		09C573122172953800BDF00F /* TGBridgeWebPageMediaAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeWebPageMediaAttachment.h; path = Bridge/TGBridgeWebPageMediaAttachment.h; sourceTree = "<group>"; };
 		09C573132172953800BDF00F /* TGBridgeStickerPack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeStickerPack.h; path = Bridge/TGBridgeStickerPack.h; sourceTree = "<group>"; };
-		09C573142172953800BDF00F /* TGBridgeChatMessages.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeChatMessages.h; path = Bridge/TGBridgeChatMessages.h; sourceTree = "<group>"; };
 		09C573152172953800BDF00F /* TGBridgeLocationVenue+TGTableItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "TGBridgeLocationVenue+TGTableItem.h"; path = "Bridge/TGBridgeLocationVenue+TGTableItem.h"; sourceTree = "<group>"; };
-		09C573362172974E00BDF00F /* TGBridgePeerIdAdapter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgePeerIdAdapter.h; path = Bridge/TGBridgePeerIdAdapter.h; sourceTree = "<group>"; };
 		09CFB211217299E80083F7A3 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS5.0.sdk/System/Library/Frameworks/CoreLocation.framework; sourceTree = DEVELOPER_DIR; };
 		09D304212174335F00C00567 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		09EBE29922B004E800F670AB /* BlueFilledIconIpad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueFilledIconIpad.png; sourceTree = "<group>"; };
@@ -956,9 +823,18 @@
 		D000CAC821FB6E370011B15D /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D001D5A91F878DA300DF975A /* PhoneCountries.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PhoneCountries.txt; path = "Telegram-iOS/Resources/PhoneCountries.txt"; sourceTree = "<group>"; };
 		D006CFA121A8D12600FDCD32 /* ModernProto.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ModernProto.framework; path = "../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-ffbqcdyqpehxdvcwhyaorlehrrdc/Build/Products/Debug Hockeyapp-iphoneos/ModernProto.framework"; sourceTree = "<group>"; };
+		D008184B22B578EC008A895F /* WatchCommon.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchCommon.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D008184D22B5796E008A895F /* BuildConfig.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = BuildConfig.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D008184F22B5797A008A895F /* BuildConfig.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = BuildConfig.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D008185122B57986008A895F /* BuildConfig.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = BuildConfig.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D008185322B57994008A895F /* BuildConfig.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = BuildConfig.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D008185522B579A1008A895F /* BuildConfig.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = BuildConfig.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D008185722B579AD008A895F /* BuildConfig.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = BuildConfig.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D008185922B57EF5008A895F /* WatchCommon.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchCommon.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D00818A422B58CCB008A895F /* WatchCommonWatch.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchCommonWatch.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D00818CE22B595DB008A895F /* LightweightAccountData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LightweightAccountData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D008599C1B28189D00EAF753 /* Telegram.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Telegram.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00859A01B28189D00EAF753 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D00859A11B28189D00EAF753 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D00859A81B28189D00EAF753 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		D00859AB1B28189D00EAF753 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
 		D00859B61B28189D00EAF753 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -1061,16 +937,9 @@
 		D050F2341E49DEDE00988324 /* telegram_plane1@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "telegram_plane1@2x.png"; sourceTree = "<group>"; };
 		D050F2351E49DEDE00988324 /* telegram_sphere@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "telegram_sphere@2x.png"; sourceTree = "<group>"; };
 		D051DB0C215E5E2300F30F92 /* NotificationContent.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NotificationContent.entitlements; sourceTree = "<group>"; };
-		D051DB5C21602D6E00F30F92 /* LegacyDataImportSplash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDataImportSplash.swift; sourceTree = "<group>"; };
 		D052974422B0073E004ABAF6 /* WhiteFilledIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "WhiteFilledIcon@3x.png"; sourceTree = "<group>"; };
 		D052974522B0073F004ABAF6 /* WhiteFilledIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "WhiteFilledIcon@2x.png"; sourceTree = "<group>"; };
-		D053DAD22018ED2B00993D32 /* LockedWindowCoveringView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockedWindowCoveringView.swift; sourceTree = "<group>"; };
 		D055BD431B7E216400F06C0A /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
-		D05B37F41FEA5F6E0041D2A5 /* SnapshotEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotEnvironment.swift; sourceTree = "<group>"; };
-		D05B37F61FEA8C640041D2A5 /* SnapshotSecretChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotSecretChat.swift; sourceTree = "<group>"; };
-		D05B37F81FEA8CF00041D2A5 /* SnapshotSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotSettings.swift; sourceTree = "<group>"; };
-		D05B37FA1FEA8D020041D2A5 /* SnapshotAppearanceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotAppearanceSettings.swift; sourceTree = "<group>"; };
-		D05B37FC1FEA8D870041D2A5 /* SnapshotResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotResources.swift; sourceTree = "<group>"; };
 		D05B37FF1FEA8E3D0041D2A5 /* Bitmap2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Bitmap2.png; sourceTree = "<group>"; };
 		D05B38001FEA8E3D0041D2A5 /* Bitmap3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Bitmap3.png; sourceTree = "<group>"; };
 		D05B38011FEA8E3D0041D2A5 /* Bitmap1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Bitmap1.png; sourceTree = "<group>"; };
@@ -1084,44 +953,27 @@
 		D05B38091FEA8E3D0041D2A5 /* Bitmap11.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Bitmap11.png; sourceTree = "<group>"; };
 		D0612E481D58B478000C8F02 /* Application.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Application.swift; sourceTree = "<group>"; };
 		D06706601D51185400DED3E3 /* TelegramCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D06E4C2D21347D9200088087 /* UIImage+ImageEffects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImage+ImageEffects.h"; sourceTree = "<group>"; };
-		D06E4C2E21347D9200088087 /* UIImage+ImageEffects.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImage+ImageEffects.m"; sourceTree = "<group>"; };
 		D073E51E21FF7CE900742DDD /* Crypto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Crypto.h; sourceTree = "<group>"; };
 		D073E51F21FF7CE900742DDD /* Crypto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Crypto.m; sourceTree = "<group>"; };
 		D073E52122003E1E00742DDD /* Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Data.swift; sourceTree = "<group>"; };
-		D07477B522A72B1F002737C4 /* TempRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempRoot.swift; sourceTree = "<group>"; };
-		D07477B722A732F1002737C4 /* TempMain.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TempMain.m; sourceTree = "<group>"; };
 		D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-AppStore.entitlements"; sourceTree = "<group>"; };
-		D084023120E1883500065674 /* ApplicationShortcutItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationShortcutItem.swift; sourceTree = "<group>"; };
-		D08410431FABDC5B008FFE92 /* TGItemProviderSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGItemProviderSignals.h; sourceTree = "<group>"; };
-		D08410441FABDC5C008FFE92 /* TGItemProviderSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGItemProviderSignals.m; sourceTree = "<group>"; };
 		D08410471FABDC7A008FFE92 /* SSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D08410491FABDCF2008FFE92 /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D084104A1FABDCFD008FFE92 /* TGContactModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGContactModel.h; sourceTree = "<group>"; };
-		D084104B1FABDCFD008FFE92 /* TGMimeTypeMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMimeTypeMap.h; sourceTree = "<group>"; };
-		D084104C1FABDCFD008FFE92 /* TGContactModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGContactModel.m; sourceTree = "<group>"; };
-		D084104D1FABDCFD008FFE92 /* TGMimeTypeMap.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMimeTypeMap.m; sourceTree = "<group>"; };
 		D08410511FABDD54008FFE92 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D08410521FABDEC8008FFE92 /* Share-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Share-Bridging-Header.h"; sourceTree = "<group>"; };
-		D08410531FABE428008FFE92 /* ShareItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareItems.swift; sourceTree = "<group>"; };
 		D08984FD2118B3F100918162 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D08984FF2118B3F100918162 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D08985012118B3F100918162 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D08985032118B46F00918162 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D08985052118B62400918162 /* SiriIntents-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SiriIntents-Bridging-Header.h"; sourceTree = "<group>"; };
 		D08985062119B7FE00918162 /* IntentContacts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentContacts.swift; sourceTree = "<group>"; };
-		D09250001FE52D2A003F693F /* BuildConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BuildConfig.h; sourceTree = "<group>"; };
-		D09250011FE52D2A003F693F /* BuildConfig.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BuildConfig.m; sourceTree = "<group>"; };
 		D096C2BD1CC3C021006D814E /* Display.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D096C2C01CC3C104006D814E /* Postbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D096C2C31CC3C11A006D814E /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D09A595F1B5858DB00FC3724 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		D09A59B71B5876B600FC3724 /* Telegram-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Telegram-Bridging-Header.h"; sourceTree = "<group>"; };
-		D09B79C42219C784003B1F9D /* SharedAccountInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAccountInfo.swift; sourceTree = "<group>"; };
-		D09B79C72219C7AE003B1F9D /* ManageSharedAccountInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageSharedAccountInfo.swift; sourceTree = "<group>"; };
 		D09DCBB61D0C856B00F51FFE /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		D0A18D621E149043004C6734 /* PushKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PushKit.framework; path = System/Library/Frameworks/PushKit.framework; sourceTree = SDKROOT; };
-		D0A18D641E15C020004C6734 /* WakeupManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WakeupManager.swift; sourceTree = "<group>"; };
 		D0AA1A671D568BA400152314 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		D0AA1A691D568BA400152314 /* UserNotificationsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotificationsUI.framework; path = System/Library/Frameworks/UserNotificationsUI.framework; sourceTree = SDKROOT; };
 		D0AB0B9F1D6708B9002C78E7 /* Postbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Postbox.framework; path = "submodules/Postbox/build/Debug-iphoneos/Postbox.framework"; sourceTree = "<group>"; };
@@ -1131,19 +983,7 @@
 		D0ADF953212B3B4700310BBC /* Share-AppStoreLLC.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Share-AppStoreLLC.entitlements"; sourceTree = "<group>"; };
 		D0ADF954212B3B5200310BBC /* SiriIntents-AppStoreLLC.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "SiriIntents-AppStoreLLC.entitlements"; sourceTree = "<group>"; };
 		D0ADF955212B3B6400310BBC /* Widget-AppStoreLLC.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Widget-AppStoreLLC.entitlements"; sourceTree = "<group>"; };
-		D0ADF957212B56DC00310BBC /* LegacyUserDataImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyUserDataImport.swift; sourceTree = "<group>"; };
-		D0ADF959212B5AC600310BBC /* LegacyResourceImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyResourceImport.swift; sourceTree = "<group>"; };
-		D0ADF95B212B636D00310BBC /* LegacyChatImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyChatImport.swift; sourceTree = "<group>"; };
-		D0ADF95D212C818F00310BBC /* LegacyPreferencesImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyPreferencesImport.swift; sourceTree = "<group>"; };
-		D0ADF95F212C8DF600310BBC /* TGAutoDownloadPreferences.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAutoDownloadPreferences.m; sourceTree = "<group>"; };
-		D0ADF960212C8DF600310BBC /* TGAutoDownloadPreferences.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAutoDownloadPreferences.h; sourceTree = "<group>"; };
-		D0ADF962212C9AA900310BBC /* TGProxyItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGProxyItem.h; sourceTree = "<group>"; };
-		D0ADF963212C9AA900310BBC /* TGProxyItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGProxyItem.m; sourceTree = "<group>"; };
 		D0AF322A1FACA1A80097362B /* libstdc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libstdc++.tbd"; path = "usr/lib/libstdc++.tbd"; sourceTree = SDKROOT; };
-		D0AF322D1FACBA270097362B /* TGShareLocationSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGShareLocationSignals.m; sourceTree = "<group>"; };
-		D0AF322E1FACBA270097362B /* TGShareLocationSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGShareLocationSignals.h; sourceTree = "<group>"; };
-		D0B21B0C2203A9A1003F741D /* SharedWakeupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedWakeupManager.swift; sourceTree = "<group>"; };
-		D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedNotificationManager.swift; sourceTree = "<group>"; };
 		D0B2F737204F4C9900D3BFB9 /* Widget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Widget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0B2F74E204F4D6100D3BFB9 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0B2F74F204F4D6100D3BFB9 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1155,11 +995,9 @@
 		D0B2F75A204F51E400D3BFB9 /* Widget-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Widget-AppStore.entitlements"; sourceTree = "<group>"; };
 		D0B2F75B204F51E500D3BFB9 /* Widget-HockeyApp.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Widget-HockeyApp.entitlements"; sourceTree = "<group>"; };
 		D0B2F75F2050102600D3BFB9 /* PeerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerNode.swift; sourceTree = "<group>"; };
-		D0B3B53A21666C0000FC60A0 /* LegacyFileImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyFileImport.swift; sourceTree = "<group>"; };
 		D0B844591DACF507005F29E1 /* HockeySDK.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HockeySDK.framework; path = "third-party/HockeySDK.framework"; sourceTree = "<group>"; };
 		D0B8445A1DACF507005F29E1 /* HockeySDKResources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; name = HockeySDKResources.bundle; path = "third-party/HockeySDKResources.bundle"; sourceTree = "<group>"; };
 		D0B8445F1DACF561005F29E1 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
-		D0BEAF721E54C9A900BD963D /* ApplicationContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationContext.swift; sourceTree = "<group>"; };
 		D0C2DFF51CC4D1B20044FF83 /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
 		D0C2DFF71CC4D1BA0044FF83 /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = System/Library/Frameworks/MobileCoreServices.framework; sourceTree = SDKROOT; };
 		D0C2DFF91CC4D1C90044FF83 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
@@ -1170,8 +1008,6 @@
 		D0CAF3171D76394C0011F558 /* TelegramCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TelegramCore.framework; path = "submodules/TelegramCore/build/Debug-iphoneos/TelegramCore.framework"; sourceTree = "<group>"; };
 		D0CCD61C222EFFB000EE1E08 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CD17B41CC3AE14007C5650 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0CE6F1A213ED11100BCD44B /* TGPresentationAutoNightPreferences.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGPresentationAutoNightPreferences.h; sourceTree = "<group>"; };
-		D0CE6F1B213ED11100BCD44B /* TGPresentationAutoNightPreferences.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGPresentationAutoNightPreferences.m; sourceTree = "<group>"; };
 		D0CE6F1F213EDA4200BCD44B /* pt */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pt; path = Localizable.strings; sourceTree = "<group>"; };
 		D0CE6F21213EDA4200BCD44B /* pt */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pt; path = InfoPlist.strings; sourceTree = "<group>"; };
 		D0CE6F23213EDA4200BCD44B /* pt */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = pt; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
@@ -1198,7 +1034,6 @@
 		D0CE6F54213EDA4400BCD44B /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = de; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
 		D0CFBB921FD88C2900B65C0D /* begin_record.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = begin_record.caf; path = "Telegram-iOS/Resources/begin_record.caf"; sourceTree = "<group>"; };
 		D0D17E891CAAD66600C4750B /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
-		D0D2276E212739120028F943 /* LegacyDataImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDataImport.swift; sourceTree = "<group>"; };
 		D0D268761D79A70A00C422DA /* SiriIntents.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SiriIntents.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D268781D79A70A00C422DA /* IntentHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentHandler.swift; sourceTree = "<group>"; };
 		D0D2687A1D79A70A00C422DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -1223,12 +1058,10 @@
 		D0EA97961FE8536900792DD6 /* SiriIntents-Hockeyapp.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "SiriIntents-Hockeyapp.entitlements"; sourceTree = "<group>"; };
 		D0EA97971FE8537000792DD6 /* Share-HockeyApp.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Share-HockeyApp.entitlements"; sourceTree = "<group>"; };
 		D0EA97981FE8537000792DD6 /* Share-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Share-AppStore.entitlements"; sourceTree = "<group>"; };
-		D0EB243A201B77C400F6CC13 /* ClearNotificationsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearNotificationsManager.swift; sourceTree = "<group>"; };
 		D0ECCB7C1FE9C38500609802 /* Telegram-iOS UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Telegram-iOS UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0ECCB7E1FE9C38500609802 /* Telegram_iOS_UITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telegram_iOS_UITests.swift; sourceTree = "<group>"; };
 		D0ECCB801FE9C38500609802 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0ECCB891FE9C4AC00609802 /* SnapshotHelper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SnapshotHelper.swift; sourceTree = "<group>"; };
-		D0ECCB8C1FE9CE3F00609802 /* SnapshotChatList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotChatList.swift; sourceTree = "<group>"; };
 		D0ED633921FF3EDF001D4648 /* AccountData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountData.swift; sourceTree = "<group>"; };
 		D0ED633C21FF3F28001D4648 /* NotificationService-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NotificationService-Bridging-Header.h"; sourceTree = "<group>"; };
 		D0ED633E21FF46E4001D4648 /* ImageData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageData.swift; sourceTree = "<group>"; };
@@ -1242,6 +1075,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D00818A522B58CCB008A895F /* WatchCommonWatch.framework in Frameworks */,
 				0972C6E021791D950069E98A /* UserNotifications.framework in Frameworks */,
 				09CFB212217299E80083F7A3 /* CoreLocation.framework in Frameworks */,
 				09C5723D21728C0E00BDF00F /* CoreGraphics.framework in Frameworks */,
@@ -1252,6 +1086,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D00818CF22B595DB008A895F /* LightweightAccountData.framework in Frameworks */,
+				D008185822B579AD008A895F /* BuildConfig.framework in Frameworks */,
 				D015E04D225D2D8F00CB9E8A /* WebP.framework in Frameworks */,
 				D0CCD61D222EFFB000EE1E08 /* MtProtoKitDynamic.framework in Frameworks */,
 			);
@@ -1264,7 +1100,6 @@
 				D0CAD6A421C03BEB001E3055 /* FFMpeg.framework in Frameworks */,
 				09C50E88217385CF009E676F /* WatchConnectivity.framework in Frameworks */,
 				09FDAEE62140477F00BF856F /* MtProtoKitDynamic.framework in Frameworks */,
-				D01A47551F4DBED700383CC1 /* HockeySDK.framework in Frameworks */,
 				D0A18D631E149043004C6734 /* PushKit.framework in Frameworks */,
 				D0B844601DACF561005F29E1 /* libc++.tbd in Frameworks */,
 				D06706621D5118F500DED3E3 /* TelegramCore.framework in Frameworks */,
@@ -1284,6 +1119,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D008185622B579A1008A895F /* BuildConfig.framework in Frameworks */,
 				D051DB0B215E5D1C00F30F92 /* TelegramUI.framework in Frameworks */,
 				D02CF615215DA24900E0F56A /* Display.framework in Frameworks */,
 				D02CF617215DA24900E0F56A /* Postbox.framework in Frameworks */,
@@ -1298,6 +1134,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D008185022B5797A008A895F /* BuildConfig.framework in Frameworks */,
 				D0AF322C1FACA1B00097362B /* libc++.tbd in Frameworks */,
 				D0AF32291FACA1920097362B /* Accelerate.framework in Frameworks */,
 				D08410501FABDD54008FFE92 /* MtProtoKitDynamic.framework in Frameworks */,
@@ -1312,6 +1149,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D008185422B57994008A895F /* BuildConfig.framework in Frameworks */,
 				D0B2F74A204F4D6100D3BFB9 /* Postbox.framework in Frameworks */,
 				D0B2F74B204F4D6100D3BFB9 /* SwiftSignalKit.framework in Frameworks */,
 				D0B2F74C204F4D6100D3BFB9 /* TelegramCore.framework in Frameworks */,
@@ -1323,6 +1161,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D008185222B57986008A895F /* BuildConfig.framework in Frameworks */,
 				D08985042118B46F00918162 /* SwiftSignalKit.framework in Frameworks */,
 				D08984FE2118B3F100918162 /* MtProtoKitDynamic.framework in Frameworks */,
 				D08985002118B3F100918162 /* Postbox.framework in Frameworks */,
@@ -1340,14 +1179,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		092F368121542CE4001A9F49 /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				092F368221542CF2001A9F49 /* en.lproj */,
-			);
-			path = "Supporting Files";
-			sourceTree = "<group>";
-		};
 		092F368221542CF2001A9F49 /* en.lproj */ = {
 			isa = PBXGroup;
 			children = (
@@ -1367,6 +1198,12 @@
 		09A218E122A14E5600DE6898 /* App Icons */ = {
 			isa = PBXGroup;
 			children = (
+				09A4192E22B7A4D400637EB4 /* BlackClassicIconIpad.png */,
+				09A4192F22B7A4D400637EB4 /* BlackClassicIconIpad@2x.png */,
+				09A4192B22B7A4D400637EB4 /* BlackClassicIconLargeIpad@2x.png */,
+				09A4192C22B7A4D400637EB4 /* BlueClassicIconIpad.png */,
+				09A4192A22B7A4D300637EB4 /* BlueClassicIconIpad@2x.png */,
+				09A4192D22B7A4D400637EB4 /* BlueClassicIconLargeIpad@2x.png */,
 				D052974522B0073F004ABAF6 /* WhiteFilledIcon@2x.png */,
 				D052974422B0073E004ABAF6 /* WhiteFilledIcon@3x.png */,
 				09EBE2A122B004E900F670AB /* BlackFilledIconIpad.png */,
@@ -1511,13 +1348,8 @@
 			children = (
 				09C57290217291BC00BDF00F /* Model */,
 				09C5728E217291AC00BDF00F /* Signals */,
-				09C573362172974E00BDF00F /* TGBridgePeerIdAdapter.h */,
 				09C572CC2172939F00BDF00F /* TGBridgeClient.h */,
 				09C572D02172939F00BDF00F /* TGBridgeClient.m */,
-				09C572CF2172939F00BDF00F /* TGBridgeCommon.h */,
-				09C572CE2172939F00BDF00F /* TGBridgeCommon.m */,
-				09C50E902173B247009E676F /* TGBridgeSubscriptions.h */,
-				09C50E8F2173B247009E676F /* TGBridgeSubscriptions.m */,
 			);
 			name = Bridge;
 			sourceTree = "<group>";
@@ -1922,76 +1754,20 @@
 		09C57290217291BC00BDF00F /* Model */ = {
 			isa = PBXGroup;
 			children = (
-				09C572CB2172938100BDF00F /* Media */,
-				09C572EA2172953400BDF00F /* TGBridgeBotCommandInfo.h */,
-				09C572EF2172953500BDF00F /* TGBridgeBotCommandInfo.m */,
-				09C572E82172953400BDF00F /* TGBridgeBotInfo.h */,
-				09C573102172953800BDF00F /* TGBridgeBotInfo.m */,
 				09C572DD2172953300BDF00F /* TGBridgeBotReplyMarkup.h */,
 				09C572D92172953300BDF00F /* TGBridgeBotReplyMarkup.m */,
-				09C572F12172953500BDF00F /* TGBridgeChat.h */,
-				09C573092172953700BDF00F /* TGBridgeChat.m */,
 				09C572DB2172953300BDF00F /* TGBridgeChat+TGTableItem.h */,
 				09C572F62172953500BDF00F /* TGBridgeChat+TGTableItem.m */,
-				09C573142172953800BDF00F /* TGBridgeChatMessages.h */,
-				09C5730C2172953700BDF00F /* TGBridgeChatMessages.m */,
-				09C573032172953600BDF00F /* TGBridgeContext.h */,
-				09C573072172953700BDF00F /* TGBridgeContext.m */,
-				09C5730B2172953700BDF00F /* TGBridgeLocationVenue.h */,
-				09C572F32172953500BDF00F /* TGBridgeLocationVenue.m */,
 				09C573152172953800BDF00F /* TGBridgeLocationVenue+TGTableItem.h */,
 				09C572FF2172953600BDF00F /* TGBridgeLocationVenue+TGTableItem.m */,
-				09C572D62172953200BDF00F /* TGBridgeMediaAttachment.h */,
-				09C572F92172953600BDF00F /* TGBridgeMediaAttachment.m */,
-				09C573042172953700BDF00F /* TGBridgeMessage.h */,
-				09C572DF2172953300BDF00F /* TGBridgeMessage.m */,
 				09C572F72172953500BDF00F /* TGBridgeMessage+TGTableItem.h */,
 				09C572D72172953300BDF00F /* TGBridgeMessage+TGTableItem.m */,
-				09C573022172953600BDF00F /* TGBridgePeerNotificationSettings.h */,
-				09C572FC2172953600BDF00F /* TGBridgePeerNotificationSettings.m */,
 				09C573132172953800BDF00F /* TGBridgeStickerPack.h */,
 				09C572E32172953400BDF00F /* TGBridgeStickerPack.m */,
-				09C572EB2172953400BDF00F /* TGBridgeUser.h */,
-				09C572ED2172953400BDF00F /* TGBridgeUser.m */,
 				09C573052172953700BDF00F /* TGBridgeUser+TGTableItem.h */,
 				09C572E92172953400BDF00F /* TGBridgeUser+TGTableItem.m */,
 			);
 			name = Model;
-			sourceTree = "<group>";
-		};
-		09C572CB2172938100BDF00F /* Media */ = {
-			isa = PBXGroup;
-			children = (
-				09C572DC2172953300BDF00F /* TGBridgeActionMediaAttachment.h */,
-				09C572E22172953300BDF00F /* TGBridgeActionMediaAttachment.m */,
-				09C573082172953700BDF00F /* TGBridgeAudioMediaAttachment.h */,
-				09C572E02172953300BDF00F /* TGBridgeAudioMediaAttachment.m */,
-				09C572DA2172953300BDF00F /* TGBridgeContactMediaAttachment.h */,
-				09C572DE2172953300BDF00F /* TGBridgeContactMediaAttachment.m */,
-				09C572F02172953500BDF00F /* TGBridgeDocumentMediaAttachment.h */,
-				09C572FB2172953600BDF00F /* TGBridgeDocumentMediaAttachment.m */,
-				09C572FE2172953600BDF00F /* TGBridgeForwardedMessageMediaAttachment.h */,
-				09C572E62172953400BDF00F /* TGBridgeForwardedMessageMediaAttachment.m */,
-				09C572EE2172953400BDF00F /* TGBridgeImageMediaAttachment.h */,
-				09C572F22172953500BDF00F /* TGBridgeImageMediaAttachment.m */,
-				09C572E72172953400BDF00F /* TGBridgeLocationMediaAttachment.h */,
-				09C573002172953600BDF00F /* TGBridgeLocationMediaAttachment.m */,
-				09C572F82172953500BDF00F /* TGBridgeMessageEntitiesAttachment.h */,
-				09C5730A2172953700BDF00F /* TGBridgeMessageEntitiesAttachment.m */,
-				09C572E12172953300BDF00F /* TGBridgeReplyMarkupMediaAttachment.h */,
-				09C5730D2172953800BDF00F /* TGBridgeReplyMarkupMediaAttachment.m */,
-				09C572EC2172953400BDF00F /* TGBridgeReplyMessageMediaAttachment.h */,
-				09C572FD2172953600BDF00F /* TGBridgeReplyMessageMediaAttachment.m */,
-				09C573112172953800BDF00F /* TGBridgeUnsupportedMediaAttachment.h */,
-				09C5730F2172953800BDF00F /* TGBridgeUnsupportedMediaAttachment.m */,
-				09C573062172953700BDF00F /* TGBridgeVideoMediaAttachment.h */,
-				09C572E42172953400BDF00F /* TGBridgeVideoMediaAttachment.m */,
-				09C573122172953800BDF00F /* TGBridgeWebPageMediaAttachment.h */,
-				09C572F52172953500BDF00F /* TGBridgeWebPageMediaAttachment.m */,
-				09C572FA2172953600BDF00F /* TGBridgeMessageEntities.h */,
-				09C572F42172953500BDF00F /* TGBridgeMessageEntities.m */,
-			);
-			name = Media;
 			sourceTree = "<group>";
 		};
 		D00859931B28189D00EAF753 = {
@@ -2041,23 +1817,9 @@
 				D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */,
 				D0E3A7071B285B5000A402D9 /* Telegram-iOS-Hockeyapp.entitlements */,
 				D021D4D7219CAEDD0064BEBA /* Telegram-iOS-Fork.entitlements */,
-				D00859A11B28189D00EAF753 /* AppDelegate.swift */,
-				D0BEAF721E54C9A900BD963D /* ApplicationContext.swift */,
-				D053DAD22018ED2B00993D32 /* LockedWindowCoveringView.swift */,
-				D084023120E1883500065674 /* ApplicationShortcutItem.swift */,
-				D0A18D641E15C020004C6734 /* WakeupManager.swift */,
-				D0EB243A201B77C400F6CC13 /* ClearNotificationsManager.swift */,
 				D00859A81B28189D00EAF753 /* Images.xcassets */,
 				D00859AA1B28189D00EAF753 /* LaunchScreen.xib */,
-				D0ADF956212B56C200310BBC /* Legacy Data Import */,
-				D0ECCB8B1FE9CE2B00609802 /* Snapshots */,
 				D008599F1B28189D00EAF753 /* Supporting Files */,
-				D0B21B0C2203A9A1003F741D /* SharedWakeupManager.swift */,
-				D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */,
-				D09B79C42219C784003B1F9D /* SharedAccountInfo.swift */,
-				D09B79C72219C7AE003B1F9D /* ManageSharedAccountInfo.swift */,
-				D07477B522A72B1F002737C4 /* TempRoot.swift */,
-				D07477B722A732F1002737C4 /* TempMain.m */,
 			);
 			path = "Telegram-iOS";
 			sourceTree = "<group>";
@@ -2065,11 +1827,7 @@
 		D008599F1B28189D00EAF753 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				D06E4C2D21347D9200088087 /* UIImage+ImageEffects.h */,
-				D06E4C2E21347D9200088087 /* UIImage+ImageEffects.m */,
 				D0612E481D58B478000C8F02 /* Application.swift */,
-				D09250001FE52D2A003F693F /* BuildConfig.h */,
-				D09250011FE52D2A003F693F /* BuildConfig.m */,
 				D09DCBB41D0C854D00F51FFE /* en.lproj */,
 				D0CE6F47213EDA4400BCD44B /* ar.lproj */,
 				D0CE6F4E213EDA4400BCD44B /* de.lproj */,
@@ -2107,6 +1865,16 @@
 		D00859C21B281E0000EAF753 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D00818CE22B595DB008A895F /* LightweightAccountData.framework */,
+				D00818A422B58CCB008A895F /* WatchCommonWatch.framework */,
+				D008185922B57EF5008A895F /* WatchCommon.framework */,
+				D008185722B579AD008A895F /* BuildConfig.framework */,
+				D008185522B579A1008A895F /* BuildConfig.framework */,
+				D008185322B57994008A895F /* BuildConfig.framework */,
+				D008185122B57986008A895F /* BuildConfig.framework */,
+				D008184F22B5797A008A895F /* BuildConfig.framework */,
+				D008184D22B5796E008A895F /* BuildConfig.framework */,
+				D008184B22B578EC008A895F /* WatchCommon.framework */,
 				D015E04C225D2D8F00CB9E8A /* WebP.framework */,
 				D0CCD61C222EFFB000EE1E08 /* MtProtoKitDynamic.framework */,
 				D0CAD6A121C03BE2001E3055 /* FFMpeg.framework */,
@@ -2234,23 +2002,14 @@
 		D03B0E791D63484500955575 /* Share */ = {
 			isa = PBXGroup;
 			children = (
-				092F368121542CE4001A9F49 /* Supporting Files */,
+				092F368221542CF2001A9F49 /* en.lproj */,
 				D0ADF953212B3B4700310BBC /* Share-AppStoreLLC.entitlements */,
 				D0EA97981FE8537000792DD6 /* Share-AppStore.entitlements */,
 				D0EA97971FE8537000792DD6 /* Share-HockeyApp.entitlements */,
 				D021D4DA219CB0EF0064BEBA /* Share-Fork.entitlements */,
-				D084104A1FABDCFD008FFE92 /* TGContactModel.h */,
-				D084104C1FABDCFD008FFE92 /* TGContactModel.m */,
-				D084104B1FABDCFD008FFE92 /* TGMimeTypeMap.h */,
-				D084104D1FABDCFD008FFE92 /* TGMimeTypeMap.m */,
-				D08410431FABDC5B008FFE92 /* TGItemProviderSignals.h */,
-				D08410441FABDC5C008FFE92 /* TGItemProviderSignals.m */,
-				D0AF322E1FACBA270097362B /* TGShareLocationSignals.h */,
-				D0AF322D1FACBA270097362B /* TGShareLocationSignals.m */,
 				D03B0E7A1D63484500955575 /* ShareRootController.swift */,
 				D08410521FABDEC8008FFE92 /* Share-Bridging-Header.h */,
 				D03B0E7F1D63484500955575 /* Info.plist */,
-				D08410531FABE428008FFE92 /* ShareItems.swift */,
 			);
 			path = Share;
 			sourceTree = "<group>";
@@ -2435,26 +2194,6 @@
 			name = en.lproj;
 			sourceTree = "<group>";
 		};
-		D0ADF956212B56C200310BBC /* Legacy Data Import */ = {
-			isa = PBXGroup;
-			children = (
-				D0D2276E212739120028F943 /* LegacyDataImport.swift */,
-				D0ADF957212B56DC00310BBC /* LegacyUserDataImport.swift */,
-				D0ADF95B212B636D00310BBC /* LegacyChatImport.swift */,
-				D0B3B53A21666C0000FC60A0 /* LegacyFileImport.swift */,
-				D0ADF959212B5AC600310BBC /* LegacyResourceImport.swift */,
-				D0ADF95D212C818F00310BBC /* LegacyPreferencesImport.swift */,
-				D0ADF960212C8DF600310BBC /* TGAutoDownloadPreferences.h */,
-				D0ADF95F212C8DF600310BBC /* TGAutoDownloadPreferences.m */,
-				D0CE6F1A213ED11100BCD44B /* TGPresentationAutoNightPreferences.h */,
-				D0CE6F1B213ED11100BCD44B /* TGPresentationAutoNightPreferences.m */,
-				D0ADF962212C9AA900310BBC /* TGProxyItem.h */,
-				D0ADF963212C9AA900310BBC /* TGProxyItem.m */,
-				D051DB5C21602D6E00F30F92 /* LegacyDataImportSplash.swift */,
-			);
-			name = "Legacy Data Import";
-			sourceTree = "<group>";
-		};
 		D0CE6F1D213EDA4200BCD44B /* pt.lproj */ = {
 			isa = PBXGroup;
 			children = (
@@ -2594,19 +2333,6 @@
 				D0ECCB801FE9C38500609802 /* Info.plist */,
 			);
 			path = "Telegram-iOS UITests";
-			sourceTree = "<group>";
-		};
-		D0ECCB8B1FE9CE2B00609802 /* Snapshots */ = {
-			isa = PBXGroup;
-			children = (
-				D05B37F41FEA5F6E0041D2A5 /* SnapshotEnvironment.swift */,
-				D05B37FC1FEA8D870041D2A5 /* SnapshotResources.swift */,
-				D0ECCB8C1FE9CE3F00609802 /* SnapshotChatList.swift */,
-				D05B37F61FEA8C640041D2A5 /* SnapshotSecretChat.swift */,
-				D05B37F81FEA8CF00041D2A5 /* SnapshotSettings.swift */,
-				D05B37FA1FEA8D020041D2A5 /* SnapshotAppearanceSettings.swift */,
-			);
-			name = Snapshots;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -2957,7 +2683,6 @@
 				09A218F222A1570A00DE6898 /* BlueFilledIcon@2x.png in Resources */,
 				090E777722A6945900CD99F5 /* BlueClassicIcon@2x.png in Resources */,
 				D0CE6F69213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
-				D0338736223A9A9A007A2CE4 /* Config-Hockeyapp-Internal.xcconfig in Resources */,
 				D08DB0C0213F4D1D00F2ADBF /* telegram_sphere@2x.png in Resources */,
 				D08DB0AB213F4D1D00F2ADBF /* ic_bubble@2x.png in Resources */,
 				D04DCC341F71C80000B021D7 /* 7.m4a in Resources */,
@@ -2965,6 +2690,7 @@
 				D0CE6F60213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D0CE6F63213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D00ED75D1FE95287001F38BD /* InfoPlist.strings in Resources */,
+				09A4193022B7A4D500637EB4 /* BlueClassicIconIpad@2x.png in Resources */,
 				D04DCC361F71C80000B021D7 /* 9.m4a in Resources */,
 				D0CE6F5A213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				09EBE2AE22B004EA00F670AB /* BlueFilledIconIpad@2x.png in Resources */,
@@ -2973,6 +2699,7 @@
 				D0CE6F68213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				09A218EE22A1570A00DE6898 /* BlueFilledIcon@3x.png in Resources */,
 				D0CE6F6A213EDA4400BCD44B /* Localizable.strings in Resources */,
+				09A4193522B7A4D500637EB4 /* BlackClassicIconIpad@2x.png in Resources */,
 				D0E8C2DE2285EA55009F26E8 /* BlackIcon@2x.png in Resources */,
 				D09DCBB71D0C856B00F51FFE /* Localizable.strings in Resources */,
 				D0CE6F66213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
@@ -2983,6 +2710,8 @@
 				09EBE2AA22B004EA00F670AB /* BlueIconLargeIpad@2x.png in Resources */,
 				D0CE6F5B213EDA4400BCD44B /* Localizable.strings in Resources */,
 				09EBE2AF22B004EA00F670AB /* BlackIconIpad@2x.png in Resources */,
+				09A4193422B7A4D500637EB4 /* BlackClassicIconIpad.png in Resources */,
+				09A4193222B7A4D500637EB4 /* BlueClassicIconIpad.png in Resources */,
 				D0CE6F62213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D08DB0A8213F4D1D00F2ADBF /* fast_arrow_shadow@2x.png in Resources */,
 				D0CFBB931FD88C2900B65C0D /* begin_record.caf in Resources */,
@@ -3005,6 +2734,7 @@
 				D08DB0A9213F4D1D00F2ADBF /* fast_body@2x.png in Resources */,
 				D04DCC321F71C80000B021D7 /* 5.m4a in Resources */,
 				D04DCC241F71C80000B021D7 /* 101.m4a in Resources */,
+				09A4193122B7A4D500637EB4 /* BlackClassicIconLargeIpad@2x.png in Resources */,
 				D04DCC351F71C80000B021D7 /* 8.m4a in Resources */,
 				D08DB0B1213F4D1D00F2ADBF /* ic_smile@2x.png in Resources */,
 				09EBE2A722B004EA00F670AB /* BlueIconIpad.png in Resources */,
@@ -3025,6 +2755,7 @@
 				D0CE6F58213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D08DB0AF213F4D1D00F2ADBF /* ic_pencil@2x.png in Resources */,
 				D0CE6F67213EDA4400BCD44B /* Localizable.strings in Resources */,
+				09A4193322B7A4D500637EB4 /* BlueClassicIconLargeIpad@2x.png in Resources */,
 				D04DCC291F71C80000B021D7 /* 106.m4a in Resources */,
 				D0CE6F5E213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D052974622B0073F004ABAF6 /* WhiteFilledIcon@3x.png in Resources */,
@@ -3133,7 +2864,6 @@
 				09C5728521728D3700BDF00F /* SSignal+Single.m in Sources */,
 				09C5728A21728D3700BDF00F /* SThreadPoolQueue.m in Sources */,
 				09C5727821728D3700BDF00F /* SMetaDisposable.m in Sources */,
-				09C5732B2172953900BDF00F /* TGBridgePeerNotificationSettings.m in Sources */,
 				0956AF2F217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m in Sources */,
 				09C50DE821729D7C009E676F /* TGBridgeBotSignals.m in Sources */,
 				09C571952172806900BDF00F /* TGUserRowController.m in Sources */,
@@ -3145,13 +2875,9 @@
 				09C5731D2172953800BDF00F /* TGBridgeStickerPack.m in Sources */,
 				09C50DF321729D7C009E676F /* TGBridgeStateSignal.m in Sources */,
 				09C5727421728D3700BDF00F /* SAtomic.m in Sources */,
-				09C5731C2172953800BDF00F /* TGBridgeActionMediaAttachment.m in Sources */,
 				09C571D52172875500BDF00F /* TGMessageViewController.m in Sources */,
-				09C5732F2172953900BDF00F /* TGBridgeContext.m in Sources */,
-				09C573192172953800BDF00F /* TGBridgeContactMediaAttachment.m in Sources */,
 				09C571EB2172878900BDF00F /* TGStickersHeaderController.m in Sources */,
 				09C50DED21729D7C009E676F /* TGBridgeLocationSignals.m in Sources */,
-				09C573302172953900BDF00F /* TGBridgeChat.m in Sources */,
 				09C571D72172875A00BDF00F /* TGMessageViewMessageRowController.m in Sources */,
 				09C571F22172879C00BDF00F /* TGComposeController.m in Sources */,
 				09C5727621728D3700BDF00F /* SBlockDisposable.m in Sources */,
@@ -3159,14 +2885,11 @@
 				09C5723021728AA500BDF00F /* TGNeoMessageViewModel.m in Sources */,
 				09C5728C21728D3700BDF00F /* STimer.m in Sources */,
 				09C5728221728D3700BDF00F /* SSignal+Multicast.m in Sources */,
-				09C573342172953900BDF00F /* TGBridgeUnsupportedMediaAttachment.m in Sources */,
 				09C573162172953800BDF00F /* TGBridgeMessage+TGTableItem.m in Sources */,
 				09C571922172806600BDF00F /* TGNeoLabelViewModel.m in Sources */,
 				09C5723521728AA500BDF00F /* TGNeoStickerMessageViewModel.m in Sources */,
 				09C50E0421729DB5009E676F /* TGBotKeyboardController.m in Sources */,
-				09C5732E2172953900BDF00F /* TGBridgeLocationMediaAttachment.m in Sources */,
 				09C5722A21728AA500BDF00F /* TGNeoConversationSimpleRowController.m in Sources */,
-				09C573262172953800BDF00F /* TGBridgeMessageEntities.m in Sources */,
 				09C5727E21728D3700BDF00F /* SSignal+Combine.m in Sources */,
 				09C571D42172875100BDF00F /* TGUserInfoController.m in Sources */,
 				09C571932172806600BDF00F /* TGNeoRenderableViewModel.m in Sources */,
@@ -3175,11 +2898,9 @@
 				09C50DF221729D7C009E676F /* TGBridgeSendMessageSignals.m in Sources */,
 				09C571902172806600BDF00F /* TGNeoAttachmentViewModel.m in Sources */,
 				09C50DE921729D7C009E676F /* TGBridgeChatListSignals.m in Sources */,
-				09C50E922173B247009E676F /* TGBridgeSubscriptions.m in Sources */,
 				09C5716A21727F1500BDF00F /* TGInterfaceMenu.m in Sources */,
 				09C571D02172874B00BDF00F /* TGUserHandleRowController.m in Sources */,
 				09C5727F21728D3700BDF00F /* SSignal+Dispatch.m in Sources */,
-				09C573232172953800BDF00F /* TGBridgeBotCommandInfo.m in Sources */,
 				09C5723121728AA500BDF00F /* TGNeoReplyHeaderViewModel.m in Sources */,
 				09C571F02172878900BDF00F /* TGStickersController.m in Sources */,
 				09C5714621727DAA00BDF00F /* TGWatchCommon.m in Sources */,
@@ -3196,8 +2917,6 @@
 				09C5713E21727D9E00BDF00F /* TGInterfaceController.m in Sources */,
 				09C571D22172875100BDF00F /* TGGroupInfoController.m in Sources */,
 				09C50DEA21729D7C009E676F /* TGBridgeChatMessageListSignals.m in Sources */,
-				09C573332172953900BDF00F /* TGBridgeReplyMarkupMediaAttachment.m in Sources */,
-				09C573352172953900BDF00F /* TGBridgeBotInfo.m in Sources */,
 				09C571DC2172876C00BDF00F /* TGLocationController.m in Sources */,
 				09C5727A21728D3700BDF00F /* SQueue.m in Sources */,
 				09C5714521727DAA00BDF00F /* TGWatchColor.m in Sources */,
@@ -3206,7 +2925,6 @@
 				09C5728D21728D3700BDF00F /* SVariable.m in Sources */,
 				09C5714321727DAA00BDF00F /* TGLocationUtils.m in Sources */,
 				09C5716121727EE700BDF00F /* TGFileCache.m in Sources */,
-				09C573202172953800BDF00F /* TGBridgeForwardedMessageMediaAttachment.m in Sources */,
 				09C5723221728AA500BDF00F /* TGNeoRowController.m in Sources */,
 				09C5728121728D3700BDF00F /* SSignal+Meta.m in Sources */,
 				09C5722521728AA500BDF00F /* TGNeoAudioMessageViewModel.m in Sources */,
@@ -3219,7 +2937,6 @@
 				09C5714821727DAA00BDF00F /* WKInterfaceGroup+Signals.m in Sources */,
 				09C5714921727DAA00BDF00F /* WKInterfaceImage+Signals.m in Sources */,
 				09C5728321728D3700BDF00F /* SSignal+Pipe.m in Sources */,
-				09C573322172953900BDF00F /* TGBridgeChatMessages.m in Sources */,
 				09C5728921728D3700BDF00F /* SThreadPool.m in Sources */,
 				09C5722921728AA500BDF00F /* TGNeoConversationMediaRowController.m in Sources */,
 				09C571DA2172876300BDF00F /* TGNeoChatViewModel.m in Sources */,
@@ -3227,28 +2944,21 @@
 				09C571982172807100BDF00F /* TGAudioMicAlertController.m in Sources */,
 				09C571D12172874B00BDF00F /* TGUserInfoHeaderController.m in Sources */,
 				09C5723421728AA500BDF00F /* TGNeoSmiliesMessageViewModel.m in Sources */,
-				09C5731E2172953800BDF00F /* TGBridgeVideoMediaAttachment.m in Sources */,
 				09C50DF421729D7C009E676F /* TGBridgeStickersSignals.m in Sources */,
-				09C573252172953800BDF00F /* TGBridgeLocationVenue.m in Sources */,
 				09C5727521728D3700BDF00F /* SBag.m in Sources */,
 				09C5713F21727DA000BDF00F /* TGExtensionDelegate.m in Sources */,
-				09C573292172953900BDF00F /* TGBridgeMediaAttachment.m in Sources */,
 				09C50DEE21729D7C009E676F /* TGBridgeMediaSignals.m in Sources */,
 				09C571D82172875A00BDF00F /* TGMessageViewWebPageRowController.m in Sources */,
 				09C50E0521729DE6009E676F /* TGBotKeyboardButtonController.m in Sources */,
 				09C5719B217280E900BDF00F /* TGNeoChatsController.m in Sources */,
-				09C5731B2172953800BDF00F /* TGBridgeAudioMediaAttachment.m in Sources */,
-				09C5731A2172953800BDF00F /* TGBridgeMessage.m in Sources */,
 				09C5728821728D3700BDF00F /* SSubscriber.m in Sources */,
 				09C5722D21728AA500BDF00F /* TGNeoFileMessageViewModel.m in Sources */,
 				09C5723821728AA500BDF00F /* TGConversationFooterController.m in Sources */,
 				09C571DD2172876F00BDF00F /* TGLocationMapHeaderController.m in Sources */,
-				09C573312172953900BDF00F /* TGBridgeMessageEntitiesAttachment.m in Sources */,
 				09C50DEC21729D7C009E676F /* TGBridgeConversationSignals.m in Sources */,
 				09C5727B21728D3700BDF00F /* SSignal.m in Sources */,
 				09C573282172953800BDF00F /* TGBridgeChat+TGTableItem.m in Sources */,
 				09C5727721728D3700BDF00F /* SDisposableSet.m in Sources */,
-				09C573242172953800BDF00F /* TGBridgeImageMediaAttachment.m in Sources */,
 				09C5723B21728AA500BDF00F /* TGNeoConversationRowController.m in Sources */,
 				09C5714121727DAA00BDF00F /* TGGeometry.m in Sources */,
 				09C5714221727DAA00BDF00F /* TGIndexPath.m in Sources */,
@@ -3268,23 +2978,18 @@
 				09C50DE721729D7C009E676F /* TGBridgeAudioSignals.m in Sources */,
 				09C5722721728AA500BDF00F /* TGNeoBubbleMessageViewModel.m in Sources */,
 				09C571CF2172874B00BDF00F /* TGUserHandle.m in Sources */,
-				09C572D3217293D400BDF00F /* TGBridgeCommon.m in Sources */,
 				09C5722821728AA500BDF00F /* TGNeoContactMessageViewModel.m in Sources */,
-				09C573222172953800BDF00F /* TGBridgeUser.m in Sources */,
 				09C571EF2172878900BDF00F /* TGStickersSectionHeaderController.m in Sources */,
 				09C5714021727DAA00BDF00F /* TGDateUtils.m in Sources */,
-				09C5732C2172953900BDF00F /* TGBridgeReplyMessageMediaAttachment.m in Sources */,
 				09C571942172806600BDF00F /* TGNeoViewModel.m in Sources */,
 				09C5727C21728D3700BDF00F /* SSignal+Accumulate.m in Sources */,
 				09C5714A21727DAA00BDF00F /* WKInterfaceTable+TGDataDrivenTable.m in Sources */,
 				09C571DE2172876F00BDF00F /* TGLocationVenueRowController.m in Sources */,
 				09C5716921727F1500BDF00F /* TGInputController.m in Sources */,
 				09C5723921728AA500BDF00F /* TGChatInfo.m in Sources */,
-				09C5732A2172953900BDF00F /* TGBridgeDocumentMediaAttachment.m in Sources */,
 				09C571962172806D00BDF00F /* TGComplicationController.m in Sources */,
 				09C5723621728AA500BDF00F /* TGNeoTextMessageViewModel.m in Sources */,
 				09C5722B21728AA500BDF00F /* TGNeoConversationStaticRowController.m in Sources */,
-				09C573272172953800BDF00F /* TGBridgeWebPageMediaAttachment.m in Sources */,
 				09C5718F2172806600BDF00F /* TGMessageViewModel.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3295,8 +3000,6 @@
 			files = (
 				D073E52222003E1E00742DDD /* Data.swift in Sources */,
 				D0E2CE642227F0680084E3DD /* ManagedFile.swift in Sources */,
-				D0ED633B21FF3EFD001D4648 /* BuildConfig.m in Sources */,
-				D09B79C62219C784003B1F9D /* SharedAccountInfo.swift in Sources */,
 				D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */,
 				D015E01F225CDF5100CB9E8A /* Api0.swift in Sources */,
 				D0ED633A21FF3EDF001D4648 /* AccountData.swift in Sources */,
@@ -3311,64 +3014,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D00859A21B28189D00EAF753 /* AppDelegate.swift in Sources */,
-				09C50E7B21738178009E676F /* TGBridgeServer.m in Sources */,
-				D0ADF95C212B636D00310BBC /* LegacyChatImport.swift in Sources */,
-				09D3042E2174344900C00567 /* TGBridgeContactMediaAttachment.m in Sources */,
-				D05B37F71FEA8C640041D2A5 /* SnapshotSecretChat.swift in Sources */,
-				09C50E842173853E009E676F /* TGBridgeCommon.m in Sources */,
-				09D3042D2174344900C00567 /* TGBridgeAudioMediaAttachment.m in Sources */,
-				D05B37F51FEA5F6E0041D2A5 /* SnapshotEnvironment.swift in Sources */,
-				0956AF2C217B4642008106D0 /* WatchCommunicationManager.swift in Sources */,
-				09D304372174344900C00567 /* TGBridgeVideoMediaAttachment.m in Sources */,
-				09C50E912173B247009E676F /* TGBridgeSubscriptions.m in Sources */,
-				09D304262174341A00C00567 /* TGBridgeLocationVenue.m in Sources */,
-				09D304312174344900C00567 /* TGBridgeImageMediaAttachment.m in Sources */,
-				09D304292174343300C00567 /* TGBridgeBotInfo.m in Sources */,
-				09D304272174341E00C00567 /* TGBridgeChatMessages.m in Sources */,
-				D0B21B0F220438E9003F741D /* SharedNotificationManager.swift in Sources */,
 				D02E31231BD803E800CD3F01 /* main.m in Sources */,
-				D05B37FD1FEA8D870041D2A5 /* SnapshotResources.swift in Sources */,
-				D0EB243B201B77C400F6CC13 /* ClearNotificationsManager.swift in Sources */,
-				09D304242174340E00C00567 /* TGBridgeMessage.m in Sources */,
-				09D304362174344900C00567 /* TGBridgeUnsupportedMediaAttachment.m in Sources */,
-				D0ADF95A212B5AC600310BBC /* LegacyResourceImport.swift in Sources */,
-				D09B79C52219C784003B1F9D /* SharedAccountInfo.swift in Sources */,
-				D06E4C2F21347D9200088087 /* UIImage+ImageEffects.m in Sources */,
-				D0B3B53B21666C0000FC60A0 /* LegacyFileImport.swift in Sources */,
-				D0ADF95E212C818F00310BBC /* LegacyPreferencesImport.swift in Sources */,
-				D0B21B0D2203A9A1003F741D /* SharedWakeupManager.swift in Sources */,
-				09D304282174342E00C00567 /* TGBridgeChat.m in Sources */,
-				09C50E8A2173AEDB009E676F /* WatchRequestHandlers.swift in Sources */,
-				09D304302174344900C00567 /* TGBridgeForwardedMessageMediaAttachment.m in Sources */,
-				D0D2276F212739120028F943 /* LegacyDataImport.swift in Sources */,
-				D0ADF961212C8DF600310BBC /* TGAutoDownloadPreferences.m in Sources */,
-				D05B37FB1FEA8D020041D2A5 /* SnapshotAppearanceSettings.swift in Sources */,
-				D0CE6F1C213ED11100BCD44B /* TGPresentationAutoNightPreferences.m in Sources */,
-				D053DAD32018ED2B00993D32 /* LockedWindowCoveringView.swift in Sources */,
-				D09250021FE52D2A003F693F /* BuildConfig.m in Sources */,
-				09D304392174344900C00567 /* TGBridgeMessageEntities.m in Sources */,
-				09D304352174344900C00567 /* TGBridgeReplyMessageMediaAttachment.m in Sources */,
-				09D304322174344900C00567 /* TGBridgeLocationMediaAttachment.m in Sources */,
-				D084023220E1883500065674 /* ApplicationShortcutItem.swift in Sources */,
-				D0ADF958212B56DC00310BBC /* LegacyUserDataImport.swift in Sources */,
-				09D304332174344900C00567 /* TGBridgeMessageEntitiesAttachment.m in Sources */,
-				09D304342174344900C00567 /* TGBridgeReplyMarkupMediaAttachment.m in Sources */,
-				D0A18D651E15C020004C6734 /* WakeupManager.swift in Sources */,
-				D09B79C82219C7AE003B1F9D /* ManageSharedAccountInfo.swift in Sources */,
-				D051DB5D21602D6E00F30F92 /* LegacyDataImportSplash.swift in Sources */,
-				09D304382174344900C00567 /* TGBridgeWebPageMediaAttachment.m in Sources */,
-				09D3042F2174344900C00567 /* TGBridgeDocumentMediaAttachment.m in Sources */,
-				09D3042C2174344900C00567 /* TGBridgeActionMediaAttachment.m in Sources */,
-				D0ECCB8D1FE9CE3F00609802 /* SnapshotChatList.swift in Sources */,
-				D0ADF964212C9AA900310BBC /* TGProxyItem.m in Sources */,
-				09C50E8321738514009E676F /* TGBridgeContext.m in Sources */,
-				09D304222174335F00C00567 /* WatchBridge.swift in Sources */,
-				09D304252174341200C00567 /* TGBridgeMediaAttachment.m in Sources */,
-				09D304232174340900C00567 /* TGBridgeUser.m in Sources */,
-				D05B37F91FEA8CF00041D2A5 /* SnapshotSettings.swift in Sources */,
-				09D3042A2174343B00C00567 /* TGBridgeBotCommandInfo.m in Sources */,
-				D0BEAF731E54C9A900BD963D /* ApplicationContext.swift in Sources */,
 				D0612E491D58B478000C8F02 /* Application.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3377,7 +3023,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D02CF61C215E51D500E0F56A /* BuildConfig.m in Sources */,
 				D02CF601215D9ABF00E0F56A /* NotificationViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3386,16 +3031,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0D1026A2212F804003ADA5E /* ClearNotificationsManager.swift in Sources */,
-				D08410451FABDC5D008FFE92 /* TGItemProviderSignals.m in Sources */,
-				D084104F1FABDCFD008FFE92 /* TGMimeTypeMap.m in Sources */,
 				D03B0E7B1D63484500955575 /* ShareRootController.swift in Sources */,
-				D0D102682212E9E6003ADA5E /* SharedWakeupManager.swift in Sources */,
-				D0EA97941FE84F2D00792DD6 /* BuildConfig.m in Sources */,
-				D084104E1FABDCFD008FFE92 /* TGContactModel.m in Sources */,
-				D08410541FABE428008FFE92 /* ShareItems.swift in Sources */,
-				D0D102692212F719003ADA5E /* SharedNotificationManager.swift in Sources */,
-				D0AF322F1FACBA280097362B /* TGShareLocationSignals.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3404,7 +3040,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0B2F7602050102600D3BFB9 /* PeerNode.swift in Sources */,
-				D0B2F755204F4EAF00D3BFB9 /* BuildConfig.m in Sources */,
 				D08DB0A4213F42F400F2ADBF /* TodayViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3414,7 +3049,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D08985072119B7FE00918162 /* IntentContacts.swift in Sources */,
-				D0EA97951FE84F2E00792DD6 /* BuildConfig.m in Sources */,
 				D0D268791D79A70A00C422DA /* IntentHandler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

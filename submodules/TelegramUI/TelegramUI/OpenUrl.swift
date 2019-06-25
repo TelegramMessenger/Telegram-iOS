@@ -9,6 +9,7 @@ import MtProtoKit
 #else
 import MtProtoKitDynamic
 #endif
+import TelegramPresentationData
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId

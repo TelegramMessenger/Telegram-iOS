@@ -3,9 +3,11 @@ import Foundation
     import PostboxMac
     import SwiftSignalKitMac
     import MtProtoKitMac
+    import TelegramApiMac
 #else
     import Postbox
     import SwiftSignalKit
+    import TelegramApi
     #if BUCK
         import MtProtoKit
     #else
@@ -277,6 +279,25 @@ struct AccountMutableState {
     
     mutating func mergeChats(_ chats: [Api.Chat]) {
         self.addOperation(.MergeApiChats(chats))
+        
+        for chat in chats {
+            switch chat {
+                case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount):
+                    if let participantsCount = participantsCount {
+                        self.addOperation(.UpdateCachedPeerData(chat.peerId, { current in
+                            var previous: CachedChannelData
+                            if let current = current as? CachedChannelData {
+                                previous = current
+                            } else {
+                                previous = CachedChannelData()
+                            }
+                            return previous.withUpdatedParticipantsSummary(previous.participantsSummary.withUpdatedMemberCount(participantsCount))
+                        }))
+                    }
+                default:
+                    break
+            }
+        }
     }
     
     mutating func updatePeer(_ id: PeerId, _ f: @escaping (Peer?) -> Peer?) {
