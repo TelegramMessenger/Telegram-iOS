@@ -57,6 +57,6 @@ extension PeekControllerTheme {
 
 public extension NavigationControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
-        self.init(navigationBar: NavigationBarTheme(rootControllerTheme: presentationTheme), emptyAreaColor: presentationTheme.chatList.backgroundColor, emptyDetailIcon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationTheme.chatList.messageTextColor.withAlphaComponent(0.2)))
+        self.init(navigationBar: NavigationBarTheme(rootControllerTheme: presentationTheme), emptyAreaColor: presentationTheme.chatList.backgroundColor)
     }
 }

@@ -206,6 +206,13 @@ open class ViewControllerPresentationArguments {
     public var scrollToTopWithTabBar: (() -> Void)?
     public var longTapWithTabBar: (() -> Void)?
     
+    open var navigationCustomData: Any?
+    open var customData: Any? {
+        get {
+            return nil
+        }
+    }
+
     public var attemptNavigation: (@escaping () -> Void) -> Bool = { _ in
         return true
     }

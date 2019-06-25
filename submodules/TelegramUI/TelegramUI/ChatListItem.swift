@@ -504,7 +504,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
     }
     
-    func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+    var reallyHighlighted: Bool {
         var reallyHighlighted = self.isHighlighted
         if let item = self.item {
             if let itemChatLocation = item.content.chatLocation {
@@ -513,6 +513,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
         }
+        return reallyHighlighted
+    }
+    
+    func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+        
         
         if reallyHighlighted {
             if self.highlightedBackgroundNode.supernode == nil {
@@ -1193,7 +1198,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.onlineNode, frame: onlineFrame)
                     
                     let onlineIcon: UIImage?
-                    if strongSelf.isHighlighted {
+                    if strongSelf.reallyHighlighted {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted)
                     } else if item.index.pinningIndex != nil {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned)

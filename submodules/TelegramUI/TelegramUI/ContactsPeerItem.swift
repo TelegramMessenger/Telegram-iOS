@@ -125,6 +125,7 @@ class ContactsPeerItem: ListViewItem {
     let action: (ContactsPeerItemPeer) -> Void
     let setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)?
     let deletePeer: ((PeerId) -> Void)?
+    let itemHighlighting: ContactItemHighlighting?
     
     let selectable: Bool
     
@@ -132,7 +133,7 @@ class ContactsPeerItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, account: Account, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, account: Account, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil) {
         self.theme = theme
         self.strings = strings
         self.sortOrder = sortOrder
@@ -151,7 +152,7 @@ class ContactsPeerItem: ListViewItem {
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.deletePeer = deletePeer
         self.header = header
-        
+        self.itemHighlighting = itemHighlighting
         self.selectable = self.enabled
         
         if let index = index {
@@ -298,6 +299,9 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     
     private var avatarState: (Account, Peer?)?
     
+    private var isHighlighted: Bool = false
+
+    
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (ContactsPeerItem, ListViewItemLayoutParams, Bool, Bool, Bool)?
     var chatPeer: Peer? {
@@ -365,25 +369,65 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
-        if highlighted && self.selectionNode == nil {
-            self.highlightedBackgroundNode.alpha = 1.0
+        self.isHighlighted = highlighted
+
+        self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+        
+//        if highlighted && self.selectionNode == nil {
+//            self.highlightedBackgroundNode.alpha = 1.0
+//            if self.highlightedBackgroundNode.supernode == nil {
+//                self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
+//            }
+//        } else {
+//            if self.highlightedBackgroundNode.supernode != nil {
+//                if animated {
+//                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
+//                        if let strongSelf = self {
+//                            if completed {
+//                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
+//                            }
+//                        }
+//                    })
+//                    self.highlightedBackgroundNode.alpha = 0.0
+//                } else {
+//                    self.highlightedBackgroundNode.removeFromSupernode()
+//                }
+//            }
+//        }
+    }
+
+    
+    func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+        var reallyHighlighted = self.isHighlighted
+        if let item = self.item {
+            switch item.peer {
+            case let .peer(_, chatPeer):
+                if let peer = chatPeer {
+                    if ChatLocation.peer(peer.id) == item.itemHighlighting?.chatLocation {
+                        reallyHighlighted = true
+                    }
+                }
+            default:
+                break
+            }
+        }
+        
+        if reallyHighlighted {
             if self.highlightedBackgroundNode.supernode == nil {
                 self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
+                self.highlightedBackgroundNode.alpha = 0.0
             }
+            self.highlightedBackgroundNode.layer.removeAllAnimations()
+            transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0)
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
-                if animated {
-                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
-                        if let strongSelf = self {
-                            if completed {
-                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
-                            }
+                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 0.0, completion: { [weak self] completed in
+                    if let strongSelf = self {
+                        if completed {
+                            strongSelf.highlightedBackgroundNode.removeFromSupernode()
                         }
-                    })
-                    self.highlightedBackgroundNode.alpha = 0.0
-                } else {
-                    self.highlightedBackgroundNode.removeFromSupernode()
-                }
+                    }
+                })
             }
         }
     }

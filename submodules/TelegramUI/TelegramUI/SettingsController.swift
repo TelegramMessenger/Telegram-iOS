@@ -1243,7 +1243,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let controller = SettingsControllerImpl(currentContext: context, contextValue: contextValue, state: signal, tabBarItem: tabBarItem, accountsAndPeers: accountsAndPeers.get())
     pushControllerImpl = { [weak controller] value in
-        (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
+        (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true, animationOptions: [.removeOnMasterDetails])
     }
     presentControllerImpl = { [weak controller] value, arguments in
         controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet), blockInteraction: true)

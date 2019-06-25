@@ -73,6 +73,14 @@ open class TabBarController: ViewController {
         }
     }
     
+    open override var navigationCustomData: Any? {
+        didSet {
+            for controller in controllers {
+                controller.navigationCustomData = navigationCustomData
+            }
+        }
+    }
+    
     public private(set) var controllers: [ViewController] = []
     
     private let _ready = Promise<Bool>()
