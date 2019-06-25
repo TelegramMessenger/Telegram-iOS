@@ -9,12 +9,13 @@ import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 
-private let titleFont: UIFont = Font.semibold(15.0)
-private let textFont: UIFont = Font.regular(15.0)
-private let textBoldFont: UIFont = Font.semibold(15.0)
-private let textItalicFont: UIFont = Font.italic(15.0)
-private let textFixedFont: UIFont = Font.regular(15.0)
-private let buttonFont: UIFont = Font.semibold(13.0)
+private let titleFont = Font.semibold(15.0)
+private let textFont = Font.regular(15.0)
+private let textBoldFont = Font.semibold(15.0)
+private let textItalicFont = Font.italic(15.0)
+private let textBoldItalicFont = Font.semiboldItalic(15.0)
+private let textFixedFont = Font.regular(15.0)
+private let buttonFont = Font.semibold(13.0)
 
 enum ChatMessageAttachedContentActionIcon {
     case instant
@@ -370,7 +371,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     string.append(NSAttributedString(string: "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
                 }
                 if let entities = entities {
-                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, fixedFont: textFixedFont))
+                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont))
                 } else {
                     string.append(NSAttributedString(string: text + "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
                 }
