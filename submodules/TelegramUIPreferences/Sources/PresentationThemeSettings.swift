@@ -252,7 +252,6 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
 public struct PresentationThemeSettings: PreferencesEntry {
     public var chatWallpaper: TelegramWallpaper
     public var theme: PresentationThemeReference
-//    public var themeAccentColor: Int32?
     public var themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     public var themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
     public var fontSize: PresentationFontSize
@@ -301,19 +300,44 @@ public struct PresentationThemeSettings: PreferencesEntry {
     public init(decoder: PostboxDecoder) {
         self.chatWallpaper = (decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper) ?? .builtin(WallpaperSettings())
         self.theme = decoder.decodeObjectForKey("t", decoder: { PresentationThemeReference(decoder: $0) }) as! PresentationThemeReference
-        //self.themeAccentColor = decoder.decodeOptionalInt32ForKey("themeAccentColor")
-       
+
+        self.themeSpecificChatWallpapers = decoder.decodeObjectDictionaryForKey("themeSpecificChatWallpapers", keyDecoder: { decoder in
+            return decoder.decodeInt64ForKey("k", orElse: 0)
+        }, valueDecoder: { decoder in
+            return TelegramWallpaper(decoder: decoder)
+        })
+        
         self.themeSpecificAccentColors = decoder.decodeObjectDictionaryForKey("themeSpecificAccentColors", keyDecoder: { decoder in
             return decoder.decodeInt64ForKey("k", orElse: 0)
         }, valueDecoder: { decoder in
             return PresentationThemeAccentColor(decoder: decoder)
         })
         
-        self.themeSpecificChatWallpapers = decoder.decodeObjectDictionaryForKey("themeSpecificChatWallpapers", keyDecoder: { decoder in
-            return decoder.decodeInt64ForKey("k", orElse: 0)
-        }, valueDecoder: { decoder in
-            return TelegramWallpaper(decoder: decoder)
-        })
+        if self.themeSpecificAccentColors[PresentationThemeReference.builtin(.day).index] == nil, let themeAccentColor = decoder.decodeOptionalInt32ForKey("themeAccentColor") {
+            let baseColor: PresentationThemeBaseColor
+            switch themeAccentColor {
+                case 0xf83b4c:
+                    baseColor = .red
+                case 0xff7519:
+                    baseColor = .orange
+                case 0xeba239:
+                    baseColor = .yellow
+                case 0x29b327:
+                    baseColor = .green
+                case 0x00c2ed:
+                    baseColor = .cyan
+                case 0x007ee5:
+                    baseColor = .blue
+                case 0x7748ff:
+                    baseColor = .purple
+                case 0xff5da2:
+                    baseColor = .pink
+                default:
+                    baseColor = .blue
+            }
+            self.themeSpecificAccentColors[PresentationThemeReference.builtin(.day).index] = PresentationThemeAccentColor(baseColor: baseColor, value: 0.5)
+        }
+        
         self.fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular
         self.automaticThemeSwitchSetting = (decoder.decodeObjectForKey("automaticThemeSwitchSetting", decoder: { AutomaticThemeSwitchSetting(decoder: $0) }) as? AutomaticThemeSwitchSetting) ?? AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent)
         self.largeEmoji = decoder.decodeBoolForKey("largeEmoji", orElse: true)
@@ -323,11 +347,6 @@ public struct PresentationThemeSettings: PreferencesEntry {
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.chatWallpaper, forKey: "w")
         encoder.encodeObject(self.theme, forKey: "t")
-//        if let themeAccentColor = self.themeAccentColor {
-//            encoder.encodeInt32(themeAccentColor, forKey: "themeAccentColor")
-//        } else {
-//            encoder.encodeNil(forKey: "themeAccentColor")
-//        }
         encoder.encodeObjectDictionary(self.themeSpecificAccentColors, forKey: "themeSpecificAccentColors", keyEncoder: { key, encoder in
             encoder.encodeInt64(key, forKey: "k")
         })
