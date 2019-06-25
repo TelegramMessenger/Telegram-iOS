@@ -107,42 +107,28 @@ VMatrix LOTRepeaterTransform::matrix(int frameNo, float multiplier) const
     return m;
 }
 
-VMatrix LOTTransformData::matrix(int frameNo, bool autoOrient) const
-{
-    if (mStaticMatrix)
-        return mCachedMatrix;
-    else
-        return computeMatrix(frameNo, autoOrient);
-}
-
-void LOTTransformData::cacheMatrix()
-{
-    mCachedMatrix = computeMatrix(0);
-}
-
-VMatrix LOTTransformData::computeMatrix(int frameNo, bool autoOrient) const
+VMatrix TransformData::matrix(int frameNo, bool autoOrient) const
 {
     VMatrix m;
-    VPointF position = mPosition.value(frameNo);
+    VPointF position;
     if (mSeparate) {
         position.setX(mX.value(frameNo));
         position.setY(mY.value(frameNo));
+    } else {
+        position = mPosition.value(frameNo);
     }
 
     float angle = autoOrient ? mPosition.angle(frameNo) : 0;
-    if (ddd()) {
+    if (m3D) {
         m.translate(position)
-            .rotate(mRotation.value(frameNo))
-            .rotate(angle)
-            .rotate(m3D->mRz.value(frameNo))
+            .rotate(m3D->mRz.value(frameNo) + angle)
             .rotate(m3D->mRy.value(frameNo), VMatrix::Axis::Y)
             .rotate(m3D->mRx.value(frameNo), VMatrix::Axis::X)
             .scale(mScale.value(frameNo) / 100.f)
             .translate(-mAnchor.value(frameNo));
     } else {
         m.translate(position)
-            .rotate(mRotation.value(frameNo))
-            .rotate(angle)
+            .rotate(mRotation.value(frameNo) + angle)
             .scale(mScale.value(frameNo) / 100.f)
             .translate(-mAnchor.value(frameNo));
     }

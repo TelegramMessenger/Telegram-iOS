@@ -1040,8 +1040,7 @@ void LOTContentGroupItem::update(int frameNo, const VMatrix &parentMatrix,
 
     if (mData && mData->mTransform) {
         // update the matrix and the flag
-        if ((flag & DirtyFlagBit::Matrix) ||
-            !mData->mTransform->staticMatrix()) {
+        if ((flag & DirtyFlagBit::Matrix) || !mData->mTransform->isStatic()) {
             newFlag |= DirtyFlagBit::Matrix;
         }
         m = mData->mTransform->matrix(frameNo);

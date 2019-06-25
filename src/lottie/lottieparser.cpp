@@ -1350,13 +1350,13 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(
 {
     std::shared_ptr<LOTTransformData> sharedTransform =
         std::make_shared<LOTTransformData>();
-    LOTTransformData *obj = sharedTransform.get();
 
+    auto obj = std::make_unique<TransformData>();
     if (ddd) obj->m3D = std::make_unique<LOT3DData>();
 
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "nm")) {
-            obj->mName = GetString();
+            sharedTransform->mName = GetString();
         } else if (0 == strcmp(key, "a")) {
             parseProperty(obj->mAnchor);
         } else if (0 == strcmp(key, "p")) {
@@ -1378,14 +1378,10 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(
             parseProperty(obj->mRotation);
         } else if (0 == strcmp(key, "s")) {
             parseProperty(obj->mScale);
-        } else if (0 == strcmp(key, "sk")) {
-            parseProperty(obj->mSkew);
-        } else if (0 == strcmp(key, "sa")) {
-            parseProperty(obj->mSkewAxis);
         } else if (0 == strcmp(key, "o")) {
             parseProperty(obj->mOpacity);
         } else if (0 == strcmp(key, "hd")) {
-            obj->mHidden = GetBool();
+            sharedTransform->mHidden = GetBool();
         } else if (0 == strcmp(key, "rx")) {
             parseProperty(obj->m3D->mRx);
         } else if (0 == strcmp(key, "ry")) {
@@ -1396,19 +1392,16 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(
             Skip(key);
         }
     }
-    obj->mStaticMatrix = obj->mAnchor.isStatic() && obj->mPosition.isStatic() &&
-                         obj->mRotation.isStatic() && obj->mScale.isStatic() &&
-                         obj->mSkew.isStatic() && obj->mSkewAxis.isStatic() &&
-                         obj->mX.isStatic() && obj->mY.isStatic();
+    obj->mStatic = obj->mAnchor.isStatic() && obj->mPosition.isStatic() &&
+                   obj->mRotation.isStatic() && obj->mScale.isStatic() &&
+                   obj->mX.isStatic() && obj->mY.isStatic() &&
+                   obj->mOpacity.isStatic();
     if (obj->m3D) {
-        obj->mStaticMatrix = obj->mStaticMatrix && obj->m3D->mRx.isStatic() &&
-                             obj->m3D->mRy.isStatic() &&
-                             obj->m3D->mRz.isStatic();
+        obj->mStatic = obj->mStatic && obj->m3D->mRx.isStatic() &&
+                       obj->m3D->mRy.isStatic() && obj->m3D->mRz.isStatic();
     }
 
-    obj->setStatic(obj->mStaticMatrix && obj->mOpacity.isStatic());
-
-    if (obj->mStaticMatrix) obj->cacheMatrix();
+    sharedTransform->set(std::move(obj));
 
     return sharedTransform;
 }

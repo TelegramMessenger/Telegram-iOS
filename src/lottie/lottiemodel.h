@@ -266,7 +266,7 @@ class LOTAnimatable
 {
 public:
     LOTAnimatable() { construct(impl.mValue, {}); }
-    LOTAnimatable(T value) { construct(impl.mValue, std::move(value)); }
+    explicit LOTAnimatable(T value) { construct(impl.mValue, std::move(value)); }
 
     const LOTAnimInfo<T>& animation() const {return *(impl.mAnimInfo.get());}
     const T& value() const {return impl.mValue;}
@@ -418,31 +418,71 @@ struct LOT3DData
     LOTAnimatable<float>     mRz{0};
 };
 
-class LOTTransformData : public LOTData
+struct TransformData
 {
-public:
-    LOTTransformData():LOTData(LOTData::Type::Transform),mScale({100, 100}){}
     VMatrix matrix(int frameNo, bool autoOrient = false) const;
-    float opacity(int frameNo) const { return mOpacity.value(frameNo)/100;}
-    void cacheMatrix();
-    bool staticMatrix() const {return mStaticMatrix;}
-    bool ddd() const {return m3D ? true : false;}
-private:
-    VMatrix computeMatrix(int frameNo, bool autoOrient = false) const;
-public:
+    float opacity(int frameNo) const { return mOpacity.value(frameNo)/100.0f; }
+    bool isStatic() const { return mStatic;}
     std::unique_ptr<LOT3DData>    m3D;
     LOTAnimatable<float>          mRotation{0};  /* "r" */
-    LOTAnimatable<VPointF>        mScale;     /* "s" */
+    LOTAnimatable<VPointF>        mScale{{100, 100}};     /* "s" */
     LOTAnimatable<VPointF>        mPosition;  /* "p" */
     LOTAnimatable<float>          mX{0};
     LOTAnimatable<float>          mY{0};
     LOTAnimatable<VPointF>        mAnchor;    /* "a" */
     LOTAnimatable<float>          mOpacity{100};   /* "o" */
-    LOTAnimatable<float>          mSkew{0};      /* "sk" */
-    LOTAnimatable<float>          mSkewAxis{0};  /* "sa" */
-    bool                          mStaticMatrix{true};
     bool                          mSeparate{false};
-    VMatrix                       mCachedMatrix;
+    bool                          mStatic{false};
+};
+
+class LOTTransformData : public LOTData
+{
+public:
+    LOTTransformData():LOTData(LOTData::Type::Transform){}
+    void set(std::unique_ptr<TransformData> data)
+    {
+        setStatic(data->isStatic());
+        if (isStatic()) {
+            new (&impl.mStaticData) static_data(data->matrix(0), data->opacity(0));
+        } else {
+            new (&impl.mData) std::unique_ptr<TransformData>(std::move(data));
+        }
+    }
+    VMatrix matrix(int frameNo, bool autoOrient = false) const
+    {
+        if (isStatic()) return impl.mStaticData.mMatrix;
+        return impl.mData->matrix(frameNo, autoOrient);
+    }
+    float opacity(int frameNo) const
+    {
+        if (isStatic()) return impl.mStaticData.mOpacity;
+        return impl.mData->opacity(frameNo);
+    }
+
+    LOTTransformData& operator=(LOTTransformData&&) = delete;
+    ~LOTTransformData() {destroy();}
+
+private:
+    void destroy() {
+        if (isStatic()) {
+            impl.mStaticData.~static_data();
+        } else {
+            using std::unique_ptr;
+            impl.mData.~unique_ptr<TransformData>();
+        }
+    }
+    struct static_data {
+       static_data(VMatrix &&m, float opacity):
+           mOpacity(opacity), mMatrix(std::move(m)){}
+       float    mOpacity;
+       VMatrix  mMatrix;
+    };
+    union details {
+        std::unique_ptr<TransformData>   mData;
+        static_data                      mStaticData;
+        details(){}
+        ~details(){}
+    }impl;
 };
 
 class LOTLayerData : public LOTGroupData
