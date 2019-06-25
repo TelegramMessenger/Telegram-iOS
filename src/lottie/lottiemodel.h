@@ -613,7 +613,7 @@ class LOTFillData : public LOTData
 public:
     LOTFillData():LOTData(LOTData::Type::Fill){}
     LottieColor color(int frameNo) const {return mColor.value(frameNo);}
-    float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
+    float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0f;}
     FillRule fillRule() const {return mFillRule;}
 public:
     FillRule                       mFillRule{FillRule::Winding}; /* "r" */
@@ -634,7 +634,7 @@ class LOTStrokeData : public LOTData
 public:
     LOTStrokeData():LOTData(LOTData::Type::Stroke){}
     LottieColor color(int frameNo) const {return mColor.value(frameNo);}
-    float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
+    float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0f;}
     float strokeWidth(int frameNo) const {return mWidth.value(frameNo);}
     CapStyle capStyle() const {return mCapStyle;}
     JoinStyle joinStyle() const {return mJoinStyle;}
@@ -712,7 +712,7 @@ class LOTGradient : public LOTData
 {
 public:
     explicit LOTGradient(LOTData::Type  type):LOTData(type){}
-    inline float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
+    inline float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0f;}
     void update(std::unique_ptr<VGradient> &grad, int frameNo);
 
 private:
@@ -723,7 +723,7 @@ public:
     LOTAnimatable<VPointF>              mEndPoint;            /* "e" */
     LOTAnimatable<float>                mHighlightLength{0};     /* "h" */
     LOTAnimatable<float>                mHighlightAngle{0};      /* "a" */
-    LOTAnimatable<int>                  mOpacity{0};             /* "o" */
+    LOTAnimatable<float>                mOpacity{100};             /* "o" */
     LOTAnimatable<LottieGradient>       mGradient;            /* "g" */
     int                                 mColorPoints{-1};
     bool                                mEnabled{true};      /* "fillEnabled" */
@@ -789,7 +789,7 @@ public:
     bool isStatic() const {return mIsStatic;}
 public:
     LOTAnimatable<LottieShapeData>    mShape;
-    LOTAnimatable<float>              mOpacity;
+    LOTAnimatable<float>              mOpacity{100};
     bool                              mInv{false};
     bool                              mIsStatic{true};
     LOTMaskData::Mode                 mMode;
