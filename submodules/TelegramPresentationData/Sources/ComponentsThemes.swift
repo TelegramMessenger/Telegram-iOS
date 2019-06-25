@@ -59,7 +59,7 @@ public extension NavigationControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
         self.init(navigationBar: NavigationBarTheme(rootControllerTheme: presentationTheme), emptyAreaColor: presentationTheme.chatList.backgroundColor)
     }
-    convenience public init(presentationTheme: PresentationTheme) {
-        self.init(navigationBar: NavigationBarTheme(rootControllerTheme: presentationTheme), emptyAreaColor: presentationTheme.chatList.backgroundColor, emptyDetailIcon: generateTintedImage(image: UIImage(named: "Chat List/EmptyMasterDetailIcon", in: Bundle(for: PresentationTheme.self), compatibleWith: nil), color: presentationTheme.chatList.messageTextColor.withAlphaComponent(0.2)))
-    }
+//    convenience public init(presentationTheme: PresentationTheme) {
+//        self.init(navigationBar: NavigationBarTheme(rootControllerTheme: presentationTheme), emptyAreaColor: presentationTheme.chatList.backgroundColor, emptyDetailIcon: generateTintedImage(image: UIImage(named: "Chat List/EmptyMasterDetailIcon", in: Bundle(for: PresentationTheme.self), compatibleWith: nil), color: presentationTheme.chatList.messageTextColor.withAlphaComponent(0.2)))
+//    }
 }
