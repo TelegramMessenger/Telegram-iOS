@@ -221,6 +221,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                 if item.stickerItem.file.isAnimatedSticker {
                     if self.animationNode == nil {
                         let animationNode = StickerAnimationNode()
+                        animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
                         self.animationNode = animationNode
                         self.addSubnode(animationNode)
                     }

@@ -255,25 +255,6 @@
 		D0104F2A1F471DA6004E4881 /* InstantImageGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0104F291F471DA6004E4881 /* InstantImageGalleryItem.swift */; };
 		D0104F2C1F471EEB004E4881 /* InstantPageGalleryFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0104F2B1F471EEB004E4881 /* InstantPageGalleryFooterContentNode.swift */; };
 		D0105D682182680E007C04A7 /* IsMediaStreamable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0105D672182680E007C04A7 /* IsMediaStreamable.swift */; };
-		D010DF1F22C18769009324D4 /* PvrTcEncoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D010DF0C22C18767009324D4 /* PvrTcEncoder.cpp */; };
-		D010DF2022C18769009324D4 /* PvrTcPacket.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF0D22C18767009324D4 /* PvrTcPacket.h */; };
-		D010DF2122C18769009324D4 /* MortonTable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D010DF0E22C18767009324D4 /* MortonTable.cpp */; };
-		D010DF2222C18769009324D4 /* BitScale.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D010DF0F22C18767009324D4 /* BitScale.cpp */; };
-		D010DF2322C18769009324D4 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D010DF1022C18767009324D4 /* main.cpp */; };
-		D010DF2422C18769009324D4 /* AlphaBitmap.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1122C18767009324D4 /* AlphaBitmap.h */; };
-		D010DF2522C18769009324D4 /* Interval.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1222C18767009324D4 /* Interval.h */; };
-		D010DF2622C18769009324D4 /* PvrTcEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1322C18767009324D4 /* PvrTcEncoder.h */; };
-		D010DF2722C18769009324D4 /* Bitmap.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1422C18767009324D4 /* Bitmap.h */; };
-		D010DF2822C18769009324D4 /* PvrTcDecoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D010DF1522C18768009324D4 /* PvrTcDecoder.cpp */; };
-		D010DF2922C18769009324D4 /* BitScale.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1622C18768009324D4 /* BitScale.h */; };
-		D010DF2A22C18769009324D4 /* PvrTcPacket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D010DF1722C18768009324D4 /* PvrTcPacket.cpp */; };
-		D010DF2B22C18769009324D4 /* BitUtility.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1822C18768009324D4 /* BitUtility.h */; };
-		D010DF2C22C18769009324D4 /* MortonTable.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1922C18768009324D4 /* MortonTable.h */; };
-		D010DF2D22C18769009324D4 /* Point2.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1A22C18768009324D4 /* Point2.h */; };
-		D010DF2E22C18769009324D4 /* PvrTcDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1B22C18768009324D4 /* PvrTcDecoder.h */; };
-		D010DF2F22C18769009324D4 /* RgbaBitmap.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1C22C18769009324D4 /* RgbaBitmap.h */; };
-		D010DF3022C18769009324D4 /* RgbBitmap.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1D22C18769009324D4 /* RgbBitmap.h */; };
-		D010DF3122C18769009324D4 /* ColorRgba.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DF1E22C18769009324D4 /* ColorRgba.h */; };
 		D010E17D22C238BC009324D4 /* RLottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D010E17C22C238BC009324D4 /* RLottie.framework */; };
 		D0119CD020CAE75F00895300 /* LegacySecureIdAttachmentMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0119CCF20CAE75F00895300 /* LegacySecureIdAttachmentMenu.swift */; };
 		D013630C208FA62400EB3653 /* SecureIdDocumentGalleryFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D013630B208FA62400EB3653 /* SecureIdDocumentGalleryFooterContentNode.swift */; };
@@ -1487,25 +1468,6 @@
 		D0104F2B1F471EEB004E4881 /* InstantPageGalleryFooterContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageGalleryFooterContentNode.swift; sourceTree = "<group>"; };
 		D0105D591D80B957008755D8 /* ChatChannelSubscriberInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatChannelSubscriberInputPanelNode.swift; sourceTree = "<group>"; };
 		D0105D672182680E007C04A7 /* IsMediaStreamable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsMediaStreamable.swift; sourceTree = "<group>"; };
-		D010DF0C22C18767009324D4 /* PvrTcEncoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PvrTcEncoder.cpp; path = "third-party/etc2/PvrTcEncoder.cpp"; sourceTree = SOURCE_ROOT; };
-		D010DF0D22C18767009324D4 /* PvrTcPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PvrTcPacket.h; path = "third-party/etc2/PvrTcPacket.h"; sourceTree = SOURCE_ROOT; };
-		D010DF0E22C18767009324D4 /* MortonTable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MortonTable.cpp; path = "third-party/etc2/MortonTable.cpp"; sourceTree = SOURCE_ROOT; };
-		D010DF0F22C18767009324D4 /* BitScale.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BitScale.cpp; path = "third-party/etc2/BitScale.cpp"; sourceTree = SOURCE_ROOT; };
-		D010DF1022C18767009324D4 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = "third-party/etc2/main.cpp"; sourceTree = SOURCE_ROOT; };
-		D010DF1122C18767009324D4 /* AlphaBitmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AlphaBitmap.h; path = "third-party/etc2/AlphaBitmap.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1222C18767009324D4 /* Interval.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Interval.h; path = "third-party/etc2/Interval.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1322C18767009324D4 /* PvrTcEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PvrTcEncoder.h; path = "third-party/etc2/PvrTcEncoder.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1422C18767009324D4 /* Bitmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bitmap.h; path = "third-party/etc2/Bitmap.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1522C18768009324D4 /* PvrTcDecoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PvrTcDecoder.cpp; path = "third-party/etc2/PvrTcDecoder.cpp"; sourceTree = SOURCE_ROOT; };
-		D010DF1622C18768009324D4 /* BitScale.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BitScale.h; path = "third-party/etc2/BitScale.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1722C18768009324D4 /* PvrTcPacket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PvrTcPacket.cpp; path = "third-party/etc2/PvrTcPacket.cpp"; sourceTree = SOURCE_ROOT; };
-		D010DF1822C18768009324D4 /* BitUtility.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BitUtility.h; path = "third-party/etc2/BitUtility.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1922C18768009324D4 /* MortonTable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MortonTable.h; path = "third-party/etc2/MortonTable.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1A22C18768009324D4 /* Point2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Point2.h; path = "third-party/etc2/Point2.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1B22C18768009324D4 /* PvrTcDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PvrTcDecoder.h; path = "third-party/etc2/PvrTcDecoder.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1C22C18769009324D4 /* RgbaBitmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RgbaBitmap.h; path = "third-party/etc2/RgbaBitmap.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1D22C18769009324D4 /* RgbBitmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RgbBitmap.h; path = "third-party/etc2/RgbBitmap.h"; sourceTree = SOURCE_ROOT; };
-		D010DF1E22C18769009324D4 /* ColorRgba.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ColorRgba.h; path = "third-party/etc2/ColorRgba.h"; sourceTree = SOURCE_ROOT; };
 		D010E17C22C238BC009324D4 /* RLottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RLottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0119CCF20CAE75F00895300 /* LegacySecureIdAttachmentMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySecureIdAttachmentMenu.swift; sourceTree = "<group>"; };
 		D0127A0C1E6424AC003BFF2E /* ChatPinnedMessageTitlePanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatPinnedMessageTitlePanelNode.swift; sourceTree = "<group>"; };
@@ -2866,25 +2828,6 @@
 		D01590A922BD46690017C33E /* Animation */ = {
 			isa = PBXGroup;
 			children = (
-				D010DF1122C18767009324D4 /* AlphaBitmap.h */,
-				D010DF1422C18767009324D4 /* Bitmap.h */,
-				D010DF0F22C18767009324D4 /* BitScale.cpp */,
-				D010DF1622C18768009324D4 /* BitScale.h */,
-				D010DF1822C18768009324D4 /* BitUtility.h */,
-				D010DF1E22C18769009324D4 /* ColorRgba.h */,
-				D010DF1222C18767009324D4 /* Interval.h */,
-				D010DF1022C18767009324D4 /* main.cpp */,
-				D010DF0E22C18767009324D4 /* MortonTable.cpp */,
-				D010DF1922C18768009324D4 /* MortonTable.h */,
-				D010DF1A22C18768009324D4 /* Point2.h */,
-				D010DF1522C18768009324D4 /* PvrTcDecoder.cpp */,
-				D010DF1B22C18768009324D4 /* PvrTcDecoder.h */,
-				D010DF0C22C18767009324D4 /* PvrTcEncoder.cpp */,
-				D010DF1322C18767009324D4 /* PvrTcEncoder.h */,
-				D010DF1722C18768009324D4 /* PvrTcPacket.cpp */,
-				D010DF0D22C18767009324D4 /* PvrTcPacket.h */,
-				D010DF1C22C18769009324D4 /* RgbaBitmap.h */,
-				D010DF1D22C18769009324D4 /* RgbBitmap.h */,
 				D01590B622BDAEBC0017C33E /* BC1Compression.cpp */,
 				D01590B122BDAEBB0017C33E /* BC1Compression.h */,
 				D01590B922BDAEBC0017C33E /* BMPImage.cpp */,
@@ -4965,26 +4908,20 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D010DF2B22C18769009324D4 /* BitUtility.h in Headers */,
 				D0E9BA221F05577700F079A4 /* STPCard.h in Headers */,
-				D010DF3122C18769009324D4 /* ColorRgba.h in Headers */,
 				D0E9BA591F055A2200F079A4 /* STPWeakStrongMacros.h in Headers */,
 				D0E9BADE1F0574D800F079A4 /* STPBackendAPIAdapter.h in Headers */,
-				D010DF2922C18769009324D4 /* BitScale.h in Headers */,
 				D0E9BAD11F0573C000F079A4 /* STPToken.h in Headers */,
-				D010DF2C22C18769009324D4 /* MortonTable.h in Headers */,
 				D01590C222BDAEBC0017C33E /* TypeDefinitions.h in Headers */,
 				D0AE303622B1D3620058D3BC /* TGBridgeAudioDecoder.h in Headers */,
 				D0E9BAE71F0574FF00F079A4 /* STPCustomer.h in Headers */,
 				D0208AD51FA33D14001F0D5F /* RaiseToListenActivator.h in Headers */,
 				D00817DA22B47A14008A895F /* TGPresentationAutoNightPreferences.h in Headers */,
 				D0E9BAE31F0574D800F079A4 /* STPBankAccountParams.h in Headers */,
-				D010DF3022C18769009324D4 /* RgbBitmap.h in Headers */,
 				D0E9BA361F05585000F079A4 /* STPPhoneNumberValidator.h in Headers */,
 				D0E9BA511F0559DA00F079A4 /* STPImageLibrary.h in Headers */,
 				D0E9BA4C1F0559C700F079A4 /* NSString+Stripe_CardBrands.h in Headers */,
 				D00817E022B47A14008A895F /* UIImage+ImageEffects.h in Headers */,
-				D010DF2E22C18769009324D4 /* PvrTcDecoder.h in Headers */,
 				D01590BA22BDAEBC0017C33E /* ColorVec.h in Headers */,
 				D0E9BAE11F0574D800F079A4 /* STPBankAccount.h in Headers */,
 				D0E9BACE1F0573AF00F079A4 /* STPBlocks.h in Headers */,
@@ -4998,7 +4935,6 @@
 				D01590AE22BD58AD0017C33E /* YUV.h in Headers */,
 				D008177B22B46B7E008A895F /* TGContactModel.h in Headers */,
 				D0E9BA291F0557A600F079A4 /* STPFormEncodable.h in Headers */,
-				D010DF2F22C18769009324D4 /* RgbaBitmap.h in Headers */,
 				D0E9BA141F05574500F079A4 /* STPCardValidationState.h in Headers */,
 				D00701A12029F6D0006B9E34 /* TGMimeTypeMap.h in Headers */,
 				D0E9BA461F0559A500F079A4 /* NSDictionary+Stripe.h in Headers */,
@@ -5010,18 +4946,13 @@
 				D0E9BADF1F0574D800F079A4 /* STPDispatchFunctions.h in Headers */,
 				D00817CD22B47A14008A895F /* TGAutoDownloadPreferences.h in Headers */,
 				D0E9BACB1F05738600F079A4 /* STPAPIPostRequest.h in Headers */,
-				D010DF2722C18769009324D4 /* Bitmap.h in Headers */,
-				D010DF2422C18769009324D4 /* AlphaBitmap.h in Headers */,
 				D0E9BA561F055A0B00F079A4 /* STPFormTextField.h in Headers */,
 				D01590C122BDAEBC0017C33E /* DDSImage.h in Headers */,
 				D008177C22B46B7E008A895F /* TGItemProviderSignals.h in Headers */,
-				D010DF2522C18769009324D4 /* Interval.h in Headers */,
-				D010DF2622C18769009324D4 /* PvrTcEncoder.h in Headers */,
 				D0E9BABE1F05735F00F079A4 /* STPPaymentConfiguration+Private.h in Headers */,
 				D01590BB22BDAEBC0017C33E /* BC1Compression.h in Headers */,
 				D0E9BACA1F05738600F079A4 /* STPAPIClient+Private.h in Headers */,
 				D01590BC22BDAEBC0017C33E /* BMPImage.h in Headers */,
-				D010DF2D22C18769009324D4 /* Point2.h in Headers */,
 				D0E9BA251F05578900F079A4 /* STPCardBrand.h in Headers */,
 				D0E9BAC81F05738600F079A4 /* STPAPIClient+ApplePay.h in Headers */,
 				D0E9BA451F0559A500F079A4 /* STPAPIResponseDecodable.h in Headers */,
@@ -5033,7 +4964,6 @@
 				D01590C922BE62C40017C33E /* TextureCompression.h in Headers */,
 				D0E9BA191F05574500F079A4 /* STPPaymentCardTextField.h in Headers */,
 				D0E9BA3F1F0558FE00F079A4 /* STPSource.h in Headers */,
-				D010DF2022C18769009324D4 /* PvrTcPacket.h in Headers */,
 				D008177A22B46B7E008A895F /* TGShareLocationSignals.h in Headers */,
 				D0E9BABC1F05735F00F079A4 /* STPPaymentConfiguration.h in Headers */,
 				D01590BF22BDAEBC0017C33E /* Image.h in Headers */,
@@ -5277,7 +5207,6 @@
 				D093D7DD2062D09A00BC3599 /* SecureIdAuthFormFieldNode.swift in Sources */,
 				092F36902157AB46001A9F49 /* ItemListCallListItem.swift in Sources */,
 				D0EC6CC61EB9F58800EBF1C3 /* PresenceStrings.swift in Sources */,
-				D010DF1F22C18769009324D4 /* PvrTcEncoder.cpp in Sources */,
 				D00817D522B47A14008A895F /* ApplicationShortcutItem.swift in Sources */,
 				D077C5C122B59A800097D617 /* ApplicationContext.swift in Sources */,
 				D0EC6CC71EB9F58800EBF1C3 /* PeerNotificationSoundStrings.swift in Sources */,
@@ -5419,7 +5348,6 @@
 				09CE95042236C6B300A7D2C3 /* CachedInstantPages.swift in Sources */,
 				D0AB269E21D56A12008F6685 /* ChannelPermissionsController.swift in Sources */,
 				D0B69C3920EBB397003632C7 /* ChatMessageInteractiveInstantVideoNode.swift in Sources */,
-				D010DF2822C18769009324D4 /* PvrTcDecoder.cpp in Sources */,
 				09F79A0D21C88E8900820234 /* LegacyWebSearchEditor.swift in Sources */,
 				09F21565225C83E100AEDF6D /* ChatListStatusNode.swift in Sources */,
 				D056CD701FF147B000880D28 /* IconButtonNode.swift in Sources */,
@@ -5720,7 +5648,6 @@
 				09D304152173C0E900C00567 /* WatchManager.swift in Sources */,
 				9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */,
 				D039FB1921711B5D00BD1BAD /* PlatformVideoContent.swift in Sources */,
-				D010DF2122C18769009324D4 /* MortonTable.cpp in Sources */,
 				D0CAD8FD20AE467D00ACD96E /* PeerChannelMemberCategoriesContextsManager.swift in Sources */,
 				D035734B22B5CCCA00F0920D /* LegacyBuffer.swift in Sources */,
 				D0430B001FF4570500A35ADD /* WebController.swift in Sources */,
@@ -5766,7 +5693,6 @@
 				D0EC6DA91EB9F58900EBF1C3 /* ChatPresentationInterfaceState.swift in Sources */,
 				D0EC6DAA1EB9F58900EBF1C3 /* ChatPanelInterfaceInteraction.swift in Sources */,
 				D00FF2091F4E2414006FA332 /* InstantPageSettingsNode.swift in Sources */,
-				D010DF2A22C18769009324D4 /* PvrTcPacket.cpp in Sources */,
 				D0BE3037206139F500FBE6D8 /* ImageCompression.swift in Sources */,
 				09AE3823214C110900850BFD /* LegacySecureIdScanController.swift in Sources */,
 				D0EC6DAB1EB9F58900EBF1C3 /* ChatInterfaceStateAccessoryPanels.swift in Sources */,
@@ -5863,7 +5789,6 @@
 				D0EC6DD81EB9F58900EBF1C3 /* VerticalListContextResultsChatInputPanelButtonItem.swift in Sources */,
 				D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */,
 				09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */,
-				D010DF2222C18769009324D4 /* BitScale.cpp in Sources */,
 				D0BFAE4E20AB1D7B00793CF2 /* DisabledContextResultsChatInputContextPanelNode.swift in Sources */,
 				D064EF871F69A06F00AC0398 /* MessageContentKind.swift in Sources */,
 				D020A9DA1FEAE675008C66F7 /* OverlayPlayerController.swift in Sources */,
@@ -6126,7 +6051,6 @@
 				D00BDA1F1EE5B69200C64C5E /* ChannelAdminController.swift in Sources */,
 				D0EC6E501EB9F58900EBF1C3 /* ChannelAdminsController.swift in Sources */,
 				D0EC6E511EB9F58900EBF1C3 /* ChannelBlacklistController.swift in Sources */,
-				D010DF2322C18769009324D4 /* main.cpp in Sources */,
 				D0EC6E521EB9F58900EBF1C3 /* ChannelInfoController.swift in Sources */,
 				D0EC6E531EB9F58900EBF1C3 /* ChannelMembersController.swift in Sources */,
 				D02B676320800A00001A864A /* PaneSearchBarPlaceholderItem.swift in Sources */,
@@ -6974,7 +6898,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				SWIFT_INSTALL_OBJC_HEADER = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};

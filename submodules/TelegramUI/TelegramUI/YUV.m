@@ -6,7 +6,7 @@ void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height)
     vImage_ARGBToYpCbCr info;
     
     vImage_Error error;
-    error = vImageConvert_ARGBToYpCbCr_GenerateConversion(kvImage_ARGBToYpCbCrMatrix_ITU_R_601_4, &pixelRange, &info, kvImageARGB8888, kvImage420Yp8_Cb8_Cr8, 0);
+    error = vImageConvert_ARGBToYpCbCr_GenerateConversion(kvImage_ARGBToYpCbCrMatrix_ITU_R_709_2, &pixelRange, &info, kvImageARGB8888, kvImage420Yp8_Cb8_Cr8, 0);
     if (error != kvImageNoError) {
         return;
     }
@@ -53,7 +53,7 @@ void decodeYUVAToRGBA(uint8_t const *yuva, uint8_t *argb, int width, int height)
     vImage_YpCbCrToARGB info;
     
     vImage_Error error;
-    error = vImageConvert_YpCbCrToARGB_GenerateConversion(kvImage_YpCbCrToARGBMatrix_ITU_R_601_4, &pixelRange, &info, kvImage420Yp8_Cb8_Cr8, kvImageARGB8888, 0);
+    error = vImageConvert_YpCbCrToARGB_GenerateConversion(kvImage_YpCbCrToARGBMatrix_ITU_R_709_2, &pixelRange, &info, kvImage420Yp8_Cb8_Cr8, kvImageARGB8888, 0);
     if (error != kvImageNoError) {
         return;
     }
