@@ -401,7 +401,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     
     func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
         var reallyHighlighted = self.isHighlighted
-        var highlightProgress: CGFloat = self.item?.itemHighlighting?.progress ?? 1.0
+        let highlightProgress: CGFloat = self.item?.itemHighlighting?.progress ?? 1.0
         if let item = self.item {
             switch item.peer {
             case let .peer(_, chatPeer):
