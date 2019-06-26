@@ -441,16 +441,17 @@ void SW_FT_Vector_From_Polar(SW_FT_Vector* vec, SW_FT_Fixed length,
 
 /* documentation is in fttrigon.h */
 
-SW_FT_Angle SW_FT_Angle_Diff(SW_FT_Angle angle1, SW_FT_Angle angle2)
+SW_FT_Angle SW_FT_Angle_Diff( SW_FT_Angle  angle1, SW_FT_Angle  angle2 )
 {
-    SW_FT_Angle delta = angle2 - angle1;
+  SW_FT_Angle  delta = angle2 - angle1;
 
-    delta %= SW_FT_ANGLE_2PI;
-    if (delta < 0) delta += SW_FT_ANGLE_2PI;
+  while ( delta <= -SW_FT_ANGLE_PI )
+    delta += SW_FT_ANGLE_2PI;
 
-    if (delta > SW_FT_ANGLE_PI) delta -= SW_FT_ANGLE_2PI;
+  while ( delta > SW_FT_ANGLE_PI )
+    delta -= SW_FT_ANGLE_2PI;
 
-    return delta;
+  return delta;
 }
 
 /* END */

@@ -637,19 +637,21 @@ End:
 
 static void gray_split_conic(SW_FT_Vector* base)
 {
-    TPos a, b;
+    TPos  a, b;
 
     base[4].x = base[2].x;
-    b = base[1].x;
-    a = base[3].x = (base[2].x + b) / 2;
-    b = base[1].x = (base[0].x + b) / 2;
-    base[2].x = (a + b) / 2;
+    a = base[0].x + base[1].x;
+    b = base[1].x + base[2].x;
+    base[3].x = b >> 1;
+    base[2].x = ( a + b ) >> 2;
+    base[1].x = a >> 1;
 
     base[4].y = base[2].y;
-    b = base[1].y;
-    a = base[3].y = (base[2].y + b) / 2;
-    b = base[1].y = (base[0].y + b) / 2;
-    base[2].y = (a + b) / 2;
+    a = base[0].y + base[1].y;
+    b = base[1].y + base[2].y;
+    base[3].y = b >> 1;
+    base[2].y = ( a + b ) >> 2;
+    base[1].y = a >> 1;
 }
 
 static void gray_render_conic(RAS_ARG_ const SW_FT_Vector* control,
@@ -719,27 +721,32 @@ static void gray_render_conic(RAS_ARG_ const SW_FT_Vector* control,
 
 static void gray_split_cubic(SW_FT_Vector* base)
 {
-    TPos a, b, c, d;
+    TPos  a, b, c;
+
 
     base[6].x = base[3].x;
-    c = base[1].x;
-    d = base[2].x;
-    base[1].x = a = (base[0].x + c) / 2;
-    base[5].x = b = (base[3].x + d) / 2;
-    c = (c + d) / 2;
-    base[2].x = a = (a + c) / 2;
-    base[4].x = b = (b + c) / 2;
-    base[3].x = (a + b) / 2;
+    a = base[0].x + base[1].x;
+    b = base[1].x + base[2].x;
+    c = base[2].x + base[3].x;
+    base[5].x = c >> 1;
+    c += b;
+    base[4].x = c >> 2;
+    base[1].x = a >> 1;
+    a += b;
+    base[2].x = a >> 2;
+    base[3].x = ( a + c ) >> 3;
 
     base[6].y = base[3].y;
-    c = base[1].y;
-    d = base[2].y;
-    base[1].y = a = (base[0].y + c) / 2;
-    base[5].y = b = (base[3].y + d) / 2;
-    c = (c + d) / 2;
-    base[2].y = a = (a + c) / 2;
-    base[4].y = b = (b + c) / 2;
-    base[3].y = (a + b) / 2;
+    a = base[0].y + base[1].y;
+    b = base[1].y + base[2].y;
+    c = base[2].y + base[3].y;
+    base[5].y = c >> 1;
+    c += b;
+    base[4].y = c >> 2;
+    base[1].y = a >> 1;
+    a += b;
+    base[2].y = a >> 2;
+    base[3].y = ( a + c ) >> 3;
 }
 
 static void gray_render_cubic(RAS_ARG_ const SW_FT_Vector* control1,
