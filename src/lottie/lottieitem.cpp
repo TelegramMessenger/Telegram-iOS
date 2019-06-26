@@ -843,7 +843,7 @@ void LOTImageLayerItem::buildLayerNode()
 
         lotDrawable->mCNode->mImageInfo.mMatrix.m31 = combinedMatrix().m_tx();
         lotDrawable->mCNode->mImageInfo.mMatrix.m32 = combinedMatrix().m_ty();
-        lotDrawable->mCNode->mImageInfo.mMatrix.m33 = combinedMatrix().m_13();
+        lotDrawable->mCNode->mImageInfo.mMatrix.m33 = combinedMatrix().m_33();
 
         mCNodeList.push_back(lotDrawable->mCNode.get());
     }
