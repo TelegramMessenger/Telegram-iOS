@@ -11,6 +11,7 @@ import Foundation
 
 public enum JoinChannelError {
     case generic
+    case tooMuchJoined
 }
 
 public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChannelParticipant?, JoinChannelError> {
@@ -20,8 +21,12 @@ public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChan
     |> mapToSignal { peer -> Signal<RenderedChannelParticipant?, JoinChannelError> in
         if let inputChannel = apiInputChannel(peer) {
             return account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
-            |> mapError { _ -> JoinChannelError in
-                return .generic
+            |> mapError { error -> JoinChannelError in
+                if error.errorDescription == "CHANNELS_TOO_MUCH" {
+                    return .tooMuchJoined
+                } else {
+                    return .generic
+                }
             }
             |> mapToSignal { updates -> Signal<RenderedChannelParticipant?, JoinChannelError> in
                 account.stateManager.addUpdates(updates)

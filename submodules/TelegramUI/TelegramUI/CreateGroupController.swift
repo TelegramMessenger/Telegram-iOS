@@ -356,6 +356,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                                 return .generic
                             case .restricted:
                                 return .restricted
+                            case .tooMuchJoined:
+                                return .tooMuchJoined
                             case .tooMuchLocationBasedGroups:
                                 return .tooMuchLocationBasedGroups
                             case let .serverProvided(error):
@@ -381,6 +383,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                                     return .generic
                                 case .restricted:
                                     return .restricted
+                                case .tooMuchJoined:
+                                    return .tooMuchJoined
                                 case .tooMuchLocationBasedGroups:
                                     return .tooMuchLocationBasedGroups
                                 case let .serverProvided(error):
@@ -448,6 +452,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                         text = presentationData.strings.Login_UnknownError
                     case .restricted:
                         text = presentationData.strings.Common_ActionNotAllowedError
+                    case .tooMuchJoined:
+                        text = presentationData.strings.CreateGroup_ChannelsTooMuch
                     case .tooMuchLocationBasedGroups:
                         text = presentationData.strings.CreateGroup_ErrorLocatedGroupsTooMuch
                     default:

@@ -1815,13 +1815,13 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                         |> deliverOnMainQueue).start(error: { error in
                             if peers.count == 1, case .restricted = error {
                                 switch peers[0] {
-                                case let .peer(peerId):
-                                    let _ = (context.account.postbox.loadedPeerWithId(peerId)
-                                    |> deliverOnMainQueue).start(next: { peer in
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                                    })
-                                default:
-                                    break
+                                    case let .peer(peerId):
+                                        let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                                        |> deliverOnMainQueue).start(next: { peer in
+                                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        })
+                                    default:
+                                        break
                                 }
                             }
                             
