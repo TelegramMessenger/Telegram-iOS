@@ -467,18 +467,20 @@ void LOTLayerItem::update(int frameNumber, const VMatrix &parentMatrix,
     m *= parentMatrix;
 
     // 3. update the dirty flag based on the change
-    if (!mCombinedMatrix.fuzzyCompare(m)) {
+    if (mCombinedMatrix != m) {
         mDirtyFlag |= DirtyFlagBit::Matrix;
+        mCombinedMatrix = m;
     }
+
     if (!vCompare(mCombinedAlpha, alpha)) {
         mDirtyFlag |= DirtyFlagBit::Alpha;
+        mCombinedAlpha = alpha;
     }
-    mCombinedMatrix = m;
-    mCombinedAlpha = alpha;
 
     // 4. update the mask
     if (mLayerMask) {
-        mLayerMask->update(frameNo(), m, alpha, mDirtyFlag);
+        mLayerMask->update(frameNo(), mCombinedMatrix, mCombinedAlpha,
+                           mDirtyFlag);
     }
 
     // 5. if no parent property change and layer is static then nothing to do.
@@ -1034,28 +1036,30 @@ void LOTContentGroupItem::addChildren(LOTGroupData *data)
 void LOTContentGroupItem::update(int frameNo, const VMatrix &parentMatrix,
                                  float parentAlpha, const DirtyFlag &flag)
 {
-    VMatrix   m = parentMatrix;
     float     alpha = parentAlpha;
     DirtyFlag newFlag = flag;
 
     if (mData && mData->mTransform) {
-        // update the matrix and the flag
-        if ((flag & DirtyFlagBit::Matrix) || !mData->mTransform->isStatic()) {
+        VMatrix m = mData->mTransform->matrix(frameNo);
+        m *= parentMatrix;
+
+        if (!(flag & DirtyFlagBit::Matrix) && !mData->mTransform->isStatic() &&
+            (m != mMatrix)) {
             newFlag |= DirtyFlagBit::Matrix;
         }
-        m = mData->mTransform->matrix(frameNo);
-        m *= parentMatrix;
-        alpha *= mData->mTransform->opacity(frameNo);
 
+        mMatrix = m;
+
+        alpha *= mData->mTransform->opacity(frameNo);
         if (!vCompare(alpha, parentAlpha)) {
             newFlag |= DirtyFlagBit::Alpha;
         }
+    } else {
+        mMatrix = parentMatrix;
     }
 
-    mMatrix = m;
-
     for (const auto &content : mContents) {
-        content->update(frameNo, m, alpha, newFlag);
+        content->update(frameNo, matrix(), alpha, newFlag);
     }
 }
 
