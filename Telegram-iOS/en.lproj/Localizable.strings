@@ -4328,6 +4328,8 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.OpenBotLinkOpen" = "Open";
 
 "TextFormat.Link" = "Link";
+"TextFormat.Strikethrough" = "Strikethrough";
+"TextFormat.Underline" = "Underline";
 
 "TextFormat.AddLinkTitle" = "Add Link";
 "TextFormat.AddLinkText" = "The link will be displayed as \"%@\".";
