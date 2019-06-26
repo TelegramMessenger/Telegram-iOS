@@ -21,6 +21,7 @@ public enum ChannelOwnershipTransferError {
     case adminsTooMuch
     case userPublicChannelsTooMuch
     case userLocatedGroupsTooMuch
+    case tooMuchJoined
     case restricted
     case userBlocked
 }
@@ -64,6 +65,8 @@ public func checkOwnershipTranfserAvailability(postbox: Postbox, network: Networ
                 return .restricted
             } else if error.errorDescription == "USER_BLOCKED" {
                 return .userBlocked
+            } else if error.errorDescription == "CHANNELS_TOO_MUCH" {
+                return .tooMuchJoined
             }
             return .generic
         }

@@ -184,24 +184,24 @@ public class TelegramController: ViewController, KeyShortcutResponder {
                                         peers?.append(author)
                                     }
                                 }
-                                return (peers, nil)
+                                return (peers, outgoingMessages)
                             }
                         default:
                             self.locationBroadcastMode = .summary
                             signal = liveLocationManager.summaryManager.broadcastingToMessages()
-                                |> map { messages -> ([Peer]?, [MessageId: Message]?) in
-                                    if messages.isEmpty {
-                                        return (nil, nil)
-                                    } else {
-                                        var peers: [Peer] = []
-                                        for message in messages.values.sorted(by: { $0.index < $1.index }) {
-                                            if let peer = message.peers[message.id.peerId] {
-                                                peers.append(peer)
-                                            }
+                            |> map { messages -> ([Peer]?, [MessageId: Message]?) in
+                                if messages.isEmpty {
+                                    return (nil, nil)
+                                } else {
+                                    var peers: [Peer] = []
+                                    for message in messages.values.sorted(by: { $0.index < $1.index }) {
+                                        if let peer = message.peers[message.id.peerId] {
+                                            peers.append(peer)
                                         }
-                                        return (peers, messages)
                                     }
+                                    return (peers, messages)
                                 }
+                            }
                         
                     }
                     
@@ -223,7 +223,16 @@ public class TelegramController: ViewController, KeyShortcutResponder {
                                 if wasEmpty != (peers == nil) {
                                     strongSelf.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
                                 } else if let peers = peers, let locationBroadcastMode = strongSelf.locationBroadcastMode {
-                                    strongSelf.locationBroadcastAccessoryPanel?.update(peers: peers, mode: locationBroadcastMode)
+                                    var canClose = true
+                                    if case let .peer(peerId) = strongSelf.locationBroadcastPanelSource, let messages = messages {
+                                        canClose = false
+                                        for messageId in messages.keys {
+                                            if messageId.peerId == peerId {
+                                                canClose = true
+                                            }
+                                        }
+                                    }
+                                    strongSelf.locationBroadcastAccessoryPanel?.update(peers: peers, mode: locationBroadcastMode, canClose: canClose)
                                 }
                             }
                         }
@@ -401,7 +410,18 @@ public class TelegramController: ViewController, KeyShortcutResponder {
                 }
                 self.locationBroadcastAccessoryPanel = locationBroadcastAccessoryPanel
                 locationBroadcastAccessoryPanel.frame = panelFrame
-                locationBroadcastAccessoryPanel.update(peers: locationBroadcastPeers, mode: locationBroadcastMode)
+                
+                var canClose = true
+                if case let .peer(peerId) = self.locationBroadcastPanelSource, let messages = self.locationBroadcastMessages {
+                    canClose = false
+                    for messageId in messages.keys {
+                        if messageId.peerId == peerId {
+                            canClose = true
+                        }
+                    }
+                }
+                
+                locationBroadcastAccessoryPanel.update(peers: locationBroadcastPeers, mode: locationBroadcastMode, canClose: canClose)
                 locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
                 if transition.isAnimated {
                     locationBroadcastAccessoryPanel.animateIn(transition)
