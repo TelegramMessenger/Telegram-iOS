@@ -732,7 +732,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var contentImageMedia: Media?
             
             switch contentData {
-                case let .chat(itemPeer, peer, _, messageText):
+                case let .chat(itemPeer, _, _, messageText):
                     let messageText = messageText.replacingOccurrences(of: "\n\n", with: " ")
                     
                     if inlineAuthorPrefix == nil, let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
@@ -755,7 +755,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             if let messagePeer = itemPeer.chatMainPeer {
                                 peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                             }
-                        } else if let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
+                        } else if let author = message.author as? TelegramUser, let peer = itemPeer.chatMainPeer, !(peer is TelegramUser) {
                             if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                             } else {
                                 peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
@@ -827,12 +827,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             switch contentData {
-                case let .chat(_, peer, _, _):
+                case let .chat(itemPeer, _, _, _):
                     if isPeerGroup {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_ArchivedChatsTitle, font: titleFont, textColor: theme.titleColor)
-                    } else if peer?.id == item.context.account.peerId {
+                    } else if itemPeer.chatMainPeer?.id == item.context.account.peerId {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
-                    } else if let displayTitle = peer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
+                    } else if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
                 case .group:
@@ -940,7 +940,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
                 titleIconsWidth += currentMutedIconImage.size.width
             }
-            
     
             let isSecret = !isPeerGroup && item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat
             if isSecret {
