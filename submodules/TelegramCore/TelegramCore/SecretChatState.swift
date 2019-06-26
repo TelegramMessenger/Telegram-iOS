@@ -14,6 +14,7 @@ enum SecretChatLayer: Int32 {
     case layer8 = 8
     case layer46 = 46
     case layer73 = 73
+    case layer101 = 101
 }
 
 public struct SecretChatKeySha1Fingerprint: PostboxCoding, Equatable {

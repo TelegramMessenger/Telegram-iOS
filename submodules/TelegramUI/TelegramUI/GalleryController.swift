@@ -118,10 +118,11 @@ func internalDocumentItemSupportsMimeType(_ type: String, fileName: String?) -> 
 private let textFont = Font.regular(16.0)
 private let boldFont = Font.bold(16.0)
 private let italicFont = Font.italic(16.0)
+private let boldItalicFont = Font.semiboldItalic(16.0)
 private let fixedFont = UIFont(name: "Menlo-Regular", size: 15.0) ?? textFont
 
 func galleryCaptionStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> NSAttributedString {
-    return stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: UIColor(rgb: 0x5ac8fa), baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, fixedFont: fixedFont, underlineLinks: false)
+    return stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: UIColor(rgb: 0x5ac8fa), baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, underlineLinks: false)
 }
 
 private func galleryMessageCaptionText(_ message: Message) -> String {

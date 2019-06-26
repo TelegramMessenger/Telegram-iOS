@@ -36,7 +36,7 @@ public enum PermissionState: Equatable {
     case contacts(status: PermissionRequestStatus)
     case notifications(status: PermissionRequestStatus)
     case siri(status: PermissionRequestStatus)
-    case cellularData
+    case cellularData(status: PermissionRequestStatus)
     case nearbyLocation(status: PermissionRequestStatus)
     
     var kind: PermissionKind {
@@ -62,19 +62,21 @@ public enum PermissionState: Equatable {
                 return status
             case let .siri(status):
                 return status
-            case .cellularData:
-                return .unreachable
+            case let .cellularData(status):
+                return status
             case let .nearbyLocation(status):
                 return status
         }
     }
 }
 
-public func requiredPermissions(context: AccountContext) -> Signal<(PermissionState, PermissionState, PermissionState), NoError> {
+public func requiredPermissions(context: AccountContext) -> Signal<(contacts: PermissionState, notifications: PermissionState, cellularData: PermissionState, siri: PermissionState), NoError> {
     return combineLatest(DeviceAccess.authorizationStatus(subject: .contacts), DeviceAccess.authorizationStatus(applicationInForeground: context.sharedContext.applicationBindings.applicationInForeground, subject: .notifications), DeviceAccess.authorizationStatus(siriAuthorization: {
         return context.sharedContext.applicationBindings.siriAuthorization()
+    }, subject: .cellularData), DeviceAccess.authorizationStatus(siriAuthorization: {
+        return context.sharedContext.applicationBindings.siriAuthorization()
     }, subject: .siri))
-    |> map { contactsStatus, notificationsStatus, siriStatus in
-        return (.contacts(status: PermissionRequestStatus(accessType: contactsStatus)), .notifications(status: PermissionRequestStatus(accessType: notificationsStatus)), .siri(status: PermissionRequestStatus(accessType: siriStatus)))
+    |> map { contactsStatus, notificationsStatus, cellularDataStatus, siriStatus in
+        return (.contacts(status: PermissionRequestStatus(accessType: contactsStatus)), .notifications(status: PermissionRequestStatus(accessType: notificationsStatus)), .cellularData(status: PermissionRequestStatus(accessType: cellularDataStatus)), .siri(status: PermissionRequestStatus(accessType: siriStatus)))
     }
 }

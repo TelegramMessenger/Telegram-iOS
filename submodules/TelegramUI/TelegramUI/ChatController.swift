@@ -233,7 +233,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     
     private var beginMediaRecordingRequestId: Int = 0
     private var lockMediaRecordingRequestId: Int?
-    
+
     public override var customData: Any? {
         return self.chatLocation
     }
@@ -4241,6 +4241,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             if updatedChatPresentationInterfaceState.interfaceState.selectionState != controllerInteraction.selectionState {
                 controllerInteraction.selectionState = updatedChatPresentationInterfaceState.interfaceState.selectionState
                 self.updateItemNodesSelectionStates(animated: transition.isAnimated)
+                (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(controllerInteraction.selectionState != nil ? .master : nil, transition: transition)
             }
         }
         
@@ -6944,7 +6945,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     }
     
     private func updateReminderActivity() {
-        if (self.isReminderActivityEnabled) {
+        if self.isReminderActivityEnabled && false {
             if #available(iOS 9.0, *) {
                 if self.reminderActivity == nil, case let .peer(peerId) = self.chatLocation, let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer {
                     let reminderActivity = NSUserActivity(activityType: "RemindAboutChatIntent")

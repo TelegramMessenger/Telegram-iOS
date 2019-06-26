@@ -358,6 +358,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                                 return .restricted
                             case .tooMuchLocationBasedGroups:
                                 return .tooMuchLocationBasedGroups
+                            case let .serverProvided(error):
+                                return .serverProvided(error)
                         }
                     }
                 case .locatedGroup:
@@ -381,6 +383,8 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                                     return .restricted
                                 case .tooMuchLocationBasedGroups:
                                     return .tooMuchLocationBasedGroups
+                                case let .serverProvided(error):
+                                    return .serverProvided(error)
                             }
                         }
                     }
@@ -431,8 +435,12 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                     }
                 }
             }, error: { error in
+                if case .serverProvided = error {
+                    return
+                }
+
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let text: String
+                let text: String?
                 switch error {
                     case .privacy:
                         text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelMultipleError
@@ -442,8 +450,13 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                         text = presentationData.strings.Common_ActionNotAllowedError
                     case .tooMuchLocationBasedGroups:
                         text = presentationData.strings.CreateGroup_ErrorLocatedGroupsTooMuch
+                    default:
+                        text = nil
                 }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                
+                if let text = text {
+                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                }
             }))
         }
     }, changeProfilePhoto: {

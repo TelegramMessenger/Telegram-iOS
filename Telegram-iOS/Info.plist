@@ -19,6 +19,7 @@
 				<key>CFBundleIconFiles</key>
 				<array>
 					<string>BlackIcon</string>
+					<string>BlackNotificationIcon</string>
 				</array>
 				<key>UIPrerenderedIcon</key>
 				<true/>
@@ -28,6 +29,7 @@
 				<key>CFBundleIconFiles</key>
 				<array>
 					<string>BlackClassicIcon</string>
+					<string>BlackClassicNotificationIcon</string>
 				</array>
 				<key>UIPrerenderedIcon</key>
 				<true/>
@@ -46,6 +48,7 @@
 				<key>CFBundleIconFiles</key>
 				<array>
 					<string>BlueIcon</string>
+					<string>BlueNotificationIcon</string>
 				</array>
 				<key>UIPrerenderedIcon</key>
 				<true/>
@@ -55,6 +58,7 @@
 				<key>CFBundleIconFiles</key>
 				<array>
 					<string>BlueClassicIcon</string>
+					<string>BlueClassicNotificationIcon</string>
 				</array>
 				<key>UIPrerenderedIcon</key>
 				<true/>
@@ -96,6 +100,7 @@
 				<array>
 					<string>BlackIconIpad</string>
 					<string>BlackIconLargeIpad</string>
+					<string>BlackNotificationIcon</string>
 				</array>
 				<key>UIPrerenderedIcon</key>
 				<true/>
@@ -106,6 +111,7 @@
 				<array>
 					<string>BlackClassicIconIpad</string>
 					<string>BlackClassicIconLargeIpad</string>
+					<string>BlackClassicNotificationIcon</string>
 				</array>
 				<key>UIPrerenderedIcon</key>
 				<true/>
@@ -126,6 +132,7 @@
 				<array>
 					<string>BlueIconIpad</string>
 					<string>BlueIconLargeIpad</string>
+					<string>BlueNotificationIcon</string>
 				</array>
 				<key>UIPrerenderedIcon</key>
 				<true/>
@@ -136,6 +143,7 @@
 				<array>
 					<string>BlueClassicIconIpad</string>
 					<string>BlueClassicIconLargeIpad</string>
+					<string>BlueClassicNotificationIcon</string>
 				</array>
 				<key>UIPrerenderedIcon</key>
 				<true/>

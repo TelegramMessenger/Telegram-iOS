@@ -36,6 +36,8 @@ func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageT
                 string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
             case .Strikethrough:
                 string.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: range)
+            case .Underline:
+                string.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: range)
             default:
                 break
         }
@@ -43,7 +45,7 @@ func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageT
     return string
 }
 
-func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, fixedFont: UIFont, underlineLinks: Bool = true, external: Bool = false) -> NSAttributedString {
+func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, underlineLinks: Bool = true, external: Bool = false) -> NSAttributedString {
     var nsString: NSString?
     let string = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.font: baseFont, NSAttributedStringKey.foregroundColor: baseColor])
     var skipEntity = false
@@ -52,6 +54,8 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
     if linkColor.isEqual(baseColor) {
         underlineAllLinks = true
     }
+    var fontAttributes: [NSRange: ChatTextFontAttributes] = [:]
+    
     for i in 0 ..< entities.count {
         if skipEntity {
             skipEntity = false
@@ -108,9 +112,17 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                     string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: url, range: range)
                 }
             case .Bold:
-                string.addAttribute(NSAttributedStringKey.font, value: boldFont, range: range)
+                if let fontAttribute = fontAttributes[range] {
+                    fontAttributes[range] = fontAttribute.union(.bold)
+                } else {
+                    fontAttributes[range] = .bold
+                }
             case .Italic:
-                string.addAttribute(NSAttributedStringKey.font, value: italicFont, range: range)
+                if let fontAttribute = fontAttributes[range] {
+                    fontAttributes[range] = fontAttribute.union(.italic)
+                } else {
+                    fontAttributes[range] = .italic
+                }
             case .Mention:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if underlineLinks && underlineAllLinks {
@@ -125,6 +137,8 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention), value: nsString!.substring(with: range), range: range)
             case .Strikethrough:
                 string.addAttribute(NSAttributedStringKey.strikethroughStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+            case .Underline:
+                string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
             case let .TextMention(peerId):
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
                 if underlineLinks && underlineAllLinks {
@@ -190,6 +204,20 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 }
             default:
                 break
+        }
+        
+        for (range, fontAttributes) in fontAttributes {
+            var font: UIFont?
+            if fontAttributes == [.bold, .italic] {
+                font = boldItalicFont
+            } else if fontAttributes == [.bold] {
+                font = boldFont
+            } else if fontAttributes == [.italic] {
+                font = italicFont
+            }
+            if let font = font {
+                string.addAttribute(NSAttributedStringKey.font, value: font, range: range)
+            }
         }
     }
     return string
