@@ -77,11 +77,9 @@ public class ContactsController: ViewController {
     
     var switchToChatsController: (() -> Void)?
     
-    
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         self.contactsNode.contactListNode.updateSelectedChatLocation(data as? ChatLocation, progress: progress, transition: transition)
     }
-    
     
     public init(context: AccountContext) {
         self.context = context

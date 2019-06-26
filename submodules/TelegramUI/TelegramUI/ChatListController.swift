@@ -100,7 +100,6 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.chatListDisplayNode.chatListNode.updateSelectedChatLocation(data as? ChatLocation, progress: progress, transition: transition)
     }
     
-    
     public init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false) {
         self.context = context
         self.controlsHistoryPreload = controlsHistoryPreload
