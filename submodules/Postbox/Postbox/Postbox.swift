@@ -932,15 +932,17 @@ func debugRestoreState(basePath:String, name: String) {
     }
 }
 
+private let sharedQueue = Queue(name: "org.telegram.postbox.Postbox")
+
 public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<PostboxResult, NoError> {
-    let queue = Queue(name: "org.telegram.postbox.Postbox")
+    let queue = sharedQueue
     return Signal { subscriber in
         queue.async {
             let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
-            debugRestoreState(basePath: basePath, name: "previous1")
+            //debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
