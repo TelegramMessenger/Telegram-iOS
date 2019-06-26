@@ -39,10 +39,11 @@ class NavigationTransitionCoordinator {
     
     private(set) var animatingCompletion = false
     private var currentCompletion: (() -> Void)?
-    
-    init(transition: NavigationTransition, container: UIView, topView: UIView, topNavigationBar: NavigationBar?, bottomView: UIView, bottomNavigationBar: NavigationBar?) {
+    private var didUpdateProgress:((CGFloat)->Void)?
+    init(transition: NavigationTransition, container: UIView, topView: UIView, topNavigationBar: NavigationBar?, bottomView: UIView, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat) -> Void)? = nil) {
         self.transition = transition
         self.container = container
+        self.didUpdateProgress = didUpdateProgress
         self.topView = topView
         switch transition {
             case .Push:
@@ -109,6 +110,8 @@ class NavigationTransitionCoordinator {
         self.bottomView.frame = CGRect(origin: CGPoint(x: ((position - 1.0) * containerSize.width * 0.3), y: 0.0), size: containerSize)
         
         self.updateNavigationBarTransition()
+        
+        self.didUpdateProgress?(self.progress)
     }
     
     func updateNavigationBarTransition() {

@@ -401,6 +401,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     
     func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
         var reallyHighlighted = self.isHighlighted
+        var highlightProgress: CGFloat = self.item?.itemHighlighting?.progress ?? 1.0
         if let item = self.item {
             switch item.peer {
             case let .peer(_, chatPeer):
@@ -420,10 +421,10 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 self.highlightedBackgroundNode.alpha = 0.0
             }
             self.highlightedBackgroundNode.layer.removeAllAnimations()
-            transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0)
+            transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: highlightProgress)
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
-                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 0.0, completion: { [weak self] completed in
+                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: highlightProgress, completion: { [weak self] completed in
                     if let strongSelf = self {
                         if completed {
                             strongSelf.highlightedBackgroundNode.removeFromSupernode()

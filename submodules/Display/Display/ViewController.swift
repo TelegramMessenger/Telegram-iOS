@@ -206,7 +206,10 @@ open class ViewControllerPresentationArguments {
     public var scrollToTopWithTabBar: (() -> Void)?
     public var longTapWithTabBar: (() -> Void)?
     
-    open var navigationCustomData: Any?
+    open func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
+        
+    }
+    
     open var customData: Any? {
         get {
             return nil

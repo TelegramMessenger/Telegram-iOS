@@ -490,9 +490,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                     controller.navigationBar?.previousItem = .item(viewControllers[i - 1].navigationItem)
                 }
                 if i < self._viewControllers.count - 1 {
-                    controller.navigationCustomData = (viewControllers[i + 1] as? ViewController)?.customData
+                    controller.updateNavigationCustomData((viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0, transition: transition)
                 } else {
-                    controller.navigationCustomData = nil
+                    controller.updateNavigationCustomData(nil, progress: 1.0, transition: transition)
                 }
             }
             viewControllers[i].navigation_setNavigationController(self)
@@ -840,13 +840,27 @@ open class NavigationController: UINavigationController, ContainableController, 
                         bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
                     }
                     
-                    let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar)
+                    let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar, didUpdateProgress: { [weak self] progress in
+                        if let strongSelf = self {
+                            for i in 0 ..< strongSelf._viewControllers.count {
+                                if let controller = strongSelf._viewControllers[i].controller as? ViewController {
+                                    if i < strongSelf._viewControllers.count - 1 {
+                                        controller.updateNavigationCustomData((strongSelf.viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0 - progress, transition: .immediate)
+                                    } else {
+                                        controller.updateNavigationCustomData(nil, progress: 1.0 - progress, transition: .immediate)
+                                    }
+                                }
+                            }
+                        }
+                    })
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
                 }
             case UIGestureRecognizerState.changed:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {
                     let translation = recognizer.translation(in: self.view).x
-                    navigationTransitionCoordinator.progress = max(0.0, min(1.0, translation / self.view.frame.width))
+                    let progress = max(0.0, min(1.0, translation / self.view.frame.width))
+                    navigationTransitionCoordinator.progress = progress
+
                 }
             case UIGestureRecognizerState.ended:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {

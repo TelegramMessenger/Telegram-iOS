@@ -96,11 +96,10 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public override var navigationCustomData: Any? {
-        didSet {
-            self.chatListDisplayNode.chatListNode.updateSelectedChatLocation(self.navigationCustomData as? ChatLocation, progress: 1, transition: .immediate)
-        }
+    public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.chatListDisplayNode.chatListNode.updateSelectedChatLocation(data as? ChatLocation, progress: progress, transition: transition)
     }
+    
     
     public init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false) {
         self.context = context
@@ -1121,11 +1120,13 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         editItem.accessibilityLabel = self.presentationData.strings.Common_Done
         if case .root = self.groupId {
             self.navigationItem.leftBarButtonItem = editItem
+            (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(.details, transition: .animated(duration: 0.5, curve: .spring))
         } else {
             self.navigationItem.rightBarButtonItem = editItem
+            (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(.master, transition: .animated(duration: 0.5, curve: .spring))
         }
         self.searchContentNode?.setIsEnabled(false, animated: true)
-        (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(.details, transition: .animated(duration: 0.5, curve: .spring))
+        
         self.chatListDisplayNode.chatListNode.updateState { state in
             var state = state
             state.editing = true

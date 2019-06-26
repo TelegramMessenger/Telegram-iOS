@@ -99,6 +99,7 @@ private enum ContactListNodeEntryId: Hashable {
 
 final class ContactItemHighlighting {
     var chatLocation: ChatLocation?
+    var progress: CGFloat = 1.0
     init(chatLocation: ChatLocation? = nil) {
         self.chatLocation = chatLocation
     }
@@ -1343,6 +1344,7 @@ final class ContactListNode: ASDisplayNode {
     func updateSelectedChatLocation(_ chatLocation: ChatLocation?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         
         self.interaction?.itemHighlighting.chatLocation = chatLocation
+        self.interaction?.itemHighlighting.progress = progress
         
         self.listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ContactsPeerItemNode {
