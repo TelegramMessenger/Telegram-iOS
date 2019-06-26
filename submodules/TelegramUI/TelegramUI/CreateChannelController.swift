@@ -262,6 +262,8 @@ public func createChannelController(context: AccountContext) -> ViewController {
                 switch error {
                     case .generic, .tooMuchLocationBasedGroups:
                         text = presentationData.strings.Login_UnknownError
+                    case .tooMuchJoined:
+                        text = presentationData.strings.CreateGroup_ChannelsTooMuch
                     case .restricted:
                         text = presentationData.strings.Common_ActionNotAllowedError
                     default:

@@ -75,6 +75,7 @@ public enum AddChannelMemberError {
     case generic
     case restricted
     case limitExceeded
+    case tooMuchJoined
     case bot(PeerId)
 }
 
@@ -97,6 +98,8 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], AddChannelMemberError> in
                         switch error.errorDescription {
+                            case "CHANNELS_TOO_MUCH":
+                                return .fail(.tooMuchJoined)
                             case "USERS_TOO_MUCH":
                                 return .fail(.limitExceeded)
                             case "USER_PRIVACY_RESTRICTED":
@@ -190,6 +193,8 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
             let signal = account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
             |> mapError { error -> AddChannelMemberError in
                 switch error.errorDescription {
+                   case "CHANNELS_TOO_MUCH":
+                        return .tooMuchJoined
                     case "USER_PRIVACY_RESTRICTED":
                         return .restricted
                     case "USERS_TOO_MUCH":

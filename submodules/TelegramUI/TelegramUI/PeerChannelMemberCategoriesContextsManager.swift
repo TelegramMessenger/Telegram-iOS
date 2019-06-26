@@ -327,23 +327,6 @@ final class PeerChannelMemberCategoriesContextsManager {
         |> mapToSignal { _ -> Signal<Void, AddChannelMemberError> in
             return .complete()
         }
-        
-        /*return addChannelMembers(account: account, peerId: peerId, memberIds: memberIds)
-        |> deliverOnMainQueue
-        |> beforeNext { [weak self] result in
-            if let strongSelf = self {
-                strongSelf.impl.with { impl in
-                    for (contextPeerId, context) in impl.contexts {
-                        if peerId == contextPeerId {
-                            context.reset(.recent)
-                        }
-                    }
-                }
-            }
-        }
-        |> mapToSignal { _ -> Signal<Void, AddChannelMemberError> in
-            return .single(Void())
-        }*/
     }
     
     func recentOnline(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<Int32, NoError> {

@@ -534,7 +534,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
-                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: highlightProgress, completion: { [weak self] completed in
+                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0 - highlightProgress, completion: { [weak self] completed in
                     if let strongSelf = self {
                         if completed {
                             strongSelf.highlightedBackgroundNode.removeFromSupernode()

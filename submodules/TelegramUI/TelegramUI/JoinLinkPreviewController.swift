@@ -105,6 +105,13 @@ public final class JoinLinkPreviewController: ViewController {
                     strongSelf.dismiss()
                 }
             }
+        }, error: { [weak self] error in
+            if let strongSelf = self {
+                if case .tooMuchJoined = error {
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Join_ChannelsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongSelf.dismiss()
+                }
+            }
         }))
     }
 }

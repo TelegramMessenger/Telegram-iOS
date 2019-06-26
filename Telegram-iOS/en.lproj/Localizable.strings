@@ -4328,6 +4328,8 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.OpenBotLinkOpen" = "Open";
 
 "TextFormat.Link" = "Link";
+"TextFormat.Strikethrough" = "Strikethrough";
+"TextFormat.Underline" = "Underline";
 
 "TextFormat.AddLinkTitle" = "Add Link";
 "TextFormat.AddLinkText" = "The link will be displayed as \"%@\".";
@@ -4458,3 +4460,7 @@ Any member of this group will be able to see messages in the channel.";
 "Activity.RemindAboutGroup" = "Send message to %@";
 "Activity.RemindAboutUser" = "Send message to %@";
 "Activity.RemindAboutChannel" = "Read %@";
+
+"CreateGroup.ChannelsTooMuch" = "Sorry, you are a member of too many groups and channels. Please leave some before creating a new one.";
+"Join.ChannelsTooMuch" = "Sorry, you are a member of too many groups and channels. Please leave some before joining one.";
+"Invite.ChannelsTooMuch" = "Sorry, the target user is a member of too many groups and channels. Please ask them to leave some first.";

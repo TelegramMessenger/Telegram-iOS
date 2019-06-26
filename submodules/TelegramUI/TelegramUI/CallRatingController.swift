@@ -34,7 +34,7 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         self.apply = apply
         
         self.titleNode = ASTextNode()
-        self.titleNode.maximumNumberOfLines = 2
+        self.titleNode.maximumNumberOfLines = 3
         
         var starNodes: [ASButtonNode] = []
         for _ in 0 ..< 5 {
@@ -110,7 +110,7 @@ private final class CallRatingAlertContentNode: AlertContentNode {
     }
     
     override func updateTheme(_ theme: AlertControllerTheme) {
-        self.titleNode.attributedText = NSAttributedString(string: strings.Calls_RatingTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.titleNode.attributedText = NSAttributedString(string: self.strings.Calls_RatingTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         
         for node in self.starNodes {
             node.setImage(generateTintedImage(image: UIImage(bundleImageName: "Call/Star"), color: theme.accentColor), for: [])
@@ -140,7 +140,7 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         
         var origin: CGPoint = CGPoint(x: 0.0, y: 20.0)
         
-        let titleSize = self.titleNode.measure(size)
+        let titleSize = self.titleNode.measure(CGSize(width: size.width - 32.0, height: size.height))
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
         origin.y += titleSize.height + 13.0
         
@@ -156,10 +156,10 @@ private final class CallRatingAlertContentNode: AlertContentNode {
                 effectiveActionLayout = .vertical
             }
             switch effectiveActionLayout {
-            case .horizontal:
-                minActionsWidth += actionTitleSize.width + actionTitleInsets
-            case .vertical:
-                minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
+                case .horizontal:
+                    minActionsWidth += actionTitleSize.width + actionTitleInsets
+                case .vertical:
+                    minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
             }
         }
         
@@ -198,24 +198,24 @@ private final class CallRatingAlertContentNode: AlertContentNode {
             if separatorIndex >= 0 {
                 let separatorNode = self.actionVerticalSeparators[separatorIndex]
                 switch effectiveActionLayout {
-                case .horizontal:
-                    transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
-                case .vertical:
-                    transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
+                    case .horizontal:
+                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
+                    case .vertical:
+                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
                 }
             }
             separatorIndex += 1
             
             let currentActionWidth: CGFloat
             switch effectiveActionLayout {
-            case .horizontal:
-                if nodeIndex == self.actionNodes.count - 1 {
-                    currentActionWidth = resultSize.width - actionOffset
-                } else {
-                    currentActionWidth = actionWidth
-                }
-            case .vertical:
-                currentActionWidth = resultSize.width
+                case .horizontal:
+                    if nodeIndex == self.actionNodes.count - 1 {
+                        currentActionWidth = resultSize.width - actionOffset
+                    } else {
+                        currentActionWidth = actionWidth
+                    }
+                case .vertical:
+                    currentActionWidth = resultSize.width
             }
             
             let actionNodeFrame: CGRect
