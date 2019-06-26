@@ -6,10 +6,11 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private let messageFont: UIFont = UIFont.systemFont(ofSize: 17.0)
-private let messageBoldFont: UIFont = UIFont.boldSystemFont(ofSize: 17.0)
-private let messageItalicFont: UIFont = UIFont.italicSystemFont(ofSize: 17.0)
-private let messageFixedFont: UIFont = UIFont(name: "Menlo-Regular", size: 16.0) ?? UIFont.systemFont(ofSize: 17.0)
+private let messageFont = Font.regular(17.0)
+private let messageBoldFont = Font.semibold(17.0)
+private let messageItalicFont = Font.italic(17.0)
+private let messageBoldItalicFont = Font.semiboldItalic(17.0)
+private let messageFixedFont = UIFont(name: "Menlo-Regular", size: 16.0) ?? UIFont.systemFont(ofSize: 17.0)
 
 final class ChatBotInfoItem: ListViewItem {
     fileprivate let text: String
@@ -151,7 +152,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 updatedTextAndEntities = (item.text, generateTextEntities(item.text, enabledTypes: .all))
             }
             
-            let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.presentationData.theme.theme.chat.bubble.infoPrimaryTextColor, linkColor: item.presentationData.theme.theme.chat.bubble.infoLinkTextColor, baseFont: messageFont, linkFont: messageFont, boldFont: messageBoldFont, italicFont: messageItalicFont, fixedFont: messageFixedFont)
+            let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.presentationData.theme.theme.chat.bubble.infoPrimaryTextColor, linkColor: item.presentationData.theme.theme.chat.bubble.infoLinkTextColor, baseFont: messageFont, linkFont: messageFont, boldFont: messageBoldFont, italicFont: messageItalicFont, boldItalicFont: messageBoldItalicFont, fixedFont: messageFixedFont)
             
             let horizontalEdgeInset: CGFloat = 10.0 + params.leftInset
             let horizontalContentInset: CGFloat = 12.0

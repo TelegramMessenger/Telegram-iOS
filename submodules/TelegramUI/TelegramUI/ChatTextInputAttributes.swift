@@ -12,8 +12,11 @@ struct ChatTextInputAttributes {
     static let italic = NSAttributedStringKey(rawValue: "Attribute__Italic")
     static let monospace = NSAttributedStringKey(rawValue: "Attribute__Monospace")
     static let strikethrough = NSAttributedStringKey(rawValue: "Attribute__Strikethrough")
+    static let underline = NSAttributedStringKey(rawValue: "Attribute__Underline")
     static let textMention = NSAttributedStringKey(rawValue: "Attribute__TextMention")
     static let textUrl = NSAttributedStringKey(rawValue: "Attribute__TextUrl")
+    
+    static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.textUrl]
 }
 
 func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedString {
@@ -22,9 +25,7 @@ func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedStr
     
     text.enumerateAttributes(in: fullRange, options: [], using: { attributes, range, _ in
         for (key, value) in attributes {
-            if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl {
-                result.addAttribute(key, value: value, range: range)
-            } else if key == ChatTextInputAttributes.bold || key == ChatTextInputAttributes.italic || key == ChatTextInputAttributes.monospace || key == ChatTextInputAttributes.strikethrough {
+            if ChatTextInputAttributes.allAttributes.contains(key) {
                 result.addAttribute(key, value: value, range: range)
             }
         }
@@ -32,12 +33,12 @@ func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedStr
     return result
 }
 
-private struct FontAttributes: OptionSet {
+struct ChatTextFontAttributes: OptionSet {
     var rawValue: Int32 = 0
     
-    static let bold = FontAttributes(rawValue: 1 << 0)
-    static let italic = FontAttributes(rawValue: 1 << 1)
-    static let monospace = FontAttributes(rawValue: 1 << 2)
+    static let bold = ChatTextFontAttributes(rawValue: 1 << 0)
+    static let italic = ChatTextFontAttributes(rawValue: 1 << 1)
+    static let monospace = ChatTextFontAttributes(rawValue: 1 << 2)
 }
 
 func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor) -> NSAttributedString {
@@ -48,7 +49,7 @@ func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize:
     result.addAttribute(NSAttributedStringKey.foregroundColor, value: textColor, range: fullRange)
     
     stateText.enumerateAttributes(in: fullRange, options: [], using: { attributes, range, _ in
-        var fontAttributes: FontAttributes = []
+        var fontAttributes: ChatTextFontAttributes = []
         
         for (key, value) in attributes {
             if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl {
@@ -69,6 +70,9 @@ func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize:
             } else if key == ChatTextInputAttributes.strikethrough {
                 result.addAttribute(key, value: value, range: range)
                 result.addAttribute(NSAttributedStringKey.strikethroughStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+            } else if key == ChatTextInputAttributes.underline {
+                result.addAttribute(key, value: value, range: range)
+                result.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
             }
         }
             
@@ -421,7 +425,7 @@ func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: Prese
         textNode.textView.textStorage.addAttribute(NSAttributedStringKey.foregroundColor, value: theme.chat.inputPanel.primaryTextColor, range: fullRange)
         
         attributedText.enumerateAttributes(in: fullRange, options: [], using: { attributes, range, _ in
-            var fontAttributes: FontAttributes = []
+            var fontAttributes: ChatTextFontAttributes = []
             
             for (key, value) in attributes {
                 if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl {
@@ -443,6 +447,9 @@ func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: Prese
                 } else if key == ChatTextInputAttributes.strikethrough {
                     textNode.textView.textStorage.addAttribute(key, value: value, range: range)
                     textNode.textView.textStorage.addAttribute(NSAttributedStringKey.strikethroughStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+                } else if key == ChatTextInputAttributes.underline {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textNode.textView.textStorage.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
             }
                 

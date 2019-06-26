@@ -590,6 +590,9 @@ final class SharedApplicationContext {
         }, requestSetAlternateIconName: { name, completion in
             if #available(iOS 10.3, *) {
                 application.setAlternateIconName(name, completionHandler: { error in
+                    if let error = error {
+                       Logger.shared.log("App \(self.episodeId)", "failed to set alternate icon with error \(error.localizedDescription)")
+                    }
                     completion(error == nil)
                 })
             } else {

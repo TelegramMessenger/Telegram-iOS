@@ -4454,3 +4454,7 @@ Any member of this group will be able to see messages in the channel.";
 "CreateGroup.ErrorLocatedGroupsTooMuch" = "Sorry, you have too many location-based groups already. Please delete one of your existing ones first.";
 
 "GroupInfo.LabelOwner" = "owner";
+
+"Activity.RemindAboutGroup" = "Send message to %@";
+"Activity.RemindAboutUser" = "Send message to %@";
+"Activity.RemindAboutChannel" = "Read %@";

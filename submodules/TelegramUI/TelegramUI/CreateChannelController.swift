@@ -258,14 +258,18 @@ public func createChannelController(context: AccountContext) -> ViewController {
                 replaceControllerImpl?(controller)
             }, error: { error in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let text: String
+                let text: String?
                 switch error {
                     case .generic, .tooMuchLocationBasedGroups:
                         text = presentationData.strings.Login_UnknownError
                     case .restricted:
                         text = presentationData.strings.Common_ActionNotAllowedError
+                    default:
+                        text = nil
                 }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                if let text = text {
+                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                }
             }))
         }
     }, changeProfilePhoto: {

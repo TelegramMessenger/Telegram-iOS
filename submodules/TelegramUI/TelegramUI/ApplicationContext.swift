@@ -148,14 +148,7 @@ final class AuthorizedApplicationContext {
             context.keyShortcutsController = keyShortcutsController
         }
         
-        /*self.applicationInForegroundDisposable = context.sharedContext.applicationBindings.applicationInForeground.start(next: { [weak self] value in
-            Queue.mainQueue().async {
-                self?.notificationManager.isApplicationInForeground = value
-            }
-        })*/
-        
         let previousPasscodeState = Atomic<PasscodeState?>(value: nil)
-        
         let passcodeStatusData = combineLatest(queue: Queue.mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData(), context.sharedContext.applicationBindings.applicationIsActive)
         let passcodeState = passcodeStatusData
         |> map { sharedData, accessChallengeDataView, isActive -> PasscodeState in
@@ -281,7 +274,7 @@ final class AuthorizedApplicationContext {
                             if #available(iOS 10.0, *) {
                             } else {
                                 DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, present: { c, a in
-                                }, openSettings: {}, { _ in })
+                                })
                             }
                             
                             if let passcodeController = strongSelf.passcodeController {
@@ -520,23 +513,27 @@ final class AuthorizedApplicationContext {
         
         if #available(iOS 10.0, *) {
             let permissionsPosition = ValuePromise(0, ignoreRepeated: true)
-            self.permissionsDisposable.set((combineLatest(queue: .mainQueue(), requiredPermissions(context: context), permissionUISplitTest(postbox: context.account.postbox), permissionsPosition.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.contactsPermissionWarningKey()), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.notificationsPermissionWarningKey()))
-            |> deliverOnMainQueue).start(next: { [weak self] required, splitTest, position, contactsPermissionWarningNotice, notificationsPermissionWarningNotice in
+            self.permissionsDisposable.set((combineLatest(queue: .mainQueue(), requiredPermissions(context: context), permissionUISplitTest(postbox: context.account.postbox), permissionsPosition.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .contacts)!), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .notifications)!), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .cellularData)!))
+            |> deliverOnMainQueue).start(next: { [weak self] required, splitTest, position, contactsPermissionWarningNotice, notificationsPermissionWarningNotice, cellularDataPermissionWarningNotice in
                 guard let strongSelf = self else {
                     return
                 }
                 
                 let contactsTimestamp = contactsPermissionWarningNotice.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 let notificationsTimestamp = notificationsPermissionWarningNotice.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                let cellularDataTimestamp = cellularDataPermissionWarningNotice.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if contactsTimestamp == nil, case .requestable = required.0.status {
-                    ApplicationSpecificNotice.setContactsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 1)
+                    ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .contacts, value: 1)
                 }
                 if notificationsTimestamp == nil, case .requestable = required.1.status {
-                    ApplicationSpecificNotice.setNotificationsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 1)
+                    ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .notifications, value: 1)
                 }
                 
                 let config = splitTest.configuration
                 var order = config.order
+                if !order.contains(.cellularData) {
+                    order.append(.cellularData)
+                }
                 if !order.contains(.siri) {
                     order.append(.siri)
                 }
@@ -563,9 +560,13 @@ final class AuthorizedApplicationContext {
                             if case .requestable = required.1.status, notificationsTimestamp != 0 {
                                 requestedPermissions.append((required.1, modal))
                             }
+                        case .cellularData:
+                            if case .denied = required.2.status, cellularDataTimestamp != 0 {
+                                requestedPermissions.append((required.2, true))
+                            }
                         case .siri:
-                            if case .requestable = required.2.status {
-                                requestedPermissions.append((required.2, false))
+                            if case .requestable = required.3.status {
+                                requestedPermissions.append((required.3, false))
                             }
                         default:
                             break
@@ -590,9 +591,11 @@ final class AuthorizedApplicationContext {
                             permissionsPosition.set(position + 1)
                             switch state {
                                 case .contacts:
-                                    ApplicationSpecificNotice.setContactsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
+                                    ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .contacts, value: 0)
                                 case .notifications:
-                                    ApplicationSpecificNotice.setNotificationsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
+                                    ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .notifications, value: 0)
+                                case .cellularData:
+                                    ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .cellularData, value: 0)
                                 default:
                                     break
                             }
@@ -616,7 +619,7 @@ final class AuthorizedApplicationContext {
                                             splitTest.addEvent(.ContactsDenied)
                                         }
                                         permissionsPosition.set(position + 1)
-                                        ApplicationSpecificNotice.setContactsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
+                                        ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .contacts, value: 0)
                                     }
                                 case .notifications:
                                     splitTest.addEvent(.NotificationsRequest)
@@ -629,8 +632,19 @@ final class AuthorizedApplicationContext {
                                             splitTest.addEvent(.NotificationsDenied)
                                         }
                                         permissionsPosition.set(position + 1)
-                                        ApplicationSpecificNotice.setNotificationsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
+                                        ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .notifications, value: 0)
                                     }
+                                case .cellularData:
+                                    DeviceAccess.authorizeAccess(to: .cellularData, presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
+                                        if let strongSelf = self {
+                                            (strongSelf.rootController.viewControllers.last as? ViewController)?.present(c, in: .window(.root))
+                                        }
+                                    }, openSettings: {
+                                        context.sharedContext.applicationBindings.openSettings()
+                                    }, { result in
+                                        permissionsPosition.set(position + 1)
+                                        ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .cellularData, value: 0)
+                                    })
                                 case .siri:
                                     DeviceAccess.authorizeAccess(to: .siri, requestSiriAuthorization: { completion in
                                         return context.sharedContext.applicationBindings.requestSiriAuthorization(completion)

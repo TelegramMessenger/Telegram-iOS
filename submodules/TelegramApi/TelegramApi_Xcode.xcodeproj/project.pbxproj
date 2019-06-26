@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09E9601B22C2BE4900B13673 /* SecretApiLayer101.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E9601A22C2BE4900B13673 /* SecretApiLayer101.swift */; };
 		D035732422B5C1FC00F0920D /* TelegramApi.h in Headers */ = {isa = PBXBuildFile; fileRef = D035732222B5C1FC00F0920D /* TelegramApi.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D035733422B5C29900F0920D /* Api0.swift in Sources */ = {isa = PBXBuildFile; fileRef = D035733022B5C29900F0920D /* Api0.swift */; };
 		D035733522B5C29900F0920D /* Api2.swift in Sources */ = {isa = PBXBuildFile; fileRef = D035733122B5C29900F0920D /* Api2.swift */; };
@@ -32,6 +33,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		09E9601A22C2BE4900B13673 /* SecretApiLayer101.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretApiLayer101.swift; sourceTree = "<group>"; };
 		D035731F22B5C1FC00F0920D /* TelegramApi.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TelegramApi.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D035732222B5C1FC00F0920D /* TelegramApi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramApi.h; sourceTree = "<group>"; };
 		D035732322B5C1FC00F0920D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -94,6 +96,7 @@
 				D035734522B5C9BF00F0920D /* SecretApiLayer8.swift */,
 				D035734422B5C9BF00F0920D /* SecretApiLayer46.swift */,
 				D035734622B5C9BF00F0920D /* SecretApiLayer73.swift */,
+				09E9601A22C2BE4900B13673 /* SecretApiLayer101.swift */,
 				D035733C22B5C39100F0920D /* DeserializeFunctionResponse.swift */,
 				D035733A22B5C31400F0920D /* TelegramApiLogger.swift */,
 				D035733822B5C2E200F0920D /* Buffer.swift */,
@@ -230,6 +233,7 @@
 				D035733D22B5C39100F0920D /* DeserializeFunctionResponse.swift in Sources */,
 				D035734822B5C9BF00F0920D /* SecretApiLayer8.swift in Sources */,
 				D035733522B5C29900F0920D /* Api2.swift in Sources */,
+				09E9601B22C2BE4900B13673 /* SecretApiLayer101.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

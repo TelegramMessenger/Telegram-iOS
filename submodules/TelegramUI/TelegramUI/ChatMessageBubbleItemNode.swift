@@ -1849,7 +1849,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
                                         item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
                                     } else {
-                                        if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
+                                        if item.message.id.peerId == item.context.account.peerId, let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
                                             if case .member = channel.participationStatus {
                                             } else {
                                                 item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)

@@ -1,67 +1,96 @@
 #import "YUV.h"
+#import <Accelerate/Accelerate.h>
 
-void encodeRGBAToBRGR422A(uint8_t *bgrg422, uint8_t *a, uint8_t const *argb, int width, int height) {
-    int i, j;
-    int lineWidth = width * 2;
-    for (j = 0; j < height; j++) {
-        for (i = 0; i < width; i += 2) {
-            int A1 = argb[(j * width + i) * 4 + 0];
-            int R1 = argb[(j * width + i) * 4 + 3];
-            int G1 = argb[(j * width + i) * 4 + 2];
-            int B1 = argb[(j * width + i) * 4 + 1];
-            
-            int A2 = argb[(j * width + i) * 4 + 4];
-            int R2 = argb[(j * width + i) * 4 + 7];
-            int G2 = argb[(j * width + i) * 4 + 6];
-            int B2 = argb[(j * width + i) * 4 + 5];
-            
-            bgrg422[j * lineWidth + (i / 2) * 4 + 0] = (uint8_t)((B1 + B2) >> 1);
-            bgrg422[j * lineWidth + (i / 2) * 4 + 1] = G1;
-            bgrg422[j * lineWidth + (i / 2) * 4 + 2] = (uint8_t)((R1 + R2) >> 1);
-            bgrg422[j * lineWidth + (i / 2) * 4 + 3] = G2;
-            
-            a[j * width + i + 0] = A1;
-            a[j * width + i + 1] = A2;
-        }
-    }
-}
-
-void encodeBRGR422AToRGBA(uint8_t const * _Nonnull bgrg422, uint8_t const * _Nonnull const a, uint8_t * _Nonnull argb, int width, int height) {
-    int i, j;
-    int lineWidth = width * 2;
-    for (j = 0; j < height; j++) {
-        for (i = 0; i < width; i += 2) {
-            argb[(j * width + i) * 4 + 0] = a[j * width + i + 0];
-            argb[(j * width + i) * 4 + 3] = bgrg422[j * lineWidth + (i / 2) * 4 + 2];
-            argb[(j * width + i) * 4 + 2] = bgrg422[j * lineWidth + (i / 2) * 4 + 1];
-            argb[(j * width + i) * 4 + 1] = bgrg422[j * lineWidth + (i / 2) * 4 + 0];
-            
-            argb[(j * width + i) * 4 + 4] = a[j * width + i + 1];
-            argb[(j * width + i) * 4 + 7] = bgrg422[j * lineWidth + (i / 2) * 4 + 2];
-            argb[(j * width + i) * 4 + 6] = bgrg422[j * lineWidth + (i / 2) * 4 + 3];
-            argb[(j * width + i) * 4 + 5] = bgrg422[j * lineWidth + (i / 2) * 4 + 0];
-        }
-    }
-}
-
-NSData * _Nonnull encodeSparseBuffer(uint8_t const * _Nonnull bytes, int length) {
-    NSMutableData *result = [[NSMutableData alloc] init];
-    int offset = 0;
-    int currentStart = 0;
-    int currentType = 0;
-    while (offset != length) {
-        if (bytes[offset] == 0) {
-            if (currentType != 0) {
-                
-            }
-        } else {
-            
-        }
-        offset += 1;
-    }
-    return result;
-}
-
-void decodeSparseeBuffer(uint8_t * _Nonnull bytes, uint8_t const * _Nonnull buffer) {
+void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height) {
+    vImage_YpCbCrPixelRange pixelRange = (vImage_YpCbCrPixelRange){ 0, 128, 255, 255, 255, 0, 255, 0 };
+    vImage_ARGBToYpCbCr info;
     
+    vImage_Error error;
+    error = vImageConvert_ARGBToYpCbCr_GenerateConversion(kvImage_ARGBToYpCbCrMatrix_ITU_R_709_2, &pixelRange, &info, kvImageARGB8888, kvImage420Yp8_Cb8_Cr8, 0);
+    if (error != kvImageNoError) {
+        return;
+    }
+    
+    vImage_Buffer src;
+    src.data = (void *)argb;
+    src.width = width;
+    src.height = height;
+    src.rowBytes = width * 4;
+    
+    uint8_t permuteMap[4] = {3, 2, 1, 0};
+    error = vImagePermuteChannels_ARGB8888(&src, &src, permuteMap, kvImageDoNotTile);
+    
+    error = vImageUnpremultiplyData_ARGB8888(&src, &src, kvImageDoNotTile);
+    
+    uint8_t *buf = (uint8_t *)argb;
+    uint8_t *alpha = yuva + (width * height * 1 + width * height * 1);
+    for (int i = 0; i < width * height; i += 2) {
+        uint8_t a0 = (buf[i * 4 + 0] >> 4) << 4;
+        uint8_t a1 = (buf[(i + 1) * 4 + 0] >> 4) << 4;
+        alpha[i / 2] = (a0 & (0xf0U)) | ((a1 & (0xf0U)) >> 4);
+    }
+    
+    vImage_Buffer destYp;
+    destYp.data = (void *)(yuva + 0);
+    destYp.width = width;
+    destYp.height = height;
+    destYp.rowBytes = width;
+    
+    vImage_Buffer destCbCr;
+    destCbCr.data = (void *)(yuva + width * height * 1);
+    destCbCr.width = width;
+    destCbCr.height = height;
+    destCbCr.rowBytes = width;
+    
+    error = vImageConvert_ARGB8888To420Yp8_CbCr8(&src, &destYp, &destCbCr, &info, NULL, kvImageDoNotTile);
+    if (error != kvImageNoError) {
+        return;
+    }
+}
+
+void decodeYUVAToRGBA(uint8_t const *yuva, uint8_t *argb, int width, int height) {
+    vImage_YpCbCrPixelRange pixelRange = (vImage_YpCbCrPixelRange){ 0, 128, 255, 255, 255, 0, 255, 0 };
+    vImage_YpCbCrToARGB info;
+    
+    vImage_Error error;
+    error = vImageConvert_YpCbCrToARGB_GenerateConversion(kvImage_YpCbCrToARGBMatrix_ITU_R_709_2, &pixelRange, &info, kvImage420Yp8_Cb8_Cr8, kvImageARGB8888, 0);
+    if (error != kvImageNoError) {
+        return;
+    }
+    
+    vImage_Buffer srcYp;
+    srcYp.data = (void *)(yuva + 0);
+    srcYp.width = width;
+    srcYp.height = height;
+    srcYp.rowBytes = width * 1;
+    
+    vImage_Buffer srcCbCr;
+    srcCbCr.data = (void *)(yuva + width * height * 1);
+    srcCbCr.width = width;
+    srcCbCr.height = height;
+    srcCbCr.rowBytes = width * 1;
+    
+    vImage_Buffer dest;
+    dest.data = (void *)argb;
+    dest.width = width;
+    dest.height = height;
+    dest.rowBytes = width * 4;
+    
+    error = vImageConvert_420Yp8_CbCr8ToARGB8888(&srcYp, &srcCbCr, &dest, &info, NULL, 0xff, kvImageDoNotTile);
+    
+    uint8_t const *alpha = yuva + (width * height * 1 + width * height * 1);
+    for (int i = 0; i < width * height; i += 2) {
+        uint8_t a = alpha[i / 2];
+        argb[i * 4 + 0] = (a & (0xf0U));
+        argb[(i + 1) * 4 + 0] = (a & (0x0fU)) << 4;
+    }
+    
+    error = vImagePremultiplyData_ARGB8888(&dest, &dest, kvImageDoNotTile);
+    
+    uint8_t permuteMap[4] = {3, 2, 1, 0};
+    error = vImagePermuteChannels_ARGB8888(&dest, &dest, permuteMap, kvImageDoNotTile);
+    
+    if (error != kvImageNoError) {
+        return;
+    }
 }

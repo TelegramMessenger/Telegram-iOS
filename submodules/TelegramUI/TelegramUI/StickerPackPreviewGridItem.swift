@@ -49,6 +49,14 @@ private let textFont = Font.regular(20.0)
 final class StickerPackPreviewGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem, CGSize)?
     private let imageNode: TransformImageNode
+    private var animationNode: StickerAnimationNode?
+    
+    override var isVisibleInGrid: Bool {
+        didSet {
+            self.animationNode?.visibility = self.isVisibleInGrid
+        }
+    }
+    
     private let textNode: ASTextNode
     
     private var currentIsPreviewing = false
@@ -101,7 +109,22 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             }
             self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .black, paragraphAlignment: .right)
             if let dimensions = stickerItem.file.dimensions {
-                self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
+                if stickerItem.file.isAnimatedSticker {
+                    if self.animationNode == nil {
+                        let animationNode = StickerAnimationNode()
+                        self.animationNode = animationNode
+                        self.addSubnode(animationNode)
+                    }
+                    self.animationNode?.setup(account: account, fileReference: FileMediaReference.standalone(media: stickerItem.file), width: 140, height: 140)
+                    self.animationNode?.visibility = self.isVisibleInGrid
+                } else {
+                    if let animationNode = self.animationNode {
+                        animationNode.visibility = false
+                        self.animationNode = nil
+                        animationNode.removeFromSupernode()
+                    }
+                    self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
+                }
                 
                 self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
                 
@@ -125,6 +148,10 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             let imageSize = mediaDimensions.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
             self.imageNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
+            if let animationNode = self.animationNode {
+                animationNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
+                animationNode.updateLayout(size: imageSize)
+            }
             let boundingFrame =  CGRect(origin: CGPoint(x: floor((bounds.size.width - boundingSize.width) / 2.0), y: (bounds.size.height - boundingSize.height) / 2.0), size: boundingSize)
             let textSize = CGSize(width: 32.0, height: 24.0)
             self.textNode.frame = CGRect(origin: CGPoint(x: boundingFrame.maxX - 1.0 - textSize.width, y: boundingFrame.height + 10.0 - textSize.height), size: textSize)

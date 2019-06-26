@@ -19,6 +19,7 @@ public enum CreateChannelError {
     case generic
     case restricted
     case tooMuchLocationBasedGroups
+    case serverProvided(String)
 }
 
 private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool, location: (latitude: Double, longitude: Double, address: String)? = nil) -> Signal<PeerId, CreateChannelError> {
@@ -40,7 +41,9 @@ private func createChannel(account: Account, title: String, description: String?
         
         return account.network.request(Api.functions.channels.createChannel(flags: flags, title: title, about: description ?? "", geoPoint: geoPoint, address: address), automaticFloodWait: false)
         |> mapError { error -> CreateChannelError in
-            if error.errorDescription == "CHANNELS_ADMIN_LOCATED_TOO_MUCH" {
+            if error.errorCode == 406 {
+                return .serverProvided(error.errorDescription)
+            } else if error.errorDescription == "CHANNELS_ADMIN_LOCATED_TOO_MUCH" {
                 return .tooMuchLocationBasedGroups
             } else if error.errorDescription == "USER_RESTRICTED" {
                 return .restricted
