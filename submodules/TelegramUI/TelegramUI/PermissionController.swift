@@ -230,7 +230,7 @@ public final class PermissionController : ViewController {
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.splashScreen ? 0.0 : self.navigationHeight, transition: transition)
     }
     
     @objc private func nextPressed() {
