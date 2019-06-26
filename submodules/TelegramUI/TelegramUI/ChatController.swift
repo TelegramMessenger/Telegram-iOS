@@ -196,6 +196,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     private var historyNavigationStack = ChatHistoryNavigationStack()
     
     let canReadHistory = ValuePromise<Bool>(true, ignoreRepeated: true)
+    private var reminderActivity: NSUserActivity?
+    private var isReminderActivityEnabled: Bool = false
     
     private var canReadHistoryValue = false
     private var canReadHistoryDisposable: Disposable?
@@ -1646,13 +1648,15 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             }
                             
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
-                                return $0.updatedPeer { _ in return renderedPeer
+                                return $0.updatedPeer { _ in
+                                    return renderedPeer
                                 }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
                             })
                             if !strongSelf.didSetChatLocationInfoReady {
                                 strongSelf.didSetChatLocationInfoReady = true
                                 strongSelf._chatLocationInfoReady.set(.single(true))
                             }
+                            strongSelf.updateReminderActivity()
                             if let upgradedToPeerId = upgradedToPeerId {
                                 if let navigationController = strongSelf.navigationController as? NavigationController {
                                     var viewControllers = navigationController.viewControllers
@@ -1898,6 +1902,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             if let strongSelf = self, strongSelf.canReadHistoryValue != value {
                 strongSelf.canReadHistoryValue = value
                 strongSelf.raiseToListen?.enabled = value
+                strongSelf.isReminderActivityEnabled = value
+                strongSelf.updateReminderActivity()
             }
         })
         
@@ -1963,6 +1969,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeTarget(self)
         self.preloadHistoryPeerIdDisposable.dispose()
         self.reportIrrelvantGeoDisposable?.dispose()
+        self.reminderActivity?.invalidate()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -6933,6 +6940,34 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     }
                 }
             })
+        }
+    }
+    
+    private func updateReminderActivity() {
+        if (self.isReminderActivityEnabled) {
+            if #available(iOS 9.0, *) {
+                if self.reminderActivity == nil, case let .peer(peerId) = self.chatLocation, let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer {
+                    let reminderActivity = NSUserActivity(activityType: "RemindAboutChatIntent")
+                    self.reminderActivity = reminderActivity
+                    if peer is TelegramGroup {
+                        reminderActivity.title = self.presentationData.strings.Activity_RemindAboutGroup(peer.displayTitle).0
+                    } else if let channel = peer as? TelegramChannel {
+                        if case .broadcast = channel.info {
+                            reminderActivity.title = self.presentationData.strings.Activity_RemindAboutChannel(peer.displayTitle).0
+                        } else {
+                            reminderActivity.title = self.presentationData.strings.Activity_RemindAboutGroup(peer.displayTitle).0
+                        }
+                    } else {
+                        reminderActivity.title = self.presentationData.strings.Activity_RemindAboutUser(peer.displayTitle).0
+                    }
+                    reminderActivity.userInfo = ["peerId": peerId.toInt64(), "peerTitle": peer.displayTitle]
+                    reminderActivity.isEligibleForHandoff = true
+                    reminderActivity.becomeCurrent()
+                }
+            }
+        } else if let reminderActivity = self.reminderActivity {
+            self.reminderActivity = nil
+            reminderActivity.invalidate()
         }
     }
 }

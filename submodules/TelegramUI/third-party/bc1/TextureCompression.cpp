@@ -1,6 +1,11 @@
 #import "TextureCompression.h"
 
+#import "astc.h"
+
 void compressRGBAToBC1(uint8_t const * _Nonnull argb, int width, int height, uint8_t * _Nonnull bc1) {
+    BgraImage image(width, height, (uint8_t *)argb);
+    CompressedImage compressed(width, height, 4, 4, 16);
+    compress_astc(image, &compressed);
     /*Javelin::RgbaBitmap bitmap(width, height);
     uint8_t *data = (uint8_t *)bitmap.GetData();
     for (int i = 0; i < width * height; i++) {

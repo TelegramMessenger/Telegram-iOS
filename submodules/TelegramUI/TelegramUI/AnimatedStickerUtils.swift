@@ -149,6 +149,8 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                     
                     let appendStartTime = CACurrentMediaTime()
                     
+                    //compressRGBAToBC1(currentFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), yuvaFrameData.assumingMemoryBound(to: UInt8.self))
+                    
                     encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), currentFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height))
                     //decodeYUVAToRGBA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), singleContext.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height))
                     
