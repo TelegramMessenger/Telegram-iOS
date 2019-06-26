@@ -5,131 +5,93 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import AVFoundation
 import CoreImage
 import TelegramPresentationData
+import Compression
 
-private class AlphaFrameFilter: CIFilter {
-    static var kernel: CIColorKernel? = {
-        return CIColorKernel(source: """
-kernel vec4 alphaFrame(__sample s, __sample m) {
-  return vec4( s.rgb, 1.0 - m.r );
-}
-""")
-    }()
+private final class AnimationFrameCache {
+    private var cache: [Int: NSPurgeableData] = [:]
     
-    var inputImage: CIImage?
-    var maskImage: CIImage?
-    
-    override var outputImage: CIImage? {
-        let kernel = AlphaFrameFilter.kernel!
-        guard let inputImage = inputImage, let maskImage = maskImage else {
-            return nil
+    func get(index: Int, _ f: (NSPurgeableData?) -> Void) {
+        guard let data = self.cache[index] else {
+            f(nil)
+            return
         }
-        let args = [inputImage as AnyObject, maskImage as AnyObject]
-        return kernel.apply(extent: inputImage.extent, arguments: args)
+        if data.beginContentAccess() {
+            f(data)
+            data.endContentAccess()
+        } else {
+            self.cache.removeValue(forKey: index)
+            f(nil)
+        }
+    }
+    
+    func set(index: Int, bytes: UnsafeRawPointer, length: Int) {
+        let data = NSPurgeableData(bytes: bytes, length: length)
+        data.endContentAccess()
+        self.cache[index] = data
+    }
+    
+    func removeAll() {
+        self.cache.removeAll()
     }
 }
 
-private func createVideoComposition(for playerItem: AVPlayerItem, ready: @escaping () -> Void) -> AVVideoComposition? {
-    let videoSize = CGSize(width: playerItem.presentationSize.width, height: playerItem.presentationSize.height / 2.0)
-    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-        let composition = AVMutableVideoComposition(asset: playerItem.asset, applyingCIFiltersWithHandler: { request in
-            let sourceRect = CGRect(origin: .zero, size: videoSize)
-            let alphaRect = sourceRect.offsetBy(dx: 0, dy: sourceRect.height)
-            let filter = AlphaFrameFilter()
-            filter.inputImage = request.sourceImage.cropped(to: alphaRect)
-                .transformed(by: CGAffineTransform(translationX: 0, y: -sourceRect.height))
-            filter.maskImage = request.sourceImage.cropped(to: sourceRect)
-            request.finish(with: filter.outputImage!, context: nil)
-            ready()
-        })
-        composition.renderSize = videoSize
-        return composition
-    } else {
-        return nil
-    }
-}
-
-private final class StickerAnimationNode: ASDisplayNode {
+final class StickerAnimationNode: ASDisplayNode {
     private var account: Account?
     private var fileReference: FileMediaReference?
     private let disposable = MetaDisposable()
     private let fetchDisposable = MetaDisposable()
     
-    var playerLayer: AVPlayerLayer {
-        return self.layer as! AVPlayerLayer
-    }
-    
     var started: () -> Void = {}
+    private var reportedStarted = false
     
-    var ready = false
+    private var timer: SwiftSignalKit.Timer?
+    
+    private var data: Data?
+    private var frameCache = AnimationFrameCache()
+    
+    private var renderer: (AnimationRenderer & ASDisplayNode)?
+    
     var visibility = false {
         didSet {
             if self.visibility {
-                if self.ready {
-                    self.player?.play()
-                }
+                self.play()
             } else{
-                self.player?.pause()
+                self.stop()
             }
-        }
-    }
-    
-    var player: AVPlayer? {
-        get {
-            if self.isNodeLoaded {
-                return self.playerLayer.player
-            } else {
-                return nil
-            }
-        }
-        set {
-            self.playerLayer.player = newValue
-        }
-    }
-    
-    private var playerItem: AVPlayerItem? = nil {
-        willSet {
-            self.playerItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
-        }
-        didSet {
-            self.playerItem?.addObserver(self, forKeyPath: #keyPath(AVPlayerItem.status), options: .new, context: nil)
-            self.setupLooping()
         }
     }
     
     override init() {
         super.init()
-        
-        self.setLayerBlock({
-            let layer = AVPlayerLayer()
-            layer.isHidden = true
-            layer.videoGravity = .resize
-            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                layer.pixelBufferAttributes = [(kCVPixelBufferPixelFormatTypeKey as String): kCVPixelFormatType_32BGRA]
-            }
-            return layer
-        })
     }
     
     deinit {
-        NotificationCenter.default.removeObserver(self.didPlayToEndTimeObsever as Any)
-        self.playerItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
-        self.player = nil
-        self.playerItem = nil
         self.disposable.dispose()
         self.fetchDisposable.dispose()
+        self.timer?.invalidate()
     }
     
-    func setup(account: Account, fileReference: FileMediaReference) {
-        self.disposable.set(chatMessageAnimationData(postbox: account.postbox, fileReference: fileReference, synchronousLoad: false).start(next: { [weak self] data in
+    override func didLoad() {
+        super.didLoad()
+        
+        #if targetEnvironment(simulator)
+        self.renderer = SoftwareAnimationRenderer()
+        #else
+        self.renderer = SoftwareAnimationRenderer()
+        //self.renderer = MetalAnimationRenderer()
+        #endif
+        self.renderer?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+        self.addSubnode(self.renderer!)
+    }
+    
+    func setup(account: Account, fileReference: FileMediaReference, width: Int, height: Int) {
+        self.disposable.set(chatMessageAnimationData(postbox: account.postbox, fileReference: fileReference, width: width, height: height, synchronousLoad: false).start(next: { [weak self] data in
             if let strongSelf = self, data.complete {
-                let playerItem = AVPlayerItem(url: URL(fileURLWithPath: data.path))
-                Queue.mainQueue().async {
-                    strongSelf.player = AVPlayer(playerItem: playerItem)
-                    strongSelf.player?.isMuted = true
-                    strongSelf.playerItem = playerItem
+                strongSelf.data = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead])
+                if strongSelf.visibility {
+                    strongSelf.play()
                 }
             }
         }))
@@ -141,45 +103,117 @@ private final class StickerAnimationNode: ASDisplayNode {
         self.fetchDisposable.set(nil)
     }
     
-    private func setupLooping() {
-        guard let playerItem = self.playerItem, let player = self.player else {
+    func play() {
+        guard let data = self.data else {
             return
         }
-        
-        self.didPlayToEndTimeObsever = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: nil, using: { _ in
-            player.seek(to: kCMTimeZero) { _ in
-                player.play()
+        if #available(iOS 9.0, *) {
+            let dataCount = data.count
+            self.timer?.invalidate()
+            var scratchBuffer = Data(count: compression_decode_scratch_buffer_size(COMPRESSION_LZ4))
+            
+            var offset = 0
+            var width = 0
+            var height = 0
+            
+            var fps: Int32 = 0
+            data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                memcpy(&fps, bytes.advanced(by: offset), 4)
+                offset += 4
+                var widthValue: Int32 = 0
+                var heightValue: Int32 = 0
+                memcpy(&widthValue, bytes.advanced(by: offset), 4)
+                offset += 4
+                memcpy(&heightValue, bytes.advanced(by: offset), 4)
+                offset += 4
+                width = Int(widthValue)
+                height = Int(heightValue)
             }
-        })
-    }
-    
-    private var didPlayToEndTimeObsever: NSObjectProtocol? = nil {
-        willSet(newObserver) {
-            if let observer = self.didPlayToEndTimeObsever, self.didPlayToEndTimeObsever !== newObserver {
-                NotificationCenter.default.removeObserver(observer)
+            
+            let initialOffset = offset
+            
+            var decodeBuffer = Data(count: width * 4 * height)
+            var frameBuffer = Data(count: width * 4 * height)
+            let decodeBufferLength = decodeBuffer.count
+            frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                memset(bytes, 0, decodeBufferLength)
             }
-        }
-    }
-    
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        if let playerItem = object as? AVPlayerItem, playerItem === self.playerItem {
-            if case .readyToPlay = playerItem.status, playerItem.videoComposition == nil {
-                playerItem.seekingWaitsForVideoCompositionRendering = true
-                let composition = createVideoComposition(for: playerItem, ready: { [weak self] in
-                    Queue.mainQueue().async {
-                        self?.playerLayer.isHidden = false
-                        self?.started()
-                    }
-                })
-                playerItem.videoComposition = composition
-                self.ready = true
-                if self.visibility {
-                    self.player?.play()
+            
+            var frameIndex = 0
+            let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(fps), repeat: true, completion: { [weak self] in
+                guard let strongSelf = self else {
+                    return
                 }
-            }
-        } else {
-            return super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
+                data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                    var frameLength: Int32 = 0
+                    memcpy(&frameLength, bytes.advanced(by: offset), 4)
+                    
+                    var usedCache = false
+                    strongSelf.frameCache.get(index: frameIndex, { data in
+                        if let data = data {
+                            usedCache = true
+                            
+                            strongSelf.renderer?.render(width: width, height: height, bytes: data.bytes, length: data.length)
+                            
+                            if !strongSelf.reportedStarted {
+                                strongSelf.reportedStarted = true
+                                strongSelf.started()
+                            }
+                        }
+                    })
+                    
+                    if !usedCache {
+                        scratchBuffer.withUnsafeMutableBytes { (scratchBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                            decodeBuffer.withUnsafeMutableBytes { (decodeBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                frameBuffer.withUnsafeMutableBytes { (frameBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                    compression_decode_buffer(decodeBytes, decodeBufferLength, bytes.advanced(by: offset + 4), Int(frameLength), UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZ4)
+                                    
+                                    var lhs = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt64.self)
+                                    var rhs = UnsafeRawPointer(decodeBytes).assumingMemoryBound(to: UInt64.self)
+                                    for _ in 0 ..< decodeBufferLength / 8 {
+                                        lhs.pointee = lhs.pointee ^ rhs.pointee
+                                        lhs = lhs.advanced(by: 1)
+                                        rhs = rhs.advanced(by: 1)
+                                    }
+                                    
+                                    strongSelf.renderer?.render(width: width, height: height, bytes: frameBytes, length: decodeBufferLength)
+                                    
+                                    //strongSelf.frameCache.set(index: frameIndex, bytes: frameBytes, length: decodeBufferLength)
+                                }
+                            }
+                        }
+                        
+                        if !strongSelf.reportedStarted {
+                            strongSelf.reportedStarted = true
+                            strongSelf.started()
+                        }
+                    }
+                    
+                    offset += 4 + Int(frameLength)
+                    frameIndex += 1
+                    if offset == dataCount {
+                        offset = initialOffset
+                        frameIndex = 0
+                        frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                            memset(bytes, 0, decodeBufferLength)
+                        }
+                    }
+                }
+            }, queue: Queue.mainQueue())
+            self.timer = timer
+            timer.start()
         }
+    }
+    
+    func stop() {
+        self.timer?.invalidate()
+        self.timer = nil
+        self.reportedStarted = false
+        self.frameCache.removeAll()
+    }
+    
+    func updateLayout(size: CGSize) {
+        self.renderer?.frame = CGRect(origin: CGPoint(), size: size)
     }
 }
 
@@ -259,14 +293,16 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var visibilityPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     override var visibility: ListViewItemNodeVisibility {
         didSet {
-            if self.visibility != oldValue {
-                switch self.visibility {
-                    case .visible:
-                        self.animationNode.visibility = true
-                        self.visibilityPromise.set(true)
-                    case .none:
-                        self.animationNode.visibility = false
-                        self.visibilityPromise.set(false)
+            let wasVisible = oldValue != .none
+            let isVisible = self.visibility != .none
+            
+            if wasVisible != isVisible {
+                if isVisible {
+                    self.animationNode.visibility = true
+                    self.visibilityPromise.set(true)
+                } else {
+                    self.animationNode.visibility = false
+                    self.visibilityPromise.set(false)
                 }
             }
         }
@@ -280,7 +316,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
                     self.imageNode.setSignal(chatMessageSticker(account: item.context.account, file: telegramFile, small: false, thumbnail: true))
-                    self.animationNode.setup(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile))
+                    self.animationNode.setup(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile), width: 360, height: 360)
                 }
                 break
             }
@@ -288,7 +324,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
-        let displaySize = CGSize(width: 162.0, height: 162.0)
+        let displaySize = CGSize(width: 184.0, height: 184.0)
         let telegramFile = self.telegramFile
         let layoutConstants = self.layoutConstants
         let imageLayout = self.imageNode.asyncLayout()
@@ -301,7 +337,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-            var imageSize: CGSize = CGSize(width: 162.0, height: 162.0)
+            var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
             if let telegramFile = telegramFile {
                 if let dimensions = telegramFile.dimensions {
                     imageSize = dimensions.aspectFitted(displaySize)
@@ -480,6 +516,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     strongSelf.imageNode.frame = updatedImageFrame
                     strongSelf.animationNode.frame = updatedImageFrame.insetBy(dx: imageInset, dy: imageInset)
+                    strongSelf.animationNode.updateLayout(size: updatedImageFrame.insetBy(dx: imageInset, dy: imageInset).size)
                     imageApply()
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
@@ -589,8 +626,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let item = self.item, self.imageNode.frame.contains(location) {
-                        //self.animationNode.play()
-                        //let _ = item.controllerInteraction.openMessage(item.message, .default)
+                        let _ = item.controllerInteraction.openMessage(item.message, .default)
                         return
                     }
                     

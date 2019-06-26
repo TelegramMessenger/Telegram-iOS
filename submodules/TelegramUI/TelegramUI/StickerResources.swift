@@ -168,8 +168,8 @@ private func chatMessageStickerPackThumbnailData(postbox: Postbox, representatio
     }
 }
 
-func chatMessageAnimationData(postbox: Postbox, fileReference: FileMediaReference, synchronousLoad: Bool) -> Signal<MediaResourceData, NoError> {
-    let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedAnimatedStickerRepresentation(), pathExtension: "mp4", complete: false, fetch: false, attemptSynchronously: synchronousLoad)
+func chatMessageAnimationData(postbox: Postbox, fileReference: FileMediaReference, width: Int, height: Int, synchronousLoad: Bool) -> Signal<MediaResourceData, NoError> {
+    let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedAnimatedStickerRepresentation(width: Int32(width), height: Int32(height)), pathExtension: "mp4", complete: false, fetch: false, attemptSynchronously: synchronousLoad)
     
     return maybeFetched
     |> take(1)
@@ -177,7 +177,7 @@ func chatMessageAnimationData(postbox: Postbox, fileReference: FileMediaReferenc
         if maybeData.complete {
             return .single(maybeData)
         } else {
-            return postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedAnimatedStickerRepresentation(), pathExtension: "mp4", complete: false)
+            return postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedAnimatedStickerRepresentation(width: Int32(width), height: Int32(height)), pathExtension: "mp4", complete: false)
         }
     }
 }

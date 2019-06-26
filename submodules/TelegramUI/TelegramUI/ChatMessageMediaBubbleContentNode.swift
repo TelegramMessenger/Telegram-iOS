@@ -22,7 +22,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
-            self.interactiveImageNode.visibility = self.visibility
+            self.interactiveImageNode.visibility = self.visibility != .none
         }
     }
     

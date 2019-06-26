@@ -18,6 +18,7 @@ import Foundation
 public enum CreateChannelError {
     case generic
     case restricted
+    case tooMuchJoined
     case tooMuchLocationBasedGroups
     case serverProvided(String)
 }
@@ -43,6 +44,8 @@ private func createChannel(account: Account, title: String, description: String?
         |> mapError { error -> CreateChannelError in
             if error.errorCode == 406 {
                 return .serverProvided(error.errorDescription)
+            } else if error.errorDescription == "CHANNELS_TOO_MUCH" {
+                return .tooMuchJoined
             } else if error.errorDescription == "CHANNELS_ADMIN_LOCATED_TOO_MUCH" {
                 return .tooMuchLocationBasedGroups
             } else if error.errorDescription == "USER_RESTRICTED" {

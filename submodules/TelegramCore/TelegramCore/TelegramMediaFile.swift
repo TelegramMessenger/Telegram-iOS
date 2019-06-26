@@ -363,6 +363,14 @@ public final class TelegramMediaFile: Media, Equatable {
         return false
     }
     
+    public var isAnimatedSticker: Bool {
+        if let fileName = self.fileName, fileName.hasSuffix(".tgs"), self.mimeType == "application/x-tgsticker" {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     public var isMusic: Bool {
         for attribute in self.attributes {
             if case .Audio(false, _, _, _, _) = attribute {
@@ -382,7 +390,13 @@ public final class TelegramMediaFile: Media, Equatable {
     }
     
     public var dimensions: CGSize? {
-        return dimensionsForFileAttributes(self.attributes)
+        if let value = dimensionsForFileAttributes(self.attributes) {
+            return value
+        } else if self.isAnimatedSticker {
+            return CGSize(width: 512.0, height: 512.0)
+        } else {
+            return nil
+        }
     }
     
     public var duration: Int32? {

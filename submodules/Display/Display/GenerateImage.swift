@@ -1,15 +1,25 @@
 import Foundation
 import UIKit
 
-let deviceColorSpace = CGColorSpaceCreateDeviceRGB()
+private let deviceColorSpace: CGColorSpace = {
+    if #available(iOSApplicationExtension 9.3, *) {
+        if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
+            return colorSpace
+        } else {
+            return CGColorSpaceCreateDeviceRGB()
+        }
+    } else {
+        return CGColorSpaceCreateDeviceRGB()
+    }
+}()
+
 let deviceScale = UIScreen.main.scale
 
-public func generateImagePixel(_ size: CGSize, pixelGenerator: (CGSize, UnsafeMutablePointer<Int8>) -> Void) -> UIImage? {
-    let scale = deviceScale
+public func generateImagePixel(_ size: CGSize, scale: CGFloat, pixelGenerator: (CGSize, UnsafeMutablePointer<UInt8>) -> Void) -> UIImage? {
     let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
     let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
     let length = bytesPerRow * Int(scaledSize.height)
-    let bytes = malloc(length)!.assumingMemoryBound(to: Int8.self)
+    let bytes = malloc(length)!.assumingMemoryBound(to: UInt8.self)
     guard let provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
         free(bytes)
     })
@@ -287,7 +297,7 @@ public class DrawingContext {
         }
     }
     
-    public init(size: CGSize, scale: CGFloat = 0.0, clear: Bool = false) {
+    public init(size: CGSize, scale: CGFloat = 0.0, premultiplied: Bool = true, clear: Bool = false) {
         let actualScale: CGFloat
         if scale.isZero {
             actualScale = deviceScale
@@ -301,7 +311,11 @@ public class DrawingContext {
         self.bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
         self.length = bytesPerRow * Int(scaledSize.height)
         
-        self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
+        if premultiplied {
+            self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
+        } else {
+            self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.first.rawValue)
+        }
         
         self.bytes = malloc(length)!
         if clear {

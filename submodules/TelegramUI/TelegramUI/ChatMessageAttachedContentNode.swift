@@ -237,8 +237,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     
     var visibility: ListViewItemNodeVisibility = .none {
         didSet {
-            self.contentImageNode?.visibility = self.visibility
-            self.contentInstantVideoNode?.visibility = self.visibility
+            self.contentImageNode?.visibility = self.visibility != .none
+            self.contentInstantVideoNode?.visibility = self.visibility != .none
         }
     }
     
@@ -785,7 +785,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                             strongSelf.openMedia?(mode)
                                         }
                                     }
-                                    contentImageNode.visibility = strongSelf.visibility
+                                    contentImageNode.visibility = strongSelf.visibility != .none
                                 }
                                 let _ = contentImageApply(transition, synchronousLoads)
                                 let contentImageFrame: CGRect
@@ -801,7 +801,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     adjustedStatusFrame = CGRect(origin: CGPoint(x: contentImageFrame.width - statusFrame.size.width - 2.0, y: contentImageFrame.height - statusFrame.size.height - 2.0), size: statusFrame.size)
                                 }
                             } else if let contentImageNode = strongSelf.contentImageNode {
-                                contentImageNode.visibility = .none
+                                contentImageNode.visibility = false
                                 contentImageNode.removeFromSupernode()
                                 strongSelf.contentImageNode = nil
                             }

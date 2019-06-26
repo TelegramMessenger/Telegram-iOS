@@ -166,10 +166,20 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem, CGSize)?
     private var currentSize: CGSize?
     private let imageNode: TransformImageNode
+    private var animationNode: StickerAnimationNode?
     
     private let stickerFetchedDisposable = MetaDisposable()
     
     var currentIsPreviewing = false
+    
+    override var isVisibleInGrid: Bool {
+        didSet {
+            self.updateVisibility()
+        }
+    }
+    
+    private var isPanelVisible = false
+    private var isPlaying = false
     
     var interfaceInteraction: ChatControllerInteraction?
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
@@ -208,7 +218,23 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         }
         if self.currentState == nil || self.currentState!.0 !== item.account || self.currentState!.1 != item.stickerItem {
             if let dimensions = item.stickerItem.file.dimensions {
-                self.imageNode.setSignal(chatMessageSticker(account: item.account, file: item.stickerItem.file, small: true, synchronousLoad: synchronousLoads && isVisible))
+                if item.stickerItem.file.isAnimatedSticker {
+                    if self.animationNode == nil {
+                        let animationNode = StickerAnimationNode()
+                        animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
+                        self.animationNode = animationNode
+                        self.addSubnode(animationNode)
+                    }
+                    self.animationNode?.setup(account: item.account, fileReference: FileMediaReference.standalone(media: item.stickerItem.file), width: 140, height: 140)
+                    self.animationNode?.visibility = self.isVisibleInGrid
+                } else {
+                    if let animationNode = self.animationNode {
+                        animationNode.visibility = false
+                        self.animationNode = nil
+                        animationNode.removeFromSupernode()
+                    }
+                    self.imageNode.setSignal(chatMessageSticker(account: item.account, file: item.stickerItem.file, small: true, synchronousLoad: synchronousLoads && isVisible))
+                }
                 self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: chatMessageStickerResource(file: item.stickerItem.file, small: true)).start())
                 
                 self.currentState = (item.account, item.stickerItem, dimensions)
@@ -226,6 +252,10 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                 let imageSize = mediaDimensions.aspectFitted(boundingSize)
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
                 self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                if let animationNode = self.animationNode {
+                    animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                    animationNode.updateLayout(size: imageSize)
+                }
             }
         }
     }
@@ -242,6 +272,21 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     
     func transitionNode() -> ASDisplayNode? {
         return self.imageNode
+    }
+    
+    func updateIsPanelVisible(_ isPanelVisible: Bool) {
+        if self.isPanelVisible != isPanelVisible {
+            self.isPanelVisible = isPanelVisible
+            self.updateVisibility()
+        }
+    }
+    
+    func updateVisibility() {
+        let isPlaying = self.isPanelVisible && self.isVisibleInGrid
+        if self.isPlaying != isPlaying {
+            self.isPlaying = isPlaying
+            self.animationNode?.visibility = isPlaying
+        }
     }
     
     func updatePreviewing(animated: Bool) {

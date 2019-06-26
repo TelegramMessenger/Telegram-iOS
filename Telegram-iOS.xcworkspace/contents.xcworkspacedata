@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:submodules/RLottie/RLottie_Xcode.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:submodules/LightweightAccountData/LightweightAccountData_Xcode.xcodeproj">
    </FileRef>
    <FileRef

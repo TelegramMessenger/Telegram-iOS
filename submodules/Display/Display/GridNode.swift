@@ -217,6 +217,8 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     private var sectionNodes: [WrappedGridSection: ASDisplayNode] = [:]
     private var itemLayout = GridNodeItemLayout(contentSize: CGSize(), items: [], sections: [])
     
+    public var setupNode: ((GridItemNode) -> Void)?
+    
     private var applyingContentOffset = false
     
     public var visibleItemsUpdated: ((GridNodeVisibleItems) -> Void)?
@@ -845,6 +847,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 self.addItemNode(index: item.index, itemNode: itemNode, lowestSectionNode: lowestSectionNode)
                 addedNodes = true
                 itemNode.updateLayout(item: self.items[item.index], size: item.frame.size, isVisible: bounds.intersects(item.frame), synchronousLoads: synchronousLoads)
+                self.setupNode?(itemNode)
             }
         }
         

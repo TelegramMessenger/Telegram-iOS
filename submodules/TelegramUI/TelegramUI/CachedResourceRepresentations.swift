@@ -216,8 +216,16 @@ final class CachedEmojiRepresentation: CachedMediaResourceRepresentation {
 }
 
 final class CachedAnimatedStickerRepresentation: CachedMediaResourceRepresentation {
+    let width: Int32
+    let height: Int32
+    
     var uniqueId: String {
-        return "animated-sticker-v2"
+        return "animated-sticker-\(self.width)x\(self.height)-v3"
+    }
+    
+    init(width: Int32, height: Int32) {
+        self.width = width
+        self.height = height
     }
     
     func isEqual(to: CachedMediaResourceRepresentation) -> Bool {

@@ -505,7 +505,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
     }
     
-    func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+    var reallyHighlighted: Bool {
         var reallyHighlighted = self.isHighlighted
         if let item = self.item {
             if let itemChatLocation = item.content.chatLocation {
@@ -514,6 +514,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
         }
+        return reallyHighlighted
+    }
+    
+    func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+        
+        let highlightProgress: CGFloat = self.item?.interaction.highlightedChatLocation?.progress ?? 1.0
         
         if reallyHighlighted {
             if self.highlightedBackgroundNode.supernode == nil {
@@ -521,14 +527,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 self.highlightedBackgroundNode.alpha = 0.0
             }
             self.highlightedBackgroundNode.layer.removeAllAnimations()
-            transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0)
+            transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: highlightProgress)
             
             if let item = self.item {
                 self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted))
             }
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
-                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 0.0, completion: { [weak self] completed in
+                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0 - highlightProgress, completion: { [weak self] completed in
                     if let strongSelf = self {
                         if completed {
                             strongSelf.highlightedBackgroundNode.removeFromSupernode()
@@ -1194,7 +1200,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.onlineNode, frame: onlineFrame)
                     
                     let onlineIcon: UIImage?
-                    if strongSelf.isHighlighted {
+                    if strongSelf.reallyHighlighted {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted)
                     } else if item.index.pinningIndex != nil {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned)

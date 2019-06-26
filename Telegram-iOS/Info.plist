@@ -288,6 +288,7 @@
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>
+		<string>RemindAboutChatIntent</string>
 	</array>
 	<key>UIAppFonts</key>
 	<array>

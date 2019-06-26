@@ -97,12 +97,22 @@ private enum ContactListNodeEntryId: Hashable {
     }
 }
 
+final class ContactItemHighlighting {
+    var chatLocation: ChatLocation?
+    var progress: CGFloat = 1.0
+    init(chatLocation: ChatLocation? = nil) {
+        self.chatLocation = chatLocation
+    }
+}
+
 private final class ContactListNodeInteraction {
-    let activateSearch: () -> Void
-    let openSortMenu: () -> Void
-    let authorize: () -> Void
-    let suppressWarning: () -> Void
-    let openPeer: (ContactListPeer) -> Void
+    fileprivate let activateSearch: () -> Void
+    fileprivate let openSortMenu: () -> Void
+    fileprivate let authorize: () -> Void
+    fileprivate let suppressWarning: () -> Void
+    fileprivate let openPeer: (ContactListPeer) -> Void
+    
+    let itemHighlighting = ContactItemHighlighting()
     
     init(activateSearch: @escaping () -> Void, openSortMenu: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer) -> Void) {
         self.activateSearch = activateSearch
@@ -194,6 +204,8 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
         }
     }
     
+    
+    
     func item(account: Account, interaction: ContactListNodeInteraction) -> ListViewItem {
         switch self {
             case let .search(theme, strings):
@@ -248,7 +260,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 }
                 return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                     interaction.openPeer(peer)
-                })
+                }, itemHighlighting: interaction.itemHighlighting)
         }
     }
 
@@ -778,6 +790,7 @@ final class ContactListNode: ASDisplayNode {
     var selectionState: ContactListNodeGroupSelectionState? {
         return self.selectionStateValue
     }
+    private var interaction: ContactListNodeInteraction?
     
     private var enableUpdatesValue = false
     var enableUpdates: Bool {
@@ -931,6 +944,8 @@ final class ContactListNode: ASDisplayNode {
                 index += 1
             }
         }
+        
+        self.interaction = interaction
         
         let context = self.context
         var firstTime: Int32 = 1
@@ -1324,6 +1339,18 @@ final class ContactListNode: ASDisplayNode {
         }
         
         self.enableUpdates = true
+    }
+    
+    func updateSelectedChatLocation(_ chatLocation: ChatLocation?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
+        
+        self.interaction?.itemHighlighting.chatLocation = chatLocation
+        self.interaction?.itemHighlighting.progress = progress
+        
+        self.listNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ContactsPeerItemNode {
+                itemNode.updateIsHighlighted(transition: transition)
+            }
+        }
     }
     
     deinit {
