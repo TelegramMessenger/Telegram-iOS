@@ -116,11 +116,6 @@ void LOTCompItem::resize(const VSize &size)
     mUpdateViewBox = true;
 }
 
-VSize LOTCompItem::size() const
-{
-    return mViewSize;
-}
-
 bool LOTCompItem::update(int frameNo)
 {
     // check if cached frame is same as requested frame.

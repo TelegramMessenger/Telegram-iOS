@@ -39,7 +39,7 @@ class AnimationImpl {
 public:
     void    init(const std::shared_ptr<LOTModel> &model);
     bool    update(size_t frameNo, const VSize &size);
-    VSize   size() const { return mCompItem->size(); }
+    VSize   size() const { return mModel->size(); }
     double  duration() const { return mModel->duration(); }
     double  frameRate() const { return mModel->frameRate(); }
     size_t  totalFrame() const { return mModel->totalFrame(); }

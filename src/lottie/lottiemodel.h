@@ -955,6 +955,7 @@ class LOTModel
 {
 public:
    bool  isStatic() const {return mRoot->isStatic();}
+   VSize size() const {return mRoot->size();}
    double duration() const {return mRoot->duration();}
    size_t totalFrame() const {return mRoot->totalFrame();}
    size_t frameDuration() const {return mRoot->frameDuration();}

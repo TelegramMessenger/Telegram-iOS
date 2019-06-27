@@ -67,7 +67,7 @@ public:
    static std::unique_ptr<LOTLayerItem> createLayerItem(LOTLayerData *layerData);
    bool update(int frameNo);
    void resize(const VSize &size);
-   VSize size() const;
+   VSize size() const { return mViewSize;}
    void buildRenderTree();
    const LOTLayerNode * renderTree()const;
    bool render(const rlottie::Surface &surface);
