@@ -14,6 +14,7 @@ import TelegramPresentationData
 import TelegramCallsUI
 import TelegramVoip
 import BuildConfig
+import DeviceCheck
 
 private let handleVoipNotifications = false
 
@@ -212,9 +213,24 @@ final class SharedApplicationContext {
         }
     }
     
+    private let deviceToken = Promise<Data?>(nil)
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
+        
+        if #available(iOS 11.0, *) {
+            let curDevice = DCDevice.current
+            if curDevice.isSupported {
+                curDevice.generateToken(completionHandler: { (data, error) in
+                    if let tokenData = data {
+                        self.deviceToken.set(.single(data))
+                    } else {
+                        print("Error: \(error!.localizedDescription)")
+                    }
+                })
+            }
+        }
         
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
@@ -341,7 +357,9 @@ final class SharedApplicationContext {
         let apiId: Int32 = buildConfig.apiId
         let languagesCategory = "ios"
         
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManager.voipMaxLayer, appData: buildConfig.bundleData)
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManager.voipMaxLayer, appData: self.deviceToken.get() |> map { token in
+            return buildConfig.bundleData(withAppToken: token)
+        })
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()

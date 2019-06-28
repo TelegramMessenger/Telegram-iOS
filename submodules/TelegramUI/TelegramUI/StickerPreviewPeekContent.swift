@@ -66,7 +66,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
     
     private var textNode: ASTextNode
     private var imageNode: TransformImageNode
-    private var animationNode: StickerAnimationNode?
+    private var animationNode: AnimatedStickerNode?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -84,7 +84,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
         }
         
         if item.file.isAnimatedSticker {
-            let animationNode = StickerAnimationNode()
+            let animationNode = AnimatedStickerNode()
             self.animationNode = animationNode
             
             self.animationNode?.setup(account: account, fileReference: FileMediaReference.standalone(media: item.file), width: 320, height: 320)

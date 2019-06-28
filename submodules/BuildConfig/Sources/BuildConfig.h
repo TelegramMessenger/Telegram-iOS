@@ -11,7 +11,6 @@
 
 - (instancetype _Nonnull)initWithBaseAppBundleId:(NSString * _Nonnull)baseAppBundleId;
 
-@property (nonatomic, strong, readonly) NSData * _Nullable bundleData;
 @property (nonatomic, strong, readonly) NSString * _Nullable hockeyAppId;
 @property (nonatomic, readonly) int32_t apiId;
 @property (nonatomic, strong, readonly) NSString * _Nonnull apiHash;
@@ -21,5 +20,6 @@
 @property (nonatomic, strong, readonly) NSString * _Nonnull appSpecificUrlScheme;
 
 + (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath baseAppBundleId:(NSString * _Nonnull)baseAppBundleId;
+- (NSData * _Nullable)bundleDataWithAppToken:(NSData * _Nullable)appToken;
 
 @end

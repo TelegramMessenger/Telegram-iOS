@@ -137,7 +137,7 @@ public final class NotificationViewControllerImpl {
                 f(false)
             })
             
-            sharedAccountContext = SharedAccountContext(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, appData: self.initializationData.bundleData), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+            sharedAccountContext = SharedAccountContext(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, appData: .single(self.initializationData.bundleData)), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
         }
     }
     
@@ -161,13 +161,13 @@ public final class NotificationViewControllerImpl {
                 let mediaBoxPath = accountsPath + "/" + accountRecordIdPathName(AccountRecordId(rawValue: accountIdValue)) + "/postbox/media"
                 
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: mediaBoxPath + "/\(largestRepresentation.resource.id.uniqueId)"), options: .mappedRead) {
-                    self.imageNode.setSignal(chatMessagePhotoInternal(photoData: .single((nil, data, true)))
+                    self.imageNode.setSignal(chatMessagePhotoInternal(photoData: .single(Tuple(nil, data, true)))
                         |> map { $0.1 })
                     return
                 }
                 
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: mediaBoxPath + "/\(thumbnailRepresentation.resource.id.uniqueId)"), options: .mappedRead) {
-                    self.imageNode.setSignal(chatMessagePhotoInternal(photoData: .single((data, nil, false)))
+                    self.imageNode.setSignal(chatMessagePhotoInternal(photoData: .single(Tuple(data, nil, false)))
                         |> map { $0.1 })
                 }
                 

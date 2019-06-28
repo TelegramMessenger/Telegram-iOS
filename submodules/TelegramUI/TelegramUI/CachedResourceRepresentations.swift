@@ -5,6 +5,7 @@ import SwiftSignalKit
 
 final class CachedStickerAJpegRepresentation: CachedMediaResourceRepresentation {
     let size: CGSize?
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
     
     var uniqueId: String {
         if let size = self.size {
@@ -33,6 +34,8 @@ enum CachedScaledImageRepresentationMode: Int32 {
 }
 
 final class CachedScaledImageRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
     let size: CGSize
     let mode: CachedScaledImageRepresentationMode
     
@@ -55,6 +58,8 @@ final class CachedScaledImageRepresentation: CachedMediaResourceRepresentation {
 }
 
 final class CachedVideoFirstFrameRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
     var uniqueId: String {
         return "first-frame"
     }
@@ -69,6 +74,8 @@ final class CachedVideoFirstFrameRepresentation: CachedMediaResourceRepresentati
 }
 
 final class CachedScaledVideoFirstFrameRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
     let size: CGSize
     
     var uniqueId: String {
@@ -89,6 +96,8 @@ final class CachedScaledVideoFirstFrameRepresentation: CachedMediaResourceRepres
 }
 
 final class CachedBlurredWallpaperRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
     var uniqueId: String {
         return "blurred-wallpaper"
     }
@@ -103,6 +112,8 @@ final class CachedBlurredWallpaperRepresentation: CachedMediaResourceRepresentat
 }
 
 final class CachedPatternWallpaperMaskRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
     let size: CGSize?
     
     var uniqueId: String {
@@ -128,6 +139,8 @@ final class CachedPatternWallpaperMaskRepresentation: CachedMediaResourceReprese
 
 
 final class CachedPatternWallpaperRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
     let color: Int32
     let intensity: Int32
     
@@ -150,6 +163,8 @@ final class CachedPatternWallpaperRepresentation: CachedMediaResourceRepresentat
 }
 
 final class CachedAlbumArtworkRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
     let size: CGSize?
     
     var uniqueId: String {
@@ -174,6 +189,8 @@ final class CachedAlbumArtworkRepresentation: CachedMediaResourceRepresentation 
 }
 
 final class CachedEmojiThumbnailRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
     let outline: Bool
     
     var uniqueId: String {
@@ -194,6 +211,8 @@ final class CachedEmojiThumbnailRepresentation: CachedMediaResourceRepresentatio
 }
 
 final class CachedEmojiRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
     let tile: UInt8
     let outline: Bool
     
@@ -215,7 +234,39 @@ final class CachedEmojiRepresentation: CachedMediaResourceRepresentation {
     }
 }
 
+final class CachedAnimatedStickerFirstFrameRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
+    let width: Int32
+    let height: Int32
+    
+    init(width: Int32, height: Int32) {
+        self.width = width
+        self.height = height
+    }
+    
+    var uniqueId: String {
+        return "animated-sticker-first-frame-\(self.width)x\(self.height)-v1"
+    }
+    
+    func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if let other = to as? CachedAnimatedStickerFirstFrameRepresentation {
+            if other.width != self.width {
+                return false
+            }
+            if other.height != self.height {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 final class CachedAnimatedStickerRepresentation: CachedMediaResourceRepresentation {
+    let keepDuration: CachedMediaRepresentationKeepDuration = .shortLived
+    
     let width: Int32
     let height: Int32
     
@@ -229,7 +280,13 @@ final class CachedAnimatedStickerRepresentation: CachedMediaResourceRepresentati
     }
     
     func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
-        if let _ = to as? CachedAnimatedStickerRepresentation {
+        if let other = to as? CachedAnimatedStickerRepresentation {
+            if other.width != self.width {
+                return false
+            }
+            if other.height != self.height {
+                return false
+            }
             return true
         } else {
             return false

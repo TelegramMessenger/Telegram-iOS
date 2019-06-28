@@ -1,9 +1,10 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 import Metal
 
-#if !targetEnvironment(simulator)
+#if false//!targetEnvironment(simulator)
 
 final class MetalAnimationRenderer: ASDisplayNode, AnimationRenderer {
     private let device: MTLDevice
@@ -140,7 +141,7 @@ fragment float4 basic_fragment(
         self.metalLayer.contentsScale = 2.0
     }
     
-    func render(width: Int, height: Int, bytes: UnsafeRawPointer, length: Int) {
+    func render(queue: Queue, width: Int, height: Int, bytes: UnsafeRawPointer, length: Int, completion: @escaping () -> Void) {
         if self.metalLayer.bounds.width.isZero {
             return
         }

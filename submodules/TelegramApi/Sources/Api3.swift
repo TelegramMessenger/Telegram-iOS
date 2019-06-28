@@ -2922,20 +2922,6 @@ public extension Api {
                     })
                 }
             
-                public static func hidePeerSettingsBar(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1336717624)
-                    peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.hidePeerSettingsBar", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
                 public static func searchGlobal(flags: Int32, folderId: Int32?, q: String, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1083038300)
@@ -2951,6 +2937,20 @@ public extension Api {
                         var result: Api.messages.Messages?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                        }
+                        return result
+                    })
+                }
+            
+                public static func hidePeerSettingsBar(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1336717624)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.hidePeerSettingsBar", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })
@@ -5065,28 +5065,6 @@ public extension Api {
                     })
                 }
             
-                public static func registerDevice(tokenType: Int32, token: String, appSandbox: Api.Bool, secret: Buffer, otherUids: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1555998096)
-                    serializeInt32(tokenType, buffer: buffer, boxed: false)
-                    serializeString(token, buffer: buffer, boxed: false)
-                    appSandbox.serialize(buffer, true)
-                    serializeBytes(secret, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(otherUids.count))
-                    for item in otherUids {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }
-                    return (FunctionDescription(name: "account.registerDevice", parameters: [("tokenType", tokenType), ("token", token), ("appSandbox", appSandbox), ("secret", secret), ("otherUids", otherUids)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getAllSecureValues() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.SecureValue]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1299661699)
@@ -5489,6 +5467,29 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     settings.serialize(buffer, true)
                     return (FunctionDescription(name: "account.saveAutoDownloadSettings", parameters: [("flags", flags), ("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func registerDevice(flags: Int32, tokenType: Int32, token: String, appSandbox: Api.Bool, secret: Buffer, otherUids: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1754754159)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(tokenType, buffer: buffer, boxed: false)
+                    serializeString(token, buffer: buffer, boxed: false)
+                    appSandbox.serialize(buffer, true)
+                    serializeBytes(secret, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(otherUids.count))
+                    for item in otherUids {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription(name: "account.registerDevice", parameters: [("flags", flags), ("tokenType", tokenType), ("token", token), ("appSandbox", appSandbox), ("secret", secret), ("otherUids", otherUids)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

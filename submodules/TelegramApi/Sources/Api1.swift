@@ -3949,6 +3949,7 @@ public extension Api {
         case updateUserStatus(userId: Int32, status: Api.UserStatus)
         case updateUserName(userId: Int32, firstName: String, lastName: String, username: String)
         case updateUserPhoto(userId: Int32, date: Int32, photo: Api.UserProfilePhoto, previous: Api.Bool)
+        case updateContactLink(userId: Int32, myLink: Api.ContactLink, foreignLink: Api.ContactLink)
         case updateNewEncryptedMessage(message: Api.EncryptedMessage, qts: Int32)
         case updateEncryptedChatTyping(chatId: Int32)
         case updateEncryption(chat: Api.EncryptedChat, date: Int32)
@@ -4086,6 +4087,14 @@ public extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     photo.serialize(buffer, true)
                     previous.serialize(buffer, true)
+                    break
+                case .updateContactLink(let userId, let myLink, let foreignLink):
+                    if boxed {
+                        buffer.appendInt32(-1657903163)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    myLink.serialize(buffer, true)
+                    foreignLink.serialize(buffer, true)
                     break
                 case .updateNewEncryptedMessage(let message, let qts):
                     if boxed {
@@ -4635,6 +4644,8 @@ public extension Api {
                 return ("updateUserName", [("userId", userId), ("firstName", firstName), ("lastName", lastName), ("username", username)])
                 case .updateUserPhoto(let userId, let date, let photo, let previous):
                 return ("updateUserPhoto", [("userId", userId), ("date", date), ("photo", photo), ("previous", previous)])
+                case .updateContactLink(let userId, let myLink, let foreignLink):
+                return ("updateContactLink", [("userId", userId), ("myLink", myLink), ("foreignLink", foreignLink)])
                 case .updateNewEncryptedMessage(let message, let qts):
                 return ("updateNewEncryptedMessage", [("message", message), ("qts", qts)])
                 case .updateEncryptedChatTyping(let chatId):
@@ -4917,6 +4928,27 @@ public extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.Update.updateUserPhoto(userId: _1!, date: _2!, photo: _3!, previous: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateContactLink(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.ContactLink?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ContactLink
+            }
+            var _3: Api.ContactLink?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.ContactLink
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateContactLink(userId: _1!, myLink: _2!, foreignLink: _3!)
             }
             else {
                 return nil
@@ -17810,6 +17842,56 @@ public extension Api {
             else {
                 return nil
             }
+        }
+    
+    }
+    public enum ContactLink: TypeConstructorDescription {
+        case contactLinkUnknown
+        case contactLinkNone
+        case contactLinkContact
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .contactLinkUnknown:
+                    if boxed {
+                        buffer.appendInt32(1599050311)
+                    }
+                    
+                    break
+                case .contactLinkNone:
+                    if boxed {
+                        buffer.appendInt32(-17968211)
+                    }
+                    
+                    break
+                case .contactLinkContact:
+                    if boxed {
+                        buffer.appendInt32(-721239344)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .contactLinkUnknown:
+                return ("contactLinkUnknown", [])
+                case .contactLinkNone:
+                return ("contactLinkNone", [])
+                case .contactLinkContact:
+                return ("contactLinkContact", [])
+    }
+    }
+    
+        public static func parse_contactLinkUnknown(_ reader: BufferReader) -> ContactLink? {
+            return Api.ContactLink.contactLinkUnknown
+        }
+        public static func parse_contactLinkNone(_ reader: BufferReader) -> ContactLink? {
+            return Api.ContactLink.contactLinkNone
+        }
+        public static func parse_contactLinkContact(_ reader: BufferReader) -> ContactLink? {
+            return Api.ContactLink.contactLinkContact
         }
     
     }

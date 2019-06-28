@@ -278,4 +278,23 @@ class SwiftSignalKitTests: XCTestCase {
         
         XCTAssert(flag == true)
     }
+    
+    func testSingleDeallocation() {
+        do {
+            let signal: Signal<(Bool, WrapData?, Int), NoError> = .single((true, WrapData(data: Data(count: 1000)), 123))
+            let _ = signal.start()
+        }
+    }
+}
+
+final class WrapData {
+    let data: Data?
+    
+    init(data: Data?) {
+        self.data = data
+    }
+    
+    deinit {
+        print("deinit")
+    }
 }

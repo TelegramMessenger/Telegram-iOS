@@ -49,7 +49,7 @@ private let textFont = Font.regular(20.0)
 final class StickerPackPreviewGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem, CGSize)?
     private let imageNode: TransformImageNode
-    private var animationNode: StickerAnimationNode?
+    private var animationNode: AnimatedStickerNode?
     
     override var isVisibleInGrid: Bool {
         didSet {
@@ -111,7 +111,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             if let dimensions = stickerItem.file.dimensions {
                 if stickerItem.file.isAnimatedSticker {
                     if self.animationNode == nil {
-                        let animationNode = StickerAnimationNode()
+                        let animationNode = AnimatedStickerNode()
                         self.animationNode = animationNode
                         self.addSubnode(animationNode)
                     }

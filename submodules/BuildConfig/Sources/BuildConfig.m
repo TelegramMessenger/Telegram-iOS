@@ -293,6 +293,7 @@ API_AVAILABLE(ios(10))
     int32_t _apiId;
     NSString * _Nonnull _apiHash;
     NSString * _Nullable _hockeyAppId;
+    NSMutableDictionary * _Nonnull _dataDict;
 }
 
 @end
@@ -351,25 +352,28 @@ API_AVAILABLE(ios(10))
         _hockeyAppId = @(APP_CONFIG_HOCKEYAPP_ID);
         
         MTPKCS *signature = checkSignature([[[NSBundle mainBundle] executablePath] UTF8String]);
-        NSMutableDictionary *dataDict = [[NSMutableDictionary alloc] init];
+        _dataDict = [[NSMutableDictionary alloc] init];
         
         if (baseAppBundleId != nil) {
-            dataDict[@"bundleId"] = baseAppBundleId;
+            _dataDict[@"bundleId"] = baseAppBundleId;
         }
         if (signature.name != nil) {
-            dataDict[@"name"] = signature.name;
+            _dataDict[@"name"] = signature.name;
         }
         if (signature.data != nil) {
-            dataDict[@"data"] = [MTSha1(signature.data) base64EncodedStringWithOptions:0];
+            _dataDict[@"data"] = [MTSha1(signature.data) base64EncodedStringWithOptions:0];
         }
-        
-        _bundleData = [NSJSONSerialization dataWithJSONObject:dataDict options:0 error:nil];
     }
     return self;
 }
 
-- (NSData * _Nullable)bundleData {
-    return _bundleData;
+- (NSData * _Nullable)bundleDataWithAppToken:(NSData * _Nullable)appToken {
+    NSMutableDictionary *dataDict = [[NSMutableDictionary alloc] initWithDictionary:_dataDict];
+    if (appToken != nil) {
+        dataDict[@"device_token"] = [appToken base64EncodedStringWithOptions:0];
+    }
+    NSData *data = [NSJSONSerialization dataWithJSONObject:dataDict options:0 error:nil];
+    return data;
 }
 
 - (int32_t)apiId {

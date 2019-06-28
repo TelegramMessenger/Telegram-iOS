@@ -89,7 +89,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         
-        account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, appData: buildConfig.bundleData), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods, encryptionParameters: encryptionParameters)
+        account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, appData: .single(buildConfig.bundleData(withAppToken: nil))), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods, encryptionParameters: encryptionParameters)
         |> mapToSignal { account -> Signal<Account, NoError> in
             if let account = account {
                 switch account {

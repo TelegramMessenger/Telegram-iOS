@@ -1,6 +1,7 @@
 import Foundation
+import SwiftSignalKit
 import AsyncDisplayKit
 
 protocol AnimationRenderer {
-    func render(width: Int, height: Int, bytes: UnsafeRawPointer, length: Int)
+    func render(queue: Queue, width: Int, height: Int, data: Data, completion: @escaping () -> Void)
 }

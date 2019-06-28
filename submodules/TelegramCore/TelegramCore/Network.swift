@@ -406,9 +406,9 @@ public struct NetworkInitializationArguments {
     public let languagesCategory: String
     public let appVersion: String
     public let voipMaxLayer: Int32
-    public let appData: Data?
+    public let appData: Signal<Data?, NoError>
     
-    public init(apiId: Int32, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, appData: Data?) {
+    public init(apiId: Int32, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, appData: Signal<Data?, NoError>) {
         self.apiId = apiId
         self.languagesCategory = languagesCategory
         self.appVersion = appVersion
@@ -419,22 +419,13 @@ public struct NetworkInitializationArguments {
 
 func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
-        Queue.concurrentDefaultQueue().async {
+        let queue = Queue()
+        queue.async {
             let _ = registeredLoggingFunctions
             
             let serialization = Serialization()
             
             var apiEnvironment = MTApiEnvironment()
-            
-            if let appData = arguments.appData {
-                if let jsonData = JSON(data: appData) {
-                    if let value = apiJson(jsonData) {
-                        let buffer = Buffer()
-                        value.serialize(buffer, true)
-                        apiEnvironment = apiEnvironment.withUpdatedSystemCode(buffer.makeData())
-                    }
-                }
-            }
             
             apiEnvironment.apiId = arguments.apiId
             apiEnvironment.langPack = arguments.languagesCategory
@@ -447,6 +438,23 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             }
             
             apiEnvironment = apiEnvironment.withUpdatedNetworkSettings((networkSettings ?? NetworkSettings.defaultSettings).mtNetworkSettings)
+            
+            var appDataUpdatedImpl: ((Data?) -> Void)?
+            let syncValue = Atomic<Data?>(value: nil)
+            let appDataDisposable = (arguments.appData
+            |> deliverOn(queue)).start(next: { value in
+                let _ = syncValue.swap(value)
+                appDataUpdatedImpl?(value)
+            })
+            if let currentAppData = syncValue.swap(Data()) {
+                if let jsonData = JSON(data: currentAppData) {
+                    if let value = apiJson(jsonData) {
+                        let buffer = Buffer()
+                        value.serialize(buffer, true)
+                        apiEnvironment = apiEnvironment.withUpdatedSystemCode(buffer.makeData())
+                    }
+                }
+            }
             
             let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: false)!
             
@@ -508,7 +516,37 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             mtProto.delegate = connectionStatusDelegate
             mtProto.add(requestService)
             
-            subscriber.putNext(Network(queue: Queue(), datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath))
+            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable)
+            appDataUpdatedImpl = { [weak network] data in
+                guard let data = data else {
+                    return
+                }
+                guard let jsonData = JSON(data: data) else {
+                    return
+                }
+                guard let value = apiJson(jsonData) else {
+                    return
+                }
+                let buffer = Buffer()
+                value.serialize(buffer, true)
+                let systemCode = buffer.makeData()
+                
+                network?.context.updateApiEnvironment { environment in
+                    let current = environment?.systemCode
+                    let updateNetwork: Bool
+                    if let current = current {
+                        updateNetwork = systemCode != current
+                    } else {
+                        updateNetwork = true
+                    }
+                    if updateNetwork {
+                        return environment?.withUpdatedSystemCode(systemCode)
+                    } else {
+                        return nil
+                    }
+                }
+            }
+            subscriber.putNext(network)
             subscriber.putCompletion()
         }
         
@@ -602,6 +640,8 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     let basePath: String
     private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
     
+    private let appDataDisposable: Disposable
+    
     private var _multiplexedRequestManager: MultiplexedRequestManager?
     var multiplexedRequestManager: MultiplexedRequestManager {
         return self._multiplexedRequestManager!
@@ -642,7 +682,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return "Network context: \(self.context)"
     }
     
-    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String) {
+    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable) {
         self.queue = queue
         self.datacenterId = datacenterId
         self.context = context
@@ -651,6 +691,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.requestService = requestService
         self.connectionStatusDelegate = connectionStatusDelegate
         self._connectionStatus = _connectionStatus
+        self.appDataDisposable = appDataDisposable
         self.basePath = basePath
         
         super.init()
@@ -736,6 +777,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     
     deinit {
         self.shouldKeepConnectionDisposable.dispose()
+        self.appDataDisposable.dispose()
     }
     
     public var globalTime: TimeInterval {

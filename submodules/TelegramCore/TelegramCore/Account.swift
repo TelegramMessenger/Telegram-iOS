@@ -1311,7 +1311,7 @@ public class Account {
                 return
             }
             let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings] as? CacheStorageSettings ?? CacheStorageSettings.defaultSettings
-            mediaBox.setMaxStoreTime(settings.defaultCacheStorageTimeout)
+            mediaBox.setMaxStoreTimes(general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60)
         })
         
         let _ = masterNotificationsKey(masterNotificationKeyValue: self.masterNotificationKey, postbox: self.postbox, ignoreDisabled: false).start(next: { key in

@@ -166,7 +166,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem, CGSize)?
     private var currentSize: CGSize?
     private let imageNode: TransformImageNode
-    private var animationNode: StickerAnimationNode?
+    private var animationNode: AnimatedStickerNode?
     
     private let stickerFetchedDisposable = MetaDisposable()
     
@@ -220,7 +220,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             if let dimensions = item.stickerItem.file.dimensions {
                 if item.stickerItem.file.isAnimatedSticker {
                     if self.animationNode == nil {
-                        let animationNode = StickerAnimationNode()
+                        let animationNode = AnimatedStickerNode()
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
                         self.animationNode = animationNode
                         self.addSubnode(animationNode)

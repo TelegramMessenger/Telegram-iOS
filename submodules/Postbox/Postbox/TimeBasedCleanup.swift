@@ -37,17 +37,20 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, _ f: (Str
 
 private final class TimeBasedCleanupImpl {
     private let queue: Queue
-    private let paths: [String]
+    private let generalPaths: [String]
+    private let shortLivedPaths: [String]
     
     private var scheduledTouches: [String] = []
     private var scheduledTouchesTimer: SignalKitTimer?
     
-    private var maxStoreTime: Int32?
+    private var generalMaxStoreTime: Int32?
+    private var shortLivedMaxStoreTime: Int32?
     private let scheduledScanDisposable = MetaDisposable()
     
-    init(queue: Queue, paths: [String]) {
+    init(queue: Queue, generalPaths: [String], shortLivedPaths: [String]) {
         self.queue = queue
-        self.paths = paths
+        self.generalPaths = generalPaths
+        self.shortLivedPaths = shortLivedPaths
     }
     
     deinit {
@@ -56,31 +59,38 @@ private final class TimeBasedCleanupImpl {
         self.scheduledScanDisposable.dispose()
     }
     
-    public func setMaxStoreTime(_ maxStoreTime: Int32) {
-        if self.maxStoreTime != maxStoreTime {
-            self.maxStoreTime = maxStoreTime
-            #if DEBUG
-            return;
-            #endif
-            self.resetScan(maxStoreTime: maxStoreTime)
+    func setMaxStoreTimes(general: Int32, shortLived: Int32) {
+        if self.generalMaxStoreTime != general || self.shortLivedMaxStoreTime != shortLived {
+            self.generalMaxStoreTime = general
+            self.shortLivedMaxStoreTime = shortLived
+            self.resetScan(general: general, shortLived: shortLived)
         }
     }
     
-    private func resetScan(maxStoreTime: Int32) {
-        let paths = self.paths
+    private func resetScan(general: Int32, shortLived: Int32) {
+        let generalPaths = self.generalPaths
+        let shortLivedPaths = self.shortLivedPaths
         let scanOnce = Signal<Never, NoError> { subscriber in
             DispatchQueue.global(qos: .utility).async {
-                var removedCount: Int = 0
+                var removedShortLivedCount: Int = 0
+                var removedGeneralCount: Int = 0
                 let timestamp = Int32(Date().timeIntervalSince1970)
-                let oldestTimestamp = timestamp - maxStoreTime
-                for path in paths {
-                    scanFiles(at: path, olderThan: oldestTimestamp, { file in
-                        removedCount += 1
+                let oldestShortLivedTimestamp = timestamp - shortLived
+                let oldestGeneralTimestamp = timestamp - general
+                for path in shortLivedPaths {
+                    scanFiles(at: path, olderThan: oldestShortLivedTimestamp, { file in
+                        removedShortLivedCount += 1
                         unlink(file)
                     })
                 }
-                if removedCount != 0 {
-                    print("[TimeBasedCleanup] removed \(removedCount) files")
+                for path in generalPaths {
+                    scanFiles(at: path, olderThan: oldestGeneralTimestamp, { file in
+                        removedGeneralCount += 1
+                        unlink(file)
+                    })
+                }
+                if removedShortLivedCount != 0 || removedGeneralCount != 0 {
+                    print("[TimeBasedCleanup] removed \(removedShortLivedCount) short-lived files, \(removedGeneralCount) general files")
                 }
                 subscriber.putCompletion()
             }
@@ -133,10 +143,10 @@ final class TimeBasedCleanup {
     private let queue = Queue()
     private let impl: QueueLocalObject<TimeBasedCleanupImpl>
     
-    init(paths: [String]) {
+    init(generalPaths: [String], shortLivedPaths: [String]) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: self.queue, generate: {
-            return TimeBasedCleanupImpl(queue: queue, paths: paths)
+            return TimeBasedCleanupImpl(queue: queue, generalPaths: generalPaths, shortLivedPaths: shortLivedPaths)
         })
     }
     
@@ -146,9 +156,9 @@ final class TimeBasedCleanup {
         }
     }
     
-    func setMaxStoreTime(_ maxStoreTime: Int32) {
+    func setMaxStoreTimes(general: Int32, shortLived: Int32) {
         self.impl.with { impl in
-            impl.setMaxStoreTime(maxStoreTime)
+            impl.setMaxStoreTimes(general: general, shortLived: shortLived)
         }
     }
 }
