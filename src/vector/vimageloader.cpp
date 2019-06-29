@@ -1,7 +1,7 @@
 #include "vimageloader.h"
 #include "config.h"
 #include "vdebug.h"
-#ifndef WIN32
+#ifndef _WIN32
 #include <dlfcn.h>
 #else
 #include <windows.h>
@@ -36,7 +36,7 @@ struct VImageLoader::Impl {
     lottie_image_load_data_f imageFromData{nullptr};
 
 #if LOTTIE_IMAGE_MODULE_SUPPORT
-#ifdef WIN32
+#ifdef _WIN32
     HMODULE dl_handle{nullptr};
     bool    moduleLoad()
     {

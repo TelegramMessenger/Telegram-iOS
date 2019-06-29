@@ -144,7 +144,7 @@ void VPath::VPathData::reserve(size_t pts, size_t elms)
 
 static VPointF curvesForArc(const VRectF &, float, float, VPointF *, size_t *);
 static constexpr float PATH_KAPPA = 0.5522847498f;
-static constexpr float K_PI = float(M_PI);
+static constexpr float K_PI = 3.141592f;
 
 void VPath::VPathData::arcTo(const VRectF &rect, float startAngle,
                              float sweepLength, bool forceMoveTo)

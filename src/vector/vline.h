@@ -51,10 +51,11 @@ private:
 
 inline float VLine::angle() const
 {
+    static constexpr float K_PI = 3.141592f;
     const float dx = mX2 - mX1;
     const float dy = mY2 - mY1;
 
-    const float theta = std::atan2(dy, dx) * 180.0 / M_PI;
+    const float theta = std::atan2f(dy, dx) * 180.0f / K_PI;
     return theta;
 }
 
