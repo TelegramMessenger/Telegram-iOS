@@ -49,21 +49,23 @@ struct VImageLoader::Impl {
     }
     void init()
     {
-        imageLoad =
-            (lottie_image_load_f)GetProcAddress(dl_handle, "lottie_image_load");
-        imageFree =
-            (lottie_image_free_f)GetProcAddress(dl_handle, "lottie_image_free");
-        imageFromData = (lottie_image_load_data_f)GetProcAddress(
-            dl_handle, "lottie_image_load_from_data");
+        imageLoad = reinterpret_cast<lottie_image_load_f>(
+                    GetProcAddress(dl_handle, "lottie_image_load"));
+        imageFree = reinterpret_cast<lottie_image_free_f>(
+                    GetProcAddress(dl_handle, "lottie_image_free"));
+        imageFromData = reinterpret_cast<lottie_image_load_data_f>(
+                        GetProcAddress(dl_handle, "lottie_image_load_from_data"));
     }
 #else
     void *dl_handle{nullptr};
     void  init()
     {
-        imageLoad = (lottie_image_load_f)dlsym(dl_handle, "lottie_image_load");
-        imageFree = (lottie_image_free_f)dlsym(dl_handle, "lottie_image_free");
-        imageFromData = (lottie_image_load_data_f)dlsym(
-            dl_handle, "lottie_image_load_from_data");
+        imageLoad = reinterpret_cast<lottie_image_load_f>(
+                    dlsym(dl_handle, "lottie_image_load"));
+        imageFree = reinterpret_cast<lottie_image_free_f>(
+                    dlsym(dl_handle, "lottie_image_free"));
+        imageFromData = reinterpret_cast<lottie_image_load_data_f>(
+                    dlsym(dl_handle, "lottie_image_load_from_data"));
     }
 
     void moduleFree()
