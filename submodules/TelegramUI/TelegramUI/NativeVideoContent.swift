@@ -9,43 +9,9 @@ import TelegramAudio
 import UniversalMediaPlayer
 
 enum NativeVideoContentId: Hashable {
-    case message(MessageId, UInt32, MediaId)
+    case message(UInt32, MediaId)
     case instantPage(MediaId, MediaId)
     case contextResult(Int64, String)
-    
-    static func ==(lhs: NativeVideoContentId, rhs: NativeVideoContentId) -> Bool {
-        switch lhs {
-            case let .message(messageId, stableId, mediaId):
-                if case .message(messageId, stableId, mediaId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .instantPage(pageId, mediaId):
-                if case .instantPage(pageId, mediaId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .contextResult(queryId, resultId):
-                if case .contextResult(queryId, resultId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case let .message(messageId, _, mediaId):
-                return messageId.hashValue &* 31 &+ mediaId.hashValue
-            case let .instantPage(pageId, mediaId):
-                return pageId.hashValue &* 31 &+ mediaId.hashValue
-            case let .contextResult(queryId, resultId):
-                return queryId.hashValue &* 31 &+ resultId.hashValue
-        }
-    }
 }
 
 final class NativeVideoContent: UniversalVideoContent {
@@ -101,8 +67,8 @@ final class NativeVideoContent: UniversalVideoContent {
     
     func isEqual(to other: UniversalVideoContent) -> Bool {
         if let other = other as? NativeVideoContent {
-            if case let .message(_, stableId, _) = self.nativeId {
-                if case .message(_, stableId, _) = other.nativeId {
+            if case let .message(stableId, _) = self.nativeId {
+                if case .message(stableId, _) = other.nativeId {
                     if self.fileReference.media.isInstantVideo {
                         return true
                     }

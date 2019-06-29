@@ -89,7 +89,7 @@ struct InstantPageGalleryEntry: Equatable {
                 
                 let nativeId: NativeVideoContentId
                 if let message = message, case let .Loaded(content) = webPage.content, content.file?.fileId == file.fileId {
-                    nativeId = .message(message.id, message.stableId, file.fileId)
+                    nativeId = .message(message.stableId, file.fileId)
                 } else {
                     nativeId = .instantPage(self.pageId, file.fileId)
                 }
