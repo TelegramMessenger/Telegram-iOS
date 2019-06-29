@@ -429,7 +429,11 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
                     if let peer = item.topMessage.peers[item.topMessage.id.peerId] {
-                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: peer, emptyColor: item.theme.list.mediaPlaceholderColor)
+                        var overrideImage: AvatarNodeImageOverride?
+                        if peer.isDeleted {
+                            overrideImage = .deletedIcon
+                        }
+                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor)
                     }
                     
                     return (strongSelf.avatarNode.ready, { [weak strongSelf] animated in

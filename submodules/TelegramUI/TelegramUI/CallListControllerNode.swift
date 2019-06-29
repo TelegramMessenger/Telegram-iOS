@@ -264,10 +264,10 @@ final class CallListControllerNode: ASDisplayNode {
         let viewProcessingQueue = self.viewProcessingQueue
         
         let callListViewUpdate = self.callListLocationAndType.get()
-            |> distinctUntilChanged
-            |> mapToSignal { locationAndType in
-                return callListViewForLocationAndType(locationAndType: locationAndType, account: context.account)
-            }
+        |> distinctUntilChanged
+        |> mapToSignal { locationAndType in
+            return callListViewForLocationAndType(locationAndType: locationAndType, account: context.account)
+        }
         
         let previousView = Atomic<CallListNodeView?>(value: nil)
         
@@ -332,8 +332,8 @@ final class CallListControllerNode: ASDisplayNode {
             }
             
             return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: false, account: context.account, scrollPosition: update.scrollPosition)
-                |> map({ mappedCallListNodeViewListTransition(account: context.account, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
-                |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
+            |> map({ mappedCallListNodeViewListTransition(account: context.account, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
+            |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
         
         let appliedTransition = callListNodeViewTransition |> deliverOnMainQueue |> mapToQueue { [weak self] transition -> Signal<Void, NoError> in

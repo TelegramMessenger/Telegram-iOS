@@ -309,7 +309,7 @@ final class ChatHistoryPreloadManager {
             }
             return disposable
         }
-        self.automaticChatListDisposable.set((combineLatest(queue: .mainQueue(), postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents()), additionalPeerIds)
+        self.automaticChatListDisposable.set((combineLatest(queue: .mainQueue(), self.postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents()), additionalPeerIds)
         |> delay(1.0, queue: .mainQueue())
         |> deliverOnMainQueue).start(next: { [weak self] view, additionalPeerIds in
             guard let strongSelf = self else {
