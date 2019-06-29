@@ -58,15 +58,15 @@ private func createChannel(account: Account, title: String, description: String?
             account.stateManager.addUpdates(updates)
             if let message = updates.messages.first, let peerId = apiMessagePeerId(message) {
                 return account.postbox.multiplePeersView([peerId])
-                    |> filter { view in
-                        return view.peers[peerId] != nil
-                    }
-                    |> take(1)
-                    |> map { _ in
-                        return peerId
-                    }
-                    |> introduceError(CreateChannelError.self)
-                    |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
+                |> filter { view in
+                    return view.peers[peerId] != nil
+                }
+                |> take(1)
+                |> map { _ in
+                    return peerId
+                }
+                |> introduceError(CreateChannelError.self)
+                |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
             } else {
                 return .fail(.generic)
             }

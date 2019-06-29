@@ -1122,37 +1122,37 @@ public final class AccountViewTracker {
             })
             
             return managed
-                |> map { view -> CallListView in
-                    var entries: [CallListViewEntry] = []
-                    if !view.entries.isEmpty {
-                        var currentMessages: [Message] = []
-                        for entry in view.entries {
-                            switch entry {
-                                case let .hole(index):
+            |> map { view -> CallListView in
+                var entries: [CallListViewEntry] = []
+                if !view.entries.isEmpty {
+                    var currentMessages: [Message] = []
+                    for entry in view.entries {
+                        switch entry {
+                            case let .hole(index):
+                                if !currentMessages.isEmpty {
+                                    entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
+                                    currentMessages.removeAll()
+                                }
+                                //entries.append(.hole(index))
+                            case let .message(message):
+                                if currentMessages.isEmpty || groupingPredicate(message, currentMessages[currentMessages.count - 1]) {
+                                    currentMessages.append(message)
+                                } else {
                                     if !currentMessages.isEmpty {
                                         entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
                                         currentMessages.removeAll()
                                     }
-                                    //entries.append(.hole(index))
-                                case let .message(message):
-                                    if currentMessages.isEmpty || groupingPredicate(message, currentMessages[currentMessages.count - 1]) {
-                                        currentMessages.append(message)
-                                    } else {
-                                        if !currentMessages.isEmpty {
-                                            entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
-                                            currentMessages.removeAll()
-                                        }
-                                        currentMessages.append(message)
-                                    }
-                            }
-                        }
-                        if !currentMessages.isEmpty {
-                            entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
-                            currentMessages.removeAll()
+                                    currentMessages.append(message)
+                                }
                         }
                     }
-                    return CallListView(entries: entries, earlier: view.earlier, later: view.later)
+                    if !currentMessages.isEmpty {
+                        entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
+                        currentMessages.removeAll()
+                    }
                 }
+                return CallListView(entries: entries, earlier: view.earlier, later: view.later)
+            }
         } else {
             return .never()
         }

@@ -3,13 +3,13 @@
     {
       "size" : "20x20",
       "idiom" : "iphone",
-      "filename" : "Simple@40x40.png",
+      "filename" : "BlueNotificationIcon@2x.png",
       "scale" : "2x"
     },
     {
       "size" : "20x20",
       "idiom" : "iphone",
-      "filename" : "Simple@60x60.png",
+      "filename" : "BlueNotificationIcon@3x.png",
       "scale" : "3x"
     },
     {
@@ -51,13 +51,13 @@
     {
       "size" : "20x20",
       "idiom" : "ipad",
-      "filename" : "Simple@20x20.png",
+      "filename" : "BlueNotificationIcon.png",
       "scale" : "1x"
     },
     {
       "size" : "20x20",
       "idiom" : "ipad",
-      "filename" : "Simple@40x40-2.png",
+      "filename" : "BlueNotificationIcon@2x-1.png",
       "scale" : "2x"
     },
     {

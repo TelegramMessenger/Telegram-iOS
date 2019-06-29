@@ -1651,8 +1651,18 @@ final class SharedApplicationContext {
         if #available(iOS 10.0, *) {
             if let startCallIntent = userActivity.interaction?.intent as? SupportedStartCallIntent {
                 if let contact = startCallIntent.contacts?.first {
+                    var processed = false
                     if let handle = contact.personHandle?.value {
                         if let userId = Int32(handle) {
+                            if let context = self.contextValue {
+                                let _ = context.context.sharedContext.callManager?.requestCall(account: context.context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
+                                processed = true
+                            }
+                        }
+                    }
+                    if !processed, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                        let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
+                        if let userId = Int32(string) {
                             if let context = self.contextValue {
                                 let _ = context.context.sharedContext.callManager?.requestCall(account: context.context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
                             }
@@ -1662,8 +1672,8 @@ final class SharedApplicationContext {
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                    if let id = Int32(string) {
-                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), activateInput: true)
+                    if let userId = Int32(string) {
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activateInput: true)
                     }
                 }
             }

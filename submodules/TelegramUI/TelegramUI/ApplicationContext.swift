@@ -70,12 +70,14 @@ final class AuthorizedApplicationContext {
     private let termsOfServiceProceedToBotDisposable = MetaDisposable()
     private let watchNavigateToMessageDisposable = MetaDisposable()
     private let permissionsDisposable = MetaDisposable()
+    private let appUpdateInfoDisposable = MetaDisposable()
     
     private var inAppNotificationSettings: InAppNotificationSettings?
     
     private var isLocked: Bool = true
     var passcodeController: PasscodeEntryController?
     
+    private var currentAppUpdateInfo: AppUpdateInfo?
     private var currentTermsOfServiceUpdate: TermsOfServiceUpdate?
     private var currentPermissionsController: PermissionController?
     private var currentPermissionsState: PermissionState?
@@ -507,6 +509,19 @@ final class AuthorizedApplicationContext {
                     })
                 }
                 
+                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
+            }
+        }))
+        
+        self.appUpdateInfoDisposable.set((context.account.stateManager.appUpdateInfo
+        |> deliverOnMainQueue).start(next: { [weak self] appUpdateInfo in
+            guard let strongSelf = self, strongSelf.currentAppUpdateInfo != appUpdateInfo else {
+                return
+            }
+            
+            strongSelf.currentAppUpdateInfo = appUpdateInfo
+            if let appUpdateInfo = appUpdateInfo {
+                let controller = updateInfoController(context: strongSelf.context, appUpdateInfo: appUpdateInfo)
                 (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
             }
         }))
