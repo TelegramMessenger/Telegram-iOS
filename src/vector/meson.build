@@ -30,7 +30,7 @@ source_file  += files('vimageloader.cpp')
 
 # dl dependancy for dlopen, dlsym, dlclose symbol
 cc = meson.get_compiler('cpp')
-vector_dep += cc.find_library('dl', required : true)
+vector_dep += cc.find_library('dl', required : false)
 
 vector_dep += declare_dependency( include_directories : include_directories('.'),
                                   sources             : source_file
