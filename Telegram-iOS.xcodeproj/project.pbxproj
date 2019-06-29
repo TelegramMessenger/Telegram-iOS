@@ -197,6 +197,7 @@
 		09EBE2AE22B004EA00F670AB /* BlueFilledIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE2A222B004E900F670AB /* BlueFilledIconIpad@2x.png */; };
 		09EBE2AF22B004EA00F670AB /* BlackIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE2A322B004E900F670AB /* BlackIconIpad@2x.png */; };
 		09EBE2B022B004EA00F670AB /* BlueFilledIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE2A422B004E900F670AB /* BlueFilledIconLargeIpad@2x.png */; };
+		09EC0DE322C6339700E7185B /* IntentMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DE222C6339700E7185B /* IntentMessages.swift */; };
 		09FDAEE62140477F00BF856F /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */; };
 		D000CACF21FB6E380011B15D /* NotificationService.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D000CAC821FB6E370011B15D /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D001D5AA1F878DA300DF975A /* PhoneCountries.txt in Resources */ = {isa = PBXBuildFile; fileRef = D001D5A91F878DA300DF975A /* PhoneCountries.txt */; };
@@ -839,6 +840,7 @@
 		09EBE2A222B004E900F670AB /* BlueFilledIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueFilledIconIpad@2x.png"; sourceTree = "<group>"; };
 		09EBE2A322B004E900F670AB /* BlackIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackIconIpad@2x.png"; sourceTree = "<group>"; };
 		09EBE2A422B004E900F670AB /* BlueFilledIconLargeIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueFilledIconLargeIpad@2x.png"; sourceTree = "<group>"; };
+		09EC0DE222C6339700E7185B /* IntentMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentMessages.swift; sourceTree = "<group>"; };
 		09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D000CAC021FB6E160011B15D /* NotificationService-HockeyApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-HockeyApp.entitlements"; sourceTree = "<group>"; };
 		D000CAC121FB6E160011B15D /* NotificationService-Fork.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-Fork.entitlements"; sourceTree = "<group>"; };
@@ -2319,6 +2321,7 @@
 				D021D4DB219CB1020064BEBA /* SiriIntents-Fork.entitlements */,
 				D0D268781D79A70A00C422DA /* IntentHandler.swift */,
 				D08985062119B7FE00918162 /* IntentContacts.swift */,
+				09EC0DE222C6339700E7185B /* IntentMessages.swift */,
 				D0D2687A1D79A70A00C422DA /* Info.plist */,
 				D08985052118B62400918162 /* SiriIntents-Bridging-Header.h */,
 			);
@@ -3097,6 +3100,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D08985072119B7FE00918162 /* IntentContacts.swift in Sources */,
+				09EC0DE322C6339700E7185B /* IntentMessages.swift in Sources */,
 				D0D268791D79A70A00C422DA /* IntentHandler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

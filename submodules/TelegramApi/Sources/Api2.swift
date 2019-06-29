@@ -1295,19 +1295,26 @@ public struct contacts {
 public extension Api {
 public struct help {
     public enum AppUpdate: TypeConstructorDescription {
-        case appUpdate(id: Int32, critical: Api.Bool, url: String, text: String)
+        case appUpdate(flags: Int32, id: Int32, version: String, text: String, entities: [Api.MessageEntity], document: Api.Document?, url: String?)
         case noAppUpdate
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .appUpdate(let id, let critical, let url, let text):
+                case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url):
                     if boxed {
-                        buffer.appendInt32(-1987579119)
+                        buffer.appendInt32(497489295)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
-                    critical.serialize(buffer, true)
-                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeString(version, buffer: buffer, boxed: false)
                     serializeString(text, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities.count))
+                    for item in entities {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 1) != 0 {document!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
                     break
                 case .noAppUpdate:
                     if boxed {
@@ -1320,8 +1327,8 @@ public struct help {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .appUpdate(let id, let critical, let url, let text):
-                return ("appUpdate", [("id", id), ("critical", critical), ("url", url), ("text", text)])
+                case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url):
+                return ("appUpdate", [("flags", flags), ("id", id), ("version", version), ("text", text), ("entities", entities), ("document", document), ("url", url)])
                 case .noAppUpdate:
                 return ("noAppUpdate", [])
     }
@@ -1330,20 +1337,31 @@ public struct help {
         public static func parse_appUpdate(_ reader: BufferReader) -> AppUpdate? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Api.Bool?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Bool
-            }
+            var _2: Int32?
+            _2 = reader.readInt32()
             var _3: String?
             _3 = parseString(reader)
             var _4: String?
             _4 = parseString(reader)
+            var _5: [Api.MessageEntity]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            }
+            var _6: Api.Document?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
+            var _7: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_7 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.help.AppUpdate.appUpdate(id: _1!, critical: _2!, url: _3!, text: _4!)
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.help.AppUpdate.appUpdate(flags: _1!, id: _2!, version: _3!, text: _4!, entities: _5!, document: _6, url: _7)
             }
             else {
                 return nil

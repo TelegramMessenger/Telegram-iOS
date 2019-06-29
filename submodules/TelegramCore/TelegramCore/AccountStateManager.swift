@@ -127,6 +127,12 @@ public final class AccountStateManager {
         return self.termsOfServiceUpdatePromise.get()
     }
     
+    private let appUpdateInfoValue = Atomic<AppUpdateInfo?>(value: nil)
+    private let appUpdateInfoPromise = Promise<AppUpdateInfo?>(nil)
+    public var appUpdateInfo: Signal<AppUpdateInfo?, NoError> {
+        return self.appUpdateInfoPromise.get()
+    }
+    
     private let appliedIncomingReadMessagesPipe = ValuePipe<[MessageId]>()
     public var appliedIncomingReadMessages: Signal<[MessageId], NoError> {
         return self.appliedIncomingReadMessagesPipe.signal()
@@ -930,6 +936,17 @@ public final class AccountStateManager {
             if (current != updated) {
                 let _ = self.termsOfServiceUpdateValue.swap(updated)
                 self.termsOfServiceUpdatePromise.set(.single(updated))
+            }
+        }
+    }
+    
+    func modifyAppUpdateInfo(_ f: @escaping (AppUpdateInfo?) -> (AppUpdateInfo?)) {
+        self.queue.async {
+            let current = self.appUpdateInfoValue.with { $0 }
+            let updated = f(current)
+            if (current != updated) {
+                let _ = self.appUpdateInfoValue.swap(updated)
+                self.appUpdateInfoPromise.set(.single(updated))
             }
         }
     }
