@@ -20,8 +20,6 @@
 
 //#define DEBUG_PARSER
 
-//#define DEBUG_PRINT_TREE
-
 // This parser implements JSON token-by-token parsing with an API that is
 // more direct; we don't have to create  handler object and
 // callbacks. Instead, we retrieve values from the JSON stream by calling
@@ -2032,7 +2030,7 @@ void LottieParserImpl::parseProperty(LOTAnimatable<T> &obj)
     }
 }
 
-#ifdef DEBUG_PRINT_TREE
+#if LOTTIE_DUMP_TREE_SUPPORT
 
 class LOTDataInspector {
 public:
@@ -2233,7 +2231,7 @@ std::shared_ptr<LOTModel> LottieParser::model()
     model->mRoot = d->composition();
     model->mRoot->processRepeaterObjects();
 
-#ifdef DEBUG_PRINT_TREE
+#if LOTTIE_DUMP_TREE_SUPPORT
     LOTDataInspector inspector;
     inspector.visit(model->mRoot.get(), "");
 #endif

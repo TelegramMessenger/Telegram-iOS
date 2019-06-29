@@ -35,7 +35,7 @@ struct VImageLoader::Impl {
     lottie_image_free_f      imageFree{nullptr};
     lottie_image_load_data_f imageFromData{nullptr};
 
-#ifndef LOTTIE_STATIC_IMAGE_LOADER
+#if LOTTIE_IMAGE_MODULE_SUPPORT
 #ifdef WIN32
     HMODULE dl_handle{nullptr};
     bool    moduleLoad()

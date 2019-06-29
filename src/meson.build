@@ -8,7 +8,7 @@ library_deps += binding_dep
 
 rlottie_lib = shared_library('rlottie',
                              include_directories : inc,
-                             version             : rlottie_lib_version,
+                             version             : meson.project_version(),
                              dependencies        : library_deps,
                              install             : true
                             )

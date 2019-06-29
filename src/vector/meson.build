@@ -5,6 +5,8 @@ subdir('stb')
 
 vector_dep = [freetype_dep]
 vector_dep += pixman_dep
+vector_dep += stb_dep
+
 
 source_file   = files('vdasher.cpp')
 source_file  += files('vbrush.cpp')
@@ -28,11 +30,10 @@ source_file  += files('vbezier.cpp')
 source_file  += files('vraster.cpp')
 source_file  += files('vimageloader.cpp')
 
-# dl dependancy for dlopen, dlsym, dlclose symbol
-cc = meson.get_compiler('cpp')
-vector_dep += cc.find_library('dl', required : false)
+inc_dir = [include_directories('.')]
+inc_dir += config_dir
 
-vector_dep += declare_dependency( include_directories : include_directories('.'),
+vector_dep += declare_dependency( include_directories : inc_dir,
                                   sources             : source_file
                                 )
 

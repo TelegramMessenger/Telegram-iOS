@@ -1,8 +1,19 @@
 
-rlottie_image_loader_sources = ['stb_image.cpp']
+source_file = ['stb_image.cpp']
 
-rlottie_image_loader_lib = shared_library('rlottie-image-loader',
-                                          rlottie_image_loader_sources,
-                                          install : true
-                                         )
+if get_option('module') == true
+    rlottie_image_loader_lib = shared_library('rlottie-image-loader',
+                                              source_file,
+                                              install : true
+                                             )
+    # dl dependancy for dlopen, dlsym, dlclose symbol
+    cc = meson.get_compiler('cpp')
+    stb_dep = cc.find_library('dl', required : false)
+else
+    stb_dep = declare_dependency(
+                                  include_directories : include_directories('.'),
+                                  sources : source_file
+                                 )
+endif
+
 
