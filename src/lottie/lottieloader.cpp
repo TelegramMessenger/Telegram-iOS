@@ -71,6 +71,9 @@ public:
 static std::string dirname(const std::string &path)
 {
     const char *ptr = strrchr(path.c_str(), '/');
+#ifdef _WIN32
+    if (ptr) ptr = strrchr(ptr + 1, '\\');
+#endif
     int         len = int(ptr + 1 - path.c_str());  // +1 to include '/'
     return std::string(path, 0, len);
 }

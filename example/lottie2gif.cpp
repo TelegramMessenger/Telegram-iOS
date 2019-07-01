@@ -110,11 +110,11 @@ public:
 
         baseName = absoloutePath;
 #ifdef _WIN32
-        char *base = strchr(baseName.data(), '/');
+        char *base = strrchr(baseName.data(), '/');
         if (base)
         {
             base++;
-            base = strchr(baseName.data(), '\\');
+            base = strrchr(baseName.data(), '\\');
             if (base) base++;
             else return 1;
         }
