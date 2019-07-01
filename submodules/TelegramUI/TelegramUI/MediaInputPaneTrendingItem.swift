@@ -66,11 +66,62 @@ private let titleFont = Font.bold(16.0)
 private let statusFont = Font.regular(15.0)
 private let buttonFont = Font.medium(13.0)
 
-private final class TrendingTopItemNode: TransformImageNode {
-    var file: TelegramMediaFile? = nil
-    let loadDisposable = MetaDisposable()
+private final class TrendingTopItemNode: ASDisplayNode {
+    private let imageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
+    public private(set) var file: TelegramMediaFile? = nil
+    private var itemSize: CGSize?
+    private let loadDisposable = MetaDisposable()
     
     var currentIsPreviewing = false
+    
+    var visibility: Bool = false {
+        didSet {
+            if oldValue != self.visibility {
+                self.animationNode?.visibility = self.visibility
+            }
+        }
+    }
+    
+    override init() {
+        self.imageNode = TransformImageNode()
+        self.imageNode.contentAnimations = [.subsequentUpdates]
+        super.init()
+        
+        self.addSubnode(self.imageNode)
+    }
+    
+    func setup(account: Account, item: StickerPackItem, itemSize: CGSize, synchronousLoads: Bool) {
+        self.file = item.file
+        self.itemSize = itemSize
+        
+        if item.file.isAnimatedSticker {
+            self.loadDisposable.set(nil)
+            
+            let animationNode: AnimatedStickerNode
+            if let currentAnimationNode = self.animationNode {
+                animationNode = currentAnimationNode
+            } else {
+                animationNode = AnimatedStickerNode()
+                animationNode.transform = self.imageNode.transform
+                animationNode.visibility = self.visibility
+                self.addSubnode(animationNode)
+                self.animationNode = animationNode
+            }
+            animationNode.started = { [weak self] in
+                self?.imageNode.alpha = 0.0
+            }
+            animationNode.setup(account: account, fileReference: stickerPackFileReference(item.file), width: 140, height: 140)
+        } else {
+            self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
+            self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
+            
+            if let currentAnimationNode = self.animationNode {
+                self.animationNode = nil
+                currentAnimationNode.removeFromSupernode()
+            }
+        }
+    }
     
     func updatePreviewing(animated: Bool, isPreviewing: Bool) {
         if self.currentIsPreviewing != isPreviewing {
@@ -87,6 +138,18 @@ private final class TrendingTopItemNode: TransformImageNode {
                 }
             }
         }
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        if let dimensions = self.file?.dimensions, let itemSize = self.itemSize {
+            let imageSize = dimensions.aspectFitted(itemSize)
+            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+        }
+        
+        self.imageNode.frame = self.bounds
+        self.animationNode?.updateLayout(size: self.bounds.size)
     }
 }
 
@@ -109,6 +172,10 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
             let isVisible = self.visibility != .none
             
             if isVisible != wasVisible {
+                for node in self.itemNodes {
+                    node.visibility = isVisible
+                }
+                
                 if isVisible {
                     if let item = self.item, item.unread {
                         self.readDisposable.set((
@@ -278,6 +345,8 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                     var offset = sideInset
                     let itemSpacing = (max(0, availableWidth - 5.0 * itemSide - sideInset * 2.0)) / 4.0
                     
+                    let isVisible = strongSelf.visibility != .none
+                    
                     for i in 0 ..< topItems.count {
                         let file = topItems[i].file
                         let node: TrendingTopItemNode
@@ -285,18 +354,15 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                             node = strongSelf.itemNodes[i]
                         } else {
                             node = TrendingTopItemNode()
-                            node.contentAnimations = [.subsequentUpdates]
+                            node.visibility = isVisible
                             strongSelf.itemNodes.append(node)
                             strongSelf.addSubnode(node)
                         }
                         if file.fileId != node.file?.fileId {
-                            node.file = file
-                            node.setSignal(chatMessageSticker(account: item.account, file: file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
-                            node.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: true)).start())
+                            node.setup(account: item.account, item: topItems[i], itemSize: itemSize, synchronousLoads: synchronousLoads)
                         }
                         if let dimensions = file.dimensions {
                             let imageSize = dimensions.aspectFitted(itemSize)
-                            node.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
                             node.frame = CGRect(origin: CGPoint(x: offset, y: 48.0), size: imageSize)
                             offset += itemSize.width + itemSpacing
                         }
