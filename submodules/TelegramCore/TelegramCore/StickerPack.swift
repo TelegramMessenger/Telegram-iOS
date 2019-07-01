@@ -22,19 +22,22 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
     public init(_ flags: StickerPackCollectionInfoFlags) {
         var rawValue: Int32 = 0
         
-        if flags.contains(StickerPackCollectionInfoFlags.masks) {
-            rawValue |= StickerPackCollectionInfoFlags.masks.rawValue
+        if flags.contains(StickerPackCollectionInfoFlags.isMasks) {
+            rawValue |= StickerPackCollectionInfoFlags.isMasks.rawValue
         }
-        
-        if flags.contains(StickerPackCollectionInfoFlags.official) {
-            rawValue |= StickerPackCollectionInfoFlags.official.rawValue
+        if flags.contains(StickerPackCollectionInfoFlags.isOfficial) {
+            rawValue |= StickerPackCollectionInfoFlags.isOfficial.rawValue
+        }
+        if flags.contains(StickerPackCollectionInfoFlags.isAnimated) {
+            rawValue |= StickerPackCollectionInfoFlags.isAnimated.rawValue
         }
         
         self.rawValue = rawValue
     }
     
-    public static let masks = StickerPackCollectionInfoFlags(rawValue: 1)
-    public static let official = StickerPackCollectionInfoFlags(rawValue: 2)
+    public static let isMasks = StickerPackCollectionInfoFlags(rawValue: 1 << 0)
+    public static let isOfficial = StickerPackCollectionInfoFlags(rawValue: 1 << 1)
+    public static let isAnimated = StickerPackCollectionInfoFlags(rawValue: 1 << 2)
 }
 
 
@@ -183,10 +186,13 @@ extension StickerPackCollectionInfo {
             case let .stickerSet(flags, _, id, accessHash, title, shortName, thumb, thumbDcId, count, nHash):
                 var setFlags: StickerPackCollectionInfoFlags = StickerPackCollectionInfoFlags()
                 if (flags & (1 << 2)) != 0 {
-                    setFlags.insert(.official)
+                    setFlags.insert(.isOfficial)
                 }
                 if (flags & (1 << 3)) != 0 {
-                    setFlags.insert(.masks)
+                    setFlags.insert(.isMasks)
+                }
+                if (flags & (1 << 5)) != 0 {
+                    setFlags.insert(.isAnimated)
                 }
                 
                 var thumbnailRepresentation: TelegramMediaImageRepresentation?
