@@ -4,7 +4,12 @@
 #include<iostream>
 #include<vector>
 #include<array>
+
+#ifndef _WIN32
 #include<libgen.h>
+#else
+#include <windows.h>
+#endif
 
 class GifBuilder {
 public:
@@ -87,6 +92,7 @@ public:
         return result();
     }
 
+#ifndef _WIN32
     int setup(int argc, char **argv)
     {
         if (argc > 1) fileName = argv[1];
@@ -103,6 +109,13 @@ public:
         snprintf(baseName.data(), baseName.size(), "%s.gif",base);
         return 0;
     }
+#else
+    int setup(int argc, char **argv)
+    {
+        std::cout<<"Yet to implement in Windows\m";
+        return 1;
+    }
+#endif
 
 private:
 

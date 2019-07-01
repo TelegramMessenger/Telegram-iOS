@@ -3,6 +3,8 @@ cmake_minimum_required( VERSION 3.2 )
 #declare project
 project( rlottie VERSION 0.0.1 LANGUAGES C CXX ASM)
 
+add_definitions(-DLOT_BUILD)
+
 #declare target
 add_library( rlottie SHARED  "" )
 

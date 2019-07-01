@@ -655,6 +655,18 @@ static std::string convertFromBase64(const std::string &str)
 }
 
 /*
+ *  std::to_string() function is missing in VS2017
+ *  so this is workaround for windows build
+ */
+#include <sstream>
+template<class T>
+static std::string toString(const T &value) {
+    std::ostringstream os;
+    os << value;
+    return os.str();
+}
+
+/*
  * https://github.com/airbnb/lottie-web/blob/master/docs/json/layers/shape.json
  *
  */
@@ -688,7 +700,7 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
                 asset->mRefId = std::string(GetString());
             } else {
                 RAPIDJSON_ASSERT(PeekType() == kNumberType);
-                asset->mRefId = std::to_string(GetInt());
+                asset->mRefId = toString(GetInt());
             }
         } else if (0 == strcmp(key, "layers")) {
             asset->mAssetType = LOTAsset::Type::Precomp;

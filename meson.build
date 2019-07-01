@@ -3,9 +3,9 @@ project('rlottie',
         version : '0.0.1',
         license : 'Apache')
 
-add_global_arguments('-DDEMO_DIR="@0@/example/resource/"'.format(meson.current_source_dir()), language : 'cpp')
+add_project_arguments('-DDEMO_DIR="@0@/example/resource/"'.format(meson.current_source_dir()), language : 'cpp')
 
-compiler_flags = []
+compiler_flags = ['-DLOT_BUILD']
 compiler_flags_try = ['-std=c++14', '-Os', '-Wall', '-Werror', '-Wextra', '-fno-exceptions', '-fno-rtti',
                       '-fno-unwind-tables' , '-fno-asynchronous-unwind-tables',
                       '-Wnon-virtual-dtor', '-Woverloaded-virtual', '-Wno-unused-parameter', '-fvisibility=hidden']
@@ -18,12 +18,12 @@ foreach cf: compiler_flags_try
 endforeach
 
 
-if (build_machine.system() == 'linux')
+if (build_machine.system() == 'linux' and get_option('thread') == true)
     compiler_flags += ['-pthread']
-    add_global_link_arguments('-pthread', language: 'cpp')
+    add_project_link_arguments('-pthread', language: 'cpp')
 endif
 
-add_global_arguments(compiler_flags, language: 'cpp')
+add_project_arguments(compiler_flags, language: 'cpp')
 
 inc = [include_directories('inc')]
 config_dir = include_directories('.')
