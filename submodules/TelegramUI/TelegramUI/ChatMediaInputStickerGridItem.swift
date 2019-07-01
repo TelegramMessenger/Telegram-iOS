@@ -225,8 +225,9 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                         self.animationNode = animationNode
                         self.addSubnode(animationNode)
                     }
-                    self.animationNode?.setup(account: item.account, fileReference: FileMediaReference.standalone(media: item.stickerItem.file), width: 140, height: 140)
+                    self.animationNode?.setup(account: item.account, resource: item.stickerItem.file.resource, width: 160, height: 160, mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: item.stickerItem.file.resource).start())
                 } else {
                     if let animationNode = self.animationNode {
                         animationNode.visibility = false
@@ -234,8 +235,8 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                         animationNode.removeFromSupernode()
                     }
                     self.imageNode.setSignal(chatMessageSticker(account: item.account, file: item.stickerItem.file, small: true, synchronousLoad: synchronousLoads && isVisible))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: chatMessageStickerResource(file: item.stickerItem.file, small: true)).start())
                 }
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: chatMessageStickerResource(file: item.stickerItem.file, small: true)).start())
                 
                 self.currentState = (item.account, item.stickerItem, dimensions)
                 self.setNeedsLayout()

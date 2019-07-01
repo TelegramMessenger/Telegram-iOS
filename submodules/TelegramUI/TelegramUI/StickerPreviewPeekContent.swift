@@ -76,7 +76,6 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
         
         self.textNode = ASTextNode()
         self.imageNode = TransformImageNode()
-        self.imageNode.addSubnode(self.textNode)
         
         for case let .Sticker(text, _, _) in item.file.attributes {
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(32.0), textColor: .black)
@@ -87,9 +86,11 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             let animationNode = AnimatedStickerNode()
             self.animationNode = animationNode
             
-            self.animationNode?.setup(account: account, fileReference: FileMediaReference.standalone(media: item.file), width: 320, height: 320)
+            self.animationNode?.setup(account: account, resource: item.file.resource, width: 400, height: 400, mode: .direct)
             self.animationNode?.visibility = true
+            self.animationNode?.addSubnode(self.textNode)
         } else {
+            self.imageNode.addSubnode(self.textNode)
             self.animationNode = nil
         }
         

@@ -83,7 +83,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         super.init()
         
         self.addSubnode(self.imageNode)
-        self.addSubnode(self.textNode)
+        //self.addSubnode(self.textNode)
     }
     
     deinit {
@@ -115,8 +115,9 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         self.animationNode = animationNode
                         self.addSubnode(animationNode)
                     }
-                    self.animationNode?.setup(account: account, fileReference: FileMediaReference.standalone(media: stickerItem.file), width: 140, height: 140)
+                    self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: 160, height: 160, mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {
                     if let animationNode = self.animationNode {
                         animationNode.visibility = false
@@ -124,9 +125,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         animationNode.removeFromSupernode()
                     }
                     self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
                 }
-                
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
                 
                 self.currentState = (account, stickerItem, dimensions)
                 self.setNeedsLayout()
