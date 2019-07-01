@@ -9,267 +9,9 @@ import CoreImage
 import TelegramPresentationData
 import Compression
 
-private final class AnimationFrameCache {
-    private var cache: [Int: NSPurgeableData] = [:]
-    
-    func get(index: Int, _ f: (NSPurgeableData?) -> Void) {
-        guard let data = self.cache[index] else {
-            f(nil)
-            return
-        }
-        if data.beginContentAccess() {
-            f(data)
-            data.endContentAccess()
-        } else {
-            self.cache.removeValue(forKey: index)
-            f(nil)
-        }
-    }
-    
-    func set(index: Int, bytes: UnsafeRawPointer, length: Int) {
-        self.cache[index] = NSPurgeableData(bytes: bytes, length: length)
-    }
-}
-
-private final class StickerAnimationNode: ASDisplayNode {
-    private var account: Account?
-    private var fileReference: FileMediaReference?
-    private let disposable = MetaDisposable()
-    private let fetchDisposable = MetaDisposable()
-    
-    var started: () -> Void = {}
-    private var reportedStarted = false
-    
-    private var timer: SwiftSignalKit.Timer?
-    
-    private var data: Data?
-    private var frameCache = AnimationFrameCache()
-    
-    private var renderer: (AnimationRenderer & ASDisplayNode)?
-    
-    var visibility = false {
-        didSet {
-            if self.visibility {
-                self.play()
-            } else{
-                self.stop()
-            }
-        }
-    }
-    
-    override init() {
-        super.init()
-    }
-    
-    deinit {
-        self.disposable.dispose()
-        self.fetchDisposable.dispose()
-        self.timer?.invalidate()
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        #if targetEnvironment(simulator)
-        self.renderer = SoftwareAnimationRenderer()
-        #else
-        self.renderer = SoftwareAnimationRenderer()
-        //self.renderer = MetalAnimationRenderer()
-        #endif
-        self.renderer?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
-        self.addSubnode(self.renderer!)
-    }
-    
-    func setup(account: Account, fileReference: FileMediaReference) {
-        self.disposable.set(chatMessageAnimationData(postbox: account.postbox, fileReference: fileReference, synchronousLoad: false).start(next: { [weak self] data in
-            if let strongSelf = self, data.complete {
-                strongSelf.data = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead])
-                if strongSelf.visibility {
-                    strongSelf.play()
-                }
-            }
-        }))
-        self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
-    }
-    
-    func reset() {
-        self.disposable.set(nil)
-        self.fetchDisposable.set(nil)
-    }
-    
-    func play() {
-        guard let data = self.data else {
-            return
-        }
-        if #available(iOS 9.0, *) {
-            let dataCount = data.count
-            self.timer?.invalidate()
-            var scratchBuffer = Data(count: compression_decode_scratch_buffer_size(COMPRESSION_LZ4))
-            
-            let width = 320
-            let height = 320
-            
-            var offset = 0
-            
-            var fps: Int32 = 0
-            data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                memcpy(&fps, bytes, 4)
-                offset += 4
-            }
-            
-            if true {
-                var decodeBuffer = Data(count: width * 4 * height)
-                var frameBuffer = Data(count: width * 4 * height)
-                let decodeBufferLength = decodeBuffer.count
-                frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                    memset(bytes, 0, decodeBufferLength)
-                }
-                
-                var frameIndex = 0
-                let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(fps), repeat: true, completion: { [weak self] in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                        var frameLength: Int32 = 0
-                        memcpy(&frameLength, bytes.advanced(by: offset), 4)
-                        
-                        var usedCache = false
-                        strongSelf.frameCache.get(index: frameIndex, { data in
-                            if let data = data {
-                                usedCache = true
-                                
-                                strongSelf.renderer?.render(width: 320, height: 320, bytes: data.bytes, length: data.length)
-                                
-                                if !strongSelf.reportedStarted {
-                                    strongSelf.reportedStarted = true
-                                    strongSelf.started()
-                                }
-                            }
-                        })
-                        
-                        if !usedCache {
-                            scratchBuffer.withUnsafeMutableBytes { (scratchBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                decodeBuffer.withUnsafeMutableBytes { (decodeBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                    frameBuffer.withUnsafeMutableBytes { (frameBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                        compression_decode_buffer(decodeBytes, decodeBufferLength, bytes.advanced(by: offset + 4), Int(frameLength), UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZ4)
-                                        
-                                        var lhs = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt64.self)
-                                        var rhs = UnsafeRawPointer(decodeBytes).assumingMemoryBound(to: UInt64.self)
-                                        for _ in 0 ..< decodeBufferLength / 8 {
-                                            lhs.pointee = lhs.pointee ^ rhs.pointee
-                                            lhs = lhs.advanced(by: 1)
-                                            rhs = rhs.advanced(by: 1)
-                                        }
-                                        
-                                        strongSelf.renderer?.render(width: 320, height: 320, bytes: frameBytes, length: decodeBufferLength)
-                                        
-                                        strongSelf.frameCache.set(index: frameIndex, bytes: frameBytes, length: decodeBufferLength)
-                                    }
-                                }
-                            }
-                            
-                            if !strongSelf.reportedStarted {
-                                strongSelf.reportedStarted = true
-                                strongSelf.started()
-                            }
-                        }
-                        
-                        offset += 4 + Int(frameLength)
-                        frameIndex += 1
-                        if offset == dataCount {
-                            offset = 4
-                            frameIndex = 0
-                        }
-                    }
-                }, queue: Queue.mainQueue())
-                self.timer = timer
-                timer.start()
-            } else {
-                var decodeBuffer = Data(count: width * 2 * height + width * height)
-                var frameBuffer = Data(count: width * 2 * height + width * height)
-                let decodeBufferLength = decodeBuffer.count
-                frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                    memset(bytes, 0, decodeBufferLength)
-                }
-                
-                var frameIndex = 0
-                let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(offset), repeat: true, completion: { [weak self] in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                        var frameLength: Int32 = 0
-                        memcpy(&frameLength, bytes.advanced(by: offset), 4)
-                        
-                        var usedCache = false
-                        strongSelf.frameCache.get(index: frameIndex, { data in
-                            if let data = data {
-                                usedCache = true
-                                
-                                strongSelf.renderer?.render(width: 320, height: 320, bytes: data.bytes, length: data.length)
-                                
-                                if !strongSelf.reportedStarted {
-                                    strongSelf.reportedStarted = true
-                                    strongSelf.started()
-                                }
-                            }
-                        })
-                        
-                        if !usedCache {
-                            scratchBuffer.withUnsafeMutableBytes { (scratchBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                decodeBuffer.withUnsafeMutableBytes { (decodeBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                    frameBuffer.withUnsafeMutableBytes { (frameBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                        compression_decode_buffer(decodeBytes, decodeBufferLength, bytes.advanced(by: offset + 4), Int(frameLength), UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZ4)
-                                        
-                                        var lhs = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt64.self)
-                                        var rhs = UnsafeRawPointer(decodeBytes).assumingMemoryBound(to: UInt64.self)
-                                        for _ in 0 ..< Int(decodeBufferLength) / 8 {
-                                            lhs.pointee = lhs.pointee ^ rhs.pointee
-                                            lhs = lhs.advanced(by: 1)
-                                            rhs = rhs.advanced(by: 1)
-                                        }
-                                        
-                                        strongSelf.renderer?.render(width: 320, height: 320, bytes: frameBytes, length: decodeBufferLength)
-                                        
-                                        strongSelf.frameCache.set(index: frameIndex, bytes: frameBytes, length: decodeBufferLength)
-                                    }
-                                }
-                            }
-                            
-                            if !strongSelf.reportedStarted {
-                                strongSelf.reportedStarted = true
-                                strongSelf.started()
-                            }
-                        }
-                        
-                        offset += 4 + Int(frameLength)
-                        frameIndex += 1
-                        if offset == dataCount {
-                            offset = 0
-                            frameIndex = 0
-                        }
-                    }
-                }, queue: Queue.mainQueue())
-                self.timer = timer
-                timer.start()
-            }
-        }
-    }
-    
-    func stop() {
-        self.timer?.invalidate()
-        self.timer = nil
-    }
-    
-    func updateLayout(size: CGSize) {
-        self.renderer?.frame = CGRect(origin: CGPoint(), size: size)
-    }
-}
-
 class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     let imageNode: TransformImageNode
-    private let animationNode: StickerAnimationNode
+    private let animationNode: AnimatedStickerNode
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
@@ -290,7 +32,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     required init() {
         self.imageNode = TransformImageNode()
-        self.animationNode = StickerAnimationNode()
+        self.animationNode = AnimatedStickerNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         super.init(layerBacked: false)
@@ -365,8 +107,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
-                    self.imageNode.setSignal(chatMessageSticker(account: item.context.account, file: telegramFile, small: false, thumbnail: true))
-                    self.animationNode.setup(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile))
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: CGSize(width: 360.0, height: 360.0), thumbnail: false))
+                    self.animationNode.setup(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile), width: 360, height: 360)
                 }
                 break
             }
@@ -374,7 +116,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
-        let displaySize = CGSize(width: 162.0, height: 162.0)
+        let displaySize = CGSize(width: 184.0, height: 184.0)
         let telegramFile = self.telegramFile
         let layoutConstants = self.layoutConstants
         let imageLayout = self.imageNode.asyncLayout()
@@ -387,14 +129,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-            var imageSize: CGSize = CGSize(width: 160.0, height: 160.0)
-            /*if let telegramFile = telegramFile {
+            var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
+            if let telegramFile = telegramFile {
                 if let dimensions = telegramFile.dimensions {
                     imageSize = dimensions.aspectFitted(displaySize)
                 } else if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {
                     imageSize = thumbnailSize.aspectFitted(displaySize)
                 }
-            }*/
+            }
             
             let avatarInset: CGFloat
             var hasAvatar = false
@@ -676,8 +418,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let item = self.item, self.imageNode.frame.contains(location) {
-                        //self.animationNode.play()
-                        //let _ = item.controllerInteraction.openMessage(item.message, .default)
+                        let _ = item.controllerInteraction.openMessage(item.message, .default)
                         return
                     }
                     

@@ -108,6 +108,11 @@ public final class PermissionController : ViewController {
         
         self.state = state
         if case let .permission(permission) = state, let state = permission {
+            if case .nearbyLocation = state {
+            } else {
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Permissions_Skip, style: .plain, target: self, action: #selector(PermissionController.nextPressed))
+            }
+            
             switch state {
                 case let .contacts(status):
                     self.splitTest?.addEvent(.ContactsModalRequest)
@@ -170,11 +175,13 @@ public final class PermissionController : ViewController {
                     }
                 case .cellularData:
                     self.allow = { [weak self] in
-                        self?.proceed?(true)
+                        if let strongSelf = self {
+                            strongSelf.openAppSettings()
+                            strongSelf.proceed?(true)
+                        }
                     }
                 case let .nearbyLocation(status):
                     self.title = self.presentationData.strings.Permissions_PeopleNearbyTitle_v0
-                    self.navigationItem.rightBarButtonItem = nil
                     
                     self.allow = { [weak self] in
                         if let strongSelf = self {
@@ -223,7 +230,7 @@ public final class PermissionController : ViewController {
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.splashScreen ? 0.0 : self.navigationHeight, transition: transition)
     }
     
     @objc private func nextPressed() {

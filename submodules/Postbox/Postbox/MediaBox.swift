@@ -87,12 +87,14 @@ public enum MediaResourceDataFetchError {
     case generic
 }
 
-public struct CachedMediaResourceRepresentationResult {
-    public let temporaryPath: String
-    
-    public init(temporaryPath: String) {
-        self.temporaryPath = temporaryPath
-    }
+public enum CachedMediaResourceRepresentationResult {
+    case temporaryPath(String)
+    case tempFile(TempBoxFile)
+}
+
+public enum CachedMediaRepresentationKeepDuration {
+    case general
+    case shortLived
 }
 
 private struct CachedMediaResourceRepresentationKey: Hashable {
@@ -160,21 +162,24 @@ public final class MediaBox {
     lazy var ensureDirectoryCreated: Void = {
         try! FileManager.default.createDirectory(atPath: self.basePath, withIntermediateDirectories: true, attributes: nil)
         try! FileManager.default.createDirectory(atPath: self.basePath + "/cache", withIntermediateDirectories: true, attributes: nil)
+        try! FileManager.default.createDirectory(atPath: self.basePath + "/short-cache", withIntermediateDirectories: true, attributes: nil)
     }()
     
     public init(basePath: String) {
         self.basePath = basePath
         
-        self.timeBasedCleanup = TimeBasedCleanup(paths: [
+        self.timeBasedCleanup = TimeBasedCleanup(generalPaths: [
             self.basePath,
             self.basePath + "/cache"
+        ], shortLivedPaths: [
+            self.basePath + "/short-cache"
         ])
         
         let _ = self.ensureDirectoryCreated
     }
     
-    public func setMaxStoreTime(_ maxStoreTime: Int32) {
-        self.timeBasedCleanup.setMaxStoreTime(maxStoreTime)
+    public func setMaxStoreTimes(general: Int32, shortLived: Int32) {
+        self.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived)
     }
     
     private func fileNameForId(_ id: MediaResourceId) -> String {
@@ -190,7 +195,14 @@ public final class MediaBox {
     }
     
     private func cachedRepresentationPathForId(_ id: MediaResourceId, representation: CachedMediaResourceRepresentation) -> String {
-        return "\(self.basePath)/cache/\(fileNameForId(id)):\(representation.uniqueId)"
+        let cacheString: String
+        switch representation.keepDuration {
+            case .general:
+                cacheString = "cache"
+            case .shortLived:
+                cacheString = "short-cache"
+        }
+        return "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representation.uniqueId)"
     }
     
     public func storeResourceData(_ id: MediaResourceId, data: Data) {
@@ -734,7 +746,13 @@ public final class MediaBox {
                             |> deliverOn(self.dataQueue)
                             context.disposable.set(signal.start(next: { [weak self, weak context] next in
                                 if let next = next {
-                                    rename(next.temporaryPath, path)
+                                    switch next {
+                                        case let .temporaryPath(temporaryPath):
+                                            rename(temporaryPath, path)
+                                        case let .tempFile(tempFile):
+                                            rename(tempFile.path, path)
+                                            TempBox.shared.dispose(tempFile)
+                                    }
                                     
                                     if let strongSelf = self, let currentContext = strongSelf.cachedRepresentationContexts[key], currentContext === context {
                                         currentContext.disposable.dispose()

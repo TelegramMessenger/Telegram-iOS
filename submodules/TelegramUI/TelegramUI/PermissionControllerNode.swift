@@ -122,7 +122,7 @@ final class PermissionControllerNode: ASDisplayNode {
     
     private func transition(state: PermissionControllerState, transition: ContainedViewLayoutTransition) {
         let insets = state.layout.layout.insets(options: [.statusBar])
-        let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: state.layout.layout.size.width, height: state.layout.layout.size.height))
+        let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: state.layout.navigationHeight), size: CGSize(width: state.layout.layout.size.width, height: state.layout.layout.size.height))
         
         if let state = state.data.state {
             switch state {

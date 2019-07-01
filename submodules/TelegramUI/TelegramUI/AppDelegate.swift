@@ -14,6 +14,7 @@ import TelegramPresentationData
 import TelegramCallsUI
 import TelegramVoip
 import BuildConfig
+import DeviceCheck
 
 private let handleVoipNotifications = false
 
@@ -212,9 +213,24 @@ final class SharedApplicationContext {
         }
     }
     
+    private let deviceToken = Promise<Data?>(nil)
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
+        
+        if #available(iOS 11.0, *) {
+            let curDevice = DCDevice.current
+            if curDevice.isSupported {
+                curDevice.generateToken(completionHandler: { (data, error) in
+                    if let tokenData = data {
+                        self.deviceToken.set(.single(data))
+                    } else {
+                        print("Error: \(error!.localizedDescription)")
+                    }
+                })
+            }
+        }
         
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
@@ -341,7 +357,9 @@ final class SharedApplicationContext {
         let apiId: Int32 = buildConfig.apiId
         let languagesCategory = "ios"
         
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManager.voipMaxLayer, appData: buildConfig.bundleData)
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManager.voipMaxLayer, appData: self.deviceToken.get() |> map { token in
+            return buildConfig.bundleData(withAppToken: token)
+        })
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()
@@ -590,6 +608,9 @@ final class SharedApplicationContext {
         }, requestSetAlternateIconName: { name, completion in
             if #available(iOS 10.3, *) {
                 application.setAlternateIconName(name, completionHandler: { error in
+                    if let error = error {
+                       Logger.shared.log("App \(self.episodeId)", "failed to set alternate icon with error \(error.localizedDescription)")
+                    }
                     completion(error == nil)
                 })
             } else {
@@ -1630,8 +1651,18 @@ final class SharedApplicationContext {
         if #available(iOS 10.0, *) {
             if let startCallIntent = userActivity.interaction?.intent as? SupportedStartCallIntent {
                 if let contact = startCallIntent.contacts?.first {
+                    var processed = false
                     if let handle = contact.personHandle?.value {
                         if let userId = Int32(handle) {
+                            if let context = self.contextValue {
+                                let _ = context.context.sharedContext.callManager?.requestCall(account: context.context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
+                                processed = true
+                            }
+                        }
+                    }
+                    if !processed, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                        let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
+                        if let userId = Int32(string) {
                             if let context = self.contextValue {
                                 let _ = context.context.sharedContext.callManager?.requestCall(account: context.context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
                             }
@@ -1641,8 +1672,8 @@ final class SharedApplicationContext {
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                    if let id = Int32(string) {
-                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), activateInput: true)
+                    if let userId = Int32(string) {
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activateInput: true)
                     }
                 }
             }

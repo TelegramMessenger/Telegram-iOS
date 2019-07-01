@@ -246,7 +246,7 @@ public final class CallListController: ViewController {
         }
         
         self.controllerNode.updateState { state in
-            return state.withUpdatedEditing(false)
+            return state.withUpdatedEditing(false).withUpdatedMessageIdWithRevealedOptions(nil)
         }
     }
     

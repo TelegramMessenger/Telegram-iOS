@@ -1052,7 +1052,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             |> then(
                 contextValue.get()
                 |> mapToSignal { context -> Signal<Bool, NoError> in
-                    return context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.notificationsPermissionWarningKey())
+                    return context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .notifications)!)
                     |> map { noticeView -> Bool in
                         let timestamp = noticeView.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                         if let timestamp = timestamp, timestamp > 0 {
@@ -1246,7 +1246,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let controller = SettingsControllerImpl(currentContext: context, contextValue: contextValue, state: signal, tabBarItem: tabBarItem, accountsAndPeers: accountsAndPeers.get())
     pushControllerImpl = { [weak controller] value in
-        (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
+        (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true, animationOptions: [.removeOnMasterDetails])
     }
     presentControllerImpl = { [weak controller] value, arguments in
         controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet), blockInteraction: true)
@@ -1347,15 +1347,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             context.sharedContext.switchToAccount(id: id)
         })
     }
-    var didAppear = false
-    controller.didAppear = { [weak controller] _ in
+    controller.didAppear = { _ in
         updatePassport()
         updateNotifyExceptions()
-        
-        if !didAppear {
-            (controller?.displayNode as? ItemListControllerNode<SettingsEntry>)?.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-            didAppear = true
-        }
     }
     controller.previewItemWithTag = { tag in
         if let tag = tag as? SettingsEntryTag, case let .account(id) = tag {

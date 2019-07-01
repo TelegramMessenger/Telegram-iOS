@@ -39,10 +39,9 @@ func matchingCloudContacts(postbox: Postbox, contacts: [MatchingDeviceContact]) 
         var result: [(String, TelegramUser)] = []
         outer: for peerId in transaction.getContactPeerIds() {
             if let peer = transaction.getPeer(peerId) as? TelegramUser, let phone = peer.phone {
-                let formattedPhone = formatPhoneNumber(phone)
                 for contact in contacts {
                     for phoneNumber in contact.phoneNumbers {
-                        if formatPhoneNumber(phoneNumber) == formattedPhone {
+                        if arePhoneNumbersEqual(phoneNumber, phone) {
                             result.append((contact.stableId, peer))
                             continue outer
                         }

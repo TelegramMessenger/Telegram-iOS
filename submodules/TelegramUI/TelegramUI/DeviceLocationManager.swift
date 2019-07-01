@@ -54,7 +54,7 @@ final class DeviceLocationManager: NSObject, CLLocationManagerDelegate {
         }
         self.manager.delegate = self
         self.manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
-        self.manager.distanceFilter = 20.0
+        self.manager.distanceFilter = 10.0
         self.manager.activityType = .other
         self.manager.pausesLocationUpdatesAutomatically = false
     }

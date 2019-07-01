@@ -134,6 +134,8 @@ func generateChatInputTextEntities(_ text: NSAttributedString) -> [MessageTextEn
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Code))
             } else if key == ChatTextInputAttributes.strikethrough {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Strikethrough))
+            } else if key == ChatTextInputAttributes.underline {
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Underline))
             } else if key == ChatTextInputAttributes.textMention, let value = value as? ChatTextInputTextMentionAttribute {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextMention(peerId: value.peerId)))
             } else if key == ChatTextInputAttributes.textUrl, let value = value as? ChatTextInputTextUrlAttribute {

@@ -173,6 +173,18 @@
 		09C5732D2172953900BDF00F /* TGBridgeLocationVenue+TGTableItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572FF2172953600BDF00F /* TGBridgeLocationVenue+TGTableItem.m */; };
 		09CFB212217299E80083F7A3 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09CFB211217299E80083F7A3 /* CoreLocation.framework */; };
 		09D30420217418EC00C00567 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D09DCBB51D0C856B00F51FFE /* Localizable.strings */; };
+		09E9600722C23FF200B13673 /* BlackNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600122C23FF000B13673 /* BlackNotificationIcon@3x.png */; };
+		09E9600822C23FF200B13673 /* BlackNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600222C23FF000B13673 /* BlackNotificationIcon.png */; };
+		09E9600922C23FF200B13673 /* BlueNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600322C23FF000B13673 /* BlueNotificationIcon.png */; };
+		09E9600A22C23FF200B13673 /* BlueNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600422C23FF100B13673 /* BlueNotificationIcon@2x.png */; };
+		09E9600B22C23FF200B13673 /* BlackNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600522C23FF100B13673 /* BlackNotificationIcon@2x.png */; };
+		09E9600C22C23FF200B13673 /* BlueNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600622C23FF100B13673 /* BlueNotificationIcon@3x.png */; };
+		09E9601322C2441000B13673 /* BlackClassicNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600D22C2440E00B13673 /* BlackClassicNotificationIcon@2x.png */; };
+		09E9601422C2441000B13673 /* BlackClassicNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600E22C2440E00B13673 /* BlackClassicNotificationIcon@3x.png */; };
+		09E9601522C2441000B13673 /* BlueClassicNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600F22C2440F00B13673 /* BlueClassicNotificationIcon.png */; };
+		09E9601622C2441000B13673 /* BlueClassicNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9601022C2440F00B13673 /* BlueClassicNotificationIcon@2x.png */; };
+		09E9601722C2441000B13673 /* BlackClassicNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9601122C2440F00B13673 /* BlackClassicNotificationIcon.png */; };
+		09E9601822C2441000B13673 /* BlueClassicNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9601222C2441000B13673 /* BlueClassicNotificationIcon@3x.png */; };
 		09EBE2A522B004EA00F670AB /* BlueFilledIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE29922B004E800F670AB /* BlueFilledIconIpad.png */; };
 		09EBE2A622B004EA00F670AB /* BlueIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE29A22B004E800F670AB /* BlueIconIpad@2x.png */; };
 		09EBE2A722B004EA00F670AB /* BlueIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE29B22B004E900F670AB /* BlueIconIpad.png */; };
@@ -185,6 +197,7 @@
 		09EBE2AE22B004EA00F670AB /* BlueFilledIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE2A222B004E900F670AB /* BlueFilledIconIpad@2x.png */; };
 		09EBE2AF22B004EA00F670AB /* BlackIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE2A322B004E900F670AB /* BlackIconIpad@2x.png */; };
 		09EBE2B022B004EA00F670AB /* BlueFilledIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE2A422B004E900F670AB /* BlueFilledIconLargeIpad@2x.png */; };
+		09EC0DE322C6339700E7185B /* IntentMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DE222C6339700E7185B /* IntentMessages.swift */; };
 		09FDAEE62140477F00BF856F /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */; };
 		D000CACF21FB6E380011B15D /* NotificationService.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D000CAC821FB6E370011B15D /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D001D5AA1F878DA300DF975A /* PhoneCountries.txt in Resources */ = {isa = PBXBuildFile; fileRef = D001D5A91F878DA300DF975A /* PhoneCountries.txt */; };
@@ -803,6 +816,18 @@
 		09C573152172953800BDF00F /* TGBridgeLocationVenue+TGTableItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "TGBridgeLocationVenue+TGTableItem.h"; path = "Bridge/TGBridgeLocationVenue+TGTableItem.h"; sourceTree = "<group>"; };
 		09CFB211217299E80083F7A3 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS5.0.sdk/System/Library/Frameworks/CoreLocation.framework; sourceTree = DEVELOPER_DIR; };
 		09D304212174335F00C00567 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
+		09E9600122C23FF000B13673 /* BlackNotificationIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackNotificationIcon@3x.png"; sourceTree = "<group>"; };
+		09E9600222C23FF000B13673 /* BlackNotificationIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlackNotificationIcon.png; sourceTree = "<group>"; };
+		09E9600322C23FF000B13673 /* BlueNotificationIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueNotificationIcon.png; sourceTree = "<group>"; };
+		09E9600422C23FF100B13673 /* BlueNotificationIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueNotificationIcon@2x.png"; sourceTree = "<group>"; };
+		09E9600522C23FF100B13673 /* BlackNotificationIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackNotificationIcon@2x.png"; sourceTree = "<group>"; };
+		09E9600622C23FF100B13673 /* BlueNotificationIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueNotificationIcon@3x.png"; sourceTree = "<group>"; };
+		09E9600D22C2440E00B13673 /* BlackClassicNotificationIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicNotificationIcon@2x.png"; sourceTree = "<group>"; };
+		09E9600E22C2440E00B13673 /* BlackClassicNotificationIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicNotificationIcon@3x.png"; sourceTree = "<group>"; };
+		09E9600F22C2440F00B13673 /* BlueClassicNotificationIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueClassicNotificationIcon.png; sourceTree = "<group>"; };
+		09E9601022C2440F00B13673 /* BlueClassicNotificationIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicNotificationIcon@2x.png"; sourceTree = "<group>"; };
+		09E9601122C2440F00B13673 /* BlackClassicNotificationIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlackClassicNotificationIcon.png; sourceTree = "<group>"; };
+		09E9601222C2441000B13673 /* BlueClassicNotificationIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicNotificationIcon@3x.png"; sourceTree = "<group>"; };
 		09EBE29922B004E800F670AB /* BlueFilledIconIpad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueFilledIconIpad.png; sourceTree = "<group>"; };
 		09EBE29A22B004E800F670AB /* BlueIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueIconIpad@2x.png"; sourceTree = "<group>"; };
 		09EBE29B22B004E900F670AB /* BlueIconIpad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueIconIpad.png; sourceTree = "<group>"; };
@@ -815,6 +840,7 @@
 		09EBE2A222B004E900F670AB /* BlueFilledIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueFilledIconIpad@2x.png"; sourceTree = "<group>"; };
 		09EBE2A322B004E900F670AB /* BlackIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackIconIpad@2x.png"; sourceTree = "<group>"; };
 		09EBE2A422B004E900F670AB /* BlueFilledIconLargeIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueFilledIconLargeIpad@2x.png"; sourceTree = "<group>"; };
+		09EC0DE222C6339700E7185B /* IntentMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentMessages.swift; sourceTree = "<group>"; };
 		09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D000CAC021FB6E160011B15D /* NotificationService-HockeyApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-HockeyApp.entitlements"; sourceTree = "<group>"; };
 		D000CAC121FB6E160011B15D /* NotificationService-Fork.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-Fork.entitlements"; sourceTree = "<group>"; };
@@ -1198,6 +1224,18 @@
 		09A218E122A14E5600DE6898 /* App Icons */ = {
 			isa = PBXGroup;
 			children = (
+				09E9601122C2440F00B13673 /* BlackClassicNotificationIcon.png */,
+				09E9600D22C2440E00B13673 /* BlackClassicNotificationIcon@2x.png */,
+				09E9600E22C2440E00B13673 /* BlackClassicNotificationIcon@3x.png */,
+				09E9600F22C2440F00B13673 /* BlueClassicNotificationIcon.png */,
+				09E9601022C2440F00B13673 /* BlueClassicNotificationIcon@2x.png */,
+				09E9601222C2441000B13673 /* BlueClassicNotificationIcon@3x.png */,
+				09E9600222C23FF000B13673 /* BlackNotificationIcon.png */,
+				09E9600522C23FF100B13673 /* BlackNotificationIcon@2x.png */,
+				09E9600122C23FF000B13673 /* BlackNotificationIcon@3x.png */,
+				09E9600322C23FF000B13673 /* BlueNotificationIcon.png */,
+				09E9600422C23FF100B13673 /* BlueNotificationIcon@2x.png */,
+				09E9600622C23FF100B13673 /* BlueNotificationIcon@3x.png */,
 				09A4192E22B7A4D400637EB4 /* BlackClassicIconIpad.png */,
 				09A4192F22B7A4D400637EB4 /* BlackClassicIconIpad@2x.png */,
 				09A4192B22B7A4D400637EB4 /* BlackClassicIconLargeIpad@2x.png */,
@@ -2283,6 +2321,7 @@
 				D021D4DB219CB1020064BEBA /* SiriIntents-Fork.entitlements */,
 				D0D268781D79A70A00C422DA /* IntentHandler.swift */,
 				D08985062119B7FE00918162 /* IntentContacts.swift */,
+				09EC0DE222C6339700E7185B /* IntentMessages.swift */,
 				D0D2687A1D79A70A00C422DA /* Info.plist */,
 				D08985052118B62400918162 /* SiriIntents-Bridging-Header.h */,
 			);
@@ -2681,11 +2720,13 @@
 				D04DCC211F71C80000B021D7 /* 0.m4a in Resources */,
 				D04DCC261F71C80000B021D7 /* 103.m4a in Resources */,
 				09A218F222A1570A00DE6898 /* BlueFilledIcon@2x.png in Resources */,
+				09E9600922C23FF200B13673 /* BlueNotificationIcon.png in Resources */,
 				090E777722A6945900CD99F5 /* BlueClassicIcon@2x.png in Resources */,
 				D0CE6F69213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D08DB0C0213F4D1D00F2ADBF /* telegram_sphere@2x.png in Resources */,
 				D08DB0AB213F4D1D00F2ADBF /* ic_bubble@2x.png in Resources */,
 				D04DCC341F71C80000B021D7 /* 7.m4a in Resources */,
+				09E9600722C23FF200B13673 /* BlackNotificationIcon@3x.png in Resources */,
 				09EBE2A522B004EA00F670AB /* BlueFilledIconIpad.png in Resources */,
 				D0CE6F60213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D0CE6F63213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
@@ -2698,8 +2739,12 @@
 				D0E8B8AE2044496C00605593 /* voip_end.caf in Resources */,
 				D0CE6F68213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				09A218EE22A1570A00DE6898 /* BlueFilledIcon@3x.png in Resources */,
+				09E9600C22C23FF200B13673 /* BlueNotificationIcon@3x.png in Resources */,
+				09E9601422C2441000B13673 /* BlackClassicNotificationIcon@3x.png in Resources */,
 				D0CE6F6A213EDA4400BCD44B /* Localizable.strings in Resources */,
 				09A4193522B7A4D500637EB4 /* BlackClassicIconIpad@2x.png in Resources */,
+				09E9601622C2441000B13673 /* BlueClassicNotificationIcon@2x.png in Resources */,
+				09E9601322C2441000B13673 /* BlackClassicNotificationIcon@2x.png in Resources */,
 				D0E8C2DE2285EA55009F26E8 /* BlackIcon@2x.png in Resources */,
 				D09DCBB71D0C856B00F51FFE /* Localizable.strings in Resources */,
 				D0CE6F66213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
@@ -2718,9 +2763,11 @@
 				D04DCC2C1F71C80000B021D7 /* 109.m4a in Resources */,
 				D08DB0BD213F4D1D00F2ADBF /* start_arrow_ipad.png in Resources */,
 				09EBE2AB22B004EA00F670AB /* BlackIconLargeIpad@2x.png in Resources */,
+				09E9601722C2441000B13673 /* BlackClassicNotificationIcon.png in Resources */,
 				D0CE6F64213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D0CE6F6C213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D04DCC231F71C80000B021D7 /* 100.m4a in Resources */,
+				09E9600A22C23FF200B13673 /* BlueNotificationIcon@2x.png in Resources */,
 				09A218EF22A1570A00DE6898 /* BlueIcon@2x.png in Resources */,
 				D04DCC281F71C80000B021D7 /* 105.m4a in Resources */,
 				D08DB0BB213F4D1D00F2ADBF /* private_screw@2x.png in Resources */,
@@ -2742,6 +2789,7 @@
 				D0CE6F59213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D08DB0B9213F4D1D00F2ADBF /* powerful_star@2x.png in Resources */,
 				D04DCC271F71C80000B021D7 /* 104.m4a in Resources */,
+				09E9600B22C23FF200B13673 /* BlackNotificationIcon@2x.png in Resources */,
 				090E777522A6945900CD99F5 /* BlueClassicIcon@3x.png in Resources */,
 				09A218F122A1570A00DE6898 /* BlackFilledIcon@3x.png in Resources */,
 				D04DCC2A1F71C80000B021D7 /* 107.m4a in Resources */,
@@ -2754,6 +2802,7 @@
 				09EBE2B022B004EA00F670AB /* BlueFilledIconLargeIpad@2x.png in Resources */,
 				D0CE6F58213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D08DB0AF213F4D1D00F2ADBF /* ic_pencil@2x.png in Resources */,
+				09E9601822C2441000B13673 /* BlueClassicNotificationIcon@3x.png in Resources */,
 				D0CE6F67213EDA4400BCD44B /* Localizable.strings in Resources */,
 				09A4193322B7A4D500637EB4 /* BlueClassicIconLargeIpad@2x.png in Resources */,
 				D04DCC291F71C80000B021D7 /* 106.m4a in Resources */,
@@ -2787,11 +2836,13 @@
 				090E777622A6945900CD99F5 /* BlackClassicIcon@3x.png in Resources */,
 				D08DB0BF213F4D1D00F2ADBF /* telegram_plane1@2x.png in Resources */,
 				D0E8B8B02044496C00605593 /* voip_ringback.caf in Resources */,
+				09E9600822C23FF200B13673 /* BlackNotificationIcon.png in Resources */,
 				09EBE2A922B004EA00F670AB /* BlackFilledIconLargeIpad@2x.png in Resources */,
 				090E777422A6945900CD99F5 /* BlackClassicIcon@2x.png in Resources */,
 				D00ED75A1FE94630001F38BD /* AppIntentVocabulary.plist in Resources */,
 				D04DCC221F71C80000B021D7 /* 1.m4a in Resources */,
 				09EBE2AD22B004EA00F670AB /* BlackFilledIconIpad.png in Resources */,
+				09E9601522C2441000B13673 /* BlueClassicNotificationIcon.png in Resources */,
 				D0E8C2E02285EA6A009F26E8 /* BlackIcon@3x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3049,6 +3100,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D08985072119B7FE00918162 /* IntentContacts.swift in Sources */,
+				09EC0DE322C6339700E7185B /* IntentMessages.swift in Sources */,
 				D0D268791D79A70A00C422DA /* IntentHandler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

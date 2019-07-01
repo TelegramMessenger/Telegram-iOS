@@ -389,7 +389,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
             }
         }
     }
-    dataPromise.set(dataSignal)
+    dataPromise.set(.single(nil) |> then(dataSignal))
     
     let previousData = Atomic<PeersNearbyData?>(value: nil)
     let displayLoading: Signal<Bool, NoError> = .single(false)

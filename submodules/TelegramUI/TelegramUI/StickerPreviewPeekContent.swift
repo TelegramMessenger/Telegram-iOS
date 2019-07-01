@@ -66,6 +66,8 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
     
     private var textNode: ASTextNode
     private var imageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
+    
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     init(account: Account, item: StickerPreviewPeekItem) {
@@ -80,13 +82,28 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(32.0), textColor: .black)
             break
         }
+        
+        if item.file.isAnimatedSticker {
+            let animationNode = AnimatedStickerNode()
+            self.animationNode = animationNode
+            
+            self.animationNode?.setup(account: account, fileReference: FileMediaReference.standalone(media: item.file), width: 320, height: 320)
+            self.animationNode?.visibility = true
+        } else {
+            self.animationNode = nil
+        }
+        
         self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: false, fetched: true))
         
         super.init()
         
         self.isUserInteractionEnabled = false
         
-        self.addSubnode(self.imageNode)
+        if let animationNode = self.animationNode {
+            self.addSubnode(animationNode)
+        } else {
+            self.addSubnode(self.imageNode)
+        }
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -100,6 +117,10 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
             let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: textSize.height + textSpacing), size: imageSize)
             self.imageNode.frame = imageFrame
+            if let animationNode = self.animationNode {
+                animationNode.frame = imageFrame
+                animationNode.updateLayout(size: imageSize)
+            }
             
             self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0), y: -textSize.height - textSpacing), size: textSize)
             

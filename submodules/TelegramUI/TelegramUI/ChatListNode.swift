@@ -1427,7 +1427,7 @@ final class ChatListNode: ListView {
         }
         
         if let chatLocation = chatLocation {
-            interaction.highlightedChatLocation = ChatListHighlightedLocation(location: chatLocation, progress: 1.0)
+            interaction.highlightedChatLocation = ChatListHighlightedLocation(location: chatLocation, progress: progress)
         } else {
             interaction.highlightedChatLocation = nil
         }

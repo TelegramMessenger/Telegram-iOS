@@ -126,15 +126,20 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                             strongSelf.activityIndicator.stopAnimating()
                         }
                     }
-                }).start(error: { [weak self] _ in
+                }).start(error: { [weak self] error in
                     guard let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
                         return
                     }
                     let text: String
-                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                        text = presentationInterfaceState.strings.Channel_ErrorAccessDenied
-                    } else {
-                        text = presentationInterfaceState.strings.Group_ErrorAccessDenied
+                    switch error {
+                        case .tooMuchJoined:
+                            text = presentationInterfaceState.strings.Join_ChannelsTooMuch
+                        default:
+                            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                                text = presentationInterfaceState.strings.Channel_ErrorAccessDenied
+                            } else {
+                                text = presentationInterfaceState.strings.Group_ErrorAccessDenied
+                            }
                     }
                     strongSelf.interfaceInteraction?.presentController(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationInterfaceState.strings.Common_OK, action: {})]), nil)
                 }))

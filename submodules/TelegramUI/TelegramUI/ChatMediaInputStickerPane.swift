@@ -103,6 +103,14 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
                 fixGridScrolling(strongSelf.gridNode)
             }
         }
+        self.gridNode.setupNode = { [weak self] itemNode in
+            guard let strongSelf = self else {
+                return
+            }
+            if let itemNode = itemNode as? ChatMediaInputStickerGridItemNode {
+                itemNode.updateIsPanelVisible(strongSelf.isPaneVisible)
+            }
+        }
         self.gridNode.scrollView.alwaysBounceVertical = true
     }
     
@@ -152,10 +160,9 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
         
         if self.isPaneVisible != isVisible {
             self.isPaneVisible = isVisible
-            if isVisible {
-                self.gridNode.forEachItemNode { itemNode in
-                    if let _ = itemNode as? ChatMediaInputStickerGridItemNode {
-                    }
+            self.gridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ChatMediaInputStickerGridItemNode {
+                    itemNode.updateIsPanelVisible(isVisible)
                 }
             }
         }

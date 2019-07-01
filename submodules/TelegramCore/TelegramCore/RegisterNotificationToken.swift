@@ -27,7 +27,7 @@ public func unregisterNotificationToken(account: Account, token: Data, type: Not
     |> ignoreValues
 }
 
-public func registerNotificationToken(account: Account, token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [Int32]) -> Signal<Never, NoError> {
+public func registerNotificationToken(account: Account, token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [Int32], excludeMutedChats: Bool) -> Signal<Never, NoError> {
     return masterNotificationsKey(account: account, ignoreDisabled: false)
     |> mapToSignal { masterKey -> Signal<Never, NoError> in
         let mappedType: Int32
@@ -42,7 +42,11 @@ public func registerNotificationToken(account: Account, token: Data, type: Notif
                 mappedType = 9
                 keyData = masterKey.data
         }
-        return account.network.request(Api.functions.account.registerDevice(tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds))
+        var flags: Int32 = 0
+        if excludeMutedChats {
+            flags |= 1 << 0
+        }
+        return account.network.request(Api.functions.account.registerDevice(flags: flags, tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds))
         |> retryRequest
         |> ignoreValues
     }

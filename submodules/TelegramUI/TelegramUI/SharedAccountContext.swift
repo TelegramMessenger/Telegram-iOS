@@ -671,15 +671,23 @@ public final class SharedAccountContext {
         sandbox = false
         #endif
         
-        let allAccounts = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
-        |> map { sharedData -> Bool in
+        let settings = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+        |> map { sharedData -> (allAccounts: Bool, includeMuted: Bool) in
             let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
-            return settings.displayNotificationsFromAllAccounts
+            return (settings.displayNotificationsFromAllAccounts, settings.totalUnreadCountDisplayStyle == .raw)
         }
-        |> distinctUntilChanged
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            if lhs.allAccounts != rhs.allAccounts {
+                return false
+            }
+            if lhs.includeMuted != rhs.includeMuted {
+                return false
+            }
+            return true
+        })
         
-        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), allAccounts, self.activeAccounts)
-        |> mapToSignal { allAccounts, activeAccountsAndInfo -> Signal<Never, NoError> in
+        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, self.activeAccounts)
+        |> mapToSignal { settings, activeAccountsAndInfo -> Signal<Never, NoError> in
             let (primary, activeAccounts, _) = activeAccountsAndInfo
             var applied: [Signal<Never, NoError>] = []
             var activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
@@ -688,7 +696,7 @@ public final class SharedAccountContext {
             let allProductionUserIds = activeProductionUserIds
             let allTestingUserIds = activeTestingUserIds
             
-            if !allAccounts {
+            if !settings.allAccounts {
                 if let primary = primary {
                     if !primary.testingEnvironment {
                         activeProductionUserIds = [primary.peerId.id]
@@ -737,7 +745,7 @@ public final class SharedAccountContext {
                         } else {
                             encrypt = false
                         }
-                        return registerNotificationToken(account: account, token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }))
+                        return registerNotificationToken(account: account, token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
                     }
                     appliedVoip = self.voipNotificationToken
                     |> distinctUntilChanged(isEqual: { $0 == $1 })
@@ -745,7 +753,7 @@ public final class SharedAccountContext {
                         guard let token = token else {
                             return .complete()
                         }
-                        return registerNotificationToken(account: account, token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }))
+                        return registerNotificationToken(account: account, token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
                     }
                 }
                 

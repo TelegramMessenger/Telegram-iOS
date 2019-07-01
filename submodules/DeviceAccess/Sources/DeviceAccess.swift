@@ -179,11 +179,11 @@ public final class DeviceAccess {
                         func statusForCellularState(_ state: CTCellularDataRestrictedState) -> AccessType? {
                             switch state {
                                 case .restricted:
-                                    return .denied
+                                    return .allowed
                                 case .notRestricted:
                                     return .allowed
                                 default:
-                                    return nil
+                                    return .allowed
                             }
                         }
                         let cellState = CTCellularData.init()
@@ -196,7 +196,7 @@ public final class DeviceAccess {
                             }
                         }
                     } else {
-                        subscriber.putNext(.notDetermined)
+                        subscriber.putNext(.allowed)
                         subscriber.putCompletion()
                     }
                     return EmptyDisposable
@@ -446,8 +446,12 @@ public final class DeviceAccess {
                             completion(result)
                         }
                     }
-                default:
-                    break
+                case .cellularData:
+                    if let presentationData = presentationData {
+                        present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Permissions_CellularDataTitle_v0, text: presentationData.strings.Permissions_CellularDataText_v0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                            openSettings()
+                        })]), nil)
+                    }
             }
     }
 }

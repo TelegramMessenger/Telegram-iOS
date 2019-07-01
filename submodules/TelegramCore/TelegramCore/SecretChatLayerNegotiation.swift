@@ -7,7 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-private let topSupportedLayer: SecretChatSequenceBasedLayer = .layer73
+private let topSupportedLayer: SecretChatSequenceBasedLayer = .layer101
 
 func secretChatCommonSupportedLayer(remoteLayer: Int32) -> SecretChatSequenceBasedLayer {
     switch remoteLayer {
@@ -15,6 +15,8 @@ func secretChatCommonSupportedLayer(remoteLayer: Int32) -> SecretChatSequenceBas
             return .layer46
         case 73:
             return .layer73
+        case 101:
+            return .layer101
         default:
             return topSupportedLayer
     }

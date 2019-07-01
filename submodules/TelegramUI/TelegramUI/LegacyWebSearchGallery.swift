@@ -261,7 +261,8 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
         representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil)
         thumbnailSignal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: .standalone(media: tmpImage), autoFetchFullSize: false)
-        |> mapToSignal { (thumbnailData, _, _) -> Signal<UIImage, NoError> in
+        |> mapToSignal { value -> Signal<UIImage, NoError> in
+            let thumbnailData = value._0
             if let data = thumbnailData, let image = UIImage(data: data) {
                 return .single(image)
             } else {
@@ -269,7 +270,11 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
             }
         }
         originalSignal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: .standalone(media: tmpImage), autoFetchFullSize: true)
-        |> mapToSignal { (thumbnailData, fullSizeData, fullSizeComplete) -> Signal<UIImage, NoError> in
+        |> mapToSignal { value -> Signal<UIImage, NoError> in
+            let thumbnailData = value._0
+            let fullSizeData = value._1
+            let fullSizeComplete = value._2
+            
             if fullSizeComplete, let data = fullSizeData, let image = UIImage(data: data) {
                 return .single(image)
             } else if let data = thumbnailData, let image = UIImage(data: data) {

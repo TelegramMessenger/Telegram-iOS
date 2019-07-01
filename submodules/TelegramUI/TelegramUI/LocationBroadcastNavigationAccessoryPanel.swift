@@ -32,7 +32,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     private let separatorNode: ASDisplayNode
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
-    private var peersAndMode: ([Peer], LocationBroadcastNavigationAccessoryPanelMode)?
+    private var peersAndMode: ([Peer], LocationBroadcastNavigationAccessoryPanelMode, Bool)?
     
     init(accountPeerId: PeerId, theme: PresentationTheme, strings: PresentationStrings, tapAction: @escaping () -> Void, close: @escaping () -> Void) {
         self.accountPeerId = accountPeerId
@@ -108,7 +108,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         
         let titleString = NSAttributedString(string: self.strings.Conversation_LiveLocation, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
         var subtitleString: NSAttributedString?
-        if let (peers, mode) = self.peersAndMode {
+        if let (peers, mode, canClose) = self.peersAndMode {
             switch mode {
                 case .summary:
                     let text: String
@@ -119,6 +119,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
                     }
                     subtitleString = NSAttributedString(string: text, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                 case .peer:
+                    self.closeButton.isHidden = !canClose
                     let filteredPeers = peers.filter {
                         $0.id != self.accountPeerId
                     }
@@ -172,8 +173,8 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
     }
     
-    func update(peers: [Peer], mode: LocationBroadcastNavigationAccessoryPanelMode) {
-        self.peersAndMode = (peers, mode)
+    func update(peers: [Peer], mode: LocationBroadcastNavigationAccessoryPanelMode, canClose: Bool) {
+        self.peersAndMode = (peers, mode, canClose)
         if let layout = validLayout {
             self.updateLayout(size: layout.0, leftInset: layout.1, rightInset: layout.2, transition: .immediate)
         }

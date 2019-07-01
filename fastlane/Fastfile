@@ -16,6 +16,7 @@ app_identifier_llc = [
 signing_identity_llc = "iPhone Distribution: Digital Fortress LLC (C67CF9S4VU)"
 
 lane :do_build_app do |options|
+  puts("Building with build number: " + options[:build_number] + ", commit id: " + options[:commit_id])
   gym(
     workspace: "Telegram-iOS.xcworkspace",
     configuration: options[:configuration],
@@ -39,16 +40,12 @@ lane :do_build_app do |options|
 end
 
 lane :build_for_appstore do |options|
-  commit = last_git_commit
-  commit_count = sh("git rev-list --count HEAD")
-  commit_count_int = commit_count.to_i + 1000
-  commit_count_string = commit_count_int.to_s
   do_build_app(
   	configuration: "ReleaseAppStoreLLC",
     scheme: "Telegram-iOS-AppStoreLLC",
     export_method: "app-store",
-    build_number: commit_count_string,
-    commit_id: commit[:commit_hash],
+    build_number: options[:build_number],
+    commit_id: options[:commit_hash],
     signingCertificate: signing_identity_llc,
     provisioningProfiles: { 
       base_app_identifier_llc => "match AppStore " + base_app_identifier_llc,
@@ -63,4 +60,6 @@ lane :build_for_appstore do |options|
   )
 end
 
-import "../../Telegram-iOS-Shared/fastlane/Fastfile"
+if File.exists?("../../Telegram-iOS-Shared/fastlane/Fastfile")
+  import "../../Telegram-iOS-Shared/fastlane/Fastfile"
+end

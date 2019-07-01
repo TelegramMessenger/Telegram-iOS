@@ -1,9 +1,10 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 import Metal
 
-#if !targetEnvironment(simulator)
+#if false//!targetEnvironment(simulator)
 
 final class MetalAnimationRenderer: ASDisplayNode, AnimationRenderer {
     private let device: MTLDevice
@@ -55,12 +56,12 @@ vertex VertexOut basic_vertex(
 fragment float4 basic_fragment(
     VertexOut interpolated [[stage_in]],
     texture2d<float> texColor [[ texture(0) ]],
-    sampler samplerColor [[ sampler(0) ]],
-    texture2d<float> texA [[ texture(1) ]],
-    sampler samplerA [[ sampler(1) ]]
+    sampler samplerColor [[ sampler(0) ]]//,
+    //texture2d<float> texA [[ texture(1) ]],
+    //sampler samplerA [[ sampler(1) ]]
 ) {
     float4 color = texColor.sample(samplerColor, interpolated.texCoord);
-    float4 alpha = texA.sample(samplerA, interpolated.texCoord);
+    float4 alpha = 1.0;//texA.sample(samplerA, interpolated.texCoord);
     return float4(color.r * alpha.a, color.g * alpha.a, color.b * alpha.a, alpha.a);
 }
 """, options: nil)
@@ -89,7 +90,7 @@ fragment float4 basic_fragment(
             let dataSize = vertexData.count * MemoryLayout.size(ofValue: vertexData[0])
             self.vertexBuffer = device.makeBuffer(bytes: vertexData, length: dataSize, options: [])!
             
-            let colorTextureDesc: MTLTextureDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgrg422, width: 320, height: 320, mipmapped: false)
+            let colorTextureDesc: MTLTextureDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .pvrtc_rgb_4bpp, width: 512, height: 512, mipmapped: false)
             colorTextureDesc.sampleCount = 1
             if #available(iOS 9.0, *) {
                 colorTextureDesc.storageMode = .private
@@ -140,16 +141,16 @@ fragment float4 basic_fragment(
         self.metalLayer.contentsScale = 2.0
     }
     
-    func render(width: Int, height: Int, bytes: UnsafeRawPointer, length: Int) {
+    func render(queue: Queue, width: Int, height: Int, bytes: UnsafeRawPointer, length: Int, completion: @escaping () -> Void) {
         if self.metalLayer.bounds.width.isZero {
             return
         }
         
         let bgrgLength = width * 2 * height
-        let alphaLength = width * height
+        //let alphaLength = width * height
         
-        self.colorTexture.replace(region: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0, withBytes: bytes.assumingMemoryBound(to: UInt8.self), bytesPerRow: width * 2)
-        self.alphaTexture.replace(region: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0, withBytes: bytes.assumingMemoryBound(to: UInt8.self).advanced(by: bgrgLength), bytesPerRow: width)
+        self.colorTexture.replace(region: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0, withBytes: bytes.assumingMemoryBound(to: UInt8.self), bytesPerRow: width / 2)
+        //self.alphaTexture.replace(region: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0, withBytes: bytes.assumingMemoryBound(to: UInt8.self).advanced(by: bgrgLength), bytesPerRow: width)
         
         let renderPassDescriptor = MTLRenderPassDescriptor()
         let drawable = self.metalLayer.nextDrawable()!

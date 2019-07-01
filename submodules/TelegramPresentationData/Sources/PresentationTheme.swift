@@ -331,8 +331,9 @@ public final class PresentationThemeList {
     public let mediaPlaceholderColor: UIColor
     public let scrollIndicatorColor: UIColor
     public let pageIndicatorInactiveColor: UIColor
+    public let inputClearButtonColor: UIColor
     
-    public init(blocksBackgroundColor: UIColor, plainBackgroundColor: UIColor, itemPrimaryTextColor: UIColor, itemSecondaryTextColor: UIColor, itemDisabledTextColor: UIColor, itemAccentColor: UIColor, itemHighlightedColor: UIColor, itemDestructiveColor: UIColor, itemPlaceholderTextColor: UIColor, itemBlocksBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemBlocksSeparatorColor: UIColor, itemPlainSeparatorColor: UIColor, disclosureArrowColor: UIColor, sectionHeaderTextColor: UIColor, freeTextColor: UIColor, freeTextErrorColor: UIColor, freeTextSuccessColor: UIColor, freeMonoIcon: UIColor, itemSwitchColors: PresentationThemeSwitch, itemDisclosureActions: PresentationThemeItemDisclosureActions, itemCheckColors: PresentationThemeCheck, controlSecondaryColor: UIColor, freeInputField: PresentationInputFieldTheme, mediaPlaceholderColor: UIColor, scrollIndicatorColor: UIColor, pageIndicatorInactiveColor: UIColor) {
+    public init(blocksBackgroundColor: UIColor, plainBackgroundColor: UIColor, itemPrimaryTextColor: UIColor, itemSecondaryTextColor: UIColor, itemDisabledTextColor: UIColor, itemAccentColor: UIColor, itemHighlightedColor: UIColor, itemDestructiveColor: UIColor, itemPlaceholderTextColor: UIColor, itemBlocksBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemBlocksSeparatorColor: UIColor, itemPlainSeparatorColor: UIColor, disclosureArrowColor: UIColor, sectionHeaderTextColor: UIColor, freeTextColor: UIColor, freeTextErrorColor: UIColor, freeTextSuccessColor: UIColor, freeMonoIcon: UIColor, itemSwitchColors: PresentationThemeSwitch, itemDisclosureActions: PresentationThemeItemDisclosureActions, itemCheckColors: PresentationThemeCheck, controlSecondaryColor: UIColor, freeInputField: PresentationInputFieldTheme, mediaPlaceholderColor: UIColor, scrollIndicatorColor: UIColor, pageIndicatorInactiveColor: UIColor, inputClearButtonColor: UIColor) {
         self.blocksBackgroundColor = blocksBackgroundColor
         self.plainBackgroundColor = plainBackgroundColor
         self.itemPrimaryTextColor = itemPrimaryTextColor
@@ -360,6 +361,7 @@ public final class PresentationThemeList {
         self.mediaPlaceholderColor = mediaPlaceholderColor
         self.scrollIndicatorColor = scrollIndicatorColor
         self.pageIndicatorInactiveColor = pageIndicatorInactiveColor
+        self.inputClearButtonColor = inputClearButtonColor
     }
 }
 
@@ -500,7 +502,7 @@ public func bubbleColorComponents(theme: PresentationTheme, incoming: Bool, wall
 
 public func bubbleVariableColor(variableColor: PresentationThemeVariableColor, wallpaper: TelegramWallpaper) -> UIColor {
     switch wallpaper {
-        case .builtin, .color(0xffffff):
+        case .color(0xffffff):
             return variableColor.withoutWallpaper
         default:
             return variableColor.withWallpaper
@@ -708,7 +710,7 @@ public func serviceMessageColorComponents(theme: PresentationTheme, wallpaper: T
 
 public func serviceMessageColorComponents(chatTheme: PresentationThemeChat, wallpaper: TelegramWallpaper) -> PresentationThemeServiceMessageColorComponents {
     switch wallpaper {
-        case .builtin, .color(0xffffff):
+        case .color(0xffffff):
             return chatTheme.serviceMessage.components.withDefaultWallpaper
         default:
             return chatTheme.serviceMessage.components.withCustomWallpaper

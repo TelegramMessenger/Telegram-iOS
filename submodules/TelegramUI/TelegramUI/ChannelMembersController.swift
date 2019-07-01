@@ -376,6 +376,8 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                 switch error {
                     case .limitExceeded:
                         text = presentationData.strings.Channel_ErrorAddTooMuch
+                    case .tooMuchJoined:
+                        text = presentationData.strings.Invite_ChannelsTooMuch
                     case .generic:
                         text = presentationData.strings.Login_UnknownError
                     case .restricted:

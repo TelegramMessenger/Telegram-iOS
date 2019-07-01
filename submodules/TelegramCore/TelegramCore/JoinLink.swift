@@ -14,6 +14,11 @@
     #endif
 #endif
 
+public enum JoinLinkError {
+    case generic
+    case tooMuchJoined
+}
+
 func apiUpdatesGroups(_ updates: Api.Updates) -> [Api.Chat] {
     switch updates {
         case let .updates( _, _, chats, _, _):
@@ -31,30 +36,30 @@ public enum ExternalJoiningChatState {
     case invalidHash
 }
 
-public func joinChatInteractively(with hash: String, account: Account) -> Signal <PeerId?, NoError> {
+public func joinChatInteractively(with hash: String, account: Account) -> Signal <PeerId?, JoinLinkError> {
     return account.network.request(Api.functions.messages.importChatInvite(hash: hash))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-        return .single(nil)
-    }
-    |> mapToSignal { updates -> Signal<PeerId?, NoError> in
-        if let updates = updates {
-            account.stateManager.addUpdates(updates)
-            if let peerId = apiUpdatesGroups(updates).first?.peerId {
-                return account.postbox.multiplePeersView([peerId])
-                |> filter { view in
-                    return view.peers[peerId] != nil
-                }
-                |> take(1)
-                |> map { _ in
-                    return peerId
-                }
-                |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
-            }
-            return .single(nil)
+    |> mapError { error -> JoinLinkError in
+        if error.errorDescription == "CHANNELS_TOO_MUCH" {
+            return .tooMuchJoined
         } else {
-            return .single(nil)
+            return .generic
         }
+    }
+    |> mapToSignal { updates -> Signal<PeerId?, JoinLinkError> in
+        account.stateManager.addUpdates(updates)
+        if let peerId = apiUpdatesGroups(updates).first?.peerId {
+            return account.postbox.multiplePeersView([peerId])
+            |> introduceError(JoinLinkError.self)
+            |> filter { view in
+                return view.peers[peerId] != nil
+            }
+            |> take(1)
+            |> map { _ in
+                return peerId
+            }
+            |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil) |> introduceError(JoinLinkError.self))
+        }
+        return .single(nil)
     }
 }
 

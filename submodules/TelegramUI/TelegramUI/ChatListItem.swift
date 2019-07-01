@@ -505,7 +505,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
     }
     
-    func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+    var reallyHighlighted: Bool {
         var reallyHighlighted = self.isHighlighted
         if let item = self.item {
             if let itemChatLocation = item.content.chatLocation {
@@ -514,6 +514,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
         }
+        return reallyHighlighted
+    }
+    
+    func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+        
+        let highlightProgress: CGFloat = self.item?.interaction.highlightedChatLocation?.progress ?? 1.0
         
         if reallyHighlighted {
             if self.highlightedBackgroundNode.supernode == nil {
@@ -521,14 +527,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 self.highlightedBackgroundNode.alpha = 0.0
             }
             self.highlightedBackgroundNode.layer.removeAllAnimations()
-            transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0)
+            transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: highlightProgress)
             
             if let item = self.item {
                 self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted))
             }
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
-                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 0.0, completion: { [weak self] completed in
+                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0 - highlightProgress, completion: { [weak self] completed in
                     if let strongSelf = self {
                         if completed {
                             strongSelf.highlightedBackgroundNode.removeFromSupernode()
@@ -726,7 +732,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var contentImageMedia: Media?
             
             switch contentData {
-                case let .chat(itemPeer, peer, _, messageText):
+                case let .chat(itemPeer, _, _, messageText):
                     let messageText = messageText.replacingOccurrences(of: "\n\n", with: " ")
                     
                     if inlineAuthorPrefix == nil, let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
@@ -749,7 +755,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             if let messagePeer = itemPeer.chatMainPeer {
                                 peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                             }
-                        } else if let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
+                        } else if let author = message.author as? TelegramUser, let peer = itemPeer.chatMainPeer, !(peer is TelegramUser) {
                             if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                             } else {
                                 peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
@@ -821,12 +827,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             switch contentData {
-                case let .chat(_, peer, _, _):
+                case let .chat(itemPeer, _, _, _):
                     if isPeerGroup {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_ArchivedChatsTitle, font: titleFont, textColor: theme.titleColor)
-                    } else if peer?.id == item.context.account.peerId {
+                    } else if itemPeer.chatMainPeer?.id == item.context.account.peerId {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
-                    } else if let displayTitle = peer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
+                    } else if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
                 case .group:
@@ -934,7 +940,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
                 titleIconsWidth += currentMutedIconImage.size.width
             }
-            
     
             let isSecret = !isPeerGroup && item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat
             if isSecret {
@@ -1194,7 +1199,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.onlineNode, frame: onlineFrame)
                     
                     let onlineIcon: UIImage?
-                    if strongSelf.isHighlighted {
+                    if strongSelf.reallyHighlighted {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted)
                     } else if item.index.pinningIndex != nil {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned)
@@ -1527,7 +1532,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let textDeltaX = textFrame.origin.x - contentRect.origin.x
             transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textDeltaX, y: 0.0))
             textFrame.origin.x = contentRect.origin.x
-            self.textNode.frame = textFrame
+            transition.updateFrame(node: textNode, frame: textFrame)
             
             var contentImageFrame = self.contentImageNode.frame
             contentImageFrame.origin = textFrame.origin.offsetBy(dx: 1.0, dy: 0.0)

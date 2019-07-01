@@ -242,7 +242,6 @@
 		D07A5CFC1BBDE6E400451791 /* Promise.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Promise.swift; sourceTree = "<group>"; };
 		D09FD73C1BA9BAB900FF0A4F /* SVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SVariable.h; sourceTree = "<group>"; };
 		D09FD73D1BA9BAB900FF0A4F /* SVariable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SVariable.m; sourceTree = "<group>"; };
-		D0B417E71D7DFA40004562A4 /* SwiftSignalKit copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "SwiftSignalKit copy-Info.plist"; path = "/Users/peter/Documents/Telegram-iOS/submodules/SSignalKit/SwiftSignalKit copy-Info.plist"; sourceTree = "<absolute>"; };
 		D0B417ED1D7DFA63004562A4 /* SwiftSignalKitMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SwiftSignalKitMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0B417EF1D7DFA63004562A4 /* SwiftSignalKitMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SwiftSignalKitMac.h; sourceTree = "<group>"; };
 		D0B417F01D7DFA63004562A4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -364,7 +363,6 @@
 				D0085B301B282B9800EAF753 /* SwiftSignalKitTests */,
 				D0B417EE1D7DFA63004562A4 /* SwiftSignalKitMac */,
 				D0445DD91A7C2CA500267924 /* Products */,
-				D0B417E71D7DFA40004562A4 /* SwiftSignalKit copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
