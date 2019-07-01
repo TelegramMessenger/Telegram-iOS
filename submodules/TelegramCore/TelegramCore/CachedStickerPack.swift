@@ -113,11 +113,12 @@ func cachedStickerPack(transaction: Transaction, reference: StickerPackReference
     let namespace = Namespaces.ItemCollection.CloudStickerPacks
     if case let .id(id, _) = reference, let currentInfo = transaction.getItemCollectionInfo(collectionId: ItemCollectionId(namespace: namespace, id: id)) as? StickerPackCollectionInfo {
         let items = transaction.getItemCollectionItems(collectionId: ItemCollectionId(namespace: namespace, id: id))
-        return (currentInfo, items, true)
-    } else {
-        if case let .id(id, _) = reference, let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id)))) as? CachedStickerPack, let info = cached.info {
-            return (info, cached.items, false)
+        if !items.isEmpty {
+            return (currentInfo, items, true)
         }
-        return nil
     }
+    if case let .id(id, _) = reference, let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id)))) as? CachedStickerPack, let info = cached.info {
+        return (info, cached.items, false)
+    }
+    return nil
 }
