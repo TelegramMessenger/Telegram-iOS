@@ -72,7 +72,6 @@ public enum MessageActionUrlAuthResult {
     case request(String, Peer, Bool)
 }
 
-
 public func requestMessageActionUrlAuth(account: Account, messageId: MessageId, buttonId: Int32) -> Signal<MessageActionUrlAuthResult, NoError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
