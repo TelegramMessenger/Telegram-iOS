@@ -99,6 +99,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                         animationNode = AnimatedStickerNode()
                         animationNode.transform = self.imageNode.transform
                         animationNode.visibility = self.isVisibleInGrid
+                        animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
                         self.addSubnode(animationNode)
                         self.animationNode = animationNode
                     }
