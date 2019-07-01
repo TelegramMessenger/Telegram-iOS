@@ -639,6 +639,7 @@ VRect VMatrix::map(const VRect &rect) const
     } else {
         // Not supported
         assert(0);
+        return {};
     }
 }
 

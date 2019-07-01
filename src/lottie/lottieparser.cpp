@@ -1250,6 +1250,7 @@ LOTTrimData::TrimType LottieParserImpl::getTrimType()
         break;
     default:
         RAPIDJSON_ASSERT(0);
+        return LOTTrimData::TrimType::Simultaneously;
         break;
     }
 }
