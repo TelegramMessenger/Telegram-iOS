@@ -87,9 +87,7 @@
             }
         }
     }
-    if (bodyText != nil) {
-        [self processMessageWithUserInfo:remoteNotification defaultTitle:titleText defaultBody:bodyText completion:completionHandler];
-    }
+    [self processMessageWithUserInfo:remoteNotification defaultTitle:titleText defaultBody:bodyText completion:completionHandler];
 }
 
 - (void)processMessageWithUserInfo:(NSDictionary *)userInfo defaultTitle:(NSString *)defaultTitle defaultBody:(NSString *)defaultBody completion:(void (^)(WKUserNotificationInterfaceType))completionHandler
@@ -109,7 +107,7 @@
     }
     int32_t messageId = [mid intValue];
     
-    if (peerId == 0 || messageId == 0)
+    if (true || peerId == 0 || messageId == 0)
     {
         if (defaultTitle.length > 0){
             self.nameLabel.hidden = false;

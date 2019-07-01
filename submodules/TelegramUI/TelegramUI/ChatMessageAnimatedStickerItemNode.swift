@@ -20,6 +20,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var shareButtonNode: HighlightableButtonNode?
     
     var telegramFile: TelegramMediaFile?
+    private let disposable = MetaDisposable()
     
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var replyInfoNode: ChatMessageReplyInfoNode?
@@ -45,7 +46,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.addSubnode(self.animationNode)
         self.addSubnode(self.dateAndStatusNode)
     }
-        
+    
+    deinit {
+        self.disposable.dispose()
+    }
+    
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
