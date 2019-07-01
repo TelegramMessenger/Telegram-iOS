@@ -91,13 +91,15 @@ private final class TrendingTopItemNode: ASDisplayNode {
         self.addSubnode(self.imageNode)
     }
     
+    deinit {
+        self.loadDisposable.dispose()
+    }
+    
     func setup(account: Account, item: StickerPackItem, itemSize: CGSize, synchronousLoads: Bool) {
         self.file = item.file
         self.itemSize = itemSize
         
         if item.file.isAnimatedSticker {
-            self.loadDisposable.set(nil)
-            
             let animationNode: AnimatedStickerNode
             if let currentAnimationNode = self.animationNode {
                 animationNode = currentAnimationNode
@@ -114,13 +116,13 @@ private final class TrendingTopItemNode: ASDisplayNode {
             animationNode.setup(account: account, resource: item.file.resource, width: 140, height: 140, mode: .cached)
         } else {
             self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
-            self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
             
             if let currentAnimationNode = self.animationNode {
                 self.animationNode = nil
                 currentAnimationNode.removeFromSupernode()
             }
         }
+        self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
     }
     
     func updatePreviewing(animated: Bool, isPreviewing: Bool) {

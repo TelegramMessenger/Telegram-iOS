@@ -92,8 +92,6 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1.file.id != item.file.id {
             if let dimensions = item.file.dimensions {
                 if item.file.isAnimatedSticker {
-                    self.stickerFetchedDisposable.set(nil)
-                    
                     let animationNode: AnimatedStickerNode
                     if let currentAnimationNode = self.animationNode {
                         animationNode = currentAnimationNode
@@ -111,13 +109,14 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                 } else {
                     self.imageNode.alpha = 1.0
                     self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true))
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
                     
                     if let currentAnimationNode = self.animationNode {
                         self.animationNode = nil
                         currentAnimationNode.removeFromSupernode()
                     }
                 }
+                
+                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
                 
                 self.currentState = (account, item, dimensions)
                 self.setNeedsLayout()
