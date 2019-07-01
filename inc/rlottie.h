@@ -23,26 +23,18 @@
 #include <vector>
 #include <memory>
 
-#ifdef _WIN32
-#ifdef LOT_BUILD
-#ifdef DLL_EXPORT
-#define LOT_EXPORT __declspec(dllexport)
+#if defined _WIN32 || defined __CYGWIN__
+  #ifdef LOT_BUILD
+    #define LOT_EXPORT __declspec(dllexport)
+  #else
+    #define LOT_EXPORT __declspec(dllimport)
+  #endif
 #else
-#define LOT_EXPORT
-#endif
-#else
-#define LOT_EXPORT __declspec(dllimport)
-#endif
-#else
-#ifdef __GNUC__
-#if __GNUC__ >= 4
-#define LOT_EXPORT __attribute__((visibility("default")))
-#else
-#define LOT_EXPORT
-#endif
-#else
-#define LOT_EXPORT
-#endif
+  #ifdef LOT_BUILD
+      #define LOT_EXPORT __attribute__ ((visibility ("default")))
+  #else
+      #define LOT_EXPORT
+  #endif
 #endif
 
 class AnimationImpl;
