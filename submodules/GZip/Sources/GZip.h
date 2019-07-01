@@ -11,7 +11,7 @@ extern "C" {
 #endif
     
 NSData *TGGZipData(NSData *data, float level);
-NSData *TGGUnzipData(NSData *data);
+NSData * _Nullable TGGUnzipData(NSData *data);
     
 #ifdef __cplusplus
 }

@@ -42,10 +42,10 @@ NSData *TGGZipData(NSData *data, float level) {
     return output;
 }
 
-NSData *TGGUnzipData(NSData *data)
+NSData * _Nullable TGGUnzipData(NSData *data)
 {
     if (data.length == 0 || !TGIsGzippedData(data)) {
-        return data;
+        return nil;
     }
     
     z_stream stream;
