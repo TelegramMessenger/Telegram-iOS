@@ -36,8 +36,8 @@ func legacyComponentsStickers(postbox: Postbox, namespace: Int32) -> SSignal {
             
             for entry in view.entries {
                 if let item = entry.item as? StickerPackItem {
-                    if stickerPackDocuments[entry.index.collectionId] == nil {
-                        stickerPackDocuments[entry.index.collectionId] = []
+                    if item.file.isAnimatedSticker {
+                        continue
                     }
                     let document = TGDocumentMediaAttachment()
                     document.documentId = item.file.fileId.id
@@ -77,6 +77,9 @@ func legacyComponentsStickers(postbox: Postbox, namespace: Int32) -> SSignal {
                         }
                     }
                     document.attributes = attributes
+                    if stickerPackDocuments[entry.index.collectionId] == nil {
+                        stickerPackDocuments[entry.index.collectionId] = []
+                    }
                     stickerPackDocuments[entry.index.collectionId]!.append(document)
                 }
             }
