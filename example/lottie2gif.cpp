@@ -9,6 +9,7 @@
 #include<libgen.h>
 #else
 #include <windows.h>
+#include <stdlib.h>
 #endif
 
 class GifBuilder {
@@ -92,7 +93,6 @@ public:
         return result();
     }
 
-#ifndef _WIN32
     int setup(int argc, char **argv)
     {
         if (argc > 1) fileName = argv[1];
@@ -100,22 +100,30 @@ public:
 
         if (!fileName) return help();
 
+#ifdef _WIN32
+        fileName = _fullpath(absoloutePath.data(), fileName, absoloutePath.size());
+#else
         fileName = realpath(fileName, absoloutePath.data());
+#endif
 
         if (!fileName || !jsonFile(fileName) ) return help();
 
         baseName = absoloutePath;
+#ifdef _WIN32
+        char *base = strchr(baseName.data(), '/');
+        if (base)
+        {
+            base++;
+            base = strchr(baseName.data(), '\\');
+            if (base) base++;
+            else return 1;
+        }
+#else
         char *base = basename(baseName.data());
+#endif
         snprintf(baseName.data(), baseName.size(), "%s.gif",base);
         return 0;
     }
-#else
-    int setup(int argc, char **argv)
-    {
-        std::cout<<"Yet to implement in Windows\m";
-        return 1;
-    }
-#endif
 
 private:
 
