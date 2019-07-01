@@ -58,20 +58,6 @@ public:
     VMatrix mMatrix;
 };
 
-class VLinearGradient : public VGradient {
-public:
-    VLinearGradient(const VPointF &start, const VPointF &stop);
-    VLinearGradient(float xStart, float yStart, float xStop, float yStop);
-};
-
-class VRadialGradient : public VGradient {
-public:
-    VRadialGradient(const VPointF &center, float cradius,
-                    const VPointF &focalPoint, float fradius);
-    VRadialGradient(float cx, float cy, float cradius, float fx, float fy,
-                    float fradius);
-};
-
 class VBrush {
 public:
     enum class Type { NoBrush, Solid, LinearGradient, RadialGradient, Texture };
