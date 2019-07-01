@@ -98,7 +98,7 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 for attribute in file.attributes {
                     if case let .Sticker(sticker) = attribute {
-                        if let packReference = sticker.packReference {
+                        if let _ = sticker.packReference {
                             return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: PendingMessageUploadedContent.text(text), reuploadInfo: nil)))
                         }
                     }
