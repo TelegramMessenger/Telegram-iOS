@@ -86,7 +86,7 @@ func legacyComponentsStickers(postbox: Postbox, namespace: Int32) -> SSignal {
             
             let stickerPacks = NSMutableArray()
             for (id, info, _) in view.collectionInfos {
-                if let info = info as? StickerPackCollectionInfo {
+                if let info = info as? StickerPackCollectionInfo, !info.flags.contains(.isAnimated) {
                     let pack = TGStickerPack(packReference: TGStickerPackIdReference(), title: info.title, stickerAssociations: [], documents: stickerPackDocuments[id] ?? [], packHash: info.hash, hidden: false, isMask: true, isFeatured: false, installedDate: 0)!
                     stickerPacks.add(pack)
                 }
