@@ -110,10 +110,15 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .black, paragraphAlignment: .right)
             if let dimensions = stickerItem.file.dimensions {
                 if stickerItem.file.isAnimatedSticker {
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: CGSize(width: 160.0, height: 160.0)))
+                    
                     if self.animationNode == nil {
                         let animationNode = AnimatedStickerNode()
                         self.animationNode = animationNode
                         self.addSubnode(animationNode)
+                        animationNode.started = { [weak self] in
+                            self?.imageNode.isHidden = true
+                        }
                     }
                     self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: 160, height: 160, mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid
