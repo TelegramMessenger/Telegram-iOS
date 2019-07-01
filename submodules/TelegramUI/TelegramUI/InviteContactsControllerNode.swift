@@ -11,37 +11,6 @@ import TelegramUIPreferences
 private enum InviteContactsEntryId: Hashable {
     case option(index: Int)
     case contactId(String)
-    
-    var hashValue: Int {
-        switch self {
-            case let .option(index):
-                return (index + 2).hashValue
-            case let .contactId(contactId):
-                return contactId.hashValue
-        }
-    }
-    
-    static func <(lhs: InviteContactsEntryId, rhs: InviteContactsEntryId) -> Bool {
-        return lhs.hashValue < rhs.hashValue
-    }
-    
-    static func ==(lhs: InviteContactsEntryId, rhs: InviteContactsEntryId) -> Bool {
-        switch lhs {
-            case let .option(index):
-                if case .option(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .contactId(lhsId):
-                switch rhs {
-                    case let .contactId(rhsId):
-                        return lhsId == rhsId
-                    default:
-                        return false
-                }
-        }
-    }
 }
 
 private final class InviteContactsInteraction {
@@ -377,10 +346,16 @@ final class InviteContactsControllerNode: ASDisplayNode {
             |> map { counts -> [(DeviceContactStableId, DeviceContactBasicData, Int32)] in
                 var result: [(DeviceContactStableId, DeviceContactBasicData, Int32)] = []
                 var contactValues: [DeviceContactStableId: DeviceContactBasicData] = [:]
+                var existing = Set<String>()
                 for (id, basicData) in contacts {
                     var found = false
+                    if basicData.phoneNumbers.isEmpty {
+                        existing.insert(id)
+                        continue
+                    }
                     for number in basicData.phoneNumbers {
                         if existingNumbersAndPeerIds.0.contains(formatPhoneNumber(number.value)) {
+                            existing.insert(id)
                             found = true
                         }
                     }
@@ -393,7 +368,6 @@ final class InviteContactsControllerNode: ASDisplayNode {
                     countValues.append((id, count))
                 }
                 countValues.sort(by: { $0.1 > $1.1 })
-                var existing = Set<String>()
                 for (id, value) in countValues {
                     existing.insert(id)
                     if let contact = contactValues[id] {
