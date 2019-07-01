@@ -10,5 +10,6 @@ rlottie_lib = shared_library('rlottie',
                              include_directories : inc,
                              version             : meson.project_version(),
                              dependencies        : library_deps,
-                             install             : true
+                             install             : true,
+                             gnu_symbol_visibility : 'hidden',
                             )

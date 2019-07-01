@@ -8,7 +8,8 @@ if get_option('module') == true
     rlottie_image_loader_lib = shared_library('rlottie-image-loader',
                                               source_file,
                                               include_directories : inc_dir,
-                                              install : true
+                                              install : true,
+                                              gnu_symbol_visibility : 'hidden',
                                              )
     # dl dependancy for dlopen, dlsym, dlclose symbol
     cc = meson.get_compiler('cpp')

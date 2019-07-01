@@ -1,14 +1,15 @@
 project('rlottie',
         'cpp',
+        default_options : ['warning_level=2', 'werror=true', 'cpp_std=c++14', 'optimization=s'],
         version : '0.0.1',
         license : 'Apache')
 
 add_project_arguments('-DDEMO_DIR="@0@/example/resource/"'.format(meson.current_source_dir()), language : 'cpp')
 
 compiler_flags = ['-DLOT_BUILD']
-compiler_flags_try = ['-std=c++14', '-Os', '-Wall', '-Werror', '-Wextra', '-fno-exceptions', '-fno-rtti',
+compiler_flags_try = ['-fno-exceptions', '-fno-rtti',
                       '-fno-unwind-tables' , '-fno-asynchronous-unwind-tables',
-                      '-Wnon-virtual-dtor', '-Woverloaded-virtual', '-Wno-unused-parameter', '-fvisibility=hidden']
+                      '-Woverloaded-virtual', '-Wno-unused-parameter']
 
 cc = meson.get_compiler('cpp')
 foreach cf: compiler_flags_try
