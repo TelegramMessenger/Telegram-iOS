@@ -173,7 +173,7 @@ struct InviteContactsGroupSelectionState: Equatable {
     }
 }
 
-private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)], selectionState: InviteContactsGroupSelectionState, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: InviteContactsInteraction) -> [InviteContactsEntry] {
+private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)]?, selectionState: InviteContactsGroupSelectionState, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: InviteContactsInteraction) -> [InviteContactsEntry] {
     var entries: [InviteContactsEntry] = []
         
     entries.append(.option(0, ContactListAdditionalOption(title: strings.Contacts_ShareTelegram, icon: .generic(UIImage(bundleImageName: "Contact List/InviteActionIcon")!), action: {
@@ -181,35 +181,39 @@ private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceC
     }), theme, strings))
     
     var index = 0
-    for (id, contact, count) in sortedContacts {
-        entries.append(.peer(index, id, contact, count, .selectable(selected: selectionState.selectedContactIndices[id] != nil), theme, strings, nameSortOrder, nameDisplayOrder))
-        index += 1
+    if let sortedContacts = sortedContacts {
+        for (id, contact, count) in sortedContacts {
+            entries.append(.peer(index, id, contact, count, .selectable(selected: selectionState.selectedContactIndices[id] != nil), theme, strings, nameSortOrder, nameDisplayOrder))
+            index += 1
+        }
     }
     
     return entries
 }
 
-private func preparedInviteContactsTransition(account: Account, from fromEntries: [InviteContactsEntry], to toEntries: [InviteContactsEntry], sortedContats: [(DeviceContactStableId, DeviceContactBasicData, Int32)], interaction: InviteContactsInteraction, firstTime: Bool, animated: Bool) -> InviteContactsTransition {
+private func preparedInviteContactsTransition(account: Account, from fromEntries: [InviteContactsEntry], to toEntries: [InviteContactsEntry], sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)]?, interaction: InviteContactsInteraction, firstTime: Bool, isLoading: Bool, animated: Bool) -> InviteContactsTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     
-    return InviteContactsTransition(deletions: deletions, insertions: insertions, updates: updates, sortedContats: sortedContats, firstTime: firstTime, animated: animated)
+    return InviteContactsTransition(deletions: deletions, insertions: insertions, updates: updates, sortedContacts: sortedContacts, firstTime: firstTime, isLoading: isLoading, animated: animated)
 }
 
 private struct InviteContactsTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
-    let sortedContats: [(DeviceContactStableId, DeviceContactBasicData, Int32)]
+    let sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)]?
     let firstTime: Bool
+    let isLoading: Bool
     let animated: Bool
 }
 
 final class InviteContactsControllerNode: ASDisplayNode {
     let listNode: ListView
+    private var activityIndicator: ActivityIndicator?
     
     private let context: AccountContext
     private var searchDisplayController: SearchDisplayController?
@@ -334,8 +338,8 @@ final class InviteContactsControllerNode: ASDisplayNode {
         }
         
         let currentSortedContacts = self.currentSortedContacts
-        let sortedContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> = combineLatest(existingNumbers, (context.sharedContext.contactDataManager?.basicData() ?? .single([:])) |> take(1))
-        |> mapToSignal { existingNumbersAndPeerIds, contacts -> Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> in
+        let sortedContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)]?, NoError> = combineLatest(existingNumbers, (context.sharedContext.contactDataManager?.basicData() ?? .single([:])) |> take(1))
+        |> mapToSignal { existingNumbersAndPeerIds, contacts -> Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)]?, NoError> in
             var mappedContacts: [(String, [DeviceContactNormalizedPhoneNumber])] = []
             for (id, basicData) in contacts {
                 mappedContacts.append((id: id, basicData.phoneNumbers.map({ phoneNumber in
@@ -343,7 +347,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 })))
             }
             return deviceContactsImportedByCount(postbox: context.account.postbox, contacts: mappedContacts)
-            |> map { counts -> [(DeviceContactStableId, DeviceContactBasicData, Int32)] in
+            |> map { counts -> [(DeviceContactStableId, DeviceContactBasicData, Int32)]? in
                 var result: [(DeviceContactStableId, DeviceContactBasicData, Int32)] = []
                 var contactValues: [DeviceContactStableId: DeviceContactBasicData] = [:]
                 var existing = Set<String>()
@@ -384,10 +388,13 @@ final class InviteContactsControllerNode: ASDisplayNode {
             }
         }
         |> beforeNext { sortedContacts in
-            let _ = currentSortedContacts.swap(sortedContacts)
+            if let sortedContacts = sortedContacts {
+                let _ = currentSortedContacts.swap(sortedContacts)
+            }
         }
+        
         let processingQueue = Queue()
-        transition = (combineLatest(sortedContacts, selectionStateSignal, themeAndStringsPromise.get())
+        transition = (combineLatest(.single(nil) |> then(sortedContacts), selectionStateSignal, themeAndStringsPromise.get())
         |> mapToQueue { sortedContacts, selectionState, themeAndStrings -> Signal<InviteContactsTransition, NoError> in
             let signal = deferred { () -> Signal<InviteContactsTransition, NoError> in
                 let entries = inviteContactsEntries(accountPeer: nil, sortedContacts: sortedContacts, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, nameSortOrder: themeAndStrings.2, nameDisplayOrder: themeAndStrings.3, interaction: interaction)
@@ -398,22 +405,26 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 } else {
                     animated = false
                 }
-                return .single(preparedInviteContactsTransition(account: context.account, from: previous ?? [], to: entries, sortedContats: sortedContacts, interaction: interaction, firstTime: previous == nil, animated: animated))
+                return .single(preparedInviteContactsTransition(account: context.account, from: previous ?? [], to: entries, sortedContacts: sortedContacts, interaction: interaction, firstTime: previous == nil, isLoading: false, animated: animated))
             }
+            return signal
+            |> runOn(processingQueue)
             
-            if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
-                return signal
-                |> runOn(Queue.mainQueue())
-            } else {
-                return signal
-                |> runOn(processingQueue)
-            }
+//            if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
+//                return signal
+//                |> runOn(Queue.mainQueue())
+//            } else {
+//                return signal
+//                |> runOn(processingQueue)
+//            }
         })
         |> deliverOnMainQueue
         
         self.disposable = transition.start(next: { [weak self] transition in
             self?.enqueueTransition(transition)
         })
+        
+        self.enqueueTransition(InviteContactsTransition(deletions: [], insertions: [], updates: [], sortedContacts: [], firstTime: true, isLoading: true, animated: false))
         
         shareImpl = { [weak self] in
             if let strongSelf = self {
@@ -498,6 +509,11 @@ final class InviteContactsControllerNode: ASDisplayNode {
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
+        if let activityIndicator = self.activityIndicator {
+            let indicatorSize = activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
+            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: updateSizeAndInsets.insets.top + 50.0 + floor((layout.size.height - updateSizeAndInsets.insets.top - updateSizeAndInsets.insets.bottom - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
+        }
+        
         if !hadValidLayout {
             self.dequeueTransitions()
         }
@@ -561,6 +577,15 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
                     if let strongSelf = self {
                         strongSelf.readyValue = true
+                        
+                        if transition.isLoading, strongSelf.activityIndicator == nil {
+                            let activityIndicator = ActivityIndicator(type: .custom(strongSelf.presentationData.theme.list.itemAccentColor, 22.0, 1.0, false))
+                            strongSelf.activityIndicator = activityIndicator
+                            strongSelf.insertSubnode(activityIndicator, aboveSubnode: strongSelf.listNode)
+                        } else if !transition.isLoading, let activityIndicator = strongSelf.activityIndicator {
+                            strongSelf.activityIndicator = nil
+                            activityIndicator.removeFromSupernode()
+                        }
                     }
                 })
             }
@@ -579,4 +604,3 @@ final class InviteContactsControllerNode: ASDisplayNode {
         self.selectionState = self.selectionState.withReplacedSelectedContactIds(allSelected ? [] : ids)
     }
 }
-

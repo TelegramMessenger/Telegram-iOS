@@ -155,7 +155,7 @@ class ContactsPeerItem: ListViewItem {
         self.deletePeer = deletePeer
         self.header = header
         self.itemHighlighting = itemHighlighting
-        self.selectable = self.enabled
+        self.selectable = enabled
         
         if let index = index {
             var letter: String = "#"
@@ -369,33 +369,14 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     }
     
     override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        if let item = self.item, case .selectable = item.selection {
+            return
+        }
+        
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         self.isHighlighted = highlighted
-
         self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
-        
-//        if highlighted && self.selectionNode == nil {
-//            self.highlightedBackgroundNode.alpha = 1.0
-//            if self.highlightedBackgroundNode.supernode == nil {
-//                self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
-//            }
-//        } else {
-//            if self.highlightedBackgroundNode.supernode != nil {
-//                if animated {
-//                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
-//                        if let strongSelf = self {
-//                            if completed {
-//                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
-//                            }
-//                        }
-//                    })
-//                    self.highlightedBackgroundNode.alpha = 0.0
-//                } else {
-//                    self.highlightedBackgroundNode.removeFromSupernode()
-//                }
-//            }
-//        }
     }
 
     

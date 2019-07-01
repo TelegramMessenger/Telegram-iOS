@@ -309,13 +309,30 @@ public class ContactsController: ViewController {
         }
         
         self.contactsNode.openInvite = { [weak self] in
-            if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(InviteContactsController(context: strongSelf.context), completion: {
-                    if let strongSelf = self {
+            let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { value in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch value {
+                    case .allowed:
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(InviteContactsController(context: strongSelf.context), completion: {
+                            if let strongSelf = self {
+                                strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                            }
+                        })
+                    case .notDetermined:
+                        DeviceAccess.authorizeAccess(to: .contacts)
                         strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-                    }
-                })
-            }
+                    default:
+                        let presentationData = strongSelf.presentationData
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                            self?.context.sharedContext.applicationBindings.openSettings()
+                        })]), in: .window(.root))
+                        strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                }
+            })
         }
         
         self.contactsNode.contactListNode.openSortMenu = { [weak self] in

@@ -29,7 +29,7 @@ public enum ChannelOwnershipTransferError {
 public func checkOwnershipTranfserAvailability(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, memberId: PeerId) -> Signal<Never, ChannelOwnershipTransferError> {
     return postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(memberId)
-        }
+    }
     |> introduceError(ChannelOwnershipTransferError.self)
     |> mapToSignal { user -> Signal<Never, ChannelOwnershipTransferError> in
         guard let user = user else {
