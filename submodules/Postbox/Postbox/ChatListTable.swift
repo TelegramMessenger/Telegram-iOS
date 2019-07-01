@@ -780,4 +780,27 @@ final class ChatListTable: Table {
             return lhs.index > rhs.index
         })
     }
+    
+    func doesGroupContainHoles(groupId: PeerGroupId) -> Bool {
+        var result = false
+        self.valueBox.range(self.table, start: self.lowerBound(groupId: groupId), end: self.upperBound(groupId: groupId), keys: { key in
+            if extractKey(key).type == ChatListEntryType.hole.rawValue {
+                result = true
+                return false
+            } else {
+                return true
+            }
+        }, limit: 0)
+        return result
+    }
+    
+    func forEachPeer(groupId: PeerGroupId, _ f: (PeerId) -> Void) {
+        self.valueBox.range(self.table, start: self.lowerBound(groupId: groupId), end: self.upperBound(groupId: groupId), keys: { key in
+            let extracted = extractKey(key)
+            if extracted.type == ChatListEntryType.message.rawValue {
+                f(extracted.index.id.peerId)
+            }
+            return true
+        }, limit: 0)
+    }
 }

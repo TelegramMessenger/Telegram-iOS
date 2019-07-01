@@ -72,21 +72,26 @@ func managedSynchronizeGroupMessageStats(network: Network, postbox: Postbox, sta
 }
 
 private func synchronizeGroupMessageStats(postbox: Postbox, network: Network, groupId: PeerGroupId, namespace: MessageId.Namespace) -> Signal<Void, NoError> {
-    if namespace != Namespaces.Message.Cloud || groupId == .root {
-        return postbox.transaction { transaction in
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        if namespace != Namespaces.Message.Cloud || groupId == .root {
             transaction.confirmSynchronizedPeerGroupMessageStats(groupId: groupId, namespace: namespace)
+            return .complete()
         }
-    }
+        
+        if !transaction.doesChatListGroupContainHoles(groupId: groupId) {
+            transaction.recalculateChatListGroupStats(groupId: groupId)
+            return .complete()
+        }
     
-    return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeerFolder(folderId: groupId.rawValue)]))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.messages.PeerDialogs?, NoError> in
-        return .single(nil)
-    }
-    |> mapToSignal { result -> Signal<Void, NoError> in
-        return postbox.transaction { transaction in
-            if let result = result {
-                switch result {
+        return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeerFolder(folderId: groupId.rawValue)]))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.messages.PeerDialogs?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<Void, NoError> in
+            return postbox.transaction { transaction in
+                if let result = result {
+                    switch result {
                     case let .peerDialogs(peerDialogs):
                         for dialog in peerDialogs.dialogs {
                             switch dialog {
@@ -97,9 +102,11 @@ private func synchronizeGroupMessageStats(postbox: Postbox, network: Network, gr
                                     break
                             }
                         }
+                    }
                 }
+                transaction.confirmSynchronizedPeerGroupMessageStats(groupId: groupId, namespace: namespace)
             }
-            transaction.confirmSynchronizedPeerGroupMessageStats(groupId: groupId, namespace: namespace)
         }
     }
+    |> switchToLatest
 }

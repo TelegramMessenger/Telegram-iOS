@@ -57,6 +57,16 @@ public final class Transaction {
         return self.postbox?.messageHistoryHoleIndexTable.containing(id: id) ?? [:]
     }
     
+    public func doesChatListGroupContainHoles(groupId: PeerGroupId) -> Bool {
+        assert(!self.disposed)
+        return self.postbox?.chatListTable.doesGroupContainHoles(groupId: groupId) ?? false
+    }
+    
+    public func recalculateChatListGroupStats(groupId: PeerGroupId) {
+        assert(!self.disposed)
+        self.postbox?.recalculateChatListGroupStats(groupId: groupId)
+    }
+    
     public func replaceChatListHole(groupId: PeerGroupId, index: MessageIndex, hole: ChatListHole?) {
         assert(!self.disposed)
         self.postbox?.replaceChatListHole(groupId: groupId, index: index, hole: hole)
@@ -1474,67 +1484,11 @@ public final class Postbox {
         self.messageHistoryHoleIndexTable.remove(peerId: peerId, namespace: namespace, space: space, range: range, operations: &self.currentPeerHoleOperations)
     }
     
-    /*fileprivate func fillMultipleGroupFeedHoles(groupId: PeerGroupId, mainHoleMaxIndex: MessageIndex, fillType: HoleFill, messages: [StoreMessage]) {
-        let initialGroupFeedOperationsCount = self.currentGroupFeedOperations[groupId]?.count ?? 0
-        self.groupFeedIndexTable.fillMultipleHoles(insertMessage: { message in
-            self.insertMessageInternal(message: message)
-        }, groupId: groupId, mainHoleMaxIndex: mainHoleMaxIndex, fillType: fillType, messages: self.messageHistoryTable.internalStoreMessages(messages), addOperation: { groupId, operation in
-            if self.currentGroupFeedOperations[groupId] == nil {
-                self.currentGroupFeedOperations[groupId] = []
-            }
-            self.currentGroupFeedOperations[groupId]!.append(operation)
-        })
-        
-        var filledMessageIndices: [MessageIndex: HoleFillDirection] = [:]
-        if let operations = self.currentGroupFeedOperations[groupId] {
-            for i in initialGroupFeedOperationsCount ..< operations.count {
-                switch operations[i] {
-                    case let .insertHole(hole, _):
-                        filledMessageIndices[hole.maxIndex] = fillType.direction
-                    case let .insertMessage(message):
-                        filledMessageIndices[MessageIndex(message)] = fillType.direction
-                default:
-                    break
-                }
-            }
-        }
-        
-        if !filledMessageIndices.isEmpty {
-            if self.currentGroupFeedIdsWithFilledHoles[groupId] == nil {
-                self.currentGroupFeedIdsWithFilledHoles[groupId] = [:]
-            }
-            for (messageIndex, direction) in filledMessageIndices {
-                self.currentGroupFeedIdsWithFilledHoles[groupId]![messageIndex] = direction
-            }
-        }
-        
-        if self.currentRemovedHolesByPeerGroupId[groupId] == nil {
-            self.currentRemovedHolesByPeerGroupId[groupId] = [:]
-        }
-        self.currentRemovedHolesByPeerGroupId[groupId]![mainHoleMaxIndex] = fillType.direction
+    fileprivate func recalculateChatListGroupStats(groupId: PeerGroupId) {
+        let summary = self.chatListIndexTable.reindexPeerGroupUnreadCounts(postbox: self, groupId: groupId)
+        self.groupMessageStatsTable.set(groupId: groupId, summary: summary)
+        self.currentUpdatedGroupTotalUnreadSummaries[groupId] = summary
     }
-    
-    fileprivate func addFeedHoleFromLatestEntries(groupId: PeerGroupId) {
-        self.groupFeedIndexTable.addHoleFromLatestEntries(groupId: groupId, messageHistoryTable: self.messageHistoryTable, operations: &self.currentGroupFeedOperations)
-    }
-    
-    fileprivate func addMessagesToGroupFeedIndex(groupId: PeerGroupId, ids: [MessageId]) {
-        for id in ids {
-            if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry {
-                if let message = self.messageHistoryTable.getMessage(index) {
-                    self.groupFeedIndexTable.add(groupId: groupId, message: message, operations: &self.currentGroupFeedOperations)
-                }
-            }
-        }
-    }
-    
-    fileprivate func removeMessagesFromGroupFeedIndex(groupId: PeerGroupId, ids: [MessageId]) {
-        for id in ids {
-            if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry {
-                self.groupFeedIndexTable.remove(groupId: groupId, messageIndex: index, operations: &self.currentGroupFeedOperations)
-            }
-        }
-    }*/
     
     fileprivate func replaceChatListHole(groupId: PeerGroupId, index: MessageIndex, hole: ChatListHole?) {
         self.chatListTable.replaceHole(groupId: groupId, index: index, hole: hole, operations: &self.currentChatListOperations)
