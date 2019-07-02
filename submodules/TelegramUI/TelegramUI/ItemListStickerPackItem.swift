@@ -656,6 +656,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         let boundingSize = CGSize(width: 34.0, height: 34.0)
         
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - self.imageNode.frame.size.width) / 2.0), y: self.imageNode.frame.minY), size: self.imageNode.frame.size))
+        if let animationNode = self.animationNode {
+            transition.updateFrame(node: animationNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - animationNode.frame.size.width) / 2.0), y: animationNode.frame.minY), size: animationNode.frame.size))
+        }
     }
     
     override func revealOptionsInteractivelyOpened() {
