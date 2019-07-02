@@ -6308,7 +6308,22 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             }
                         }
                     }
-                case let .url(node, rect, string):
+                case let .url(node, rect, string, concealed):
+                    var parsedUrlValue: URL?
+                    if let parsed = URL(string: string) {
+                        parsedUrlValue = parsed
+                    } else if let encoded = (string as NSString).addingPercentEscapes(using: String.Encoding.utf8.rawValue), let parsed = URL(string: encoded) {
+                        parsedUrlValue = parsed
+                    }
+                    
+                    if let parsedUrlValue = parsedUrlValue {
+                        if concealed, (parsedUrlValue.scheme == "http" || parsedUrlValue.scheme == "https"), !isConcealedUrlWhitelisted(parsedUrlValue) {
+                            return nil
+                        }
+                    } else {
+                        return nil
+                    }
+                    
                     let targetRect = node.view.convert(rect, to: sourceView)
                     let sourceRect = CGRect(origin: CGPoint(x: floor(targetRect.midX), y: floor(targetRect.midY)), size: CGSize(width: 1.0, height: 1.0))
                     if let parsedUrl = URL(string: string) {
