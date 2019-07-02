@@ -86,9 +86,19 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
     return Signal({ subscriber in
         let queue = Queue()
         
+        let cancelled = Atomic<Bool>(value: false)
+        
         queue.async {
+            if cancelled.with({ $0 }) {
+                return
+            }
+            
             let decompressedData = TGGUnzipData(data)
             if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
+                if cancelled.with({ $0 }) {
+                    return
+                }
+                
                 let context = DrawingContext(size: size, scale: 1.0, clear: true)
                 player.renderFrame(with: 0, into: context.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height))
                 
@@ -151,7 +161,9 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
                 }
             }
         }
-        return EmptyDisposable
+        return ActionDisposable {
+            let _ = cancelled.swap(true)
+        }
     })
 }
 
@@ -175,6 +187,8 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
         
         let queue = maybeQueue!
         
+        let cancelled = Atomic<Bool>(value: false)
+        
         queue.async {
             let startTime = CACurrentMediaTime()
             var drawingTime: Double = 0
@@ -184,6 +198,10 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
             if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
                 let endFrame = Int(player.frameCount)
                 print("read at \(CACurrentMediaTime() - startTime)")
+                
+                if cancelled.with({ $0 }) {
+                    return
+                }
                 
                 var randomId: Int64 = 0
                 arc4random_buf(&randomId, 8)
@@ -232,6 +250,10 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 }
                 
                 while currentFrame < endFrame {
+                    if cancelled.with({ $0 }) {
+                        return
+                    }
+                    
                     let drawStartTime = CACurrentMediaTime()
                     memset(currentFrameData, 0, frameLength)
                     player.renderFrame(with: Int32(currentFrame), into: currentFrameData.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height))
@@ -276,6 +298,8 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 print("of which appending time \(appendingTime)")
             }
         }
-        return EmptyDisposable
+        return ActionDisposable {
+            let _ = cancelled.swap(true)
+        }
     })
 }
