@@ -29,7 +29,7 @@ public func archivedStickerPacks(account: Account, namespace: ArchivedStickerPac
     if case .masks = namespace {
         flags |= 1 << 0
     }
-    return account.network.request(Api.functions.messages.getArchivedStickers(flags: flags, offsetId: 0, limit: 100))
+    return account.network.request(Api.functions.messages.getArchivedStickers(flags: flags, offsetId: 0, limit: 200))
     |> map { result -> [ArchivedStickerPackItem] in
         var archivedItems: [ArchivedStickerPackItem] = []
         switch result {
