@@ -224,6 +224,9 @@ final class SharedApplicationContext {
             if curDevice.isSupported {
                 curDevice.generateToken(completionHandler: { (data, error) in
                     if let tokenData = data {
+                        #if DEBUG
+                        print("\(tokenData.base64EncodedString())")
+                        #endif
                         self.deviceToken.set(.single(data))
                     } else {
                         print("Error: \(error!.localizedDescription)")
