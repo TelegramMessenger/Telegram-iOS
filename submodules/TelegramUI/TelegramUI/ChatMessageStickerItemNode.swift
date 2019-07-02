@@ -8,7 +8,6 @@ import TelegramCore
 import TelegramPresentationData
 
 private let nameFont = Font.medium(14.0)
-
 private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
@@ -24,13 +23,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var shareButtonNode: HighlightableButtonNode?
 
     var telegramFile: TelegramMediaFile?
-    
     private let fetchDisposable = MetaDisposable()
-    
-    private var appliedForwardInfo: (Peer?, String?)?
-    
-    private var forwardInfoNode: ChatMessageForwardInfoNode?
-    private var forwardBackgroundNode: ASImageNode?
     
     private var viaBotNode: TextNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
@@ -277,10 +270,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             var availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
             if isEmoji {
-                availableWidth -= 10.0 + 14.0
-                //if incoming {
-                //    availableWidth -= dateAndStatusSize.width
-                //}
+                availableWidth -= 24.0
             }
             
             for attribute in item.message.attributes {
@@ -669,64 +659,64 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         switch recognizer.state {
-        case .began:
-            self.currentSwipeToReplyTranslation = 0.0
-            if self.swipeToReplyFeedback == nil {
-                self.swipeToReplyFeedback = HapticFeedback()
-                self.swipeToReplyFeedback?.prepareImpact()
-            }
-            (self.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
-        case .changed:
-            var translation = recognizer.translation(in: self.view)
-            translation.x = max(-80.0, min(0.0, translation.x))
-            var animateReplyNodeIn = false
-            if (translation.x < -45.0) != (self.currentSwipeToReplyTranslation < -45.0) {
-                if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
-                    self.swipeToReplyFeedback?.impact()
-                    
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
-                    self.swipeToReplyNode = swipeToReplyNode
-                    self.addSubnode(swipeToReplyNode)
-                    animateReplyNodeIn = true
+            case .began:
+                self.currentSwipeToReplyTranslation = 0.0
+                if self.swipeToReplyFeedback == nil {
+                    self.swipeToReplyFeedback = HapticFeedback()
+                    self.swipeToReplyFeedback?.prepareImpact()
                 }
-            }
-            self.currentSwipeToReplyTranslation = translation.x
-            var bounds = self.bounds
-            bounds.origin.x = -translation.x
-            self.bounds = bounds
-            
-            if let swipeToReplyNode = self.swipeToReplyNode {
-                swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
-                if animateReplyNodeIn {
-                    swipeToReplyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
-                    swipeToReplyNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
-                } else {
-                    swipeToReplyNode.alpha = min(1.0, abs(translation.x / 45.0))
+                (self.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
+            case .changed:
+                var translation = recognizer.translation(in: self.view)
+                translation.x = max(-80.0, min(0.0, translation.x))
+                var animateReplyNodeIn = false
+                if (translation.x < -45.0) != (self.currentSwipeToReplyTranslation < -45.0) {
+                    if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
+                        self.swipeToReplyFeedback?.impact()
+                        
+                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
+                        self.swipeToReplyNode = swipeToReplyNode
+                        self.addSubnode(swipeToReplyNode)
+                        animateReplyNodeIn = true
+                    }
                 }
-            }
-        case .cancelled, .ended:
-            self.swipeToReplyFeedback = nil
-            
-            let translation = recognizer.translation(in: self.view)
-            if case .ended = recognizer.state, translation.x < -45.0 {
-                if let item = self.item {
-                    item.controllerInteraction.setupReply(item.message.id)
+                self.currentSwipeToReplyTranslation = translation.x
+                var bounds = self.bounds
+                bounds.origin.x = -translation.x
+                self.bounds = bounds
+                
+                if let swipeToReplyNode = self.swipeToReplyNode {
+                    swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
+                    if animateReplyNodeIn {
+                        swipeToReplyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
+                        swipeToReplyNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+                    } else {
+                        swipeToReplyNode.alpha = min(1.0, abs(translation.x / 45.0))
+                    }
                 }
-            }
-            var bounds = self.bounds
-            let previousBounds = bounds
-            bounds.origin.x = 0.0
-            self.bounds = bounds
-            self.layer.animateBounds(from: previousBounds, to: bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-            if let swipeToReplyNode = self.swipeToReplyNode {
-                self.swipeToReplyNode = nil
-                swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in
-                    swipeToReplyNode?.removeFromSupernode()
-                })
-                swipeToReplyNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-            }
-        default:
-            break
+            case .cancelled, .ended:
+                self.swipeToReplyFeedback = nil
+                
+                let translation = recognizer.translation(in: self.view)
+                if case .ended = recognizer.state, translation.x < -45.0 {
+                    if let item = self.item {
+                        item.controllerInteraction.setupReply(item.message.id)
+                    }
+                }
+                var bounds = self.bounds
+                let previousBounds = bounds
+                bounds.origin.x = 0.0
+                self.bounds = bounds
+                self.layer.animateBounds(from: previousBounds, to: bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                if let swipeToReplyNode = self.swipeToReplyNode {
+                    self.swipeToReplyNode = nil
+                    swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in
+                        swipeToReplyNode?.removeFromSupernode()
+                    })
+                    swipeToReplyNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                }
+            default:
+                break
         }
     }
     

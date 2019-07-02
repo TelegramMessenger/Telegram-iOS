@@ -361,25 +361,25 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             
             var imageSize: CGSize?
             
-            if fileUpdated {
-                if let thumbnailItem = thumbnailItem {
-                    switch thumbnailItem {
-                        case let .still(representation):
-                            let stillImageSize = representation.dimensions.aspectFitted(imageBoundingSize)
-                            imageSize = stillImageSize
-                            
+            if let thumbnailItem = thumbnailItem {
+                switch thumbnailItem {
+                    case let .still(representation):
+                        let stillImageSize = representation.dimensions.aspectFitted(imageBoundingSize)
+                        imageSize = stillImageSize
+                        
+                        if fileUpdated {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
                             updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, representation: representation)
-                        case .animated:
-                            imageSize = imageBoundingSize
-                    }
-                    if let resourceReference = resourceReference {
-                        updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: resourceReference)
-                    }
-                } else {
-                    updatedImageSignal = .single({ _ in return nil })
-                    updatedFetchSignal = .complete()
+                        }
+                    case .animated:
+                        imageSize = imageBoundingSize
                 }
+                if fileUpdated, let resourceReference = resourceReference {
+                    updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: resourceReference)
+                }
+            } else {
+                updatedImageSignal = .single({ _ in return nil })
+                updatedFetchSignal = .complete()
             }
             
             return (layout, { [weak self] animated in
@@ -650,14 +650,14 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             editingOffset = 0.0
         }
         
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
-        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + self.revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + self.revealOffset + editingOffset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
         
         let boundingSize = CGSize(width: 34.0, height: 34.0)
         
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - self.imageNode.frame.size.width) / 2.0), y: self.imageNode.frame.minY), size: self.imageNode.frame.size))
+        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + self.revealOffset + editingOffset + 15.0 + floor((boundingSize.width - self.imageNode.frame.size.width) / 2.0), y: self.imageNode.frame.minY), size: self.imageNode.frame.size))
         if let animationNode = self.animationNode {
-            transition.updateFrame(node: animationNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - animationNode.frame.size.width) / 2.0), y: animationNode.frame.minY), size: animationNode.frame.size))
+            transition.updateFrame(node: animationNode, frame: CGRect(origin: CGPoint(x: params.leftInset + self.revealOffset + editingOffset + 15.0 + floor((boundingSize.width - animationNode.frame.size.width) / 2.0), y: animationNode.frame.minY), size: animationNode.frame.size))
         }
     }
     

@@ -103,11 +103,20 @@ private let textFont = Font.regular(20.0)
 final class StickerPaneSearchStickerItemNode: GridItemNode {
     private var currentState: (Account, FoundStickerItem, CGSize)?
     private let imageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
     private let textNode: ASTextNode
     
     private let stickerFetchedDisposable = MetaDisposable()
     
     var currentIsPreviewing = false
+    
+    override var isVisibleInGrid: Bool {
+        didSet {
+            self.updateVisibility()
+        }
+    }
+    
+    private var isPlaying = false
     
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
     var selected: (() -> Void)?
@@ -143,8 +152,25 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
             self.textNode.attributedText = NSAttributedString(string: code ?? "", font: textFont, textColor: .black)
             
             if let dimensions = stickerItem.file.dimensions {
-                self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
+                if stickerItem.file.isAnimatedSticker {
+                    if self.animationNode == nil {
+                        let animationNode = AnimatedStickerNode()
+                        animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
+                        self.animationNode = animationNode
+                        self.addSubnode(animationNode)
+                    }
+                    self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: 160, height: 160, mode: .cached)
+                    self.animationNode?.visibility = self.isVisibleInGrid
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
+                } else {
+                    if let animationNode = self.animationNode {
+                        animationNode.visibility = false
+                        self.animationNode = nil
+                        animationNode.removeFromSupernode()
+                    }
+                    self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
+                }
                 
                 self.currentState = (account, stickerItem, dimensions)
                 self.setNeedsLayout()
@@ -165,6 +191,11 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
             let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
             self.imageNode.frame = imageFrame
             
+            if let animationNode = self.animationNode {
+                animationNode.frame = imageFrame
+                animationNode.updateLayout(size: imageSize)
+            }
+            
             let textSize = self.textNode.measure(CGSize(width: bounds.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
             self.textNode.frame = CGRect(origin: CGPoint(x: bounds.size.width - textSize.width, y: bounds.size.height - textSize.height), size: textSize)
         }
@@ -176,6 +207,14 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
     
     func transitionNode() -> ASDisplayNode? {
         return self.imageNode
+    }
+    
+    func updateVisibility() {
+        let isPlaying = self.isVisibleInGrid
+        if self.isPlaying != isPlaying {
+            self.isPlaying = isPlaying
+            self.animationNode?.visibility = isPlaying
+        }
     }
     
     func updatePreviewing(animated: Bool) {
