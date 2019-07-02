@@ -138,8 +138,52 @@ final class StickerPackPreviewController: ViewController {
                 self?.dismiss()
             }
         }
+        let account = self.context.account
         self.displayNodeDidLoad()
-        self.stickerPackDisposable.set((self.stickerPackContents.get() |> deliverOnMainQueue).start(next: { [weak self] next in
+        self.stickerPackDisposable.set((self.stickerPackContents.get()
+        |> mapToSignal { next -> Signal<LoadedStickerPack, NoError> in
+            switch next {
+                case let .result(_, items, _):
+                    var preloadSignals: [Signal<Bool, NoError>] = []
+                    let topItems = items.prefix(16)
+                    for item in topItems {
+                        if let item = item as? StickerPackItem, item.file.isAnimatedSticker {
+                            let signal = Signal<Bool, NoError> { subscriber in
+                                let fetched = fetchedMediaResource(postbox: account.postbox, reference: FileMediaReference.standalone(media: item.file).resourceReference(item.file.resource)).start()
+                                let data = account.postbox.mediaBox.resourceData(item.file.resource).start()
+                                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, file: item.file, small: false, size: CGSize(width: 160.0, height: 160.0), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
+                                    let hasContent = next._0 != nil || next._1 != nil
+                                    subscriber.putNext(hasContent)
+                                    if hasContent {
+                                        subscriber.putCompletion()
+                                    }
+                                })
+                                return ActionDisposable {
+                                    fetched.dispose()
+                                    data.dispose()
+                                    fetchedRepresentation.dispose()
+                                }
+                            }
+                            preloadSignals.append(signal)
+                        }
+                    }
+                    return combineLatest(preloadSignals)
+                    |> map { values -> Bool in
+                        return !values.contains(false)
+                    }
+                    |> distinctUntilChanged
+                    |> mapToSignal { loaded -> Signal<LoadedStickerPack, NoError> in
+                        if !loaded {
+                            return .single(.fetching)
+                        } else {
+                            return .single(next)
+                        }
+                    }
+                default:
+                    return .single(next)
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
                 if case .none = next {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
