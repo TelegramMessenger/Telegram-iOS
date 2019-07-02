@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09EC5CD822CBB86B00292E42 /* telegram_plane1@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EC5CD722CBB86A00292E42 /* telegram_plane1@2x.png */; };
 		D0A25B8922B5C0CF00AD4DE8 /* LegacyComponents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0A25B8822B5C0CF00AD4DE8 /* LegacyComponents.framework */; };
 		D0A25B8A22B5C0CF00AD4DE8 /* LegacyComponents.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0A25B8822B5C0CF00AD4DE8 /* LegacyComponents.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0AE304922B1D77E0058D3BC /* RMIntro.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE304722B1D77E0058D3BC /* RMIntro.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -56,7 +57,6 @@
 		D0AE30C022B1D8ED0058D3BC /* powerful_infinity_white@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0AE308422B1D8ED0058D3BC /* powerful_infinity_white@2x.png */; };
 		D0AE30C122B1D8ED0058D3BC /* private_screw@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0AE308522B1D8ED0058D3BC /* private_screw@2x.png */; };
 		D0AE30C222B1D8ED0058D3BC /* powerful_infinity@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0AE308622B1D8ED0058D3BC /* powerful_infinity@2x.png */; };
-		D0AE30C322B1D8ED0058D3BC /* telegram_plane@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0AE308722B1D8ED0058D3BC /* telegram_plane@2x.png */; };
 		D0AE30C422B1D8ED0058D3BC /* ic_smile@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0AE308822B1D8ED0058D3BC /* ic_smile@2x.png */; };
 		D0AE30C522B1D8ED0058D3BC /* RMGeometry.m in Sources */ = {isa = PBXBuildFile; fileRef = D0AE308922B1D8ED0058D3BC /* RMGeometry.m */; };
 		D0AE30C622B1D8ED0058D3BC /* RMIntroViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE308A22B1D8ED0058D3BC /* RMIntroViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -84,6 +84,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		09EC5CD722CBB86A00292E42 /* telegram_plane1@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "telegram_plane1@2x.png"; sourceTree = "<group>"; };
 		D0A25B8822B5C0CF00AD4DE8 /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE304422B1D77E0058D3BC /* RMIntro.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RMIntro.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE304722B1D77E0058D3BC /* RMIntro.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RMIntro.h; sourceTree = "<group>"; };
@@ -134,7 +135,6 @@
 		D0AE308422B1D8ED0058D3BC /* powerful_infinity_white@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "powerful_infinity_white@2x.png"; sourceTree = "<group>"; };
 		D0AE308522B1D8ED0058D3BC /* private_screw@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "private_screw@2x.png"; sourceTree = "<group>"; };
 		D0AE308622B1D8ED0058D3BC /* powerful_infinity@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "powerful_infinity@2x.png"; sourceTree = "<group>"; };
-		D0AE308722B1D8ED0058D3BC /* telegram_plane@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "telegram_plane@2x.png"; sourceTree = "<group>"; };
 		D0AE308822B1D8ED0058D3BC /* ic_smile@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ic_smile@2x.png"; sourceTree = "<group>"; };
 		D0AE308922B1D8ED0058D3BC /* RMGeometry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RMGeometry.m; sourceTree = "<group>"; };
 		D0AE308A22B1D8ED0058D3BC /* RMIntroViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RMIntroViewController.h; sourceTree = "<group>"; };
@@ -249,6 +249,7 @@
 		D0AE306E22B1D8ED0058D3BC /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				09EC5CD722CBB86A00292E42 /* telegram_plane1@2x.png */,
 				D0AE306F22B1D8ED0058D3BC /* ic_bubble_dot@2x.png */,
 				D0AE307022B1D8ED0058D3BC /* powerful_mask@2x.png */,
 				D0AE307122B1D8ED0058D3BC /* telegram_sphere@2x.png */,
@@ -273,7 +274,6 @@
 				D0AE308422B1D8ED0058D3BC /* powerful_infinity_white@2x.png */,
 				D0AE308522B1D8ED0058D3BC /* private_screw@2x.png */,
 				D0AE308622B1D8ED0058D3BC /* powerful_infinity@2x.png */,
-				D0AE308722B1D8ED0058D3BC /* telegram_plane@2x.png */,
 				D0AE308822B1D8ED0058D3BC /* ic_smile@2x.png */,
 			);
 			path = Resources;
@@ -402,6 +402,7 @@
 				D0AE30B522B1D8ED0058D3BC /* start_arrow_ipad@2x.png in Resources */,
 				D0AE30BD22B1D8ED0058D3BC /* fast_spiral@2x.png in Resources */,
 				D0AE30CD22B1D8ED0058D3BC /* .gitignore in Resources */,
+				09EC5CD822CBB86B00292E42 /* telegram_plane1@2x.png in Resources */,
 				D0AE30B822B1D8ED0058D3BC /* fast_arrow@2x.png in Resources */,
 				D0AE30AC22B1D8ED0058D3BC /* powerful_mask@2x.png in Resources */,
 				D0AE30B322B1D8ED0058D3BC /* fast_arrow_shadow@2x.png in Resources */,
@@ -414,7 +415,6 @@
 				D0AE30B222B1D8ED0058D3BC /* start_arrow_ipad.png in Resources */,
 				D0AE30C422B1D8ED0058D3BC /* ic_smile@2x.png in Resources */,
 				D0AE30B922B1D8ED0058D3BC /* ic_pencil@2x.png in Resources */,
-				D0AE30C322B1D8ED0058D3BC /* telegram_plane@2x.png in Resources */,
 				D0AE30B422B1D8ED0058D3BC /* ic_cam@2x.png in Resources */,
 				D0AE30B622B1D8ED0058D3BC /* fast_body@2x.png in Resources */,
 				D0AE30BC22B1D8ED0058D3BC /* ic_pin@2x.png in Resources */,

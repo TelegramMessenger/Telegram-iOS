@@ -257,7 +257,9 @@ open class ViewControllerPresentationArguments {
             }
         }
         self.navigationBar?.requestContainerLayout = { [weak self] transition in
-            self?.requestLayout(transition: transition)
+            if let strongSelf = self, strongSelf.isNodeLoaded, let validLayout = strongSelf.validLayout {
+                strongSelf.updateNavigationBarLayout(validLayout, transition: transition)
+            }
         }
         self.navigationBar?.item = self.navigationItem
         self.automaticallyAdjustsScrollViewInsets = false
@@ -275,17 +277,7 @@ open class ViewControllerPresentationArguments {
         
     }
     
-    open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        self.validLayout = layout
-        
-        if !self.isViewLoaded {
-            self.loadView()
-        }
-        transition.updateFrame(node: self.displayNode, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
-        if let _ = layout.statusBarHeight {
-            self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
-        }
-        
+    private func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         let navigationBarHeight: CGFloat = max(20.0, statusBarHeight) + (self.navigationBar?.contentHeight ?? 44.0)
         let navigationBarOffset: CGFloat
@@ -318,6 +310,20 @@ open class ViewControllerPresentationArguments {
             transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
             navigationBar.setHidden(!self.displayNavigationBar, animated: transition.isAnimated)
         }
+    }
+    
+    open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.validLayout = layout
+        
+        if !self.isViewLoaded {
+            self.loadView()
+        }
+        transition.updateFrame(node: self.displayNode, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
+        if let _ = layout.statusBarHeight {
+            self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
+        }
+        
+        self.updateNavigationBarLayout(layout, transition: transition)
         
         self.presentationContext.containerLayoutUpdated(layout, transition: transition)
         

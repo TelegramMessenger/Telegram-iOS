@@ -68,8 +68,6 @@ public final class PresentationCallManager {
     private var callSettings: VoiceCallSettings?
     private var callSettingsDisposable: Disposable?
     
-    public var callRequested: ((_ accountPeerId: PeerId, _ peerId: PeerId) -> Void)?
-    
     public static var voipMaxLayer: Int32 {
         return OngoingCallContext.maxLayer
     }
@@ -316,8 +314,6 @@ public final class PresentationCallManager {
             } else {
                 begin()
             }
-            
-            self.callRequested?(account.peerId, peerId)
         } else {
             let begin: () -> Void = { [weak self] in
                 guard let strongSelf = self else {
@@ -333,7 +329,6 @@ public final class PresentationCallManager {
             } else {
                 begin()
             }
-            self.callRequested?(account.peerId, peerId)
         }
         return .requested
     }
