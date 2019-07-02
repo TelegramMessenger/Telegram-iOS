@@ -97,10 +97,14 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         if !message.text.isEmpty {
                             messageText = "📎 \(messageText)"
                         } else {
-                            if let fileName = fileMedia.fileName {
-                                messageText = fileName
+                            if fileMedia.isAnimatedSticker {
+                                messageText = strings.Message_Sticker
                             } else {
-                                messageText = strings.Message_File
+                                if let fileName = fileMedia.fileName {
+                                    messageText = fileName
+                                } else {
+                                    messageText = strings.Message_File
+                                }
                             }
                         }
                     }

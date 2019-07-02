@@ -154,6 +154,7 @@
 		09EC0DE722C67FB100E7185B /* UpdateInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DE622C67FB100E7185B /* UpdateInfoController.swift */; };
 		09EC0DEB22CAFF1400E7185B /* UpdateInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DEA22CAFF1400E7185B /* UpdateInfoItem.swift */; };
 		09EC0DED22CB583C00E7185B /* TextLinkHandling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DEC22CB583C00E7185B /* TextLinkHandling.swift */; };
+		09EC5CDC22CBD33D00292E42 /* NumberFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC5CDB22CBD33D00292E42 /* NumberFormat.swift */; };
 		09EDAD26220D30980012A50B /* AutodownloadConnectionTypeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */; };
 		09EDAD2A220DA6A40012A50B /* VolumeButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD29220DA6A40012A50B /* VolumeButtons.swift */; };
 		09EDAD2C2211552F0012A50B /* AutodownloadMediaCategoryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD2B2211552F0012A50B /* AutodownloadMediaCategoryController.swift */; };
@@ -1376,6 +1377,7 @@
 		09EC0DE622C67FB100E7185B /* UpdateInfoController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateInfoController.swift; sourceTree = "<group>"; };
 		09EC0DEA22CAFF1400E7185B /* UpdateInfoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateInfoItem.swift; sourceTree = "<group>"; };
 		09EC0DEC22CB583C00E7185B /* TextLinkHandling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLinkHandling.swift; sourceTree = "<group>"; };
+		09EC5CDB22CBD33D00292E42 /* NumberFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumberFormat.swift; sourceTree = "<group>"; };
 		09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadConnectionTypeController.swift; sourceTree = "<group>"; };
 		09EDAD29220DA6A40012A50B /* VolumeButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeButtons.swift; sourceTree = "<group>"; };
 		09EDAD2B2211552F0012A50B /* AutodownloadMediaCategoryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadMediaCategoryController.swift; sourceTree = "<group>"; };
@@ -2975,6 +2977,7 @@
 				0900678E21ED8E0E00530762 /* HexColor.swift */,
 				0947FCAF224055990086741C /* StringHash.swift */,
 				09F2158C225CF5BC00AEDF6D /* Pasteboard.swift */,
+				09EC5CDB22CBD33D00292E42 /* NumberFormat.swift */,
 			);
 			name = Strings;
 			sourceTree = "<group>";
@@ -6051,6 +6054,7 @@
 				09FFBCD9228473BD00C33B4B /* CallSuggestTabController.swift in Sources */,
 				D0EC6DFC1EB9F58900EBF1C3 /* GalleryController.swift in Sources */,
 				D0EC6DFD1EB9F58900EBF1C3 /* GalleryControllerNode.swift in Sources */,
+				09EC5CDC22CBD33D00292E42 /* NumberFormat.swift in Sources */,
 				D0E9BA571F055A0B00F079A4 /* STPFormTextField.m in Sources */,
 				D0EC6DFE1EB9F58900EBF1C3 /* GalleryControllerPresentationState.swift in Sources */,
 				D00817DB22B47A14008A895F /* LegacyChatImport.swift in Sources */,

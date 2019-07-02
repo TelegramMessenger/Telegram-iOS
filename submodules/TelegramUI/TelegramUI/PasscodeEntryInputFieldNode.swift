@@ -47,6 +47,10 @@ private func generateFieldBackgroundImage(background: PasscodeBackground, frame:
     })
 }
 
+private let validDigitsSet: CharacterSet = {
+    return CharacterSet(charactersIn: "0".unicodeScalars.first! ... "9".unicodeScalars.first!)
+}()
+
 enum PasscodeEntryFieldType {
     case digits6
     case digits4
@@ -66,7 +70,7 @@ enum PasscodeEntryFieldType {
     var allowedCharacters: CharacterSet? {
         switch self {
             case .digits6, .digits4:
-                return CharacterSet.decimalDigits
+                return validDigitsSet
             case .alphanumeric:
                 return nil
         }
@@ -75,7 +79,11 @@ enum PasscodeEntryFieldType {
     var keyboardType: UIKeyboardType {
         switch self {
             case .digits6, .digits4:
-                return .numberPad
+                if #available(iOS 10.0, *) {
+                    return .asciiCapableNumberPad
+                } else {
+                    return .numberPad
+                }
             case .alphanumeric:
                 return .default
         }

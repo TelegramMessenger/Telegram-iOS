@@ -129,6 +129,9 @@ public func mediaContentKind(_ media: Media, message: Message? = nil, strings: P
                         break
                 }
             }
+            if file.isAnimatedSticker {
+                return .sticker("")
+            }
             return .file(fileName)
         case _ as TelegramMediaContact:
             return .contact
