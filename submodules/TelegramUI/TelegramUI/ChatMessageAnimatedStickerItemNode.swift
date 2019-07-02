@@ -16,6 +16,7 @@ private let inlineBotNameFont = nameFont
 class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     let imageNode: TransformImageNode
     private let animationNode: AnimatedStickerNode
+    private var didSetUpAnimationNode = false
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
@@ -97,9 +98,25 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let isVisible = self.visibility != .none
             
             if wasVisible != isVisible {
-                if isVisible {
+                self.visibilityStatus = isVisible
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                if self.visibilityStatus {
                     self.animationNode.visibility = true
                     self.visibilityPromise.set(true)
+                    if let item = self.item, !self.didSetUpAnimationNode {
+                        for media in item.message.media {
+                            if let telegramFile = media as? TelegramMediaFile {
+                                self.didSetUpAnimationNode = true
+                                self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
+                            }
+                        }
+                    }
                 } else {
                     self.animationNode.visibility = false
                     self.visibilityPromise.set(false)
@@ -116,7 +133,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
-                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
+                    if self.visibilityStatus {
+                        self.didSetUpAnimationNode = true
+                        self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
+                    }
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                 }
                 break
