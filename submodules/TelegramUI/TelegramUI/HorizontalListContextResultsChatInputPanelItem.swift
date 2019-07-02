@@ -383,7 +383,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             animationNode.started = { [weak self] in
                                 self?.imageNode.alpha = 0.0
                             }
-                            animationNode.setup(account: item.account, resource: animatedStickerFile.resource, width: 140, height: 140, mode: .cached)
+                            animationNode.setup(account: item.account, resource: animatedStickerFile.resource, width: 160, height: 160, mode: .cached)
                         }
                     }
                     
