@@ -367,25 +367,25 @@ public func sendBotPaymentForm(account: Account, messageId: MessageId, validated
         flags |= (1 << 1)
     }
     return account.network.request(Api.functions.payments.sendPaymentForm(flags: flags, msgId: messageId.id, requestedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, credentials: apiCredentials))
-        |> map { result -> SendBotPaymentResult in
-            switch result {
-                case let .paymentResult(updates):
-                    account.stateManager.addUpdates(updates)
-                    return .done
-                case let .paymentVerficationNeeded(url):
-                    return .externalVerificationRequired(url: url)
-            }
+    |> map { result -> SendBotPaymentResult in
+        switch result {
+            case let .paymentResult(updates):
+                account.stateManager.addUpdates(updates)
+                return .done
+            case let .paymentVerficationNeeded(url):
+                return .externalVerificationRequired(url: url)
         }
-        |> `catch` { error -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
-            if error.errorDescription == "BOT_PRECHECKOUT_FAILED" {
-                return .fail(.precheckoutFailed)
-            } else if error.errorDescription == "PAYMENT_FAILED" {
-                return .fail(.paymentFailed)
-            } else if error.errorDescription == "INVOICE_ALREADY_PAID" {
-                return .fail(.alreadyPaid)
-            }
-            return .fail(.generic)
+    }
+    |> `catch` { error -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+        if error.errorDescription == "BOT_PRECHECKOUT_FAILED" {
+            return .fail(.precheckoutFailed)
+        } else if error.errorDescription == "PAYMENT_FAILED" {
+            return .fail(.paymentFailed)
+        } else if error.errorDescription == "INVOICE_ALREADY_PAID" {
+            return .fail(.alreadyPaid)
         }
+        return .fail(.generic)
+    }
 }
 
 public struct BotPaymentReceipt {
@@ -397,16 +397,16 @@ public struct BotPaymentReceipt {
 
 public func requestBotPaymentReceipt(network: Network, messageId: MessageId) -> Signal<BotPaymentReceipt, NoError> {
     return network.request(Api.functions.payments.getPaymentReceipt(msgId: messageId.id))
-        |> retryRequest
-        |> map { result -> BotPaymentReceipt in
-            switch result {
-                case let .paymentReceipt(_, _, _, invoice, _, info, shipping, _, _, credentialsTitle, _):
-                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
-                    let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
-                    let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
-                    return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle)
-            }
+    |> retryRequest
+    |> map { result -> BotPaymentReceipt in
+        switch result {
+            case let .paymentReceipt(_, _, _, invoice, _, info, shipping, _, _, credentialsTitle, _):
+                let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
+                let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
+                return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle)
         }
+    }
 }
 
 public struct BotPaymentInfo: OptionSet {
@@ -433,8 +433,8 @@ public func clearBotPaymentInfo(network: Network, info: BotPaymentInfo) -> Signa
         flags |= (1 << 1)
     }
     return network.request(Api.functions.payments.clearSavedInfo(flags: flags))
-        |> retryRequest
-        |> mapToSignal { _ -> Signal<Void, NoError> in
-            return .complete()
-        }
+    |> retryRequest
+    |> mapToSignal { _ -> Signal<Void, NoError> in
+        return .complete()
+    }
 }

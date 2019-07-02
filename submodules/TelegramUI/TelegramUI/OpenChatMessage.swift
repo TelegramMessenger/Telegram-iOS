@@ -118,6 +118,8 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     break
                 }
             }
+        } else if let file = galleryMedia as? TelegramMediaFile, file.isAnimatedSticker {
+            return nil
         } else if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice || file.isInstantVideo {
             return .audio(file)
         } else if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "application/vnd.apple.pkpass" || (file.fileName != nil && file.fileName!.lowercased().hasSuffix(".pkpass")) {

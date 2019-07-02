@@ -83,25 +83,9 @@ final class ContactsControllerNode: ASDisplayNode {
         }
         
         inviteImpl = { [weak self] in
-            let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { value in
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                switch value {
-                    case .allowed:
-                        strongSelf.openInvite?()
-                    case .notDetermined:
-                        DeviceAccess.authorizeAccess(to: .contacts)
-                    default:
-                        let presentationData = strongSelf.presentationData
-                        present(textAlertController(context: strongSelf.context, title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                            self?.context.sharedContext.applicationBindings.openSettings()
-                        })]), nil)
-                }
-            })
+            if let strongSelf = self {
+                strongSelf.openInvite?()
+            }
         }
     }
     

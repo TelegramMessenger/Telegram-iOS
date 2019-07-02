@@ -41,12 +41,25 @@ final class HorizontalStickerGridItem: GridItem {
 final class HorizontalStickerGridItemNode: GridItemNode {
     private var currentState: (Account, HorizontalStickerGridItem, CGSize)?
     private let imageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
     
     private let stickerFetchedDisposable = MetaDisposable()
     
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     
     private var currentIsPreviewing: Bool = false
+    
+    override var isVisibleInGrid: Bool {
+        didSet {
+            if oldValue != self.isVisibleInGrid {
+                if self.isVisibleInGrid {
+                    self.animationNode?.visibility = true
+                } else {
+                    self.animationNode?.visibility = false
+                }
+            }
+        }
+    }
     
     var stickerItem: StickerPackItem? {
         if let (_, item, _) = self.currentState {
@@ -66,7 +79,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     }
     
     deinit {
-        stickerFetchedDisposable.dispose()
+        self.stickerFetchedDisposable.dispose()
     }
     
     override func didLoad() {
@@ -78,7 +91,32 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     func setup(account: Account, item: HorizontalStickerGridItem) {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1.file.id != item.file.id {
             if let dimensions = item.file.dimensions {
-                self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true))
+                if item.file.isAnimatedSticker {
+                    let animationNode: AnimatedStickerNode
+                    if let currentAnimationNode = self.animationNode {
+                        animationNode = currentAnimationNode
+                    } else {
+                        animationNode = AnimatedStickerNode()
+                        animationNode.transform = self.imageNode.transform
+                        animationNode.visibility = self.isVisibleInGrid
+                        animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
+                        self.addSubnode(animationNode)
+                        self.animationNode = animationNode
+                    }
+                    animationNode.started = { [weak self] in
+                        self?.imageNode.alpha = 0.0
+                    }
+                    animationNode.setup(account: account, resource: item.file.resource, width: 140, height: 140, mode: .cached)
+                } else {
+                    self.imageNode.alpha = 1.0
+                    self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true))
+                    
+                    if let currentAnimationNode = self.animationNode {
+                        self.animationNode = nil
+                        currentAnimationNode.removeFromSupernode()
+                    }
+                }
+                
                 self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
                 
                 self.currentState = (account, item, dimensions)
@@ -101,6 +139,12 @@ final class HorizontalStickerGridItemNode: GridItemNode {
             let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: CGSize(width: imageSize.width, height: imageSize.height))
             self.imageNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: imageSize.width, height: imageSize.height))
             self.imageNode.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
+            
+            if let animationNode = self.animationNode {
+                animationNode.bounds = self.imageNode.bounds
+                animationNode.position = self.imageNode.position
+                animationNode.updateLayout(size: self.imageNode.bounds.size)
+            }
         }
     }
     

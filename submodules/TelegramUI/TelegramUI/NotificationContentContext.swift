@@ -68,6 +68,7 @@ public final class NotificationViewControllerImpl {
     private let setPreferredContentSize: (CGSize) -> Void
     
     private let imageNode = TransformImageNode()
+    private var animatedStickerNode: AnimatedStickerNode?
     private var imageInfo: (isSticker: Bool, dimensions: CGSize)?
     
     private let applyDisposable = MetaDisposable()
@@ -176,44 +177,44 @@ public final class NotificationViewControllerImpl {
                 }
                 
                 self.applyDisposable.set((sharedAccountContext.activeAccounts
-                    |> map { _, accounts, _ -> Account? in
-                        return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
+                |> map { _, accounts, _ -> Account? in
+                    return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
+                }
+                |> filter { account in
+                    return account != nil
+                }
+                |> take(1)
+                |> mapToSignal { account -> Signal<(Account, ImageMediaReference?), NoError> in
+                    guard let account = account else {
+                        return .complete()
                     }
-                    |> filter { account in
-                        return account != nil
-                    }
-                    |> take(1)
-                    |> mapToSignal { account -> Signal<(Account, ImageMediaReference?), NoError> in
-                        guard let account = account else {
-                            return .complete()
-                        }
-                        return account.postbox.messageAtId(messageId)
-                            |> take(1)
-                            |> map { message in
-                                var imageReference: ImageMediaReference?
-                                if let message = message {
-                                    for media in message.media {
-                                        if let image = media as? TelegramMediaImage {
-                                            imageReference = .message(message: MessageReference(message), media: image)
-                                        }
+                    return account.postbox.messageAtId(messageId)
+                        |> take(1)
+                        |> map { message in
+                            var imageReference: ImageMediaReference?
+                            if let message = message {
+                                for media in message.media {
+                                    if let image = media as? TelegramMediaImage {
+                                        imageReference = .message(message: MessageReference(message), media: image)
                                     }
-                                } else {
-                                    imageReference = .standalone(media: image)
                                 }
-                                return (account, imageReference)
-                        }
+                            } else {
+                                imageReference = .standalone(media: image)
+                            }
+                            return (account, imageReference)
                     }
-                    |> deliverOnMainQueue).start(next: { [weak self] accountAndImage in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        if let imageReference = accountAndImage.1 {
-                            strongSelf.imageNode.setSignal(chatMessagePhoto(postbox: accountAndImage.0.postbox, photoReference: imageReference))
-                            
-                            accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
-                            strongSelf.fetchedDisposable.set(standaloneChatMessagePhotoInteractiveFetched(account: accountAndImage.0, photoReference: imageReference).start())
-                        }
-                    }))
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] accountAndImage in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let imageReference = accountAndImage.1 {
+                        strongSelf.imageNode.setSignal(chatMessagePhoto(postbox: accountAndImage.0.postbox, photoReference: imageReference))
+                        
+                        accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
+                        strongSelf.fetchedDisposable.set(standaloneChatMessagePhotoInteractiveFetched(account: accountAndImage.0, photoReference: imageReference).start())
+                    }
+                }))
             } else if let file = media as? TelegramMediaFile, let dimensions = file.dimensions {
                 guard let sharedAccountContext = sharedAccountContext else {
                     return
@@ -227,46 +228,77 @@ public final class NotificationViewControllerImpl {
                 self.updateImageLayout(boundingSize: view.bounds.size)
                 
                 self.applyDisposable.set((sharedAccountContext.activeAccounts
-                    |> map { _, accounts, _ -> Account? in
-                        return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
+                |> map { _, accounts, _ -> Account? in
+                    return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
+                }
+                |> filter { account in
+                    return account != nil
+                }
+                |> take(1)
+                |> mapToSignal { account -> Signal<(Account, FileMediaReference?), NoError> in
+                    guard let account = account else {
+                        return .complete()
                     }
-                    |> filter { account in
-                        return account != nil
-                    }
+                    return account.postbox.messageAtId(messageId)
                     |> take(1)
-                    |> mapToSignal { account -> Signal<(Account, FileMediaReference?), NoError> in
-                        guard let account = account else {
-                            return .complete()
-                        }
-                        return account.postbox.messageAtId(messageId)
-                            |> take(1)
-                            |> map { message in
-                                var fileReference: FileMediaReference?
-                                if let message = message {
-                                    for media in message.media {
-                                        if let file = media as? TelegramMediaFile {
-                                            fileReference = .message(message: MessageReference(message), media: file)
-                                        }
-                                    }
-                                } else {
-                                    fileReference = .standalone(media: file)
+                    |> map { message in
+                        var fileReference: FileMediaReference?
+                        if let message = message {
+                            for media in message.media {
+                                if let file = media as? TelegramMediaFile {
+                                    fileReference = .message(message: MessageReference(message), media: file)
                                 }
-                                return (account, fileReference)
+                            }
+                        } else {
+                            fileReference = .standalone(media: file)
+                        }
+                        return (account, fileReference)
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self, weak view] accountAndImage in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let fileReference = accountAndImage.1 {
+                        if file.isAnimatedSticker {
+                            let animatedStickerNode: AnimatedStickerNode
+                            if let current = strongSelf.animatedStickerNode {
+                                animatedStickerNode = current
+                            } else {
+                                animatedStickerNode = AnimatedStickerNode()
+                                strongSelf.animatedStickerNode = animatedStickerNode
+                                animatedStickerNode.started = {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.imageNode.isHidden = true
+                                }
+                                if !strongSelf.imageNode.frame.width.isZero {
+                                    animatedStickerNode.frame = strongSelf.imageNode.frame
+                                    animatedStickerNode.updateLayout(size: strongSelf.imageNode.frame.size)
+                                }
+                                view?.addSubnode(animatedStickerNode)
+                            }
+                            strongSelf.imageNode.setSignal(chatMessageAnimatedSticker(postbox: accountAndImage.0.postbox, file: fileReference.media, small: false, size: CGSize(width: 512.0, height: 512.0)))
+                            animatedStickerNode.setup(account: accountAndImage.0, resource: fileReference.media.resource, width: 512, height: 512, mode: .direct)
+                            animatedStickerNode.visibility = true
+                            
+                            accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
+                            strongSelf.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: accountAndImage.0, fileReference: fileReference).start())
+                        } else if file.isSticker {
+                            if let animatedStickerNode = strongSelf.animatedStickerNode {
+                                animatedStickerNode.removeFromSupernode()
+                                strongSelf.animatedStickerNode = nil
+                            }
+                            strongSelf.imageNode.isHidden = false
+                            
+                            strongSelf.imageNode.setSignal(chatMessageSticker(account: accountAndImage.0, file: file, small: false))
+                            
+                            accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
+                            strongSelf.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: accountAndImage.0, fileReference: fileReference).start())
                         }
                     }
-                    |> deliverOnMainQueue).start(next: { [weak self] accountAndImage in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        if let fileReference = accountAndImage.1 {
-                            if file.isSticker {
-                                strongSelf.imageNode.setSignal(chatMessageSticker(account: accountAndImage.0, file: file, small: false))
-                                
-                                accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
-                                strongSelf.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: accountAndImage.0, fileReference: fileReference).start())
-                            }
-                        }
-                    }))
+                }))
             }
         }
     }
@@ -288,6 +320,8 @@ public final class NotificationViewControllerImpl {
             apply()
             let displaySize = isSticker ? fittedSize : boundingSize
             self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - displaySize.width) / 2.0), y: 0.0), size: displaySize)
+            self.animatedStickerNode?.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - displaySize.width) / 2.0), y: 0.0), size: displaySize)
+            self.animatedStickerNode?.updateLayout(size: displaySize)
         }
     }
 }

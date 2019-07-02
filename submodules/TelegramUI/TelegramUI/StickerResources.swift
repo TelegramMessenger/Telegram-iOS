@@ -219,8 +219,8 @@ private func chatMessageStickerPackThumbnailData(postbox: Postbox, representatio
     }
 }
 
-func chatMessageAnimationData(postbox: Postbox, fileReference: FileMediaReference, width: Int, height: Int, synchronousLoad: Bool) -> Signal<MediaResourceData, NoError> {
-    let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedAnimatedStickerRepresentation(width: Int32(width), height: Int32(height)), pathExtension: "mp4", complete: false, fetch: false, attemptSynchronously: synchronousLoad)
+func chatMessageAnimationData(postbox: Postbox, resource: MediaResource, width: Int, height: Int, synchronousLoad: Bool) -> Signal<MediaResourceData, NoError> {
+    let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedAnimatedStickerRepresentation(width: Int32(width), height: Int32(height)), complete: false, fetch: false, attemptSynchronously: synchronousLoad)
     
     return maybeFetched
     |> take(1)
@@ -228,7 +228,7 @@ func chatMessageAnimationData(postbox: Postbox, fileReference: FileMediaReferenc
         if maybeData.complete {
             return .single(maybeData)
         } else {
-            return postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedAnimatedStickerRepresentation(width: Int32(width), height: Int32(height)), pathExtension: "mp4", complete: false)
+            return postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedAnimatedStickerRepresentation(width: Int32(width), height: Int32(height)), complete: false)
         }
     }
 }
@@ -474,12 +474,11 @@ public func chatMessageAnimatedSticker(postbox: Postbox, file: TelegramMediaFile
         let fullSizeData = value._1
         let fullSizeComplete = value._2
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
             
             let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
-            //let fittedRect = arguments.drawingRect
             
             var fullSizeImage: (UIImage, UIImage)?
             if let fullSizeData = fullSizeData, fullSizeComplete {

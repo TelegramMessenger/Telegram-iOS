@@ -107,8 +107,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: CGSize(width: 360.0, height: 360.0), thumbnail: false))
-                    self.animationNode.setup(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile), width: 360, height: 360)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: CGSize(width: 400.0, height: 400.0), thumbnail: false))
+                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 400, height: 400, mode: .cached)
+                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: telegramFile)).start())
                 }
                 break
             }

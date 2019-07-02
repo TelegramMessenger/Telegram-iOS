@@ -96,6 +96,13 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
     } else if let file = media as? TelegramMediaFile {
         if let resource = file.resource as? CloudDocumentMediaResource {
             if peerId.namespace == Namespaces.Peer.SecretChat {
+                for attribute in file.attributes {
+                    if case let .Sticker(sticker) = attribute {
+                        if let _ = sticker.packReference {
+                            return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: PendingMessageUploadedContent.text(text), reuploadInfo: nil)))
+                        }
+                    }
+                }
                 return uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, forceReupload: true, isGrouped: isGrouped, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file)
             } else {
                 if forceReupload {

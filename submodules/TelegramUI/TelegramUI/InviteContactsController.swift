@@ -209,4 +209,3 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         self.contactsNode.selectionState = self.contactsNode.selectionState.withClearedSelection()
     }
 }
-

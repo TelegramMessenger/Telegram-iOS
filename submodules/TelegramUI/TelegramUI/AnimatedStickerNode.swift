@@ -5,6 +5,8 @@ import TelegramCore
 import Compression
 import Display
 import AsyncDisplayKit
+import RLottie
+import GZip
 
 private final class AnimationFrameCache {
     private var cache: [Int: NSPurgeableData] = [:]
@@ -65,6 +67,11 @@ private class AnimatedStickerNodeDisplayEvents: ASDisplayNode {
     }
 }
 
+enum AnimatedStickerMode {
+    case cached
+    case direct
+}
+
 final class AnimatedStickerNode: ASDisplayNode {
     private let queue: Queue
     private var account: Account?
@@ -78,7 +85,8 @@ final class AnimatedStickerNode: ASDisplayNode {
     
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
     
-    private var data: Data?
+    private var directData: Tuple2<Data, String>?
+    private var cachedData: Data?
     
     private var renderer: (AnimationRenderer & ASDisplayNode)?
     
@@ -134,16 +142,32 @@ final class AnimatedStickerNode: ASDisplayNode {
         self.addSubnode(self.renderer!)
     }
     
-    func setup(account: Account, fileReference: FileMediaReference, width: Int, height: Int) {
-        self.disposable.set(chatMessageAnimationData(postbox: account.postbox, fileReference: fileReference, width: width, height: height, synchronousLoad: false).start(next: { [weak self] data in
-            if let strongSelf = self, data.complete {
-                strongSelf.data = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead])
-                if strongSelf.isPlaying {
-                    strongSelf.play()
-                }
-            }
-        }))
-        self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
+    func setup(account: Account, resource: MediaResource, width: Int, height: Int, mode: AnimatedStickerMode) {
+        switch mode {
+            case .direct:
+                self.disposable.set((account.postbox.mediaBox.resourceData(resource)
+                |> deliverOnMainQueue).start(next: { [weak self] data in
+                    guard let strongSelf = self, data.complete else {
+                        return
+                    }
+                    if let directData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead]) {
+                        strongSelf.directData = Tuple(directData, data.path)
+                    }
+                    if strongSelf.isPlaying {
+                        strongSelf.play()
+                    }
+                }))
+            case .cached:
+                self.disposable.set((chatMessageAnimationData(postbox: account.postbox, resource: resource, width: width, height: height, synchronousLoad: false)
+                |> deliverOnMainQueue).start(next: { [weak self] data in
+                    if let strongSelf = self, data.complete {
+                        strongSelf.cachedData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead])
+                        if strongSelf.isPlaying {
+                            strongSelf.play()
+                        }
+                    }
+                }))
+        }
     }
     
     func reset() {
@@ -164,95 +188,147 @@ final class AnimatedStickerNode: ASDisplayNode {
     }
     
     func play() {
-        guard let data = self.data else {
-            return
-        }
-        let queue = self.queue
-        let timerHolder = self.timer
-        self.queue.async { [weak self] in
-            if #available(iOS 9.0, *) {
-                let dataCount = data.count
-                timerHolder.swap(nil)?.invalidate()
-                var scratchBuffer = Data(count: compression_decode_scratch_buffer_size(COMPRESSION_LZ4))
-                
-                var offset = 0
-                var width = 0
-                var height = 0
-                
-                var fps: Int32 = 0
-                data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                    memcpy(&fps, bytes.advanced(by: offset), 4)
-                    offset += 4
-                    var widthValue: Int32 = 0
-                    var heightValue: Int32 = 0
-                    memcpy(&widthValue, bytes.advanced(by: offset), 4)
-                    offset += 4
-                    memcpy(&heightValue, bytes.advanced(by: offset), 4)
-                    offset += 4
-                    width = Int(widthValue)
-                    height = Int(heightValue)
-                }
-                
-                let initialOffset = offset
-                
-                var decodeBuffer = Data(count: width * 4 * height)
-                var frameBuffer = Data(count: width * 4 * height)
-                let decodeBufferLength = decodeBuffer.count
-                frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                    memset(bytes, 0, decodeBufferLength)
-                }
-                
-                var frameIndex = 0
-                let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(fps), repeat: true, completion: {
-                    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                        var frameLength: Int32 = 0
-                        memcpy(&frameLength, bytes.advanced(by: offset), 4)
-                        
-                        scratchBuffer.withUnsafeMutableBytes { (scratchBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                            decodeBuffer.withUnsafeMutableBytes { (decodeBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                frameBuffer.withUnsafeMutableBytes { (frameBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                    compression_decode_buffer(decodeBytes, decodeBufferLength, bytes.advanced(by: offset + 4), Int(frameLength), UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZ4)
-                                    
-                                    var lhs = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt64.self)
-                                    var rhs = UnsafeRawPointer(decodeBytes).assumingMemoryBound(to: UInt64.self)
-                                    for _ in 0 ..< decodeBufferLength / 8 {
-                                        lhs.pointee = lhs.pointee ^ rhs.pointee
-                                        lhs = lhs.advanced(by: 1)
-                                        rhs = rhs.advanced(by: 1)
-                                    }
-                                    
-                                    let frameData = Data(bytes: frameBytes, count: decodeBufferLength)
-                                    
-                                    Queue.mainQueue().async {
-                                        guard let strongSelf = self else {
-                                            return
+        if let cachedData = self.cachedData {
+            let queue = self.queue
+            let timerHolder = self.timer
+            self.queue.async { [weak self] in
+                if #available(iOS 9.0, *) {
+                    let dataCount = cachedData.count
+                    timerHolder.swap(nil)?.invalidate()
+                    var scratchBuffer = Data(count: compression_decode_scratch_buffer_size(COMPRESSION_LZ4))
+                    
+                    var offset = 0
+                    var width = 0
+                    var height = 0
+                    
+                    var fps: Int32 = 0
+                    cachedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                        memcpy(&fps, bytes.advanced(by: offset), 4)
+                        offset += 4
+                        var widthValue: Int32 = 0
+                        var heightValue: Int32 = 0
+                        memcpy(&widthValue, bytes.advanced(by: offset), 4)
+                        offset += 4
+                        memcpy(&heightValue, bytes.advanced(by: offset), 4)
+                        offset += 4
+                        width = Int(widthValue)
+                        height = Int(heightValue)
+                    }
+                    
+                    let initialOffset = offset
+                    
+                    var decodeBuffer = Data(count: width * 4 * height)
+                    var frameBuffer = Data(count: width * 4 * height)
+                    let decodeBufferLength = decodeBuffer.count
+                    frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                        memset(bytes, 0, decodeBufferLength)
+                    }
+                    
+                    var frameIndex = 0
+                    let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(fps), repeat: true, completion: {
+                        cachedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                            var frameLength: Int32 = 0
+                            memcpy(&frameLength, bytes.advanced(by: offset), 4)
+                            
+                            scratchBuffer.withUnsafeMutableBytes { (scratchBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                decodeBuffer.withUnsafeMutableBytes { (decodeBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                    frameBuffer.withUnsafeMutableBytes { (frameBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                        compression_decode_buffer(decodeBytes, decodeBufferLength, bytes.advanced(by: offset + 4), Int(frameLength), UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZ4)
+                                        
+                                        var lhs = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt64.self)
+                                        var rhs = UnsafeRawPointer(decodeBytes).assumingMemoryBound(to: UInt64.self)
+                                        for _ in 0 ..< decodeBufferLength / 8 {
+                                            lhs.pointee = lhs.pointee ^ rhs.pointee
+                                            lhs = lhs.advanced(by: 1)
+                                            rhs = rhs.advanced(by: 1)
                                         }
-                                        strongSelf.renderer?.render(queue: strongSelf.queue, width: width, height: height, data: frameData, completion: {
+                                        
+                                        let frameData = Data(bytes: frameBytes, count: decodeBufferLength)
+                                        
+                                        Queue.mainQueue().async {
                                             guard let strongSelf = self else {
                                                 return
                                             }
-                                            if !strongSelf.reportedStarted {
-                                                strongSelf.started()
-                                            }
-                                        })
+                                            strongSelf.renderer?.render(queue: strongSelf.queue, width: width, height: height, data: frameData, type: .yuva, completion: {
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                if !strongSelf.reportedStarted {
+                                                    strongSelf.started()
+                                                }
+                                            })
+                                        }
                                     }
                                 }
                             }
-                        }
-                        
-                        offset += 4 + Int(frameLength)
-                        frameIndex += 1
-                        if offset == dataCount {
-                            offset = initialOffset
-                            frameIndex = 0
-                            frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                memset(bytes, 0, decodeBufferLength)
+                            
+                            offset += 4 + Int(frameLength)
+                            frameIndex += 1
+                            if offset == dataCount {
+                                offset = initialOffset
+                                frameIndex = 0
+                                frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                    memset(bytes, 0, decodeBufferLength)
+                                }
                             }
                         }
+                    }, queue: queue)
+                    let _ = timerHolder.swap(timer)
+                    timer.start()
+                }
+            }
+        } else if let directData = self.directData {
+            let queue = self.queue
+            let timerHolder = self.timer
+            self.queue.async { [weak self] in
+                if #available(iOS 9.0, *) {
+                    timerHolder.swap(nil)?.invalidate()
+                    
+                    guard let rawData = TGGUnzipData(directData._0) else {
+                        return
                     }
-                }, queue: queue)
-                let _ = timerHolder.swap(timer)
-                timer.start()
+                    
+                    guard let animation = LottieInstance(data: rawData, cacheKey: directData._1) else {
+                        return
+                    }
+                    
+                    let width: Int32 = 512
+                    let height: Int32 = 512
+                    
+                    let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, clear: true)
+                    
+                    let frameCount = Int(animation.frameCount)
+                    let fps: Int32 = animation.frameRate
+                    
+                    var frameIndex = 0
+                    let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(fps), repeat: true, completion: {
+                        memset(context.bytes, 0, context.length)
+                        animation.renderFrame(with: Int32(frameIndex), into: context.bytes.assumingMemoryBound(to: UInt8.self), width: width, height: height)
+                        
+                        let frameData = Data(bytes: context.bytes, count: context.length)
+                        
+                        Queue.mainQueue().async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.renderer?.render(queue: strongSelf.queue, width: Int(width), height: Int(height), data: frameData, type: .argb, completion: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                if !strongSelf.reportedStarted {
+                                    strongSelf.started()
+                                }
+                            })
+                        }
+                        
+                        frameIndex += 1
+                        if frameIndex >= frameCount {
+                            frameIndex = 0
+                        }
+                    }, queue: queue)
+                    let _ = timerHolder.swap(timer)
+                    timer.start()
+                }
             }
         }
     }

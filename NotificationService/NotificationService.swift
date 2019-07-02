@@ -345,58 +345,59 @@ class NotificationService: UNNotificationServiceExtension {
             
             if let attachment = attachment {
                 switch attachment {
-                    case let .photo(photo):
-                        switch photo {
-                            case let .photo(_, id, accessHash, fileReference, _, sizes, dcId):
-                                isExpandableMedia = true
-                                loop: for size in sizes {
-                                    switch size {
-                                        case let .photoSize(type, _, _, _, _):
-                                            if type == "m" {
-                                                inputFileLocation = (dcId, .inputPhotoFileLocation(id: id, accessHash: accessHash, fileReference: fileReference, thumbSize: type))
-                                                fetchResourceId = "telegram-cloud-photo-size-\(dcId)-\(id)-\(type)"
-                                                break loop
-                                            }
-                                        default:
-                                            break
+                case let .photo(photo):
+                    switch photo {
+                    case let .photo(_, id, accessHash, fileReference, _, sizes, dcId):
+                        isExpandableMedia = true
+                        loop: for size in sizes {
+                            switch size {
+                                case let .photoSize(type, _, _, _, _):
+                                    if type == "m" {
+                                        inputFileLocation = (dcId, .inputPhotoFileLocation(id: id, accessHash: accessHash, fileReference: fileReference, thumbSize: type))
+                                        fetchResourceId = "telegram-cloud-photo-size-\(dcId)-\(id)-\(type)"
+                                        break loop
                                     }
-                                }
-                            case .photoEmpty:
+                                default:
+                                    break
+                            }
+                        }
+                    case .photoEmpty:
+                        break
+                    }
+                case let .document(document):
+                    switch document {
+                    case let .document(_, id, accessHash, fileReference, _, mimeType, _, thumbs, dcId, attributes):
+                        var isSticker = false
+                        for attribute in attributes {
+                            switch attribute {
+                            case .documentAttributeSticker:
+                                isSticker = true
+                            default:
                                 break
+                            }
                         }
-                    case let .document(document):
-                        switch document {
-                            case let .document(_, id, accessHash, fileReference, _, _, _, thumbs, dcId, attributes):
-                                var isSticker = false
-                                for attribute in attributes {
-                                    switch attribute {
-                                        case .documentAttributeSticker:
-                                            isSticker = true
-                                        default:
-                                            break
-                                    }
-                                }
-                                if isSticker {
-                                    isExpandableMedia = true
-                                }
-                                if let thumbs = thumbs {
-                                    loop: for size in thumbs {
-                                        switch size {
-                                            case let .photoSize(type, _, _, _, _):
-                                                if (isSticker && type == "s") || type == "m" {
-                                                    if isSticker {
-                                                        isPng = true
-                                                    }
-                                                    inputFileLocation = (dcId, .inputDocumentFileLocation(id: id, accessHash: accessHash, fileReference: fileReference, thumbSize: type))
-                                                    fetchResourceId = "telegram-cloud-document-size-\(dcId)-\(id)-\(type)"
-                                                    break loop
-                                                }
-                                            default:
-                                                break
+                        let isAnimatedSticker = mimeType == "application/x-tgsticker"
+                        if isSticker || isAnimatedSticker {
+                            isExpandableMedia = true
+                        }
+                        if let thumbs = thumbs {
+                            loop: for size in thumbs {
+                                switch size {
+                                case let .photoSize(type, _, _, _, _):
+                                    if (isSticker && type == "s") || type == "m" {
+                                        if isSticker {
+                                            isPng = true
                                         }
+                                        inputFileLocation = (dcId, .inputDocumentFileLocation(id: id, accessHash: accessHash, fileReference: fileReference, thumbSize: type))
+                                        fetchResourceId = "telegram-cloud-document-size-\(dcId)-\(id)-\(type)"
+                                        break loop
                                     }
+                                default:
+                                    break
                                 }
+                            }
                         }
+                    }
                 }
             }
             

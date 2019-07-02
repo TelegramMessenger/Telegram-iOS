@@ -636,4 +636,36 @@ final class ChatListIndexTable: Table {
         
         return (rootState, summaries)
     }
+    
+    func reindexPeerGroupUnreadCounts(postbox: Postbox, groupId: PeerGroupId) -> PeerGroupUnreadCountersCombinedSummary {
+        var summary = PeerGroupUnreadCountersCombinedSummary(namespaces: [:])
+        
+        postbox.chatListTable.forEachPeer(groupId: groupId, { peerId in
+            if peerId.namespace == Int32.max {
+                return
+            }
+            /*guard let peer = postbox.peerTable.get(peerId) else {
+                return
+            }*/
+            guard let combinedState = postbox.readStateTable.getCombinedState(peerId) else {
+                return
+            }
+            /*let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
+            let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId)*/
+            let inclusion = self.get(peerId: peerId)
+            if let (inclusionGroupId, _) = inclusion.includedIndex(peerId: peerId), inclusionGroupId == groupId {
+                for (namespace, state) in combinedState.states {
+                    if summary.namespaces[namespace] == nil {
+                        summary.namespaces[namespace] = PeerGroupUnreadCountersSummary(all: PeerGroupUnreadCounters(messageCount: 0, chatCount: 0))
+                    }
+                    if state.count > 0 {
+                        summary.namespaces[namespace]!.all.chatCount += 1
+                        summary.namespaces[namespace]!.all.messageCount += state.count
+                    }
+                }
+            }
+        })
+        
+        return summary
+    }
 }
