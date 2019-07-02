@@ -265,6 +265,8 @@ final class InviteContactsControllerNode: ASDisplayNode {
         return self._ready.get()
     }
     
+    var loadedContacts: (() -> Void)?
+    
     private var disposable: Disposable?
     
     private let currentContactIds = Atomic<[String]>(value: [])
@@ -578,7 +580,10 @@ final class InviteContactsControllerNode: ASDisplayNode {
                             activityIndicator.removeFromSupernode()
                         }
                         
-                        let _ = strongSelf.currentSortedContacts.swap(transition.sortedContacts)
+                        let previous = strongSelf.currentSortedContacts.swap(transition.sortedContacts)
+                        if previous == nil && transition.sortedContacts != nil {
+                            strongSelf.loadedContacts?()
+                        }
                     }
                 })
             }

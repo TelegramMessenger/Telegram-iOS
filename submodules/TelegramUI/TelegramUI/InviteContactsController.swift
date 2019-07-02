@@ -39,7 +39,6 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         self.title = self.presentationData.strings.Contacts_InviteFriends
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: presentationData.strings.Contacts_SelectAll, style: .plain, target: self, action: #selector(self.selectAllPressed))
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -67,6 +66,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
             self?.activateSearch()
         })
+        self.searchContentNode?.setIsEnabled(false)
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
@@ -84,6 +84,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.presentationData.strings.Contacts_InviteFriends
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: presentationData.strings.Contacts_SelectAll, style: .plain, target: self, action: #selector(self.selectAllPressed))
     }
     
     override public func loadDisplayNode() {
@@ -91,6 +92,14 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         self._ready.set(self.contactsNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
+        
+        self.contactsNode.loadedContacts = { [weak self] in
+            if let strongSelf = self {
+                self?.searchContentNode?.setIsEnabled(true)
+                
+                strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Contacts_SelectAll, style: .plain, target: self, action: #selector(strongSelf.selectAllPressed))
+            }
+        }
         
         self.contactsNode.requestDeactivateSearch = { [weak self] in
             self?.deactivateSearch()
