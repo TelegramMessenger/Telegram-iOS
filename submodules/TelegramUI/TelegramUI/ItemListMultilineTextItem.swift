@@ -19,7 +19,7 @@ enum TextLinkItem {
 class ItemListMultilineTextItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
-    let enabledEntitiyTypes: EnabledEntityTypes
+    let enabledEntityTypes: EnabledEntityTypes
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let action: (() -> Void)?
@@ -30,10 +30,10 @@ class ItemListMultilineTextItem: ListViewItem, ItemListItem {
     
     let selectable: Bool
     
-    init(theme: PresentationTheme, text: String, enabledEntitiyTypes: EnabledEntityTypes, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+    init(theme: PresentationTheme, text: String, enabledEntityTypes: EnabledEntityTypes, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.text = text
-        self.enabledEntitiyTypes = enabledEntitiyTypes
+        self.enabledEntityTypes = enabledEntityTypes
         self.sectionId = sectionId
         self.style = style
         self.action = action
@@ -184,7 +184,7 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
                     leftInset = 16.0 + params.rightInset
             }
             
-            let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntitiyTypes)
+            let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntityTypes)
             let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColor, linkColor: item.theme.list.itemAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleBoldFont, italicFont: titleItalicFont, boldItalicFont: titleBoldItalicFont, fixedFont: titleFixedFont)
             
             let (titleLayout, titleApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

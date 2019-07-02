@@ -386,27 +386,27 @@ private enum UserInfoEntry: ItemListNodeEntry {
             case let .calls(theme, strings, dateTimeFormat, messages):
                 return ItemListCallListItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, messages: messages, sectionId: self.section, style: .plain)
             case let .about(theme, peer, text, value):
-                var enabledEntitiyTypes: EnabledEntityTypes = []
+                var enabledEntityTypes: EnabledEntityTypes = []
                 if let peer = peer as? TelegramUser, let _ = peer.botInfo {
-                    enabledEntitiyTypes = [.url, .mention, .hashtag]
+                    enabledEntityTypes = [.url, .mention, .hashtag]
                 }
-                return ItemListTextWithLabelItem(theme: theme, label: text, text: foldMultipleLineBreaks(value), enabledEntitiyTypes: enabledEntitiyTypes, multiline: true, sectionId: self.section, action: nil, longTapAction: {
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: foldMultipleLineBreaks(value), enabledEntityTypes: enabledEntityTypes, multiline: true, sectionId: self.section, action: nil, longTapAction: {
                     arguments.displayAboutContextMenu(value)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)
                 }, tag: UserInfoEntryTag.about)
             case let .phoneNumber(theme, _, label, value, isMain):
-                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: isMain ? .highlighted : .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: isMain ? .highlighted : .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.openCallMenu(value)
                 }, longTapAction: {
                     arguments.displayCopyContextMenu(.phoneNumber, value)
                 }, tag: UserInfoEntryTag.phoneNumber)
             case let .requestPhoneNumber(theme, label, value):
-                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.requestPhoneNumber()
                 })
             case let .userName(theme, text, value):
-                return ItemListTextWithLabelItem(theme: theme, label: text, text: "@\(value)", textColor: .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: "@\(value)", textColor: .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.displayUsernameContextMenu("@\(value)")
                 }, longTapAction: {
                     arguments.displayCopyContextMenu(.username, "@\(value)")
@@ -1178,113 +1178,114 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerView.get(), deviceContacts, context.account.postbox.combinedView(keys: [.peerChatState(peerId: peerId), globalNotificationsKey]))
-        |> map { presentationData, state, view, deviceContacts, combinedView -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
-            let peer = peerViewMainPeer(view.0)
-            
-            var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
-            if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
-                if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
-                    globalNotificationSettings = settings
-                }
+    |> map { presentationData, state, view, deviceContacts, combinedView -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
+        let peer = peerViewMainPeer(view.0)
+        
+        var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
+        if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
+            if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                globalNotificationSettings = settings
             }
-            
-            if let peer = peer {
-                let _ = cachedAvatarEntries.modify { value in
-                    if value != nil {
-                        return value
-                    } else {
-                        let promise = Promise<[AvatarGalleryEntry]>()
-                        promise.set(fetchedAvatarGalleryEntries(account: context.account, peer: peer))
-                        return promise
-                    }
-                }
-            }
-            var leftNavigationButton: ItemListNavigationButton?
-            let rightNavigationButton: ItemListNavigationButton
-            if let editingState = state.editingState {
-                leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                    updateState {
-                        $0.withUpdatedEditingState(nil)
-                    }
-                })
-                
-                var doneEnabled = true
-                if let editingName = editingState.editingName, editingName.isEmpty {
-                    doneEnabled = false
-                }
-                
-                if state.savingData {
-                    rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: doneEnabled, action: {})
+        }
+        
+        if let peer = peer {
+            let _ = cachedAvatarEntries.modify { value in
+                if value != nil {
+                    return value
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
-                        var updateName: ItemListAvatarAndNameInfoItemName?
-                        updateState { state in
-                            if let editingState = state.editingState, let editingName = editingState.editingName {
-                                if let user = peer {
-                                    if ItemListAvatarAndNameInfoItemName(user) != editingName {
-                                        updateName = editingName
-                                    }
+                    let promise = Promise<[AvatarGalleryEntry]>()
+                    promise.set(fetchedAvatarGalleryEntries(account: context.account, peer: peer))
+                    return promise
+                }
+            }
+        }
+        var leftNavigationButton: ItemListNavigationButton?
+        let rightNavigationButton: ItemListNavigationButton
+        if let editingState = state.editingState {
+            leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+                updateState {
+                    $0.withUpdatedEditingState(nil)
+                }
+            })
+            
+            var doneEnabled = true
+            if let editingName = editingState.editingName, editingName.isEmpty {
+                doneEnabled = false
+            }
+            
+            if state.savingData {
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: doneEnabled, action: {})
+            } else {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
+                    var updateName: ItemListAvatarAndNameInfoItemName?
+                    updateState { state in
+                        if let editingState = state.editingState, let editingName = editingState.editingName {
+                            if let user = peer {
+                                if ItemListAvatarAndNameInfoItemName(user) != editingName {
+                                    updateName = editingName
                                 }
-                            }
-                            if updateName != nil {
-                                return state.withUpdatedSavingData(true)
-                            } else {
-                                return state.withUpdatedEditingState(nil)
                             }
                         }
-                        
-                        if let updateName = updateName, case let .personName(firstName, lastName) = updateName {
-                            updatePeerNameDisposable.set((updateContactName(account: context.account, peerId: peerId, firstName: firstName, lastName: lastName)
-                            |> deliverOnMainQueue).start(error: { _ in
-                                updateState { state in
-                                    return state.withUpdatedSavingData(false)
+                        if updateName != nil {
+                            return state.withUpdatedSavingData(true)
+                        } else {
+                            return state.withUpdatedEditingState(nil)
+                        }
+                    }
+                    
+                    if let updateName = updateName, case let .personName(firstName, lastName) = updateName {
+                        updatePeerNameDisposable.set((updateContactName(account: context.account, peerId: peerId, firstName: firstName, lastName: lastName)
+                        |> deliverOnMainQueue).start(error: { _ in
+                            updateState { state in
+                                return state.withUpdatedSavingData(false)
+                            }
+                        }, completed: {
+                            updateState { state in
+                                return state.withUpdatedSavingData(false).withUpdatedEditingState(nil)
+                            }
+                            
+                            let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
+                            |> mapToSignal { peer, _ -> Signal<Void, NoError> in
+                                guard let peer = peer as? TelegramUser, let phone = peer.phone, !phone.isEmpty else {
+                                    return .complete()
                                 }
-                            }, completed: {
-                                updateState { state in
-                                    return state.withUpdatedSavingData(false).withUpdatedEditingState(nil)
-                                }
-                                
-                                let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
-                                |> mapToSignal { peer, _ -> Signal<Void, NoError> in
-                                    guard let peer = peer as? TelegramUser, let phone = peer.phone, !phone.isEmpty else {
+                                return (context.sharedContext.contactDataManager?.basicDataForNormalizedPhoneNumber(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone))) ?? .single([]))
+                                |> take(1)
+                                |> mapToSignal { records -> Signal<Void, NoError> in
+                                    var signals: [Signal<DeviceContactExtendedData?, NoError>] = []
+                                    if let contactDataManager = context.sharedContext.contactDataManager {
+                                        for (id, basicData) in records {
+                                            signals.append(contactDataManager.appendContactData(DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: basicData.phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: []), to: id))
+                                        }
+                                    }
+                                    return combineLatest(signals)
+                                    |> mapToSignal { _ -> Signal<Void, NoError> in
                                         return .complete()
                                     }
-                                    return (context.sharedContext.contactDataManager?.basicDataForNormalizedPhoneNumber(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone))) ?? .single([]))
-                                    |> take(1)
-                                    |> mapToSignal { records -> Signal<Void, NoError> in
-                                        var signals: [Signal<DeviceContactExtendedData?, NoError>] = []
-                                        if let contactDataManager = context.sharedContext.contactDataManager {
-                                            for (id, basicData) in records {
-                                                signals.append(contactDataManager.appendContactData(DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: basicData.phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: []), to: id))
-                                            }
-                                        }
-                                        return combineLatest(signals)
-                                        |> mapToSignal { _ -> Signal<Void, NoError> in
-                                            return .complete()
-                                        }
-                                    }
-                                }).start()
-                            }))
-                        }
-                    })
-                }
-            } else {
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
-                    if let user = peer {
-                        updateState { state in
-                            return state.withUpdatedEditingState(UserInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(user)))
-                        }
+                                }
+                            }).start()
+                        }))
                     }
                 })
             }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
-            let listState = ItemListNodeState(entries: userInfoEntries(account: context.account, presentationData: presentationData, view: view.0, cachedPeerData: view.1, deviceContacts: deviceContacts, mode: mode, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+        } else {
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
+                if let user = peer {
+                    updateState { state in
+                        return state.withUpdatedEditingState(UserInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(user)))
+                    }
+                }
+            })
         }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
+        let listState = ItemListNodeState(entries: userInfoEntries(account: context.account, presentationData: presentationData, view: view.0, cachedPeerData: view.1, deviceContacts: deviceContacts, mode: mode, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+        actionsDisposable.dispose()
+    }
     
     let controller = ItemListController(context: context, state: signal)
     
@@ -1449,7 +1450,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     }
     aboutLinkActionImpl = { [weak controller] action, itemLink in
         if let controller = controller {
-            handlePeerInfoAboutTextAction(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+            handleTextLinkAction(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
         }
     }
     displayAboutContextMenuImpl = { [weak controller] text in

@@ -322,9 +322,17 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
     
-    let availableAppIcons: Signal<[PresentationAppIcon], NoError> = .single(context.sharedContext.applicationBindings.getAvailableAlternateIcons())
+    let currentAppIcon: PresentationAppIcon?
+    let appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons()
+    if let alternateIconName = context.sharedContext.applicationBindings.getAlternateIconName() {
+        currentAppIcon = appIcons.filter { $0.name == alternateIconName }.first
+    } else {
+        currentAppIcon = appIcons.filter { $0.isDefault }.first
+    }
+    
+    let availableAppIcons: Signal<[PresentationAppIcon], NoError> = .single(appIcons)
     let currentAppIconName = ValuePromise<String?>()
-    currentAppIconName.set(context.sharedContext.applicationBindings.getAlternateIconName() ?? "Blue")
+    currentAppIconName.set(currentAppIcon?.name ?? "Blue")
     
     let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { theme in
         let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in

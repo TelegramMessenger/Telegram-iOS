@@ -152,6 +152,8 @@
 		09E4A805223D4A5A0038140F /* OpenSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A804223D4A5A0038140F /* OpenSettings.swift */; };
 		09E4A807223D4B860038140F /* AccountUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A806223D4B860038140F /* AccountUtils.swift */; };
 		09EC0DE722C67FB100E7185B /* UpdateInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DE622C67FB100E7185B /* UpdateInfoController.swift */; };
+		09EC0DEB22CAFF1400E7185B /* UpdateInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DEA22CAFF1400E7185B /* UpdateInfoItem.swift */; };
+		09EC0DED22CB583C00E7185B /* TextLinkHandling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DEC22CB583C00E7185B /* TextLinkHandling.swift */; };
 		09EDAD26220D30980012A50B /* AutodownloadConnectionTypeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */; };
 		09EDAD2A220DA6A40012A50B /* VolumeButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD29220DA6A40012A50B /* VolumeButtons.swift */; };
 		09EDAD2C2211552F0012A50B /* AutodownloadMediaCategoryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD2B2211552F0012A50B /* AutodownloadMediaCategoryController.swift */; };
@@ -1372,6 +1374,8 @@
 		09E4A804223D4A5A0038140F /* OpenSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenSettings.swift; sourceTree = "<group>"; };
 		09E4A806223D4B860038140F /* AccountUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountUtils.swift; sourceTree = "<group>"; };
 		09EC0DE622C67FB100E7185B /* UpdateInfoController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateInfoController.swift; sourceTree = "<group>"; };
+		09EC0DEA22CAFF1400E7185B /* UpdateInfoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateInfoItem.swift; sourceTree = "<group>"; };
+		09EC0DEC22CB583C00E7185B /* TextLinkHandling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLinkHandling.swift; sourceTree = "<group>"; };
 		09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadConnectionTypeController.swift; sourceTree = "<group>"; };
 		09EDAD29220DA6A40012A50B /* VolumeButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeButtons.swift; sourceTree = "<group>"; };
 		09EDAD2B2211552F0012A50B /* AutodownloadMediaCategoryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadMediaCategoryController.swift; sourceTree = "<group>"; };
@@ -2743,6 +2747,7 @@
 				D0FC194C201F82A000FEDBB2 /* OpenResolvedUrl.swift */,
 				D023836F1DDF0462004018B6 /* UrlHandling.swift */,
 				09E4A804223D4A5A0038140F /* OpenSettings.swift */,
+				09EC0DEC22CB583C00E7185B /* TextLinkHandling.swift */,
 			);
 			name = Routing;
 			sourceTree = "<group>";
@@ -2777,6 +2782,7 @@
 			isa = PBXGroup;
 			children = (
 				09EC0DE622C67FB100E7185B /* UpdateInfoController.swift */,
+				09EC0DEA22CAFF1400E7185B /* UpdateInfoItem.swift */,
 			);
 			name = Update;
 			sourceTree = "<group>";
@@ -6037,6 +6043,7 @@
 				09F664C821EB4A2600AB7E26 /* ThemeGridSearchItem.swift in Sources */,
 				09A218D9229EE1B600DE6898 /* HorizontalStickerGridItem.swift in Sources */,
 				D07E413B208A432100FCA8F0 /* ChatListTitleProxyNode.swift in Sources */,
+				09EC0DED22CB583C00E7185B /* TextLinkHandling.swift in Sources */,
 				D080B27F1F4C7C6000AA3847 /* InstantPageManagedMediaId.swift in Sources */,
 				D08984F02114AE0C00918162 /* DataPrivacySettingsController.swift in Sources */,
 				D087BFAD1F741B9D003FD209 /* ShareContentContainerNode.swift in Sources */,
@@ -6171,6 +6178,7 @@
 				D0E9BA651F055B4500F079A4 /* BotCheckoutNativeCardEntryController.swift in Sources */,
 				D02D60B3206C18A600FEFE1E /* SecureIdPlaintextFormControllerNode.swift in Sources */,
 				D00ACA5A2022897D0045D427 /* ProcessedPeerRestrictionText.swift in Sources */,
+				09EC0DEB22CAFF1400E7185B /* UpdateInfoItem.swift in Sources */,
 				D0192D3C210A44D00005FA10 /* DeviceContactData.swift in Sources */,
 				D0EC6E391EB9F58900EBF1C3 /* ItemListCheckboxItem.swift in Sources */,
 				D0EC6E3A1EB9F58900EBF1C3 /* ItemListSwitchItem.swift in Sources */,
