@@ -91,7 +91,7 @@ private func collectExternalShareItems(strings: PresentationStrings, postbox: Po
                         case .progress:
                             return .single(.progress)
                         case let .done(data):
-                            if file.isSticker, let dimensions = file.dimensions {
+                            if file.isSticker, !file.isAnimatedSticker, let dimensions = file.dimensions {
                                 return chatMessageSticker(postbox: postbox, file: file, small: false, fetched: true, onlyFullSize: true)
                                 |> map { f -> ExternalShareItemStatus in
                                     let context = f(TransformImageArguments(corners: ImageCorners(), imageSize: dimensions, boundingSize: dimensions, intrinsicInsets: UIEdgeInsets(), emptyColor: nil, scale: 1.0))
