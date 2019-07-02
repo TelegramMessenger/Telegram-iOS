@@ -223,8 +223,12 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                         let animationNode = AnimatedStickerNode()
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
                         self.animationNode = animationNode
+                        animationNode.started = { [weak self] in
+                            self?.imageNode.isHidden = true
+                        }
                         self.addSubnode(animationNode)
                     }
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, file: item.stickerItem.file, small: false, size: CGSize(width: 160.0, height: 160.0)))
                     self.animationNode?.setup(account: item.account, resource: item.stickerItem.file.resource, width: 160, height: 160, mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: item.stickerItem.file.resource).start())
@@ -233,6 +237,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                         animationNode.visibility = false
                         self.animationNode = nil
                         animationNode.removeFromSupernode()
+                        self.imageNode.isHidden = false
                     }
                     self.imageNode.setSignal(chatMessageSticker(account: item.account, file: item.stickerItem.file, small: true, synchronousLoad: synchronousLoads && isVisible))
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: chatMessageStickerResource(file: item.stickerItem.file, small: true)).start())
