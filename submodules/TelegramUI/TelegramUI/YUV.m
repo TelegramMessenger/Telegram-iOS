@@ -2,14 +2,14 @@
 #import <Accelerate/Accelerate.h>
 
 void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height) {
-    vImage_YpCbCrPixelRange pixelRange = (vImage_YpCbCrPixelRange){ 0, 128, 255, 255, 255, 0, 255, 0 };
-    vImage_ARGBToYpCbCr info;
+    static vImage_ARGBToYpCbCr info;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        vImage_YpCbCrPixelRange pixelRange = (vImage_YpCbCrPixelRange){ 0, 128, 255, 255, 255, 1, 255, 0 };
+        vImageConvert_ARGBToYpCbCr_GenerateConversion(kvImage_ARGBToYpCbCrMatrix_ITU_R_709_2, &pixelRange, &info, kvImageARGB8888, kvImage420Yp8_Cb8_Cr8, 0);
+    });
     
-    vImage_Error error;
-    error = vImageConvert_ARGBToYpCbCr_GenerateConversion(kvImage_ARGBToYpCbCrMatrix_ITU_R_709_2, &pixelRange, &info, kvImageARGB8888, kvImage420Yp8_Cb8_Cr8, 0);
-    if (error != kvImageNoError) {
-        return;
-    }
+    vImage_Error error = kvImageNoError;
     
     vImage_Buffer src;
     src.data = (void *)argb;
@@ -49,14 +49,14 @@ void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height)
 }
 
 void decodeYUVAToRGBA(uint8_t const *yuva, uint8_t *argb, int width, int height) {
-    vImage_YpCbCrPixelRange pixelRange = (vImage_YpCbCrPixelRange){ 0, 128, 255, 255, 255, 0, 255, 0 };
-    vImage_YpCbCrToARGB info;
+    static vImage_YpCbCrToARGB info;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        vImage_YpCbCrPixelRange pixelRange = (vImage_YpCbCrPixelRange){ 0, 128, 255, 255, 255, 1, 255, 0 };
+        vImageConvert_YpCbCrToARGB_GenerateConversion(kvImage_YpCbCrToARGBMatrix_ITU_R_709_2, &pixelRange, &info, kvImage420Yp8_Cb8_Cr8, kvImageARGB8888, 0);
+    });
     
-    vImage_Error error;
-    error = vImageConvert_YpCbCrToARGB_GenerateConversion(kvImage_YpCbCrToARGBMatrix_ITU_R_709_2, &pixelRange, &info, kvImage420Yp8_Cb8_Cr8, kvImageARGB8888, 0);
-    if (error != kvImageNoError) {
-        return;
-    }
+    vImage_Error error = kvImageNoError;
     
     vImage_Buffer srcYp;
     srcYp.data = (void *)(yuva + 0);
@@ -81,8 +81,10 @@ void decodeYUVAToRGBA(uint8_t const *yuva, uint8_t *argb, int width, int height)
     uint8_t const *alpha = yuva + (width * height * 1 + width * height * 1);
     for (int i = 0; i < width * height; i += 2) {
         uint8_t a = alpha[i / 2];
-        argb[i * 4 + 0] = (a & (0xf0U));
-        argb[(i + 1) * 4 + 0] = (a & (0x0fU)) << 4;
+        uint8_t a1 = (a & (0xf0U));
+        uint8_t a2 = ((a & (0x0fU)) << 4);
+        argb[i * 4 + 0] = a1 | (a1 >> 4);
+        argb[(i + 1) * 4 + 0] = a2 | (a2 >> 4);
     }
     
     error = vImagePremultiplyData_ARGB8888(&dest, &dest, kvImageDoNotTile);

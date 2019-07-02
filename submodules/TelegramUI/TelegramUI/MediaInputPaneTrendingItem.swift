@@ -113,7 +113,7 @@ private final class TrendingTopItemNode: ASDisplayNode {
             animationNode.started = { [weak self] in
                 self?.imageNode.alpha = 0.0
             }
-            animationNode.setup(account: account, resource: item.file.resource, width: 140, height: 140, mode: .cached)
+            animationNode.setup(account: account, resource: item.file.resource, width: 160, height: 160, mode: .cached)
         } else {
             self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
             

@@ -685,7 +685,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         strongSelf.imageNode.isHidden = true
                                     }
                                     strongSelf.animatedStickerNode = animatedStickerNode
-                                    animatedStickerNode.setup(account: context.account, resource: updatedAnimatedStickerFile.resource, width: 400, height: 400, mode: .cached)
+                                    animatedStickerNode.setup(account: context.account, resource: updatedAnimatedStickerFile.resource, width: 380, height: 380, mode: .cached)
                                     strongSelf.insertSubnode(animatedStickerNode, aboveSubnode: strongSelf.imageNode)
                                     animatedStickerNode.visibility = strongSelf.visibility
                                 }
