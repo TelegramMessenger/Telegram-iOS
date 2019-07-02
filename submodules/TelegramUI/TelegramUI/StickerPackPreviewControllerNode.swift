@@ -98,6 +98,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.isOpaque = false
+        self.contentContainerNode.clipsToBounds = true
         
         self.contentBackgroundNode = ASImageNode()
         self.contentBackgroundNode.displaysAsynchronously = false
@@ -474,7 +475,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             if compactFrame {
                 backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.maxY - buttonHeight - 32.0), size: CGSize(width: contentFrame.size.width, height: buttonHeight + 32.0))
             }
+            let backgroundDeltaY = backgroundFrame.minY - self.contentBackgroundNode.frame.minY
             transition.updateFrame(node: self.contentBackgroundNode, frame: backgroundFrame)
+            transition.animatePositionAdditive(node: self.contentGridNode, offset: CGPoint(x: 0.0, y: -backgroundDeltaY))
             
             let titleSize = self.contentTitleNode.bounds.size
             let titleFrame = CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.size.width - titleSize.width) / 2.0), y: backgroundFrame.minY + 15.0), size: titleSize)
