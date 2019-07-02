@@ -302,6 +302,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             self.isPlaying = isPlaying
             self.animationNode?.visibility = isPlaying
             if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
+                self.didSetUpAnimationNode = true
                 self.animationNode?.setup(account: item.account, resource: item.stickerItem.file.resource, width: 160, height: 160, mode: .cached)
             }
         }
