@@ -108,7 +108,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
     init?(queue: Queue, data: Data) {
         self.queue = queue
         self.data = data
-        self.scratchBuffer = Data(count: compression_decode_scratch_buffer_size(COMPRESSION_LZ4))
+        self.scratchBuffer = Data(count: compression_decode_scratch_buffer_size(COMPRESSION_LZFSE))
 
         var offset = 0
         var width = 0
@@ -170,7 +170,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
             self.scratchBuffer.withUnsafeMutableBytes { (scratchBytes: UnsafeMutablePointer<UInt8>) -> Void in
                 self.decodeBuffer.withUnsafeMutableBytes { (decodeBytes: UnsafeMutablePointer<UInt8>) -> Void in
                     self.frameBuffer.withUnsafeMutableBytes { (frameBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                        compression_decode_buffer(decodeBytes, decodeBufferLength, bytes.advanced(by: self.offset), Int(frameLength), UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZ4)
+                        compression_decode_buffer(decodeBytes, decodeBufferLength, bytes.advanced(by: self.offset), Int(frameLength), UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZFSE)
                         
                         var lhs = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt64.self)
                         var rhs = UnsafeRawPointer(decodeBytes).assumingMemoryBound(to: UInt64.self)

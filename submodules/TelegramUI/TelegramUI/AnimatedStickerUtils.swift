@@ -244,7 +244,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 var compressedFrameData = Data(count: frameLength)
                 let compressedFrameDataLength = compressedFrameData.count
                 
-                let scratchData = malloc(compression_encode_scratch_buffer_size(COMPRESSION_LZ4))!
+                let scratchData = malloc(compression_encode_scratch_buffer_size(COMPRESSION_LZFSE))!
                 defer {
                     free(scratchData)
                 }
@@ -278,7 +278,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                     drawingTime += CACurrentMediaTime() - drawStartTime
                     
                     compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                        let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousYuvaFrameData.assumingMemoryBound(to: UInt8.self), yuvaLength, scratchData, COMPRESSION_LZ4)
+                        let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousYuvaFrameData.assumingMemoryBound(to: UInt8.self), yuvaLength, scratchData, COMPRESSION_LZFSE)
                         var frameLengthValue: Int32 = Int32(length)
                         let _ = fileContext.write(&frameLengthValue, count: 4)
                         let _ = fileContext.write(bytes, count: length)
