@@ -155,10 +155,25 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
     })
 }
 
+private let queueBySize = Atomic<[Int: Queue]>(value: [:])
+
 @available(iOS 9.0, *)
 func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, cacheKey: String) -> Signal<String, NoError> {
     return Signal({ subscriber in
-        let queue = Queue()
+        var maybeQueue: Queue?
+        let _ = queueBySize.modify { dict in
+            var dict = dict
+            if let current = dict[Int(size.width)] {
+                maybeQueue = current
+            } else {
+                let value = Queue()
+                maybeQueue = value
+                dict[Int(size.width)] = value
+            }
+            return dict
+        }
+        
+        let queue = maybeQueue!
         
         queue.async {
             let startTime = CACurrentMediaTime()
