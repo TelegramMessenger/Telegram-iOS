@@ -12,11 +12,15 @@ import Foundation
 #endif
 
 
-#if os(macOS)
-private let apiPrefix = "TelegramCoreMac.Api."
-#else
-private let apiPrefix = "TelegramCore.Api."
-#endif
+private let apiPrefix: String = {
+    let type = _typeName(Api.User.self)
+    let userType = "User"
+    if type.hasSuffix(userType) {
+        return String(type[type.startIndex ..< type.index(type.endIndex, offsetBy: -userType.count)])
+    } else {
+        return "TelegramApi.Api."
+    }
+}()
 
 private let apiPrefixLength = apiPrefix.count
 
