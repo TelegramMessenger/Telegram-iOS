@@ -66,7 +66,7 @@ private let titleFont = Font.bold(16.0)
 private let statusFont = Font.regular(15.0)
 private let buttonFont = Font.medium(13.0)
 
-private final class TrendingTopItemNode: ASDisplayNode {
+final class TrendingTopItemNode: ASDisplayNode {
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
     public private(set) var file: TelegramMediaFile? = nil

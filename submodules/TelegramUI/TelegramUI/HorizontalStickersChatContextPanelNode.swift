@@ -302,9 +302,6 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
             self.backgroundNode.image = backgroundCenterImage(theme)
             self.backgroundLeftNode.image = backgroundLeftImage(theme)
             self.backgroundRightNode.image = backgroundLeftImage(theme)
-            // if let currentEntries = self.currentEntries {
-            //     self.updateToEntries(entries: currentEntries, forceUpdate: true)
-            // }
         }
     }
     

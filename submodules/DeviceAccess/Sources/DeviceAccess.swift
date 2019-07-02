@@ -179,7 +179,7 @@ public final class DeviceAccess {
                         func statusForCellularState(_ state: CTCellularDataRestrictedState) -> AccessType? {
                             switch state {
                                 case .restricted:
-                                    return .allowed
+                                    return .denied
                                 case .notRestricted:
                                     return .allowed
                                 default:

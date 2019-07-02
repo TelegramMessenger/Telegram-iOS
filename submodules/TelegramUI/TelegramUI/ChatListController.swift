@@ -837,21 +837,6 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             }
         }
         
-        /*self.chatListDisplayNode.chatListNode.contentOffsetChanged = { [weak self] offset in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-                var progress: CGFloat = 0.0
-                switch offset {
-                    case let .known(offset):
-                        progress = max(0.0, (searchContentNode.nominalHeight - max(0.0, offset - 76.0))) / searchContentNode.nominalHeight
-                    case .none:
-                        progress = 1.0
-                    default:
-                        break
-                }
-                searchContentNode.updateExpansionProgress(progress)
-            }
-        }*/
-        
         self.chatListDisplayNode.chatListNode.contentScrollingEnded = { [weak self] listView in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
                 return fixListNodeScrolling(listView, searchNode: searchContentNode)

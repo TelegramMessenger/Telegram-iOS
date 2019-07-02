@@ -78,30 +78,6 @@ private let titleFont = Font.bold(16.0)
 private let statusFont = Font.regular(15.0)
 private let buttonFont = Font.medium(13.0)
 
-private final class TrendingTopItemNode: TransformImageNode {
-    var file: TelegramMediaFile? = nil
-    let loadDisposable = MetaDisposable()
-    
-    var currentIsPreviewing = false
-    
-    func updatePreviewing(animated: Bool, isPreviewing: Bool) {
-        if self.currentIsPreviewing != isPreviewing {
-            self.currentIsPreviewing = isPreviewing
-            
-            if isPreviewing {
-                if animated {
-                    self.layer.animateSpring(from: 1.0 as NSNumber, to: 0.8 as NSNumber, keyPath: "transform.scale", duration: 0.4, removeOnCompletion: false)
-                }
-            } else {
-                self.layer.removeAnimation(forKey: "transform.scale")
-                if animated {
-                    self.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
-                }
-            }
-        }
-    }
-}
-
 class StickerPaneSearchGlobalItemNode: GridItemNode {
     private let titleNode: TextNode
     private let descriptionNode: TextNode
@@ -114,6 +90,16 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     private var item: StickerPaneSearchGlobalItem?
     private var appliedItem: StickerPaneSearchGlobalItem?
     private let preloadDisposable = MetaDisposable()
+    
+    override var isVisibleInGrid: Bool {
+        didSet {
+            if oldValue != self.isVisibleInGrid {
+                for node in self.itemNodes {
+                    node.visibility = self.isVisibleInGrid
+                }
+            }
+        }
+    }
     
     override init() {
         self.titleNode = TextNode()
@@ -270,9 +256,14 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
             strongSelf.unreadNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 2.0, y: titleFrame.minY + 7.0), size: image.size)
         }
     
-        var offset: CGFloat = params.leftInset + leftInset
-        let itemSize = CGSize(width: 68.0, height: 68.0)
-    
+        let sideInset: CGFloat = 2.0
+        let availableWidth = params.width - params.leftInset - params.rightInset - sideInset * 2.0
+        var itemSide: CGFloat = floor(availableWidth / 5.0)
+        itemSide = min(itemSide, 75.0)
+        let itemSize = CGSize(width: itemSide, height: itemSide)
+        var offset = sideInset
+        let itemSpacing = (max(0, availableWidth - 5.0 * itemSide - sideInset * 2.0)) / 4.0
+        
         for i in 0 ..< topItems.count {
             let file = topItems[i].file
             let node: TrendingTopItemNode
@@ -280,20 +271,17 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
                 node = strongSelf.itemNodes[i]
             } else {
                 node = TrendingTopItemNode()
-                node.contentAnimations = [.subsequentUpdates]
+                node.visibility = strongSelf.isVisibleInGrid
                 strongSelf.itemNodes.append(node)
                 strongSelf.addSubnode(node)
             }
             if file.fileId != node.file?.fileId {
-                node.file = file
-                node.setSignal(chatMessageSticker(account: item.account, file: file, small: true))
-                node.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: true)).start())
+                node.setup(account: item.account, item: topItems[i], itemSize: itemSize, synchronousLoads: false)
             }
             if let dimensions = file.dimensions {
                 let imageSize = dimensions.aspectFitted(itemSize)
-                node.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
                 node.frame = CGRect(origin: CGPoint(x: offset, y: 48.0 + topOffset), size: imageSize)
-                offset += imageSize.width + 4.0
+                offset += itemSize.width + itemSpacing
             }
         }
     

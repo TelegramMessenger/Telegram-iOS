@@ -387,10 +387,10 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     arguments.performAction(.addToExisting)
                 })
             case let .company(_, theme, title, value, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, enabledEntityTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                 }, tag: nil)
             case let .phoneNumber(_, index, theme, title, label, value, selected, isInteractionEnabled):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: isInteractionEnabled ? {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: false, selected: selected, sectionId: self.section, action: isInteractionEnabled ? {
                     if selected != nil {
                         arguments.toggleSelection(.phoneNumber(label, value))
                     } else {
@@ -424,7 +424,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     arguments.addPhoneNumber()
                 })
             case let .email(_, index, theme, title, label, value, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.email(label, value))
                     } else {
@@ -436,7 +436,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
             case let .url(_, index, theme, title, label, value, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: value, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: false, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.url(label, value))
                     } else {
@@ -475,7 +475,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
             case let .birthday(_, theme, title, value, text, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.birthday)
                     } else {
@@ -504,7 +504,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     }
                 }, tag: DeviceContactInfoEntryTag.birthday)
             case let .socialProfile(_, index, theme, title, value, text, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.socialProfile(value))
                     } else if value.url.count > 0 {
@@ -516,7 +516,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
             case let .instantMessenger(_, index, theme, title, value, text, selected):
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, textColor: .accent, enabledEntityTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.instantMessenger(value))
                     }
