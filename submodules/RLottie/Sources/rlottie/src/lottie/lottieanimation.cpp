@@ -113,7 +113,7 @@ void AnimationImpl::init(const std::shared_ptr<LOTModel> &model)
     mRenderInProgress = false;
 }
 
-#ifdef LOTTIE_THREAD_SUPPORT
+#if false //def LOTTIE_THREAD_SUPPORT
 
 #include <thread>
 #include "vtaskqueue.h"
