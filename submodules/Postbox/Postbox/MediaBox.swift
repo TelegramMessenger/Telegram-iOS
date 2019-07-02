@@ -880,6 +880,21 @@ public final class MediaBox {
                     }
                 }
                 
+                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath + "/short-cache"), includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                    loop: for url in enumerator {
+                        if let url = url as? URL {
+                            if let prefix = url.lastPathComponent.components(separatedBy: ":").first, excludePrefixes.contains(prefix) {
+                                continue loop
+                            }
+                            
+                            if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                paths.append("short-cache/" + url.lastPathComponent)
+                                cacheResult += Int64(value)
+                            }
+                        }
+                    }
+                }
+                
                 subscriber.putNext((result, paths, cacheResult))
                 subscriber.putCompletion()
             }
