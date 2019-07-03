@@ -6,7 +6,8 @@ Group:      UI Framework/Services
 License:    LGPL-v2.1
 URL:        http://www.tizen.org/
 Source0:    %{name}-%{version}.tar.gz
-BuildRequires:  cmake
+BuildRequires:  meson
+BuildRequires:  ninja
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 
@@ -29,28 +30,24 @@ rlottie library (devel)
 
 
 %build
-export CFLAGS+=" -fvisibility=hidden -fPIC -Wall -O2"
-export LDFLAGS+=" "
 
-%ifarch %{arm}
-export CXXFLAGS+=" -D_ARCH_ARM_ -mfpu=neon"
-%endif
+export DESTDIR=%{buildroot}
 
+export CXXFLAGS+=" -std=gnu++14"
 
-%ifarch %{arm}
-cmake . -DCMAKE_INSTALL_PREFIX=/usr \
-        -DLIB_INSTALL_DIR:PATH=%{_libdir} \
-        -DARCH="arm"
-%else
-cmake . -DCMAKE_INSTALL_PREFIX=/usr \
-        -DLIB_INSTALL_DIR:PATH=%{_libdir}
-%endif
-
-
-make %{?jobs:-j%jobs}
+meson setup \
+                --prefix /usr \
+                --libdir %{_libdir} \
+                builddir 2>&1
+ninja \
+      -C builddir \
+      -j %(echo "`/usr/bin/getconf _NPROCESSORS_ONLN`")
 
 %install
-%make_install
+
+export DESTDIR=%{buildroot}
+
+ninja -C builddir install
 
 %files
 %defattr(-,root,root,-)
@@ -65,5 +62,4 @@ make %{?jobs:-j%jobs}
 %{_libdir}/librlottie.so
 %{_libdir}/librlottie-image-loader.so
 
-%{_libdir}/cmake/rlottie/*.cmake
 %{_libdir}/pkgconfig/rlottie.pc
