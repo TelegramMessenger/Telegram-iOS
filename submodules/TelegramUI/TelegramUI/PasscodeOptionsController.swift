@@ -420,6 +420,9 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                         succeed = true
                     case let .numericalPassword(code, _, _):
                         succeed = passcode == code
+                        if !succeed {
+                            succeed = convertToArabicNumeralString(passcode) == code
+                        }
                     case let .plaintextPassword(code, _, _):
                         succeed = passcode == code
                 }

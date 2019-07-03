@@ -64,7 +64,7 @@ func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfigur
         
         for media in message.media {
             if let file = media as? TelegramMediaFile {
-                if file.isSticker || file.isInstantVideo {
+                if file.isSticker || file.isAnimatedSticker || file.isInstantVideo {
                     hasUneditableAttributes = true
                     break
                 }

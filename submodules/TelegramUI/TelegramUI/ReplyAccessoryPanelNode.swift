@@ -91,7 +91,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         } else if let file = media as? TelegramMediaFile {
                             updatedMediaReference = .message(message: MessageReference(message), media: file)
                             isRoundImage = file.isInstantVideo
-                            if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+                            if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker && !file.isAnimatedSticker {
                                 imageDimensions = representation.dimensions
                             }
                             break

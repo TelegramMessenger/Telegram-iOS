@@ -121,6 +121,8 @@ private let titleFont = Font.bold(15.0)
 private let statusFont = Font.regular(14.0)
 
 class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
+    private var currentThumbnailItem: StickerPackThumbnailItem?
+    
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -128,6 +130,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     private var disabledOverlayNode: ASDisplayNode?
     
     fileprivate let imageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
     private let unreadNode: ASImageNode
     private let titleNode: TextNode
     private let statusNode: TextNode
@@ -150,6 +153,17 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             return super.canBeSelected
         } else {
             return false
+        }
+    }
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            let wasVisible = oldValue != .none
+            let isVisible = self.visibility != .none
+            
+            if wasVisible != isVisible {
+                self.animationNode?.visibility = isVisible
+            }
         }
     }
     
@@ -230,13 +244,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
         
-        var previousThumbnailItem: TelegramMediaImageRepresentation?
-        if let thumbnail = self.layoutParams?.0.packInfo.thumbnail {
-            previousThumbnailItem = thumbnail
-        } else if let item = self.layoutParams?.0.topItem, let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-            previousThumbnailItem = TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource)
-        }
-        
+        var previousThumbnailItem = self.currentThumbnailItem
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
         let currentItem = self.layoutParams?.0
@@ -324,43 +332,63 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 currentDisabledOverlayNode = nil
             }
             
-            var thumbnailItem: TelegramMediaImageRepresentation?
+            var thumbnailItem: StickerPackThumbnailItem?
             var resourceReference: MediaResourceReference?
             if let thumbnail = item.packInfo.thumbnail {
-                thumbnailItem = thumbnail
-                resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
-            } else if let item = item.topItem, let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-                thumbnailItem = TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource)
-                resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
-            }
-            
-            let fileUpdated = thumbnailItem != previousThumbnailItem
-            
-            var imageApply: (() -> Void)?
-            var imageSize: CGSize = CGSize(width: 34.0, height: 34.0)
-            if let thumbnailItem = thumbnailItem {
-                let imageBoundingSize = CGSize(width: 34.0, height: 34.0)
-                imageSize = thumbnailItem.dimensions.aspectFitted(imageBoundingSize)
-                imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
+                if item.packInfo.flags.contains(.isAnimated) {
+                    thumbnailItem = .animated(thumbnail.resource)
+                    resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
+                } else {
+                    thumbnailItem = .still(thumbnail)
+                    resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
+                }
+            } else if let item = item.topItem {
+                if item.file.isAnimatedSticker {
+                    thumbnailItem = .animated(item.file.resource)
+                    resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
+                } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
+                    thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource))
+                    resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
+                }
             }
             
             var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             var updatedFetchSignal: Signal<FetchResourceSourceType, FetchResourceError>?
-            if fileUpdated {
-                if let thumbnailItem = thumbnailItem {
-                    updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, representation: thumbnailItem)
-                    if let resourceReference = resourceReference {
-                        updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: resourceReference)
-                    }
-                } else {
-                    updatedImageSignal = .single({ _ in return nil })
-                    updatedFetchSignal = .complete()
+            
+            let imageBoundingSize = CGSize(width: 34.0, height: 34.0)
+            var imageApply: (() -> Void)?
+            let fileUpdated = thumbnailItem != previousThumbnailItem
+            
+            var imageSize: CGSize?
+            
+            if let thumbnailItem = thumbnailItem {
+                switch thumbnailItem {
+                    case let .still(representation):
+                        let stillImageSize = representation.dimensions.aspectFitted(imageBoundingSize)
+                        imageSize = stillImageSize
+                        
+                        if fileUpdated {
+                            imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
+                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, representation: representation)
+                        }
+                    case .animated:
+                        imageSize = imageBoundingSize
                 }
+                if fileUpdated, let resourceReference = resourceReference {
+                    updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: resourceReference)
+                }
+            } else {
+                updatedImageSignal = .single({ _ in return nil })
+                updatedFetchSignal = .complete()
             }
             
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, neighbors)
+            
+                    if fileUpdated {
+                        strongSelf.currentThumbnailItem = thumbnailItem
+                    }
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
@@ -516,7 +544,27 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 32.0), size: statusLayout.size))
                     
                     let boundingSize = CGSize(width: 34.0, height: 34.0)
-                    transition.updateFrame(node: strongSelf.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: 11.0 + floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize))
+                    if let thumbnailItem = thumbnailItem, let imageSize = imageSize {
+                        let imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: 11.0 + floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
+                        switch thumbnailItem {
+                            case .still:
+                                transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
+                            case let .animated(resource):
+                                let animationNode: AnimatedStickerNode
+                                if let current = strongSelf.animationNode {
+                                    animationNode = current
+                                } else {
+                                    animationNode = AnimatedStickerNode()
+                                    strongSelf.animationNode = animationNode
+                                    strongSelf.addSubnode(animationNode)
+                                    animationNode.setup(account: item.account, resource: resource, width: 80, height: 80, mode: .cached)
+                                    animationNode.visibility = strongSelf.visibility != .none
+                                }
+                                if let animationNode = strongSelf.animationNode {
+                                    transition.updateFrame(node: animationNode, frame: imageFrame)
+                                }
+                        }
+                    }
                     
                     if let updatedImageSignal = updatedImageSignal {
                         strongSelf.imageNode.setSignal(updatedImageSignal)
@@ -602,12 +650,15 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             editingOffset = 0.0
         }
         
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
-        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + self.revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + self.revealOffset + editingOffset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
         
         let boundingSize = CGSize(width: 34.0, height: 34.0)
         
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - self.imageNode.frame.size.width) / 2.0), y: self.imageNode.frame.minY), size: self.imageNode.frame.size))
+        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + self.revealOffset + editingOffset + 15.0 + floor((boundingSize.width - self.imageNode.frame.size.width) / 2.0), y: self.imageNode.frame.minY), size: self.imageNode.frame.size))
+        if let animationNode = self.animationNode {
+            transition.updateFrame(node: animationNode, frame: CGRect(origin: CGPoint(x: params.leftInset + self.revealOffset + editingOffset + 15.0 + floor((boundingSize.width - animationNode.frame.size.width) / 2.0), y: animationNode.frame.minY), size: animationNode.frame.size))
+        }
     }
     
     override func revealOptionsInteractivelyOpened() {

@@ -86,9 +86,19 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
     return Signal({ subscriber in
         let queue = Queue()
         
+        let cancelled = Atomic<Bool>(value: false)
+        
         queue.async {
+            if cancelled.with({ $0 }) {
+                return
+            }
+            
             let decompressedData = TGGUnzipData(data)
             if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
+                if cancelled.with({ $0 }) {
+                    return
+                }
+                
                 let context = DrawingContext(size: size, scale: 1.0, clear: true)
                 player.renderFrame(with: 0, into: context.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height))
                 
@@ -151,29 +161,46 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
                 }
             }
         }
-        return EmptyDisposable
+        return ActionDisposable {
+            let _ = cancelled.swap(true)
+        }
     })
 }
+
+private let threadPool: ThreadPool = {
+    return ThreadPool(threadCount: 3, threadPriority: 0.5)
+}()
 
 @available(iOS 9.0, *)
 func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, cacheKey: String) -> Signal<String, NoError> {
     return Signal({ subscriber in
-        let queue = Queue()
+        let cancelled = Atomic<Bool>(value: false)
         
-        queue.async {
+        threadPool.addTask(ThreadPoolTask({ _ in
+            if cancelled.with({ $0 }) {
+                print("cancelled 1")
+                return
+            }
+            
             let startTime = CACurrentMediaTime()
             var drawingTime: Double = 0
             var appendingTime: Double = 0
+            var deltaTime: Double = 0
+            var compressionTime: Double = 0
             
             let decompressedData = TGGUnzipData(data)
             if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
                 let endFrame = Int(player.frameCount)
-                print("read at \(CACurrentMediaTime() - startTime)")
+                
+                if cancelled.with({ $0 }) {
+                    print("cancelled 2")
+                    return
+                }
                 
                 var randomId: Int64 = 0
                 arc4random_buf(&randomId, 8)
                 let path = NSTemporaryDirectory() + "\(randomId).lz4v"
-                guard let fileContext = ManagedFile(queue: queue, path: path, mode: .readwrite) else {
+                guard let fileContext = ManagedFile(queue: nil, path: path, mode: .readwrite) else {
                     return
                 }
                 
@@ -211,25 +238,29 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 var compressedFrameData = Data(count: frameLength)
                 let compressedFrameDataLength = compressedFrameData.count
                 
-                let scratchData = malloc(compression_encode_scratch_buffer_size(COMPRESSION_LZ4))!
+                let scratchData = malloc(compression_encode_scratch_buffer_size(COMPRESSION_LZFSE))!
                 defer {
                     free(scratchData)
                 }
                 
                 while currentFrame < endFrame {
+                    if cancelled.with({ $0 }) {
+                        print("cancelled 3")
+                        return
+                    }
+                    
                     let drawStartTime = CACurrentMediaTime()
                     memset(currentFrameData, 0, frameLength)
                     player.renderFrame(with: Int32(currentFrame), into: currentFrameData.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height))
+                    drawingTime += CACurrentMediaTime() - drawStartTime
                     
                     let appendStartTime = CACurrentMediaTime()
                     
-                    //compressRGBAToBC1(currentFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), yuvaFrameData.assumingMemoryBound(to: UInt8.self))
-                    
                     encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), currentFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height))
-                    //decodeYUVAToRGBA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), singleContext.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height))
                     
                     appendingTime += CACurrentMediaTime() - appendStartTime
                     
+                    let deltaStartTime = CACurrentMediaTime()
                     var lhs = previousYuvaFrameData.assumingMemoryBound(to: UInt64.self)
                     var rhs = yuvaFrameData.assumingMemoryBound(to: UInt64.self)
                     for _ in 0 ..< yuvaLength / 8 {
@@ -237,11 +268,11 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                         lhs = lhs.advanced(by: 1)
                         rhs = rhs.advanced(by: 1)
                     }
+                    deltaTime += CACurrentMediaTime() - deltaStartTime
                     
-                    drawingTime += CACurrentMediaTime() - drawStartTime
-                    
+                    let compressionStartTime = CACurrentMediaTime()
                     compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                        let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousYuvaFrameData.assumingMemoryBound(to: UInt8.self), yuvaLength, scratchData, COMPRESSION_LZ4)
+                        let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousYuvaFrameData.assumingMemoryBound(to: UInt8.self), yuvaLength, scratchData, COMPRESSION_LZFSE)
                         var frameLengthValue: Int32 = Int32(length)
                         let _ = fileContext.write(&frameLengthValue, count: 4)
                         let _ = fileContext.write(bytes, count: length)
@@ -251,6 +282,8 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                     previousYuvaFrameData = yuvaFrameData
                     yuvaFrameData = tmp
                     
+                    compressionTime += CACurrentMediaTime() - compressionStartTime
+                    
                     currentFrame += 1
                 }
                 
@@ -259,8 +292,13 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 print("animation render time \(CACurrentMediaTime() - startTime)")
                 print("of which drawing time \(drawingTime)")
                 print("of which appending time \(appendingTime)")
+                print("of which delta time \(deltaTime)")
+                
+                print("of which compression time \(compressionTime)")
             }
+        }))
+        return ActionDisposable {
+            let _ = cancelled.swap(true)
         }
-        return EmptyDisposable
     })
 }

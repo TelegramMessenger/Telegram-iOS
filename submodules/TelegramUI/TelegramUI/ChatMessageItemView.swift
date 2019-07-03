@@ -96,7 +96,7 @@ let defaultChatMessageItemLayoutConstants = ChatMessageItemLayoutConstants()
 
 enum ChatMessagePeekPreviewContent {
     case media(Media)
-    case url(ASDisplayNode, CGRect, String)
+    case url(ASDisplayNode, CGRect, String, Bool)
 }
 
 private let voiceMessageDurationFormatter: DateComponentsFormatter = {

@@ -312,13 +312,13 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                     arguments.tapAvatarAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingAvatar)
             case let .about(theme, text, value):
-                return ItemListTextWithLabelItem(theme: theme, label: text, text: foldMultipleLineBreaks(value), enabledEntitiyTypes: [.url, .mention, .hashtag], multiline: true, sectionId: self.section, action: nil, longTapAction: {
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: foldMultipleLineBreaks(value), enabledEntityTypes: [.url, .mention, .hashtag], multiline: true, sectionId: self.section, action: nil, longTapAction: {
                     arguments.displayContextMenu(ChannelInfoEntryTag.about, value)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)
                 }, tag: ChannelInfoEntryTag.about)
             case let .addressName(theme, text, value):
-                return ItemListTextWithLabelItem(theme: theme, label: text, text: "https://t.me/\(value)", textColor: .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: "https://t.me/\(value)", textColor: .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.displayAddressNameContextMenu("https://t.me/\(value)")
                 }, longTapAction: {
                     arguments.displayContextMenu(ChannelInfoEntryTag.link, "https://t.me/\(value)")
@@ -1157,7 +1157,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     }
     aboutLinkActionImpl = { [weak controller] action, itemLink in
         if let controller = controller {
-            handlePeerInfoAboutTextAction(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+            handleTextLinkAction(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
         }
     }
     endEditingImpl = {

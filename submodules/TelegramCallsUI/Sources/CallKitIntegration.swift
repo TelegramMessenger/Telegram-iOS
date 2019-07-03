@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import CallKit
+import Intents
 import AVFoundation
 import Postbox
 import TelegramCore
@@ -49,6 +50,7 @@ public final class CallKitIntegration {
     func startCall(account: Account, peerId: PeerId, displayTitle: String) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(account: account, peerId: peerId, displayTitle: displayTitle)
+            self.donateIntent(peerId: peerId, displayTitle: displayTitle)
         }
     }
     
@@ -73,6 +75,20 @@ public final class CallKitIntegration {
     func reportOutgoingCallConnected(uuid: UUID, at date: Date) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.reportOutgoingCallConnected(uuid: uuid, at: date)
+        }
+    }
+    
+    private func donateIntent(peerId: PeerId, displayTitle: String) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            let handle = INPersonHandle(value: "tg\(peerId.id)", type: .unknown)
+            let contact = INPerson(personHandle: handle, nameComponents: nil, displayName: displayTitle, image: nil, contactIdentifier: nil, customIdentifier: "tg\(peerId.id)")
+        
+            let intent = INStartAudioCallIntent(contacts: [contact])
+            
+            let interaction = INInteraction(intent: intent, response: nil)
+            interaction.direction = .outgoing
+            interaction.donate { _ in
+            }
         }
     }
 }

@@ -224,6 +224,9 @@ final class SharedApplicationContext {
             if curDevice.isSupported {
                 curDevice.generateToken(completionHandler: { (data, error) in
                     if let tokenData = data {
+                        #if DEBUG
+                        print("\(tokenData.base64EncodedString())")
+                        #endif
                         self.deviceToken.set(.single(data))
                     } else {
                         print("Error: \(error!.localizedDescription)")
@@ -586,8 +589,8 @@ final class SharedApplicationContext {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
-                var icons = [PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: false),
-                        PresentationAppIcon(name: "Black", imageName: "BlackIcon", isDefault: false),
+                var icons = [PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
+                        PresentationAppIcon(name: "Black", imageName: "BlackIcon", isDefault: buildConfig.isInternalBuild),
                         PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon", isDefault: false),
                         PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon", isDefault: false),
                         PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon", isDefault: false),

@@ -454,7 +454,11 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         for i in 1 ..< rects.count {
                             rect = rect.union(rects[i])
                         }
-                        return (item.message, .url(self, rect, value))
+                        var concealed = true
+                        if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                            concealed = !doesUrlMatchText(url: value, text: attributeText)
+                        }
+                        return (item.message, .url(self, rect, value, concealed))
                     }
                 }
             }

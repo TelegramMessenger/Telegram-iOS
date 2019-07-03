@@ -16,7 +16,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
     private var disabledOverlay: ASDisplayNode?
     
     private(set) var expansionProgress: CGFloat = 1.0
-    
+
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     init(theme: PresentationTheme, placeholder: String, activate: @escaping () -> Void) {

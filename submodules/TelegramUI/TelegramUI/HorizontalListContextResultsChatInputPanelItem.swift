@@ -80,9 +80,11 @@ private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radiu
 final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode {
     private let imageNodeBackground: ASDisplayNode
     private let imageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
     private var videoLayer: (SoftwareVideoThumbnailLayer, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
     private var currentImageResource: TelegramMediaResource?
     private var currentVideoFile: TelegramMediaFile?
+    private var currentAnimatedStickerFile: TelegramMediaFile?
     private var resourceStatus: MediaResourceStatus?
     private(set) var item: HorizontalListContextResultsChatInputPanelItem?
     private var statusDisposable = MetaDisposable()
@@ -188,6 +190,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         let imageLayout = self.imageNode.asyncLayout()
         let currentImageResource = self.currentImageResource
         let currentVideoFile = self.currentVideoFile
+        let currentAnimatedStickerFile = self.currentAnimatedStickerFile
         
         return { [weak self] item, params, mergedTop, mergedBottom in
             let height = params.width
@@ -199,6 +202,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
 
             var imageResource: TelegramMediaResource?
             var stickerFile: TelegramMediaFile?
+            var animatedStickerFile: TelegramMediaFile?
             var videoFile: TelegramMediaFile?
             var imageDimensions: CGSize?
             switch item.result {
@@ -231,7 +235,10 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         } else if let largestRepresentation = largestImageRepresentation(file.previewRepresentations) {
                             imageDimensions = largestRepresentation.dimensions
                         }
-                        if file.isSticker {
+                        if file.isAnimatedSticker {
+                            animatedStickerFile = file
+                            imageResource = smallestImageRepresentation(file.previewRepresentations)?.resource
+                        } else if file.isSticker {
                             stickerFile = file
                             imageResource = file.resource
                         } else {
@@ -286,6 +293,15 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                 updatedVideoFile = true
             }
             
+            var updatedAnimatedStickerFile = false
+            if let currentAnimatedStickerFile = currentAnimatedStickerFile, let animatedStickerFile = animatedStickerFile {
+                if !currentAnimatedStickerFile.isEqual(to: animatedStickerFile) {
+                    updatedAnimatedStickerFile = true
+                }
+            } else if (currentAnimatedStickerFile != nil) != (animatedStickerFile != nil) {
+                updatedAnimatedStickerFile = true
+            }
+            
             if updatedImageResource {
                 if let imageResource = imageResource {
                     if let stickerFile = stickerFile {
@@ -299,7 +315,6 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     updateImageSignal = .complete()
                 }
             }
-            
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: height, height: croppedImageDimensions.width + sideInset), insets: UIEdgeInsets())
             
@@ -348,6 +363,30 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         }
                     }
                     
+                    if updatedAnimatedStickerFile {
+                        if let animationNode = strongSelf.animationNode {
+                            strongSelf.animationNode = nil
+                            animationNode.removeFromSupernode()
+                        }
+                        
+                        if let animatedStickerFile = animatedStickerFile {
+                            let animationNode: AnimatedStickerNode
+                            if let currentAnimationNode = strongSelf.animationNode {
+                                animationNode = currentAnimationNode
+                            } else {
+                                animationNode = AnimatedStickerNode()
+                                animationNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                                animationNode.visibility = true
+                                strongSelf.addSubnode(animationNode)
+                                strongSelf.animationNode = animationNode
+                            }
+                            animationNode.started = { [weak self] in
+                                self?.imageNode.alpha = 0.0
+                            }
+                            animationNode.setup(account: item.account, resource: animatedStickerFile.resource, width: 160, height: 160, mode: .cached)
+                        }
+                    }
+                    
                     let progressSize = CGSize(width: 24.0, height: 24.0)
                     let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((nodeLayout.contentSize.width - progressSize.width) / 2.0), y: floorToScreenPixels((nodeLayout.contentSize.height - progressSize.height) / 2.0)), size: progressSize)
 
@@ -363,19 +402,17 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                 if let strongSelf = strongSelf {
                                     strongSelf.resourceStatus = status
                                     
-
                                     let state: RadialStatusNodeState
                                     let statusForegroundColor: UIColor = .white
                                     
                                     switch status {
-                                    case let .Fetching(_, progress):
-                                        state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
-                                    case .Remote:
-                                        state = .download(statusForegroundColor)
-                                    case .Local:
-                                        state = .none
+                                        case let .Fetching(_, progress):
+                                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
+                                        case .Remote:
+                                            state = .download(statusForegroundColor)
+                                        case .Local:
+                                            state = .none
                                     }
-                                    
                                     
                                     strongSelf.statusNode.transitionToState(state, completion: { })
                                 }
@@ -390,6 +427,12 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         thumbnailLayer.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
                         layer.layer.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
                         layer.layer.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
+                    }
+                    
+                    if let animationNode = strongSelf.animationNode {
+                        animationNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
+                        animationNode.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
+                        animationNode.updateLayout(size: croppedImageDimensions)
                     }
                 }
             })

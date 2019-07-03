@@ -2954,7 +2954,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             self?.deleteMediaRecording()
         }, sendRecordedMedia: { [weak self] in
             self?.sendMediaRecording()
-        }, displayRestrictedInfo: { [weak self] subject in
+        }, displayRestrictedInfo: { [weak self] subject, displayType in
             guard let strongSelf = self else {
                 return
             }
@@ -3006,37 +3006,42 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 
                 strongSelf.recordingModeFeedback?.error()
                 
-                var rect: CGRect?
-                let isStickers: Bool = subject == .stickers
-                switch subject {
-                    case .stickers:
-                        rect = strongSelf.chatDisplayNode.frameForStickersButton()
-                        if var rectValue = rect, let actionRect = strongSelf.chatDisplayNode.frameForInputActionButton() {
-                            rectValue.origin.y = actionRect.minY
-                            rect = rectValue
+                switch displayType {
+                    case .tooltip:
+                        var rect: CGRect?
+                        let isStickers: Bool = subject == .stickers
+                        switch subject {
+                        case .stickers:
+                            rect = strongSelf.chatDisplayNode.frameForStickersButton()
+                            if var rectValue = rect, let actionRect = strongSelf.chatDisplayNode.frameForInputActionButton() {
+                                rectValue.origin.y = actionRect.minY
+                                rect = rectValue
+                            }
+                        case .mediaRecording:
+                            rect = strongSelf.chatDisplayNode.frameForInputActionButton()
                         }
-                    case .mediaRecording:
-                        rect = strongSelf.chatDisplayNode.frameForInputActionButton()
-                }
-                
-                if let tooltipController = strongSelf.mediaRestrictedTooltipController, strongSelf.mediaRestrictedTooltipControllerMode == isStickers {
-                    tooltipController.content = .text(banDescription)
-                } else if let rect = rect {
-                    strongSelf.mediaRestrictedTooltipController?.dismiss()
-                    let tooltipController = TooltipController(content: .text(banDescription))
-                    strongSelf.mediaRestrictedTooltipController = tooltipController
-                    strongSelf.mediaRestrictedTooltipControllerMode = isStickers
-                    tooltipController.dismissed = { [weak tooltipController] in
-                        if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRestrictedTooltipController === tooltipController {
-                            strongSelf.mediaRestrictedTooltipController = nil
+                        
+                        if let tooltipController = strongSelf.mediaRestrictedTooltipController, strongSelf.mediaRestrictedTooltipControllerMode == isStickers {
+                            tooltipController.content = .text(banDescription)
+                        } else if let rect = rect {
+                            strongSelf.mediaRestrictedTooltipController?.dismiss()
+                            let tooltipController = TooltipController(content: .text(banDescription))
+                            strongSelf.mediaRestrictedTooltipController = tooltipController
+                            strongSelf.mediaRestrictedTooltipControllerMode = isStickers
+                            tooltipController.dismissed = { [weak tooltipController] in
+                                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRestrictedTooltipController === tooltipController {
+                                    strongSelf.mediaRestrictedTooltipController = nil
+                                }
+                            }
+                            strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                                if let strongSelf = self {
+                                    return (strongSelf.chatDisplayNode, rect)
+                                }
+                                return nil
+                            }))
                         }
-                    }
-                    strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
-                        if let strongSelf = self {
-                            return (strongSelf.chatDisplayNode, rect)
-                        }
-                        return nil
-                    }))
+                    case .alert:
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: banDescription, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
             }
         }, displayVideoUnmuteTip: { [weak self] location in
@@ -3607,6 +3612,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 self.failedMessageEventsDisposable.set((self.context.account.pendingMessageManager.failedMessageEvents(peerId: peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] reason in
                     if let strongSelf = self {
+                        let subjectFlags: TelegramChatBannedRightsFlags = .banSendMedia
+                        
                         let text: String
                         let moreInfo: Bool
                         switch reason {
@@ -3617,8 +3624,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
                                 moreInfo = true
                             case .mediaRestricted:
-                                text = strongSelf.presentationData.strings.Conversation_DefaultRestrictedMedia
-                                moreInfo = false
+                                strongSelf.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .alert)
+                                return
                         }
                         let actions: [TextAlertAction]
                         if moreInfo {
@@ -3631,27 +3638,6 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: actions), in: .window(.root))
                     }
                 }))
-            /*case let .group(groupId):
-                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.group(groupId), .total(nil)])
-                self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
-                    if let strongSelf = self {
-                        var unreadCount: Int32 = 0
-                        var totalCount: Int32 = 0
-                        
-                        if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
-                            if let count = view.count(for: .group(groupId)) {
-                                unreadCount = count
-                            }
-                            if let (_, state) = view.total() {
-                                let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                                let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
-                                totalCount = count
-                            }
-                        }
-                        
-                        strongSelf.chatDisplayNode.navigateButtons.unreadCount = unreadCount
-                    }
-                })*/
         }
         
         self.interfaceInteraction = interfaceInteraction
@@ -6308,7 +6294,22 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             }
                         }
                     }
-                case let .url(node, rect, string):
+                case let .url(node, rect, string, concealed):
+                    var parsedUrlValue: URL?
+                    if let parsed = URL(string: string) {
+                        parsedUrlValue = parsed
+                    } else if let encoded = (string as NSString).addingPercentEscapes(using: String.Encoding.utf8.rawValue), let parsed = URL(string: encoded) {
+                        parsedUrlValue = parsed
+                    }
+                    
+                    if let parsedUrlValue = parsedUrlValue {
+                        if concealed, (parsedUrlValue.scheme == "http" || parsedUrlValue.scheme == "https"), !isConcealedUrlWhitelisted(parsedUrlValue) {
+                            return nil
+                        }
+                    } else {
+                        return nil
+                    }
+                    
                     let targetRect = node.view.convert(rect, to: sourceView)
                     let sourceRect = CGRect(origin: CGPoint(x: floor(targetRect.midX), y: floor(targetRect.midY)), size: CGSize(width: 1.0, height: 1.0))
                     if let parsedUrl = URL(string: string) {

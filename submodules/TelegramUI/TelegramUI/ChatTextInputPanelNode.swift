@@ -348,7 +348,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.addSubnode(self.actionButtons)
         
         self.actionButtons.micButton.recordingDisabled = { [weak self] in
-            self?.interfaceInteraction?.displayRestrictedInfo(.mediaRecording)
+            self?.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .tooltip)
         }
         
         self.actionButtons.micButton.beginRecording = { [weak self] in
@@ -1578,7 +1578,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         if enabled {
                             self.interfaceInteraction?.openStickers()
                         } else {
-                            self.interfaceInteraction?.displayRestrictedInfo(.stickers)
+                            self.interfaceInteraction?.displayRestrictedInfo(.stickers, .tooltip)
                         }
                     case .keyboard:
                         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in

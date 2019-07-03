@@ -67,7 +67,7 @@ private let boundingImageSize = CGSize(width: 28.0, height: 28.0)
 private let highlightSize = CGSize(width: 35.0, height: 35.0)
 private let verticalOffset: CGFloat = 3.0
 
-private enum StickerPackThumbnailItem: Equatable {
+enum StickerPackThumbnailItem: Equatable {
     case still(TelegramMediaImageRepresentation)
     case animated(MediaResource)
     
