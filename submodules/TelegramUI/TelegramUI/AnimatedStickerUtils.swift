@@ -167,29 +167,21 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
     })
 }
 
-private let queueBySize = Atomic<[Int: Queue]>(value: [:])
+private let threadPool: ThreadPool = {
+    return ThreadPool(threadCount: 3, threadPriority: 0.5)
+}()
 
 @available(iOS 9.0, *)
 func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, cacheKey: String) -> Signal<String, NoError> {
     return Signal({ subscriber in
-        var maybeQueue: Queue?
-        let _ = queueBySize.modify { dict in
-            var dict = dict
-            if let current = dict[Int(size.width)] {
-                maybeQueue = current
-            } else {
-                let value = Queue()
-                maybeQueue = value
-                dict[Int(size.width)] = value
-            }
-            return dict
-        }
-        
-        let queue = maybeQueue!
-        
         let cancelled = Atomic<Bool>(value: false)
         
-        queue.async {
+        threadPool.addTask(ThreadPoolTask({ _ in
+            if cancelled.with({ $0 }) {
+                print("cancelled 1")
+                return
+            }
+            
             let startTime = CACurrentMediaTime()
             var drawingTime: Double = 0
             var appendingTime: Double = 0
@@ -201,13 +193,14 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 let endFrame = Int(player.frameCount)
                 
                 if cancelled.with({ $0 }) {
+                    print("cancelled 2")
                     return
                 }
                 
                 var randomId: Int64 = 0
                 arc4random_buf(&randomId, 8)
                 let path = NSTemporaryDirectory() + "\(randomId).lz4v"
-                guard let fileContext = ManagedFile(queue: queue, path: path, mode: .readwrite) else {
+                guard let fileContext = ManagedFile(queue: nil, path: path, mode: .readwrite) else {
                     return
                 }
                 
@@ -252,6 +245,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 
                 while currentFrame < endFrame {
                     if cancelled.with({ $0 }) {
+                        print("cancelled 3")
                         return
                     }
                     
@@ -299,9 +293,10 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 print("of which drawing time \(drawingTime)")
                 print("of which appending time \(appendingTime)")
                 print("of which delta time \(deltaTime)")
+                
                 print("of which compression time \(compressionTime)")
             }
-        }
+        }))
         return ActionDisposable {
             let _ = cancelled.swap(true)
         }
