@@ -107,6 +107,14 @@ open class TabBarController: ViewController {
     
     var currentController: ViewController?
     
+    open override var navigationBarRequiresEntireLayoutUpdate: Bool {
+        if let currentController = currentController {
+            return currentController.navigationBarRequiresEntireLayoutUpdate
+        } else {
+            return false
+        }
+    }
+    
     private let pendingControllerDisposable = MetaDisposable()
     
     private var theme: TabBarControllerTheme

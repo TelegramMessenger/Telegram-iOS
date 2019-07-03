@@ -544,6 +544,10 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
     
     weak var switchController: TabBarAccountSwitchController?
     
+    override var navigationBarRequiresEntireLayoutUpdate: Bool {
+        return false
+    }
+
     init(currentContext: AccountContext, contextValue: Promise<AccountContext>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?, accountsAndPeers: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError>) {
         self.sharedContext = currentContext.sharedContext
         self.contextValue = contextValue
@@ -1435,7 +1439,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             return state
         }
     }
-    
+
     setDisplayNavigationBarImpl = { [weak controller] display in
         controller?.setDisplayNavigationBar(display, transition: .animated(duration: 0.5, curve: .spring))
     }

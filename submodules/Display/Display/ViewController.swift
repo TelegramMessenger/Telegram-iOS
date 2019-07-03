@@ -140,6 +140,9 @@ open class ViewControllerPresentationArguments {
     private var previewingContext: Any?
     
     public var displayNavigationBar = true
+    open var navigationBarRequiresEntireLayoutUpdate: Bool {
+        return true
+    }
     
     private weak var activeInputViewCandidate: UIResponder?
     private weak var activeInputView: UIResponder?
@@ -258,7 +261,11 @@ open class ViewControllerPresentationArguments {
         }
         self.navigationBar?.requestContainerLayout = { [weak self] transition in
             if let strongSelf = self, strongSelf.isNodeLoaded, let validLayout = strongSelf.validLayout {
-                strongSelf.updateNavigationBarLayout(validLayout, transition: transition)
+                if strongSelf.navigationBarRequiresEntireLayoutUpdate {
+                    strongSelf.containerLayoutUpdated(validLayout, transition: transition)
+                } else {
+                    strongSelf.updateNavigationBarLayout(validLayout, transition: transition)
+                }
             }
         }
         self.navigationBar?.item = self.navigationItem
