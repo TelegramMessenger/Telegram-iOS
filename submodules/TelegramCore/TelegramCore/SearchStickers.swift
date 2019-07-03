@@ -180,14 +180,14 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
         if !scope.contains(.remote) {
             return .single(tempResult)
         }
-        let currentItems = Set<MediaId>(localItems.map { $0.file.fileId })
+        let currentItemIds = Set<MediaId>(localItems.map { $0.file.fileId })
         
         if let cached = cached {
             var cachedItems: [FoundStickerItem] = []
             var cachedAnimatedItems: [FoundStickerItem] = []
             
             for file in cached.items {
-                if !currentItems.contains(file.fileId) {
+                if !currentItemIds.contains(file.fileId) {
                     if file.isAnimatedSticker {
                         cachedAnimatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
                     } else {
@@ -212,13 +212,13 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
                         var animatedItems: [FoundStickerItem] = []
                         
                         var result: [FoundStickerItem] = localItems
-                        let currentItems = Set<MediaId>(items.map { $0.file.fileId })
+                        let currentItemIds = Set<MediaId>(result.map { $0.file.fileId })
                         
                         var files: [TelegramMediaFile] = []
                         for sticker in stickers {
                             if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
                                 files.append(file)
-                                if !currentItems.contains(id) {
+                                if !currentItemIds.contains(id) {
                                     if file.isAnimatedSticker {
                                         animatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
                                     } else {
