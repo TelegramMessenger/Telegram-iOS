@@ -1,15 +1,31 @@
+cc = meson.get_compiler('cpp')
+
+if (cc.get_id() != 'msvc')
+    compiler_flags = ['-fno-exceptions', '-fno-rtti',
+                      '-fno-unwind-tables' , '-fno-asynchronous-unwind-tables',
+                      '-Woverloaded-virtual', '-Wno-unused-parameter']
+endif
+
 subdir('vector')
 subdir('lottie')
 subdir('binding')
 
-library_deps  = vector_dep
-library_deps += lottie_dep
-library_deps += binding_dep
+rlottie_dep  = [ vector_dep, lottie_dep, binding_dep, dependency('threads')]
 
 rlottie_lib = shared_library('rlottie',
                              include_directories : inc,
                              version             : meson.project_version(),
-                             dependencies        : library_deps,
+                             dependencies        : rlottie_dep,
                              install             : true,
+                             cpp_args            : compiler_flags,
                              gnu_symbol_visibility : 'hidden',
                             )
+
+pkg_mod = import('pkgconfig')
+
+pkg_mod.generate( libraries   : rlottie_lib,
+                  version     : meson.project_version(),
+                  name        : 'librlottie',
+                  filebase    : 'rlottie',
+                  description : 'A Library for rendering lottie files.'
+                )

@@ -3,38 +3,32 @@ subdir('freetype')
 subdir('pixman')
 subdir('stb')
 
-vector_dep = [freetype_dep]
-vector_dep += pixman_dep
-vector_dep += stb_dep
+source_file = [
+    'vdasher.cpp',
+    'vbrush.cpp',
+    'vbitmap.cpp',
+    'vpainter.cpp',
+    'vcompositionfunctions.cpp',
+    'vdrawhelper.cpp',
+    'vdrawhelper_sse2.cpp',
+    'vdrawhelper_neon.cpp',
+    'vdrawable.cpp',
+    'vrect.cpp',
+    'vrle.cpp',
+    'vpath.cpp',
+    'vpathmesure.cpp',
+    'vmatrix.cpp',
+    'velapsedtimer.cpp',
+    'vdebug.cpp',
+    'vinterpolator.cpp',
+    'vbezier.cpp',
+    'vraster.cpp',
+    'vimageloader.cpp',
+]
 
-
-source_file   = files('vdasher.cpp')
-source_file  += files('vbrush.cpp')
-source_file  += files('vbitmap.cpp')
-source_file  += files('vpainter.cpp')
-source_file  += files('vcompositionfunctions.cpp')
-source_file  += files('vdrawhelper.cpp')
-source_file  += files('vdrawhelper_sse2.cpp')
-source_file  += files('vdrawhelper_neon.cpp')
-source_file  += files('vdrawable.cpp')
-
-source_file  += files('vrect.cpp')
-source_file  += files('vrle.cpp')
-source_file  += files('vpath.cpp')
-source_file  += files('vpathmesure.cpp')
-source_file  += files('vmatrix.cpp')
-source_file  += files('velapsedtimer.cpp')
-source_file  += files('vdebug.cpp')
-source_file  += files('vinterpolator.cpp')
-source_file  += files('vbezier.cpp')
-source_file  += files('vraster.cpp')
-source_file  += files('vimageloader.cpp')
-
-inc_dir = [include_directories('.')]
-inc_dir += config_dir
-
-vector_dep += declare_dependency( include_directories : inc_dir,
-                                  sources             : source_file
+vector_dep = declare_dependency( include_directories : include_directories('.'),
+                                  sources             : source_file,
+                                  dependencies        : [freetype_dep, pixman_dep, stb_dep],
                                 )
 
 

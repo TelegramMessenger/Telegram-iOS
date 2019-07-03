@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "lottieanimation_capi.h"
+#include "rlottie_capi.h"
 
 class AnimationCApiTest : public ::testing::Test {
 public:
