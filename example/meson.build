@@ -16,7 +16,7 @@ executable('lottie2gif',
 executable('vectorTest',
            'vectortest.cpp',
            include_directories : inc,
-           dependencies : [rlottie_dep])
+           dependencies : [rlottie_lib_dep])
 
 demo_dep = dependency('elementary', required : false)
 

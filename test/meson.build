@@ -12,7 +12,7 @@ vector_testsuite = executable('vectorTestSuite',
                               vector_test_sources,
                               include_directories : inc,
                               override_options : override_default,
-                              dependencies : [gtest_dep, rlottie_dep],
+                              dependencies : [gtest_dep, rlottie_lib_dep],
                               )
 
 test('Vector Testsuite', vector_testsuite)
