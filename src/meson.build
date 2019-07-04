@@ -1,5 +1,5 @@
 cc = meson.get_compiler('cpp')
-
+compiler_flags =[]
 if (cc.get_id() != 'msvc')
     compiler_flags = ['-fno-exceptions', '-fno-rtti',
                       '-fno-unwind-tables' , '-fno-asynchronous-unwind-tables',
