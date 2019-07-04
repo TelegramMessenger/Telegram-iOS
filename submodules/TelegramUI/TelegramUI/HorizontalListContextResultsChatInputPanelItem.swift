@@ -323,6 +323,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     strongSelf.item = item
                     strongSelf.currentImageResource = imageResource
                     strongSelf.currentVideoFile = videoFile
+                    strongSelf.currentAnimatedStickerFile = currentAnimatedStickerFile
                     
                     if let imageApply = imageApply {
                         if let updateImageSignal = updateImageSignal {
