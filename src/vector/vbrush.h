@@ -47,13 +47,15 @@ public:
     VGradient::Mode      mMode;
     VGradientStops       mStops;
     float                mAlpha{1.0};
+    struct Linear{
+        float x1, y1, x2, y2;
+    };
+    struct Radial{
+        float cx, cy, fx, fy, cradius, fradius;
+    };
     union {
-        struct {
-            float x1, y1, x2, y2;
-        } linear;
-        struct {
-            float cx, cy, fx, fy, cradius, fradius;
-        } radial;
+        Linear linear;
+        Radial radial;
     };
     VMatrix mMatrix;
 };

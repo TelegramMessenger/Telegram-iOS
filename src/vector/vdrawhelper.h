@@ -103,13 +103,15 @@ private:
 
 struct VGradientData {
     VGradient::Spread mSpread;
+    struct Linear{
+        float x1, y1, x2, y2;
+    };
+    struct Radial{
+        float cx, cy, fx, fy, cradius, fradius;
+    };
     union {
-        struct {
-            float x1, y1, x2, y2;
-        } linear;
-        struct {
-            float cx, cy, fx, fy, cradius, fradius;
-        } radial;
+        Linear linear;
+        Radial radial;
     };
     const uint32_t *mColorTable;
     bool            mColorTableAlpha;
