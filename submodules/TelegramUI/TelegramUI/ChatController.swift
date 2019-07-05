@@ -4541,8 +4541,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             }
                         }
                     }, recognizedQRCode: { [weak self] code in
-                        if let strongSelf = self, let (host, port, username, password, secret) = parseProxyUrl(code) {
-                            strongSelf.openResolved(ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret))
+                        if let strongSelf = self, let (host, port, username, password, secret, secretHost) = parseProxyUrl(code) {
+                            strongSelf.openResolved(ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret, secretHost: secretHost))
                         }
                     })
                 }
