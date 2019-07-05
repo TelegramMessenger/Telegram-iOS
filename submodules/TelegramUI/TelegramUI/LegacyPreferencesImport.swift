@@ -137,7 +137,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                     secretIsValid = true
                 }
                 if secretIsValid {
-                    connection = .mtp(secret: secret)
+                    connection = .mtp(secret: secret, host: nil)
                 }
             } else {
                 connection = .socks5(username: (dict["username"] as? String) ?? "", password: (dict["password"] as? String) ?? "")
@@ -436,7 +436,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                                 secretIsValid = true
                             }
                             if secretIsValid {
-                                connection = .mtp(secret: data)
+                                connection = .mtp(secret: data, host: nil)
                             } else {
                                 connection = nil
                             }

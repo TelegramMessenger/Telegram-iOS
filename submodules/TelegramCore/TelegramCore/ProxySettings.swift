@@ -15,14 +15,14 @@ import Foundation
 
 public enum ProxyServerConnection: Equatable, Hashable, PostboxCoding {
     case socks5(username: String?, password: String?)
-    case mtp(secret: Data)
+    case mtp(secret: Data, host: String?)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_t", orElse: 0) {
             case 0:
                 self = .socks5(username: decoder.decodeOptionalStringForKey("username"), password: decoder.decodeOptionalStringForKey("password"))
             case 1:
-                self = .mtp(secret: decoder.decodeBytesForKey("secret")?.makeData() ?? Data())
+                self = .mtp(secret: decoder.decodeBytesForKey("secret")?.makeData() ?? Data(), host: decoder.decodeOptionalStringForKey("host"))
             default:
                 self = .socks5(username: nil, password: nil)
         }
@@ -42,25 +42,14 @@ public enum ProxyServerConnection: Equatable, Hashable, PostboxCoding {
                 } else {
                     encoder.encodeNil(forKey: "password")
                 }
-            case let .mtp(secret):
+            case let .mtp(secret, host):
                 encoder.encodeInt32(1, forKey: "_t")
                 encoder.encodeBytes(MemoryBuffer(data: secret), forKey: "secret")
-        }
-    }
-    
-    public var hashValue: Int {
-        switch self {
-            case let .socks5(username, password):
-                var hash = 0
-                if let username = username {
-                    hash = hash &* 31 &+ username.hashValue
+                if let host = host {
+                    encoder.encodeString(host, forKey: "host")
+                } else {
+                    encoder.encodeNil(forKey: "host")
                 }
-                if let password = password {
-                    hash = hash &* 31 &+ password.hashValue
-                }
-                return hash
-            case let .mtp(secret):
-                return secret.hashValue
         }
     }
 }
@@ -173,9 +162,9 @@ extension ProxyServerSettings {
     var mtProxySettings: MTSocksProxySettings {
         switch self.connection {
             case let .socks5(username, password):
-                return MTSocksProxySettings(ip: self.host, port: UInt16(clamping: self.port), username: username, password: password, secret: nil)
-            case let .mtp(secret):
-                return MTSocksProxySettings(ip: self.host, port: UInt16(clamping: self.port), username: nil, password: nil, secret: secret)
+                return MTSocksProxySettings(ip: self.host, port: UInt16(clamping: self.port), username: username, password: password, secret: nil, host: nil)
+            case let .mtp(secret, host):
+                return MTSocksProxySettings(ip: self.host, port: UInt16(clamping: self.port), username: nil, password: nil, secret: secret, host: host)
         }
     }
 }

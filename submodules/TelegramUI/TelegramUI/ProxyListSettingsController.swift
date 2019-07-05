@@ -501,10 +501,13 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
                     
                     var string: String
                     switch server.connection {
-                    case let .mtp(secret):
+                    case let .mtp(secret, secretHost):
                         let secret = hexString(secret)
                         string = "https://t.me/proxy?server=\(server.host)&port=\(server.port)"
                         string += "&secret=\((secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+                        if let secretHost = secretHost?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) {
+                            string += "&host=\(secretHost)"
+                        }
                     case let .socks5(username, password):
                         string = "https://t.me/socks?server=\(server.host)&port=\(server.port)"
                         if let username = username, let password = password {

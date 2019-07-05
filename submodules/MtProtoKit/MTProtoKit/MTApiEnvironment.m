@@ -151,7 +151,7 @@ typedef enum {
 
 @implementation MTSocksProxySettings
 
-- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password secret:(NSData *)secret {
+- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password secret:(NSData *)secret host:(NSString *)host {
     self = [super init];
     if (self != nil) {
         _ip = ip;
@@ -159,6 +159,7 @@ typedef enum {
         _username = username;
         _password = password;
         _secret = secret;
+        _host = host;
     }
     return self;
 }
@@ -183,18 +184,30 @@ typedef enum {
     if ((other->_secret != nil) != (_secret != nil) || (_secret != nil && ![_secret isEqual:other->_secret])) {
         return false;
     }
+    if ((other->_host != nil) != (_host != nil) || (_host != nil && ![_host isEqual:other->_host])) {
+        return false;
+    }
     return true;
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"%@:%d+%@+%@+%@", _ip, (int)_port, _username, _password, _secret];
+    return [NSString stringWithFormat:@"%@:%d+%@+%@+%@+%@", _ip, (int)_port, _username, _password, _secret, _host];
 }
 
 + (bool)secretSupportsExtendedPadding:(NSData *)data {
     if (data.length == 17) {
         uint8_t first = 0;
         [data getBytes:&first length:1];
-        return (first == 0xdd);
+        return (first == 0xdd || first == 0xee);
+    }
+    return false;
+}
+
++ (bool)secretSupportsExtendedMode:(NSData *)data {
+    if (data.length == 17) {
+        uint8_t first = 0;
+        [data getBytes:&first length:1];
+        return (first == 0xee);
     }
     return false;
 }

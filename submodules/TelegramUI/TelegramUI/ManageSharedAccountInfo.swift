@@ -49,14 +49,16 @@ func sharedAccountInfos(accountManager: AccountManager, accounts: Signal<[Accoun
             var username: String?
             var password: String?
             var secret: Data?
+            var secretHost: String?
             switch proxyServer.connection {
                 case let .socks5(usernameValue, passwordValue):
                     username = usernameValue
                     password = passwordValue
-                case let .mtp(secretValue):
+                case let .mtp(secretValue, secretHostValue):
                     secret = secretValue
+                    secretHost = secretHostValue
             }
-            return AccountProxyConnection(host: proxyServer.host, port: proxyServer.port, username: username, password: password, secret: secret)
+            return AccountProxyConnection(host: proxyServer.host, port: proxyServer.port, username: username, password: password, secret: secret, secretHost: secretHost)
         }
         
         return combineLatest(accounts.map(accountInfo))

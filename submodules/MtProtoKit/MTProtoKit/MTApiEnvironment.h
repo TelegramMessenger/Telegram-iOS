@@ -9,10 +9,12 @@
 @property (nonatomic, strong, readonly) NSString *username;
 @property (nonatomic, strong, readonly) NSString *password;
 @property (nonatomic, strong, readonly) NSData *secret;
+@property (nonatomic, strong, readonly) NSString *host;
 
-- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password secret:(NSData *)secret;
+- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password secret:(NSData *)secret host:(NSString *)host;
 
 + (bool)secretSupportsExtendedPadding:(NSData *)data;
++ (bool)secretSupportsExtendedMode:(NSData *)data;
 
 @end
 
