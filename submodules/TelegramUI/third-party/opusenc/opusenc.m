@@ -130,9 +130,9 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
     self = [super init];
     if (self != nil)
     {
-        bitrate = 20 * 1024;
+        bitrate = 30 * 1024;
         rate = 48000;
-        coding_rate = 16000;
+        coding_rate = 48000;
         frame_size = 960;
         with_cvbr = 1;
         max_ogg_delay = 48000;
@@ -178,13 +178,13 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
     const char *opus_version = opus_get_version_string();
     comment_init(&inopt.comments, &inopt.comments_length, opus_version);
     
-    bitrate = 16 * 1024;
-    
-    inopt.rawmode = 1;
-    inopt.ignorelength = 1;
-    inopt.samplesize = 16;
-    inopt.rate = 16000;
-    inopt.channels = 1;
+//    bitrate = 16 * 1024;
+
+//    inopt.rawmode = 1;
+//    inopt.ignorelength = 1;
+//    inopt.samplesize = 16;
+//    inopt.rate = 16000;
+//    inopt.channels = 1;
     
     rate = (opus_int32)inopt.rate;
     inopt.skip = 0;

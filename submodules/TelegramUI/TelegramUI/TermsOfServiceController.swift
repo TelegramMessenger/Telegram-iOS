@@ -46,8 +46,8 @@ public extension TermsOfServiceControllerTheme {
                 theme = defaultDarkPresentationTheme
             case defaultDarkAccentPresentationTheme.list.itemBlocksBackgroundColor.argb:
                 theme = defaultDarkAccentPresentationTheme
-        default:
-            theme = defaultPresentationTheme
+            default:
+                theme = defaultPresentationTheme
         }
         return theme
     }

@@ -449,7 +449,6 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
     return PresentationTheme(
         name: .builtin(day ? .day : .dayClassic),
         overallDarkAppearance: false,
-        allowsCustomWallpapers: true,
         auth: auth,
         passcode: passcode,
         rootController: rootController,

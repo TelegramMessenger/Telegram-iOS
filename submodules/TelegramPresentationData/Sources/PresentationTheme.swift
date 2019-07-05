@@ -951,7 +951,6 @@ public enum PresentationThemeName: Equatable {
 public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
     public let overallDarkAppearance: Bool
-    public let allowsCustomWallpapers: Bool
     public let auth: PresentationThemeAuth
     public let passcode: PresentationThemePasscode
     public let rootController: PresentationThemeRootController
@@ -963,10 +962,9 @@ public final class PresentationTheme: Equatable {
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, overallDarkAppearance: Bool, allowsCustomWallpapers: Bool, auth: PresentationThemeAuth, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification) {
+    public init(name: PresentationThemeName, overallDarkAppearance: Bool, auth: PresentationThemeAuth, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification) {
         self.name = name
         self.overallDarkAppearance = overallDarkAppearance
-        self.allowsCustomWallpapers = allowsCustomWallpapers
         self.auth = auth
         self.passcode = passcode
         self.rootController = rootController

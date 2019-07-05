@@ -115,6 +115,16 @@ public extension UIColor {
         return UIColor(hue: hue, saturation: saturation, brightness: max(0.0, min(1.0, brightness * factor)), alpha: alpha)
     }
     
+    func withMultiplied(hue: CGFloat, saturation: CGFloat, brightness: CGFloat) -> UIColor {
+        var hueValue: CGFloat = 0.0
+        var saturationValue: CGFloat = 0.0
+        var brightnessValue: CGFloat = 0.0
+        var alphaValue: CGFloat = 0.0
+        self.getHue(&hueValue, saturation: &saturationValue, brightness: &brightnessValue, alpha: &alphaValue)
+        
+        return UIColor(hue: max(0.0, min(1.0, hueValue * hue)), saturation: max(0.0, min(1.0, saturationValue * saturation)), brightness: max(0.0, min(1.0, brightnessValue * brightness)), alpha: alphaValue)
+    }
+    
     func mixedWith(_ other: UIColor, alpha: CGFloat) -> UIColor {
         let alpha = min(1.0, max(0.0, alpha))
         let oneMinusAlpha = 1.0 - alpha
