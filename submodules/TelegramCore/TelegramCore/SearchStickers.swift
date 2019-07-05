@@ -180,13 +180,24 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
         if !scope.contains(.remote) {
             return .single(tempResult)
         }
-        let currentItems = Set<MediaId>(localItems.map { $0.file.fileId })
+        let currentItemIds = Set<MediaId>(localItems.map { $0.file.fileId })
+        
         if let cached = cached {
+            var cachedItems: [FoundStickerItem] = []
+            var cachedAnimatedItems: [FoundStickerItem] = []
+            
             for file in cached.items {
-                if !currentItems.contains(file.fileId) {
-                    tempResult.append(FoundStickerItem(file: file, stringRepresentations: []))
+                if !currentItemIds.contains(file.fileId) {
+                    if file.isAnimatedSticker {
+                        cachedAnimatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+                    } else {
+                        cachedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+                    }
                 }
             }
+            
+            tempResult.append(contentsOf: cachedAnimatedItems)
+            tempResult.append(contentsOf: cachedItems)
         }
         
         let remote = account.network.request(Api.functions.messages.getStickers(emoticon: query, hash: cached?.hash ?? 0))
@@ -197,21 +208,32 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
             return account.postbox.transaction { transaction -> [FoundStickerItem] in
                 switch result {
                     case let .stickers(hash, stickers):
-                        var items: [FoundStickerItem] = localItems
-                        let currentItems = Set<MediaId>(items.map { $0.file.fileId })
+                        var items: [FoundStickerItem] = []
+                        var animatedItems: [FoundStickerItem] = []
+                        
+                        var result: [FoundStickerItem] = localItems
+                        let currentItemIds = Set<MediaId>(result.map { $0.file.fileId })
                         
                         var files: [TelegramMediaFile] = []
                         for sticker in stickers {
                             if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
                                 files.append(file)
-                                if !currentItems.contains(id) {
-                                    items.append(FoundStickerItem(file: file, stringRepresentations: []))
+                                if !currentItemIds.contains(id) {
+                                    if file.isAnimatedSticker {
+                                        animatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+                                    } else {
+                                        items.append(FoundStickerItem(file: file, stringRepresentations: []))
+                                    }
                                 }
                             }
                         }
+                        
+                        result.append(contentsOf: animatedItems)
+                        result.append(contentsOf: items)
+                        
                         transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: CachedStickerQueryResult(items: files, hash: hash), collectionSpec: collectionSpec)
                     
-                        return items
+                        return result
                     case .stickersNotModified:
                         break
                 }

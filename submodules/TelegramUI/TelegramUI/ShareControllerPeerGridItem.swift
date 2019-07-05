@@ -46,7 +46,7 @@ final class ShareControllerGridSection: GridSection {
     }
 }
 
-private let sectionTitleFont = Font.medium(12.0)
+private let sectionTitleFont = Font.bold(13.0)
 
 final class ShareControllerGridSectionNode: ASDisplayNode {
     let backgroundNode: ASDisplayNode
@@ -59,7 +59,7 @@ final class ShareControllerGridSectionNode: ASDisplayNode {
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
-        self.titleNode.attributedText = NSAttributedString(string: title.uppercased(), font: sectionTitleFont, textColor: theme.list.sectionHeaderTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: title.uppercased(), font: sectionTitleFont, textColor: theme.chatList.sectionHeaderTextColor)
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.truncationMode = .byTruncatingTail
         
@@ -77,7 +77,7 @@ final class ShareControllerGridSectionNode: ASDisplayNode {
         self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: bounds.size.width, height: 27.0))
         
         let titleSize = self.titleNode.measure(CGSize(width: bounds.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 7.0), size: titleSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 6.0 + UIScreenPixel), size: titleSize)
     }
 }
 

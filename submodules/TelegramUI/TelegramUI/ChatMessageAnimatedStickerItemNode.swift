@@ -388,7 +388,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 layoutSize.height += actionButtonsSizeAndApply.0.height
             }
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: contentHeight), insets: layoutInsets), { [weak self] animation, _ in
+            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration) = animation {
@@ -493,7 +493,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                         let actionButtonsNode = actionButtonsSizeAndApply.1(animated)
                         let previousFrame = actionButtonsNode.frame
-                        let actionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY - 10.0), size: actionButtonsSizeAndApply.0)
+                        let actionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY), size: actionButtonsSizeAndApply.0)
                         actionButtonsNode.frame = actionButtonsFrame
                         if actionButtonsNode !== strongSelf.actionButtonsNode {
                             strongSelf.actionButtonsNode = actionButtonsNode
