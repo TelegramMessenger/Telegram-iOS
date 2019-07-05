@@ -770,10 +770,11 @@ struct ctr_state {
                     }
                     
                     if (_sayHello) {
+                        NSMutableData *partitionedCompleteData = [[NSMutableData alloc] init];
                         if (!_addedHelloHeader) {
                             _addedHelloHeader = true;
                             uint8_t helloHeader[6] = { 0x14, 0x03, 0x03, 0x00, 0x01, 0x01 };
-                            [_socket writeData:[[NSData alloc] initWithBytes:helloHeader length:6] withTimeout:-1 tag:0];
+                            [partitionedCompleteData appendData:[[NSData alloc] initWithBytes:helloHeader length:6]];
                         }
                         
                         NSUInteger limit = 2878;
@@ -786,14 +787,12 @@ struct ctr_state {
                             lengthValue = OSSwapInt16(lengthValue);
                             memcpy(&packetHeader[3], &lengthValue, 2);
                             
-                            NSMutableData *packetData = [[NSMutableData alloc] init];
-                            [packetData appendData:[[NSData alloc] initWithBytes:packetHeader length:5]];
-                            [packetData appendData:[completeData subdataWithRange:NSMakeRange(offset, partLength)]];
-                            
-                            [_socket writeData:packetData withTimeout:-1 tag:0];
+                            [partitionedCompleteData appendData:[[NSData alloc] initWithBytes:packetHeader length:5]];
+                            [partitionedCompleteData appendData:[completeData subdataWithRange:NSMakeRange(offset, partLength)]];
                             
                             offset += partLength;
                         }
+                        [_socket writeData:partitionedCompleteData withTimeout:-1 tag:0];
                     } else {
                         [_socket writeData:completeData withTimeout:-1 tag:0];
                     }
