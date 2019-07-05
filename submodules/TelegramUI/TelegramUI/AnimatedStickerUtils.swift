@@ -178,7 +178,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
         
         threadPool.addTask(ThreadPoolTask({ _ in
             if cancelled.with({ $0 }) {
-                print("cancelled 1")
+               //print("cancelled 1")
                 return
             }
             
@@ -193,7 +193,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 let endFrame = Int(player.frameCount)
                 
                 if cancelled.with({ $0 }) {
-                    print("cancelled 2")
+                    //print("cancelled 2")
                     return
                 }
                 
@@ -245,7 +245,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 
                 while currentFrame < endFrame {
                     if cancelled.with({ $0 }) {
-                        print("cancelled 3")
+                        //print("cancelled 3")
                         return
                     }
                     
