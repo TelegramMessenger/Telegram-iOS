@@ -114,6 +114,7 @@ final class TrendingTopItemNode: ASDisplayNode {
                 self?.imageNode.alpha = 0.0
             }
             animationNode.setup(account: account, resource: item.file.resource, width: 160, height: 160, mode: .cached)
+            self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
         } else {
             self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
             
@@ -121,8 +122,8 @@ final class TrendingTopItemNode: ASDisplayNode {
                 self.animationNode = nil
                 currentAnimationNode.removeFromSupernode()
             }
+            self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
         }
-        self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
     }
     
     func updatePreviewing(animated: Bool, isPreviewing: Bool) {
