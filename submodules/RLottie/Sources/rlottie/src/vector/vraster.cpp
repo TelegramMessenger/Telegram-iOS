@@ -346,7 +346,7 @@ struct VRleTask {
         sw_ft_grays_raster.raster_render(nullptr, &params);
     }
 
-    void operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
+    void update(FTOutline &outRef, SW_FT_Stroker &stroker)
     {
         if (mGenerateStroke) {  // Stroke Task
             outRef.convert(mPath);
@@ -481,13 +481,23 @@ public:
 
     ~RleTaskScheduler() { SW_FT_Stroker_Done(stroker); }
 
-    void process(VTask task) { (*task)(outlineRef, stroker); }
+    void process(VTask task) { (*task).update(outlineRef, stroker); }
 };
 #endif
 
 struct VRasterizer::VRasterizerImpl {
     VRleTask mTask;
-
+    FTOutline     outlineRef;
+    SW_FT_Stroker stroker;
+    
+    VRasterizerImpl() {
+        SW_FT_Stroker_New(&stroker);
+    }
+    
+    ~VRasterizerImpl() {
+        SW_FT_Stroker_Done(stroker);
+    }
+    
     VRle &    rle() { return mTask.rle(); }
     VRleTask &task() { return mTask; }
 };
@@ -505,8 +515,7 @@ void VRasterizer::init()
 
 void VRasterizer::updateRequest()
 {
-    VTask taskObj = VTask(d, &d->task());
-    RleTaskScheduler::instance().process(std::move(taskObj));
+    d->task().update(d->outlineRef, d->stroker);
 }
 
 void VRasterizer::rasterize(VPath path, FillRule fillRule, const VRect &clip)
