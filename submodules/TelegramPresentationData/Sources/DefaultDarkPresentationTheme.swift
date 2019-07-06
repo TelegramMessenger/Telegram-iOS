@@ -1,8 +1,6 @@
 import Foundation
 import UIKit
 
-//private let accentColor: UIColor = UIColor(rgb: 0xffffff)
-
 private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationTheme {
     let destructiveColor: UIColor = UIColor(rgb: 0xeb5545)
     let constructiveColor: UIColor = UIColor(rgb: 0x08a723)
@@ -41,11 +39,11 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
     let activeNavigationSearchBar = PresentationThemeActiveNavigationSearchBar(
         backgroundColor: UIColor(rgb: 0x1c1c1d),
         accentColor: accentColor,
-        inputFillColor: UIColor(rgb: 0x272728),
+        inputFillColor: UIColor(rgb: 0x0f0f0f),
         inputTextColor: accentColor,
-        inputPlaceholderTextColor: UIColor(rgb: 0x5e5e5e),
-        inputIconColor: UIColor(rgb: 0x5e5e5e),
-        inputClearButtonColor: UIColor(rgb: 0x5e5e5e),
+        inputPlaceholderTextColor: UIColor(rgb: 0x8f8f8f),
+        inputIconColor: UIColor(rgb: 0x8f8f8f),
+        inputClearButtonColor: UIColor(rgb: 0x8f8f8f),
         separatorColor: UIColor(rgb: 0x3d3d40)
     )
 
@@ -135,7 +133,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
         authorNameColor: UIColor(rgb: 0xffffff),
         messageTextColor: UIColor(rgb: 0x8e8e92),
         messageDraftTextColor: UIColor(rgb: 0xdd4b39),
-        checkmarkColor: UIColor(rgb: 0xffffff),
+        checkmarkColor: accentColor,
         pendingIndicatorColor: UIColor(rgb: 0xffffff),
         failedFillColor: destructiveColor,
         failedForegroundColor: .white,
@@ -169,8 +167,8 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
         incomingScamColor: destructiveColor,
         outgoingPrimaryTextColor: UIColor(rgb: 0xffffff),
         outgoingSecondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
-        outgoingLinkTextColor: accentColor,
-        outgoingLinkHighlightColor: accentColor.withAlphaComponent(0.5),
+        outgoingLinkTextColor: .white,
+        outgoingLinkHighlightColor: UIColor.white.withAlphaComponent(0.5),
         outgoingScamColor: destructiveColor,
         infoPrimaryTextColor: UIColor(rgb: 0xffffff),
         infoLinkTextColor: accentColor,
@@ -181,10 +179,10 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
         incomingAccentControlColor: UIColor(rgb: 0xffffff),
         outgoingAccentControlColor: UIColor(rgb: 0xffffff),
         incomingMediaActiveControlColor: UIColor(rgb: 0xffffff, alpha: 0.6),
-        outgoingMediaActiveControlColor: UIColor(rgb: 0xffffff, alpha: 0.6),
-        incomingMediaInactiveControlColor: UIColor(rgb: 0xffffff, alpha: 0.3),
-        outgoingMediaInactiveControlColor: UIColor(rgb: 0xffffff, alpha: 0.3),
-        outgoingCheckColor: UIColor(rgb: 0xffffff, alpha: 0.5),
+        outgoingMediaActiveControlColor: .white,
+        incomingMediaInactiveControlColor: UIColor.white.withAlphaComponent(0.3),
+        outgoingMediaInactiveControlColor: UIColor.white.withAlphaComponent(0.3),
+        outgoingCheckColor: .white,
         incomingPendingActivityColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         outgoingPendingActivityColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         mediaDateAndStatusFillColor: UIColor(white: 0.0, alpha: 0.5),
@@ -249,7 +247,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
         inputTextColor: UIColor(rgb: 0xffffff),
         inputControlColor: UIColor(rgb: 0x7b7b7b),
         actionControlFillColor: accentColor,
-        actionControlForegroundColor: .black,
+        actionControlForegroundColor: .white,
         primaryTextColor: UIColor(rgb: 0xffffff),
         secondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         mediaRecordingDotColor: .white,

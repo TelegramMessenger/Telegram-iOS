@@ -278,7 +278,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         outgoingMediaActiveControlColor: UIColor(rgb: 0xffffff, alpha: 1.0),
         incomingMediaInactiveControlColor: UIColor(rgb: 0xcacaca),
         outgoingMediaInactiveControlColor: UIColor(rgb: 0xffffff, alpha: 0.6),
-        outgoingCheckColor: UIColor(rgb: 0xffffff, alpha: 0.6),
+        outgoingCheckColor: UIColor.white,
         incomingPendingActivityColor: UIColor(rgb: 0x525252, alpha: 0.6),
         outgoingPendingActivityColor: UIColor(rgb: 0xffffff, alpha: 0.7),
         mediaDateAndStatusFillColor: UIColor(rgb: 0x000000, alpha: 0.5),
