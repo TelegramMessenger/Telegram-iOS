@@ -67,6 +67,10 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
     }
     
     func setPeer(account: Account, theme: PresentationTheme, synchronousLoad:Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
-        self.avatarNode.setPeer(account: account, theme: theme, peer: peer, authorOfMessage: authorOfMessage, emptyColor: emptyColor, synchronousLoad: synchronousLoad)
+        var overrideImage: AvatarNodeImageOverride?
+        if peer.isDeleted {
+            overrideImage = .deletedIcon
+        }
+        self.avatarNode.setPeer(account: account, theme: theme, peer: peer, authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad)
     }
 }

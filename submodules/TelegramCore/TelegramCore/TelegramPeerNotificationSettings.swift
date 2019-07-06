@@ -136,9 +136,9 @@ public enum PeerNotificationDisplayPreviews {
             case .default:
                 encoder.encodeInt32(0, forKey: "p.v")
             case .show:
-                encoder.encodeInt32(0, forKey: "p.v")
+                encoder.encodeInt32(1, forKey: "p.v")
             case .hide:
-                encoder.encodeInt32(0, forKey: "p.v")
+                encoder.encodeInt32(2, forKey: "p.v")
         }
     }
 }
