@@ -69,16 +69,21 @@ private func validateAnimationLayers(_ layers: [Any]?) -> Bool {
 }
 
 func validateAnimationComposition(json: [AnyHashable: Any]) -> Bool {
+    let validDimensions: [Int] = [100, 512]
+    let validFramerates: [Int] = [30, 60]
+    
     guard let tgs = json["tgs"] as? Int, tgs == 1 else {
         return false
     }
-    guard let width = json["w"] as? Int, width == 512 else {
+    guard let width = json["w"] as? Int, validDimensions.contains(width) else {
         return false
     }
-    guard let height = json["h"] as? Int, height == 512 else {
+    guard let height = json["h"] as? Int, validDimensions.contains(height)  else {
         return false
     }
-    
+    guard let fps = json["fr"] as? Int, validFramerates.contains(fps)  else {
+        return false
+    }
     return true
 }
 
