@@ -95,18 +95,25 @@ public:
 
     int setup(int argc, char **argv)
     {
-        if (argc > 1) fileName = argv[1];
+        char *path{nullptr};
+
+        if (argc > 1) path = argv[1];
         if (argc > 2) bgColor = strtol(argv[2], NULL, 16);
 
-        if (!fileName) return help();
+        if (!path) return help();
+
+        std::array<char, 5000> memory;
 
 #ifdef _WIN32
-        fileName = _fullpath(absoloutePath.data(), fileName, absoloutePath.size());
+        path = _fullpath(memory.data(), path, memory.size());
 #else
-        fileName = realpath(fileName, absoloutePath.data());
+        path = realpath(path, memory.data());
 #endif
+        if (!path) return help();
 
-        if (!fileName || !jsonFile(fileName) ) return help();
+        fileName = std::string(path);
+
+        if (!jsonFile()) return help();
 
         gifName = basename(fileName);
         gifName.append(".gif");
@@ -116,22 +123,16 @@ public:
 private:
     std::string basename(const std::string &str)
     {
-        if (str.empty()) return {};
-
-        auto ptr = str.c_str();
-        auto pos = str.size();
-        while (--pos) {
-            if ( ptr[pos] == '/' || ptr[pos] == '\\') {
-                return str.substr(pos+1);
-            }
-        }
-        return str;
+        return str.substr(str.find_last_of("/\\") + 1);
     }
 
-    bool jsonFile(const char *filename) {
-      const char *dot = strrchr(filename, '.');
-      if(!dot || dot == filename) return false;
-      return !strcmp(dot + 1, "json");
+    bool jsonFile() {
+        std::string extn = ".json";
+        if ( fileName.size() <= extn.size() ||
+             fileName.substr(fileName.size()- extn.size()) != extn )
+            return false;
+
+        return true;
     }
 
     int result() {
@@ -145,9 +146,8 @@ private:
     }
 
 private:
-    char *fileName{nullptr};
     int bgColor = 0xffffffff;
-    std::array<char, 5000> absoloutePath;
+    std::string fileName;
     std::string gifName;
 };
 
