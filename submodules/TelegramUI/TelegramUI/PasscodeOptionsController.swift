@@ -214,6 +214,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var popControllerImpl: (() -> Void)?
+    var popBackToControllerImpl: ((Int) -> Void)?
     var replaceTopControllerImpl: ((ViewController, Bool) -> Void)?
 
     let actionsDisposable = DisposableSet()
@@ -293,7 +294,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             }) |> deliverOnMainQueue).start(next: { _ in
             }, error: { _ in
             }, completed: {
-                popControllerImpl?()
+                popBackToControllerImpl?(2)
             })
         }
         pushControllerImpl?(setupController)
@@ -393,6 +394,12 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
+    }
+    popBackToControllerImpl = { [weak controller] i in
+        if let controller = controller, let navigationController = controller.navigationController as? NavigationController, let viewControllers = controller.navigationController?.viewControllers {
+            let index = viewControllers.count - i - 1
+            let _ = navigationController.popToViewController(viewControllers[index], animated: true)
+        }
     }
     popControllerImpl = { [weak controller] in
         let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
