@@ -569,6 +569,7 @@ public:
     VSize size() const {return mSize;}
     void processRepeaterObjects();
 public:
+    int                  mTgs;
     std::string          mVersion;
     VSize                mSize;
     long                 mStartFrame{0};
@@ -954,6 +955,7 @@ public:
 class LOTModel
 {
 public:
+   bool isTgs() const {return mRoot->mTgs == 1;}
    bool  isStatic() const {return mRoot->isStatic();}
    double duration() const {return mRoot->duration();}
    size_t totalFrame() const {return mRoot->totalFrame();}

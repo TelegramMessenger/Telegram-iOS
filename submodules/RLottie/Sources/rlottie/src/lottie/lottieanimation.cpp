@@ -47,7 +47,8 @@ public:
     Surface render(size_t frameNo, const Surface &surface);
     std::future<Surface> renderAsync(size_t frameNo, Surface &&surface);
     const LOTLayerNode * renderTree(size_t frameNo, const VSize &size);
-
+    bool    isTgs() const { return mModel->isTgs(); }
+    
     const LayerInfoList &layerInfoList() const
     {
         return mModel->layerInfoList();
@@ -264,6 +265,11 @@ std::unique_ptr<Animation> Animation::loadFromFile(const std::string &path)
         return animation;
     }
     return nullptr;
+}
+
+bool Animation::isTgs() const
+{
+    return d->isTgs();
 }
 
 void Animation::size(size_t &width, size_t &height) const
