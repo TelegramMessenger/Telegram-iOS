@@ -558,7 +558,10 @@ void LottieParserImpl::parseComposition()
     LOTCompositionData *comp = sharedComposition.get();
     compRef = comp;
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "v")) {
+        if (0 == strcmp(key, "tgs")) {
+            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            comp->mTgs = GetInt();
+        }else if (0 == strcmp(key, "v")) {
             RAPIDJSON_ASSERT(PeekType() == kStringType);
             comp->mVersion = std::string(GetString());
         } else if (0 == strcmp(key, "w")) {
