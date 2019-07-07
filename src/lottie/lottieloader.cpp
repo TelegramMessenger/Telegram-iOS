@@ -96,6 +96,9 @@ bool LottieLoader::load(const std::string &path)
         LottieParser parser(const_cast<char *>(buf.str().data()),
                             dirname(path).c_str());
         mModel = parser.model();
+
+        if (!mModel) return false;
+
         LottieFileCache::instance().add(path, mModel);
 
         f.close();
@@ -113,6 +116,9 @@ bool LottieLoader::loadFromData(std::string &&jsonData, const std::string &key,
     LottieParser parser(const_cast<char *>(jsonData.c_str()),
                         resourcePath.c_str());
     mModel = parser.model();
+
+    if (!mModel) return false;
+
     LottieFileCache::instance().add(key, mModel);
 
     return true;
