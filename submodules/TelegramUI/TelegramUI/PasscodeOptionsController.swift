@@ -280,15 +280,23 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             ])])
         presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, turnPasscodeOn: {
-        let _ = passcodeOptionsAccessController(context: context, pushController: { controller in
-            replaceTopControllerImpl?(controller, false)
-        }, completion: { _ in
-            replaceTopControllerImpl?(passcodeOptionsController(context: context), false)
-        }).start(next: { controller in
-            if let controller = controller {
-                pushControllerImpl?(controller)
-            }
-        })
+        let setupController = PasscodeSetupController(context: context, mode: .setup(change: true, .digits6))
+        setupController.complete = { passcode, numerical in
+            let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
+                var data = transaction.getAccessChallengeData()
+                if numerical {
+                    data = PostboxAccessChallengeData.numericalPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                } else {
+                    data = PostboxAccessChallengeData.plaintextPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                }
+                transaction.setAccessChallengeData(data)
+            }) |> deliverOnMainQueue).start(next: { _ in
+            }, error: { _ in
+            }, completed: {
+                popControllerImpl?()
+            })
+        }
+        pushControllerImpl?(setupController)
     }, changePasscode: {
         let _ = (context.sharedContext.accountManager.transaction({ transaction -> Bool in
             switch transaction.getAccessChallengeData() {
