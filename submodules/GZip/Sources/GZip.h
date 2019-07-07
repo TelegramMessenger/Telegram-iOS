@@ -10,8 +10,8 @@ FOUNDATION_EXPORT const unsigned char GZipVersionString[];
 extern "C" {
 #endif
     
-NSData *TGGZipData(NSData *data, float level);
-NSData * _Nullable TGGUnzipData(NSData *data);
+NSData * _Nonnull TGGZipData(NSData * _Nonnull data, float level);
+NSData * _Nullable TGGUnzipData(NSData * _Nonnull data, uint sizeLimit);
     
 #ifdef __cplusplus
 }
