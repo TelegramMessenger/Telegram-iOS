@@ -26,7 +26,7 @@ if [ "$BUILD_MACHINE" == "linux" ]; then
 		echo "Virtual machine $VM_BASE_NAME not found"
 		exit 1
 	fi
-elif [ "$BUILD_MACHINE" == "linux" ]; then
+elif [ "$BUILD_MACHINE" == "macOS" ]; then
 	echo "Building on macOS"
 else
 	echo "Unknown build machine $(uname -s)"
