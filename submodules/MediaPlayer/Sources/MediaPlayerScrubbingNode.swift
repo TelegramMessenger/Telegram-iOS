@@ -691,30 +691,19 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        var hitBounds = self.bounds
-        let hitTestSlop = self.hitTestSlop
-        hitBounds.origin.x += hitTestSlop.left
-        hitBounds.origin.y += hitTestSlop.top
-        hitBounds.size.width += -hitTestSlop.left - hitTestSlop.right
-        hitBounds.size.height += -hitTestSlop.top - hitTestSlop.bottom
-        
-        if hitBounds.contains(point) {
-            switch self.contentNodes {
-                case let .standard(node):
-                    if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
-                        return handleNodeContainer.view
-                    } else {
-                        return nil
-                    }
-                case let .custom(node):
-                    if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
-                        return handleNodeContainer.view
-                    } else {
-                        return nil
-                    }
+        switch self.contentNodes {
+        case let .standard(node):
+            if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
+                return handleNodeContainer.view
+            } else {
+                return nil
             }
-        } else {
-            return nil
+        case let .custom(node):
+            if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
+                return handleNodeContainer.view
+            } else {
+                return nil
+            }
         }
     }
 }
