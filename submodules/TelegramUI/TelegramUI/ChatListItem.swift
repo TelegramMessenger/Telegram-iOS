@@ -361,7 +361,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             result += "Outgoing message"
                         }
-                        let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: peer.message, chatPeer: peer.peer, accountPeerId: item.context.account.peerId)
+                        let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: peer.message, chatPeer: peer.peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
                             result += "\nFrom: \(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder))"
                         }
@@ -707,7 +707,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var hideAuthor = false
             switch contentPeer {
                 case let .chat(itemPeer):
-                    let (peer, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: message, chatPeer: itemPeer, accountPeerId: item.context.account.peerId, enableMediaEmoji: !enableChatListPhotos)
+                    let (peer, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: message, chatPeer: itemPeer, accountPeerId: item.context.account.peerId, enableMediaEmoji: !enableChatListPhotos, isPeerGroup: isPeerGroup)
                     contentData = .chat(itemPeer: itemPeer, peer: peer, hideAuthor: hideAuthor, messageText: messageText)
                     hideAuthor = initialHideAuthor
                 case let .group(groupPeers):
