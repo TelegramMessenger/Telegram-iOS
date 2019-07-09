@@ -95,7 +95,7 @@ fi
 
 SOURCE_DIR=$(basename "$BASE_DIR")
 rm -f "$BUILDBOX_DIR/transient-data/source.tar"
-tar cf "$BUILDBOX_DIR/transient-data/source.tar" --exclude "$BUILDBOX_DIR" --exclude-vcs "."
+tar cf "$BUILDBOX_DIR/transient-data/source.tar" --exclude "$BUILDBOX_DIR" --exclude ".git" "."
 
 PROCESS_ID="$$"
 VM_NAME="$VM_BASE_NAME-$(openssl rand -hex 10)-build-telegram-$PROCESS_ID"
