@@ -4580,6 +4580,7 @@ static int stbi__create_png_image(stbi__png *a, stbi_uc *image_data, stbi__uint3
             }
          }
          STBI_FREE(a->out);
+         a->out = NULL;
          image_data += img_len;
          image_data_len -= img_len;
       }
