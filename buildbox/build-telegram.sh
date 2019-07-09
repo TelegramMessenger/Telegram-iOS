@@ -94,10 +94,8 @@ if [ ! -d "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" ]; then
 fi
 
 SOURCE_DIR=$(basename "$BASE_DIR")
-cd ..
-rm -f "$SOURCE_DIR/$BUILDBOX_DIR/transient-data/source.tar"
-tar cf "$SOURCE_DIR/$BUILDBOX_DIR/transient-data/source.tar" --exclude "$SOURCE_DIR/$BUILDBOX_DIR" "$SOURCE_DIR"
-cd "$BASE_DIR"
+rm -f "$BUILDBOX_DIR/transient-data/source.tar"
+tar cf "$BUILDBOX_DIR/transient-data/source.tar" --exclude "$BUILDBOX_DIR" --exclude-vcs "."
 
 PROCESS_ID="$$"
 VM_NAME="$VM_BASE_NAME-$(openssl rand -hex 10)-build-telegram-$PROCESS_ID"
@@ -105,9 +103,6 @@ VM_NAME="$VM_BASE_NAME-$(openssl rand -hex 10)-build-telegram-$PROCESS_ID"
 if [ "$BUILD_MACHINE" == "linux" ]; then
 	virt-clone --original "$VM_BASE_NAME" --name "$VM_NAME" --auto-clone
 	virsh start "$VM_NAME"
-	while 1; do
-		VM_IP=virsh domifaddr "$VM_NAME"
-	done
 
 	echo "Getting VM IP"
 
