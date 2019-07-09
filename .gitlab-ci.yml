@@ -15,7 +15,7 @@ internal:
   except:
     - tags
   script:
-    - sh buildbox/build-telegram.sh hockeyapp
+    - bash buildbox/build-telegram.sh hockeyapp
   environment:
     name: internal
 
@@ -28,6 +28,6 @@ beta_testflight:
   except:
     - tags
   script:
-    - sh buildbox/build-telegram.sh appstore
+    - bash buildbox/build-telegram.sh appstore
   environment:
     name: testflight_llc
