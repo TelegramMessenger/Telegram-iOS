@@ -50,15 +50,13 @@ public struct AccountProxyConnection: Codable {
     public let username: String?
     public let password: String?
     public let secret: Data?
-    public let secretHost: String?
     
-    public init(host: String, port: Int32, username: String?, password: String?, secret: Data?, secretHost: String?) {
+    public init(host: String, port: Int32, username: String?, password: String?, secret: Data?) {
         self.host = host
         self.port = port
         self.username = username
         self.password = password
         self.secret = secret
-        self.secretHost = secretHost
     }
 }
 
