@@ -518,10 +518,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     }
     
     func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
-        
         let highlightProgress: CGFloat = self.item?.interaction.highlightedChatLocation?.progress ?? 1.0
         
-        if reallyHighlighted {
+        if self.reallyHighlighted {
             if self.highlightedBackgroundNode.supernode == nil {
                 self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
                 self.highlightedBackgroundNode.alpha = 0.0
