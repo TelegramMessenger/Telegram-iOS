@@ -904,6 +904,11 @@ final class ChatMediaInputNode: ChatInputNode {
                 } else {
                     panes = [strongSelf.gifPane, strongSelf.stickerPane, strongSelf.trendingPane]
                 }
+                let panelPoint = strongSelf.view.convert(point, to: strongSelf.collectionListPanel.view)
+                if panelPoint.y < strongSelf.collectionListPanel.frame.maxY {
+                    return .single(nil)
+                }
+                
                 for pane in panes {
                     if pane.supernode != nil, pane.frame.contains(point) {
                         if let pane = pane as? ChatMediaInputGifPane {
