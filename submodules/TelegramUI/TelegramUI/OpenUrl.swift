@@ -24,8 +24,8 @@ public func parseProxyUrl(_ url: URL) -> ProxyServerSettings? {
     guard let proxy = parseProxyUrl(url.absoluteString) else {
         return nil
     }
-    if let secret = proxy.secret, secret.count == 16 || (secret.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(secret)) && (!MTSocksProxySettings.secretSupportsExtendedMode(secret) || proxy.secretHost != nil) {
-        return ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .mtp(secret: secret, host: proxy.secretHost))
+    if let secret = proxy.secret, let _ = MTProxySecret.parseData(secret) {
+        return ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .mtp(secret: secret))
     } else {
         return ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .socks5(username: proxy.username, password: proxy.password))
     }

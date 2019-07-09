@@ -216,9 +216,7 @@ struct ctr_state {
     
     NSString *_mtpIp;
     int32_t _mtpPort;
-    NSData *_mtpSecret;
-    NSString *_mtpHost;
-    bool _sayHello;
+    MTProxySecret *_mtpSecret;
     NSData *_helloRandom;
     NSData *_currentHelloResponse;
     
@@ -268,13 +266,16 @@ struct ctr_state {
             _firstPacketControlByte = [context.apiEnvironment tcpPayloadPrefix];
         }
         
+        if (_scheme.address.secret != nil) {
+            _mtpIp = _scheme.address.ip;
+            _mtpPort = _scheme.address.port;
+            _mtpSecret = [MTProxySecret parseData:_scheme.address.secret];
+        }
         if (context.apiEnvironment.socksProxySettings != nil) {
             if (context.apiEnvironment.socksProxySettings.secret != nil) {
                 _mtpIp = context.apiEnvironment.socksProxySettings.ip;
                 _mtpPort = context.apiEnvironment.socksProxySettings.port;
-                _mtpSecret = context.apiEnvironment.socksProxySettings.secret;
-                _mtpHost = context.apiEnvironment.socksProxySettings.host;
-                _sayHello = [MTSocksProxySettings secretSupportsExtendedMode:_mtpSecret] && _mtpHost != nil;
+                _mtpSecret = [MTProxySecret parseData:context.apiEnvironment.socksProxySettings.secret];
             } else {
                 _socksIp = context.apiEnvironment.socksProxySettings.ip;
                 _socksPort = context.apiEnvironment.socksProxySettings.port;
@@ -284,11 +285,9 @@ struct ctr_state {
         }
         
         if (_mtpSecret != nil) {
-            if ([MTSocksProxySettings secretSupportsExtendedPadding:_mtpSecret]) {
+            if ([_mtpSecret isKindOfClass:[MTProxySecretType1 class]] || [_mtpSecret isKindOfClass:[MTProxySecretType2 class]]) {
                 _useIntermediateFormat = true;
             }
-        } else if ([MTSocksProxySettings secretSupportsExtendedPadding:_scheme.address.secret]) {
-            _useIntermediateFormat = true;
         }
         
         _resolveDisposable = [[MTMetaDisposable alloc] init];
@@ -423,8 +422,6 @@ struct ctr_state {
                             }
                         } else if (strongSelf->_mtpIp != nil) {
                             MTLog(@"[MTTcpConnection#%x connecting to %@:%d via mtp://%@:%d:%@]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_mtpIp, (int)strongSelf->_mtpPort, strongSelf->_mtpSecret);
-                        } else if (strongSelf->_scheme.address.secret != nil) {
-                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d with secret %@]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_scheme.address.secret);
                         } else {
                             MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port);
                         }
@@ -434,7 +431,9 @@ struct ctr_state {
                     if (![strongSelf->_socket connectToHost:connectionData.ip onPort:connectionData.port viaInterface:strongSelf->_interface withTimeout:12 error:&error] || error != nil) {
                         [strongSelf closeAndNotifyWithError:true];
                     } else if (strongSelf->_socksIp == nil) {
-                        if (strongSelf->_mtpIp != nil && strongSelf->_sayHello) {
+                        if (strongSelf->_mtpIp != nil && [strongSelf->_mtpSecret isKindOfClass:[MTProxySecretType2 class]]) {
+                            MTProxySecretType2 *secret = (MTProxySecretType2 *)(strongSelf->_mtpSecret);
+                            
                             int greaseCount = 8;
                             NSMutableData *greaseData = [[NSMutableData alloc] initWithLength:greaseCount];
                             uint8_t *greaseBytes = (uint8_t *)greaseData.mutableBytes;
@@ -472,7 +471,7 @@ struct ctr_state {
                             [helloData appendBytes:r1 length:32];
                             
                             uint8_t s3[2] = { 0x00, 0x22 };
-                            [helloData appendBytes:s3 length:1];
+                            [helloData appendBytes:s3 length:2];
                             
                             [helloData appendBytes:&greaseBytes[0] length:1];
                             [helloData appendBytes:&greaseBytes[0] length:1];
@@ -500,18 +499,18 @@ struct ctr_state {
                             int stack3 = (int)helloData.length;
                             [helloData appendBytes:stackZ length:2];
                             
-                            NSString *d1 = strongSelf->_mtpHost;
+                            NSString *d1 = secret.domain;
                             [helloData appendData:[d1 dataUsingEncoding:NSUTF8StringEncoding]];
                             
-                            int16_t stack3Value = (int16_t)(helloData.length - stack3);
+                            int16_t stack3Value = (int16_t)(helloData.length - stack3 - 2);
                             stack3Value = OSSwapInt16(stack3Value);
                             memcpy(((uint8_t *)helloData.mutableBytes) + stack3, &stack3Value, 2);
                             
-                            int16_t stack2Value = (int16_t)(helloData.length - stack2);
+                            int16_t stack2Value = (int16_t)(helloData.length - stack2 - 2);
                             stack2Value = OSSwapInt16(stack2Value);
                             memcpy(((uint8_t *)helloData.mutableBytes) + stack2, &stack2Value, 2);
                             
-                            int16_t stack1Value = (int16_t)(helloData.length - stack1);
+                            int16_t stack1Value = (int16_t)(helloData.length - stack1 - 2);
                             stack1Value = OSSwapInt16(stack1Value);
                             memcpy(((uint8_t *)helloData.mutableBytes) + stack1, &stack1Value, 2);
                             
@@ -558,11 +557,11 @@ struct ctr_state {
                                 [helloData appendBytes:&zero length:1];
                             }
                             
-                            int16_t stack4Value = (int16_t)(helloData.length - stack1);
+                            int16_t stack4Value = (int16_t)(helloData.length - stack4 - 2);
                             stack4Value = OSSwapInt16(stack4Value);
                             memcpy(((uint8_t *)helloData.mutableBytes) + stack4, &stack4Value, 2);
                             
-                            NSData *effectiveSecret = [strongSelf->_mtpSecret subdataWithRange:NSMakeRange(1, strongSelf->_mtpSecret.length - 1)];
+                            NSData *effectiveSecret = strongSelf->_mtpSecret.secret;
                             uint8_t cHMAC[CC_SHA256_DIGEST_LENGTH];
                             CCHmac(kCCHmacAlgSHA256, effectiveSecret.bytes, effectiveSecret.length, helloData.bytes, helloData.length, cHMAC);
                             int32_t timestamp = (int32_t)[[NSDate date] timeIntervalSince1970];
@@ -719,9 +718,7 @@ struct ctr_state {
                         
                         NSData *effectiveSecret = nil;
                         if (_mtpSecret != nil) {
-                            effectiveSecret = _mtpSecret;
-                        } else if (_scheme.address.secret != nil) {
-                            effectiveSecret = _scheme.address.secret;
+                            effectiveSecret = _mtpSecret.secret;
                         }
                         if (effectiveSecret.length != 16 && effectiveSecret.length != 17) {
                             effectiveSecret = nil;
@@ -769,7 +766,7 @@ struct ctr_state {
                         [completeData appendData:encryptedData];
                     }
                     
-                    if (_sayHello) {
+                    if ([_mtpSecret isKindOfClass:[MTProxySecretType2 class]]) {
                         NSMutableData *partitionedCompleteData = [[NSMutableData alloc] init];
                         if (!_addedHelloHeader) {
                             _addedHelloHeader = true;
@@ -1156,7 +1153,7 @@ struct ctr_state {
         [checkData appendData:_helloRandom];
         [checkData appendData:currentHelloResponse];
         
-        NSData *effectiveSecret = [_mtpSecret subdataWithRange:NSMakeRange(1, _mtpSecret.length - 1)];
+        NSData *effectiveSecret = _mtpSecret.secret;
         uint8_t cHMAC[CC_SHA256_DIGEST_LENGTH];
         CCHmac(kCCHmacAlgSHA256, effectiveSecret.bytes, effectiveSecret.length, checkData.bytes, checkData.length, cHMAC);
         
@@ -1225,7 +1222,7 @@ struct ctr_state {
 - (void)requestReadDataWithLength:(int)length tag:(int)tag {
     assert(_pendingReceiveData == nil);
     _pendingReceiveData = [[MTTcpReceiveData alloc] initWithTag:tag length:length];
-    if (!_sayHello) {
+    if (![_mtpSecret isKindOfClass:[MTProxySecretType2 class]]) {
         [_socket readDataToLength:length withTimeout:-1 tag:MTTcpSocksReceivePassthrough];
     }
     if (_receivedDataBuffer.length >= _pendingReceiveData.length) {

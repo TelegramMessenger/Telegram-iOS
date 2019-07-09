@@ -14,13 +14,10 @@ import TelegramPresentationData
 private func shareLink(for server: ProxyServerSettings) -> String {
     var link: String
     switch server.connection {
-    case let .mtp(secret, host):
-        let secret = hexString(secret)
+    case let .mtp(secret):
+        let secret = MTProxySecret.parseData(secret)?.serializeToString() ?? ""
         link = "https://t.me/proxy?server=\(server.host)&port=\(server.port)"
         link += "&secret=\(secret.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
-        if let host = host?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) {
-            link += "&host=\(host)"
-        }
     case let .socks5(username, password):
         link = "https://t.me/socks?server=\(server.host)&port=\(server.port)"
         link += "&user=\(username?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")&pass=\(password?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
@@ -63,7 +60,6 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     case credentialsUsername(PresentationTheme, String, String)
     case credentialsPassword(PresentationTheme, String, String)
     case credentialsSecret(PresentationTheme, String, String)
-    case credentialsHost(PresentationTheme, String, String)
     
     case share(PresentationTheme, String, Bool)
     
@@ -75,7 +71,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                 return ProxySettingsSection.mode.rawValue
             case .connectionHeader, .connectionServer, .connectionPort:
                 return ProxySettingsSection.connection.rawValue
-            case .credentialsHeader, .credentialsUsername, .credentialsPassword, .credentialsSecret, .credentialsHost:
+            case .credentialsHeader, .credentialsUsername, .credentialsPassword, .credentialsSecret:
                 return ProxySettingsSection.credentials.rawValue
             case .share:
                 return ProxySettingsSection.share.rawValue
@@ -106,8 +102,6 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                 return 9
             case .credentialsSecret:
                 return 10
-            case .credentialsHost:
-                return 11
             case .share:
                 return 12
         }
@@ -185,14 +179,6 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                         return state
                     }
                 }, action: {})
-            case let .credentialsHost(theme, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), sectionId: self.section, textUpdated: { value in
-                    arguments.updateState { current in
-                        var state = current
-                        state.host = value
-                        return state
-                    }
-                }, action: {})
             case let .share(theme, text, enabled):
                 return ItemListActionItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.share()
@@ -213,7 +199,6 @@ private struct ProxyServerSettingsControllerState: Equatable {
     var username: String
     var password: String
     var secret: String
-    var proxyHost: String
     
     var isComplete: Bool {
         if self.host.isEmpty || self.port.isEmpty || Int(self.port) == nil {
@@ -223,19 +208,7 @@ private struct ProxyServerSettingsControllerState: Equatable {
             case .socks5:
                 break
             case .mtp:
-                let data = dataWithHexString(self.secret)
-                var secretIsValid = false
-                if data.count == 16 {
-                    secretIsValid = true
-                } else if data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data) {
-                    if MTSocksProxySettings.secretSupportsExtendedMode(data) {
-                        if !self.proxyHost.isEmpty {
-                            secretIsValid = true
-                        }
-                    } else {
-                        secretIsValid = true
-                    }
-                }
+                let secretIsValid = MTProxySecret.parse(self.secret) != nil
                 if !secretIsValid {
                     return false
                 }
@@ -266,7 +239,6 @@ private func proxyServerSettingsControllerEntries(presentationData: (theme: Pres
         case .mtp:
             entries.append(.credentialsHeader(presentationData.theme, presentationData.strings.SocksProxySetup_RequiredCredentials))
             entries.append(.credentialsSecret(presentationData.theme, presentationData.strings.SocksProxySetup_SecretPlaceholder, state.secret))
-            entries.append(.credentialsHost(presentationData.theme, "Proxy Host", state.proxyHost))
     }
     
     entries.append(.share(presentationData.theme, presentationData.strings.Conversation_ContextMenuShare, state.isComplete))
@@ -280,15 +252,9 @@ private func proxyServerSettings(with state: ProxyServerSettingsControllerState)
             case .socks5:
                 return ProxyServerSettings(host: state.host, port: port, connection: .socks5(username: state.username.isEmpty ? nil : state.username, password: state.password.isEmpty ? nil : state.password))
             case .mtp:
-                let data = dataWithHexString(state.secret)
-                var secretIsValid = false
-                if data.count == 16 {
-                    secretIsValid = true
-                } else if data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data) {
-                    secretIsValid = true
-                }
-                if secretIsValid {
-                    return ProxyServerSettings(host: state.host, port: port, connection: .mtp(secret: data, host: state.proxyHost))
+                let parsedSecret = MTProxySecret.parse(state.secret)
+                if let parsedSecret = parsedSecret {
+                    return ProxyServerSettings(host: state.host, port: port, connection: .mtp(secret: parsedSecret.serialize()))
                 }
         }
     }
@@ -306,29 +272,27 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
     var currentPassword: String?
     var currentSecret: String?
     var pasteboardSettings: ProxyServerSettings?
-    var currentProxyHost: String?
     if let currentSettings = currentSettings {
         switch currentSettings.connection {
             case let .socks5(username, password):
                 currentUsername = username
                 currentPassword = password
                 currentMode = .socks5
-            case let .mtp(secret, host):
+            case let .mtp(secret):
                 currentSecret = hexString(secret)
                 currentMode = .mtp
-                currentProxyHost = host
         }
     } else {
         if let proxy = parseProxyUrl(UIPasteboard.general.string ?? "") {
-            if let secret = proxy.secret, secret.count == 16 || (secret.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(secret)) {
-                pasteboardSettings = ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .mtp(secret: secret, host: proxy.secretHost))
+            if let secret = proxy.secret, let parsedSecret = MTProxySecret.parseData(secret) {
+                pasteboardSettings = ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .mtp(secret: parsedSecret.serialize()))
             } else {
                 pasteboardSettings = ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .socks5(username: proxy.username, password: proxy.password))
             }
         }
     }
 
-    let initialState = ProxyServerSettingsControllerState(mode: currentMode, host: currentSettings?.host ?? "", port: (currentSettings?.port).flatMap { "\($0)" } ?? "", username: currentUsername ?? "", password: currentPassword ?? "", secret: currentSecret ?? "", proxyHost: currentProxyHost ?? "")
+    let initialState = ProxyServerSettingsControllerState(mode: currentMode, host: currentSettings?.host ?? "", port: (currentSettings?.port).flatMap { "\($0)" } ?? "", username: currentUsername ?? "", password: currentPassword ?? "", secret: currentSecret ?? "")
     let stateValue = Atomic(value: initialState)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let updateState: ((ProxyServerSettingsControllerState) -> ProxyServerSettingsControllerState) -> Void = { f in
@@ -355,10 +319,9 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
                         state.mode = .socks5
                         state.username = username ?? ""
                         state.password = password ?? ""
-                    case let .mtp(secret, host):
+                    case let .mtp(secret):
                         state.mode = .mtp
                         state.secret = hexString(secret)
-                        state.proxyHost = host ?? ""
                 }
                 return state
             }

@@ -71,7 +71,7 @@ func fetchImageWithAccount(buildConfig: BuildConfig, proxyConnection: AccountPro
     apiEnvironment = apiEnvironment.withUpdatedLangPackCode("en")
     
     if let proxy = proxyConnection {
-        apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: proxy.host, port: UInt16(clamping: proxy.port), username: proxy.username, password: proxy.password, secret: proxy.secret, host: proxy.secretHost))
+        apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: proxy.host, port: UInt16(clamping: proxy.port), username: proxy.username, password: proxy.password, secret: proxy.secret))
     }
     
     let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, isTestingEnvironment: account.isTestingEnvironment, useTempAuthKeys: false)!

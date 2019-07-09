@@ -129,15 +129,9 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
             let inactive = (dict["inactive"] as? Bool) ?? true
             var connection: ProxyServerConnection?
             if let secretString = dict["secret"] as? String {
-                let secret = dataWithHexString(secretString)
-                var secretIsValid = false
-                if secret.count == 16 {
-                    secretIsValid = true
-                } else if secret.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(secret) {
-                    secretIsValid = true
-                }
-                if secretIsValid {
-                    connection = .mtp(secret: secret, host: nil)
+                let secret = MTProxySecret.parse(secretString)
+                if let secret = secret {
+                    connection = .mtp(secret: secret.serialize())
                 }
             } else {
                 connection = .socks5(username: (dict["username"] as? String) ?? "", password: (dict["password"] as? String) ?? "")
@@ -428,15 +422,9 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                     for item in proxyList {
                         let connection: ProxyServerConnection?
                         if item.isMTProxy, let secret = item.secret {
-                            let data = dataWithHexString(secret)
-                            var secretIsValid = false
-                            if data.count == 16 {
-                                secretIsValid = true
-                            } else if data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data) {
-                                secretIsValid = true
-                            }
-                            if secretIsValid {
-                                connection = .mtp(secret: data, host: nil)
+                            let parsedSecret = MTProxySecret.parse(secret)
+                            if let parsedSecret = parsedSecret {
+                                connection = .mtp(secret: parsedSecret.serialize())
                             } else {
                                 connection = nil
                             }

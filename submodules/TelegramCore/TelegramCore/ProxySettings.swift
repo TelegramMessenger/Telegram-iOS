@@ -15,14 +15,14 @@ import Foundation
 
 public enum ProxyServerConnection: Equatable, Hashable, PostboxCoding {
     case socks5(username: String?, password: String?)
-    case mtp(secret: Data, host: String?)
+    case mtp(secret: Data)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_t", orElse: 0) {
             case 0:
                 self = .socks5(username: decoder.decodeOptionalStringForKey("username"), password: decoder.decodeOptionalStringForKey("password"))
             case 1:
-                self = .mtp(secret: decoder.decodeBytesForKey("secret")?.makeData() ?? Data(), host: decoder.decodeOptionalStringForKey("host"))
+                self = .mtp(secret: decoder.decodeBytesForKey("secret")?.makeData() ?? Data())
             default:
                 self = .socks5(username: nil, password: nil)
         }
@@ -42,14 +42,9 @@ public enum ProxyServerConnection: Equatable, Hashable, PostboxCoding {
                 } else {
                     encoder.encodeNil(forKey: "password")
                 }
-            case let .mtp(secret, host):
+            case let .mtp(secret):
                 encoder.encodeInt32(1, forKey: "_t")
                 encoder.encodeBytes(MemoryBuffer(data: secret), forKey: "secret")
-                if let host = host {
-                    encoder.encodeString(host, forKey: "host")
-                } else {
-                    encoder.encodeNil(forKey: "host")
-                }
         }
     }
 }
@@ -162,9 +157,9 @@ extension ProxyServerSettings {
     var mtProxySettings: MTSocksProxySettings {
         switch self.connection {
             case let .socks5(username, password):
-                return MTSocksProxySettings(ip: self.host, port: UInt16(clamping: self.port), username: username, password: password, secret: nil, host: nil)
-            case let .mtp(secret, host):
-                return MTSocksProxySettings(ip: self.host, port: UInt16(clamping: self.port), username: nil, password: nil, secret: secret, host: host)
+                return MTSocksProxySettings(ip: self.host, port: UInt16(clamping: self.port), username: username, password: password, secret: nil)
+            case let .mtp(secret):
+                return MTSocksProxySettings(ip: self.host, port: UInt16(clamping: self.port), username: nil, password: nil, secret: secret)
         }
     }
 }

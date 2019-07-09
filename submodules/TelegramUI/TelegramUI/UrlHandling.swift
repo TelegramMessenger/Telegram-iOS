@@ -29,7 +29,7 @@ enum ParsedInternalUrl {
     case stickerPack(String)
     case join(String)
     case localization(String)
-    case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?, secretHost: String?)
+    case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case internalInstantView(url: String)
     case confirmationCode(Int)
     case cancelAccountReset(phone: String, hash: String)
@@ -51,7 +51,7 @@ enum ResolvedUrl {
     case channelMessage(peerId: PeerId, messageId: MessageId)
     case stickerPack(name: String)
     case instantView(TelegramMediaWebpage, String?)
-    case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?, secretHost: String?)
+    case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case join(String)
     case localization(String)
     case confirmationCode(Int)
@@ -80,7 +80,6 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         var user: String?
                         var pass: String?
                         var secret: Data?
-                        var secretHost: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -93,19 +92,17 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     } else if queryItem.name == "pass" {
                                         pass = value
                                     } else if queryItem.name == "secret" {
-                                        let data = dataWithHexString(value)
-                                        if data.count == 16 || (data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data)) {
-                                            secret = data
+                                        let parsedSecret = MTProxySecret.parse(value)
+                                        if let parsedSecret = parsedSecret {
+                                            secret = parsedSecret.serialize()
                                         }
-                                    } else if queryItem.name == "host" {
-                                        secretHost = value
                                     }
                                 }
                             }
                         }
                         
                         if let server = server, !server.isEmpty, let port = port, let portValue = Int32(port) {
-                            return .proxy(host: server, port: portValue, username: user, password: pass, secret: secret, secretHost: secretHost)
+                            return .proxy(host: server, port: portValue, username: user, password: pass, secret: secret)
                         }
                     } else if peerName == "iv" {
                         var url: String?
@@ -317,8 +314,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             return .single(.join(link))
         case let .localization(identifier):
             return .single(.localization(identifier))
-        case let .proxy(host, port, username, password, secret, secretHost):
-            return .single(.proxy(host: host, port: port, username: username, password: password, secret: secret, secretHost: secretHost))
+        case let .proxy(host, port, username, password, secret):
+            return .single(.proxy(host: host, port: port, username: username, password: password, secret: secret))
         case let .internalInstantView(url):
             return resolveInstantViewUrl(account: account, url: url)
             |> map(Optional.init)
@@ -347,7 +344,7 @@ func isTelegramMeLink(_ url: String) -> Bool {
     return false
 }
 
-func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username: String?, password: String?, secret: Data?, secretHost: String?)? {
+func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username: String?, password: String?, secret: Data?)? {
     let schemes = ["http://", "https://", ""]
     let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
@@ -355,14 +352,14 @@ func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username: Strin
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
                 if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])), case let .proxy(proxy) = internalUrl {
-                    return (proxy.host, proxy.port, proxy.username, proxy.password, proxy.secret, proxy.secretHost)
+                    return (proxy.host, proxy.port, proxy.username, proxy.password, proxy.secret)
                 }
             }
         }
     }
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
         if let internalUrl = parseInternalUrl(query: host + "?" + query), case let .proxy(proxy) = internalUrl {
-            return (proxy.host, proxy.port, proxy.username, proxy.password, proxy.secret, proxy.secretHost)
+            return (proxy.host, proxy.port, proxy.username, proxy.password, proxy.secret)
         }
     }
     
