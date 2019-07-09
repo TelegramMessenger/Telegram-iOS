@@ -47,6 +47,9 @@ final public class PasscodeEntryController: ViewController {
     private var hasOngoingBiometricsRequest = false
     private var skipNextBiometricsRequest = false
     
+    private var inBackground: Bool = false
+    private var inBackgroundDisposable: Disposable?
+    
     public init(context: AccountContext, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, inShareExtension: Bool = false, arguments: PasscodeEntryControllerPresentationArguments) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -66,11 +69,23 @@ final public class PasscodeEntryController: ViewController {
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
+        
+        self.inBackgroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.inBackground = !value
+            if !value {
+                strongSelf.skipNextBiometricsRequest = false
+            }
+        })
     }
     
     deinit {
         self.presentationDataDisposable?.dispose()
         self.biometricsDisposable.dispose()
+        self.inBackgroundDisposable?.dispose()
     }
     
     required init(coder aDecoder: NSCoder) {
