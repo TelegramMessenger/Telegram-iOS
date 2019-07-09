@@ -367,13 +367,8 @@ void Animation::setValue(Point_Type, Property prop, const std::string &keypath,
     d->setValue(keypath, LOTVariant(prop, value));
 }
 
+Animation::~Animation() = default;
 Animation::Animation() : d(std::make_unique<AnimationImpl>()) {}
-
-/*
- * this is only to supress build fail
- * because unique_ptr expects the destructor in the same translation unit.
- */
-Animation::~Animation() {}
 
 Surface::Surface(uint32_t *buffer, size_t width, size_t height,
                  size_t bytesPerLine)

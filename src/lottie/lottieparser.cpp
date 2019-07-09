@@ -95,7 +95,7 @@ public:
         v_.SetInt64(i);
         return true;
     }
-    bool Uint64(uint64_t u)
+    bool Uint64(int64_t u)
     {
         st_ = kHasNumber;
         v_.SetUint64(u);
@@ -143,7 +143,6 @@ public:
 
 protected:
     explicit LookaheadParserHandler(char *str);
-    void ParseNext();
 
 protected:
     enum LookaheadParsingState {
@@ -168,13 +167,14 @@ protected:
     static const int parseFlags = kParseDefaultFlags | kParseInsituFlag;
 };
 
-class LottieParserImpl : protected LookaheadParserHandler {
+class LottieParserImpl : public LookaheadParserHandler {
 public:
     LottieParserImpl(char *str, const char *dir_path)
         : LookaheadParserHandler(str), mDirPath(dir_path)
     {
+        ParseNext();
     }
-
+    void ParseNext();
 public:
     bool        EnterObject();
     bool        EnterArray();
@@ -190,9 +190,7 @@ public:
     void   SkipArray();
     void   SkipValue();
     Value *PeekValue();
-    int PeekType();  // returns a rapidjson::Type, or -1 for no value (at end of
-                     // object/array)
-
+    int PeekType() const;
     bool IsValid() { return st_ != kError; }
 
     void                  Skip(const char *key);
@@ -280,10 +278,9 @@ LookaheadParserHandler::LookaheadParserHandler(char *str)
     : v_(), st_(kInit), r_(), ss_(str)
 {
     r_.IterativeParseInit();
-    ParseNext();
 }
 
-void LookaheadParserHandler::ParseNext()
+void LottieParserImpl::ParseNext()
 {
     if (r_.HasParseError()) {
         st_ = kError;
@@ -338,17 +335,17 @@ const char *LottieParserImpl::NextObjectKey()
         // #ifdef DEBUG_PARSER
         //         vDebug<<"Object: Exiting nested loop";
         // #endif
-        return 0;
+        return nullptr;
     }
 
     if (st_ != kExitingObject) {
         RAPIDJSON_ASSERT(false);
         st_ = kError;
-        return 0;
+        return nullptr;
     }
 
     ParseNext();
-    return 0;
+    return nullptr;
 }
 
 bool LottieParserImpl::NextArrayValue()
@@ -431,7 +428,7 @@ const char *LottieParserImpl::GetString()
     if (st_ != kHasString) {
         st_ = kError;
         RAPIDJSON_ASSERT(false);
-        return 0;
+        return nullptr;
     }
 
     const char *result = v_.GetString();
@@ -476,10 +473,12 @@ Value *LottieParserImpl::PeekValue()
         return &v_;
     }
 
-    return 0;
+    return nullptr;
 }
 
-int LottieParserImpl::PeekType()
+// returns a rapidjson::Type, or -1 for no value (at end of
+// object/array)
+int LottieParserImpl::PeekType() const
 {
     if (st_ >= kHasNull && st_ <= kHasKey) {
         return v_.GetType();
@@ -621,9 +620,9 @@ static constexpr const unsigned char B64index[256] = {
     25, 0,  0,  0,  0,  63, 0,  26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
     37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51};
 
-std::string b64decode(const void *data, const size_t len)
+std::string b64decode(const char *data, const size_t len)
 {
-    unsigned char *p = (unsigned char *)data;
+    auto p = reinterpret_cast<const unsigned char *>(data);
     int            pad = len > 0 && (len % 4 || p[len - 1] == '=');
     const size_t   L = ((len + 3) / 4 - pad) * 4;
     std::string    str(L / 4 * 3 + pad, '\0');
@@ -764,7 +763,7 @@ void LottieParserImpl::parseLayers(LOTCompositionData *comp)
 LottieColor LottieParserImpl::toColor(const char *str)
 {
     LottieColor color;
-    int         len = strlen(str);
+    auto len = strlen(str);
 
     // some resource has empty color string
     // return a default color for those cases.
@@ -776,15 +775,15 @@ LottieColor LottieParserImpl::toColor(const char *str)
     char tmp[3] = {'\0', '\0', '\0'};
     tmp[0] = str[1];
     tmp[1] = str[2];
-    color.r = std::strtol(tmp, NULL, 16) / 255.0;
+    color.r = std::strtol(tmp, nullptr, 16) / 255.0f;
 
     tmp[0] = str[3];
     tmp[1] = str[4];
-    color.g = std::strtol(tmp, NULL, 16) / 255.0;
+    color.g = std::strtol(tmp, nullptr, 16) / 255.0f;
 
     tmp[0] = str[5];
     tmp[1] = str[6];
-    color.b = std::strtol(tmp, NULL, 16) / 255.0;
+    color.b = std::strtol(tmp, nullptr, 16) / 255.0f;
 
     return color;
 }
@@ -1233,8 +1232,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parsePolystarObject()
             parseProperty(obj->mRotation);
         } else if (0 == strcmp(key, "sy")) {
             int starType = GetInt();
-            if (starType == 1) obj->mType = LOTPolystarData::PolyType::Star;
-            if (starType == 2) obj->mType = LOTPolystarData::PolyType::Polygon;
+            if (starType == 1) obj->mPolyType = LOTPolystarData::PolyType::Star;
+            if (starType == 2) obj->mPolyType = LOTPolystarData::PolyType::Polygon;
         } else if (0 == strcmp(key, "d")) {
             obj->mDirection = GetInt();
         } else if (0 == strcmp(key, "hd")) {
@@ -1813,10 +1812,10 @@ void LottieParserImpl::getValue(LottieShapeData &obj)
         vCritical << "The Shape data are corrupted";
         points = std::vector<VPointF>();
     } else {
-        int size = vertices.size();
+        auto size = vertices.size();
         points.reserve(3 * size + 4);
         points.push_back(vertices[0]);
-        for (int i = 1; i < size; i++) {
+        for (size_t i = 1; i < size; i++) {
             points.push_back(vertices[i - 1] +
                              outPoint[i - 1]);  // CP1 = start + outTangent
             points.push_back(vertices[i] +
@@ -2060,7 +2059,7 @@ void LottieParserImpl::parseProperty(LOTAnimatable<T> &obj)
     }
 }
 
-#if LOTTIE_DUMP_TREE_SUPPORT
+#ifdef LOTTIE_DUMP_TREE_SUPPORT
 
 class LOTDataInspector {
 public:
@@ -2243,13 +2242,9 @@ public:
 
 #endif
 
-LottieParser::~LottieParser()
-{
-    delete d;
-}
-
+LottieParser::~LottieParser() = default;
 LottieParser::LottieParser(char *str, const char *dir_path)
-    : d(new LottieParserImpl(str, dir_path))
+    : d(std::make_unique<LottieParserImpl>(str, dir_path))
 {
     d->parseComposition();
 }

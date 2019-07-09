@@ -467,7 +467,7 @@ public:
 
 class RleTaskScheduler {
 public:
-    FTOutline     outlineRef;
+    FTOutline     outlineRef{};
     SW_FT_Stroker stroker;
 
 public:

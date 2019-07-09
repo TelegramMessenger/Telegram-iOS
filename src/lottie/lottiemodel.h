@@ -22,7 +22,7 @@
 #include<vector>
 #include<memory>
 #include<unordered_map>
-#include <algorithm>
+#include <cmath>
 #include"vpoint.h"
 #include"vrect.h"
 #include"vinterpolator.h"
@@ -102,7 +102,7 @@ inline const LottieColor operator*(float m, const LottieColor &c)
 class LottieShapeData
 {
 public:
-    void reserve(int size) {
+    void reserve(size_t size) {
         mPoints.reserve(mPoints.size() + size);
     }
     void toPath(VPath& path) {
@@ -110,23 +110,23 @@ public:
 
         if (mPoints.empty()) return;
 
-        int size = mPoints.size();
-        const VPointF *points = mPoints.data();
+        auto size = mPoints.size();
+        auto points = mPoints.data();
         /* reserve exact memory requirement at once
          * ptSize = size + 1(size + close)
          * elmSize = size/3 cubic + 1 move + 1 close
          */
         path.reserve(size + 1 , size/3 + 2);
         path.moveTo(points[0]);
-        for (int i = 1 ; i < size; i+=3) {
+        for (size_t i = 1 ; i < size; i+=3) {
            path.cubicTo(points[i], points[i+1], points[i+2]);
         }
         if (mClosed)
           path.close();
     }
 public:
-    std::vector<VPointF>    mPoints;
-    bool                     mClosed = false;   /* "c" */
+    std::vector<VPointF> mPoints;
+    bool                 mClosed = false;   /* "c" */
 };
 
 
@@ -617,7 +617,7 @@ inline int LOTLayerData::timeRemap(int frameNo) const
      * Time streach factor is already applied to the layers inFrame and outFrame.
      * @TODO need to find out if timestreatch also affects the in and out frame of the
      * child layers or not. */
-    return frameNo / mTimeStreatch;
+    return int(frameNo / mTimeStreatch);
 }
 
 class LOTFillData : public LOTData
@@ -797,7 +797,7 @@ public:
       Intersect,
       Difference
     };
-    float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
+    float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0f;}
     bool isStatic() const {return mIsStatic;}
 public:
     LOTAnimatable<LottieShapeData>    mShape;
@@ -835,7 +835,7 @@ public:
     };
     LOTPolystarData():LOTPath(LOTData::Type::Polystar){}
 public:
-    LOTPolystarData::PolyType     mType{PolyType::Polygon};
+    LOTPolystarData::PolyType     mPolyType{PolyType::Polygon};
     LOTAnimatable<VPointF>        mPos;
     LOTAnimatable<float>          mPointCount{0};
     LOTAnimatable<float>          mInnerRadius{0};
@@ -867,9 +867,9 @@ public:
     Segment segment(int frameNo) const {
         float start = mStart.value(frameNo)/100.0f;
         float end = mEnd.value(frameNo)/100.0f;
-        float offset = fmod(mOffset.value(frameNo), 360.0f)/ 360.0f;
+        float offset = std::fmod(mOffset.value(frameNo), 360.0f)/ 360.0f;
 
-        float diff = fabs(start - end);
+        float diff = std::abs(start - end);
         if (vCompare(diff, 0.0f)) return Segment(0, 0);
         if (vCompare(diff, 1.0f)) return Segment(0, 1);
 

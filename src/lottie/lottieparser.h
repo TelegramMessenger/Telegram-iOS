@@ -20,6 +20,7 @@
 #define LOTTIEPARSER_H
 
 #include "lottiemodel.h"
+#include <memory>
 
 class LottieParserImpl;
 class LottieParser {
@@ -28,7 +29,7 @@ public:
     LottieParser(char* str, const char *dir_path);
     std::shared_ptr<LOTModel> model();
 private:
-   LottieParserImpl   *d;
+   std::unique_ptr<LottieParserImpl>  d;
 };
 
 #endif // LOTTIEPARSER_H

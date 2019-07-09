@@ -1253,7 +1253,7 @@ void LOTPolystarItem::updatePath(VPath &path, int frameNo)
     path.reset();
     VMatrix m;
 
-    if (mData->mType == LOTPolystarData::PolyType::Star) {
+    if (mData->mPolyType == LOTPolystarData::PolyType::Star) {
         path.addPolystar(points, innerRadius, outerRadius, innerRoundness,
                          outerRoundness, 0.0, 0.0, 0.0, mData->direction());
     } else {
