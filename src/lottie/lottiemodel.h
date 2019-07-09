@@ -51,7 +51,7 @@ class LottieShapeData;
 class LOTPolystarData;
 class LOTMaskData;
 
-enum class MatteType
+enum class MatteType: uchar
 {
     None = 0,
     Alpha = 1,
@@ -60,7 +60,8 @@ enum class MatteType
     LumaInv
 };
 
-enum class LayerType {
+enum class LayerType: uchar
+{
     Precomp = 0,
     Solid = 1,
     Image = 2,
@@ -332,7 +333,7 @@ private:
     bool                                 mStatic{true};
 };
 
-enum class LottieBlendMode
+enum class LottieBlendMode: uchar
 {
     Normal = 0,
     Multiply = 1,
@@ -485,6 +486,16 @@ private:
     }impl;
 };
 
+struct ExtraLayerData
+{
+    LottieColor                mSolidColor;
+    std::string                mPreCompRefId;
+    LOTAnimatable<float>       mTimeRemap;  /* "tm" */
+    LOTCompositionData        *mCompRef{nullptr};
+    std::shared_ptr<LOTAsset>  mAsset;
+    std::vector<std::shared_ptr<LOTMaskData>>  mMasks;
+};
+
 class LOTLayerData : public LOTGroupData
 {
 public:
@@ -498,9 +509,7 @@ public:
     int inFrame() const noexcept{return mInFrame;}
     int outFrame() const noexcept{return mOutFrame;}
     int startFrame() const noexcept{return mStartFrame;}
-    int solidWidth() const noexcept{return mSolidLayer.mWidth;}
-    int solidHeight() const noexcept{return mSolidLayer.mHeight;}
-    LottieColor solidColor() const noexcept{return mSolidLayer.mColor;}
+    LottieColor solidColor() const noexcept{return mExtra->mSolidColor;}
     bool autoOrient() const noexcept{return mAutoOrient;}
     int timeRemap(int frameNo) const;
     VSize layerSize() const {return mLayerSize;}
@@ -513,34 +522,35 @@ public:
     {
         return mTransform ? mTransform->opacity(frameNo) : 1.0f;
     }
+    LOTAsset* asset() const
+    {
+        if (mExtra && mExtra->mAsset)
+            return mExtra->mAsset.get();
+        else
+            return nullptr;
+    }
 public:
-    struct SolidLayer {
-        int            mWidth{0};
-        int            mHeight{0};
-        LottieColor    mColor;
-    };
-
+    ExtraLayerData* extra()
+    {
+        if (!mExtra) mExtra = std::make_unique<ExtraLayerData>();
+        return mExtra.get();
+    }
     MatteType            mMatteType{MatteType::None};
-    LayerType            mLayerType{LayerType::Null}; //lottie layer type  (solid/shape/precomp)
-    int                  mParentId{-1}; // Lottie the id of the parent in the composition
-    int                  mId{-1};  // Lottie the group id  used for parenting.
-    long                 mInFrame{0};
-    long                 mOutFrame{0};
-    long                 mStartFrame{0};
-    VSize                mLayerSize;
+    LayerType            mLayerType{LayerType::Null};
     LottieBlendMode      mBlendMode{LottieBlendMode::Normal};
-    float                mTimeStreatch{1.0f};
-    std::string          mPreCompRefId;
-    LOTAnimatable<float> mTimeRemap;  /* "tm" */
-    SolidLayer           mSolidLayer;
     bool                 mHasPathOperator{false};
     bool                 mHasMask{false};
     bool                 mHasRepeater{false};
     bool                 mHasGradient{false};
     bool                 mAutoOrient{false};
-    std::vector<std::shared_ptr<LOTMaskData>>  mMasks;
-    LOTCompositionData   *mCompRef{nullptr};
-    std::shared_ptr<LOTAsset> mAsset;
+    VSize                mLayerSize;
+    int                  mParentId{-1}; // Lottie the id of the parent in the composition
+    int                  mId{-1};  // Lottie the group id  used for parenting.
+    float                mTimeStreatch{1.0f};
+    int                  mInFrame{0};
+    int                  mOutFrame{0};
+    int                  mStartFrame{0};
+    std::unique_ptr<ExtraLayerData> mExtra{nullptr};
 };
 
 using LayerInfo = std::tuple<std::string, int , int>;
@@ -597,8 +607,10 @@ inline int LOTLayerData::timeRemap(int frameNo) const
      * when a layer has timeremap bodymovin updates the startFrame()
      * of all child layer so we don't have to take care of it.
      */
-    frameNo = mTimeRemap.isStatic() ? frameNo - startFrame():
-              mCompRef->frameAtTime(mTimeRemap.value(frameNo));
+    if (!mExtra || mExtra->mTimeRemap.isStatic())
+        frameNo = frameNo - startFrame();
+    else
+        frameNo = mExtra->mCompRef->frameAtTime(mExtra->mTimeRemap.value(frameNo));
     /* Apply time streatch if it has any.
      * Time streatch is just a factor by which the animation will speedup or slow
      * down with respect to the overal animation.

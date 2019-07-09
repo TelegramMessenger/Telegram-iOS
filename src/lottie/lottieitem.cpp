@@ -336,9 +336,11 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask,
 
 LOTLayerMaskItem::LOTLayerMaskItem(LOTLayerData *layerData)
 {
-    mMasks.reserve(layerData->mMasks.size());
+    if (!layerData->mExtra) return;
 
-    for (auto &i : layerData->mMasks) {
+    mMasks.reserve(layerData->mExtra->mMasks.size());
+
+    for (auto &i : layerData->mExtra->mMasks) {
         mMasks.emplace_back(i.get());
         mStatic &= i->isStatic();
     }
@@ -741,7 +743,9 @@ void LOTSolidLayerItem::updateContent()
     if (flag() & DirtyFlagBit::Matrix) {
         VPath path;
         path.addRect(
-            VRectF(0, 0, mLayerData->solidWidth(), mLayerData->solidHeight()));
+            VRectF(0, 0,
+                   mLayerData->layerSize().width(),
+                   mLayerData->layerSize().height()));
         path.transform(combinedMatrix());
         mRenderNode.mFlag |= VDrawable::DirtyState::Path;
         mRenderNode.mPath = path;
@@ -781,16 +785,20 @@ void LOTSolidLayerItem::renderList(std::vector<VDrawable *> &list)
 LOTImageLayerItem::LOTImageLayerItem(LOTLayerData *layerData)
     : LOTLayerItem(layerData)
 {
-    VBrush brush(mLayerData->mAsset->bitmap());
+    if (!mLayerData->asset()) return;
+
+    VBrush brush(mLayerData->asset()->bitmap());
     mRenderNode.setBrush(brush);
 }
 
 void LOTImageLayerItem::updateContent()
 {
+    if (!mLayerData->asset()) return;
+
     if (flag() & DirtyFlagBit::Matrix) {
         VPath path;
-        path.addRect(VRectF(0, 0, mLayerData->mAsset->mWidth,
-                            mLayerData->mAsset->mHeight));
+        path.addRect(VRectF(0, 0, mLayerData->asset()->mWidth,
+                            mLayerData->asset()->mHeight));
         path.transform(combinedMatrix());
         mRenderNode.mFlag |= VDrawable::DirtyState::Path;
         mRenderNode.mPath = path;

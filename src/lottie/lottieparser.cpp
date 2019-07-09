@@ -534,10 +534,10 @@ void LottieParserImpl::resolveLayerRefs()
 {
     for (const auto &i : mLayersToUpdate) {
         LOTLayerData *layer = i.get();
-        auto          search = compRef->mAssets.find(layer->mPreCompRefId);
+        auto          search = compRef->mAssets.find(layer->extra()->mPreCompRefId);
         if (search != compRef->mAssets.end()) {
             if (layer->mLayerType == LayerType::Image) {
-                layer->mAsset = search->second;
+                layer->extra()->mAsset = search->second;
             } else if (layer->mLayerType == LayerType::Precomp) {
                 layer->mChildren = search->second->mLayers;
                 layer->setStatic(layer->isStatic() &&
@@ -872,14 +872,14 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
             layer->mParentId = GetInt();
         } else if (0 == strcmp(key, "refId")) { /*preComp Layer reference id*/
             RAPIDJSON_ASSERT(PeekType() == kStringType);
-            layer->mPreCompRefId = std::string(GetString());
+            layer->extra()->mPreCompRefId = std::string(GetString());
             layer->mHasGradient = true;
             mLayersToUpdate.push_back(sharedLayer);
         } else if (0 == strcmp(key, "sr")) {  // "Layer Time Stretching"
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
             layer->mTimeStreatch = GetDouble();
         } else if (0 == strcmp(key, "tm")) {  // time remapping
-            parseProperty(layer->mTimeRemap);
+            parseProperty(layer->extra()->mTimeRemap);
         } else if (0 == strcmp(key, "ip")) {
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
             layer->mInFrame = std::round(GetDouble());
@@ -902,11 +902,11 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
         } else if (0 == strcmp(key, "h")) {
             layer->mLayerSize.setHeight(GetInt());
         } else if (0 == strcmp(key, "sw")) {
-            layer->mSolidLayer.mWidth = GetInt();
+            layer->mLayerSize.setWidth(GetInt());
         } else if (0 == strcmp(key, "sh")) {
-            layer->mSolidLayer.mHeight = GetInt();
+            layer->mLayerSize.setHeight(GetInt());
         } else if (0 == strcmp(key, "sc")) {
-            layer->mSolidLayer.mColor = toColor(GetString());
+            layer->extra()->mSolidColor = toColor(GetString());
         } else if (0 == strcmp(key, "tt")) {
             layer->mMatteType = getMatteType();
         } else if (0 == strcmp(key, "hasMask")) {
@@ -930,7 +930,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
         return nullptr;
     }
 
-    layer->mCompRef = compRef;
+    if (layer->mExtra) layer->mExtra->mCompRef = compRef;
 
     if (layer->hidden()) {
         // if layer is hidden, only data that is usefull is its
@@ -948,8 +948,10 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
         staticFlag &= child.get()->isStatic();
     }
 
-    for (const auto &mask : layer->mMasks) {
-        staticFlag &= mask->isStatic();
+    if (layer->hasMask()) {
+        for (const auto &mask : layer->mExtra->mMasks) {
+            staticFlag &= mask->isStatic();
+        }
     }
 
     layer->setStatic(staticFlag && layer->mTransform->isStatic());
@@ -966,7 +968,7 @@ void LottieParserImpl::parseMaskProperty(LOTLayerData *layer)
     RAPIDJSON_ASSERT(PeekType() == kArrayType);
     EnterArray();
     while (NextArrayValue()) {
-        layer->mMasks.push_back(parseMaskObject());
+        layer->extra()->mMasks.push_back(parseMaskObject());
     }
 }
 
@@ -2083,15 +2085,14 @@ public:
                << ", mask:" << obj->hasMask() << ", inFm:" << obj->mInFrame
                << ", outFm:" << obj->mOutFrame << ", stFm:" << obj->mStartFrame
                << ", ts:" << obj->mTimeStreatch << ", ao:" << obj->autoOrient()
-               << ", ddd:" << (obj->mTransform ? obj->mTransform->ddd() : false)
                << ", W:" << obj->layerSize().width()
                << ", H:" << obj->layerSize().height();
 
         if (obj->mLayerType == LayerType::Image)
             vDebug << level << "\t{ "
                    << "ImageInfo:"
-                   << " W :" << obj->mAsset->mWidth
-                   << ", H :" << obj->mAsset->mHeight << " }"
+                   << " W :" << obj->extra()->mAsset->mWidth
+                   << ", H :" << obj->extra()->mAsset->mHeight << " }"
                    << "\n";
         else {
             vDebug << level;
@@ -2261,7 +2262,7 @@ std::shared_ptr<LOTModel> LottieParser::model()
     model->mRoot = d->composition();
     model->mRoot->processRepeaterObjects();
 
-#if LOTTIE_DUMP_TREE_SUPPORT
+#ifdef LOTTIE_DUMP_TREE_SUPPORT
     LOTDataInspector inspector;
     inspector.visit(model->mRoot.get(), "");
 #endif
