@@ -413,6 +413,7 @@ PIXMAN_EXPORT void PREFIX(_fini)(region_type_t *region)
 {
     GOOD(region);
     FREE_DATA(region);
+    region->data = NULL;
 }
 
 PIXMAN_EXPORT int PREFIX(_n_rects)(region_type_t *region)
