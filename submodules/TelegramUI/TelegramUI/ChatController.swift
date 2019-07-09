@@ -455,6 +455,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 return
             }
             if let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(message.id) {
+                (strongSelf.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
                 var updatedMessages = messages
                 for i in 0 ..< updatedMessages.count {
                     if updatedMessages[i].id == message.id {
