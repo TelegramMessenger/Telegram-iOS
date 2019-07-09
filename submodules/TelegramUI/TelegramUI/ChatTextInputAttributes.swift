@@ -666,7 +666,7 @@ func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttributedStri
         while let match = regex.firstMatch(in: string as String, range: NSMakeRange(0, string.length)) {
             let matchIndex = stringOffset + match.range.location
             
-            result.append(text.attributedSubstring(from: NSMakeRange(0, match.range.location)))
+            result.append(text.attributedSubstring(from: NSMakeRange(text.length - string.length, match.range.location)))
             
             var pre = match.range(at: 3)
             if pre.location != NSNotFound {

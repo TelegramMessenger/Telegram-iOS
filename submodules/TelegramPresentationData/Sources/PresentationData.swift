@@ -279,9 +279,9 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
                     case .dayClassic:
                         themeValue = defaultPresentationTheme
                     case .nightGrayscale:
-                        themeValue = defaultDarkPresentationTheme
+                        themeValue = makeDarkPresentationTheme(accentColor: effectiveAccentColor)
                     case .nightAccent:
-                        themeValue = defaultDarkAccentPresentationTheme
+                        themeValue = makeDarkAccentPresentationTheme(accentColor: effectiveAccentColor)
                     case .day:
                         themeValue = makeDefaultDayPresentationTheme(accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
                 }
@@ -561,9 +561,9 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                                     case .dayClassic:
                                         themeValue = makeDefaultPresentationTheme(serviceBackgroundColor: serviceBackgroundColor)
                                     case .nightGrayscale:
-                                        themeValue = defaultDarkPresentationTheme
+                                        themeValue = makeDarkPresentationTheme(accentColor: effectiveAccentColor)
                                     case .nightAccent:
-                                        themeValue = defaultDarkAccentPresentationTheme
+                                        themeValue = makeDarkAccentPresentationTheme(accentColor: effectiveAccentColor)
                                     case .day:
                                         themeValue = makeDefaultDayPresentationTheme(accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor)
                                 }

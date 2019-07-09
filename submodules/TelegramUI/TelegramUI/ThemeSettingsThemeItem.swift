@@ -63,11 +63,23 @@ private func generateThemeIconImage(theme: PresentationThemeReference, accentCol
             case .nightGrayscale:
                 background = UIColor(rgb: 0x000000)
                 incomingBubble = UIColor(rgb: 0x1f1f1f)
-                outgoingBubble = UIColor(rgb: 0x313131)
+                if let accentColorValue = accentColor {
+                    let accentColor = UIColor(rgb: UInt32(bitPattern: accentColorValue))
+                    outgoingBubble = accentColor
+                } else {
+                    outgoingBubble = UIColor(rgb: 0x313131)
+                }
             case .nightAccent:
-                background = UIColor(rgb: 0x18222d)
-                incomingBubble = UIColor(rgb: 0x32475e)
-                outgoingBubble = UIColor(rgb: 0x3d6a97)
+                if let accentColorValue = accentColor {
+                    let accentColor = UIColor(rgb: UInt32(bitPattern: accentColorValue))
+                    background = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+                    incomingBubble = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
+                    outgoingBubble = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
+                } else {
+                    background = UIColor(rgb: 0x18222d)
+                    incomingBubble = UIColor(rgb: 0x32475e)
+                    outgoingBubble = UIColor(rgb: 0x3d6a97)
+                }
         }
             
         context.setFillColor(background.cgColor)
@@ -97,16 +109,20 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     let themes: [PresentationThemeReference]
     let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     let currentTheme: PresentationThemeReference
-    let updated: (PresentationThemeReference) -> Void
+    let updatedTheme: (PresentationThemeReference) -> Void
+    let currentColor: PresentationThemeAccentColor?
+    let updatedColor: (PresentationThemeAccentColor) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updated: @escaping (PresentationThemeReference) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, currentColor: PresentationThemeAccentColor?, updatedColor: @escaping (PresentationThemeAccentColor) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.themes = themes
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.currentTheme = currentTheme
-        self.updated = updated
+        self.updatedTheme = updatedTheme
+        self.currentColor = currentColor
+        self.updatedColor = updatedColor
         self.tag = tag
         self.sectionId = sectionId
     }
@@ -352,7 +368,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                         
                         if let name = name {
                             imageNode.setup(theme: item.theme, icon: generateThemeIconImage(theme: theme, accentColor: item.themeSpecificAccentColors[theme.index]?.color), title: NSAttributedString(string: name, font: textFont, textColor: selected ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: { [weak self, weak imageNode] in
-                                item.updated(theme)
+                                item.updatedTheme(theme)
                                 if let imageNode = imageNode {
                                     self?.scrollToNode(imageNode, animated: true)
                                 }
