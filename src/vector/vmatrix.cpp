@@ -20,7 +20,6 @@
 #include <vglobal.h>
 #include <cassert>
 #include <cmath>
-#include <cstring>
 
 V_BEGIN_NAMESPACE
 
@@ -694,39 +693,6 @@ VPointF VMatrix::map(const VPointF &p) const
         }
     }
     return {x, y};
-}
-static std::string type_helper(VMatrix::MatrixType t)
-{
-    switch (t) {
-    case VMatrix::MatrixType::None:
-        return "MatrixType::None";
-        break;
-    case VMatrix::MatrixType::Translate:
-        return "MatrixType::Translate";
-        break;
-    case VMatrix::MatrixType::Scale:
-        return "MatrixType::Scale";
-        break;
-    case VMatrix::MatrixType::Rotate:
-        return "MatrixType::Rotate";
-        break;
-    case VMatrix::MatrixType::Shear:
-        return "MatrixType::Shear";
-        break;
-    case VMatrix::MatrixType::Project:
-        return "MatrixType::Project";
-        break;
-    }
-    return "";
-}
-std::ostream &operator<<(std::ostream &os, const VMatrix &o)
-{
-    os << "[Matrix: "
-       << "type =" << type_helper(o.type()) << ", Data : " << o.m11 << " "
-       << o.m12 << " " << o.m13 << " " << o.m21 << " " << o.m22 << " " << o.m23
-       << " " << o.mtx << " " << o.mty << " " << o.m33 << " "
-       << "]" << std::endl;
-    return os;
 }
 
 V_END_NAMESPACE

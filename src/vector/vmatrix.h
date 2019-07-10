@@ -81,8 +81,6 @@ public:
     bool                 operator==(const VMatrix &) const;
     bool                 operator!=(const VMatrix &) const;
     bool                 fuzzyCompare(const VMatrix &) const;
-    friend std::ostream &operator<<(std::ostream &os, const VMatrix &o);
-
 private:
     friend struct VSpanData;
     float              m11{1}, m12{0}, m13{0};
