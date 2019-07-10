@@ -75,7 +75,7 @@ final class ThemeColorsGridController: ViewController {
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.title = self.presentationData.strings.WallpaperColors_Title
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -108,7 +108,7 @@ final class ThemeColorsGridController: ViewController {
     
     private func updateThemeAndStrings() {
         self.title = self.presentationData.strings.WallpaperColors_Title
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
         if self.isNodeLoaded {

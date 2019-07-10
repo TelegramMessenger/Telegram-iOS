@@ -72,7 +72,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case accentColor(PresentationTheme, String, PresentationThemeAccentColor?)
     case autoNightTheme(PresentationTheme, String, String)
     case themeTint(PresentationTheme, String, Bool)
-    case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor])
+    case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor], PresentationThemeAccentColor?, Bool)
     case iconHeader(PresentationTheme, String)
     case iconItem(PresentationTheme, PresentationStrings, [PresentationAppIcon], String?)
     case otherHeader(PresentationTheme, String)
@@ -168,8 +168,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsThemeAccentColor):
-                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsThemeAccentColor) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsThemeAccentColor == rhsThemeAccentColor {
+            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsThemeAccentColors, lhsCurrentColor, lhsDisplayColorSlider):
+                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsThemeAccentColors, rhsCurrentColor, rhsDisplayColorSlider) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsThemeAccentColors == rhsThemeAccentColors, lhsCurrentColor == rhsCurrentColor, lhsDisplayColorSlider == rhsDisplayColorSlider {
                     return true
                 } else {
                     return false
@@ -267,12 +267,12 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .themeListHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors):
+            case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors, currentColor, displayColorSlider):
                 return ThemeSettingsThemeItem(theme: theme, strings: strings, sectionId: self.section, themes: themes, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
                     arguments.selectTheme(theme)
-                }, currentColor: nil, updatedColor: { color in
+                }, currentColor: currentColor, updatedColor: { color in
                     arguments.selectAccentColor(color)
-                })
+                }, displayColorSlider: displayColorSlider)
             case let .iconHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .iconItem(theme, strings, icons, value):
@@ -313,7 +313,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme.uppercased()))
     entries.append(.chatPreview(presentationData.theme, theme, wallpaper, fontSize, presentationData.strings, dateTimeFormat, presentationData.nameDisplayOrder))
     if case .builtin = themeReference {
-        entries.append(.themeItem(presentationData.theme, presentationData.strings, [.builtin(.dayClassic), .builtin(.day), .builtin(.nightAccent), .builtin(.nightGrayscale)], themeReference, themeSpecificAccentColors))
+        entries.append(.themeItem(presentationData.theme, presentationData.strings, [.builtin(.dayClassic), .builtin(.day), .builtin(.nightAccent), .builtin(.nightGrayscale)], themeReference, themeSpecificAccentColors, themeSpecificAccentColors[themeReference.index], displayColorSlider))
     }
     if theme.name == .builtin(.nightAccent) || theme.name == .builtin(.nightGrayscale) {
         //entries.append(.themeTint(presentationData.theme, strings.Appearance_TintAllColors, false))

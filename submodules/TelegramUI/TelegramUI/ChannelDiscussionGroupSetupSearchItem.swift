@@ -151,7 +151,7 @@ private final class ChannelDiscussionSearchNavigationContentNode: NavigationBarC
     func updatePlaceholder() {
         let placeholderText: String
         placeholderText = self.strings.Channel_DiscussionGroup_SearchPlaceholder
-        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: self.theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
+        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: self.theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
     }
     
     override var nominalHeight: CGFloat {

@@ -164,7 +164,7 @@ class WallpaperGalleryController: ViewController {
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
         self.title = self.presentationData.strings.WallpaperPreview_Title
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         var entries: [WallpaperGalleryEntry] = []
@@ -268,7 +268,7 @@ class WallpaperGalleryController: ViewController {
         if self.title != nil {
             self.title = self.presentationData.strings.WallpaperPreview_Title
         }
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.toolbarNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
     }

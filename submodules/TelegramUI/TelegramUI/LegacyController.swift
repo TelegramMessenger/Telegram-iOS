@@ -340,7 +340,7 @@ public class LegacyController: ViewController, PresentableController {
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         if let theme = theme {
-            self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+            self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
         }
         
         let contextImpl = LegacyControllerContext(controller: self, theme: theme)

@@ -588,7 +588,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.theme.chat.bubble.incomingLinkHighlightColor : item.theme.chat.bubble.outgoingLinkHighlightColor)
+                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.theme.chat.message.incoming.linkHighlightColor : item.theme.chat.message.outgoing.linkHighlightColor)
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.linkNode)
                 }

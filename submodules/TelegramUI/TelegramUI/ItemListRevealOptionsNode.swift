@@ -141,7 +141,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
         self.animationNode?.reset()
     }
     
-    func updateLayout(isFirst: Bool, isLeft: Bool, baseSize: CGSize, alignment: ItemListRevealOptionAlignment, isExpanded: Bool, extendedWidth: CGFloat, sideInset: CGFloat, transition: ContainedViewLayoutTransition, additive: Bool, revealFactor: CGFloat) {
+    func updateLayout(isFirst: Bool, isLeft: Bool, baseSize: CGSize, alignment: ItemListRevealOptionAlignment, isExpanded: Bool, extendedWidth: CGFloat, sideInset: CGFloat, transition: ContainedViewLayoutTransition, additive: Bool, revealFactor: CGFloat, animateIconMovement: Bool) {
         self.highlightNode.frame = CGRect(origin: CGPoint(), size: baseSize)
         
         var animateAdditive = false
@@ -164,7 +164,9 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             } else {
                 deltaX = -(previousFrame.width - backgroundFrame.width)
             }
-            transition.animatePositionAdditive(node: self.backgroundNode, offset: CGPoint(x: deltaX, y: 0.0))
+            if !animateIconMovement {
+                transition.animatePositionAdditive(node: self.backgroundNode, offset: CGPoint(x: deltaX, y: 0.0))
+            }
         } else {
             deltaX = 0.0
             transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
@@ -186,16 +188,18 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             let titleIconSpacing: CGFloat = 11.0
             let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - imageSize.width + sideInset) / 2.0), y: contentRect.midY - imageSize.height / 2.0 + iconOffset), size: imageSize)
             if animateAdditive {
+                let iconOffsetX = animateIconMovement ? animationNode.frame.minX - iconFrame.minX : deltaX
                 animationNode.frame = iconFrame
-                transition.animatePositionAdditive(node: animationNode, offset: CGPoint(x: deltaX, y: 0.0))
+                transition.animatePositionAdditive(node: animationNode, offset: CGPoint(x: iconOffsetX, y: 0.0))
             } else {
                 transition.updateFrame(node: animationNode, frame: iconFrame)
             }
             
             let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width + sideInset) / 2.0), y: contentRect.midY + titleIconSpacing), size: titleSize)
             if animateAdditive {
+                let titleOffsetX = animateIconMovement ? self.titleNode.frame.minX - titleFrame.minX : deltaX
                 self.titleNode.frame = titleFrame
-                transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: deltaX, y: 0.0))
+                transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: titleOffsetX, y: 0.0))
             } else {
                 transition.updateFrame(node: self.titleNode, frame: titleFrame)
             }
@@ -210,24 +214,27 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             let titleIconSpacing: CGFloat = 11.0
             let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - imageSize.width + sideInset) / 2.0), y: contentRect.midY - imageSize.height / 2.0 + iconOffset), size: imageSize)
             if animateAdditive {
+                let iconOffsetX = animateIconMovement ? iconNode.frame.minX - iconFrame.minX : deltaX
                 iconNode.frame = iconFrame
-                transition.animatePositionAdditive(node: iconNode, offset: CGPoint(x: deltaX, y: 0.0))
+                transition.animatePositionAdditive(node: iconNode, offset: CGPoint(x: iconOffsetX, y: 0.0))
             } else {
                 transition.updateFrame(node: iconNode, frame: iconFrame)
             }
             
             let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width + sideInset) / 2.0), y: contentRect.midY + titleIconSpacing), size: titleSize)
             if animateAdditive {
+                let titleOffsetX = animateIconMovement ? self.titleNode.frame.minX - titleFrame.minX : deltaX
                 self.titleNode.frame = titleFrame
-                transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: deltaX, y: 0.0))
+                transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: titleOffsetX, y: 0.0))
             } else {
                 transition.updateFrame(node: self.titleNode, frame: titleFrame)
             }
         } else {
             let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - titleSize.width + sideInset) / 2.0), y: contentRect.minY + floor((baseSize.height - titleSize.height) / 2.0)), size: titleSize)
             if animateAdditive {
+                let titleOffsetX = animateIconMovement ? self.titleNode.frame.minX - titleFrame.minX : deltaX
                 self.titleNode.frame = titleFrame
-                transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: deltaX, y: 0.0))
+                transition.animatePositionAdditive(node: self.titleNode, offset: CGPoint(x: titleOffsetX, y: 0.0))
             } else {
                 transition.updateFrame(node: self.titleNode, frame: titleFrame)
             }
@@ -365,7 +372,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
                 }
             }
             if let _ = node.alignment, node.isExpanded != isExpanded {
-                nodeTransition = transition.isAnimated ? transition : .animated(duration: 0.2, curve: .spring)
+                nodeTransition = transition.isAnimated ? transition : .animated(duration: 0.2, curve: .easeInOut)
                 if !transition.isAnimated {
                     self.tapticAction()
                 }
@@ -396,7 +403,19 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
                 intermediateCompletion()
 
             })
-            node.updateLayout(isFirst: (self.isLeft && i == 0) || (!self.isLeft && i == self.optionNodes.count - 1), isLeft: self.isLeft, baseSize: CGSize(width: nodeWidth, height: size.height), alignment: defaultAlignment, isExpanded: isExpanded, extendedWidth: extendedWidth, sideInset: sideInset, transition: nodeTransition, additive: !transition.isAnimated, revealFactor: revealFactor)
+            
+            var nodeAlignment: ItemListRevealOptionAlignment
+            if (self.optionNodes.count > 1) {
+                nodeAlignment = self.isLeft ? .right : .left
+            } else {
+                if (self.isLeft) {
+                    nodeAlignment = isExpanded ? .right : .left
+                } else {
+                    nodeAlignment = isExpanded ? .left : .right
+                }
+            }
+            let animateIconMovement = self.optionNodes.count == 1
+            node.updateLayout(isFirst: (self.isLeft && i == 0) || (!self.isLeft && i == self.optionNodes.count - 1), isLeft: self.isLeft, baseSize: CGSize(width: nodeWidth, height: size.height), alignment: nodeAlignment, isExpanded: isExpanded, extendedWidth: extendedWidth, sideInset: sideInset, transition: nodeTransition, additive: !transition.isAnimated, revealFactor: revealFactor, animateIconMovement: animateIconMovement)
             
             if self.isLeft {
                 i -= 1

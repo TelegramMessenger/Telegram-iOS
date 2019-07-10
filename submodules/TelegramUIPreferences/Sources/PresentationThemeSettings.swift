@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import Display
 
 public enum PresentationBuiltinThemeReference: Int32 {
     case dayClassic = 0
@@ -102,7 +103,7 @@ public enum AutomaticThemeSwitchTimeBasedSetting: PostboxCoding, Equatable {
                 encoder.encodeInt32(0, forKey: "_t")
                 encoder.encodeInt32(fromSeconds, forKey: "fromSeconds")
                 encoder.encodeInt32(toSeconds, forKey: "toSeconds")
-        case let .automatic(latitude, longitude, localizedName):
+            case let .automatic(latitude, longitude, localizedName):
                 encoder.encodeInt32(1, forKey: "_t")
                 encoder.encodeDouble(latitude, forKey: "latitude")
                 encoder.encodeDouble(longitude, forKey: "longitude")
@@ -245,7 +246,18 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
     }
     
     public var color: Int32 {
-        return self.baseColor.colorValue
+        var hue: CGFloat = 0.0
+        var saturation: CGFloat = 0.0
+        var value: CGFloat = 0.0
+        
+        let color = UIColor(rgb: UInt32(bitPattern: self.baseColor.colorValue))
+        let delta = (-0.5 + self.value) * 0.8
+        if color.getHue(&hue, saturation: &saturation, brightness: &value, alpha: nil) {
+            let newColor = UIColor(hue: hue, saturation: saturation, brightness: min(1.0, max(0.0, value + delta)), alpha: 1.0)
+            return Int32(bitPattern: newColor.rgb)
+        } else {
+            return self.baseColor.colorValue
+        }
     }
 }
 

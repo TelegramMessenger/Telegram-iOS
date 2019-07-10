@@ -650,8 +650,8 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                         placeholder = self.presentationData.strings.Wallpaper_Search
                     case let .color(color, query):
                         let prefixString = NSMutableAttributedString()
-                        prefixString.append(NSAttributedString(string: self.presentationData.strings.WallpaperSearch_ColorPrefix, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.activeNavigationSearchBar.inputTextColor))
-                        prefixString.append(NSAttributedString(string: "\(color.localizedString(strings: self.presentationData.strings)) ", font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.activeNavigationSearchBar.accentColor))
+                        prefixString.append(NSAttributedString(string: self.presentationData.strings.WallpaperSearch_ColorPrefix, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationSearchBar.inputTextColor))
+                        prefixString.append(NSAttributedString(string: "\(color.localizedString(strings: self.presentationData.strings)) ", font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationSearchBar.accentColor))
                         prefix = prefixString
                         text = query
                         placeholder = self.presentationData.strings.Wallpaper_SearchShort

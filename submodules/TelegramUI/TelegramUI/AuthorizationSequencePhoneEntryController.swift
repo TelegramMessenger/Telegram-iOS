@@ -57,7 +57,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         
         self.hasActiveInput = true
         
-        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
         self.attemptNavigation = { _ in
             return false
         }

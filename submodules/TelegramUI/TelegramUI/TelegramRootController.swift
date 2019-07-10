@@ -61,7 +61,7 @@ public final class TelegramRootController: NavigationController {
                 strongSelf.presentationData = presentationData
                 if previousTheme !== presentationData.theme {
                     strongSelf.rootTabController?.updateTheme(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData), theme: TabBarControllerTheme(rootControllerTheme: presentationData.theme))
-                    strongSelf.rootTabController?.statusBar.statusBarStyle = presentationData.theme.rootController.statusBar.style.style
+                    strongSelf.rootTabController?.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
                     
                     
                 }

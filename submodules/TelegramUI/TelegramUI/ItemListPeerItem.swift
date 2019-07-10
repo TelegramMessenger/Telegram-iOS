@@ -14,6 +14,11 @@ struct ItemListPeerItemEditing: Equatable {
     let revealed: Bool
 }
 
+enum ItemListPeerItemHeight {
+    case generic
+    case peerList
+}
+
 enum ItemListPeerItemText {
     case presence
     case text(String)
@@ -75,6 +80,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let nameDisplayOrder: PresentationPersonNameOrder
     let account: Account
     let peer: Peer
+    let height: ItemListPeerItemHeight
     let aliasHandling: ItemListPeerItemAliasHandling
     let nameColor: ItemListPeerItemNameColor
     let nameStyle: ItemListPeerItemNameStyle
@@ -96,13 +102,14 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let noInsets: Bool
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.account = account
         self.peer = peer
+        self.height = height
         self.aliasHandling = aliasHandling
         self.nameColor = nameColor
         self.nameStyle = nameStyle
@@ -479,17 +486,29 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
             var insets = itemListNeighborsGroupedInsets(neighbors)
             if !item.hasTopGroupInset {
                 switch neighbors.top {
-                case .none:
-                    insets.top = 0.0
-                default:
-                    break
+                    case .none:
+                        insets.top = 0.0
+                    default:
+                        break
                 }
             }
             if item.noInsets {
                 insets.top = 0.0
                 insets.bottom = 0.0
             }
-            let contentSize = CGSize(width: params.width, height: 50.0)
+            
+            let height: CGFloat
+            let verticalOffset: CGFloat
+            switch item.height {
+                case .generic:
+                    height = 44.0
+                    verticalOffset = -3.0
+                case .peerList:
+                    height = 50.0
+                    verticalOffset = 0.0
+            }
+        
+            let contentSize = CGSize(width: params.width, height: height)
             let separatorHeight = UIScreenPixel
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -621,8 +640,8 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
                     
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: statusAttributedString == nil ? 14.0 : 6.0), size: titleLayout.size))
-                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 27.0), size: statusLayout.size))
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: (statusAttributedString == nil ? 14.0 : 6.0) + verticalOffset), size: titleLayout.size))
+                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 27.0 + verticalOffset), size: statusLayout.size))
                     
                     if let currentSwitchNode = currentSwitchNode {
                         if currentSwitchNode !== strongSelf.switchNode {
@@ -706,7 +725,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                     
                     strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth, y: labelFrame.minY - 1.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
                     
-                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
+                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: 5.0 + verticalOffset), size: CGSize(width: 40.0, height: 40.0)))
                     
                     if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
                         strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
@@ -718,7 +737,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                         strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
                     }
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: height + UIScreenPixel + UIScreenPixel))
                     
                     if let presence = item.presence as? TelegramUserPresence {
                         strongSelf.peerPresenceManager?.reset(presence: presence)

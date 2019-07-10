@@ -46,13 +46,13 @@ final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleContentNod
                 if incoming {
                     buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonIncoming(presentationData.theme.theme)!
                     buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIncoming(presentationData.theme.theme)!
-                    titleColor = presentationData.theme.theme.chat.bubble.incomingAccentTextColor
+                    titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
                     let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: true, wallpaper: !presentationData.theme.wallpaper.isEmpty)
                     titleHighlightedColor = bubbleColor.fill
                 } else {
                     buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(presentationData.theme.theme)!
                     buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonOutgoing(presentationData.theme.theme)!
-                    titleColor = presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
+                    titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: false, wallpaper: !presentationData.theme.wallpaper.isEmpty)
                     titleHighlightedColor = bubbleColor.fill
                 }

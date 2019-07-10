@@ -28,7 +28,7 @@ private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Settings/ChangePhoneIntroIcon"), color: presentationData.theme.list.freeMonoIcon)
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Settings/ChangePhoneIntroIcon"), color: presentationData.theme.list.freeMonoIconColor)
         let textColor = self.presentationData.theme.list.freeTextColor
         self.labelNode.attributedText = parseMarkdownIntoAttributedString(self.presentationData.strings.PhoneNumberHelp_Help, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(14.0), textColor: textColor), bold: MarkdownAttributeSet(font: Font.semibold(14.0), textColor: textColor), link: MarkdownAttributeSet(font: Font.regular(14.0), textColor: textColor), linkAttribute: { _ in return nil }), textAlignment: .center)
         self.buttonNode.setTitle(self.presentationData.strings.PhoneNumberHelp_ChangeNumber, with: Font.regular(19.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
@@ -92,7 +92,7 @@ final class ChangePhoneNumberIntroController: ViewController {
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.title = phoneNumber
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)

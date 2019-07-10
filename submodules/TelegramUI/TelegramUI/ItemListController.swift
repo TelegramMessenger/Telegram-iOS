@@ -253,7 +253,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         self.isOpaqueWhenInOverlay = true
         self.blocksBackgroundWhenInOverlay = true
         
-        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
         
         self.scrollToTop = { [weak self] in
             self?.willScrollToTop?()
@@ -419,7 +419,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
                         strongSelf.theme = controllerState.theme
                         
                         strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.theme), strings: NavigationBarStrings(presentationStrings: strongSelf.strings)))
-                        strongSelf.statusBar.statusBarStyle = strongSelf.theme.rootController.statusBar.style.style
+                        strongSelf.statusBar.statusBarStyle = strongSelf.theme.rootController.statusBarStyle.style
                         
                         strongSelf.segmentedTitleView?.color = controllerState.theme.rootController.navigationBar.accentTextColor
                         

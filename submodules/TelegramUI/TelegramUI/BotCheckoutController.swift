@@ -34,7 +34,7 @@ final class BotCheckoutController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         var title = self.presentationData.strings.Checkout_Title
         if invoice.flags.contains(.isTest) {

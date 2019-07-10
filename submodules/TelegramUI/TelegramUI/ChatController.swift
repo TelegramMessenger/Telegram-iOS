@@ -1987,7 +1987,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     
     private func themeAndStringsUpdated() {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.chatTitleView?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
@@ -4234,7 +4234,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         
         switch updatedChatPresentationInterfaceState.mode {
             case .standard:
-                self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+                self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
                     self.deferScreenEdgeGestures = []
             case .overlay:
                 self.statusBar.statusBarStyle = .Hide
@@ -4686,7 +4686,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true).start(next: { generator in
                 if let strongSelf = self {
                     let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
-                    legacyController.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBar.style.style
+                    legacyController.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBarStyle.style
                     legacyController.controllerLoaded = { [weak legacyController] in
                         legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
                     }

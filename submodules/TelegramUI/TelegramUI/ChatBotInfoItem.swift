@@ -152,14 +152,14 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 updatedTextAndEntities = (item.text, generateTextEntities(item.text, enabledTypes: .all))
             }
             
-            let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.presentationData.theme.theme.chat.bubble.infoPrimaryTextColor, linkColor: item.presentationData.theme.theme.chat.bubble.infoLinkTextColor, baseFont: messageFont, linkFont: messageFont, boldFont: messageBoldFont, italicFont: messageItalicFont, boldItalicFont: messageBoldItalicFont, fixedFont: messageFixedFont)
+            let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor, linkColor: item.presentationData.theme.theme.chat.message.infoLinkTextColor, baseFont: messageFont, linkFont: messageFont, boldFont: messageBoldFont, italicFont: messageItalicFont, boldItalicFont: messageBoldItalicFont, fixedFont: messageFixedFont)
             
             let horizontalEdgeInset: CGFloat = 10.0 + params.leftInset
             let horizontalContentInset: CGFloat = 12.0
             let verticalItemInset: CGFloat = 10.0
             let verticalContentInset: CGFloat = 8.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Bot_DescriptionTitle, font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.bubble.infoPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Bot_DescriptionTitle, font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -245,7 +245,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.theme.chat.bubble.incomingLinkHighlightColor)
+                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.theme.chat.message.incoming.linkHighlightColor)
                     self.linkHighlightingNode = linkHighlightingNode
                     self.offsetContainer.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
                 }

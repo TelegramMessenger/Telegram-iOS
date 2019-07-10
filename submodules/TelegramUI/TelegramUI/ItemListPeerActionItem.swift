@@ -5,21 +5,28 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
+enum ItemListPeerActionItemHeight {
+    case generic
+    case peerList
+}
+
 class ItemListPeerActionItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let icon: UIImage?
     let title: String
     let alwaysPlain: Bool
     let editing: Bool
+    let height: ItemListPeerActionItemHeight
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(theme: PresentationTheme, icon: UIImage?, title: String, alwaysPlain: Bool = false, sectionId: ItemListSectionId, editing: Bool, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, icon: UIImage?, title: String, alwaysPlain: Bool = false, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, editing: Bool, action: @escaping () -> Void) {
         self.theme = theme
         self.icon = icon
         self.title = title
         self.alwaysPlain = alwaysPlain
         self.editing = editing
+        self.height = height
         self.sectionId = sectionId
         self.action = action
     }
