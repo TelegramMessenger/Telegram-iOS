@@ -76,12 +76,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
         if let value = NSKeyedUnarchiver.unarchiveObject(withFile: documentsPath + "/autonight.dat") as? TGPresentationAutoNightPreferences {
             autoNightPreferences = value
         }
-        
-        var wallpaperInfo: TGWallpaperInfo?
-        if let data = UserDefaults.standard.object(forKey: "_currentWallpaperInfo") as? [AnyHashable: Any], let value = TGWallpaperInfo(dictionary: data) {
-            wallpaperInfo = value
-        }
-        
+                
         let autoDownloadPreferences: TGAutoDownloadPreferences? = NSKeyedUnarchiver.unarchiveObject(withFile: documentsPath + "/autoDownload.pref") as? TGAutoDownloadPreferences
         
         let preferencesProvider: PreferencesProvider
@@ -232,22 +227,6 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                         default:
                             break
                     }
-                }
-                
-                if let wallpaperInfo = wallpaperInfo as? TGBuiltinWallpaperInfo, wallpaperInfo.isDefault() {
-                    settings.chatWallpaper = .builtin(WallpaperSettings())
-                } else if let wallpaperInfo = wallpaperInfo as? TGRemoteWallpaperInfo, let data = try? Data(contentsOf: URL(fileURLWithPath: documentsPath + "/wallpaper-data/_currentWallpaper.jpg")), let image = UIImage(data: data) {
-                    let url = wallpaperInfo.fullscreenUrl()!
-                    if let resource = resourceFromLegacyImageUrl(url) {
-                        settings.chatWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)], WallpaperSettings())
-                        account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                    }
-                } else if let wallpaperInfo = wallpaperInfo as? TGColorWallpaperInfo {
-                    settings.chatWallpaper = .color(Int32(bitPattern: wallpaperInfo.color))
-                } else if let data = try? Data(contentsOf: URL(fileURLWithPath: documentsPath + "/wallpaper-data/_currentWallpaper.jpg")), let image = UIImage(data: data) {
-                    let resource = LocalFileMediaResource(fileId: arc4random64())
-                    settings.chatWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)], WallpaperSettings())
-                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 }
                 
                 return settings
