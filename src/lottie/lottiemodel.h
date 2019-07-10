@@ -22,6 +22,7 @@
 #include<vector>
 #include<memory>
 #include<unordered_map>
+#include<algorithm>
 #include <cmath>
 #include"vpoint.h"
 #include"vrect.h"
