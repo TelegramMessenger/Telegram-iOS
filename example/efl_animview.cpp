@@ -24,16 +24,14 @@
 #define WIDTH 400
 #define HEIGHT 400
 
-Eo *slider = NULL;
-
 void
-win_del(void *data, Eo *o, void *ev)
+win_del(void *data EINA_UNUSED, Eo *o EINA_UNUSED, void *event_info EINA_UNUSED)
 {
    elm_exit();
 }
 
 static void
-btn_clicked_cb(void *data, Eo *obj, void *event_info)
+btn_clicked_cb(void *data, Eo *obj, void *event_info EINA_UNUSED)
 {
    Eo *anim_view = (Eo *) data;
    const char *text = elm_object_text_get(obj);
@@ -53,14 +51,14 @@ btn_clicked_cb(void *data, Eo *obj, void *event_info)
 }
 
 static void
-check_changed_cb(void *data, Eo *obj, void *event_info)
+check_changed_cb(void *data, Eo *obj, void *event_info EINA_UNUSED)
 {
    Eo *anim_view = (Eo *) data;
    elm_animation_view_auto_repeat_set(anim_view, elm_check_state_get(obj));
 }
 
 static void
-speed_changed_cb(void *data, Eo *obj, void *event_info)
+speed_changed_cb(void *data, Eo *obj, void *event_info EINA_UNUSED)
 {
    Eo *anim_view = (Eo *) data;
    double speed = 1;
@@ -94,40 +92,40 @@ update_anim_view_state(Eo *anim_view, Eo *label)
 }
 
 static void
-_play_done(void *data, Eo *obj, void *ev)
+_play_done(void *data EINA_UNUSED, Eo *obj EINA_UNUSED, void *event_info EINA_UNUSED)
 {
    printf("done!\n");
 }
 
 static void
-_play_updated(void *data, Eo *obj, void *ev)
+_play_updated(void *data, Eo *obj, void *event_info EINA_UNUSED)
 {
    Eo *slider = (Eo *) data;
    elm_slider_value_set(slider, elm_animation_view_progress_get(obj));
 }
 
 static void
-_state_update(void *data, Eo *obj, void *ev)
+_state_update(void *data, Eo *obj, void *event_info EINA_UNUSED)
 {
    Eo *label = (Eo *) data;
    update_anim_view_state(obj, label);
 }
 
 static void
-_play_repeated(void *data, Eo *obj, void *ev)
+_play_repeated(void *data EINA_UNUSED, Eo *obj EINA_UNUSED, void *event_info EINA_UNUSED)
 {
    printf("repeated!\n");
 }
 
 static void
-_slider_drag_cb(void *data, Eo *obj, void *ev)
+_slider_drag_cb(void *data, Eo *obj, void *event_info EINA_UNUSED)
 {
    Eo *anim_view = (Eo *) data;
    elm_animation_view_progress_set(anim_view, elm_slider_value_get(obj));
 }
 
 static void
-_slider_reset(void *data, Eo *obj, void *ev)
+_slider_reset(void *data, Eo *obj EINA_UNUSED, void *event_info EINA_UNUSED)
 {
    Eo *slider = (Eo *) data;
    elm_slider_value_set(slider, 0);
