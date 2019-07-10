@@ -1570,9 +1570,9 @@ void LOTRepeaterItem::update(int frameNo, const VMatrix &parentMatrix,
     if (visibleCopies == 0) {
         mHidden = true;
         return;
-    } else {
-        mHidden = false;
     }
+
+    mHidden = false;
 
     if (!mRepeaterData->isStatic()) newFlag |= DirtyFlagBit::Matrix;
 

@@ -234,10 +234,10 @@ public:
 
     VPointF parseInperpolatorPoint();
 
-    void getValue(VPointF &val);
-    void getValue(float &val);
-    void getValue(LottieColor &val);
-    void getValue(int &val);
+    void getValue(VPointF &pt);
+    void getValue(float &fval);
+    void getValue(LottieColor &color);
+    void getValue(int &ival);
     void getValue(LottieShapeData &shape);
     void getValue(LottieGradient &gradient);
     void getValue(std::vector<VPointF> &v);
@@ -275,7 +275,7 @@ protected:
 };
 
 LookaheadParserHandler::LookaheadParserHandler(char *str)
-    : v_(), st_(kInit), r_(), ss_(str)
+    : v_(), st_(kInit), ss_(str)
 {
     r_.IterativeParseInit();
 }
@@ -359,10 +359,7 @@ bool LottieParserImpl::NextArrayValue()
      * same as  NextObjectKey()
      */
     if (st_ == kExitingObject) {
-        // #ifdef DEBUG_PARSER
-        //         vDebug<<"Array: Exiting nested loop";
-        // #endif
-        return 0;
+        return false;
     }
 
     if (st_ == kError || st_ == kHasKey) {
@@ -1884,14 +1881,15 @@ std::shared_ptr<VInterpolator> LottieParserImpl::interpolator(
     }
 
     auto search = mInterpolatorCache.find(key);
+
     if (search != mInterpolatorCache.end()) {
         return search->second;
-    } else {
-        auto obj = std::make_shared<VInterpolator>(
-            VInterpolator(outTangent, inTangent));
-        mInterpolatorCache[std::move(key)] = obj;
-        return obj;
     }
+
+    auto obj = std::make_shared<VInterpolator>(
+        VInterpolator(outTangent, inTangent));
+    mInterpolatorCache[std::move(key)] = obj;
+    return obj;
 }
 
 /*

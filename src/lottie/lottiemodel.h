@@ -180,9 +180,8 @@ struct LOTKeyFrameValue<VPointF>
                                        mEndValue + mInTangent, mEndValue);
             return b.pointAt(b.tAtLength(t * b.length()));
 
-        } else {
-            return lerp(mStartValue, mEndValue, t);
         }
+        return lerp(mStartValue, mEndValue, t);
     }
 
     float angle(float t) const {
@@ -250,12 +249,8 @@ public:
         int first = mKeyFrames.front().mStartFrame;
         int last = mKeyFrames.back().mEndFrame;
 
-        if ((first > prevFrame  && first > curFrame) ||
-            (last < prevFrame  && last < curFrame)) {
-            return false;
-        }
-
-        return true;
+        return !((first > prevFrame  && first > curFrame) ||
+                 (last < prevFrame  && last < curFrame));
     }
 
 public:
@@ -327,8 +322,12 @@ private:
     union details {
         std::unique_ptr<LOTAnimInfo<T>>   mAnimInfo;
         T                                 mValue;
-        details(){}
-        ~details(){}
+        details(){};
+        details(const details&) = delete;
+        details(details&&) = delete;
+        details& operator=(details&&) = delete;
+        details& operator=(const details&) = delete;
+        ~details(){};
     }impl;
     bool                                 mStatic{true};
 };
@@ -459,7 +458,9 @@ public:
         if (isStatic()) return impl.mStaticData.mOpacity;
         return impl.mData->opacity(frameNo);
     }
-
+    LOTTransformData(const LOTTransformData&) = delete;
+    LOTTransformData(LOTTransformData&&) = delete;
+    LOTTransformData& operator=(LOTTransformData&) = delete;
     LOTTransformData& operator=(LOTTransformData&&) = delete;
     ~LOTTransformData() {destroy();}
 
@@ -481,8 +482,12 @@ private:
     union details {
         std::unique_ptr<TransformData>   mData;
         static_data                      mStaticData;
-        details(){}
-        ~details(){}
+        details(){};
+        details(const details&) = delete;
+        details(details&&) = delete;
+        details& operator=(details&&) = delete;
+        details& operator=(const details&) = delete;
+        ~details(){};
     }impl;
 };
 
@@ -524,10 +529,7 @@ public:
     }
     LOTAsset* asset() const
     {
-        if (mExtra && mExtra->mAsset)
-            return mExtra->mAsset.get();
-        else
-            return nullptr;
+        return (mExtra && mExtra->mAsset) ? mExtra->mAsset.get() : nullptr;
     }
 public:
     ExtraLayerData* extra()
@@ -772,8 +774,10 @@ class LOTPath : public LOTData
 {
 public:
     explicit LOTPath(LOTData::Type  type):LOTData(type){}
-    VPath::Direction direction() { if (mDirection == 3) return VPath::Direction::CCW;
-                                   else return VPath::Direction::CW;}
+    VPath::Direction direction() {
+        return (mDirection == 3) ?
+               VPath::Direction::CCW : VPath::Direction::CW;
+    }
 public:
     int                                    mDirection{1};
 };
@@ -851,8 +855,8 @@ public:
     struct Segment {
         float start{0};
         float end{0};
-        Segment() {}
-        Segment(float s, float e):start(s), end(e) {}
+        Segment() = default;
+        explicit Segment(float s, float e):start(s), end(e) {}
     };
     enum class TrimType {
         Simultaneously,
@@ -881,8 +885,8 @@ public:
             } else if (start > 1 && end > 1) {
                 return noloop(start - 1, end - 1);
             } else {
-                if (start > 1) return loop(start - 1 , end);
-                else return loop(start , end - 1);
+                return (start > 1) ?
+                            loop(start - 1 , end) : loop(start , end - 1);
             }
         } else {
             start += offset;
@@ -892,8 +896,8 @@ public:
             } else if (start < 0 && end < 0) {
                 return noloop(1 + start, 1 + end);
             } else {
-                if (start < 0) return loop(1 + start, end);
-                else return loop(start , 1 + end);
+                return (start < 0) ?
+                            loop(1 + start, end) : loop(start , 1 + end);
             }
         }
     }
