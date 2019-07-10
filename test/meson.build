@@ -33,3 +33,8 @@ animation_testsuite = executable('animationTestSuite',
                               )
 
 test('Animation Testsuite', animation_testsuite)
+
+executable('vectorTest',
+           'vectortest.cpp',
+           include_directories : inc,
+           dependencies : [rlottie_lib_dep])

@@ -13,11 +13,6 @@ executable('lottie2gif',
            override_options : override_default,
            link_with : rlottie_lib)
 
-executable('vectorTest',
-           'vectortest.cpp',
-           include_directories : inc,
-           dependencies : [rlottie_lib_dep])
-
 demo_dep = dependency('elementary', required : false, disabler : true)
 
 executable('demo',
