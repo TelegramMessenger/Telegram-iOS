@@ -214,7 +214,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         self.width = width
         self.height = height
         self.currentFrame = 0
-        guard let rawData = TGGUnzipData(data, 2 * 1024 * 1024) else {
+        guard let rawData = TGGUnzipData(data, 1024 * 1024) else {
             return nil
         }
         guard let animation = LottieInstance(data: rawData, cacheKey: "") else {
