@@ -24,6 +24,7 @@
 #include <memory>
 
 #if defined _WIN32 || defined __CYGWIN__
+  #pragma warning(disable: 4251)  //FIXME: Remove stl usage in Animation class declaration.
   #ifdef LOT_BUILD
     #define LOT_EXPORT __declspec(dllexport)
   #else
