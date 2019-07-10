@@ -452,14 +452,13 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             completion(true)
             return nil
         } else {
-            let inShareExtension = !context.sharedContext.applicationBindings.isMainApp
             let biometrics: PasscodeEntryControllerBiometricsMode
             if let passcodeSettings = passcodeSettings, passcodeSettings.enableBiometrics {
-                biometrics = .enabled(inShareExtension ? passcodeSettings.shareBiometricsDomainState : passcodeSettings.biometricsDomainState)
+                biometrics = .enabled(context.sharedContext.applicationBindings.isMainApp ? passcodeSettings.biometricsDomainState : passcodeSettings.shareBiometricsDomainState)
             } else {
                 biometrics = .none
             }
-            let controller = PasscodeEntryController(context: context, challengeData: challenge, biometrics: biometrics, inShareExtension: inShareExtension, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
+            let controller = PasscodeEntryController(context: context, challengeData: challenge, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
                 completion(false)
             }))
             controller.presentationCompleted = { [weak controller] in

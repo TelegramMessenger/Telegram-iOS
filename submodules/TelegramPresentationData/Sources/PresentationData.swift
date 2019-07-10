@@ -488,9 +488,9 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
                         fetch.dispose()
                         data.dispose()
                     }
-                    }
-                    |> afterNext { color in
-                        serviceBackgroundColorForWallpaper = (wallpaper, color)
+                }
+                |> afterNext { color in
+                    serviceBackgroundColorForWallpaper = (wallpaper, color)
                 }
             }
         }

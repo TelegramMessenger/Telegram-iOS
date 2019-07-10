@@ -37,7 +37,6 @@ final public class PasscodeEntryController: ViewController {
         
     private let challengeData: PostboxAccessChallengeData
     private let biometrics: PasscodeEntryControllerBiometricsMode
-    private let inShareExtension: Bool
     private let arguments: PasscodeEntryControllerPresentationArguments
     
     public var presentationCompleted: (() -> Void)?
@@ -50,12 +49,11 @@ final public class PasscodeEntryController: ViewController {
     private var inBackground: Bool = false
     private var inBackgroundDisposable: Disposable?
     
-    public init(context: AccountContext, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, inShareExtension: Bool = false, arguments: PasscodeEntryControllerPresentationArguments) {
+    public init(context: AccountContext, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.challengeData = challengeData
         self.biometrics = biometrics
-        self.inShareExtension = inShareExtension
         self.arguments = arguments
         
         super.init(navigationBarPresentationData: nil)
@@ -103,7 +101,7 @@ final public class PasscodeEntryController: ViewController {
         let biometricsType: LocalAuthBiometricAuthentication?
         if case let .enabled(data) = self.biometrics {
             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                if data == LocalAuth.evaluatedPolicyDomainState || (data == nil && self.inShareExtension) {
+                if data == LocalAuth.evaluatedPolicyDomainState || (data == nil && !self.context.sharedContext.applicationBindings.isMainApp) {
                     biometricsType = LocalAuth.biometricAuthentication
                 } else {
                     biometricsType = nil
@@ -162,12 +160,12 @@ final public class PasscodeEntryController: ViewController {
                     }).start()
                 }
                 
-                let inShareExtension = strongSelf.inShareExtension
+                let isMainApp = !strongSelf.context.sharedContext.applicationBindings.isMainApp
                 let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { settings in
-                    if inShareExtension {
-                        return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
-                    } else {
+                    if isMainApp {
                         return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                    } else {
+                        return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
                     }
                 }).start()
             } else {
@@ -233,7 +231,7 @@ final public class PasscodeEntryController: ViewController {
         }
         
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            if data == nil && !self.inShareExtension {
+            if data == nil && self.context.sharedContext.applicationBindings.isMainApp {
                 return
             }
         }
@@ -260,7 +258,7 @@ final public class PasscodeEntryController: ViewController {
             
             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                 if case let .enabled(storedDomainState) = strongSelf.biometrics, evaluatedPolicyDomainState != nil {
-                    if strongSelf.inShareExtension && storedDomainState == nil {
+                    if !strongSelf.context.sharedContext.applicationBindings.isMainApp && storedDomainState == nil {
                         let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { settings in
                             return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
                         }).start()
