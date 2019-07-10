@@ -6,6 +6,10 @@ public enum ContainedViewLayoutTransitionCurve {
     case easeInOut
     case spring
     case custom(Float, Float, Float, Float)
+    
+    public static var slide: ContainedViewLayoutTransitionCurve {
+        return .custom(0.33, 0.52, 0.25, 0.99)
+    }
 }
 
 public extension ContainedViewLayoutTransitionCurve {

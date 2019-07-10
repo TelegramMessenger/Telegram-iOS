@@ -32,6 +32,10 @@ final class ThemeGridController: ViewController {
     
     private var validLayout: ContainerViewLayout?
     
+    override var navigationBarRequiresEntireLayoutUpdate: Bool {
+        return false
+    }
+    
     init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
