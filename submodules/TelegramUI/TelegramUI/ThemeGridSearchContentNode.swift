@@ -477,6 +477,9 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                                 if let _ = searchContext.loadMoreIndex, let nextOffset = searchContext.result.nextOffset {
                                     let collection = searchContext.result.collection
                                     return requestChatContextResults(account: self.context.account, botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(collection.geoPoint), offset: nextOffset)
+                                    |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
+                                        return .single(nil)
+                                    }
                                     |> map { nextResults -> (ChatContextResultCollection, String?) in
                                         var results: [ChatContextResult] = []
                                         var existingIds = Set<String>()

@@ -4024,6 +4024,17 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 })
                             }
                         }
+                    }, error: { [weak self] error in
+                        if let strongSelf = self {
+                            switch error {
+                                case let .inlineBotLocationRequest(peerId):
+                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_ShareInlineBotLocationConfirmation, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                        let _ = ApplicationSpecificNotice.setInlineBotLocationRequest(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId, value: Int32(Date().timeIntervalSince1970 + 10 * 60)).start()
+                                    }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                        let _ = ApplicationSpecificNotice.setInlineBotLocationRequest(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId, value: 0).start()
+                                    })]), in: .window(.root))
+                            }
+                        }
                     }))
                     inScope = false
                     if let inScopeResult = inScopeResult {

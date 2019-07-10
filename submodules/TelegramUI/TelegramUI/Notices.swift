@@ -158,6 +158,11 @@ private struct ApplicationSpecificNoticeKeys {
     private static let globalNamespace: Int32 = 2
     private static let permissionsNamespace: Int32 = 3
     private static let peerReportNamespace: Int32 = 4
+    private static let inlineBotLocationRequestNamespace: Int32 = 1
+    
+    static func inlineBotLocationRequestNotice(peerId: PeerId) -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: inlineBotLocationRequestNamespace), key: noticeKey(peerId: peerId, key: 0))
+    }
     
     static func botPaymentLiabilityNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: botPaymentLiabilityNamespace), key: noticeKey(peerId: peerId, key: 0))
@@ -248,6 +253,22 @@ public struct ApplicationSpecificNotice {
     static func setBotPaymentLiability(accountManager: AccountManager, peerId: PeerId) -> Signal<Void, NoError> {
         return accountManager.transaction { transaction -> Void in
             transaction.setNotice(ApplicationSpecificNoticeKeys.botPaymentLiabilityNotice(peerId: peerId), ApplicationSpecificBoolNotice())
+        }
+    }
+    
+    static func getInlineBotLocationRequest(accountManager: AccountManager, peerId: PeerId) -> Signal<Int32?, NoError> {
+        return accountManager.transaction { transaction -> Int32? in
+            if let notice = transaction.getNotice(ApplicationSpecificNoticeKeys.inlineBotLocationRequestNotice(peerId: peerId)) as? ApplicationSpecificTimestampNotice {
+                return notice.value
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    static func setInlineBotLocationRequest(accountManager: AccountManager, peerId: PeerId, value: Int32) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.inlineBotLocationRequestNotice(peerId: peerId), ApplicationSpecificTimestampNotice(value: value))
         }
     }
     
