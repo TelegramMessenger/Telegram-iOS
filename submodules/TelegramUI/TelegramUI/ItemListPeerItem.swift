@@ -439,7 +439,22 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                     break
             }
 
-            let leftInset: CGFloat = 65.0 + params.leftInset
+            let leftInset: CGFloat
+            let height: CGFloat
+            let verticalOffset: CGFloat
+            let avatarSize: CGFloat
+            switch item.height {
+                case .generic:
+                    height = 44.0
+                    verticalOffset = -3.0
+                    avatarSize = 31.0
+                    leftInset = 59.0 + params.leftInset
+                case .peerList:
+                    height = 50.0
+                    verticalOffset = 0.0
+                    avatarSize = 40.0
+                    leftInset = 65.0 + params.leftInset
+            }
             
             var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
             
@@ -497,17 +512,6 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                 insets.bottom = 0.0
             }
             
-            let height: CGFloat
-            let verticalOffset: CGFloat
-            switch item.height {
-                case .generic:
-                    height = 44.0
-                    verticalOffset = -3.0
-                case .peerList:
-                    height = 50.0
-                    verticalOffset = 0.0
-            }
-        
             let contentSize = CGSize(width: params.width, height: height)
             let separatorHeight = UIScreenPixel
             
@@ -725,7 +729,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                     
                     strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth, y: labelFrame.minY - 1.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
                     
-                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: 5.0 + verticalOffset), size: CGSize(width: 40.0, height: 40.0)))
+                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: floorToScreenPixels((height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize)))
                     
                     if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
                         strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
