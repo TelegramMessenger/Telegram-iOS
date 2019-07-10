@@ -11,82 +11,6 @@ import GZip
 import RLottie
 import MobileCoreServices
 
-private func validateAnimationItems(_ items: [Any]?, shapes: Bool = true) -> Bool {
-    if let items = items {
-        for case let item as [AnyHashable: Any] in items {
-            if let type = item["ty"] as? String {
-                if type == "rp" || type == "sr" || type == "gs" {
-                    return false
-                }
-            }
-            
-            if shapes, let subitems = item["it"] as? [Any] {
-                if !validateAnimationItems(subitems, shapes: false) {
-                    return false
-                }
-            }
-        }
-    }
-    return true;
-}
-
-private func validateAnimationLayers(_ layers: [Any]?) -> Bool {
-    if let layers = layers {
-        for case let layer as [AnyHashable: Any] in layers {
-            if let ddd = layer["ddd"] as? Int, ddd != 0 {
-                return false
-            }
-            if let sr = layer["sr"] as? Int, sr != 1 {
-                return false
-            }
-            if let _ = layer["tm"] {
-                return false
-            }
-            if let ty = layer["ty"] as? Int {
-                if ty == 1 || ty == 2 || ty == 5 || ty == 9 {
-                    return false
-                }
-            }
-            if let hasMask = layer["hasMask"] as? Bool, hasMask {
-                return false
-            }
-            if let _ = layer["masksProperties"] {
-                return false
-            }
-            if let _ = layer["tt"] {
-                return false
-            }
-            if let ao = layer["ao"] as? Int, ao == 1 {
-                return false
-            }
-            
-            if let shapes = layer["shapes"] as? [Any], !validateAnimationItems(shapes, shapes: true) {
-                return false
-            }
-        }
-    }
-    return true
-}
-
-func validateAnimationComposition(json: [AnyHashable: Any]) -> Bool {
-    let validDimensions: [Int] = [100, 512]
-    let validFramerates: [Int] = [30, 60]
-    
-    guard let tgs = json["tgs"] as? Int, tgs == 1 else {
-        return false
-    }
-    guard let width = json["w"] as? Int, validDimensions.contains(width) else {
-        return false
-    }
-    guard let height = json["h"] as? Int, validDimensions.contains(height)  else {
-        return false
-    }
-    guard let fps = json["fr"] as? Int, validFramerates.contains(fps)  else {
-        return false
-    }
-    return true
-}
-
 func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: String) -> Signal<TempBoxFile, NoError> {
     return Signal({ subscriber in
         let queue = Queue()
@@ -98,7 +22,7 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
                 return
             }
             
-            let decompressedData = TGGUnzipData(data, 1024 * 1024)
+            let decompressedData = TGGUnzipData(data, 2 * 1024 * 1024)
             if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
                 if cancelled.with({ $0 }) {
                     return
@@ -193,7 +117,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
             var deltaTime: Double = 0
             var compressionTime: Double = 0
             
-            let decompressedData = TGGUnzipData(data, 1024 * 1024)
+            let decompressedData = TGGUnzipData(data, 2 * 1024 * 1024)
             if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
                 let endFrame = Int(player.frameCount)
                 
