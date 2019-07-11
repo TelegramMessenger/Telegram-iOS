@@ -52,3 +52,22 @@ if get_option('test') == true
    subdir('test')
 endif
 
+
+
+cmake = import('cmake')
+cmake.write_basic_package_version_file(
+    version: meson.project_version(),
+    name: 'rlottie',
+)
+
+cmakeconf = configuration_data()
+cmakeconf.set('VERSION', meson.project_version())
+
+cmake.configure_package_config_file(
+    input: meson.current_source_dir() + '/cmake/rlottieConfig.cmake.in',
+    name: 'rlottie',
+    configuration: cmakeconf,
+)
+
+
+
