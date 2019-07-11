@@ -16,7 +16,7 @@ import Foundation
 #endif
 
 public struct AppUpdateInfo: Equatable {
-    public let popup: Bool
+    public let blocking: Bool
     public let version: String
     public let text: String
     public let entities: [MessageTextEntity]
@@ -26,7 +26,7 @@ extension AppUpdateInfo {
     init?(apiAppUpdate: Api.help.AppUpdate) {
         switch apiAppUpdate {
             case let .appUpdate(flags, _, version, text, entities, _, _):
-                self.popup = (flags & (1 << 0)) != 0
+                self.blocking = (flags & (1 << 0)) != 0
                 self.version = version
                 self.text = text
                 self.entities = messageTextEntitiesFromApiEntities(entities)
