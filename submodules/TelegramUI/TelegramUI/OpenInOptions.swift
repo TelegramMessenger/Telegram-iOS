@@ -192,6 +192,20 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                     return .openUrl(url: "yandexnavi://build_route_on_map?lat_to=\(lat)&lon_to=\(lon)")
                 }))
             }
+            
+            options.append(OpenInOption(application: .other(title: "Moovit", identifier: 498477945, scheme: "moovit", store: nil), action: {
+                if withDirections {
+                    let destName: String
+                    if let title = location.venue?.title.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), title.count > 0 {
+                        destName = title
+                    } else {
+                        destName = ""
+                    }
+                    return .openUrl(url: "moovit://directions?dest_lat=\(lat)&dest_lon=\(lon)&dest_name=\(destName)&partner_id=Telegram")
+                } else {
+                    return .openUrl(url: "moovit://nearby?lat=\(lat)&lon=\(lon)&partner_id=Telegram")
+                }
+            }))
         
             if !withDirections {
                 options.append(OpenInOption(application: .other(title: "HERE Maps", identifier: 955837609, scheme: "here-location", store: nil), action: {
