@@ -270,7 +270,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                         }
                     } else {
                         if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                            return .peer(peer.id, .info)
+                            return .peer(peer.id, .chat(textInputState: nil, messageId: nil))
                         } else {
                             return .peer(peer.id, .chat(textInputState: nil, messageId: nil))
                         }
