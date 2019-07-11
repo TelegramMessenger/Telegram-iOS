@@ -44,10 +44,10 @@ public:
     inline friend VDebug &   operator<<(VDebug &os, const VPointF &o);
 
     friend inline VPointF       operator-(const VPointF &p1, const VPointF &p2);
-    friend inline const VPointF operator*(const VPointF &, float val);
-    friend inline const VPointF operator*(float val, const VPointF &);
-    friend inline const VPointF operator/(const VPointF &, float val);
-    friend inline const VPointF operator/(float val, const VPointF &);
+    friend inline const VPointF operator*(const VPointF &, float);
+    friend inline const VPointF operator*(float, const VPointF &);
+    friend inline const VPointF operator/(const VPointF &, float);
+    friend inline const VPointF operator/(float, const VPointF &);
 
 private:
     float mx{0};

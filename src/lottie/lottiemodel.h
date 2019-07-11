@@ -76,7 +76,10 @@ class LottieColor
 public:
     LottieColor() = default;
     LottieColor(float red, float green , float blue):r(red), g(green),b(blue){}
-    VColor toColor(float a=1){ return VColor((255 * r), (255 * g), (255 * b), (255 * a));}
+    VColor toColor(float a=1){ return VColor(uchar(255 * r),
+                                             uchar(255 * g),
+                                             uchar(255 * b),
+                                             uchar(255 * a));}
     friend inline LottieColor operator+(const LottieColor &c1, const LottieColor &c2);
     friend inline LottieColor operator-(const LottieColor &c1, const LottieColor &c2);
 public:

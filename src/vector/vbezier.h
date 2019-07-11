@@ -50,13 +50,13 @@ private:
 inline void VBezier::coefficients(float t, float &a, float &b, float &c,
                                   float &d)
 {
-    float m_t = 1. - t;
+    float m_t = 1.0f - t;
     b = m_t * m_t;
     c = t * t;
     d = c * t;
     a = b * m_t;
-    b *= 3. * t;
-    c *= 3. * m_t;
+    b *= 3.0f * t;
+    c *= 3.0f * m_t;
 }
 
 inline VPointF VBezier::pointAt(float t) const
@@ -64,7 +64,7 @@ inline VPointF VBezier::pointAt(float t) const
     // numerically more stable:
     float x, y;
 
-    float m_t = 1. - t;
+    float m_t = 1.0f - t;
     {
         float a = x1 * m_t + x2 * t;
         float b = x2 * m_t + x3 * t;
@@ -110,23 +110,23 @@ inline void VBezier::parameterSplitLeft(float t, VBezier *left)
 
 inline void VBezier::split(VBezier *firstHalf, VBezier *secondHalf) const
 {
-    float c = (x2 + x3) * .5;
-    firstHalf->x2 = (x1 + x2) * .5;
-    secondHalf->x3 = (x3 + x4) * .5;
+    float c = (x2 + x3) * .5f;
+    firstHalf->x2 = (x1 + x2) * .5f;
+    secondHalf->x3 = (x3 + x4) * .5f;
     firstHalf->x1 = x1;
     secondHalf->x4 = x4;
-    firstHalf->x3 = (firstHalf->x2 + c) * .5;
-    secondHalf->x2 = (secondHalf->x3 + c) * .5;
-    firstHalf->x4 = secondHalf->x1 = (firstHalf->x3 + secondHalf->x2) * .5;
+    firstHalf->x3 = (firstHalf->x2 + c) * .5f;
+    secondHalf->x2 = (secondHalf->x3 + c) * .5f;
+    firstHalf->x4 = secondHalf->x1 = (firstHalf->x3 + secondHalf->x2) * .5f;
 
     c = (y2 + y3) / 2;
-    firstHalf->y2 = (y1 + y2) * .5;
-    secondHalf->y3 = (y3 + y4) * .5;
+    firstHalf->y2 = (y1 + y2) * .5f;
+    secondHalf->y3 = (y3 + y4) * .5f;
     firstHalf->y1 = y1;
     secondHalf->y4 = y4;
-    firstHalf->y3 = (firstHalf->y2 + c) * .5;
-    secondHalf->y2 = (secondHalf->y3 + c) * .5;
-    firstHalf->y4 = secondHalf->y1 = (firstHalf->y3 + secondHalf->y2) * .5;
+    firstHalf->y3 = (firstHalf->y2 + c) * .5f;
+    secondHalf->y2 = (secondHalf->y3 + c) * .5f;
+    firstHalf->y4 = secondHalf->y1 = (firstHalf->y3 + secondHalf->y2) * .5f;
 }
 
 V_END_NAMESPACE

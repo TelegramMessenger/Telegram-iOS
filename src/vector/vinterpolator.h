@@ -64,11 +64,11 @@ private:
 
     float BinarySubdivide(float aX, float aA, float aB) const;
 
-    static float A(float aA1, float aA2) { return 1.0 - 3.0 * aA2 + 3.0 * aA1; }
+    static float A(float aA1, float aA2) { return 1.0f - 3.0f * aA2 + 3.0f * aA1; }
 
-    static float B(float aA1, float aA2) { return 3.0 * aA2 - 6.0 * aA1; }
+    static float B(float aA1, float aA2) { return 3.0f * aA2 - 6.0f * aA1; }
 
-    static float C(float aA1) { return 3.0 * aA1; }
+    static float C(float aA1) { return 3.0f * aA1; }
 
     float mX1;
     float mY1;
