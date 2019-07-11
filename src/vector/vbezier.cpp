@@ -79,7 +79,7 @@ float VBezier::tAtLength(float l) const
 {
     float       len = length();
     float       t = 1.0;
-    const float error = 0.01;
+    const float error = 0.01f;
     if (l > len || vCompare(l, len)) return t;
 
     t *= 0.5;
@@ -93,10 +93,10 @@ float VBezier::tAtLength(float l) const
         if (fabs(lLen - l) < error) break;
 
         if (lLen < l) {
-            t += (lastBigger - t) * 0.5;
+            t += (lastBigger - t) * 0.5f;
         } else {
             lastBigger = t;
-            t -= t * 0.5;
+            t -= t * 0.5f;
         }
     }
     return t;
@@ -116,7 +116,7 @@ VPointF VBezier::derivative(float t) const
     // p'(t) = 3 * (-(1-2t+t^2) * p0 + (1 - 4 * t + 3 * t^2) * p1 + (2 * t - 3 *
     // t^2) * p2 + t^2 * p3)
 
-    float m_t = 1. - t;
+    float m_t = 1.0f - t;
 
     float d = t * t;
     float a = -m_t * m_t;

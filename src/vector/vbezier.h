@@ -110,23 +110,23 @@ inline void VBezier::parameterSplitLeft(float t, VBezier *left)
 
 inline void VBezier::split(VBezier *firstHalf, VBezier *secondHalf) const
 {
-    float c = (x2 + x3) * .5f;
-    firstHalf->x2 = (x1 + x2) * .5f;
-    secondHalf->x3 = (x3 + x4) * .5f;
+    float c = (x2 + x3) * 0.5f;
+    firstHalf->x2 = (x1 + x2) * 0.5f;
+    secondHalf->x3 = (x3 + x4) * 0.5f;
     firstHalf->x1 = x1;
     secondHalf->x4 = x4;
-    firstHalf->x3 = (firstHalf->x2 + c) * .5f;
-    secondHalf->x2 = (secondHalf->x3 + c) * .5f;
-    firstHalf->x4 = secondHalf->x1 = (firstHalf->x3 + secondHalf->x2) * .5f;
+    firstHalf->x3 = (firstHalf->x2 + c) * 0.5f;
+    secondHalf->x2 = (secondHalf->x3 + c) * 0.5f;
+    firstHalf->x4 = secondHalf->x1 = (firstHalf->x3 + secondHalf->x2) * 0.5f;
 
     c = (y2 + y3) / 2;
-    firstHalf->y2 = (y1 + y2) * .5f;
-    secondHalf->y3 = (y3 + y4) * .5f;
+    firstHalf->y2 = (y1 + y2) * 0.5f;
+    secondHalf->y3 = (y3 + y4) * 0.5f;
     firstHalf->y1 = y1;
     secondHalf->y4 = y4;
-    firstHalf->y3 = (firstHalf->y2 + c) * .5f;
-    secondHalf->y2 = (secondHalf->y3 + c) * .5f;
-    firstHalf->y4 = secondHalf->y1 = (firstHalf->y3 + secondHalf->y2) * .5f;
+    firstHalf->y3 = (firstHalf->y2 + c) * 0.5f;
+    secondHalf->y2 = (secondHalf->y3 + c) * 0.5f;
+    firstHalf->y4 = secondHalf->y1 = (firstHalf->y3 + secondHalf->y2) * 0.5f;
 }
 
 V_END_NAMESPACE

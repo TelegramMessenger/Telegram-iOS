@@ -70,7 +70,7 @@ inline float VLine::length(float x1, float y1, float x2, float y2)
     x = x < 0 ? -x : x;
     y = y < 0 ? -y : y;
 
-    return (x > y ? x + 0.375 * y : y + 0.375 * x);
+    return (x > y ? x + 0.375f * y : y + 0.375f * x);
 }
 
 inline void VLine::splitAtLength(float lengthAt, VLine &left, VLine &right) const

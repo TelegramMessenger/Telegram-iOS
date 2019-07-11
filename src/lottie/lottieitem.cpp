@@ -132,8 +132,8 @@ bool LOTCompItem::update(int frameNo)
     float sx = float(viewPort.width()) / viewBox.width();
     float sy = float(viewPort.height()) / viewBox.height();
     float scale = fmin(sx, sy);
-    float tx = (viewPort.width() - viewBox.width() * scale) * 0.5;
-    float ty = (viewPort.height() - viewBox.height() * scale) * 0.5;
+    float tx = (viewPort.width() - viewBox.width() * scale) * 0.5f;
+    float ty = (viewPort.height() - viewBox.height() * scale) * 0.5f;
 
     VMatrix m;
     m.translate(tx, ty).scale(scale, scale);
@@ -231,7 +231,7 @@ void LOTLayerItem::buildLayerNode()
         mLayerCNode->mClipPath.elmCount = 0;
         mLayerCNode->name = name().c_str();
     }
-    if (complexContent()) mLayerCNode->mAlpha = combinedAlpha() * 255;
+    if (complexContent()) mLayerCNode->mAlpha = combinedAlpha() * 255.f;
     mLayerCNode->mVisible = visible();
     // update matte
     if (hasMatte()) {
@@ -267,7 +267,7 @@ void LOTLayerItem::buildLayerNode()
             cNode->mPath.ptCount = pts.size();
             cNode->mPath.elmPtr = elmPtr;
             cNode->mPath.elmCount = elm.size();
-            cNode->mAlpha = mask.mCombinedAlpha * 255;
+            cNode->mAlpha = mask.mCombinedAlpha * 255.0f;
             switch (mask.maskMode()) {
             case LOTMaskData::Mode::Add:
                 cNode->mMode = MaskAdd;
@@ -584,7 +584,7 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask,
             srcPainter.begin(&srcBitmap);
             renderHelper(&srcPainter, inheritMask, matteRle);
             srcPainter.end();
-            painter->drawBitmap(VPoint(), srcBitmap, combinedAlpha() * 255);
+            painter->drawBitmap(VPoint(), srcBitmap, combinedAlpha() * 255.0f);
         } else {
             renderHelper(painter, inheritMask, matteRle);
         }
@@ -1383,14 +1383,14 @@ void LOTStrokeItem::updateContent(int frameNo)
 
 static float getScale(const VMatrix &matrix)
 {
-    constexpr float SQRT_2 = 1.41421;
+    constexpr float SQRT_2 = 1.41421f;
     VPointF         p1(0, 0);
     VPointF         p2(SQRT_2, SQRT_2);
     p1 = matrix.map(p1);
     p2 = matrix.map(p2);
     VPointF final = p2 - p1;
 
-    return std::sqrt(final.x() * final.x() + final.y() * final.y()) / 2.0;
+    return std::sqrt(final.x() * final.x() + final.y() * final.y()) / 2.0f;
 }
 
 void LOTStrokeItem::updateRenderNode()
@@ -1408,7 +1408,7 @@ void LOTStrokeItem::updateRenderNode()
         for (int i = 0; i < mDashArraySize; i++) mDashArray[i] *= scale;
 
         /* AE draw the dash even if dash value is 0 */
-        if (vCompare(mDashArray[0], 0.0f)) mDashArray[0] = 0.1;
+        if (vCompare(mDashArray[0], 0.0f)) mDashArray[0] = 0.1f;
 
         mDrawable.setDashInfo(mDashArray, mDashArraySize);
     }

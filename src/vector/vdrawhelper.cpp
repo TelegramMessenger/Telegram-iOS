@@ -150,8 +150,8 @@ bool VGradientCache::generateGradientColorTable(const VGradientStops &stops,
     curr = start;
     if (!curr->second.isOpaque()) alpha = true;
     curColor = curr->second.premulARGB(opacity);
-    incr = 1.0 / (float)size;
-    fpos = 1.5 * incr;
+    incr = 1.0f / (float)size;
+    fpos = 1.5f * incr;
 
     colorTable[pos++] = curColor;
 

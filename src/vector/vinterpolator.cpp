@@ -45,7 +45,7 @@ V_BEGIN_NAMESPACE
 #define SUBDIVISION_MAX_ITERATIONS 10
 
 const float VInterpolator::kSampleStepSize =
-    1.0 / float(VInterpolator::kSplineTableSize - 1);
+    1.0f / float(VInterpolator::kSplineTableSize - 1);
 
 void VInterpolator::init(float aX1, float aY1, float aX2, float aY2)
 {
@@ -72,7 +72,7 @@ void VInterpolator::CalcSampleValues()
 
 float VInterpolator::GetSlope(float aT, float aA1, float aA2)
 {
-    return 3.0 * A(aA1, aA2) * aT * aT + 2.0 * B(aA1, aA2) * aT + C(aA1);
+    return 3.0f * A(aA1, aA2) * aT * aT + 2.0f * B(aA1, aA2) * aT + C(aA1);
 }
 
 float VInterpolator::value(float aX) const
@@ -137,7 +137,7 @@ float VInterpolator::BinarySubdivide(float aX, float aA, float aB) const
     int   i = 0;
 
     do {
-        currentT = aA + (aB - aA) / 2.0;
+        currentT = aA + (aB - aA) / 2.0f;
         currentX = CalcBezier(currentT, mX1, mX2) - aX;
 
         if (currentX > 0.0) {

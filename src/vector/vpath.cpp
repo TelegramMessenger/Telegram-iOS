@@ -524,7 +524,7 @@ void VPath::VPathData::addPolystar(float points, float innerRadius,
     float              partialPointAmount = points - floorf(points);
     bool               longSegment = false;
     size_t             numPoints = size_t(ceilf(points) * 2);
-    float              angleDir = ((dir == VPath::Direction::CW) ? 1.0 : -1.0);
+    float              angleDir = ((dir == VPath::Direction::CW) ? 1.0f : -1.0f);
     bool               hasRoundness = false;
 
     innerRoundness /= 100.0f;
@@ -625,7 +625,7 @@ void VPath::VPathData::addPolygon(float points, float radius, float roundness,
     float              y;
     float              anglePerPoint = 2.0f * K_PI / floorf(points);
     size_t             numPoints = size_t(floorf(points));
-    float              angleDir = ((dir == VPath::Direction::CW) ? 1.0 : -1.0);
+    float              angleDir = ((dir == VPath::Direction::CW) ? 1.0f : -1.0f);
     bool               hasRoundness = false;
 
     roundness /= 100.0f;

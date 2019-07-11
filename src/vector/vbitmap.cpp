@@ -125,7 +125,7 @@ struct VBitmap::Impl {
                     green = (green * 255) / alpha;
                     blue = (blue * 255) / alpha;
                 }
-                int luminosity = (0.299 * red + 0.587 * green + 0.114 * blue);
+                int luminosity = (0.299f * red + 0.587f * green + 0.114f * blue);
                 *pixel = luminosity << 24;
                 pixel++;
             }

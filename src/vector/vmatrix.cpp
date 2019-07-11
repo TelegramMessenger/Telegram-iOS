@@ -510,8 +510,8 @@ VMatrix VMatrix::inverted(bool *invertible) const
         inv = !vIsZero(m11);
         inv &= !vIsZero(m22);
         if (inv) {
-            invert.m11 = 1. / m11;
-            invert.m22 = 1. / m22;
+            invert.m11 = 1.0f / m11;
+            invert.m22 = 1.0f / m22;
             invert.mtx = -mtx * invert.m11;
             invert.mty = -mty * invert.m22;
         }
@@ -553,7 +553,7 @@ bool VMatrix::fuzzyCompare(const VMatrix &o) const
            vCompare(mtx, o.mtx) && vCompare(mty, o.mty);
 }
 
-#define V_NEAR_CLIP 0.000001
+#define V_NEAR_CLIP 0.000001f
 #ifdef MAP
 #undef MAP
 #endif
@@ -687,7 +687,7 @@ VPointF VMatrix::map(const VPointF &p) const
         x = m11 * fx + m21 * fy + mtx;
         y = m12 * fx + m22 * fy + mty;
         if (t == MatrixType::Project) {
-            float w = 1. / (m13 * fx + m23 * fy + m33);
+            float w = 1.0f / (m13 * fx + m23 * fy + m33);
             x *= w;
             y *= w;
         }
