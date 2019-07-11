@@ -6843,23 +6843,22 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     }
                 })
             ]
-            
-            if let message = self.chatDisplayNode.historyNode.latestMessageInCurrentHistoryView(), !message.flags.contains(.Incoming) {
-                inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
-                    if let strongSelf = self {
-                        var canEdit = false
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                            if state.interfaceState.effectiveInputState.inputText.length == 0 && state.interfaceState.editMessage == nil {
-                                canEdit = true
-                            }
-                            return state
-                        })
-                        if canEdit {
-                            strongSelf.interfaceInteraction?.setupEditMessage(message.id)
-                        }
-                    }
-                }))
+        }
+        
+        var canEdit = false
+        self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+            if state.interfaceState.effectiveInputState.inputText.length == 0 && state.interfaceState.editMessage == nil {
+                canEdit = true
             }
+            return state
+        })
+        
+        if canEdit, let message = self.chatDisplayNode.historyNode.firstMessageForEditInCurrentHistoryView() {
+            inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.interfaceInteraction?.setupEditMessage(message.id)
+                }
+            }))
         }
         
         let otherShortcuts: [KeyShortcut] = [
