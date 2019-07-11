@@ -398,7 +398,7 @@ class LOTPaintDataItem : public LOTContentItem
 {
 public:
    LOTPaintDataItem(bool staticContent);
-   void addPathItems(std::vector<LOTPathDataItem *> &list, int startOffset);
+   void addPathItems(std::vector<LOTPathDataItem *> &list, size_t startOffset);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) override;
    void renderList(std::vector<VDrawable *> &list) final;
 protected:
@@ -488,7 +488,7 @@ public:
    LOTTrimItem(LOTTrimData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
    void update();
-   void addPathItems(std::vector<LOTPathDataItem *> &list, int startOffset);
+   void addPathItems(std::vector<LOTPathDataItem *> &list, size_t startOffset);
 private:
    bool pathDirty() const {
        for (auto &i : mPathItems) {

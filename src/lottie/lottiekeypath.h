@@ -38,7 +38,7 @@ private:
     bool isGlobstar(uint depth) const {return mKeys[depth] == "**";}
     bool isGlob(uint depth) const {return mKeys[depth] == "*";}
     bool endsWithGlobstar() const { return mKeys.back() == "**"; }
-    uint size() const {return mKeys.size() - 1;}
+    size_t size() const {return mKeys.size() - 1;}
 private:
     std::vector<std::string> mKeys;
 };

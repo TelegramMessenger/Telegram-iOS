@@ -647,9 +647,9 @@ static std::string convertFromBase64(const std::string &str)
 {
     // usual header look like "data:image/png;base64,"
     // so need to skip till ','.
-    int startIndex = str.find(",", 0);
+    size_t startIndex = str.find(",", 0);
     startIndex += 1;  // skip ","
-    int length = str.length() - startIndex;
+    size_t length = str.length() - startIndex;
 
     const char *b64Data = str.c_str() + startIndex;
 

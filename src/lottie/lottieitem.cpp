@@ -1095,7 +1095,7 @@ void LOTContentGroupItem::renderList(std::vector<VDrawable *> &list)
 void LOTContentGroupItem::processPaintItems(
     std::vector<LOTPathDataItem *> &list)
 {
-    int curOpCount = list.size();
+    size_t curOpCount = list.size();
     for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
         auto content = (*i).get();
         switch (content->type()) {
@@ -1121,7 +1121,7 @@ void LOTContentGroupItem::processPaintItems(
 
 void LOTContentGroupItem::processTrimItems(std::vector<LOTPathDataItem *> &list)
 {
-    int curOpCount = list.size();
+    size_t curOpCount = list.size();
     for (auto i = mContents.rbegin(); i != mContents.rend(); ++i) {
         auto content = (*i).get();
 
@@ -1320,7 +1320,7 @@ void LOTPaintDataItem::renderList(std::vector<VDrawable *> &list)
 }
 
 void LOTPaintDataItem::addPathItems(std::vector<LOTPathDataItem *> &list,
-                                    int                             startOffset)
+                                    size_t                          startOffset)
 {
     std::copy(list.begin() + startOffset, list.end(),
               back_inserter(mPathItems));
@@ -1539,7 +1539,7 @@ void LOTTrimItem::update()
 }
 
 void LOTTrimItem::addPathItems(std::vector<LOTPathDataItem *> &list,
-                               int                             startOffset)
+                               size_t                          startOffset)
 {
     std::copy(list.begin() + startOffset, list.end(),
               back_inserter(mPathItems));

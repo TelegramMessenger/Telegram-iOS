@@ -107,7 +107,7 @@ private:
         const std::vector<VPointF> &points() const { return m_points; }
         std::vector<VPointF>        m_points;
         std::vector<VPath::Element> m_elements;
-        unsigned int                m_segments;
+        size_t                      m_segments;
         VPointF                     mStartPoint;
         mutable float               mLength{0};
         mutable bool                mLengthDirty{true};

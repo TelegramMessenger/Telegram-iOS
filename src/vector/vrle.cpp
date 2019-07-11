@@ -384,7 +384,7 @@ static void rleIntersectWithRle(VRleHelper *tmp_clip, int clip_offset_x,
                                 VRleHelper *result)
 {
     VRle::Span *out = result->spans;
-    int         available = result->alloc;
+    size_t      available = result->alloc;
     VRle::Span *spans = tmp_obj->spans;
     VRle::Span *end = tmp_obj->spans + tmp_obj->size;
     VRle::Span *clipSpans = tmp_clip->spans;
@@ -459,7 +459,7 @@ static void rleIntersectWithRect(const VRect &clip, VRleHelper *tmp_obj,
                                  VRleHelper *result)
 {
     VRle::Span *out = result->spans;
-    int         available = result->alloc;
+    size_t      available = result->alloc;
     VRle::Span *spans = tmp_obj->spans;
     VRle::Span *end = tmp_obj->spans + tmp_obj->size;
     short       minx, miny, maxx, maxy;

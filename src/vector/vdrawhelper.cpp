@@ -137,9 +137,10 @@ bool VGradientCache::generateGradientColorTable(const VGradientStops &stops,
                                                 float                 opacity,
                                                 uint32_t *colorTable, int size)
 {
-    int                  dist, idist, pos = 0, i;
+    int                  dist, idist, pos = 0;
+    size_t i;
     bool                 alpha = false;
-    int                  stopCount = stops.size();
+    size_t               stopCount = stops.size();
     const VGradientStop *curr, *next, *start;
     uint32_t             curColor, nextColor;
     float                delta, t, incr, fpos;
