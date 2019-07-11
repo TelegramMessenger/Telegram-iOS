@@ -117,9 +117,9 @@ typedef enum
 typedef struct LOTMask {
     struct {
         const float *ptPtr;
-        int          ptCount;
+        size_t       ptCount;
         const char*  elmPtr;
-        int          elmCount;
+        size_t       elmCount;
     } mPath;
     LOTMaskType mMode;
     int mAlpha;
@@ -143,9 +143,9 @@ typedef struct LOTNode {
 
     struct {
         const float *ptPtr;
-        int          ptCount;
-        const char*  elmPtr;
-        int          elmCount;
+        size_t       ptCount;
+        const char  *elmPtr;
+        size_t       elmCount;
     } mPath;
 
     struct {
@@ -158,14 +158,14 @@ typedef struct LOTNode {
         LOTCapStyle  cap;
         LOTJoinStyle join;
         int       meterLimit;
-        float*    dashArray;
+        float    *dashArray;
         int       dashArraySize;
     } mStroke;
 
     struct {
-        LOTGradientType type;
+        LOTGradientType  type;
         LOTGradientStop *stopPtr;
-        unsigned int stopCount;
+        size_t           stopCount;
         struct {
             float x, y;
         } start, end, center, focal;
@@ -174,7 +174,7 @@ typedef struct LOTNode {
     } mGradient;
 
     struct {
-        unsigned char* data;
+        unsigned char *data;
         int width;
         int height;
         struct {
@@ -195,24 +195,24 @@ typedef struct LOTLayerNode {
 
     struct {
         LOTMask        *ptr;
-        unsigned int    size;
+        size_t          size;
     } mMaskList;
 
     struct {
         const float *ptPtr;
-        int          ptCount;
-        const char*  elmPtr;
-        int          elmCount;
+        size_t       ptCount;
+        const char  *elmPtr;
+        size_t       elmCount;
     } mClipPath;
 
     struct {
         struct LOTLayerNode   **ptr;
-        unsigned int          size;
+        size_t                  size;
     } mLayerList;
 
     struct {
         LOTNode        **ptr;
-        unsigned int   size;
+        size_t           size;
     } mNodeList;
 
     LOTMatteType mMatte;

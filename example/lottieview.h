@@ -409,7 +409,7 @@ public:
         const float *data = node->mPath.ptPtr;
         if (!data) return;
 
-        for (int i = 0; i < node->mPath.elmCount; i++) {
+        for (size_t i = 0; i < node->mPath.elmCount; i++) {
             switch (node->mPath.elmPtr[i]) {
             case 0:
                 evas_vg_shape_append_move_to(shape, data[0], data[1]);
