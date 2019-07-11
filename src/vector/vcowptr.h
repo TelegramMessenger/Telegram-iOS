@@ -19,7 +19,7 @@
 #ifndef VCOWPTR_H
 #define VCOWPTR_H
 
-#include <assert.h>
+#include <cassert>
 #include "vglobal.h"
 
 template <typename T>
@@ -30,9 +30,8 @@ class vcow_ptr {
         model() = default;
 
         template <class... Args>
-        explicit model(Args&&... args) : mValue(std::forward<Args>(args)...)
-        {
-        }
+        explicit model(Args&&... args) : mValue(std::forward<Args>(args)...){}
+        explicit model(const T& other) : mValue(other){}
 
         T mValue;
     };
@@ -54,7 +53,7 @@ public:
     }
 
     template <class... Args>
-    vcow_ptr(Args&&... args) : mModel(new model(std::forward<Args>(args)...))
+    explicit vcow_ptr(Args&&... args) : mModel(new model(std::forward<Args>(args)...))
     {
     }
 
@@ -71,7 +70,8 @@ public:
 
     auto operator=(const vcow_ptr& x) noexcept -> vcow_ptr&
     {
-        return *this = vcow_ptr(x);
+        *this = vcow_ptr(x);
+        return *this;
     }
 
     auto operator=(vcow_ptr&& x) noexcept -> vcow_ptr&
@@ -85,7 +85,7 @@ public:
 
     auto operator-> () const noexcept -> const element_type* { return &read(); }
 
-    int refCount() const noexcept
+    std::size_t refCount() const noexcept
     {
         assert(mModel);
 

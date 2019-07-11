@@ -14,7 +14,7 @@ install:
   - pip install meson==0.50.0 ninja
   - call "%VS140COMNTOOLS%\..\..\VC\vcvarsall.bat" %ARCH%
 build_script:
-  - meson -Dwarning_level=0 -Dwerror=false --backend=ninja --prefix=%cd%  build
+  - meson -Dwerror=false --backend=ninja --prefix=%cd%  build
   - where link
   - ninja -C build
 test_script:

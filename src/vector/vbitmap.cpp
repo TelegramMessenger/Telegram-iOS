@@ -17,7 +17,7 @@
  */
 
 #include "vbitmap.h"
-#include <string.h>
+#include <string>
 #include "vdrawhelper.h"
 #include "vglobal.h"
 
@@ -35,8 +35,12 @@ struct VBitmap::Impl {
     bool            mRoData;
 
     Impl() = delete;
+    Impl(Impl&&) = delete;
+    Impl(const Impl&) = delete;
+    Impl& operator=(Impl&&) = delete;
+    Impl& operator=(Impl&) = delete;
 
-    Impl(uint width, uint height, VBitmap::Format format)
+    explicit Impl(uint width, uint height, VBitmap::Format format)
         : mOwnData(true), mRoData(false)
     {
         reset(width, height, format);
@@ -55,24 +59,19 @@ struct VBitmap::Impl {
         mFormat = format;
         mStride = stride;
         mBytes = mStride * mHeight;
-        mData = reinterpret_cast<uchar *>(::operator new(mBytes));
+        mData = new uchar[mBytes];
     }
 
-    Impl(uchar *data, uint w, uint h, uint bytesPerLine, VBitmap::Format format)
-        : mOwnData(false), mRoData(false)
+    explicit Impl(uchar *data, uint w, uint h, uint bytesPerLine, VBitmap::Format format)
+        : mData(data), mWidth(w), mHeight(h), mStride(bytesPerLine),
+          mDepth(depth(format)), mFormat(format), mOwnData(false), mRoData(false)
     {
-        mWidth = w;
-        mHeight = h;
-        mFormat = format;
-        mStride = bytesPerLine;
         mBytes = mStride * mHeight;
-        mData = data;
-        mDepth = depth(format);
     }
 
     ~Impl()
     {
-        if (mOwnData && mData) ::operator delete(mData);
+        if (mOwnData && mData) delete[] mData;
     }
 
     uint            stride() const { return mStride; }
@@ -125,7 +124,7 @@ struct VBitmap::Impl {
                     green = (green * 255) / alpha;
                     blue = (blue * 255) / alpha;
                 }
-                int luminosity = (0.299f * red + 0.587f * green + 0.114f * blue);
+                int luminosity = int(0.299f * red + 0.587f * green + 0.114f * blue);
                 *pixel = luminosity << 24;
                 pixel++;
             }
@@ -195,7 +194,7 @@ uchar *VBitmap::data() const
 
 bool VBitmap::valid() const
 {
-    return mImpl ? true : false;
+    return (mImpl != nullptr);
 }
 
 VBitmap::Format VBitmap::format() const

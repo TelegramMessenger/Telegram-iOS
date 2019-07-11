@@ -131,7 +131,7 @@ bool LOTCompItem::update(int frameNo)
 
     float sx = float(viewPort.width()) / viewBox.width();
     float sy = float(viewPort.height()) / viewBox.height();
-    float scale = fmin(sx, sy);
+    float scale = std::min(sx, sy);
     float tx = (viewPort.width() - viewBox.width() * scale) * 0.5f;
     float ty = (viewPort.height() - viewBox.height() * scale) * 0.5f;
 
@@ -1340,7 +1340,7 @@ void LOTFillItem::updateRenderNode()
 {
     VColor color = mColor;
 
-    color.setAlpha(color.a * parentAlpha());
+    color.setAlpha(uchar(color.a * parentAlpha()));
     VBrush brush(color);
     mDrawable.setBrush(brush);
     mDrawable.setFillRule(mModel.fillRule());
@@ -1397,7 +1397,7 @@ void LOTStrokeItem::updateRenderNode()
 {
     VColor color = mColor;
 
-    color.setAlpha(color.a * parentAlpha());
+    color.setAlpha(uchar(color.a * parentAlpha()));
     VBrush brush(color);
     mDrawable.setBrush(brush);
     float scale =

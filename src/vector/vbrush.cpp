@@ -21,9 +21,7 @@
 V_BEGIN_NAMESPACE
 
 VGradient::VGradient(VGradient::Type type)
-    : mType(type),
-      mSpread(VGradient::Spread::Pad),
-      mMode(VGradient::Mode::Absolute)
+    : mType(type)
 {
     if (mType == Type::Linear)
         linear.x1 = linear.y1 = linear.x2 = linear.y2 = 0.0f;
@@ -41,7 +39,7 @@ VBrush::VBrush(const VColor &color) : mType(VBrush::Type::Solid), mColor(color)
 {
 }
 
-VBrush::VBrush(int r, int g, int b, int a)
+VBrush::VBrush(uchar r, uchar g, uchar b, uchar a)
     : mType(VBrush::Type::Solid), mColor(r, g, b, a)
 
 {

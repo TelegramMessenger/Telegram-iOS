@@ -250,8 +250,8 @@ public:
     }
 
     bool changed(int prevFrame, int curFrame) const {
-        int first = mKeyFrames.front().mStartFrame;
-        int last = mKeyFrames.back().mEndFrame;
+        auto first = mKeyFrames.front().mStartFrame;
+        auto last = mKeyFrames.back().mEndFrame;
 
         return !((first > prevFrame  && first > curFrame) ||
                  (last < prevFrame  && last < curFrame));
@@ -572,7 +572,7 @@ public:
     size_t frameAtPos(double pos) const {
         if (pos < 0) pos = 0;
         if (pos > 1) pos = 1;
-        return pos * frameDuration();
+        return size_t(pos * frameDuration());
     }
     long frameAtTime(double timeInSec) const {
         return frameAtPos(timeInSec / duration());
@@ -979,7 +979,7 @@ public:
    double duration() const {return mRoot->duration();}
    size_t totalFrame() const {return mRoot->totalFrame();}
    size_t frameDuration() const {return mRoot->frameDuration();}
-   size_t frameRate() const {return mRoot->frameRate();}
+   double frameRate() const {return mRoot->frameRate();}
    size_t startFrame() const {return mRoot->startFrame();}
    size_t endFrame() const {return mRoot->endFrame();}
    size_t frameAtPos(double pos) const {return mRoot->frameAtPos(pos);}

@@ -91,7 +91,7 @@ public:
         if (count == -1)  // isStatic
             return true;
         atomic.fetch_sub(1);
-        return --count;
+        return (--count == 0);
     }
     bool isShared() const
     {
@@ -263,14 +263,14 @@ public:
     VColor() = default;
     explicit VColor(uchar red, uchar green, uchar blue, uchar alpha = 255) noexcept
         :a(alpha), r(red), g(green), b(blue){}
-    inline int  red() const noexcept { return r; }
-    inline int  green() const noexcept { return g; }
-    inline int  blue() const noexcept { return b; }
-    inline int  alpha() const noexcept { return a; }
-    inline void setRed(int red) noexcept { r = red; }
-    inline void setGreen(int green) noexcept { g = green; }
-    inline void setBlue(int blue) noexcept { b = blue; }
-    inline void setAlpha(int alpha) noexcept { a = alpha; }
+    inline uchar  red() const noexcept { return r; }
+    inline uchar  green() const noexcept { return g; }
+    inline uchar  blue() const noexcept { return b; }
+    inline uchar  alpha() const noexcept { return a; }
+    inline void setRed(uchar red) noexcept { r = red; }
+    inline void setGreen(uchar green) noexcept { g = green; }
+    inline void setBlue(uchar blue) noexcept { b = blue; }
+    inline void setAlpha(uchar alpha) noexcept { a = alpha; }
     inline bool isOpaque() const { return a == 255; }
     inline bool operator==(const VColor &o) const
     {

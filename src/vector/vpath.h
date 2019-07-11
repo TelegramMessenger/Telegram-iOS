@@ -69,7 +69,7 @@ public:
     const std::vector<VPointF> &       points() const;
     void  clone(const VPath &srcPath);
     bool unique() const { return d.unique();}
-    int refCount() const { return d.refCount();}
+    size_t refCount() const { return d.refCount();}
 
 private:
     struct VPathData {

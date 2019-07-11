@@ -30,13 +30,13 @@ V_BEGIN_NAMESPACE
 class VRle {
 public:
     struct Span {
-        short  x;
-        short  y;
-        ushort len;
-        uchar  coverage;
+        short  x{0};
+        short  y{0};
+        ushort len{0};
+        uchar  coverage{0};
     };
-    typedef void (*VRleSpanCb)(size_t count, const VRle::Span *spans,
-                               void *userData);
+    using VRleSpanCb =  void (*)(size_t count, const VRle::Span *spans,
+                                 void *userData);
     bool  empty() const;
     VRect boundingRect() const;
     void setBoundingRect(const VRect &bbox);
@@ -46,7 +46,7 @@ public:
     void translate(const VPoint &p);
     void invert();
 
-    void operator*=(int alpha);
+    void operator*=(uchar alpha);
 
     void intersect(const VRect &r, VRleSpanCb cb, void *userData) const;
     void intersect(const VRle &rle, VRleSpanCb cb, void *userData) const;
@@ -59,7 +59,7 @@ public:
     static VRle toRle(const VRect &rect);
 
     bool unique() const {return d.unique();}
-    int refCount() const { return d.refCount();}
+    size_t refCount() const { return d.refCount();}
     void clone(const VRle &o);
 
 private:
@@ -75,7 +75,7 @@ private:
         void setBbox(const VRect &bbox) const;
         void  reset();
         void  translate(const VPoint &p);
-        void  operator*=(int alpha);
+        void  operator*=(uchar alpha);
         void  invert();
         void  opIntersect(const VRect &, VRle::VRleSpanCb, void *) const;
         void  opGeneric(const VRle::VRleData &, const VRle::VRleData &, OpCode code);
@@ -119,7 +119,7 @@ inline void VRle::invert()
     d.write().invert();
 }
 
-inline void VRle::operator*=(int alpha)
+inline void VRle::operator*=(uchar alpha)
 {
     d.write() *= alpha;
 }

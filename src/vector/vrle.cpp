@@ -31,9 +31,9 @@ V_BEGIN_NAMESPACE
 enum class Operation { Add, Xor };
 
 struct VRleHelper {
-    size_t      alloc;
-    size_t      size;
-    VRle::Span *spans;
+    size_t      alloc{0};
+    size_t      size{0};
+    VRle::Span *spans{nullptr};
 };
 static void rleIntersectWithRle(VRleHelper *, int, int, VRleHelper *,
                                 VRleHelper *);
@@ -150,7 +150,7 @@ void VRle::VRleData::invert()
     }
 }
 
-void VRle::VRleData::operator*=(int alpha)
+void VRle::VRleData::operator*=(uchar alpha)
 {
     alpha &= 0xff;
     for (auto &i : mSpans) {

@@ -27,14 +27,14 @@
 
 V_BEGIN_NAMESPACE
 
-typedef std::pair<float, VColor>   VGradientStop;
-typedef std::vector<VGradientStop> VGradientStops;
+using VGradientStop = std::pair<float, VColor>;
+using VGradientStops = std::vector<VGradientStop>;
 class VGradient {
 public:
     enum class Mode { Absolute, Relative };
     enum class Spread { Pad, Repeat, Reflect };
     enum class Type { Linear, Radial };
-    VGradient(VGradient::Type type);
+    explicit VGradient(VGradient::Type type);
     void setStops(const VGradientStops &stops);
     void setAlpha(float alpha) {mAlpha = alpha;}
     float alpha() const {return mAlpha;}
@@ -42,16 +42,16 @@ public:
 
 public:
     static constexpr int colorTableSize = 1024;
-    VGradient::Type      mType;
-    VGradient::Spread    mSpread;
-    VGradient::Mode      mMode;
+    VGradient::Type      mType{Type::Linear};
+    VGradient::Spread    mSpread{Spread::Pad};
+    VGradient::Mode      mMode{Mode::Absolute};
     VGradientStops       mStops;
     float                mAlpha{1.0};
     struct Linear{
-        float x1, y1, x2, y2;
+        float x1{0}, y1{0}, x2{0}, y2{0};
     };
     struct Radial{
-        float cx, cy, fx, fy, cradius, fradius;
+        float cx{0}, cy{0}, fx{0}, fy{0}, cradius{0}, fradius{0};
     };
     union {
         Linear linear;
@@ -64,10 +64,10 @@ class VBrush {
 public:
     enum class Type { NoBrush, Solid, LinearGradient, RadialGradient, Texture };
     VBrush() = default;
-    VBrush(const VColor &color);
-    VBrush(const VGradient *gradient);
-    VBrush(int r, int g, int b, int a);
-    VBrush(const VBitmap &texture);
+    explicit VBrush(const VColor &color);
+    explicit VBrush(const VGradient *gradient);
+    explicit VBrush(uchar r, uchar g, uchar b, uchar a);
+    explicit VBrush(const VBitmap &texture);
     inline VBrush::Type type() const { return mType; }
     void setMatrix(const VMatrix &m);
 public:
