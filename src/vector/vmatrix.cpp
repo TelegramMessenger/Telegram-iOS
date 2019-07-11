@@ -593,13 +593,13 @@ VRect VMatrix::map(const VRect &rect) const
 {
     VMatrix::MatrixType t = type();
     if (t <= MatrixType::Translate)
-        return rect.translated(std::round(mtx), std::round(mty));
+        return rect.translated(std::lround(mtx), std::lround(mty));
 
     if (t <= MatrixType::Scale) {
-        int x = std::round(m11 * rect.x() + mtx);
-        int y = std::round(m22 * rect.y() + mty);
-        int w = std::round(m11 * rect.width());
-        int h = std::round(m22 * rect.height());
+        int x = std::lround(m11 * rect.x() + mtx);
+        int y = std::lround(m22 * rect.y() + mty);
+        int w = std::lround(m11 * rect.width());
+        int h = std::lround(m22 * rect.height());
         if (w < 0) {
             w = -w;
             x -= w;
@@ -632,9 +632,9 @@ VRect VMatrix::map(const VRect &rect) const
         ymin = vMin(ymin, y);
         xmax = vMax(xmax, x);
         ymax = vMax(ymax, y);
-        return VRect(std::round(xmin), std::round(ymin),
-                     std::round(xmax) - std::round(xmin),
-                     std::round(ymax) - std::round(ymin));
+        return VRect(std::lround(xmin), std::lround(ymin),
+                     std::lround(xmax) - std::lround(xmin),
+                     std::lround(ymax) - std::lround(ymin));
     } else {
         // Not supported
         assert(0);
@@ -649,7 +649,7 @@ VRegion VMatrix::map(const VRegion &r) const
 
     if (t == MatrixType::Translate) {
         VRegion copy(r);
-        copy.translate(std::round(mtx), std::round(mty));
+        copy.translate(std::lround(mtx), std::lround(mty));
         return copy;
     }
 

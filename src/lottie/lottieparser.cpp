@@ -878,10 +878,10 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
             parseProperty(layer->extra()->mTimeRemap);
         } else if (0 == strcmp(key, "ip")) {
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
-            layer->mInFrame = std::round(GetDouble());
+            layer->mInFrame = std::lround(GetDouble());
         } else if (0 == strcmp(key, "op")) {
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
-            layer->mOutFrame = std::round(GetDouble());
+            layer->mOutFrame = std::lround(GetDouble());
         } else if (0 == strcmp(key, "st")) {
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
             layer->mStartFrame = GetDouble();
