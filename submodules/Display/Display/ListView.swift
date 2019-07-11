@@ -149,6 +149,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var rotated = false
     public final var experimentalSnapScrollToItem = false
     
+    public final var scrollEnabled: Bool = true {
+        didSet {
+            self.scroller.isScrollEnabled = self.scrollEnabled
+        }
+    }
+    
     private final var invisibleInset: CGFloat = 500.0
     public var preloadPages: Bool = true {
         didSet {
