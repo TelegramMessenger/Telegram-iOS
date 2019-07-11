@@ -83,7 +83,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     if !item.message.containsSecretMedia {
                         if telegramFile.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs {
                             if case .full = automaticDownload {
-                                automaticPlayback = true //item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
+                                automaticPlayback = true
                             } else {
                                 automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
                             }
