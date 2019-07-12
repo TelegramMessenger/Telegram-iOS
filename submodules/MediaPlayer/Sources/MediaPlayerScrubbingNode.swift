@@ -188,6 +188,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     public var playbackStatusUpdated: ((MediaPlayerPlaybackStatus?) -> Void)?
     public var playerStatusUpdated: ((MediaPlayerStatus?) -> Void)?
     public var seek: ((Double) -> Void)?
+    public var update: ((Double?, CGFloat) -> Void)?
     
     private let _scrubbingTimestamp = Promise<Double?>(nil)
     public var scrubbingTimestamp: Signal<Double?, NoError> {
@@ -378,6 +379,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                                 strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
                                 strongSelf.scrubbingTimestampValue = statusValue.timestamp
                                 strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
+                                strongSelf.update?(strongSelf.scrubbingTimestampValue, CGFloat(statusValue.timestamp / statusValue.duration))
                                 strongSelf.updateProgressAnimations()
                             }
                         }
@@ -385,8 +387,10 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                     handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
                         if let strongSelf = self {
                             if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
-                                strongSelf.scrubbingTimestampValue = max(0.0, min(statusValue.duration, scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)))
+                                let timestampValue = max(0.0, min(statusValue.duration, scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)))
+                                strongSelf.scrubbingTimestampValue = timestampValue
                                 strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
+                                strongSelf.update?(timestampValue, CGFloat(timestampValue / statusValue.duration))
                                 strongSelf.updateProgressAnimations()
                             }
                         }
@@ -408,6 +412,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                                 }
                                 strongSelf.seek?(scrubbingTimestampValue)
                             }
+                            strongSelf.update?(nil, 0.0)
                             strongSelf.updateProgressAnimations()
                         }
                     }
