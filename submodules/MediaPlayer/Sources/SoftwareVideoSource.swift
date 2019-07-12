@@ -3,7 +3,6 @@ import UIKit
 import CoreMedia
 import SwiftSignalKit
 import FFMpeg
-import UniversalMediaPlayer
 
 private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<SoftwareVideoSource>.fromOpaque(userData!).takeUnretainedValue()
@@ -46,7 +45,7 @@ private final class SoftwareVideoStream {
     }
 }
 
-final class SoftwareVideoSource {
+public final class SoftwareVideoSource {
     private var readingError = false
     private var videoStream: SoftwareVideoStream?
     private var avIoContext: FFMpegAVIOContext?
@@ -55,7 +54,7 @@ final class SoftwareVideoSource {
     fileprivate let fd: Int32?
     fileprivate let size: Int32
     
-    init(path: String) {
+    public init(path: String) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
         var s = stat()
@@ -102,10 +101,10 @@ final class SoftwareVideoSource {
             
             let codecId = avFormatContext.codecId(atStreamIndex: streamIndex)
             
-            let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: streamIndex, defaultTimeBase: CMTimeMake(1, 40000))
+            let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: streamIndex, defaultTimeBase: CMTimeMake(value: 1, timescale: 40000))
             let (fps, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
             
-            let duration = CMTimeMake(avFormatContext.duration(atStreamIndex: streamIndex), timebase.timescale)
+            let duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
             
             let metrics = avFormatContext.metricsForStream(at: streamIndex)
             
@@ -154,14 +153,14 @@ final class SoftwareVideoSource {
                 if let videoStream = videoStream, Int(packet.streamIndex) == videoStream.index {
                     let packetPts = packet.pts
                     
-                    let pts = CMTimeMake(packetPts, videoStream.timebase.timescale)
-                    let dts = CMTimeMake(packet.dts, videoStream.timebase.timescale)
+                    let pts = CMTimeMake(value: packetPts, timescale: videoStream.timebase.timescale)
+                    let dts = CMTimeMake(value: packet.dts, timescale: videoStream.timebase.timescale)
                     
                     let duration: CMTime
                     
                     let frameDuration = packet.duration
                     if frameDuration != 0 {
-                        duration = CMTimeMake(frameDuration * videoStream.timebase.value, videoStream.timebase.timescale)
+                        duration = CMTimeMake(value: frameDuration * videoStream.timebase.value, timescale: videoStream.timebase.timescale)
                     } else {
                         duration = videoStream.fps
                     }
@@ -193,7 +192,7 @@ final class SoftwareVideoSource {
         return (frames.first, endOfStream)
     }
     
-    func readFrame(maxPts: CMTime?) -> (MediaTrackFrame?, CGFloat, CGFloat, Bool) {
+    public func readFrame(maxPts: CMTime?) -> (MediaTrackFrame?, CGFloat, CGFloat, Bool) {
         if let videoStream = self.videoStream {
             let (decodableFrame, loop) = self.readDecodableFrame()
             if let decodableFrame = decodableFrame {
@@ -207,6 +206,30 @@ final class SoftwareVideoSource {
             }
         } else {
             return (nil, 0.0, 1.0, false)
+        }
+    }
+    
+    public func readImage() -> (UIImage?, CGFloat, CGFloat, Bool) {
+        if let videoStream = self.videoStream {
+            for _ in 0 ..< 10 {
+                let (decodableFrame, loop) = self.readDecodableFrame()
+                if let decodableFrame = decodableFrame {
+                    if let renderedFrame = videoStream.decoder.render(frame: decodableFrame) {
+                        return (renderedFrame, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+                    }
+                }
+            }
+            return (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), true)
+        } else {
+            return (nil, 0.0, 1.0, false)
+        }
+    }
+    
+    public func seek(timestamp: Double) {
+        if let stream = self.videoStream, let avFormatContext = self.avFormatContext {
+            let pts = CMTimeMakeWithSeconds(timestamp, preferredTimescale: stream.timebase.timescale)
+            avFormatContext.seekFrame(forStreamIndex: Int32(stream.index), pts: pts.value)
+            stream.decoder.reset()
         }
     }
 }
