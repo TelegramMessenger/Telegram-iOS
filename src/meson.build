@@ -1,5 +1,5 @@
 cc = meson.get_compiler('cpp')
-compiler_flags =[]
+compiler_flags = []
 if (cc.get_id() != 'msvc')
     compiler_flags = ['-fno-exceptions', '-fno-rtti',
                       '-fno-unwind-tables' , '-fno-asynchronous-unwind-tables',
@@ -9,6 +9,8 @@ endif
 subdir('vector')
 subdir('lottie')
 subdir('binding')
+
+compiler_flags += ['-DLOT_BUILD=1']
 
 rlottie_lib_dep  = [ vector_dep, lottie_dep, binding_dep, dependency('threads')]
 

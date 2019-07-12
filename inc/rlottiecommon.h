@@ -19,6 +19,10 @@
 #ifndef _RLOTTIE_COMMON_H_
 #define _RLOTTIE_COMMON_H_
 
+#ifdef LOT_EXPORT
+  #undef LOT_EXPORT
+#endif
+
 #if defined _WIN32 || defined __CYGWIN__
   #ifdef LOT_BUILD
     #define LOT_EXPORT __declspec(dllexport)
@@ -225,5 +229,8 @@ typedef struct LOTLayerNode {
 /**
  * @}
  */
+
+#undef LOT_EXPORT
+#define LOT_EXPORT
 
 #endif  // _RLOTTIE_COMMON_H_

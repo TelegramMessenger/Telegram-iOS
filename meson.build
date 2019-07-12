@@ -5,7 +5,6 @@ project('rlottie',
         license : 'Apache')
 
 add_project_arguments('-DDEMO_DIR="@0@/example/resource/"'.format(meson.current_source_dir()), language : 'cpp')
-add_project_arguments('-DLOT_BUILD', language: 'cpp')
 
 inc = [include_directories('inc')]
 config_dir = include_directories('.')

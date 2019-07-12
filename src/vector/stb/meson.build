@@ -1,11 +1,14 @@
 
 source_file = ['stb_image.cpp']
 
+compiler_flags = ['-DLOT_BUILD=1']
+
 if get_option('module') == true
     rlottie_image_loader_lib = shared_library('rlottie-image-loader',
                                               source_file,
                                               include_directories : [include_directories('.'), config_dir],
                                               install : true,
+                                              cpp_args : compiler_flags,
                                               gnu_symbol_visibility : 'hidden',
                                              )
     cc = meson.get_compiler('cpp')
