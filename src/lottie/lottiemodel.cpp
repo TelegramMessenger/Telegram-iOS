@@ -198,13 +198,13 @@ int LOTGStrokeData::getDashInfo(int frameNo, float *array) const
 void LOTGradient::populate(VGradientStops &stops, int frameNo)
 {
     LottieGradient gradData = mGradient.value(frameNo);
-    int            size = gradData.mGradient.size();
+    int            size = int(gradData.mGradient.size());
     float *        ptr = gradData.mGradient.data();
     int            colorPoints = mColorPoints;
     if (colorPoints == -1) {  // for legacy bodymovin (ref: lottie-android)
         colorPoints = size / 4;
     }
-    int    opacityArraySize = size - colorPoints * 4;
+    int opacityArraySize = size - colorPoints * 4;
     float *opacityPtr = ptr + (colorPoints * 4);
     stops.clear();
     int j = 0;

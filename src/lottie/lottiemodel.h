@@ -575,7 +575,7 @@ public:
         return size_t(pos * frameDuration());
     }
     long frameAtTime(double timeInSec) const {
-        return frameAtPos(timeInSec / duration());
+        return long(frameAtPos(timeInSec / duration()));
     }
     size_t totalFrame() const {return mEndFrame - mStartFrame;}
     long frameDuration() const {return mEndFrame - mStartFrame -1;}

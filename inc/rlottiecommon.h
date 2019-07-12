@@ -175,8 +175,8 @@ typedef struct LOTNode {
 
     struct {
         unsigned char *data;
-        int width;
-        int height;
+        size_t width;
+        size_t height;
         struct {
            float m11; float m12; float m13;
            float m21; float m22; float m23;

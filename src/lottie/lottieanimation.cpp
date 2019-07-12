@@ -86,7 +86,7 @@ bool AnimationImpl::update(size_t frameNo, const VSize &size)
     if (frameNo < mModel->startFrame()) frameNo = mModel->startFrame();
 
     mCompItem->resize(size);
-    return mCompItem->update(frameNo);
+    return mCompItem->update(int(frameNo));
 }
 
 Surface AnimationImpl::render(size_t frameNo, const Surface &surface)
@@ -99,7 +99,7 @@ Surface AnimationImpl::render(size_t frameNo, const Surface &surface)
 
     mRenderInProgress.store(true);
     update(frameNo,
-           VSize(surface.drawRegionWidth(), surface.drawRegionHeight()));
+           VSize(int(surface.drawRegionWidth()), int(surface.drawRegionHeight())));
     mCompItem->render(surface);
     mRenderInProgress.store(false);
 
@@ -297,7 +297,7 @@ size_t Animation::frameAtPos(double pos)
 const LOTLayerNode *Animation::renderTree(size_t frameNo, size_t width,
                                           size_t height) const
 {
-    return d->renderTree(frameNo, VSize(width, height));
+    return d->renderTree(frameNo, VSize(int(width), int(height)));
 }
 
 std::future<Surface> Animation::render(size_t frameNo, Surface surface)

@@ -158,13 +158,13 @@ struct VImageLoader::Impl {
         return createBitmap(data, width, height, n);
     }
 
-    VBitmap load(const char *imageData, int len)
+    VBitmap load(const char *imageData, size_t len)
     {
         if (!imageFromData) return VBitmap();
 
         int            width, height, n;
         unsigned char *data =
-            imageFromData(imageData, len, &width, &height, &n, 4);
+            imageFromData(imageData, static_cast<int>(len), &width, &height, &n, 4);
 
         if (!data) {
             return VBitmap();
@@ -222,7 +222,7 @@ VBitmap VImageLoader::load(const char *fileName)
     return mImpl->load(fileName);
 }
 
-VBitmap VImageLoader::load(const char *data, int len)
+VBitmap VImageLoader::load(const char *data, size_t len)
 {
     return mImpl->load(data, len);
 }
