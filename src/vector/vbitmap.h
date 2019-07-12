@@ -34,19 +34,20 @@ public:
     };
 
     VBitmap() = default;
-    VBitmap(uint w, uint h, VBitmap::Format format);
-    VBitmap(uchar *data, uint w, uint h, uint bytesPerLine, VBitmap::Format format);
+    VBitmap(size_t w, size_t h, VBitmap::Format format);
+    VBitmap(uchar *data, size_t w, size_t h, size_t bytesPerLine, VBitmap::Format format);
 
-    void reset(uint w, uint h, VBitmap::Format format=Format::ARGB32_Premultiplied);
-    uint          stride() const;
-    uint          width() const;
-    uint          height() const;
-    uint          depth() const;
+    void reset(size_t w, size_t h, VBitmap::Format format=Format::ARGB32_Premultiplied);
+    size_t          stride() const;
+    size_t          width() const;
+    size_t          height() const;
+    size_t          depth() const;
     VBitmap::Format format() const;
     bool            valid() const;
     uchar *         data();
     uchar *         data() const;
-
+    VRect           rect() const;
+    VSize           size() const;
     void    fill(uint pixel);
     void    updateLuma();
 private:

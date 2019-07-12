@@ -28,6 +28,7 @@ class VRect {
 public:
     VRect() = default;
     VRect(int x, int y, int w, int h):x1(x),y1(y),x2(x+w),y2(y+h){}
+    explicit VRect(VPoint pt, VSize sz):VRect(pt.x(), pt.y(), sz.width(), sz.height()){}
     explicit VRect(const VRectF &r);
     V_CONSTEXPR bool empty() const {return x1 >= x2 || y1 >= y2;}
     V_CONSTEXPR int left() const {return x1;}
@@ -115,9 +116,13 @@ inline bool VRect::contains(const VRect &r, bool proper) const
 class VRectF {
 public:
     VRectF() = default;
-    VRectF(float x, float y, float w, float h):x1(x),y1(y),x2(x+w),y2(y+h){}
-    explicit VRectF(const VRect &r):x1(float(r.left())),y1(float(r.top())),
-                                    x2(float(r.right())),y2(float(r.bottom())){}
+
+    explicit VRectF(float x, float y, float w, float h):x1(x),y1(y),x2(x+w),y2(y+h){}
+
+    explicit VRectF(int x, int y, int w, int h):x1(float(x)),y1(float(y)),
+                                       x2(float(x+w)),y2(float(y+h)){}
+
+    explicit VRectF(const VRect &r):VRectF(r.x(), r.y(), r.width(), r.height()){}
 
     V_CONSTEXPR bool  empty() const {return x1 >= x2 || y1 >= y2;}
     V_CONSTEXPR float left() const {return x1;}

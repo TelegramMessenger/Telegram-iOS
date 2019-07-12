@@ -224,5 +224,5 @@ VBitmap VImageLoader::load(const char *fileName)
 
 VBitmap VImageLoader::load(const char *data, size_t len)
 {
-    return mImpl->load(data, len);
+    return mImpl->load(data, int(len));
 }

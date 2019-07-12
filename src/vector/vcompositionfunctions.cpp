@@ -124,7 +124,7 @@ void comp_func_SourceOver(uint32_t *dest, const uint32_t *src, int length,
          * dest = source' + dest ( 1- source'a)
          */
         for (int i = 0; i < length; ++i) {
-            uint s = BYTE_MUL(src[i], const_alpha);
+            s = BYTE_MUL(src[i], const_alpha);
             sia = vAlpha(~s);
             dest[i] = s + BYTE_MUL(dest[i], sia);
         }

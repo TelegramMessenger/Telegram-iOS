@@ -28,8 +28,7 @@ struct VBitmap::Impl {
     uint            mWidth{0};
     uint            mHeight{0};
     uint            mStride{0};
-    uint            mBytes{0};
-    uint            mDepth{0};
+    uchar           mDepth{0};
     VBitmap::Format mFormat{VBitmap::Format::Invalid};
     bool            mOwnData;
     bool            mRoData;
@@ -40,49 +39,54 @@ struct VBitmap::Impl {
     Impl& operator=(Impl&&) = delete;
     Impl& operator=(Impl&) = delete;
 
-    explicit Impl(uint width, uint height, VBitmap::Format format)
+    VRect rect() const
+    {
+        return VRect(0, 0, mWidth, mHeight);
+    }
+
+    VSize size() const
+    {
+        return VSize(mWidth, mHeight);
+    }
+
+    explicit Impl(size_t width, size_t height, VBitmap::Format format)
         : mOwnData(true), mRoData(false)
     {
         reset(width, height, format);
     }
 
-    void reset(uint width, uint height, VBitmap::Format format)
+    void reset(size_t width, size_t height, VBitmap::Format format)
     {
-        if (mOwnData && mData) delete (mData);
+        if (mOwnData && mData) delete[] mData;
+
+        mWidth = uint(width);
+        mHeight = uint(height);
+        mFormat = format;
 
         mDepth = depth(format);
-        uint stride = ((width * mDepth + 31) >> 5)
+        mStride = ((mWidth * mDepth + 31) >> 5)
                       << 2;  // bytes per scanline (must be multiple of 4)
-
-        mWidth = width;
-        mHeight = height;
-        mFormat = format;
-        mStride = stride;
-        mBytes = mStride * mHeight;
-        mData = new uchar[mBytes];
+        mData = new uchar[mStride * mHeight];
     }
 
-    explicit Impl(uchar *data, uint w, uint h, uint bytesPerLine, VBitmap::Format format)
-        : mData(data), mWidth(w), mHeight(h), mStride(bytesPerLine),
-          mDepth(depth(format)), mFormat(format), mOwnData(false), mRoData(false)
-    {
-        mBytes = mStride * mHeight;
-    }
+    explicit Impl(uchar *data, size_t w, size_t h, size_t bytesPerLine, VBitmap::Format format)
+        : mData(data), mWidth(uint(w)), mHeight(uint(h)), mStride(uint(bytesPerLine)),
+          mDepth(depth(format)), mFormat(format), mOwnData(false), mRoData(false){}
 
     ~Impl()
     {
         if (mOwnData && mData) delete[] mData;
     }
 
-    uint            stride() const { return mStride; }
-    uint            width() const { return mWidth; }
-    uint            height() const { return mHeight; }
+    size_t            stride() const { return mStride; }
+    size_t            width() const { return mWidth; }
+    size_t            height() const { return mHeight; }
     VBitmap::Format format() const { return mFormat; }
     uchar *         data() { return mData; }
 
-    static uint depth(VBitmap::Format format)
+    static uchar depth(VBitmap::Format format)
     {
-        uint depth = 1;
+        uchar depth = 1;
         switch (format) {
         case VBitmap::Format::Alpha8:
             depth = 8;
@@ -132,14 +136,14 @@ struct VBitmap::Impl {
     }
 };
 
-VBitmap::VBitmap(uint width, uint height, VBitmap::Format format)
+VBitmap::VBitmap(size_t width, size_t height, VBitmap::Format format)
 {
     if (width <= 0 || height <= 0 || format == Format::Invalid) return;
 
     mImpl = std::make_shared<Impl>(width, height, format);
 }
 
-VBitmap::VBitmap(uchar *data, uint width, uint height, uint bytesPerLine,
+VBitmap::VBitmap(uchar *data, size_t width, size_t height, size_t bytesPerLine,
                  VBitmap::Format format)
 {
     if (!data || width <= 0 || height <= 0 || bytesPerLine <= 0 ||
@@ -149,7 +153,7 @@ VBitmap::VBitmap(uchar *data, uint width, uint height, uint bytesPerLine,
     mImpl = std::make_shared<Impl>(data, width, height, bytesPerLine, format);
 }
 
-void VBitmap::reset(uint w, uint h, VBitmap::Format format)
+void VBitmap::reset(size_t w, size_t h, VBitmap::Format format)
 {
     if (mImpl) {
         if (w == mImpl->width() && h == mImpl->height() &&
@@ -162,22 +166,22 @@ void VBitmap::reset(uint w, uint h, VBitmap::Format format)
     }
 }
 
-uint VBitmap::stride() const
+size_t VBitmap::stride() const
 {
     return mImpl ? mImpl->stride() : 0;
 }
 
-uint VBitmap::width() const
+size_t VBitmap::width() const
 {
     return mImpl ? mImpl->width() : 0;
 }
 
-uint VBitmap::height() const
+size_t VBitmap::height() const
 {
     return mImpl ? mImpl->height() : 0;
 }
 
-uint VBitmap::depth() const
+size_t VBitmap::depth() const
 {
     return mImpl ? mImpl->mDepth : 0;
 }
@@ -190,6 +194,16 @@ uchar *VBitmap::data()
 uchar *VBitmap::data() const
 {
     return mImpl ? mImpl->data() : nullptr;
+}
+
+VRect VBitmap::rect() const
+{
+    return mImpl ? mImpl->rect() : VRect();
+}
+
+VSize VBitmap::size() const
+{
+    return mImpl ? mImpl->size() : VSize();
 }
 
 bool VBitmap::valid() const

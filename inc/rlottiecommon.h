@@ -122,7 +122,7 @@ typedef struct LOTMask {
         size_t       elmCount;
     } mPath;
     LOTMaskType mMode;
-    int mAlpha;
+    unsigned char mAlpha;
 }LOTMask;
 
 typedef enum
@@ -154,10 +154,10 @@ typedef struct LOTNode {
 
     struct {
         unsigned char  enable;
-        int       width;
+        float       width;
         LOTCapStyle  cap;
         LOTJoinStyle join;
-        int       meterLimit;
+        float       meterLimit;
         float    *dashArray;
         int       dashArraySize;
     } mStroke;
@@ -217,7 +217,7 @@ typedef struct LOTLayerNode {
 
     LOTMatteType mMatte;
     int          mVisible;
-    int          mAlpha;
+    unsigned char mAlpha;
     const char  *name;
 
 } LOTLayerNode;

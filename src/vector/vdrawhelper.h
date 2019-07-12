@@ -83,22 +83,22 @@ public:
     inline uchar *scanLine(int y)
     {
         assert(y >= 0);
-        assert(y < mHeight);
+        assert(size_t(y) < mHeight);
         return mBuffer + y * mBytesPerLine;
     }
 
-    int width() const { return mWidth; }
-    int height() const { return mHeight; }
-    int bytesPerLine() const { return mBytesPerLine; }
-    int bytesPerPixel() const { return mBytesPerPixel; }
+    size_t width() const { return mWidth; }
+    size_t height() const { return mHeight; }
+    size_t bytesPerLine() const { return mBytesPerLine; }
+    size_t bytesPerPixel() const { return mBytesPerPixel; }
 
     VBitmap::Format           mFormat{VBitmap::Format::ARGB32_Premultiplied};
 private:
-    int    mWidth{0};
-    int    mHeight{0};
-    int    mBytesPerLine{0};
-    int    mBytesPerPixel{0};
-    uchar *mBuffer{nullptr};
+    size_t    mWidth{0};
+    size_t    mHeight{0};
+    size_t    mBytesPerLine{0};
+    size_t    mBytesPerPixel{0};
+    uchar    *mBuffer{nullptr};
 };
 
 struct VGradientData {

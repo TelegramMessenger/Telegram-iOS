@@ -61,12 +61,10 @@ void VPainterImpl::drawRle(const VRle &rle, const VRle &clip)
 
 static void fillRect(const VRect &r, VSpanData *data)
 {
-    int x1, x2, y1, y2;
-
-    x1 = std::max(r.x(), 0);
-    x2 = std::min(r.x() + r.width(), data->mDrawableSize.width());
-    y1 = std::max(r.y(), 0);
-    y2 = std::min(r.y() + r.height(), data->mDrawableSize.height());
+    auto x1 = std::max(r.x(), 0);
+    auto x2 = std::min(r.x() + r.width(), data->mDrawableSize.width());
+    auto y1 = std::max(r.y(), 0);
+    auto y2 = std::min(r.y() + r.height(), data->mDrawableSize.height());
 
     if (x2 <= x1 || y2 <= y1) return;
 
@@ -78,9 +76,9 @@ static void fillRect(const VRect &r, VSpanData *data)
         int n = std::min(nspans, y2 - y);
         int i = 0;
         while (i < n) {
-            spans[i].x = x1;
-            spans[i].len = x2 - x1;
-            spans[i].y = y + i;
+            spans[i].x = short(x1);
+            spans[i].len = ushort(x2 - x1);
+            spans[i].y = short(y + i);
             spans[i].coverage = 255;
             ++i;
         }
@@ -97,8 +95,8 @@ void VPainterImpl::drawBitmapUntransform(const VRect &  target,
 {
     mSpanData.initTexture(&bitmap, const_alpha, VBitmapData::Plain, source);
     if (!mSpanData.mUnclippedBlendFunc) return;
-    mSpanData.dx = -target.x();
-    mSpanData.dy = -target.y();
+    mSpanData.dx = float(-target.x());
+    mSpanData.dy = float(-target.y());
 
     VRect rr = source.translated(target.x(), target.y());
 
@@ -165,7 +163,7 @@ void VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap,
 {
     if (!bitmap.valid()) return;
 
-    drawBitmap(VRect(point.x(), point.y(), bitmap.width(), bitmap.height()),
+    drawBitmap(VRect(point, bitmap.size()),
                bitmap, source, const_alpha);
 }
 
@@ -189,8 +187,8 @@ void VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap,
 {
     if (!bitmap.valid()) return;
 
-    drawBitmap(VRect(point.x(), point.y(), bitmap.width(), bitmap.height()),
-               bitmap, VRect(0, 0, bitmap.width(), bitmap.height()),
+    drawBitmap(VRect(point, bitmap.size()),
+               bitmap, bitmap.rect(),
                const_alpha);
 }
 
@@ -199,7 +197,7 @@ void VPainter::drawBitmap(const VRect &rect, const VBitmap &bitmap,
 {
     if (!bitmap.valid()) return;
 
-    drawBitmap(rect, bitmap, VRect(0, 0, bitmap.width(), bitmap.height()),
+    drawBitmap(rect, bitmap, bitmap.rect(),
                const_alpha);
 }
 
