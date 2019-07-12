@@ -53,22 +53,24 @@ if get_option('test') == true
 endif
 
 
-cmake_bin = find_program('cmake', required: false)
-if cmake_bin.found()
-    cmake = import('cmake')
-    cmake.write_basic_package_version_file(
-        version: meson.project_version(),
-        name: 'rlottie',
-    )
+if host_machine.system() != 'windows'
+    cmake_bin = find_program('cmake', required: false)
+    if cmake_bin.found()
+        cmake = import('cmake')
+        cmake.write_basic_package_version_file(
+            version: meson.project_version(),
+            name: 'rlottie',
+        )
 
-    cmakeconf = configuration_data()
-    cmakeconf.set('VERSION', meson.project_version())
+        cmakeconf = configuration_data()
+        cmakeconf.set('VERSION', meson.project_version())
 
-    cmake.configure_package_config_file(
-        input: meson.current_source_dir() + '/cmake/rlottieConfig.cmake.in',
-        name: 'rlottie',
-        configuration: cmakeconf,
-    )
+        cmake.configure_package_config_file(
+            input: meson.current_source_dir() + '/cmake/rlottieConfig.cmake.in',
+            name: 'rlottie',
+            configuration: cmakeconf,
+        )
+    endif
 endif
 
 
