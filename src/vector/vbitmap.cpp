@@ -18,47 +18,42 @@
 
 #include "vbitmap.h"
 #include <string>
+#include <memory>
 #include "vdrawhelper.h"
 #include "vglobal.h"
 
 V_BEGIN_NAMESPACE
 
 struct VBitmap::Impl {
-    uchar *         mData{nullptr};
+    std::unique_ptr<uchar[]> mOwnData{nullptr};
+    uchar *         mRoData{nullptr};
     uint            mWidth{0};
     uint            mHeight{0};
     uint            mStride{0};
     uchar           mDepth{0};
     VBitmap::Format mFormat{VBitmap::Format::Invalid};
-    bool            mOwnData;
-    bool            mRoData;
-
-    Impl() = delete;
-    Impl(Impl&&) = delete;
-    Impl(const Impl&) = delete;
-    Impl& operator=(Impl&&) = delete;
-    Impl& operator=(Impl&) = delete;
-
-    VRect rect() const
-    {
-        return VRect(0, 0, mWidth, mHeight);
-    }
-
-    VSize size() const
-    {
-        return VSize(mWidth, mHeight);
-    }
 
     explicit Impl(size_t width, size_t height, VBitmap::Format format)
-        : mOwnData(true), mRoData(false)
     {
         reset(width, height, format);
     }
 
+    explicit Impl(uchar *data, size_t w, size_t h, size_t bytesPerLine, VBitmap::Format format)
+        : mRoData(data), mWidth(uint(w)), mHeight(uint(h)), mStride(uint(bytesPerLine)),
+          mDepth(depth(format)), mFormat(format){}
+
+    VRect   rect() const { return VRect(0, 0, mWidth, mHeight);}
+    VSize   size() const { return VSize(mWidth, mHeight); }
+    size_t  stride() const { return mStride; }
+    size_t  width() const { return mWidth; }
+    size_t  height() const { return mHeight; }
+    uchar * data() { return mRoData ? mRoData : mOwnData.get(); }
+
+    VBitmap::Format format() const { return mFormat; }
+
     void reset(size_t width, size_t height, VBitmap::Format format)
     {
-        if (mOwnData && mData) delete[] mData;
-
+        mRoData = nullptr;
         mWidth = uint(width);
         mHeight = uint(height);
         mFormat = format;
@@ -66,23 +61,8 @@ struct VBitmap::Impl {
         mDepth = depth(format);
         mStride = ((mWidth * mDepth + 31) >> 5)
                       << 2;  // bytes per scanline (must be multiple of 4)
-        mData = new uchar[mStride * mHeight];
+        mOwnData = std::make_unique<uchar[]>(mStride * mHeight);
     }
-
-    explicit Impl(uchar *data, size_t w, size_t h, size_t bytesPerLine, VBitmap::Format format)
-        : mData(data), mWidth(uint(w)), mHeight(uint(h)), mStride(uint(bytesPerLine)),
-          mDepth(depth(format)), mFormat(format), mOwnData(false), mRoData(false){}
-
-    ~Impl()
-    {
-        if (mOwnData && mData) delete[] mData;
-    }
-
-    size_t            stride() const { return mStride; }
-    size_t            width() const { return mWidth; }
-    size_t            height() const { return mHeight; }
-    VBitmap::Format format() const { return mFormat; }
-    uchar *         data() { return mData; }
 
     static uchar depth(VBitmap::Format format)
     {
@@ -108,9 +88,9 @@ struct VBitmap::Impl {
     void updateLuma()
     {
         if (mFormat != VBitmap::Format::ARGB32_Premultiplied) return;
-
+        auto dataPtr = data();
         for (uint col = 0; col < mHeight; col++) {
-            uint *pixel = (uint *)(mData + mStride * col);
+            uint *pixel = (uint *)(dataPtr + mStride * col);
             for (uint row = 0; row < mWidth; row++) {
                 int alpha = vAlpha(*pixel);
                 if (alpha == 0) {
