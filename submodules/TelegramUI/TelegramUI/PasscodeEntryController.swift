@@ -160,7 +160,7 @@ final public class PasscodeEntryController: ViewController {
                     }).start()
                 }
                 
-                let isMainApp = !strongSelf.context.sharedContext.applicationBindings.isMainApp
+                let isMainApp = strongSelf.context.sharedContext.applicationBindings.isMainApp
                 let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { settings in
                     if isMainApp {
                         return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
