@@ -38,6 +38,11 @@ public func navigateToChatController(navigationController: NavigationController,
             if activateInput {
                 controller.activateInput()
             }
+            if let botStart = botStart {
+                controller.updateChatPresentationInterfaceState(interactive: false) { state -> ChatPresentationInterfaceState in
+                    return state.updatedBotStartPayload(botStart.payload)
+                }
+            }
             found = true
             break
         }
@@ -48,6 +53,11 @@ public func navigateToChatController(navigationController: NavigationController,
         let controller: ChatController
         if let chatController = chatController {
             controller = chatController
+            if let botStart = botStart {
+                controller.updateChatPresentationInterfaceState(interactive: false) { state -> ChatPresentationInterfaceState in
+                    return state.updatedBotStartPayload(botStart.payload)
+                }
+            }
         } else {
             controller = ChatController(context: context, chatLocation: chatLocation, messageId: messageId, botStart: botStart)
         }
