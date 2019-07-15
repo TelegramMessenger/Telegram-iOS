@@ -376,7 +376,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                 if badgeCount > 0 {
                     label = .badge(compactNumericCountString(Int(badgeCount), decimalSeparator: dateTimeFormat.decimalSeparator))
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, account: account, peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.switchToAccount(account.id)
                 }, setPeerIdWithRevealedOptions: { lhs, rhs in
                     var lhsAccountId: AccountRecordId?
@@ -392,7 +392,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                     arguments.removeAccount(account.id)
                 }, tag: SettingsEntryTag.account(account.id))
             case let .addAccount(theme, text):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, alwaysPlain: false, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
                     arguments.addAccount()
                 })
             case let .proxy(theme, image, text, value):
@@ -544,6 +544,10 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
     
     weak var switchController: TabBarAccountSwitchController?
     
+    override var navigationBarRequiresEntireLayoutUpdate: Bool {
+        return false
+    }
+
     init(currentContext: AccountContext, contextValue: Promise<AccountContext>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?, accountsAndPeers: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError>) {
         self.sharedContext = currentContext.sharedContext
         self.contextValue = contextValue
@@ -1435,7 +1439,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             return state
         }
     }
-    
+
     setDisplayNavigationBarImpl = { [weak controller] display in
         controller?.setDisplayNavigationBar(display, transition: .animated(duration: 0.5, curve: .spring))
     }

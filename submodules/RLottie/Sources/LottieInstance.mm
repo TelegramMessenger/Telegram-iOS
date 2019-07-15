@@ -20,6 +20,17 @@
         
         _frameCount = (int32_t)_animation->totalFrame();
         _frameRate = (int32_t)_animation->frameRate();
+        
+        size_t width = 0;
+        size_t height = 0;
+        _animation->size(width, height);
+        
+        if (width != height || (width != 100 && width != 512)) {
+            return nil;
+        }
+        if ((_frameRate > 30 && _frameRate != 60) || _animation->duration() > 4.5) {
+            return nil;
+        }
     }
     return self;
 }

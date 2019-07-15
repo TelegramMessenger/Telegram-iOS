@@ -63,11 +63,23 @@ private func generateThemeIconImage(theme: PresentationThemeReference, accentCol
             case .nightGrayscale:
                 background = UIColor(rgb: 0x000000)
                 incomingBubble = UIColor(rgb: 0x1f1f1f)
-                outgoingBubble = UIColor(rgb: 0x313131)
+                if let accentColorValue = accentColor {
+                    let accentColor = UIColor(rgb: UInt32(bitPattern: accentColorValue))
+                    outgoingBubble = accentColor
+                } else {
+                    outgoingBubble = UIColor(rgb: 0x313131)
+                }
             case .nightAccent:
-                background = UIColor(rgb: 0x18222d)
-                incomingBubble = UIColor(rgb: 0x32475e)
-                outgoingBubble = UIColor(rgb: 0x3d6a97)
+                if let accentColorValue = accentColor {
+                    let accentColor = UIColor(rgb: UInt32(bitPattern: accentColorValue))
+                    background = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+                    incomingBubble = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
+                    outgoingBubble = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
+                } else {
+                    background = UIColor(rgb: 0x18222d)
+                    incomingBubble = UIColor(rgb: 0x32475e)
+                    outgoingBubble = UIColor(rgb: 0x3d6a97)
+                }
         }
             
         context.setFillColor(background.cgColor)
@@ -97,16 +109,22 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     let themes: [PresentationThemeReference]
     let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     let currentTheme: PresentationThemeReference
-    let updated: (PresentationThemeReference) -> Void
+    let updatedTheme: (PresentationThemeReference) -> Void
+    let currentColor: PresentationThemeAccentColor?
+    let updatedColor: (PresentationThemeAccentColor) -> Void
+    let displayColorSlider: Bool
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updated: @escaping (PresentationThemeReference) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, currentColor: PresentationThemeAccentColor?, updatedColor: @escaping (PresentationThemeAccentColor) -> Void, displayColorSlider: Bool, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.themes = themes
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.currentTheme = currentTheme
-        self.updated = updated
+        self.updatedTheme = updatedTheme
+        self.currentColor = currentColor
+        self.updatedColor = updatedColor
+        self.displayColorSlider = displayColorSlider
         self.tag = tag
         self.sectionId = sectionId
     }
@@ -166,6 +184,8 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         
         super.init()
         
+        self.allowsGroupOpacity = true
+        
         self.addSubnode(self.iconNode)
         self.addSubnode(self.overlayNode)
         self.addSubnode(self.textNode)
@@ -205,7 +225,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
 
 
 private let textFont = Font.regular(11.0)
-private let itemSize = Font.regular(11.0)
+private let selectedTextFont = Font.bold(11.0)
 
 class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
@@ -214,6 +234,8 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     
     private let scrollNode: ASScrollNode
     private var nodes: [ThemeSettingsThemeItemIconNode] = []
+    
+    private let colorSlider: ThemeSettingsColorSliderNode
     
     private var item: ThemeSettingsThemeItem?
     private var layoutParams: ListViewItemLayoutParams?
@@ -234,15 +256,26 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         
         self.scrollNode = ASScrollNode()
         
+        self.colorSlider = ThemeSettingsColorSliderNode()
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.scrollNode)
+        self.addSubnode(self.colorSlider)
     }
     
     override func didLoad() {
         super.didLoad()
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsHorizontalScrollIndicator = false
+        
+        self.colorSlider.view.disablesInteractiveTransitionGestureRecognizer = true
+        
+        self.colorSlider.valueChanged = { [weak self] value in
+            if let strongSelf = self, let item = strongSelf.item, let currentColor = item.currentColor {
+                item.updatedColor(PresentationThemeAccentColor(baseColor: currentColor.baseColor, value: value))
+            }
+        }
     }
     
     private func scrollToNode(_ node: ThemeSettingsThemeItemIconNode, animated: Bool) {
@@ -308,6 +341,8 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
                     strongSelf.scrollNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: CGSize(width: layoutSize.width, height: layoutSize.height))
+                    strongSelf.colorSlider.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layoutSize.width, height: layoutSize.height))
+                    strongSelf.colorSlider.updateLayout(size: strongSelf.colorSlider.frame.size, transition: .immediate)
                     
                     let nodeInset: CGFloat = 4.0
                     let nodeSize = CGSize(width: 116.0, height: 112.0)
@@ -341,18 +376,17 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                                 case .day:
                                     name = item.strings.Appearance_ThemeCarouselDay
                                 case .nightGrayscale:
-                                    name = item.strings.Appearance_ThemeCarouselNight
+                                    name = "Night" //item.strings.Appearance_ThemeCarouselNight
                                 case .nightAccent:
-                                    name = item.strings.Appearance_ThemeCarouselNightBlue
+                                    name = "Tinted Night" //item.strings.Appearance_ThemeCarouselNightBlue
                             }
                         } else {
                             name = nil
                         }
                         
-                        
                         if let name = name {
-                            imageNode.setup(theme: item.theme, icon: generateThemeIconImage(theme: theme, accentColor: item.themeSpecificAccentColors[theme.index]?.color), title: NSAttributedString(string: name, font: textFont, textColor: selected ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: { [weak self, weak imageNode] in
-                                item.updated(theme)
+                            imageNode.setup(theme: item.theme, icon: generateThemeIconImage(theme: theme, accentColor: item.themeSpecificAccentColors[theme.index]?.color), title: NSAttributedString(string: name, font: selected ?  selectedTextFont : textFont, textColor: selected ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: { [weak self, weak imageNode] in
+                                item.updatedTheme(theme)
                                 if let imageNode = imageNode {
                                     self?.scrollToNode(imageNode, animated: true)
                                 }
@@ -375,6 +409,23 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     if updated, let selectedNode = selectedNode {
                         strongSelf.scrollToNode(selectedNode, animated: false)
                     }
+                    
+                    let transition: ContainedViewLayoutTransition
+                    if currentItem == nil {
+                        transition = .immediate
+                    } else {
+                        transition = .animated(duration: 0.3, curve: .easeInOut)
+                    }
+                    
+                    let previousBaseColor = strongSelf.colorSlider.baseColor
+                    let newBaseColor = UIColor(rgb: UInt32(bitPattern: item.currentColor?.baseColor.colorValue ?? 0))
+                    strongSelf.colorSlider.baseColor = newBaseColor
+                    if previousBaseColor != newBaseColor {
+                        strongSelf.colorSlider.value = item.currentColor?.value ?? 0.5
+                    }
+                    
+                    transition.updateAlpha(node: strongSelf.scrollNode, alpha: item.displayColorSlider ? 0.0 : 1.0)
+                    transition.updateAlpha(node: strongSelf.colorSlider, alpha: item.displayColorSlider ? 1.0 : 0.0)
                 }
             })
         }

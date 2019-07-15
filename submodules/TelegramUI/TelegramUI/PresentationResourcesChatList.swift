@@ -217,10 +217,10 @@ struct PresentationResourcesChatList {
         switch type {
             case .regular:
                 key = PresentationResourceKey.chatListScamRegularIcon
-                color = theme.chat.bubble.incomingScamColor
+                color = theme.chat.message.incoming.scamColor
             case .outgoing:
                 key = PresentationResourceKey.chatListScamOutgoingIcon
-                color = theme.chat.bubble.outgoingScamColor
+                color = theme.chat.message.outgoing.scamColor
             case .service:
                 key = PresentationResourceKey.chatListScamServiceIcon
                 color = theme.chat.serviceMessage.components.withDefaultWallpaper.scam

@@ -9,11 +9,23 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
 
+private final class ContactsControllerNodeView: UITracingLayerView, PreviewingHostView {
+    var previewingDelegate: PreviewingHostViewDelegate? {
+        return PreviewingHostViewDelegate(controllerForLocation: { [weak self] sourceView, point in
+            return self?.controller?.previewingController(from: sourceView, for: point)
+        }, commitController: { [weak self] controller in
+            self?.controller?.previewingCommit(controller)
+        })
+    }
+    
+    weak var controller: ContactsController?
+}
+
 final class ContactsControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode
     
     private let context: AccountContext
-    private var searchDisplayController: SearchDisplayController?
+    private(set) var searchDisplayController: SearchDisplayController?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -27,8 +39,11 @@ final class ContactsControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, sortOrder: Signal<ContactsSortOrder, NoError>, present: @escaping (ViewController, Any?) -> Void) {
+    weak var controller: ContactsController?
+    
+    init(context: AccountContext, sortOrder: Signal<ContactsSortOrder, NoError>, present: @escaping (ViewController, Any?) -> Void, controller: ContactsController) {
         self.context = context
+        self.controller = controller
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -55,7 +70,7 @@ final class ContactsControllerNode: ASDisplayNode {
         super.init()
         
         self.setViewBlock({
-            return UITracingLayerView()
+            return ContactsControllerNodeView()
         })
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
@@ -93,9 +108,23 @@ final class ContactsControllerNode: ASDisplayNode {
         self.presentationDataDisposable?.dispose()
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        (self.view as? ContactsControllerNodeView)?.controller = self.controller
+    }
+    
     private func updateThemeAndStrings() {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.searchDisplayController?.updatePresentationData(self.presentationData)
+    }
+    
+    func scrollToTop() {
+        if let contentNode = self.searchDisplayController?.contentNode as? ContactsSearchContainerNode {
+            contentNode.scrollToTop()
+        } else {
+            self.contactListNode.scrollToTop()
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -78,6 +78,7 @@
 		09797873210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */; };
 		0979787C210642CB0077D77F /* WebEmbedPlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */; };
 		0979787E210646C00077D77F /* YoutubeEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */; };
+		097A581722D4C3FC0078B73C /* ThemeSettingsColorSliderNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097A581622D4C3FC0078B73C /* ThemeSettingsColorSliderNode.swift */; };
 		09874E4F21078FA100E190B8 /* Generic.html in Resources */ = {isa = PBXBuildFile; fileRef = 0979788321065F8C0077D77F /* Generic.html */; };
 		09874E5021078FA100E190B8 /* GenericUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 0979788821065F8C0077D77F /* GenericUserScript.js */; };
 		09874E5121078FA100E190B8 /* Instagram.html in Resources */ = {isa = PBXBuildFile; fileRef = 0979788421065F8C0077D77F /* Instagram.html */; };
@@ -461,7 +462,7 @@
 		D079FCE91F06A76C0038FADE /* Notices.swift in Sources */ = {isa = PBXBuildFile; fileRef = D079FCE81F06A76C0038FADE /* Notices.swift */; };
 		D07A33B722C578AC00F6D622 /* Tuple.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07A33B622C578AC00F6D622 /* Tuple.swift */; };
 		D07ABBA5202A14BC003671DE /* LegacyImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07ABBA4202A14BC003671DE /* LegacyImagePicker.swift */; };
-		D07ABBAB202A1BD1003671DE /* LegacyWallpaperEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07ABBAA202A1BD1003671DE /* LegacyWallpaperEditor.swift */; };
+		D07ABBAB202A1BD1003671DE /* LegacyWallpaperPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07ABBAA202A1BD1003671DE /* LegacyWallpaperPicker.swift */; };
 		D07BCBFE1F2B792300ED97AA /* LegacyComponents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D07BCBFD1F2B792300ED97AA /* LegacyComponents.framework */; };
 		D07E413B208A432100FCA8F0 /* ChatListTitleProxyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E413A208A432100FCA8F0 /* ChatListTitleProxyNode.swift */; };
 		D07E413D208A494D00FCA8F0 /* ProxyServerActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E413C208A494D00FCA8F0 /* ProxyServerActionSheetController.swift */; };
@@ -1009,7 +1010,6 @@
 		D0EC6DC11EB9F58900EBF1C3 /* ChatMediaInputTrendingItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AEE1E9FF881006F2541 /* ChatMediaInputTrendingItem.swift */; };
 		D0EC6DC21EB9F58900EBF1C3 /* ChatMediaInputStickerPackItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E41DB55D0A00C6B04F /* ChatMediaInputStickerPackItem.swift */; };
 		D0EC6DC31EB9F58900EBF1C3 /* ChatMediaInputStickerGridItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08C36821DB66AD40064C744 /* ChatMediaInputStickerGridItem.swift */; };
-		D0EC6DC51EB9F58900EBF1C3 /* SoftwareVideoSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002A0D01E9B99F500A81812 /* SoftwareVideoSource.swift */; };
 		D0EC6DC61EB9F58900EBF1C3 /* MultiplexedSoftwareVideoSourceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002A0D21E9BBE6700A81812 /* MultiplexedSoftwareVideoSourceManager.swift */; };
 		D0EC6DC71EB9F58900EBF1C3 /* SampleBufferPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002A0D41E9BD48400A81812 /* SampleBufferPool.swift */; };
 		D0EC6DC81EB9F58900EBF1C3 /* MultiplexedVideoNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002A0D61E9BD92100A81812 /* MultiplexedVideoNode.swift */; };
@@ -1310,6 +1310,7 @@
 		0979788621065F8C0077D77F /* TwitchUserScript.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = TwitchUserScript.js; sourceTree = "<group>"; };
 		0979788721065F8C0077D77F /* Youtube.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = Youtube.html; sourceTree = "<group>"; };
 		0979788821065F8C0077D77F /* GenericUserScript.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = GenericUserScript.js; sourceTree = "<group>"; };
+		097A581622D4C3FC0078B73C /* ThemeSettingsColorSliderNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsColorSliderNode.swift; sourceTree = "<group>"; };
 		09874E3A21075BF400E190B8 /* VimeoEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VimeoEmbedImplementation.swift; sourceTree = "<group>"; };
 		09874E4021075C1700E190B8 /* GenericEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenericEmbedImplementation.swift; sourceTree = "<group>"; };
 		098CF79122B924E200AF6134 /* ThemeSettingsAccentColorItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsAccentColorItem.swift; sourceTree = "<group>"; };
@@ -1423,7 +1424,6 @@
 		9F06830A21A404C4001D8EDB /* NotificationExceptionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionSettingsController.swift; sourceTree = "<group>"; };
 		D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapResourceToAvatarSizes.swift; sourceTree = "<group>"; };
 		D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrepareSecretThumbnailData.swift; sourceTree = "<group>"; };
-		D002A0D01E9B99F500A81812 /* SoftwareVideoSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVideoSource.swift; sourceTree = "<group>"; };
 		D002A0D21E9BBE6700A81812 /* MultiplexedSoftwareVideoSourceManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiplexedSoftwareVideoSourceManager.swift; sourceTree = "<group>"; };
 		D002A0D41E9BD48400A81812 /* SampleBufferPool.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SampleBufferPool.swift; sourceTree = "<group>"; };
 		D002A0D61E9BD92100A81812 /* MultiplexedVideoNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiplexedVideoNode.swift; sourceTree = "<group>"; };
@@ -1863,7 +1863,7 @@
 		D07A7DA21D957671005BCD27 /* ListMessageSnippetItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListMessageSnippetItemNode.swift; sourceTree = "<group>"; };
 		D07A7DA41D95783C005BCD27 /* ListMessageNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListMessageNode.swift; sourceTree = "<group>"; };
 		D07ABBA4202A14BC003671DE /* LegacyImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyImagePicker.swift; sourceTree = "<group>"; };
-		D07ABBAA202A1BD1003671DE /* LegacyWallpaperEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWallpaperEditor.swift; sourceTree = "<group>"; };
+		D07ABBAA202A1BD1003671DE /* LegacyWallpaperPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWallpaperPicker.swift; sourceTree = "<group>"; };
 		D07BCBFD1F2B792300ED97AA /* LegacyComponents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LegacyComponents.framework; path = "../LegacyComponents/build/Debug-iphoneos/LegacyComponents.framework"; sourceTree = "<group>"; };
 		D07CFF731DCA207200761F81 /* PeerSelectionController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerSelectionController.swift; sourceTree = "<group>"; };
 		D07CFF751DCA224100761F81 /* PeerSelectionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerSelectionControllerNode.swift; sourceTree = "<group>"; };
@@ -3073,7 +3073,6 @@
 				D01C06B41FBB7720001561AB /* ChatMediaInputSettingsItem.swift */,
 				D021E0E41DB55D0A00C6B04F /* ChatMediaInputStickerPackItem.swift */,
 				D08C36821DB66AD40064C744 /* ChatMediaInputStickerGridItem.swift */,
-				D002A0D01E9B99F500A81812 /* SoftwareVideoSource.swift */,
 				D002A0D21E9BBE6700A81812 /* MultiplexedSoftwareVideoSourceManager.swift */,
 				D002A0D41E9BD48400A81812 /* SampleBufferPool.swift */,
 				D002A0D61E9BD92100A81812 /* MultiplexedVideoNode.swift */,
@@ -3355,6 +3354,7 @@
 				D06F31E52135A41C001A0F12 /* ThemeSettingsBrightnessItem.swift */,
 				09A218F422A15F1400DE6898 /* ThemeSettingsAppIconItem.swift */,
 				098CF79122B924E200AF6134 /* ThemeSettingsAccentColorItem.swift */,
+				097A581622D4C3FC0078B73C /* ThemeSettingsColorSliderNode.swift */,
 				090E777822A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift */,
 				D06E4C322134A59700088087 /* ThemeAccentColorActionSheet.swift */,
 				D06E4C342134AE3C00088087 /* ThemeAutoNightSettingsController.swift */,
@@ -3494,7 +3494,7 @@
 				D0CFBB851FD715E700B65C0D /* LegacyHTTPOperationImpl.swift */,
 				D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */,
 				D07ABBA4202A14BC003671DE /* LegacyImagePicker.swift */,
-				D07ABBAA202A1BD1003671DE /* LegacyWallpaperEditor.swift */,
+				D07ABBAA202A1BD1003671DE /* LegacyWallpaperPicker.swift */,
 				D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */,
 				D097C26B20DD1EA5007BB4B8 /* OverlayStatusController.swift */,
 				09F799F921C3542D00820234 /* LegacyWebSearchGallery.swift */,
@@ -5781,6 +5781,7 @@
 				D0E9BA231F05577700F079A4 /* STPCard.m in Sources */,
 				D0EC6D841EB9F58800EBF1C3 /* ChatHistoryEntry.swift in Sources */,
 				D00817DC22B47A14008A895F /* ManageSharedAccountInfo.swift in Sources */,
+				097A581722D4C3FC0078B73C /* ThemeSettingsColorSliderNode.swift in Sources */,
 				D0EC6D851EB9F58800EBF1C3 /* ChatHistoryLocation.swift in Sources */,
 				D0EC6D861EB9F58800EBF1C3 /* ChatAvatarNavigationNode.swift in Sources */,
 				D0EC6D871EB9F58800EBF1C3 /* ChatTitleView.swift in Sources */,
@@ -5939,7 +5940,6 @@
 				D0E9BAE81F0574FF00F079A4 /* STPCustomer.m in Sources */,
 				D0C0B59F1EE082F5000F4D2C /* ChatSearchInputPanelNode.swift in Sources */,
 				D079FCD91F05A5550038FADE /* BotCheckoutPasswordEntryController.swift in Sources */,
-				D0EC6DC51EB9F58900EBF1C3 /* SoftwareVideoSource.swift in Sources */,
 				0962E66121B3512500245FD9 /* WebSearchController.swift in Sources */,
 				D0EC6DC61EB9F58900EBF1C3 /* MultiplexedSoftwareVideoSourceManager.swift in Sources */,
 				D0EC6DC71EB9F58900EBF1C3 /* SampleBufferPool.swift in Sources */,
@@ -6311,7 +6311,7 @@
 				D056CD741FF2996B00880D28 /* ExternalMusicAlbumArtResources.swift in Sources */,
 				D0F0AAE41EC21AAA005EE2A5 /* CallControllerButtonsNode.swift in Sources */,
 				D0EC6E7A1EB9F58900EBF1C3 /* DebugController.swift in Sources */,
-				D07ABBAB202A1BD1003671DE /* LegacyWallpaperEditor.swift in Sources */,
+				D07ABBAB202A1BD1003671DE /* LegacyWallpaperPicker.swift in Sources */,
 				09E2D9F1226F214000EA0AA4 /* EmojiResources.swift in Sources */,
 				D0EC6E7B1EB9F58900EBF1C3 /* DebugAccountsController.swift in Sources */,
 				D093D8262069A31700BC3599 /* FormControllerItem.swift in Sources */,

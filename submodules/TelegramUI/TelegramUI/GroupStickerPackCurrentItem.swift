@@ -171,7 +171,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             var updatedNotFoundImage: UIImage?
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
-                updatedNotFoundImage = generateTintedImage(image: UIImage(bundleImageName: "Peer Info/GroupStickerPackNotFound"), color: item.theme.list.freeMonoIcon)
+                updatedNotFoundImage = generateTintedImage(image: UIImage(bundleImageName: "Peer Info/GroupStickerPackNotFound"), color: item.theme.list.freeMonoIconColor)
             }
             
             let rightInset: CGFloat = params.rightInset

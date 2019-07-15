@@ -237,87 +237,6 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
         return nil
     }
     
-    public func currentWallpaperInfo() -> TGWallpaperInfo! {
-        if let legacyContext = legacyContext {
-            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
-            switch presentationData.chatWallpaper {
-                case .builtin:
-                    return TGBuiltinWallpaperInfo()
-                case let .color(color):
-                    return TGColorWallpaperInfo(color: UInt32(bitPattern: color))
-                case let .image(representations, _):
-                    if let resource = largestImageRepresentation(representations)?.resource, let path = legacyContext.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
-                        return TGCustomImageWallpaperInfo(image: image)
-                    } else {
-                        return TGBuiltinWallpaperInfo()
-                    }
-                case let .file(file):
-                    if file.isPattern {
-                        if let color = file.settings.color {
-                            return TGColorWallpaperInfo(color: UInt32(bitPattern: color))
-                        } else {
-                            return TGBuiltinWallpaperInfo()
-                        }
-                    }
-                    else if let path = legacyContext.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
-                        return TGCustomImageWallpaperInfo(image: image)
-                    } else {
-                        return TGBuiltinWallpaperInfo()
-                    }
-            }
-        } else {
-            return TGBuiltinWallpaperInfo()
-        }
-    }
-    
-    public func currentWallpaperImage() -> UIImage! {
-        if let legacyContext = legacyContext {
-            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
-            switch presentationData.chatWallpaper {
-                case .builtin:
-                    return nil
-                case let .color(color):
-                    return generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-                        if color == 0 {
-                            context.setFillColor(UIColor(rgb: 0x222222).cgColor)
-                        } else {
-                            context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
-                        }
-                        context.fill(CGRect(origin: CGPoint(), size: size))
-                    })
-                case let .image(representations, _):
-                    if let resource = largestImageRepresentation(representations)?.resource, let path = legacyContext.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
-                        return image
-                    } else {
-                        return nil
-                    }
-                case let .file(file):
-                    if file.isPattern {
-                        if let color = file.settings.color {
-                            return generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-                                if color == 0 {
-                                    context.setFillColor(UIColor(rgb: 0x222222).cgColor)
-                                } else {
-                                    context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
-                                }
-                                context.fill(CGRect(origin: CGPoint(), size: size))
-                            })
-                        } else {
-                            return nil
-                        }
-                    } else {
-                        if let path = legacyContext.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
-                            return image
-                        } else {
-                            return nil
-                        }
-                    }
-            }
-        } else {
-            return nil
-        }
-    }
-    
     public func sharedMediaImageProcessingThreadPool() -> SThreadPool! {
         return nil
     }
@@ -434,7 +353,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
         }
         
         let theme = presentationTheme
-        return TGCheckButtonPallete(defaultBackgroundColor: theme.chat.bubble.selectionControlFillColor, accentBackgroundColor: theme.chat.bubble.selectionControlFillColor, defaultBorderColor: theme.chat.bubble.selectionControlBorderColor, mediaBorderColor: theme.chat.bubble.selectionControlBorderColor, chatBorderColor: theme.chat.bubble.selectionControlBorderColor, check: theme.chat.bubble.selectionControlForegroundColor, blueColor: theme.chat.bubble.selectionControlFillColor, barBackgroundColor: theme.chat.bubble.selectionControlFillColor)
+        return TGCheckButtonPallete(defaultBackgroundColor: theme.chat.message.selectionControlColors.fillColor, accentBackgroundColor: theme.chat.message.selectionControlColors.fillColor, defaultBorderColor: theme.chat.message.selectionControlColors.strokeColor, mediaBorderColor: theme.chat.message.selectionControlColors.strokeColor, chatBorderColor: theme.chat.message.selectionControlColors.strokeColor, check: theme.chat.message.selectionControlColors.foregroundColor, blueColor: theme.chat.message.selectionControlColors.fillColor, barBackgroundColor: theme.chat.message.selectionControlColors.fillColor)
     }
 }
 

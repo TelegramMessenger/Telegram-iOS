@@ -1523,12 +1523,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         switch self.chatPresentationInterfaceState.inputMode {
-            case .none:
-                break
-            default:
-                self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-                    return (.none, state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
-                })
+        case .none:
+            break
+        case .inputButtons:
+            self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                return (.none, state.keyboardButtonsMessage?.id ?? state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+            })
+        default:
+            self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                return (.none, state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+            })
         }
         self.searchNavigationNode?.deactivate()
     }

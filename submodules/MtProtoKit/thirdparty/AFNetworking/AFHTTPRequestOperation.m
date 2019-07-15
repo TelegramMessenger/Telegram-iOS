@@ -84,9 +84,6 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
     return self;
 }
 
-- (void)dealloc {
-}
-
 - (NSHTTPURLResponse *)response {
     return (NSHTTPURLResponse *)[super response];
 }
@@ -176,8 +173,8 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
     }];
 }
 
-- (void)setCompletionBlockWithSuccess:(void (^)(AFHTTPRequestOperation *operation, id responseObject))success
-                              failure:(void (^)(AFHTTPRequestOperation *operation, NSError *error))failure
+- (void)setCompletionBlockWithSuccess:(void (^)(NSOperation *operation, id responseObject))success
+                              failure:(void (^)(NSOperation *operation, NSError *error))failure
 {
     self.completionBlock = ^ {
         if ([self isCancelled]) {

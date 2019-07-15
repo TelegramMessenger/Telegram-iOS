@@ -155,7 +155,30 @@
                 _textureVertices[7] = 0.0f;
             }
             break;
-            
+        case AVCaptureVideoOrientationPortraitUpsideDown:
+            if (!_mirror)
+            {
+                _textureVertices[0] = 1.0f - centerOffset;
+                _textureVertices[1] = 0.0f;
+                _textureVertices[2] = 1.0f - centerOffset;
+                _textureVertices[3] = 1.0f;
+                _textureVertices[4] = centerOffset;
+                _textureVertices[5] = 0.0f;
+                _textureVertices[6] = centerOffset;
+                _textureVertices[7] = 1.0f;
+            }
+            else
+            {
+                _textureVertices[0] = centerOffset;
+                _textureVertices[1] = 1.0f;
+                _textureVertices[2] = centerOffset;
+                _textureVertices[3] = 0.0f;
+                _textureVertices[4] = 1.0f - centerOffset;
+                _textureVertices[5] = 1.0f;
+                _textureVertices[6] = 1.0f - centerOffset;
+                _textureVertices[7] = 0.0f;
+            }
+            break;
         default:
             break;
     }

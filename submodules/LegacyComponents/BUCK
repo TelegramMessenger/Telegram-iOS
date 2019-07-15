@@ -310,10 +310,8 @@ apple_library(
         'LegacyComponents/TGPassportScanController.h',
         'LegacyComponents/TGPassportOCR.h',
         'LegacyComponents/TGPassportMRZ.h',
-        'LegacyComponents/TGPasscodeEntryController.h',
         'LegacyComponents/TGPassportICloud.h',
         'LegacyComponents/TGEmbedPlayerView.h',
-        'LegacyComponents/TGWallpaperInfo.h',
         'LegacyComponents/LegacyHTTPRequestOperation.h',
 
         'LegacyComponents/TGAttachmentCarouselItemView.h',
@@ -342,14 +340,9 @@ apple_library(
         'LegacyComponents/TGTooltipView.h',
 
         'LegacyComponents/TGCheckButtonView.h',
-        'LegacyComponents/TGBuiltinWallpaperInfo.h',
-        'LegacyComponents/TGRemoteWallpaperInfo.h',
-        'LegacyComponents/TGColorWallpaperInfo.h',
-        'LegacyComponents/TGCustomImageWallpaperInfo.h',
         'LegacyComponents/TGClipboardMenu.h',
         'LegacyComponents/TGImagePickerController.h',
         'LegacyComponents/TGLegacyCameraController.h',
-        'LegacyComponents/TGWallpaperController.h',
         'LegacyComponents/TGProxyWindow.h',
         'LegacyComponents/TGIconSwitchView.h',
 

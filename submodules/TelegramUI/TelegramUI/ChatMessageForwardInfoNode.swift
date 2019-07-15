@@ -44,7 +44,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             
             switch type {
                 case let .bubble(incoming):
-                    titleColor = incoming ? presentationData.theme.theme.chat.bubble.incomingAccentTextColor : presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
+                    titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     completeSourceString = strings.Message_ForwardedMessage(peerString)
                 case .standalone:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)

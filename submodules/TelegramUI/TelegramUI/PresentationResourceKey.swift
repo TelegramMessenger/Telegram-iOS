@@ -208,9 +208,6 @@ enum PresentationResourceKey: Int32 {
     
     case chatBubbleMapPinImage
     
-    case chatSelectionButtonChecked
-    case chatSelectionButtonUnchecked
-    
     case callListOutgoingIcon
     case callListInfoButton
     

@@ -134,6 +134,9 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.player.attachPlayerNode(self.playerNode)
         
         self.dimensions = fileReference.media.dimensions
+        if let dimensions = self.dimensions {
+            self.dimensionsPromise.set(dimensions)
+        }
         
         super.init()
         

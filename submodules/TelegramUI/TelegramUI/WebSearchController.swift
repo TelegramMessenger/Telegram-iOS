@@ -10,6 +10,9 @@ import TelegramUIPreferences
 
 func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
     return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset)
+    |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
+        return .single(nil)
+    }
     |> mapToSignal { results -> Signal<ChatContextResultCollection?, NoError> in
         var collection = existingResults
         var updated: Bool = false
@@ -144,7 +147,7 @@ final class WebSearchController: ViewController {
         }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme).withUpdatedSeparatorColor(presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
-        self.statusBar.statusBarStyle = presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {

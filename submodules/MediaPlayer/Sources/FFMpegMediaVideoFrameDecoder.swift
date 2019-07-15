@@ -1,8 +1,21 @@
 import CoreMedia
 import Accelerate
 import FFMpeg
+import Accelerate
 
 private let bufferCount = 32
+
+private let deviceColorSpace: CGColorSpace = {
+    if #available(iOSApplicationExtension 9.3, iOS 9.3, *) {
+        if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
+            return colorSpace
+        } else {
+            return CGColorSpaceCreateDeviceRGB()
+        }
+    } else {
+        return CGColorSpaceCreateDeviceRGB()
+    }
+}()
 
 public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
     private let codecContext: FFMpegAVCodecContext
@@ -63,6 +76,17 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         return nil
     }
     
+    public func render(frame: MediaTrackDecodableFrame) -> UIImage? {
+        let status = frame.packet.send(toDecoder: self.codecContext)
+        if status == 0 {
+            if self.codecContext.receive(into: self.videoFrame) {
+                return convertVideoFrameToImage(self.videoFrame)
+            }
+        }
+        
+        return nil
+    }
+    
     public func takeRemainingFrame() -> MediaTrackFrame? {
         if !self.delayedFrames.isEmpty {
             var minFrameIndex = 0
@@ -77,6 +101,53 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         } else {
             return nil
         }
+    }
+    
+    private func convertVideoFrameToImage(_ frame: FFMpegAVFrame) -> UIImage? {
+        var info = vImage_YpCbCrToARGB()
+        
+        var pixelRange: vImage_YpCbCrPixelRange
+        switch frame.colorRange {
+        case .full:
+            pixelRange = vImage_YpCbCrPixelRange(Yp_bias: 0, CbCr_bias: 128, YpRangeMax: 255, CbCrRangeMax: 255, YpMax: 255, YpMin: 0, CbCrMax: 255, CbCrMin: 0)
+        default:
+            pixelRange = vImage_YpCbCrPixelRange(Yp_bias: 16, CbCr_bias: 128, YpRangeMax: 235, CbCrRangeMax: 240, YpMax: 255, YpMin: 0, CbCrMax: 255, CbCrMin: 0)
+        }
+        var result = kvImageNoError
+        result = vImageConvert_YpCbCrToARGB_GenerateConversion(kvImage_YpCbCrToARGBMatrix_ITU_R_709_2, &pixelRange, &info, kvImage420Yp8_Cb8_Cr8, kvImageARGB8888, 0)
+        if result != kvImageNoError {
+            return nil
+        }
+        
+        var srcYp = vImage_Buffer(data: frame.data[0], height: vImagePixelCount(frame.height), width: vImagePixelCount(frame.width), rowBytes: Int(frame.lineSize[0]))
+        var srcCb = vImage_Buffer(data: frame.data[1], height: vImagePixelCount(frame.height), width: vImagePixelCount(frame.width / 2), rowBytes: Int(frame.lineSize[1]))
+        var srcCr = vImage_Buffer(data: frame.data[2], height: vImagePixelCount(frame.height), width: vImagePixelCount(frame.width / 2), rowBytes: Int(frame.lineSize[2]))
+        
+        let argbBytesPerRow = (4 * Int(frame.width) + 15) & (~15)
+        let argbLength = argbBytesPerRow * Int(frame.height)
+        let argb = malloc(argbLength)!
+        guard let provider = CGDataProvider(dataInfo: argb, data: argb, size: argbLength, releaseData: { bytes, _, _ in
+            free(bytes)
+        }) else {
+            return nil
+        }
+        
+        var dst = vImage_Buffer(data: argb, height: vImagePixelCount(frame.height), width: vImagePixelCount(frame.width), rowBytes: argbBytesPerRow)
+        
+        var permuteMap: [UInt8] = [3, 2, 1, 0]
+        
+        result = vImageConvert_420Yp8_Cb8_Cr8ToARGB8888(&srcYp, &srcCb, &srcCr, &dst, &info, &permuteMap, 0x00, 0)
+        if result != kvImageNoError {
+            return nil
+        }
+        
+        let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue)
+        
+        guard let image = CGImage(width: Int(frame.width), height: Int(frame.height), bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: argbBytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo, provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent) else {
+            return nil
+        }
+        
+        return UIImage(cgImage: image, scale: 1.0, orientation: .up)
     }
     
     private func convertVideoFrame(_ frame: FFMpegAVFrame, pts: CMTime, dts: CMTime, duration: CMTime) -> MediaTrackFrame? {
@@ -100,9 +171,6 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
             ioSurfaceProperties["IOSurfaceIsGlobal"] = true as NSNumber
             
             var options: [String: Any] = [kCVPixelBufferBytesPerRowAlignmentKey as String: frame.lineSize[0] as NSNumber]
-            /*if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                options[kCVPixelBufferOpenGLESTextureCacheCompatibilityKey as String] = true as NSNumber
-            }*/
             options[kCVPixelBufferIOSurfacePropertiesKey as String] = ioSurfaceProperties
             
             CVPixelBufferCreate(kCFAllocatorDefault,

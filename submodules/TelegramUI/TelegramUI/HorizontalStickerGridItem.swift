@@ -107,6 +107,8 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                         self?.imageNode.alpha = 0.0
                     }
                     animationNode.setup(account: account, resource: item.file.resource, width: 160, height: 160, mode: .cached)
+                    
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
                 } else {
                     self.imageNode.alpha = 1.0
                     self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true))
@@ -115,9 +117,9 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                         self.animationNode = nil
                         currentAnimationNode.removeFromSupernode()
                     }
+                    
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
                 }
-                
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
                 
                 self.currentState = (account, item, dimensions)
                 self.setNeedsLayout()

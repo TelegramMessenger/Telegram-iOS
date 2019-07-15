@@ -77,6 +77,8 @@ public enum AddChannelMemberError {
     case limitExceeded
     case tooMuchJoined
     case bot(PeerId)
+    case botDoesntSupportGroups
+    case tooMuchBots
 }
 
 public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
@@ -106,6 +108,10 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                                 return .fail(.restricted)
                             case "USER_BOT":
                                 return .fail(.bot(memberId))
+                            case "BOT_GROUPS_BLOCKED":
+                                return .fail(.botDoesntSupportGroups)
+                            case "BOTS_TOO_MUCH":
+                                return .fail(.tooMuchBots)
                             default:
                                 return .fail(.generic)
                         }

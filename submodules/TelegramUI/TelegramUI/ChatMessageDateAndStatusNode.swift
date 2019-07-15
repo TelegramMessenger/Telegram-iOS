@@ -160,7 +160,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             switch type {
                 case .BubbleIncoming:
-                    dateColor = presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor
+                    dateColor = presentationData.theme.theme.chat.message.incoming.secondaryTextColor
                     leftInset = 10.0
                     loadedCheckFullImage = graphics.checkBubbleFullImage
                     loadedCheckPartialImage = graphics.checkBubblePartialImage
@@ -170,7 +170,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.incomingDateAndStatusImpressionIcon
                     }
                 case let .BubbleOutgoing(status):
-                    dateColor = presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor
+                    dateColor = presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                     outgoingStatus = status
                     leftInset = 10.0
                     loadedCheckFullImage = graphics.checkBubbleFullImage
@@ -181,7 +181,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.outgoingDateAndStatusImpressionIcon
                     }
                 case .ImageIncoming:
-                    dateColor = presentationData.theme.theme.chat.bubble.mediaDateAndStatusTextColor
+                    dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
                     backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
                     loadedCheckFullImage = graphics.checkMediaFullImage
@@ -192,7 +192,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.mediaImpressionIcon
                     }
                 case let .ImageOutgoing(status):
-                    dateColor = presentationData.theme.theme.chat.bubble.mediaDateAndStatusTextColor
+                    dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0

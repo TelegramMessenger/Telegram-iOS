@@ -409,6 +409,10 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                             contactsController?.dismiss()
                         })
                         return
+                    case .botDoesntSupportGroups:
+                        text = presentationData.strings.Channel_BotDoesntSupportGroups
+                    case .tooMuchBots:
+                        text = presentationData.strings.Channel_TooMuchBots
                 }
                 presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 contactsController?.dismiss()

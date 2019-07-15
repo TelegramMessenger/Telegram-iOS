@@ -80,7 +80,7 @@ public final class PermissionController : ViewController {
     }
     
     private func updateThemeAndStrings() {
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         let navigationBarPresentationData: NavigationBarPresentationData
         if self.splashScreen {

@@ -279,9 +279,9 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
                     case .dayClassic:
                         themeValue = defaultPresentationTheme
                     case .nightGrayscale:
-                        themeValue = defaultDarkPresentationTheme
+                        themeValue = makeDarkPresentationTheme(accentColor: effectiveAccentColor)
                     case .nightAccent:
-                        themeValue = defaultDarkAccentPresentationTheme
+                        themeValue = makeDarkAccentPresentationTheme(accentColor: effectiveAccentColor)
                     case .day:
                         themeValue = makeDefaultDayPresentationTheme(accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
                 }
@@ -488,9 +488,9 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
                         fetch.dispose()
                         data.dispose()
                     }
-                    }
-                    |> afterNext { color in
-                        serviceBackgroundColorForWallpaper = (wallpaper, color)
+                }
+                |> afterNext { color in
+                    serviceBackgroundColorForWallpaper = (wallpaper, color)
                 }
             }
         }
@@ -561,9 +561,9 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                                     case .dayClassic:
                                         themeValue = makeDefaultPresentationTheme(serviceBackgroundColor: serviceBackgroundColor)
                                     case .nightGrayscale:
-                                        themeValue = defaultDarkPresentationTheme
+                                        themeValue = makeDarkPresentationTheme(accentColor: effectiveAccentColor)
                                     case .nightAccent:
-                                        themeValue = defaultDarkAccentPresentationTheme
+                                        themeValue = makeDarkAccentPresentationTheme(accentColor: effectiveAccentColor)
                                     case .day:
                                         themeValue = makeDefaultDayPresentationTheme(accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor)
                                 }

@@ -14,7 +14,7 @@ public enum PresentationContextType {
     case window(PresentationSurfaceLevel)
 }
 
-final class PresentationContext {
+public final class PresentationContext {
     private var _view: UIView?
     var view: UIView? {
         get {

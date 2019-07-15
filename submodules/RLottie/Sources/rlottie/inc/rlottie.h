@@ -423,6 +423,8 @@ public:
      *  @internal
      */
     ~Animation();
+    
+    bool isTgs() const;
 
 private:
     void setValue(Color_Type, Property, const std::string &, Color);

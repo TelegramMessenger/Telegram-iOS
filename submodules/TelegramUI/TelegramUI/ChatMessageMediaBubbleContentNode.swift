@@ -356,7 +356,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             self.highlightedState = highlighted
             
             if highlighted {
-                self.interactiveImageNode.setOverlayColor(item.presentationData.theme.theme.chat.bubble.mediaHighlightOverlayColor, animated: false)
+                self.interactiveImageNode.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
             } else {
                 self.interactiveImageNode.setOverlayColor(nil, animated: animated)
             }

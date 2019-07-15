@@ -90,7 +90,7 @@ public class ContactsController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
@@ -113,7 +113,7 @@ public class ContactsController: ViewController {
                 if let searchContentNode = strongSelf.searchContentNode {
                     searchContentNode.updateExpansionProgress(1.0, animated: true)
                 }
-                strongSelf.contactsNode.contactListNode.scrollToTop()
+                strongSelf.contactsNode.scrollToTop()
             }
         }
         
@@ -181,7 +181,7 @@ public class ContactsController: ViewController {
     }
     
     private func updateThemeAndStrings() {
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.presentationData.strings.Contacts_Title
@@ -195,7 +195,7 @@ public class ContactsController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = ContactsControllerNode(context: self.context, sortOrder: sortOrderPromise.get() |> distinctUntilChanged, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
-        })
+        }, controller: self)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -210,7 +210,6 @@ public class ContactsController: ViewController {
                             if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                                 scrollToEndIfExists = true
                             }
-                            
                             
                             navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
                                 if fromSearch {
@@ -380,7 +379,83 @@ public class ContactsController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
+        self.validLayout = layout
+        
         self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, actualNavigationBarHeight: self.navigationHeight, transition: transition)
+    }
+    
+    func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
+        guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
+            return nil
+        }
+        
+        let boundsSize = self.view.bounds.size
+        let contentSize: CGSize
+        if let metrics = DeviceMetrics.forScreenSize(layout.size) {
+            contentSize = metrics.previewingContentSize(inLandscape: boundsSize.width > boundsSize.height)
+        } else {
+            contentSize = boundsSize
+        }
+        
+        var selectedNode: ContactsPeerItemNode?
+        
+        if let searchController = self.contactsNode.searchDisplayController {
+            guard let contentNode = searchController.contentNode as? ContactsSearchContainerNode else {
+                return nil
+            }
+            
+            let listLocation = self.view.convert(location, to: contentNode.listNode.view)
+            
+            contentNode.listNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ContactsPeerItemNode, itemNode.frame.contains(listLocation), !itemNode.isDisplayingRevealedOptions {
+                    selectedNode = itemNode
+                }
+            }
+        } else {
+            let listLocation = self.view.convert(location, to: self.contactsNode.contactListNode.listNode.view)
+            
+            self.contactsNode.contactListNode.listNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ContactsPeerItemNode, itemNode.frame.contains(listLocation), !itemNode.isDisplayingRevealedOptions {
+                    selectedNode = itemNode
+                }
+            }
+        }
+        
+        if let selectedNode = selectedNode, let peer = selectedNode.item?.peer {
+            var sourceRect = selectedNode.view.superview!.convert(selectedNode.frame, to: sourceView)
+            sourceRect.size.height -= UIScreenPixel
+            switch peer {
+            case let .peer(peer, _):
+                guard let peer = peer else {
+                    return nil
+                }
+                if peer.id.namespace != Namespaces.Peer.SecretChat {
+                    let chatController = ChatController(context: self.context, chatLocation: .peer(peer.id), mode: .standard(previewing: true))
+                    chatController.canReadHistory.set(false)
+                    chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+                    return (chatController, sourceRect)
+                } else {
+                    return nil
+                }
+            case .deviceContact:
+                return nil
+            }
+        } else {
+            return nil
+        }
+    }
+    
+    func previewingCommit(_ viewControllerToCommit: UIViewController) {
+        if let viewControllerToCommit = viewControllerToCommit as? ViewController {
+            if let chatController = viewControllerToCommit as? ChatController {
+                chatController.canReadHistory.set(true)
+                chatController.updatePresentationMode(.standard(previewing: false))
+                if let navigationController = self.navigationController as? NavigationController {
+                    navigateToChatController(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false)
+                    self.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                }
+            }
+        }
     }
     
     private func activateSearch() {

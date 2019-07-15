@@ -22,7 +22,7 @@ class FormController<InnerState, InitParams, Node: FormControllerNode<InitParams
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
     }
     
     required init(coder aDecoder: NSCoder) {

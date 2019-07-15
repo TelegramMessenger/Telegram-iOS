@@ -176,10 +176,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 if let image = chatControllerBackgroundImage(wallpaper: self.wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, composed: false) {
                     self.background = ImageBasedPasscodeBackground(image: image, size: size)
                 } else {
-                    self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors, buttonColor: self.theme.passcode.buttonColor)
+                    self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
                 }
             default:
-                self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors, buttonColor: self.theme.passcode.buttonColor)
+                self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
         }
         
         if let background = self.background {

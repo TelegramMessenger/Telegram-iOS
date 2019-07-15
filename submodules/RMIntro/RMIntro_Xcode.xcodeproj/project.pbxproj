@@ -66,7 +66,6 @@
 		D0AE30CA22B1D8ED0058D3BC /* platform_macros.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE308F22B1D8ED0058D3BC /* platform_macros.h */; };
 		D0AE30CB22B1D8ED0058D3BC /* platform_log.c in Sources */ = {isa = PBXBuildFile; fileRef = D0AE309022B1D8ED0058D3BC /* platform_log.c */; };
 		D0AE30CC22B1D8ED0058D3BC /* linmath.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE309322B1D8ED0058D3BC /* linmath.h */; };
-		D0AE30CD22B1D8ED0058D3BC /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = D0AE309422B1D8ED0058D3BC /* .gitignore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -144,7 +143,6 @@
 		D0AE308F22B1D8ED0058D3BC /* platform_macros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform_macros.h; sourceTree = "<group>"; };
 		D0AE309022B1D8ED0058D3BC /* platform_log.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = platform_log.c; sourceTree = "<group>"; };
 		D0AE309322B1D8ED0058D3BC /* linmath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = linmath.h; sourceTree = "<group>"; };
-		D0AE309422B1D8ED0058D3BC /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -293,7 +291,6 @@
 			isa = PBXGroup;
 			children = (
 				D0AE309222B1D8ED0058D3BC /* linmath */,
-				D0AE309422B1D8ED0058D3BC /* .gitignore */,
 			);
 			path = 3rdparty;
 			sourceTree = "<group>";
@@ -401,7 +398,6 @@
 				D0AE30BB22B1D8ED0058D3BC /* ic_bubble@2x.png in Resources */,
 				D0AE30B522B1D8ED0058D3BC /* start_arrow_ipad@2x.png in Resources */,
 				D0AE30BD22B1D8ED0058D3BC /* fast_spiral@2x.png in Resources */,
-				D0AE30CD22B1D8ED0058D3BC /* .gitignore in Resources */,
 				09EC5CD822CBB86B00292E42 /* telegram_plane1@2x.png in Resources */,
 				D0AE30B822B1D8ED0058D3BC /* fast_arrow@2x.png in Resources */,
 				D0AE30AC22B1D8ED0058D3BC /* powerful_mask@2x.png in Resources */,

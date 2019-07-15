@@ -149,6 +149,284 @@ typedef enum {
     
 } UIDeviceFamily;
 
+static NSData * _Nullable parseHexString(NSString * _Nonnull hex) {
+    if ([hex length] % 2 != 0) {
+        return nil;
+    }
+    char buf[3];
+    buf[2] = '\0';
+    uint8_t *bytes = (uint8_t *)malloc(hex.length / 2);
+    uint8_t *bp = bytes;
+    for (CFIndex i = 0; i < [hex length]; i += 2) {
+        buf[0] = [hex characterAtIndex:i];
+        buf[1] = [hex characterAtIndex:i+1];
+        char *b2 = NULL;
+        *bp++ = strtol(buf, &b2, 16);
+        if (b2 != buf + 2) {
+            return nil;
+        }
+    }
+    
+    return [NSData dataWithBytesNoCopy:bytes length:[hex length]/2 freeWhenDone:YES];
+}
+
+static NSString * _Nonnull dataToHexString(NSData * _Nonnull data) {
+    const unsigned char *dataBuffer = (const unsigned char *)[data bytes];
+    if (dataBuffer == NULL) {
+        return @"";
+    }
+    
+    NSUInteger dataLength  = [data length];
+    NSMutableString *hexString  = [NSMutableString stringWithCapacity:(dataLength * 2)];
+    
+    for (int i = 0; i < (int)dataLength; ++i) {
+        [hexString appendString:[NSString stringWithFormat:@"%02lx", (unsigned long)dataBuffer[i]]];
+    }
+    
+    return hexString;
+}
+
+static NSData *base64_decode(NSString *str) {
+    if ([NSData instancesRespondToSelector:@selector(initWithBase64EncodedString:options:)]) {
+        NSData *data = [[NSData alloc] initWithBase64EncodedString:str options:NSDataBase64DecodingIgnoreUnknownCharacters];
+        return data;
+    } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        return [[NSData alloc] initWithBase64Encoding:[str stringByReplacingOccurrencesOfString:@"[^A-Za-z0-9+/=]" withString:@"" options:NSRegularExpressionSearch range:NSMakeRange(0, [str length])]];
+#pragma clang diagnostic pop
+    }
+}
+
+@implementation MTProxySecret
+
+- (instancetype _Nullable)initWithSecret:(NSData * _Nonnull)secret {
+    self = [super init];
+    if (self != nil) {
+        _secret = secret;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super init];
+    if (self != nil) {
+        _secret = [aDecoder decodeObjectForKey:@"secret"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [aCoder encodeObject:_secret forKey:@"secret"];
+}
+
++ (MTProxySecret * _Nullable)parse:(NSString * _Nonnull)string {
+    NSData *hexData = parseHexString(string);
+    if (hexData == nil) {
+        NSString *finalString = @"";
+        finalString = [finalString stringByAppendingString:[string stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"="]]];
+        while (finalString.length % 4 != 0) {
+            finalString = [finalString stringByAppendingString:@"="];
+        }
+        
+        hexData = base64_decode(finalString);
+    }
+    if (hexData != nil) {
+        return [self parseData:hexData];
+    } else {
+        return nil;
+    }
+}
+
++ (MTProxySecret * _Nullable)parseData:(NSData * _Nonnull)data {
+    if (data == nil || data.length < 16) {
+        return nil;
+    }
+    
+    uint8_t firstByte = 0;
+    [data getBytes:&firstByte length:1];
+    
+    if (data.length == 16) {
+        return [[MTProxySecretType0 alloc] initWithSecret:data];
+    } else if (data.length == 17) {
+        if (firstByte == 0xdd) {
+            return [[MTProxySecretType1 alloc] initWithSecret:[data subdataWithRange:NSMakeRange(1, 16)]];
+        } else {
+            return nil;
+        }
+    } else if (data.length >= 18 && firstByte == 0xee) {
+        NSString *domain = [[NSString alloc] initWithData:[data subdataWithRange:NSMakeRange(1 + 16, data.length - (1 + 16))] encoding:NSUTF8StringEncoding];
+        if (domain == nil) {
+            return nil;
+        }
+        return [[MTProxySecretType2 alloc] initWithSecret:[data subdataWithRange:NSMakeRange(1, 16)] domain:domain];
+    } else {
+        return nil;
+    }
+}
+
+- (NSData * _Nonnull)serialize {
+    assert(false);
+    return nil;
+}
+
+- (NSString * _Nonnull)serializeToString {
+    assert(false);
+    return nil;
+}
+
+- (NSString *)description {
+    return dataToHexString([self serialize]);
+}
+
+@end
+
+@implementation MTProxySecretType0
+
+- (instancetype _Nullable)initWithSecret:(NSData * _Nonnull)secret {
+    self = [super initWithSecret:secret];
+    if (self != nil) {
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super initWithCoder:aDecoder];
+    if (self != nil) {
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [super encodeWithCoder:aCoder];
+}
+
+- (NSData * _Nonnull)serialize {
+    return self.secret;
+}
+
+- (NSString * _Nonnull)serializeToString {
+    return dataToHexString(self.serialize);
+}
+
+- (BOOL)isEqual:(id)object {
+    if (![object isKindOfClass:[MTProxySecretType0 class]]) {
+        return false;
+    }
+    MTProxySecretType0 *other = object;
+    if (![self.secret isEqual:other.secret]) {
+        return false;
+    }
+    return true;
+}
+
+@end
+
+@implementation MTProxySecretType1
+
+- (instancetype _Nullable)initWithSecret:(NSData * _Nonnull)secret {
+    self = [super initWithSecret:secret];
+    if (self != nil) {
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super initWithCoder:aDecoder];
+    if (self != nil) {
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [super encodeWithCoder:aCoder];
+}
+
+- (NSData * _Nonnull)serialize {
+    NSMutableData *data = [[NSMutableData alloc] init];
+    uint8_t marker = 0xdd;
+    [data appendBytes:&marker length:1];
+    [data appendData:self.secret];
+    return data;
+}
+
+- (NSString * _Nonnull)serializeToString {
+    return dataToHexString(self.serialize);
+}
+
+- (BOOL)isEqual:(id)object {
+    if (![object isKindOfClass:[MTProxySecretType1 class]]) {
+        return false;
+    }
+    MTProxySecretType1 *other = object;
+    if (![self.secret isEqual:other.secret]) {
+        return false;
+    }
+    return true;
+}
+
+@end
+
+@implementation MTProxySecretType2
+
+- (instancetype _Nullable)initWithSecret:(NSData * _Nonnull)secret domain:(NSString * _Nonnull)domain {
+    self = [super initWithSecret:secret];
+    if (self != nil) {
+        _domain = domain;
+    }
+    return self;
+}
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    self = [super initWithCoder:aDecoder];
+    if (self != nil) {
+        _domain = [aDecoder decodeObjectForKey:@"domain"];
+    }
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+    [super encodeWithCoder:aCoder];
+    [aCoder encodeObject:_domain forKey:@"domain"];
+}
+
+- (NSData * _Nonnull)serialize {
+    NSMutableData *data = [[NSMutableData alloc] init];
+    uint8_t marker = 0xee;
+    [data appendBytes:&marker length:1];
+    [data appendData:self.secret];
+    [data appendData:[_domain dataUsingEncoding:NSUTF8StringEncoding]];
+    return data;
+}
+
+- (NSString * _Nonnull)serializeToString {
+    NSData *data = [self serialize];
+    if ([data respondsToSelector:@selector(base64EncodedDataWithOptions:)]) {
+        return [[data base64EncodedStringWithOptions:kNilOptions] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"="]];
+    } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    return [self.serialize base64Encoding];
+#pragma clang diagnostic pop
+    }
+}
+
+- (BOOL)isEqual:(id)object {
+    if (![object isKindOfClass:[MTProxySecretType2 class]]) {
+        return false;
+    }
+    MTProxySecretType2 *other = object;
+    if (![self.secret isEqual:other.secret]) {
+        return false;
+    }
+    if (![self.domain isEqual:other.domain]) {
+        return false;
+    }
+    return true;
+}
+
+@end
+
 @implementation MTSocksProxySettings
 
 - (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password secret:(NSData *)secret {
@@ -187,16 +465,7 @@ typedef enum {
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"%@:%d+%@+%@+%@", _ip, (int)_port, _username, _password, _secret];
-}
-
-+ (bool)secretSupportsExtendedPadding:(NSData *)data {
-    if (data.length == 17) {
-        uint8_t first = 0;
-        [data getBytes:&first length:1];
-        return (first == 0xdd);
-    }
-    return false;
+    return [NSString stringWithFormat:@"%@:%d+%@+%@+%@", _ip, (int)_port, _username, _password, [_secret description]];
 }
 
 @end

@@ -107,6 +107,14 @@ open class TabBarController: ViewController {
     
     var currentController: ViewController?
     
+    open override var navigationBarRequiresEntireLayoutUpdate: Bool {
+        if let currentController = currentController {
+            return currentController.navigationBarRequiresEntireLayoutUpdate
+        } else {
+            return false
+        }
+    }
+    
     private let pendingControllerDisposable = MetaDisposable()
     
     private var theme: TabBarControllerTheme
@@ -168,7 +176,23 @@ open class TabBarController: ViewController {
                     }
                 }
                 if let validLayout = strongSelf.validLayout {
-                    strongSelf.controllers[index].containerLayoutUpdated(validLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
+                    var updatedLayout = validLayout
+                    
+                    var tabBarHeight: CGFloat
+                    var options: ContainerViewLayoutInsetOptions = []
+                    if validLayout.metrics.widthClass == .regular {
+                        options.insert(.input)
+                    }
+                    let bottomInset: CGFloat = validLayout.insets(options: options).bottom
+                    if !validLayout.safeInsets.left.isZero {
+                        tabBarHeight = 34.0 + bottomInset
+                    } else {
+                        tabBarHeight = 49.0 + bottomInset
+                    }
+                    updatedLayout.intrinsicInsets.bottom = tabBarHeight
+                    
+                    
+                    strongSelf.controllers[index].containerLayoutUpdated(updatedLayout, transition: .immediate)
                 }
                 let startTime = CFAbsoluteTimeGetCurrent()
                 strongSelf.pendingControllerDisposable.set((strongSelf.controllers[index].ready.get()
@@ -263,7 +287,23 @@ open class TabBarController: ViewController {
         if let currentController = self.currentController {
             currentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
             
-            currentController.containerLayoutUpdated(layout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: transition)
+            var updatedLayout = layout
+            
+            var tabBarHeight: CGFloat
+            var options: ContainerViewLayoutInsetOptions = []
+            if updatedLayout.metrics.widthClass == .regular {
+                options.insert(.input)
+            }
+            let bottomInset: CGFloat = updatedLayout.insets(options: options).bottom
+            if !updatedLayout.safeInsets.left.isZero {
+                tabBarHeight = 34.0 + bottomInset
+            } else {
+                tabBarHeight = 49.0 + bottomInset
+            }
+            updatedLayout.intrinsicInsets.bottom = tabBarHeight
+            
+            
+            currentController.containerLayoutUpdated(updatedLayout, transition: transition)
         }
     }
     

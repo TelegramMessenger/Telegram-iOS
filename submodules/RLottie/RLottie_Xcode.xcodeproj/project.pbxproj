@@ -116,6 +116,7 @@
 		D010E17A22C237CF009324D4 /* vbrush.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D010E06B22C237CE009324D4 /* vbrush.cpp */; };
 		D010E17F22C23C42009324D4 /* LottieInstance.mm in Sources */ = {isa = PBXBuildFile; fileRef = D010E17E22C23C42009324D4 /* LottieInstance.mm */; };
 		D010E18122C23D57009324D4 /* LottieInstance.h in Headers */ = {isa = PBXBuildFile; fileRef = D010E18022C23D57009324D4 /* LottieInstance.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05B16B022CC29F100B85A94 /* pixman-arma64-neon-asm.h in Headers */ = {isa = PBXBuildFile; fileRef = D05B16AE22CC29F100B85A94 /* pixman-arma64-neon-asm.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -232,6 +233,8 @@
 		D010E06B22C237CE009324D4 /* vbrush.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vbrush.cpp; sourceTree = "<group>"; };
 		D010E17E22C23C42009324D4 /* LottieInstance.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = LottieInstance.mm; sourceTree = "<group>"; };
 		D010E18022C23D57009324D4 /* LottieInstance.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LottieInstance.h; sourceTree = "<group>"; };
+		D05B16AD22CC29F100B85A94 /* pixman-arma64-neon-asm.S */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; path = "pixman-arma64-neon-asm.S"; sourceTree = "<group>"; };
+		D05B16AE22CC29F100B85A94 /* pixman-arma64-neon-asm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "pixman-arma64-neon-asm.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -453,6 +456,8 @@
 		D010E03122C237CE009324D4 /* pixman */ = {
 			isa = PBXGroup;
 			children = (
+				D05B16AE22CC29F100B85A94 /* pixman-arma64-neon-asm.h */,
+				D05B16AD22CC29F100B85A94 /* pixman-arma64-neon-asm.S */,
 				D010E03322C237CE009324D4 /* pixman-arm-neon-asm.h */,
 				D010E03422C237CE009324D4 /* vregion.h */,
 				D010E03522C237CE009324D4 /* pixman-arm-neon-asm.S */,
@@ -518,6 +523,7 @@
 				D010E12D22C237CE009324D4 /* rapidjson.h in Headers */,
 				D010E11E22C237CE009324D4 /* strtod.h in Headers */,
 				D010E14A22C237CF009324D4 /* config.h in Headers */,
+				D05B16B022CC29F100B85A94 /* pixman-arma64-neon-asm.h in Headers */,
 				D010E17422C237CF009324D4 /* vstackallocator.h in Headers */,
 				D010E10C22C237CE009324D4 /* lottieparser.h in Headers */,
 				D010E15A22C237CF009324D4 /* vpathmesure.h in Headers */,

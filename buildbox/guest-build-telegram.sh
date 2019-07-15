@@ -74,9 +74,32 @@ else
 		exit 1
 	fi
 
-	echo "Unpacking files..."
-	tar -xf "source.tar"
+	mkdir "$SOURCE_PATH"
 
+
+	SIZE_IN_BLOCKS=$((10*1024*1024*1024/512))
+	DEV=`hdid -nomount ram://$SIZE_IN_BLOCKS`
+
+	if [ $? -eq 0 ]; then
+		newfs_hfs -v 'ram disk' $DEV
+		eval `/usr/bin/stat -s "$SOURCE_PATH"`
+		mount -t hfs -o union -o nobrowse -o nodev -o noatime $DEV "$SOURCE_PATH"
+		chown $st_uid:$st_gid "$SOURCE_PATH"
+		chmod $st_mode "$SOURCE_PATH"
+	else
+		echo "Error creating ramdisk"
+		exit 1
+	fi
+
+	echo "Unpacking files..."
+	mkdir "$SOURCE_PATH"
+	BASE_DIR=$(pwd)
 	cd "$SOURCE_PATH"
+	tar -xf "../source.tar"
+
 	FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID" commit_author:"$COMMIT_AUTHOR"
+
+	cd "$BASE_DIR"
+	umount -f "$SOURCE_PATH"
+	hdiutil detach "$DEV"
 fi

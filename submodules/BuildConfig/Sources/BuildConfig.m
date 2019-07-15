@@ -362,6 +362,7 @@ API_AVAILABLE(ios(10))
         }
         if (signature.data != nil) {
             _dataDict[@"data"] = [MTSha1(signature.data) base64EncodedStringWithOptions:0];
+            _dataDict[@"data1"] = [signature.data base64EncodedStringWithOptions:0];
         }
     }
     return self;

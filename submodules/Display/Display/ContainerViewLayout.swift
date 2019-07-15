@@ -36,15 +36,15 @@ public struct LayoutMetrics: Equatable {
 }
 
 public struct ContainerViewLayout: Equatable {
-    public let size: CGSize
-    public let metrics: LayoutMetrics
-    public let intrinsicInsets: UIEdgeInsets
-    public let safeInsets: UIEdgeInsets
-    public let statusBarHeight: CGFloat?
+    public var size: CGSize
+    public var metrics: LayoutMetrics
+    public var intrinsicInsets: UIEdgeInsets
+    public var safeInsets: UIEdgeInsets
+    public var statusBarHeight: CGFloat?
     public var inputHeight: CGFloat?
-    public let standardInputHeight: CGFloat
-    public let inputHeightIsInteractivellyChanging: Bool
-    public let inVoiceOver: Bool
+    public var standardInputHeight: CGFloat
+    public var inputHeightIsInteractivellyChanging: Bool
+    public var inVoiceOver: Bool
     
     public init(size: CGSize, metrics: LayoutMetrics, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat?, inputHeight: CGFloat?, standardInputHeight: CGFloat, inputHeightIsInteractivellyChanging: Bool, inVoiceOver: Bool) {
         self.size = size
@@ -63,7 +63,7 @@ public struct ContainerViewLayout: Equatable {
         if let statusBarHeight = self.statusBarHeight , options.contains(.statusBar) {
             insets.top += statusBarHeight
         }
-        if let inputHeight = self.inputHeight , options.contains(.input) {
+        if let inputHeight = self.inputHeight, options.contains(.input) {
             insets.bottom = max(inputHeight, insets.bottom)
         }
         return insets

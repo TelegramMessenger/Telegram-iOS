@@ -154,12 +154,12 @@ final class SearchBarNodeTheme: Equatable {
     init(theme: PresentationTheme, hasSeparator: Bool = true) {
         self.background = theme.rootController.navigationBar.backgroundColor
         self.separator = hasSeparator ? theme.rootController.navigationBar.separatorColor : theme.rootController.navigationBar.backgroundColor
-        self.inputFill = theme.rootController.activeNavigationSearchBar.inputFillColor
-        self.placeholder = theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor
-        self.primaryText = theme.rootController.activeNavigationSearchBar.inputTextColor
-        self.inputIcon = theme.rootController.activeNavigationSearchBar.inputIconColor
-        self.inputClear = theme.rootController.activeNavigationSearchBar.inputClearButtonColor
-        self.accent = theme.rootController.activeNavigationSearchBar.accentColor
+        self.inputFill = theme.rootController.navigationSearchBar.inputFillColor
+        self.placeholder = theme.rootController.navigationSearchBar.inputPlaceholderTextColor
+        self.primaryText = theme.rootController.navigationSearchBar.inputTextColor
+        self.inputIcon = theme.rootController.navigationSearchBar.inputIconColor
+        self.inputClear = theme.rootController.navigationSearchBar.inputClearButtonColor
+        self.accent = theme.rootController.navigationSearchBar.accentColor
         self.keyboard = theme.chatList.searchBarKeyboardColor
     }
     

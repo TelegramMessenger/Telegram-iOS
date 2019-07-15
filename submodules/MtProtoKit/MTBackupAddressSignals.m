@@ -79,7 +79,7 @@ static NSData *base64_decode(NSString *str) {
     
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     for (NSString *host in hosts) {
-        MTSignal *signal = [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:[NSString stringWithFormat:@"https://%@/resolve?name=%@&type=16", host, isTesting ? @"tapv2.stel.com" : @"apv2.stel.com"]] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
+        MTSignal *signal = [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:[NSString stringWithFormat:@"https://%@/resolve?name=%@&type=16", host, isTesting ? @"tapv3.stel.com" : @"apv3.stel.com"]] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
             NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             if ([dict respondsToSelector:@selector(objectForKey:)]) {
                 NSArray *answer = dict[@"Answer"];

@@ -558,7 +558,10 @@ void LottieParserImpl::parseComposition()
     LOTCompositionData *comp = sharedComposition.get();
     compRef = comp;
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "v")) {
+        if (0 == strcmp(key, "tgs")) {
+            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            comp->mTgs = GetInt();
+        }else if (0 == strcmp(key, "v")) {
             RAPIDJSON_ASSERT(PeekType() == kStringType);
             comp->mVersion = std::string(GetString());
         } else if (0 == strcmp(key, "w")) {
@@ -587,6 +590,12 @@ void LottieParserImpl::parseComposition()
             Skip(key);
         }
     }
+    
+    if (comp->mVersion.empty()) {
+        // don't have a valid bodymovin header
+        return;
+    }
+    
     resolveLayerRefs();
     comp->setStatic(comp->mRootLayer->isStatic());
     comp->mRootLayer->mInFrame = comp->mStartFrame;
@@ -699,8 +708,10 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
             bool staticFlag = true;
             while (NextArrayValue()) {
                 std::shared_ptr<LOTData> layer = parseLayer();
-                staticFlag = staticFlag && layer->isStatic();
-                asset->mLayers.push_back(layer);
+                if (layer) {
+                    staticFlag = staticFlag && layer->isStatic();
+                    asset->mLayers.push_back(layer);
+                }
             }
             asset->setStatic(staticFlag);
         } else {
@@ -735,8 +746,10 @@ void LottieParserImpl::parseLayers(LOTCompositionData *comp)
     EnterArray();
     while (NextArrayValue()) {
         std::shared_ptr<LOTData> layer = parseLayer(true);
-        staticFlag = staticFlag && layer->isStatic();
-        comp->mRootLayer->mChildren.push_back(layer);
+        if (layer) {
+            staticFlag = staticFlag && layer->isStatic();
+            comp->mRootLayer->mChildren.push_back(layer);
+        }
     }
     comp->mRootLayer->setStatic(staticFlag);
 }
@@ -903,6 +916,11 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
 #endif
             Skip(key);
         }
+    }
+    
+    if (!layer->mTransform) {
+        // not a valid layer
+        return nullptr;
     }
 
     layer->mCompRef = compRef;
@@ -1240,6 +1258,7 @@ LOTTrimData::TrimType LottieParserImpl::getTrimType()
         break;
     default:
         RAPIDJSON_ASSERT(0);
+        return LOTTrimData::TrimType::Individually;
         break;
     }
 }
@@ -2229,6 +2248,8 @@ LottieParser::LottieParser(char *str, const char *dir_path)
 
 std::shared_ptr<LOTModel> LottieParser::model()
 {
+    if (!d->composition()) return nullptr;
+    
     std::shared_ptr<LOTModel> model = std::make_shared<LOTModel>();
     model->mRoot = d->composition();
     model->mRoot->processRepeaterObjects();

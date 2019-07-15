@@ -341,7 +341,7 @@ static CGRect viewFrame(UIView *view)
 {
     UIImage *deleteImage = _assets.actionDelete;
     
-    _deleteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 45.0f, 45.0f)];
+    _deleteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, (self.bounds.size.height - 45.0f) / 2.0f, 45.0f, 45.0f)];
     [_deleteButton setImage:deleteImage forState:UIControlStateNormal];
     _deleteButton.adjustsImageWhenDisabled = false;
     _deleteButton.adjustsImageWhenHighlighted = false;
@@ -491,7 +491,7 @@ static CGRect viewFrame(UIView *view)
     }
     
     setViewFrame(_sendButton, CGRectMake(self.frame.size.width - _sendButton.frame.size.width, 0.0f, _sendButton.frame.size.width, self.frame.size.height));
-    _deleteButton.center = CGPointMake(24.0f, 22.0f);
+    _deleteButton.center = CGPointMake(24.0f, self.bounds.size.height / 2.0f);
     setViewFrame(_scrubberView, CGRectMake(46.0f, (self.frame.size.height - 33.0f) / 2.0f, self.frame.size.width - 46.0f * 2.0f, 33.0f));
 }
 

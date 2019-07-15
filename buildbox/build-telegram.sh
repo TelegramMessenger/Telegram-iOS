@@ -1,8 +1,36 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
 BUILD_TELEGRAM_VERSION="1"
+
+MACOS_VERSION="10.14"
+XCODE_VERSION="10.1"
+
+VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"
+
+case "$(uname -s)" in
+    Linux*)     BUILD_MACHINE=linux;;
+    Darwin*)    BUILD_MACHINE=macOS;;
+    *)          BUILD_MACHINE=""
+esac
+
+if [ "$BUILD_MACHINE" == "linux" ]; then
+	for MACHINE in $(virsh list --all --name); do
+		if [ "$MACHINE" == "$VM_BASE_NAME" ]; then
+			FOUND_BASE_MACHINE="1"
+			break
+		fi
+	done
+	if [ -z "$FOUND_BASE_MACHINE" ]; then
+		echo "Virtual machine $VM_BASE_NAME not found"
+		exit 1
+	fi
+elif [ "$BUILD_MACHINE" == "macOS" ]; then
+	echo "Building on macOS"
+else
+	echo "Unknown build machine $(uname -s)"
+fi
 
 if [ `which cleanup-telegram-build-vms.sh` ]; then
 	cleanup-telegram-build-vms.sh
@@ -66,27 +94,39 @@ if [ ! -d "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" ]; then
 fi
 
 SOURCE_DIR=$(basename "$BASE_DIR")
-cd ..
-rm -f "$SOURCE_DIR/$BUILDBOX_DIR/transient-data/source.tar"
-tar cf "$SOURCE_DIR/$BUILDBOX_DIR/transient-data/source.tar" --exclude "$SOURCE_DIR/$BUILDBOX_DIR" "$SOURCE_DIR"
-cd "$BASE_DIR"
-
-VM_BASE_NAME="macos10_14_3_Xcode10_1"
-
-SNAPSHOT_ID=$(prlctl snapshot-list "$VM_BASE_NAME" | grep -Eo '\{(\d|[a-f]|-)*\}' | tr '\n' '\0')
-
-if [ -z "$SNAPSHOT_ID" ]; then
-	echo "$VM_BASE_NAME is required to have one snapshot"
-	exit 1
-fi
+rm -f "$BUILDBOX_DIR/transient-data/source.tar"
+tar cf "$BUILDBOX_DIR/transient-data/source.tar" --exclude "$BUILDBOX_DIR" --exclude ".git" "."
 
 PROCESS_ID="$$"
 VM_NAME="$VM_BASE_NAME-$(openssl rand -hex 10)-build-telegram-$PROCESS_ID"
 
-prlctl clone "$VM_BASE_NAME" --name "$VM_NAME"
-prlctl snapshot-switch "$VM_NAME" -i "$SNAPSHOT_ID"
+if [ "$BUILD_MACHINE" == "linux" ]; then
+	virt-clone --original "$VM_BASE_NAME" --name "$VM_NAME" --auto-clone
+	virsh start "$VM_NAME"
 
-VM_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'")
+	echo "Getting VM IP"
+
+	while [ 1 ]; do
+	TEST_IP=$(virsh domifaddr "$VM_NAME" 2>/dev/null | egrep -o 'ipv4.*' | sed -e 's/ipv4\s*//g' | sed -e 's|/.*||g')
+	if [ ! -z "$TEST_IP" ]; then
+		RESPONSE=$(ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$TEST_IP" -o ServerAliveInterval=60 -t "echo -n 1")
+		if [ "$RESPONSE" == "1" ]; then
+			VM_IP="$TEST_IP"
+			break
+		fi
+	fi
+	sleep 1
+done
+elif [ "$BUILD_MACHINE" == "macOS" ]; then
+	SNAPSHOT_ID=$(prlctl snapshot-list "$VM_BASE_NAME" | grep -Eo '\{(\d|[a-f]|-)*\}' | tr '\n' '\0')
+	if [ -z "$SNAPSHOT_ID" ]; then
+		echo "$VM_BASE_NAME is required to have one snapshot"
+		exit 1
+	fi
+	prlctl clone "$VM_BASE_NAME" --name "$VM_NAME"
+	prlctl snapshot-switch "$VM_NAME" -i "$SNAPSHOT_ID"
+	VM_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'")
+fi
 
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
 
@@ -118,5 +158,10 @@ elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":telegram-ios/Telegram-iOS-AppStoreLLC.ipa "./$VERIFY_IPA"
 fi
 
-prlctl stop "$VM_NAME" --kill
-prlctl delete "$VM_NAME"
+if [ "$BUILD_MACHINE" == "linux" ]; then
+	virsh destroy "$VM_NAME"
+	virsh undefine "$VM_NAME" --remove-all-storage --nvram
+elif [ "$BUILD_MACHINE" == "macOS" ]; then
+	prlctl stop "$VM_NAME" --kill
+	prlctl delete "$VM_NAME"
+fi

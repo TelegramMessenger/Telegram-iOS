@@ -341,7 +341,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
             if !hasActionMedia && !isBroadcastChannel {
                 if let effectiveAuthor = effectiveAuthor {
-                    accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, emptyColor: presentationData.theme.theme.chat.bubble.incoming.withoutWallpaper.fill)
+                    accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, emptyColor: presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill)
                 }
             }
         }
@@ -353,7 +353,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         loop: for media in self.message.media {
             if let telegramFile = media as? TelegramMediaFile {
-                if telegramFile.isAnimatedSticker, let size = telegramFile.size, size > 0 && size <= 64 * 1024 {
+                if telegramFile.isAnimatedSticker, let size = telegramFile.size, size > 0 && size <= 128 * 1024 {
                     viewClassName = ChatMessageAnimatedStickerItemNode.self
                     break loop
                 }

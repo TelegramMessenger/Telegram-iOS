@@ -128,8 +128,8 @@ public final class PrincipalThemeEssentialGraphics {
     public let radialIndicatorFileIconOutgoing: UIImage
     
     init(_ theme: PresentationThemeChat, wallpaper: TelegramWallpaper) {
-        let incoming: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.bubble.incoming.withoutWallpaper : theme.bubble.incoming.withWallpaper
-        let outgoing: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.bubble.outgoing.withoutWallpaper : theme.bubble.outgoing.withWallpaper
+        let incoming: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.incoming.bubble.withoutWallpaper : theme.message.incoming.bubble.withWallpaper
+        let outgoing: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.outgoing.bubble.withoutWallpaper : theme.message.outgoing.bubble.withWallpaper
         
         self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none)
         self.chatMessageBackgroundIncomingHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .none)
@@ -158,8 +158,8 @@ public final class PrincipalThemeEssentialGraphics {
         self.chatMessageBackgroundIncomingMergedSideHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .side)
         self.chatMessageBackgroundOutgoingMergedSideHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .side)
         
-        self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.bubble.outgoingCheckColor)!
-        self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.bubble.outgoingCheckColor)!
+        self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.message.outgoingCheckColor)!
+        self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.message.outgoingCheckColor)!
         
         self.checkMediaFullImage = generateCheckImage(partial: false, color: .white)!
         self.checkMediaPartialImage = generateCheckImage(partial: true, color: .white)!
@@ -168,10 +168,10 @@ public final class PrincipalThemeEssentialGraphics {
         self.checkFreeFullImage = generateCheckImage(partial: false, color: serviceColor.primaryText)!
         self.checkFreePartialImage = generateCheckImage(partial: true, color: serviceColor.primaryText)!
         
-        self.clockBubbleIncomingFrameImage = generateClockFrameImage(color: theme.bubble.incomingPendingActivityColor)!
-        self.clockBubbleIncomingMinImage = generateClockMinImage(color: theme.bubble.incomingPendingActivityColor)!
-        self.clockBubbleOutgoingFrameImage = generateClockFrameImage(color: theme.bubble.outgoingPendingActivityColor)!
-        self.clockBubbleOutgoingMinImage = generateClockMinImage(color: theme.bubble.outgoingPendingActivityColor)!
+        self.clockBubbleIncomingFrameImage = generateClockFrameImage(color: theme.message.incoming.pendingActivityColor)!
+        self.clockBubbleIncomingMinImage = generateClockMinImage(color: theme.message.incoming.pendingActivityColor)!
+        self.clockBubbleOutgoingFrameImage = generateClockFrameImage(color: theme.message.outgoing.pendingActivityColor)!
+        self.clockBubbleOutgoingMinImage = generateClockMinImage(color: theme.message.outgoing.pendingActivityColor)!
         
         self.clockMediaFrameImage = generateClockFrameImage(color: .white)!
         self.clockMediaMinImage = generateClockMinImage(color: .white)!
@@ -179,12 +179,12 @@ public final class PrincipalThemeEssentialGraphics {
         self.clockFreeFrameImage = generateClockFrameImage(color: serviceColor.primaryText)!
         self.clockFreeMinImage = generateClockMinImage(color: serviceColor.primaryText)!
         
-        self.dateAndStatusMediaBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.bubble.mediaDateAndStatusFillColor)!
+        self.dateAndStatusMediaBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.message.mediaDateAndStatusFillColor)!
         self.dateAndStatusFreeBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: serviceColor.dateFillStatic)!
         
         let impressionCountImage = UIImage(bundleImageName: "Chat/Message/ImpressionCount")!
-        self.incomingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.bubble.incomingSecondaryTextColor)!
-        self.outgoingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.bubble.outgoingSecondaryTextColor)!
+        self.incomingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.message.incoming.secondaryTextColor)!
+        self.outgoingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.message.outgoing.secondaryTextColor)!
         self.mediaImpressionIcon = generateTintedImage(image: impressionCountImage, color: .white)!
         self.freeImpressionIcon = generateTintedImage(image: impressionCountImage, color: serviceColor.primaryText)!
         
@@ -258,26 +258,26 @@ public final class PrincipalThemeAdditionalGraphics {
         self.chatEmptyItemBackgroundImage = generateStretchableFilledCircleImage(radius: 14.0, color: serviceColor.fill)!
         self.chatLoadingIndicatorBackgroundImage = generateStretchableFilledCircleImage(diameter: 30.0, color: serviceColor.fill)!
         
-        self.chatBubbleShareButtonImage = chatBubbleActionButtonImage(fillColor: bubbleVariableColor(variableColor: theme.bubble.shareButtonFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.bubble.shareButtonStrokeColor, wallpaper: wallpaper), foregroundColor: bubbleVariableColor(variableColor: theme.bubble.shareButtonForegroundColor, wallpaper: wallpaper), image: UIImage(bundleImageName: "Chat/Message/ShareIcon"))!
-        self.chatBubbleNavigateButtonImage = chatBubbleActionButtonImage(fillColor: bubbleVariableColor(variableColor: theme.bubble.shareButtonFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.bubble.shareButtonStrokeColor, wallpaper: wallpaper), foregroundColor: bubbleVariableColor(variableColor: theme.bubble.shareButtonForegroundColor, wallpaper: wallpaper), image: UIImage(bundleImageName: "Chat/Message/NavigateToMessageIcon"), iconOffset: CGPoint(x: 0.0, y: 1.0))!
-        self.chatBubbleActionButtonIncomingMiddleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingStrokeColor, wallpaper: wallpaper), position: .middle)
-        self.chatBubbleActionButtonIncomingBottomLeftImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingStrokeColor, wallpaper: wallpaper), position: .bottomLeft)
-        self.chatBubbleActionButtonIncomingBottomRightImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingStrokeColor, wallpaper: wallpaper), position: .bottomRight)
-        self.chatBubbleActionButtonIncomingBottomSingleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingStrokeColor, wallpaper: wallpaper), position: .bottomSingle)
-        self.chatBubbleActionButtonOutgoingMiddleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingStrokeColor, wallpaper: wallpaper), position: .middle)
-        self.chatBubbleActionButtonOutgoingBottomLeftImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingStrokeColor, wallpaper: wallpaper), position: .bottomLeft)
-        self.chatBubbleActionButtonOutgoingBottomRightImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingStrokeColor, wallpaper: wallpaper), position: .bottomRight)
-        self.chatBubbleActionButtonOutgoingBottomSingleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingStrokeColor, wallpaper: wallpaper), position: .bottomSingle)
-        self.chatBubbleActionButtonIncomingMessageIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingTextColor, wallpaper: wallpaper))!
-        self.chatBubbleActionButtonIncomingLinkIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingTextColor, wallpaper: wallpaper))!
-        self.chatBubbleActionButtonIncomingShareIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotShare"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingTextColor, wallpaper: wallpaper))!
-        self.chatBubbleActionButtonIncomingPhoneIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPhone"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingTextColor, wallpaper: wallpaper))!
-        self.chatBubbleActionButtonIncomingLocationIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLocation"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingTextColor, wallpaper: wallpaper))!
-        self.chatBubbleActionButtonOutgoingMessageIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingTextColor, wallpaper: wallpaper))!
-        self.chatBubbleActionButtonOutgoingLinkIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingTextColor, wallpaper: wallpaper))!
-        self.chatBubbleActionButtonOutgoingShareIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotShare"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingTextColor, wallpaper: wallpaper))!
-        self.chatBubbleActionButtonOutgoingPhoneIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPhone"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingTextColor, wallpaper: wallpaper))!
-        self.chatBubbleActionButtonOutgoingLocationIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLocation"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingTextColor, wallpaper: wallpaper))!
+        self.chatBubbleShareButtonImage = chatBubbleActionButtonImage(fillColor: bubbleVariableColor(variableColor: theme.message.shareButtonFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.shareButtonStrokeColor, wallpaper: wallpaper), foregroundColor: bubbleVariableColor(variableColor: theme.message.shareButtonForegroundColor, wallpaper: wallpaper), image: UIImage(bundleImageName: "Chat/Message/ShareIcon"))!
+        self.chatBubbleNavigateButtonImage = chatBubbleActionButtonImage(fillColor: bubbleVariableColor(variableColor: theme.message.shareButtonFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.shareButtonStrokeColor, wallpaper: wallpaper), foregroundColor: bubbleVariableColor(variableColor: theme.message.shareButtonForegroundColor, wallpaper: wallpaper), image: UIImage(bundleImageName: "Chat/Message/NavigateToMessageIcon"), iconOffset: CGPoint(x: 0.0, y: 1.0))!
+        self.chatBubbleActionButtonIncomingMiddleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsStrokeColor, wallpaper: wallpaper), position: .middle)
+        self.chatBubbleActionButtonIncomingBottomLeftImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomLeft)
+        self.chatBubbleActionButtonIncomingBottomRightImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomRight)
+        self.chatBubbleActionButtonIncomingBottomSingleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomSingle)
+        self.chatBubbleActionButtonOutgoingMiddleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsStrokeColor, wallpaper: wallpaper), position: .middle)
+        self.chatBubbleActionButtonOutgoingBottomLeftImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomLeft)
+        self.chatBubbleActionButtonOutgoingBottomRightImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomRight)
+        self.chatBubbleActionButtonOutgoingBottomSingleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomSingle)
+        self.chatBubbleActionButtonIncomingMessageIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonIncomingLinkIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonIncomingShareIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotShare"), color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonIncomingPhoneIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPhone"), color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonIncomingLocationIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLocation"), color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonOutgoingMessageIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonOutgoingLinkIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonOutgoingShareIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotShare"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonOutgoingPhoneIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPhone"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
+        self.chatBubbleActionButtonOutgoingLocationIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLocation"), color: bubbleVariableColor(variableColor: theme.message.outgoing.actionButtonsTextColor, wallpaper: wallpaper))!
         
         self.chatEmptyItemLockIcon = generateImage(CGSize(width: 9.0, height: 13.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))

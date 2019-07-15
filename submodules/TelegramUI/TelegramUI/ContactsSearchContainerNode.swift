@@ -130,7 +130,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     private let openPeer: (ContactListPeer) -> Void
     
     private let dimNode: ASDisplayNode
-    private let listNode: ListView
+    let listNode: ListView
     
     private let searchQuery = Promise<String?>()
     private let searchDisposable = MetaDisposable()
@@ -315,6 +315,12 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     
     deinit {
         self.searchDisposable.dispose()
+    }
+    
+    override func scrollToTop() {
+        if !self.listNode.isHidden {
+            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        }
     }
     
     override func didLoad() {

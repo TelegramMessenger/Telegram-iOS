@@ -293,7 +293,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var isVoice = false
                 var audioDuration: Int32 = 0
                 
-                let bubbleTheme = presentationData.theme.theme.chat.bubble
+                let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
                 
                 for attribute in file.attributes {
                     if case let .Audio(voice, duration, title, performer, waveform) = attribute {
@@ -318,14 +318,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         if voice {
                             isVoice = true
                             let durationString = stringForDuration(audioDuration)
-                            candidateDescriptionString = NSAttributedString(string: durationString, font: durationFont, textColor: incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+                            candidateDescriptionString = NSAttributedString(string: durationString, font: durationFont, textColor: messageTheme.fileDurationColor)
                             if let waveform = waveform {
                                 waveform.withDataNoCopy { data in
                                     audioWaveform = AudioWaveform(bitstream: data, bitsPerSample: 5)
                                 }
                             }
                         } else {
-                            candidateTitleString = NSAttributedString(string: title ?? (file.fileName ?? "Unknown Track"), font: titleFont, textColor: incoming ? bubbleTheme.incomingFileTitleColor : bubbleTheme.outgoingFileTitleColor)
+                            candidateTitleString = NSAttributedString(string: title ?? (file.fileName ?? "Unknown Track"), font: titleFont, textColor: messageTheme.fileTitleColor)
                             let descriptionText: String
                             if let performer = performer {
                                 descriptionText = performer
@@ -334,7 +334,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             } else {
                                 descriptionText = ""
                             }
-                            candidateDescriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor:incoming ? bubbleTheme.incomingFileDescriptionColor : bubbleTheme.outgoingFileDescriptionColor)
+                            candidateDescriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor: messageTheme.fileDescriptionColor)
                         }
                         break
                     }
@@ -346,7 +346,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if let candidateTitleString = candidateTitleString {
                     titleString = candidateTitleString
                 } else if !isVoice {
-                    titleString = NSAttributedString(string: file.fileName ?? "File", font: titleFont, textColor: incoming ? bubbleTheme.incomingFileTitleColor : bubbleTheme.outgoingFileTitleColor)
+                    titleString = NSAttributedString(string: file.fileName ?? "File", font: titleFont, textColor: messageTheme.fileTitleColor)
                 }
                 
                 if let candidateDescriptionString = candidateDescriptionString {
@@ -358,7 +358,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     } else {
                         descriptionText = ""
                     }
-                    descriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor:incoming ? bubbleTheme.incomingFileDescriptionColor : bubbleTheme.outgoingFileDescriptionColor)
+                    descriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor: messageTheme.fileDescriptionColor)
                 }
                 
                 var textConstrainedSize = CGSize(width: constrainedSize.width - 44.0 - 8.0, height: constrainedSize.height)
@@ -551,15 +551,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 let waveformColor: UIColor
                                 if incoming {
                                     if consumableContentIcon != nil {
-                                        waveformColor = bubbleTheme.incomingMediaActiveControlColor
+                                        waveformColor = messageTheme.mediaActiveControlColor
                                     } else {
-                                        waveformColor = bubbleTheme.incomingMediaInactiveControlColor
+                                        waveformColor = messageTheme.mediaInactiveControlColor
                                     }
                                 } else {
-                                    waveformColor = bubbleTheme.outgoingMediaInactiveControlColor
+                                    waveformColor = messageTheme.mediaInactiveControlColor
                                 }
                                 strongSelf.waveformNode.setup(color: waveformColor, waveform: audioWaveform)
-                                strongSelf.waveformForegroundNode.setup(color: incoming ? bubbleTheme.incomingMediaActiveControlColor : bubbleTheme.outgoingMediaActiveControlColor, waveform: audioWaveform)
+                                strongSelf.waveformForegroundNode.setup(color: messageTheme.mediaActiveControlColor, waveform: audioWaveform)
                             } else if let waveformScrubbingNode = strongSelf.waveformScrubbingNode {
                                 strongSelf.waveformScrubbingNode = nil
                                 waveformScrubbingNode.removeFromSupernode()
@@ -573,7 +573,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     iconNode = TransformImageNode()
                                     strongSelf.iconNode = iconNode
                                     strongSelf.insertSubnode(iconNode, at: 0)
-                                    let arguments = TransformImageArguments(corners: ImageCorners(radius: 8.0), imageSize: CGSize(width: 74.0, height: 74.0), boundingSize: CGSize(width: 74.0, height: 74.0), intrinsicInsets: UIEdgeInsets(), emptyColor: incoming ? bubbleTheme.incomingMediaPlaceholderColor : bubbleTheme.outgoingMediaPlaceholderColor)
+                                    let arguments = TransformImageArguments(corners: ImageCorners(radius: 8.0), imageSize: CGSize(width: 74.0, height: 74.0), boundingSize: CGSize(width: 74.0, height: 74.0), intrinsicInsets: UIEdgeInsets(), emptyColor: messageTheme.mediaPlaceholderColor)
                                     let apply = iconNode.asyncLayout()(arguments)
                                     apply()
                                 }
@@ -655,7 +655,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             return
         }
         let incoming = message.effectivelyIncoming(context.account.peerId)
-        let bubbleTheme = presentationData.theme.chat.bubble
+        let messageTheme = incoming ? presentationData.theme.chat.message.incoming : presentationData.theme.chat.message.outgoing
         
         var isAudio = false
         var isVoice = false
@@ -714,8 +714,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
         
         if isAudio && !isVoice && !isSending {
-            let streamingStatusForegroundColor: UIColor = incoming ? bubbleTheme.incomingAccentControlColor : bubbleTheme.outgoingAccentControlColor
-            let streamingStatusBackgroundColor: UIColor = incoming ? bubbleTheme.incomingMediaInactiveControlColor : bubbleTheme.outgoingMediaInactiveControlColor
+            let streamingStatusForegroundColor: UIColor = messageTheme.accentControlColor
+            let streamingStatusBackgroundColor: UIColor = messageTheme.mediaInactiveControlColor
             switch resourceStatus.fetchStatus {
                 case let .Fetching(_, progress):
                     let adjustedProgress = max(progress, 0.027)
@@ -739,11 +739,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let statusForegroundColor: UIColor
         if self.iconNode != nil {
-            statusForegroundColor = bubbleTheme.mediaOverlayControlForegroundColor
-        } else if incoming {
-            statusForegroundColor = presentationData.wallpaper.isEmpty ? bubbleTheme.incoming.withoutWallpaper.fill : bubbleTheme.incoming.withWallpaper.fill
+            statusForegroundColor = presentationData.theme.chat.message.mediaOverlayControlColors.foregroundColor
         } else {
-            statusForegroundColor = presentationData.wallpaper.isEmpty ? bubbleTheme.outgoing.withoutWallpaper.fill : bubbleTheme.outgoing.withWallpaper.fill
+            statusForegroundColor = bubbleColorComponents(theme: presentationData.theme, incoming: incoming, wallpaper: !presentationData.wallpaper.isEmpty).fill
         }
         switch resourceStatus.mediaStatus {
             case var .fetchStatus(fetchStatus):
@@ -782,12 +780,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let backgroundNodeColor: UIColor
         if self.iconNode != nil {
-            backgroundNodeColor = bubbleTheme.mediaOverlayControlBackgroundColor
-        } else if incoming {
-            backgroundNodeColor = bubbleTheme.incomingMediaActiveControlColor
+            backgroundNodeColor = presentationData.theme.chat.message.mediaOverlayControlColors.fillColor
         } else {
-            backgroundNodeColor = bubbleTheme.outgoingMediaActiveControlColor
+            backgroundNodeColor = messageTheme.mediaActiveControlColor
         }
+
         if state != .none && self.statusNode == nil {
             let statusNode = RadialStatusNode(backgroundNodeColor: backgroundNodeColor)
             self.statusNode = statusNode
@@ -829,8 +826,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
         
         if let (expandedString, compactString, font) = downloadingStrings {
-            self.fetchingTextNode.attributedText = NSAttributedString(string: expandedString, font: font, textColor: incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
-            self.fetchingCompactTextNode.attributedText = NSAttributedString(string: compactString, font: font, textColor: incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+            self.fetchingTextNode.attributedText = NSAttributedString(string: expandedString, font: font, textColor: messageTheme.fileDurationColor)
+            self.fetchingCompactTextNode.attributedText = NSAttributedString(string: compactString, font: font, textColor: messageTheme.fileDurationColor)
         } else {
             self.fetchingTextNode.attributedText = nil
             self.fetchingCompactTextNode.attributedText = nil

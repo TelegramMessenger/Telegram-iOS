@@ -751,7 +751,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
-            navigationTransitionCoordinator.updateProgress()
+            navigationTransitionCoordinator.updateProgress(transition: transition)
         }
     }
     
@@ -840,14 +840,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                         bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
                     }
                     
-                    let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar, didUpdateProgress: { [weak self] progress in
+                    let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar, didUpdateProgress: { [weak self] progress, transition in
                         if let strongSelf = self {
                             for i in 0 ..< strongSelf._viewControllers.count {
                                 if let controller = strongSelf._viewControllers[i].controller as? ViewController {
                                     if i < strongSelf._viewControllers.count - 1 {
-                                        controller.updateNavigationCustomData((strongSelf.viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0 - progress, transition: .immediate)
+                                        controller.updateNavigationCustomData((strongSelf.viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0 - progress, transition: transition)
                                     } else {
-                                        controller.updateNavigationCustomData(nil, progress: 1.0 - progress, transition: .immediate)
+                                        controller.updateNavigationCustomData(nil, progress: 1.0 - progress, transition: transition)
                                     }
                                 }
                             }

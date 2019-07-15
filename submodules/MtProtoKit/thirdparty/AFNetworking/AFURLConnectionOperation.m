@@ -187,6 +187,8 @@ static inline BOOL AFStateTransitionIsValid(AFOperationState fromState, AFOperat
     if (_outputStream) {
         [_outputStream close];
     }
+    
+    [super dealloc];
 }
 
 
@@ -414,8 +416,8 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
         if ([challenge previousFailureCount] == 0) {
             NSURLCredential *credential = nil;
             
-            NSString *username = (__bridge_transfer NSString *)CFURLCopyUserName((CFURLRef)[self.request URL]);
-            NSString *password = (__bridge_transfer NSString *)CFURLCopyPassword((CFURLRef)[self.request URL]);
+            NSString *username = CFBridgingRelease(CFURLCopyUserName((CFURLRef)[self.request URL]));
+            NSString *password = CFBridgingRelease(CFURLCopyPassword((CFURLRef)[self.request URL]));
             
             if (username && password) {
                 credential = [NSURLCredential credentialWithUser:username password:password persistence:NSURLCredentialPersistenceNone];

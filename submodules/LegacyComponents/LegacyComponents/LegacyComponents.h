@@ -295,10 +295,8 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGPassportScanController.h>
 #import <LegacyComponents/TGPassportOCR.h>
 #import <LegacyComponents/TGPassportMRZ.h>
-#import <LegacyComponents/TGPasscodeEntryController.h>
 #import <LegacyComponents/TGPassportICloud.h>
 #import <LegacyComponents/TGEmbedPlayerView.h>
-#import <LegacyComponents/TGWallpaperInfo.h>
 #import <LegacyComponents/TGMemoryImageCache.h>
 #import <LegacyComponents/LegacyHTTPRequestOperation.h>
 #import <LegacyComponents/LegacyComponentsAccessChecker.h>
@@ -329,13 +327,8 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGTooltipView.h>
 
 #import <LegacyComponents/TGCheckButtonView.h>
-#import <LegacyComponents/TGBuiltinWallpaperInfo.h>
-#import <LegacyComponents/TGRemoteWallpaperInfo.h>
-#import <LegacyComponents/TGColorWallpaperInfo.h>
-#import <LegacyComponents/TGCustomImageWallpaperInfo.h>
 #import <LegacyComponents/TGClipboardMenu.h>
 #import <LegacyComponents/TGImagePickerController.h>
 #import <LegacyComponents/TGLegacyCameraController.h>
-#import <LegacyComponents/TGWallpaperController.h>
 #import <LegacyComponents/TGProxyWindow.h>
 #import <LegacyComponents/TGIconSwitchView.h>

@@ -10,11 +10,11 @@ import UniversalMediaPlayer
 private let kOutputBus: UInt32 = 0
 private let kInputBus: UInt32 = 1
 
-private func audioRecorderNativeStreamDescription() -> AudioStreamBasicDescription {
+private func audioRecorderNativeStreamDescription(sampleRate: Float64) -> AudioStreamBasicDescription {
     var canonicalBasicStreamDescription = AudioStreamBasicDescription()
-    canonicalBasicStreamDescription.mSampleRate = 16000.0
+    canonicalBasicStreamDescription.mSampleRate = sampleRate
     canonicalBasicStreamDescription.mFormatID = kAudioFormatLinearPCM
-    canonicalBasicStreamDescription.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked
+    canonicalBasicStreamDescription.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked
     canonicalBasicStreamDescription.mFramesPerPacket = 1
     canonicalBasicStreamDescription.mChannelsPerFrame = 1
     canonicalBasicStreamDescription.mBitsPerChannel = 16
@@ -365,7 +365,7 @@ final class ManagedAudioRecorderContext {
             return
         }
         
-        var audioStreamDescription = audioRecorderNativeStreamDescription()
+        var audioStreamDescription = audioRecorderNativeStreamDescription(sampleRate: 48000)
         guard AudioUnitSetProperty(audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, &audioStreamDescription, UInt32(MemoryLayout<AudioStreamBasicDescription>.size)) == noErr else {
             AudioComponentInstanceDispose(audioUnit)
             return

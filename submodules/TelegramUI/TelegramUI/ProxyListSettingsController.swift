@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import MtProtoKitDynamic
 
 private final class ProxySettingsControllerArguments {
     let toggleEnabled: (Bool) -> Void
@@ -502,7 +503,7 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
                     var string: String
                     switch server.connection {
                     case let .mtp(secret):
-                        let secret = hexString(secret)
+                        let secret = MTProxySecret.parseData(secret)?.serializeToString() ?? ""
                         string = "https://t.me/proxy?server=\(server.host)&port=\(server.port)"
                         string += "&secret=\((secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
                     case let .socks5(username, password):
