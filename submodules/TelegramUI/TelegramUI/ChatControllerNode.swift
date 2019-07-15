@@ -1497,6 +1497,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.prefetchManager.updateAutoDownloadSettings(settings)
     }
     
+    func updateStickerSettings(_ settings: ChatInterfaceStickerSettings) {
+        self.historyNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                itemNode.updateStickerSettings()
+            }
+        }
+    }
+    
     var isInputViewFocused: Bool {
         if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             return inputPanelNode.isFocused

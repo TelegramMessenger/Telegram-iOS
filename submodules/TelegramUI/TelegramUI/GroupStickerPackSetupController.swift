@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class GroupStickerPackSetupControllerArguments {
     let account: Account
@@ -64,7 +65,7 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
     case currentPack(Int32, PresentationTheme, PresentationStrings, GroupStickerPackCurrentItemContent)
     case searchInfo(PresentationTheme, String)
     case packsTitle(PresentationTheme, String)
-    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, StickerPackItem?, String, Bool)
+    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, StickerPackItem?, String, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -85,7 +86,7 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
                 return .index(2)
             case .packsTitle:
                 return .index(3)
-            case let .pack(_, _, _, info, _, _, _):
+            case let .pack(_, _, _, info, _, _, _, _):
                 return .pack(info.id)
         }
     }
@@ -128,8 +129,8 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .pack(lhsIndex, lhsTheme, lhsStrings, lhsInfo, lhsTopItem, lhsCount, lhsSelected):
-            if case let .pack(rhsIndex, rhsTheme, rhsStrings, rhsInfo, rhsTopItem, rhsCount, rhsSelected) = rhs {
+        case let .pack(lhsIndex, lhsTheme, lhsStrings, lhsInfo, lhsTopItem, lhsCount, lhsPlayAnimatedStickers, lhsSelected):
+            if case let .pack(rhsIndex, rhsTheme, rhsStrings, rhsInfo, rhsTopItem, rhsCount, rhsPlayAnimatedStickers, rhsSelected) = rhs {
                 if lhsIndex != rhsIndex {
                     return false
                 }
@@ -146,6 +147,9 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
                     return false
                 }
                 if lhsCount != rhsCount {
+                    return false
+                }
+                if lhsPlayAnimatedStickers != rhsPlayAnimatedStickers {
                     return false
                 }
                 if lhsSelected != rhsSelected {
@@ -188,9 +192,9 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .pack(lhsIndex, _, _, _, _, _, _):
+            case let .pack(lhsIndex, _, _, _, _, _, _, _):
                 switch rhs {
-                    case let .pack(rhsIndex, _, _, _, _, _, _):
+                    case let .pack(rhsIndex, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                     default:
                         return false
@@ -216,8 +220,8 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section, linkAction: nil)
             case let .packsTitle(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .pack(_, theme, strings, info, topItem, count, selected):
-                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: true, sectionId: self.section, action: {
+            case let .pack(_, theme, strings, info, topItem, count, playAnimatedStickers, selected):
+                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
                     if selected {
                         arguments.openStickerPack(info)
                     } else {
@@ -258,7 +262,7 @@ private struct GroupStickerPackSetupControllerState: Equatable {
     var isSaving: Bool
 }
 
-private func groupStickerPackSetupControllerEntries(presentationData: PresentationData, searchText: String, view: CombinedView, initialData: InitialStickerPackData?, searchState: GroupStickerPackSearchState) -> [GroupStickerPackEntry] {
+private func groupStickerPackSetupControllerEntries(presentationData: PresentationData, searchText: String, view: CombinedView, initialData: InitialStickerPackData?, searchState: GroupStickerPackSearchState, stickerSettings: StickerSettings) -> [GroupStickerPackEntry] {
     if initialData == nil {
         return []
     }
@@ -288,7 +292,7 @@ private func groupStickerPackSetupControllerEntries(presentationData: Presentati
                     if case let .found(found) = searchState {
                         selected = found.info.id == info.id
                     }
-                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, presentationData.strings.StickerPack_StickerCount(info.count == 0 ? entry.count : info.count), selected))
+                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, presentationData.strings.StickerPack_StickerCount(info.count == 0 ? entry.count : info.count), stickerSettings.loopAnimatedStickers, selected))
                     index += 1
                 }
             }
@@ -400,66 +404,71 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     
     let previousHadData = Atomic<Bool>(value: false)
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue)
-        |> map { presentationData, state, initialData, view, searchState -> (ItemListControllerState, (ItemListNodeState<GroupStickerPackEntry>, GroupStickerPackEntry.ItemGenerationArguments)) in
-            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                dismissImpl?()
-            })
-            
-            var rightNavigationButton: ItemListNavigationButton?
-            if initialData != nil {
-                if state.isSaving {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(""), style: .activity, enabled: true, action: {})
-                } else {
-                    let enabled: Bool
-                    var info: StickerPackCollectionInfo?
-                    switch searchState.1 {
-                        case .searching, .notFound:
-                            enabled = false
-                        case .none:
-                            enabled = true
-                        case let .found(data):
-                            enabled = true
-                            info = data.info
-                    }
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: enabled, action: {
-                        if info?.id == currentPackInfo?.id {
-                            dismissImpl?()
-                        } else {
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
+    |> map { presentationData, state, initialData, view, searchState, sharedData -> (ItemListControllerState, (ItemListNodeState<GroupStickerPackEntry>, GroupStickerPackEntry.ItemGenerationArguments)) in
+        var stickerSettings = StickerSettings.defaultSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+            stickerSettings = value
+        }
+        
+        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            dismissImpl?()
+        })
+        
+        var rightNavigationButton: ItemListNavigationButton?
+        if initialData != nil {
+            if state.isSaving {
+                rightNavigationButton = ItemListNavigationButton(content: .text(""), style: .activity, enabled: true, action: {})
+            } else {
+                let enabled: Bool
+                var info: StickerPackCollectionInfo?
+                switch searchState.1 {
+                    case .searching, .notFound:
+                        enabled = false
+                    case .none:
+                        enabled = true
+                    case let .found(data):
+                        enabled = true
+                        info = data.info
+                }
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: enabled, action: {
+                    if info?.id == currentPackInfo?.id {
+                        dismissImpl?()
+                    } else {
+                        updateState { state in
+                            var state = state
+                            state.isSaving = true
+                            return state
+                        }
+                        saveDisposable.set((updateGroupSpecificStickerset(postbox: context.account.postbox, network: context.account.network, peerId: peerId, info: info)
+                        |> deliverOnMainQueue).start(error: { _ in
                             updateState { state in
                                 var state = state
-                                state.isSaving = true
+                                state.isSaving = false
                                 return state
                             }
-                            saveDisposable.set((updateGroupSpecificStickerset(postbox: context.account.postbox, network: context.account.network, peerId: peerId, info: info)
-                            |> deliverOnMainQueue).start(error: { _ in
-                                updateState { state in
-                                    var state = state
-                                    state.isSaving = false
-                                    return state
-                                }
-                            }, completed: {
-                                dismissImpl?()
-                            }))
-                        }
-                    })
-                }
+                        }, completed: {
+                            dismissImpl?()
+                        }))
+                    }
+                })
             }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_Info_Stickers), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            
-            let hasData = initialData != nil
-            let hadData = previousHadData.swap(hasData)
-            
-            var emptyStateItem: ItemListLoadingIndicatorEmptyStateItem?
-            if !hasData {
-                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
-            }
-            
-            let listState = ItemListNodeState(entries: groupStickerPackSetupControllerEntries(presentationData: presentationData, searchText: searchState.0, view: view, initialData: initialData, searchState: searchState.1), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: hasData && hadData)
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_Info_Stickers), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        
+        let hasData = initialData != nil
+        let hadData = previousHadData.swap(hasData)
+        
+        var emptyStateItem: ItemListLoadingIndicatorEmptyStateItem?
+        if !hasData {
+            emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
+        }
+        
+        let listState = ItemListNodeState(entries: groupStickerPackSetupControllerEntries(presentationData: presentationData, searchText: searchState.0, view: view, initialData: initialData, searchState: searchState.1, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: hasData && hadData)
+        return (controllerState, (listState, arguments))
+    } |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal)
