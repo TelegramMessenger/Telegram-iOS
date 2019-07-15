@@ -19,6 +19,7 @@
 		D035734722B5C9BF00F0920D /* SecretApiLayer46.swift in Sources */ = {isa = PBXBuildFile; fileRef = D035734422B5C9BF00F0920D /* SecretApiLayer46.swift */; };
 		D035734822B5C9BF00F0920D /* SecretApiLayer8.swift in Sources */ = {isa = PBXBuildFile; fileRef = D035734522B5C9BF00F0920D /* SecretApiLayer8.swift */; };
 		D035734922B5C9BF00F0920D /* SecretApiLayer73.swift in Sources */ = {isa = PBXBuildFile; fileRef = D035734622B5C9BF00F0920D /* SecretApiLayer73.swift */; };
+		D05FDC3A22CA453E0060BFE3 /* SecretApiLayer101.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E9601A22C2BE4900B13673 /* SecretApiLayer101.swift */; };
 		D0CC4AC422BA46F30088F36D /* TelegramApi.h in Headers */ = {isa = PBXBuildFile; fileRef = D035732222B5C1FC00F0920D /* TelegramApi.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CC4AC622BA46F30088F36D /* SecretApiLayer46.swift in Sources */ = {isa = PBXBuildFile; fileRef = D035734422B5C9BF00F0920D /* SecretApiLayer46.swift */; };
 		D0CC4AC722BA46F30088F36D /* Api1.swift in Sources */ = {isa = PBXBuildFile; fileRef = D035733222B5C29900F0920D /* Api1.swift */; };
@@ -237,6 +238,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D05FDC3A22CA453E0060BFE3 /* SecretApiLayer101.swift in Sources */,
 				D0CC4AC622BA46F30088F36D /* SecretApiLayer46.swift in Sources */,
 				D0CC4AC722BA46F30088F36D /* Api1.swift in Sources */,
 				D0CC4AC822BA46F30088F36D /* Api0.swift in Sources */,

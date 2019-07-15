@@ -330,7 +330,7 @@ public final class TelegramMediaFile: Media, Equatable {
     public var isSticker: Bool {
         for attribute in self.attributes {
             if case .Sticker = attribute {
-                return true
+                return !isAnimatedSticker
             }
         }
         return false
@@ -365,10 +365,13 @@ public final class TelegramMediaFile: Media, Equatable {
     
     public var isAnimatedSticker: Bool {
         if let _ = self.fileName, self.mimeType == "application/x-tgsticker" {
-            return true
-        } else {
-            return false
+            for attribute in self.attributes {
+                if case .Sticker = attribute {
+                    return true
+                }
+            }
         }
+        return false
     }
     
     public var isMusic: Bool {

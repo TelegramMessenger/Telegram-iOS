@@ -24,6 +24,7 @@ struct SecretChatRequestData {
 func updateSecretChat(accountPeerId: PeerId, transaction: Transaction, chat: Api.EncryptedChat, requestData: SecretChatRequestData?) {
     let currentPeer = transaction.getPeer(chat.peerId) as? TelegramSecretChat
     let currentState = transaction.getPeerChatState(chat.peerId) as? SecretChatState
+    let settings = transaction.getPreferencesEntry(key: PreferencesKeys.secretChatSettings) as? SecretChatSettings ?? SecretChatSettings.defaultSettings
     assert((currentPeer == nil) == (currentState == nil))
     switch chat {
         case let .encryptedChat(_, _, _, adminId, _, gAOrB, remoteKeyFingerprint):
@@ -61,7 +62,7 @@ func updateSecretChat(accountPeerId: PeerId, transaction: Transaction, chat: Api
                     updatedState = updatedState.withUpdatedEmbeddedState(.sequenceBasedLayer(SecretChatSequenceBasedLayerState(layerNegotiationState: SecretChatLayerNegotiationState(activeLayer: .layer46, locallyRequestedLayer: nil, remotelyRequestedLayer: nil), rekeyState: nil, baseIncomingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: currentPeer.id, tag: OperationLogTags.SecretIncomingDecrypted), baseOutgoingOperationIndex: transaction.operationLogGetNextEntryLocalIndex(peerId: currentPeer.id, tag: OperationLogTags.SecretOutgoing), topProcessedCanonicalIncomingOperationIndex: nil)))
                     
                     updatedState = updatedState.withUpdatedKeyFingerprint(SecretChatKeyFingerprint(sha1: SecretChatKeySha1Fingerprint(digest: sha1Digest(key)), sha256: SecretChatKeySha256Fingerprint(digest: sha256Digest(key))))
-
+                    
                     updatedState = secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(transaction: transaction, peerId: currentPeer.id, state: updatedState)
                     
                     transaction.setPeerChatState(currentPeer.id, state: updatedState)
@@ -88,25 +89,31 @@ func updateSecretChat(accountPeerId: PeerId, transaction: Transaction, chat: Api
             break
         case let .encryptedChatRequested(_, accessHash, date, adminId, participantId, gA):
             if currentPeer == nil && participantId == accountPeerId.id {
-                let state = SecretChatState(role: .participant, embeddedState: .handshake(.accepting), keychain: SecretChatKeychain(keys: []), keyFingerprint: nil, messageAutoremoveTimeout: nil)
-                
-                let bBytes = malloc(256)!
-                let randomStatus = SecRandomCopyBytes(nil, 256, bBytes.assumingMemoryBound(to: UInt8.self))
-                let b = MemoryBuffer(memory: bBytes, capacity: 256, length: 256, freeWhenDone: true)
-                if randomStatus == 0 {
-                    let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: chat.peerId, operation: .initialHandshakeAccept(gA: MemoryBuffer(gA), accessHash: accessHash, b: b), state: state)
-                    transaction.setPeerChatState(chat.peerId, state: updatedState)
+                if settings.acceptOnThisDevice {
+                    let state = SecretChatState(role: .participant, embeddedState: .handshake(.accepting), keychain: SecretChatKeychain(keys: []), keyFingerprint: nil, messageAutoremoveTimeout: nil)
                     
-                    let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, role: updatedState.role, embeddedState: updatedState.embeddedState.peerState, messageAutoremoveTimeout: nil)
-                    updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated })
-                    transaction.resetIncomingReadStates([peer.id: [
-                        Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false),
-                        Namespaces.Message.Local: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false)
-                        ]
-                    ])
+                    let bBytes = malloc(256)!
+                    let randomStatus = SecRandomCopyBytes(nil, 256, bBytes.assumingMemoryBound(to: UInt8.self))
+                    let b = MemoryBuffer(memory: bBytes, capacity: 256, length: 256, freeWhenDone: true)
+                    if randomStatus == 0 {
+                        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: chat.peerId, operation: .initialHandshakeAccept(gA: MemoryBuffer(gA), accessHash: accessHash, b: b), state: state)
+                        transaction.setPeerChatState(chat.peerId, state: updatedState)
+                        
+                        let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), accessHash: accessHash, role: updatedState.role, embeddedState: updatedState.embeddedState.peerState, messageAutoremoveTimeout: nil)
+                        updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated })
+                        transaction.resetIncomingReadStates([peer.id: [
+                            Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false),
+                            Namespaces.Message.Local: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false)
+                            ]
+                            ])
+                    } else {
+                        assertionFailure()
+                    }
                 } else {
-                    assertionFailure()
+                    Logger.shared.log("State", "accepting secret chats disabled on this device")
                 }
+                
+                
             } else {
                 Logger.shared.log("State", "got encryptedChatRequested, but peer already exists or this account is creator")
             }
