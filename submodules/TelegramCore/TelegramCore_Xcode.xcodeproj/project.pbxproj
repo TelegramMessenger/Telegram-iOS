@@ -677,6 +677,8 @@
 		D0CC4ADC22BA47280088F36D /* TelegramApiMac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CC4ADB22BA47280088F36D /* TelegramApiMac.framework */; };
 		D0D1026C2212FE52003ADA5E /* AccountSortOrderAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */; };
 		D0D1026D2212FE52003ADA5E /* AccountSortOrderAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */; };
+		D0D376E622DCCFD600FA7D7C /* SlowMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D376E522DCCFD600FA7D7C /* SlowMode.swift */; };
+		D0D376E722DCCFD600FA7D7C /* SlowMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D376E522DCCFD600FA7D7C /* SlowMode.swift */; };
 		D0D748021E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */; };
 		D0D748031E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */; };
 		D0DA1D321F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA1D311F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift */; };
@@ -1186,6 +1188,7 @@
 		D0CC4AA322BA44960088F36D /* TelegramApi.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramApi.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CC4ADB22BA47280088F36D /* TelegramApiMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramApiMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSortOrderAttribute.swift; sourceTree = "<group>"; };
+		D0D376E522DCCFD600FA7D7C /* SlowMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlowMode.swift; sourceTree = "<group>"; };
 		D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPackInteractiveOperations.swift; sourceTree = "<group>"; };
 		D0DA1D311F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedPendingPeerNotificationSettings.swift; sourceTree = "<group>"; };
 		D0DB7F021F43030C00591D48 /* InstallInteractiveReadMessagesAction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstallInteractiveReadMessagesAction.swift; sourceTree = "<group>"; };
@@ -1993,6 +1996,7 @@
 				D076F8882296D8E9004F895A /* ManageChannelDiscussionGroup.swift */,
 				090E778222A9862100CD99F5 /* ChannelOwnershipTransfer.swift */,
 				090E778F22AAABC600CD99F5 /* PeersNearby.swift */,
+				D0D376E522DCCFD600FA7D7C /* SlowMode.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -2343,6 +2347,7 @@
 				D0DA1D321F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift in Sources */,
 				D099D7491EEF418D00A3128C /* HistoryViewChannelStateValidation.swift in Sources */,
 				C23BC3871E9BE3CA00D79F92 /* ImportContact.swift in Sources */,
+				D0D376E622DCCFD600FA7D7C /* SlowMode.swift in Sources */,
 				D00422D321677F4500719B67 /* ManagedAccountPresence.swift in Sources */,
 				D03B0D0A1D62255C00955575 /* Holes.swift in Sources */,
 				D05464972073872C002ECC1E /* SecureIdBankStatementValue.swift in Sources */,
@@ -2857,6 +2862,7 @@
 				D0FA8BB11E1FEC7E001E855B /* SecretChatEncryptionConfig.swift in Sources */,
 				D0B418AA1D7E0597004562A4 /* Download.swift in Sources */,
 				D001F3F41E128A1C007A8C60 /* UpdatesApiUtils.swift in Sources */,
+				D0D376E722DCCFD600FA7D7C /* SlowMode.swift in Sources */,
 				D015E00F225CA61100CB9E8A /* FindChannelById.swift in Sources */,
 				D04D8FF5209A4B0700865719 /* NetworkSettings.swift in Sources */,
 				D05464982073872C002ECC1E /* SecureIdBankStatementValue.swift in Sources */,

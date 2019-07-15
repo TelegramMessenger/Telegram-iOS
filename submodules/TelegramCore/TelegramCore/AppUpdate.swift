@@ -37,7 +37,7 @@ extension AppUpdateInfo {
 }
 
 func managedAppUpdateInfo(network: Network, stateManager: AccountStateManager) -> Signal<Never, NoError> {
-    let poll = network.request(Api.functions.help.getAppUpdate())
+    let poll = network.request(Api.functions.help.getAppUpdate(source: ""))
     |> retryRequest
     |> mapToSignal { [weak stateManager] result -> Signal<Never, NoError> in
         let updated = AppUpdateInfo(apiAppUpdate: result)
