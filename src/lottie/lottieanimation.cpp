@@ -32,20 +32,21 @@ struct RenderTask {
     AnimationImpl *       playerImpl{nullptr};
     size_t                frameNo{0};
     Surface               surface;
+    bool                  keepAspectRatio{true};
 };
 using SharedRenderTask = std::shared_ptr<RenderTask>;
 
 class AnimationImpl {
 public:
     void    init(const std::shared_ptr<LOTModel> &model);
-    bool    update(size_t frameNo, const VSize &size);
+    bool    update(size_t frameNo, const VSize &size, bool keepAspectRatio);
     VSize   size() const { return mModel->size(); }
     double  duration() const { return mModel->duration(); }
     double  frameRate() const { return mModel->frameRate(); }
     size_t  totalFrame() const { return mModel->totalFrame(); }
     size_t  frameAtPos(double pos) const { return mModel->frameAtPos(pos); }
-    Surface render(size_t frameNo, const Surface &surface);
-    std::future<Surface> renderAsync(size_t frameNo, Surface &&surface);
+    Surface render(size_t frameNo, const Surface &surface, bool keepAspectRatio);
+    std::future<Surface> renderAsync(size_t frameNo, Surface &&surface, bool keepAspectRatio);
     const LOTLayerNode * renderTree(size_t frameNo, const VSize &size);
 
     const LayerInfoList &layerInfoList() const
@@ -71,13 +72,13 @@ void AnimationImpl::setValue(const std::string &keypath, LOTVariant &&value)
 
 const LOTLayerNode *AnimationImpl::renderTree(size_t frameNo, const VSize &size)
 {
-    if (update(frameNo, size)) {
+    if (update(frameNo, size, true)) {
         mCompItem->buildRenderTree();
     }
     return mCompItem->renderTree();
 }
 
-bool AnimationImpl::update(size_t frameNo, const VSize &size)
+bool AnimationImpl::update(size_t frameNo, const VSize &size, bool keepAspectRatio)
 {
     frameNo += mModel->startFrame();
 
@@ -85,11 +86,10 @@ bool AnimationImpl::update(size_t frameNo, const VSize &size)
 
     if (frameNo < mModel->startFrame()) frameNo = mModel->startFrame();
 
-    mCompItem->resize(size);
-    return mCompItem->update(int(frameNo));
+    return mCompItem->update(int(frameNo), size, keepAspectRatio);
 }
 
-Surface AnimationImpl::render(size_t frameNo, const Surface &surface)
+Surface AnimationImpl::render(size_t frameNo, const Surface &surface, bool keepAspectRatio)
 {
     bool renderInProgress = mRenderInProgress.load();
     if (renderInProgress) {
@@ -99,7 +99,7 @@ Surface AnimationImpl::render(size_t frameNo, const Surface &surface)
 
     mRenderInProgress.store(true);
     update(frameNo,
-           VSize(int(surface.drawRegionWidth()), int(surface.drawRegionHeight())));
+           VSize(int(surface.drawRegionWidth()), int(surface.drawRegionHeight())), keepAspectRatio);
     mCompItem->render(surface);
     mRenderInProgress.store(false);
 
@@ -149,7 +149,7 @@ class RenderTaskScheduler {
             if (!success && !_q[i].pop(task)) break;
 
             auto result =
-                task->playerImpl->render(task->frameNo, task->surface);
+                task->playerImpl->render(task->frameNo, task->surface, task->keepAspectRatio);
             task->sender.set_value(result);
         }
     }
@@ -211,7 +211,8 @@ public:
 #endif
 
 std::future<Surface> AnimationImpl::renderAsync(size_t    frameNo,
-                                                Surface &&surface)
+                                                Surface &&surface,
+                                                bool keepAspectRatio)
 {
     if (!mTask) {
         mTask = std::make_shared<RenderTask>();
@@ -222,6 +223,7 @@ std::future<Surface> AnimationImpl::renderAsync(size_t    frameNo,
     mTask->playerImpl = this;
     mTask->frameNo = frameNo;
     mTask->surface = std::move(surface);
+    mTask->keepAspectRatio = keepAspectRatio;
 
     return RenderTaskScheduler::instance().process(mTask);
 }
@@ -300,14 +302,14 @@ const LOTLayerNode *Animation::renderTree(size_t frameNo, size_t width,
     return d->renderTree(frameNo, VSize(int(width), int(height)));
 }
 
-std::future<Surface> Animation::render(size_t frameNo, Surface surface)
+std::future<Surface> Animation::render(size_t frameNo, Surface surface, bool keepAspectRatio)
 {
-    return d->renderAsync(frameNo, std::move(surface));
+    return d->renderAsync(frameNo, std::move(surface), keepAspectRatio);
 }
 
-void Animation::renderSync(size_t frameNo, Surface surface)
+void Animation::renderSync(size_t frameNo, Surface surface, bool keepAspectRatio)
 {
-    d->render(frameNo, surface);
+    d->render(frameNo, surface, keepAspectRatio);
 }
 
 const LayerInfoList &Animation::layers() const

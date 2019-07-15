@@ -340,6 +340,7 @@ public:
      *
      *  @param[in] frameNo Content corresponds to the @p frameNo needs to be drawn
      *  @param[in] surface Surface in which content will be drawn
+     *  @param[in] keepAspectRatio whether to keep the aspect ratio while scaling the content.
      *
      *  @return future that will hold the result when rendering finished.
      *
@@ -348,7 +349,7 @@ public:
      *  @see Surface
      *  @internal
      */
-    std::future<Surface> render(size_t frameNo, Surface surface);
+    std::future<Surface> render(size_t frameNo, Surface surface, bool keepAspectRatio=true);
 
     /**
      *  @brief Renders the content to surface synchronously.
@@ -356,10 +357,11 @@ public:
      *
      *  @param[in] frameNo Content corresponds to the @p frameNo needs to be drawn
      *  @param[in] surface Surface in which content will be drawn
+     *  @param[in] keepAspectRatio whether to keep the aspect ratio while scaling the content.
      *
      *  @internal
      */
-    void              renderSync(size_t frameNo, Surface surface);
+    void              renderSync(size_t frameNo, Surface surface, bool keepAspectRatio=true);
 
     /**
      *  @brief Returns root layer of the composition updated with

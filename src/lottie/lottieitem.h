@@ -65,19 +65,18 @@ class LOTCompItem
 public:
    explicit LOTCompItem(LOTModel *model);
    static std::unique_ptr<LOTLayerItem> createLayerItem(LOTLayerData *layerData);
-   bool update(int frameNo);
-   void resize(const VSize &size);
+   bool update(int frameNo, const VSize &size, bool keepAspectRatio);
    VSize size() const { return mViewSize;}
    void buildRenderTree();
    const LOTLayerNode * renderTree()const;
    bool render(const rlottie::Surface &surface);
    void setValue(const std::string &keypath, LOTVariant &value);
 private:
-   VMatrix                                    mScaleMatrix;
-   VSize                                      mViewSize;
+   VMatrix                                     mScaleMatrix;
+   VSize                                       mViewSize;
    LOTCompositionData                         *mCompData;
    std::unique_ptr<LOTLayerItem>               mRootLayer;
-   bool                                        mUpdateViewBox;
+   bool                                        mKeepAspectRatio{true};
    int                                         mCurFrameNo;
    std::vector<LOTNode *>                      mRenderList;
    std::vector<VDrawable *>                    mDrawableList;

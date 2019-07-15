@@ -70,7 +70,7 @@ static bool strokeProp(rlottie::Property prop)
 }
 
 LOTCompItem::LOTCompItem(LOTModel *model)
-    : mUpdateViewBox(false), mCurFrameNo(-1)
+    : mCurFrameNo(-1)
 {
     mCompData = model->mRoot.get();
     mRootLayer = createLayerItem(mCompData->mRootLayer.get());
@@ -109,38 +109,36 @@ std::unique_ptr<LOTLayerItem> LOTCompItem::createLayerItem(
     }
 }
 
-void LOTCompItem::resize(const VSize &size)
-{
-    if (mViewSize == size) return;
-    mViewSize = size;
-    mUpdateViewBox = true;
-}
-
-bool LOTCompItem::update(int frameNo)
+bool LOTCompItem::update(int frameNo, const VSize &size, bool keepAspectRatio)
 {
     // check if cached frame is same as requested frame.
-    if (!mUpdateViewBox && (mCurFrameNo == frameNo)) return false;
+    if ((mViewSize == size) &&
+        (mCurFrameNo == frameNo) &&
+        (mKeepAspectRatio == keepAspectRatio)) return false;
+
+    mViewSize = size;
+    mCurFrameNo = frameNo;
+    mKeepAspectRatio = keepAspectRatio;
 
     /*
      * if viewbox dosen't scale exactly to the viewport
      * we scale the viewbox keeping AspectRatioPreserved and then align the
      * viewbox to the viewport using AlignCenter rule.
      */
+    VMatrix m;
     VSize viewPort = mViewSize;
     VSize viewBox = mCompData->size();
-
     float sx = float(viewPort.width()) / viewBox.width();
     float sy = float(viewPort.height()) / viewBox.height();
-    float scale = std::min(sx, sy);
-    float tx = (viewPort.width() - viewBox.width() * scale) * 0.5f;
-    float ty = (viewPort.height() - viewBox.height() * scale) * 0.5f;
-
-    VMatrix m;
-    m.translate(tx, ty).scale(scale, scale);
+    if (mKeepAspectRatio) {
+        float scale = std::min(sx, sy);
+        float tx = (viewPort.width() - viewBox.width() * scale) * 0.5f;
+        float ty = (viewPort.height() - viewBox.height() * scale) * 0.5f;
+        m.translate(tx, ty).scale(scale, scale);
+    } else {
+       m.scale(sx, sy);
+    }
     mRootLayer->update(frameNo, m, 1.0);
-
-    mCurFrameNo = frameNo;
-    mUpdateViewBox = false;
     return true;
 }
 
