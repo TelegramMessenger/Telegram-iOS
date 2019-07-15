@@ -42,7 +42,7 @@ func augmentMediaWithReference(_ mediaReference: AnyMediaReference) -> Media {
         if file.partialReference != nil {
             return file
         } else {
-            return  file.withUpdatedPartialReference(mediaReference.partial)
+            return file.withUpdatedPartialReference(mediaReference.partial)
         }
     } else if let image = mediaReference.media as? TelegramMediaImage {
         if image.partialReference != nil {
@@ -367,7 +367,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                 
                     let authorId: PeerId?
-                    if let peer = peer as? TelegramChannel, case let .broadcast(info) = peer.info {
+                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                         authorId = peer.id
                     }  else {
                         authorId = account.peerId
@@ -388,12 +388,9 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         if let peer = peer as? TelegramSecretChat {
                             var isAction = false
-                            var mediaDuration: Int32?
                             for media in sourceMessage.media {
                                 if let _ = media as? TelegramMediaAction {
                                     isAction = true
-                                } else if let file = media as? TelegramMediaFile, let duration = file.duration {
-                                    mediaDuration = duration
                                 }
                             }
                             if !disableAutoremove, let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
