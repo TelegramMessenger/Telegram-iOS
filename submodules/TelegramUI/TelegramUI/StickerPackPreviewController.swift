@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import TelegramUIPreferences
 
 enum StickerPackPreviewControllerMode {
     case `default`
@@ -140,8 +141,13 @@ final class StickerPackPreviewController: ViewController {
         }
         let account = self.context.account
         self.displayNodeDidLoad()
-        self.stickerPackDisposable.set((self.stickerPackContents.get()
-        |> mapToSignal { next -> Signal<LoadedStickerPack, NoError> in
+        self.stickerPackDisposable.set((combineLatest(self.stickerPackContents.get(), self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> take(1))
+        |> mapToSignal { next, sharedData -> Signal<(LoadedStickerPack, StickerSettings), NoError> in
+            var stickerSettings = StickerSettings.defaultSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+                stickerSettings = value
+            }
+            
             switch next {
                 case let .result(_, items, _):
                     var preloadSignals: [Signal<Bool, NoError>] = []
@@ -172,26 +178,26 @@ final class StickerPackPreviewController: ViewController {
                         return !values.contains(false)
                     }
                     |> distinctUntilChanged
-                    |> mapToSignal { loaded -> Signal<LoadedStickerPack, NoError> in
+                    |> mapToSignal { loaded -> Signal<(LoadedStickerPack, StickerSettings), NoError> in
                         if !loaded {
-                            return .single(.fetching)
+                            return .single((.fetching, stickerSettings))
                         } else {
-                            return .single(next)
+                            return .single((next, stickerSettings))
                         }
                     }
                 default:
-                    return .single(next)
+                    return .single((next, stickerSettings))
             }
         }
         |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
-                if case .none = next {
+                if case .none = next.0 {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     strongSelf.dismiss()
                 } else {
-                    strongSelf.controllerNode.updateStickerPack(next)
-                    strongSelf.stickerPackContentsValue = next
+                    strongSelf.controllerNode.updateStickerPack(next.0, stickerSettings: next.1)
+                    strongSelf.stickerPackContentsValue = next.0
                 }
             }
         }))

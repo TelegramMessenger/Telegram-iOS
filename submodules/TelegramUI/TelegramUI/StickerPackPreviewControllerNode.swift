@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TelegramUIPreferences
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -75,6 +76,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     private var stickerPack: LoadedStickerPack?
     private var stickerPackUpdated = false
     private var stickerPackInitiallyInstalled : Bool?
+    private var stickerSettings: StickerSettings?
     
     private var currentItems: [StickerPackPreviewGridEntry] = []
     
@@ -131,13 +133,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         super.init()
         
-        self.interaction = StickerPackPreviewInteraction(sendSticker: { [weak self] item in
-            if let strongSelf = self, let sendSticker = strongSelf.sendSticker {
-                /*if sendSticker(item.file) {
-                    strongSelf.cancel?()
-                }*/
-            }
-        })
+        self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: false)
         
         self.backgroundColor = nil
         self.isOpaque = false
@@ -510,16 +506,16 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         } else {
             dismissOnAction = true
         }
-        if let stickerPack = self.stickerPack {
+        if let stickerPack = self.stickerPack, let stickerSettings = self.stickerSettings {
             switch stickerPack {
                 case let .result(info, items, installed):
                     if installed {
                         let _ = removeStickerPackInteractively(postbox: self.context.account.postbox, id: info.id, option: .delete).start()
-                        updateStickerPack(.result(info: info, items: items, installed: false))
+                        self.updateStickerPack(.result(info: info, items: items, installed: false), stickerSettings: stickerSettings)
                     } else {
                         let _ = addStickerPackInteractively(postbox: self.context.account.postbox, info: info, items: items).start()
                         if !dismissOnAction {
-                            updateStickerPack(.result(info: info, items: items, installed: true))
+                            self.updateStickerPack(.result(info: info, items: items, installed: true), stickerSettings: stickerSettings)
                         }
                     }
                     if dismissOnAction {
@@ -566,9 +562,13 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         })
     }
     
-    func updateStickerPack(_ stickerPack: LoadedStickerPack) {
+    func updateStickerPack(_ stickerPack: LoadedStickerPack, stickerSettings: StickerSettings) {
         self.stickerPack = stickerPack
+        self.stickerSettings = stickerSettings
         self.stickerPackUpdated = true
+        
+        self.interaction.playAnimatedStickers = stickerSettings.loopAnimatedStickers
+        
         if let _ = self.containerLayout {
             self.dequeueUpdateStickerPack()
         }

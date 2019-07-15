@@ -2191,7 +2191,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
     }
     
-    
     override func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         for contentNode in self.contentNodes {
             if let playMediaWithSound = contentNode.playMediaWithSound() {
