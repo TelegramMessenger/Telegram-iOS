@@ -87,6 +87,8 @@
 		C2FD33E51E687BF1008D13D4 /* PeerPhotoUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FD33E31E687BF1008D13D4 /* PeerPhotoUpdater.swift */; };
 		C2FD33EB1E696C78008D13D4 /* GroupsInCommon.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FD33EA1E696C78008D13D4 /* GroupsInCommon.swift */; };
 		C2FD33EC1E696C79008D13D4 /* GroupsInCommon.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2FD33EA1E696C78008D13D4 /* GroupsInCommon.swift */; };
+		D00083CD22DD438D00EC418C /* SecretChatSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00083CC22DD438D00EC418C /* SecretChatSettings.swift */; };
+		D00083CE22DD438D00EC418C /* SecretChatSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00083CC22DD438D00EC418C /* SecretChatSettings.swift */; };
 		D001F3E81E128A1C007A8C60 /* ChannelState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0CFF1D62255C00955575 /* ChannelState.swift */; };
 		D001F3E91E128A1C007A8C60 /* SecretChatState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0177B7A1DF8A16C00A5083A /* SecretChatState.swift */; };
 		D001F3EA1E128A1C007A8C60 /* TelegramPeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */; };
@@ -428,7 +430,6 @@
 		D0642EFA1F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EF81F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift */; };
 		D067066C1D512ADB00DED3E3 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706671D512ADB00DED3E3 /* Postbox.framework */; };
 		D067066D1D512ADB00DED3E3 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706681D512ADB00DED3E3 /* SwiftSignalKit.framework */; };
-		D069257122D8B526002FC021 /* SecretChatSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D069257022D8B526002FC021 /* SecretChatSettings.swift */; };
 		D069257222D8B526002FC021 /* SecretChatSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D069257022D8B526002FC021 /* SecretChatSettings.swift */; };
 		D06CA13522772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CA13422772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift */; };
 		D06CA13622772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CA13422772EB20094E707 /* ManagedNotificationSettingsBehaviors.swift */; };
@@ -862,6 +863,7 @@
 		C2FD33E01E680E9E008D13D4 /* RequestUserPhotos.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestUserPhotos.swift; sourceTree = "<group>"; };
 		C2FD33E31E687BF1008D13D4 /* PeerPhotoUpdater.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerPhotoUpdater.swift; sourceTree = "<group>"; };
 		C2FD33EA1E696C78008D13D4 /* GroupsInCommon.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupsInCommon.swift; sourceTree = "<group>"; };
+		D00083CC22DD438D00EC418C /* SecretChatSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretChatSettings.swift; sourceTree = "<group>"; };
 		D003702A1DA42586004308D3 /* PhoneNumber.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhoneNumber.swift; sourceTree = "<group>"; };
 		D00422D221677F4500719B67 /* ManagedAccountPresence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAccountPresence.swift; sourceTree = "<group>"; };
 		D00580AD21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountEnvironmentAttribute.swift; sourceTree = "<group>"; };
@@ -1313,6 +1315,7 @@
 				0962E66E21B6147600245FD9 /* AppConfiguration.swift */,
 				0962E68021BAA20E00245FD9 /* SearchBotsConfiguration.swift */,
 				09EDAD372213120C0012A50B /* AutodownloadSettings.swift */,
+				D00083CC22DD438D00EC418C /* SecretChatSettings.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -2278,6 +2281,7 @@
 				0900555621E4A96E0030924C /* Wallpaper.swift in Sources */,
 				C230BEB61EE9A3760029586C /* ChannelAdminEventLogs.swift in Sources */,
 				D0136309208F3B0900EB3653 /* SecureIdValueContentError.swift in Sources */,
+				D00083CD22DD438D00EC418C /* SecretChatSettings.swift in Sources */,
 				D03B0D3D1D6319E200955575 /* Fetch.swift in Sources */,
 				D02D60A7206BA5F900FEFE1E /* SecureIdValue.swift in Sources */,
 				D0DF0C931D81AD09008AEB01 /* MessageUtils.swift in Sources */,
@@ -2291,7 +2295,6 @@
 				D03B0D441D6319F900955575 /* CloudFileMediaResource.swift in Sources */,
 				D018D3371E648ACF00C5E089 /* ChannelCreation.swift in Sources */,
 				D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */,
-				D069257122D8B526002FC021 /* SecretChatSettings.swift in Sources */,
 				D0AF32221FAC95C20097362B /* StandaloneUploadedMedia.swift in Sources */,
 				D0F53BE91E784A4800117362 /* ChangeAccountPhoneNumber.swift in Sources */,
 				D0E35A0E1DE4953E00BC6096 /* FetchHttpResource.swift in Sources */,
@@ -2648,6 +2651,7 @@
 				D050F26A1E4A5B6D00988324 /* ManagedGlobalNotificationSettings.swift in Sources */,
 				D0750C9122B2FD8300BE5F6E /* PeerAccessHash.swift in Sources */,
 				D050F26B1E4A5B6D00988324 /* ApplyMaxReadIndexInteractively.swift in Sources */,
+				D00083CE22DD438D00EC418C /* SecretChatSettings.swift in Sources */,
 				D033FEB11E61EB0200644997 /* PeerContactSettings.swift in Sources */,
 				D0458C891E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */,
 				D050F26C1E4A5B6D00988324 /* UpdatePeers.swift in Sources */,

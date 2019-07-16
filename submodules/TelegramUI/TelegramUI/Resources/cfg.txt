@@ -1,0 +1,1004 @@
+{
+  "@type": "config.global",
+  "liteclients": [
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304504083,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "DV/tiUhUm63rd5Apd8GEAT0dFfJUtZ2nTIfJ+kRlsAw="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1068377703,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "CIoYpRWinXWbFq28vaehuVHXjcWIAVntgP86IFVhBZA="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1057912003,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "gzDHDw3tRv8vlNX7fZstkf2ryjtSnPPFCoo3zShIrP4="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1057911744,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "qny2fvIURiomfiersNlO2XCVsoAa79jODk8W+xwHb7U="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1057911148,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "HA46rLOlOR8TnLUTMKj+00EkgVNjLLR/n8pl0D6UVFs="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -960017601,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "KTcSr9C1dOV0aq1XYNQ+EB/FD/ZahbxPDki3LiqW2gI="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -960016061,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "NUbsAQT1cOc37zL2EKETN7PW/+IEEqcUPnE7NLlErYw="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1057908603,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "ExfhjJNdm5pTb59CKRs7PvOZmYzp10JGVMsJZUh6ECc="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1057913261,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "EgJ3XQs2BPH4KgVSOUhYCGJauDf1ZIQS8ekY0CWuSWM="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1057912968,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "fkcogWHOSj/mjne7plR88xm8jFhgQuj8CViXSGdDr7Q="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1068378705,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "2xi+YQBzNQs0Y6LRtLLuFpC9xGxBG0GmuA+VrhlHUJ8="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761102430,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "AMF7C9bSHrcmmLv8PBLIsNMwIrlk5hz95EPinrtS3OM="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761102682,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "Drj1DIdJbaywWyXwWrXe4Ahdxt0aeUoDxGNlbRJuAvw="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761102998,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "XNvgKbw/Lt+5Olzl0JXWh3Z8SUUoOl+HfBQXpa7mmus="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906484321,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "IKqRbLTkH9SycgbNKSqGwoQ4quwIIbniw6CIpHupvGg="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761128499,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "H4CyzrVBmRUySPRbodkIOS0bNN7pw25BOkr8osvu2uk="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906485293,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "hs/hGnZ5/cXpnaXW4YC6ZiCccKbCKV0lqUAHDcZAWbI="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761103643,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "jRvgvasW6qCo8B7Bx/is0keNTO9r4TorAnc6pEi/23M="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761102669,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "uv2MVlfhGOWIw5HgryqGDKJ3UpJwkrqp4kr+lPK6co8="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761128567,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "NApQRK7m0vRQxzbkYmwUq8glTbkUU8UIBgPCBWeCU3s="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761102455,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "bmbIbxQV4zSUMQ8I+dD5/l8kPHQBdG8CiybmnT32euc="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304505746,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "S75iLB0NR2/UigCTeHZ09aYOjOmv5XHouvsf7WdP3Zk="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304506980,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "1bfndxb6MSCLLfBNuGNbGRgsqemtfC89Gd/+hXUTRbU="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304505254,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "el6aQW3psg5eoUAZYSmK+JUpaqGrcETaxdVc69VdoqQ="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304505250,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "rcXjR9/LRK33pKIoheKsZlluRrDRbybDGd9yF7/GNGY="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304506016,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "lTeh+3op7fMgAoeJbKLvT1Bsn3Q7cCrpmU25BYQw1k8="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304505762,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "8aRwvoUS+IMkysDo300FTBlInDWI7Cv1J6/Q5G1KXFc="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304506327,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "XQB7dBGjRTg/xl3a5coTIeHfkMU/glrXd+pOCjLXlMc="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304505218,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "7+LMdebb+NeEW1v+wPnkZFfkSOj539xTcpKYlkIEeb4="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304507131,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "qokyesASkg3C7YOp/DJ/DfsuojVARFc28LsNMitmCmA="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1304506280,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "zEiY6eT3aYZq5+pAC9cmjv/YRvzxG5E5wsm7IBSto+4="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1152892389,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "cdCPa/iSKfID87WEZe/nFjO/aRbiZahj8FsK8SMUZpQ="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1645860838,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "6UWk19MbBb7I3o9xvClrlcvFqzWnNRfEt8ttBbvFz/s="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1152889600,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "Y2wsQPXrMNMB6dvNa612HdaJ5HWh0jo9W5sbEicC8xs="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1152889682,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "XUk6hemxamYwdUr93+pNeRLESEL+xOy0LNCnKuR+Gdo="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -826453684,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "KD5l0+wrR0SjTvwKB0j4C/wTaeiyhSwrRRq11Dyb3L0="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1152892218,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "pMIxjycUkkhqU0E2JPCANW7bMBK6Zw/Sga8aIz++JYo="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1152892263,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "hDh4oFrYKquWQM1DsAO273cfJevPW/TlZHF/aP8WCc4="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1152892278,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "6q+ZtFXRIO0Wi0IgXnsyIbOJHMxhnZfKQFEhDlIsxuc="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1152892245,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "t+5NFV1iSCOB4JRH6uXsVahAQjx1YypiNoawUxV4elk="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1152889739,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "QW/Qcec57iz27OTLJZWx8hADO4rOUI8fjak0BeW7Uik="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906497622,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "+BGcX5JyiJLCNncXDkraybMlWl6ia/E442KBxH/BaSw="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761128256,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "wGlPbpfz/xfynExyRhRtp8C6LZuj8u/LMUT6/uTIvTg="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761125946,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "cmo+9dmnfewfrAe9tkWN7+EZfEH+yVaugHrPGrd1qN0="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761126833,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "CX3L4PkMF00sATRk/b3oSTrJyLdMrEtsNnI3CXcsudo="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761126836,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "mfbwQQF6JxCqjH8N2DhawDI9BAQ4jr6p7iXXJsrv+Mw="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761125954,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "kBHSnRbZbLFHoWVPQ3GZUvBxLsgQ1Dtah8UicTzNmQM="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761126831,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "yilz2TDUfQYUFOU2w/FSDGsQgUbK1VO/6avcmHK/9yM="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761127482,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "WSpv7ZJZYdcHXEPWxCGa1eB83NFLtzNxD83E6cpLbsA="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761125923,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "VOzqQQWzAWuQ13LurjTqnRn6ca6ZVRngqBRX5EhFkxU="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1761126773,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "JZv7kKSqWUY1Hb834Yoju5x4f7CsAy8evvac74m6C2I="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906462930,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "TKY6d+qjYOuy4NdYPpW1EI1OUUdt+mRZ1XdNttTyfUM="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906465777,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "v2/1ctPuoLrkcjhzg883nsj43CEZunD0rLwiydWQB1g="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906462910,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "ll6tinPXeBq8AQuFNx/tpXb3zPEgbYKWCOzlwsvY9So="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906465752,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "pkbZ3c5mFOPGqIGNAhdY2aYVYtktUovv4ydf+7KoYIw="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906462871,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "Jrbug5SSeN4SS2QXWAEKWqGQn2DlULYEpd0CQUmrUog="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906462903,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "Uqb/H4hAXfYTowJ8Uj1i/O2uyCtVzIvEYs7Wj0WugKM="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906462900,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "DnMT/zaKqEDCWj0pqEQVZx2Gyej5NVnVgzfSMZbtS8I="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906464679,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "bfn/ZPjyi2sRRb3EqWeEo1biCfmnAScJtzf0iWcoetY="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906462816,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "dNleRcSLp18yP6JuJ9ZAw4tyvcZI8dwYIamJrsf3jnw="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906464690,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "TXs2WXqGdqydsAo0AoeCoL+2/46+Itn19w7boG+xmOA="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1486637148,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "kwU+G53Qu2B6dcQ5VU22lq/lM58nPkJpgs+nUqBVKE8="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1486637095,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "dLzZot6GVZ1vb9oRzNLRUvRyKPfjtD5Rhwda5lDX5RY="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1486637057,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "/GrzoCXcy+0Cf+sGW4jW/t1YS2l5/l4vP2f1ab/+4Xg="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1486637076,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "7PLAlTdhGvCGY87aF/zHV37mcnaPZ56ulWynys73Ht4="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1486637077,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "3x+i3BTlSgx71oxeV9MK8GIlmaoeviBVP5mRAohkWjg="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300176878,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "594AzH7G2s3X0CatCX+VcotLDAEhkoSdtH7jgJJqx9A="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300176772,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "IOw67C40qmY/jMajJOP0T7nXq0Nm0bad3hRJZH37plw="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1966759642,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "1+OvwcnY/TmcVf6/BNgVp5K4ROfKWDUrGPryMDPiAVo="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1621525557,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "sz1vWl1/6zL6Ax3JIoMi2Hypbm3EYua0PMCzYJIPwHA="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1486637182,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "HWrd2Ki0RIQZanCClYA6wVTL/2/Pw93xR7wnzPC54FA="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300174690,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "PRkX4OnKH9hrC4wRLK9KjcyRIeb8vQ9fAuKy0KAR96I="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300174601,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "SLtDEcGNoLejl5+7ugRtwIb1iAP4zJgiMqV45adhBxo="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300174685,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "BTNybm5f/sNG1bTrVHbvfDYRNqj8tMUJ4I8C8NaiC5k="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300174619,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "jLQkdn005r7OI92waLZgo+s3eXBufdA0f2ZABbziG+c="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300175620,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "ldjuyk0g5F167UOy/Onmfw0DF4XIzhATN71DB9OSE+I="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1966758224,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "XiyxLPocCqLzzAq32b12zi58YuhI8Tk0g12A3C+baBI="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300174695,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "QQA+HLq++d9cydhpnc/IJdEaGSXsiooNc4x93F11zGI="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300173773,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "cjq2qdBHRVoIidXywXj7wffJyw4c7fxnhA0GvaB3hS8="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300176324,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "4URHqWke30BXuS7OAhmtyk0g8SMIZFc4ThyyBsOKf08="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300175865,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "fDQXvgFHQIYTaBpTlMBhA0h56NOuWeDJnKpKAX5vMTE="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906452403,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "5JXdERiHv3vB3gYfR9TlH0/vFp6WVqAVd0RwrKijrgU="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906450496,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "60Ap+Ny9Wu83f0EnGyz5yc7ko2oCdPf2r6rgpaarQAc="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -826440608,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "gx/O0lgQMGQaTJ1HkH03eOhJ42Ts/PcgtAXuYVLzeGQ="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906453788,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "/q9JpZOk/qQRSCLJZFC7/9iOvoSt5llktn3YcQ8DFXM="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906451778,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "DsV4SOyWmCjw2daY5CQVa05PNIbJcPN5G+gJWzGXn6w="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906454492,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "+sQhYkomuMdwRJoa4l2jLxqzqh9ppSIdDC/N1v0KfbY="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906454434,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "/FAXhFYnpj1KKsD70TIiEbvTWqEnxai+kvol/5BSruk="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -826441009,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "7ubeF32tFr1d99LlT9wDZ3P0Fq93be8pMasa5VjcLN4="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1621514304,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "OA5JMLshDZ+AkqmF0LG4xCpri0Sqp4Lor0+cmq0GZh8="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -826439121,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "xfx2ZUTBGUSL1ah2HFabK7OY04pjk1Kg37JUMs5U/sU="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300233760,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "t9LrAxemsDKCxEh2k2yEuKXKGjF0g4FaEDz7YWSxaeU="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1975195596,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "jFlC3YvTllrqp6spQnxF9FbNObfL6gYnE0OG4PC31f4="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300187178,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "DutaSjqF3BiJE8MJnx0EBO0mk/Vw9WLTx8ABGPnECXk="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300232943,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "hnVmZHy/od2mOcTWci9qOBxpqG4SJBpjgTIWl9X2A5M="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300230720,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "mFPe8+dcmsrYjb7vg+6Uq2tlEOzGmndlPaahbbKR0s8="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1959043315,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "kiOZrE5gNrNCLn3qpJrV6hLovc81z70FkqASezpMOtA="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -826441105,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "lHYQFG4CVeMLrITRZ7ga2PgQFRsrzLbnhga+mly5T+Q="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906452288,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "XZVDqG6TdXmEN+bCXWSR7E7QOCB5HL2mBe8ErMXDHkU="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906452915,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "w9zFkSfBTwMg2y/Wz7lo5GRwiy7C7vkUK7b1YWZSDu0="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1906452150,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "nKOE+5IdXPQEBepJoIqZTKBe4cmqoHMjbS/VCTazh64="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1645858963,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "VWeMFMCIvJuLNN+hgHYHa5f9Ddr4weOdDZtdjDPxDw0="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1645860831,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "Eehi2MUSTSN0LuOhlKgIi1AXNdlDXDCvipTMzTouSu4="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1645858962,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "0dcj6aQPBvRvwSUObscLDGhrHv0OGhSkqMzJdDGwc2Q="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1152904943,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "v/+3wj2whN9/V3gF1v4ijIFV8j0FafMPEJ8v1955GBM="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1645858971,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "/g0Qu/jPQ+SU4mM2gf/CSVvvP3D9xLlRn4kgCW+lo18="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": 1152889061,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "bUQTJ62nzM+yOe7QqeafDkCcVyYzwROZX2RRWb0+DOg="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1645858966,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "MO51IFzD52v5TAL712Q24XVX+bvRe+BzxMYQexpf99Y="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1645858965,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "TOrLpeLDEr1SObDsYzyN15Bug9xQClcROx8cdZRH220="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1645862732,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "PZ6dB8lfhryFk6keq8Jo/eiy+q+zSzey8B+YYt/ifwE="
+      }
+    },
+    {
+      "@type": "liteclient.config.global",
+      "ip": -1300227689,
+      "port": 4924,
+      "id": {
+        "@type": "pub.ed25519",
+        "key": "nJ/JNVabS5My75rJIWnJ+hW/undPVm+NuYr21UHICVU="
+      }
+    }
+  ]
+}

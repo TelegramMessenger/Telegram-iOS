@@ -6,6 +6,7 @@ import TelegramCore
 import Display
 import DeviceAccess
 import TelegramPresentationData
+import MtProtoKitDynamic
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -182,6 +183,8 @@ public final class AccountContext {
     private let deviceSpecificContactImportContexts: QueueLocalObject<DeviceSpecificContactImportContexts>
     private var managedAppSpecificContactsDisposable: Disposable?
     
+    public var ton: TON?
+    
     public init(sharedContext: SharedAccountContext, account: Account, limitsConfiguration: LimitsConfiguration) {
         self.sharedContext = sharedContext
         self.account = account
@@ -230,6 +233,10 @@ public final class AccountContext {
                 }
             })
         }
+        
+        let tonConfig = frameworkBundle.path(forResource: "cfg", ofType: "txt").flatMap({ try? Data(contentsOf: URL(fileURLWithPath: $0)) }).flatMap({ String(data: $0, encoding: .utf8) })
+        
+        self.ton = TON(keystoreDirectory: account.basePath + "/keystore", config: tonConfig!)
     }
     
     deinit {

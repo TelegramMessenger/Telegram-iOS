@@ -843,6 +843,10 @@
 		09EC0DE222C6339700E7185B /* IntentMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentMessages.swift; sourceTree = "<group>"; };
 		09EC5CD922CBBF9600292E42 /* telegram_plane1@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "telegram_plane1@2x.png"; sourceTree = "<group>"; };
 		09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D00083CF22DD454300EC418C /* Telegram-iOS.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Telegram-iOS.xcodeproj"; sourceTree = "<group>"; };
+		D00083D222DD455600EC418C /* libtonlibjson.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtonlibjson.dylib; path = submodules/MtProtoKit/TON/libtonlibjson.dylib; sourceTree = "<group>"; };
+		D00083D922DD46DA00EC418C /* libtdjson.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtdjson.dylib; path = submodules/MtProtoKit/TON/libtdjson.dylib; sourceTree = "<group>"; };
+		D00083DC22DD4AD100EC418C /* libtonlibjson.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtonlibjson.dylib; path = submodules/MtProtoKit/TON/libtonlibjson.dylib; sourceTree = "<group>"; };
 		D000CAC021FB6E160011B15D /* NotificationService-HockeyApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-HockeyApp.entitlements"; sourceTree = "<group>"; };
 		D000CAC121FB6E160011B15D /* NotificationService-Fork.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-Fork.entitlements"; sourceTree = "<group>"; };
 		D000CAC221FB6E170011B15D /* NotificationService-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-AppStore.entitlements"; sourceTree = "<group>"; };
@@ -1808,9 +1812,17 @@
 			name = Model;
 			sourceTree = "<group>";
 		};
+		D00083D022DD454300EC418C /* Products */ = {
+			isa = PBXGroup;
+			name = Products;
+			sourceTree = "<group>";
+		};
 		D00859931B28189D00EAF753 = {
 			isa = PBXGroup;
 			children = (
+				D00083D222DD455600EC418C /* libtonlibjson.dylib */,
+				D00083DC22DD4AD100EC418C /* libtonlibjson.dylib */,
+				D00083CF22DD454300EC418C /* Telegram-iOS.xcodeproj */,
 				D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */,
 				D023EBB31DDB2F0E00BD496D /* Resources */,
 				D03B0E791D63484500955575 /* Share */,
@@ -1903,6 +1915,7 @@
 		D00859C21B281E0000EAF753 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D00083D922DD46DA00EC418C /* libtdjson.dylib */,
 				D00818CE22B595DB008A895F /* LightweightAccountData.framework */,
 				D00818A422B58CCB008A895F /* WatchCommonWatch.framework */,
 				D008185922B57EF5008A895F /* WatchCommon.framework */,
@@ -2662,6 +2675,12 @@
 			mainGroup = D00859931B28189D00EAF753;
 			productRefGroup = D008599D1B28189D00EAF753 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = D00083D022DD454300EC418C /* Products */;
+					ProjectRef = D00083CF22DD454300EC418C /* Telegram-iOS.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				D008599B1B28189D00EAF753 /* Telegram-iOS */,
@@ -4981,6 +5000,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
+					"$(PROJECT_DIR)/submodules/MtProtoKit/TON",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (
@@ -5025,6 +5045,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
+					"$(PROJECT_DIR)/submodules/MtProtoKit/TON",
 				);
 				OTHER_LDFLAGS = (
 					"-ObjC",
@@ -5121,6 +5142,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
+					"$(PROJECT_DIR)/submodules/MtProtoKit/TON",
 				);
 				OTHER_LDFLAGS = (
 					"-ObjC",
@@ -6138,6 +6160,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
+					"$(PROJECT_DIR)/submodules/MtProtoKit/TON",
 				);
 				OTHER_LDFLAGS = (
 					"-ObjC",
@@ -6285,6 +6308,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
+					"$(PROJECT_DIR)/submodules/MtProtoKit/TON",
 				);
 				OTHER_LDFLAGS = (
 					"-ObjC",
@@ -6441,6 +6465,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
+					"$(PROJECT_DIR)/submodules/MtProtoKit/TON",
 				);
 				OTHER_LDFLAGS = (
 					"-ObjC",
@@ -7006,6 +7031,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
+					"$(PROJECT_DIR)/submodules/MtProtoKit/TON",
 				);
 				OTHER_LDFLAGS = (
 					"-ObjC",
