@@ -371,7 +371,8 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                     
                     if self.currentItems.isEmpty && !updatedItems.isEmpty {
                         let entities = generateTextEntities(info.title, enabledTypes: [.mention])
-                        self.contentTitleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: Font.medium(20.0), linkFont: Font.medium(20.0), boldFont: Font.medium(20.0), italicFont: Font.medium(20.0), boldItalicFont: Font.medium(20.0), fixedFont: Font.medium(20.0))
+                        let font = Font.medium(20.0)
+                        self.contentTitleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: font, linkFont: font, boldFont: font, italicFont: font, boldItalicFont: font, fixedFont: font, blockQuoteFont: font)
                         animateIn = true
                     }
                     transaction = StickerPackPreviewGridTransaction(previousList: self.currentItems, list: updatedItems, account: self.context.account, interaction: self.interaction)

@@ -185,7 +185,7 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
             }
             
             let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntityTypes)
-            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColor, linkColor: item.theme.list.itemAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleBoldFont, italicFont: titleItalicFont, boldItalicFont: titleBoldItalicFont, fixedFont: titleFixedFont)
+            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColor, linkColor: item.theme.list.itemAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleBoldFont, italicFont: titleItalicFont, boldItalicFont: titleBoldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: titleFont)
             
             let (titleLayout, titleApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

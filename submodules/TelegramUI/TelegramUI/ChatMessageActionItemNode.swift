@@ -385,7 +385,7 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                     }
                     attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                 case let .customText(text, entities):
-                    attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, underlineLinks: false)
+                    attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false)
                 case let .botDomainAccessGranted(domain):
                     attributedString = NSAttributedString(string: strings.AuthSessions_Message(domain).0, font: titleFont, textColor: primaryTextColor)
                 case let .botSentSecureValues(types):
