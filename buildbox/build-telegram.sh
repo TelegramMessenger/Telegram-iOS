@@ -44,6 +44,8 @@ BUILD_CONFIGURATION="$1"
 
 if [ "$BUILD_CONFIGURATION" == "hockeyapp" ]; then
 	CODESIGNING_SUBPATH="transient-data/codesigning"
+elif [ "$BUILD_CONFIGURATION" == "testinghockeyapp" ]; then
+	CODESIGNING_SUBPATH="transient-data/codesigning"
 elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	CODESIGNING_SUBPATH="transient-data/codesigning"
 elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
@@ -65,7 +67,7 @@ fi
 
 BASE_DIR=$(pwd)
 
-if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "testinghockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	if [ ! `which setup-telegram-build.sh` ]; then
 		echo "setup-telegram-build.sh not found in PATH $PATH"
 		exit 1

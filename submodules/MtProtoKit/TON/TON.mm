@@ -36,14 +36,14 @@ using tonlib_api::make_object;
 
 @interface TONReceiveThreadParams : NSObject
 
-@property (nonatomic, readonly) tonlib::Client *client;
+@property (nonatomic, readonly) std::shared_ptr<tonlib::Client> client;
 @property (nonatomic, copy, readonly) void (^received)(tonlib::Client::Response &);
 
 @end
 
 @implementation TONReceiveThreadParams
 
-- (instancetype)initWithClient:(tonlib::Client *)client received:(void (^)(tonlib::Client::Response &))received {
+- (instancetype)initWithClient:(std::shared_ptr<tonlib::Client>)client received:(void (^)(tonlib::Client::Response &))received {
     self = [super init];
     if (self != nil) {
         _client = client;
@@ -85,7 +85,7 @@ using tonlib_api::make_object;
 @end
 
 @interface TON () {
-    tonlib::Client *_client;
+    std::shared_ptr<tonlib::Client> _client;
     uint64_t _nextRequestId;
     NSLock *_requestHandlersLock;
     NSMutableDictionary<NSNumber *, TONRequestHandler *> *_requestHandlers;
@@ -114,7 +114,7 @@ using tonlib_api::make_object;
         _initialized.sink(@false);
         _nextRequestId = 1;
         
-        _client = new tonlib::Client;
+        _client = std::make_shared<tonlib::Client>();
         
         NSLock *requestHandlersLock = _requestHandlersLock;
         NSMutableDictionary *requestHandlers = _requestHandlers;
@@ -137,10 +137,6 @@ using tonlib_api::make_object;
         }];
     }
     return self;
-}
-
-- (void)dealloc {
-    delete _client;
 }
 
 - (MTSignal *)requestInitWithConfigString:(NSString *)configString keystoreDirectory:(NSString *)keystoreDirectory {
