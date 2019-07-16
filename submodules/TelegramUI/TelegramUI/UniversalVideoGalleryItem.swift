@@ -215,7 +215,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let timecode = timecode {
                 if !strongSelf.scrubbingFrames {
                     strongSelf.scrubbingFrames = true
-                    strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames)
+                    strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
+                    |> map { result -> UIImage? in
+                        switch result {
+                        case .waitingForData:
+                            return nil
+                        case let .image(image):
+                            return image
+                        }
+                    })
                 }
                 videoFramePreview.generateFrame(at: timecode)
             } else {
