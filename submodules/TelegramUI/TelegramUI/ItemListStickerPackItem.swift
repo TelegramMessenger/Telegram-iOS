@@ -375,7 +375,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         imageSize = imageBoundingSize
                 }
                 if fileUpdated, let resourceReference = resourceReference {
-                    updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: resourceReference)
+                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, reference: resourceReference)
                 }
             } else {
                 updatedImageSignal = .single({ _ in return nil })

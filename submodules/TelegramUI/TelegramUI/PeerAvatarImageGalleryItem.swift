@@ -174,7 +174,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
                 if let largestIndex = representations.index(where: { $0.representation == largestSize }) {
-                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: representations[largestIndex].reference).start())
+                    self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: representations[largestIndex].reference).start())
                 }
                 
                 self.statusDisposable.set((self.context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
@@ -341,7 +341,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                     
                     if let largestIndex = representations.index(where: { $0.representation == largestSize }) {
-                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: representations[largestIndex].reference).start())
+                        self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: representations[largestIndex].reference).start())
                     }
                 default:
                     break

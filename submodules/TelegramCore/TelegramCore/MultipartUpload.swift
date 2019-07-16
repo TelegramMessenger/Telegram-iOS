@@ -430,7 +430,7 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                 case let .resource(resource):
                     dataSignal = postbox.mediaBox.resourceData(resource.resource, option: .incremental(waitUntilFetchStatus: true)) |> map { MultipartUploadData.resourceData($0) }
                     headerSize = resource.resource.headerSize
-                    fetchedResource = fetchedMediaResource(postbox: postbox, reference: resource)
+                    fetchedResource = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resource)
                     |> map { _ in }
                 case let .data(data):
                     dataSignal = .single(.data(data))
