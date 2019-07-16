@@ -536,12 +536,12 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                                 switch effectiveChatWallpaper {
                                 case .builtin, .color:
                                     switch themeSettings.automaticThemeSwitchSetting.theme {
-                                    case .nightAccent:
-                                        effectiveChatWallpaper = .color(0x18222d)
-                                    case .nightGrayscale:
-                                        effectiveChatWallpaper = .color(0x000000)
-                                    default:
-                                        break
+                                        case .nightAccent:
+                                            effectiveChatWallpaper = .color(0x18222d)
+                                        case .nightGrayscale:
+                                            effectiveChatWallpaper = .color(0x000000)
+                                        default:
+                                            break
                                     }
                                 default:
                                     break

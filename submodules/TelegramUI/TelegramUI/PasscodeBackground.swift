@@ -15,7 +15,7 @@ final class GradientPasscodeBackground: PasscodeBackground {
     public private(set) var backgroundImage: UIImage
     public private(set) var foregroundImage: UIImage
     
-    init(size: CGSize, backgroundColors: (UIColor, UIColor), buttonColor: UIColor?) {
+    init(size: CGSize, backgroundColors: (UIColor, UIColor), buttonColor: UIColor) {
         self.size = size
         self.backgroundImage = generateImage(CGSize(width: 8.0, height: size.height), contextGenerator: { size, context in
             let gradientColors = [backgroundColors.1.cgColor, backgroundColors.0.cgColor] as CFArray
@@ -27,7 +27,7 @@ final class GradientPasscodeBackground: PasscodeBackground {
         self.foregroundImage = generateImage(CGSize(width: 1.0, height: 1.0), contextGenerator: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
             context.clear(bounds)
-            if let buttonColor = buttonColor {
+            if buttonColor != UIColor.clear {
                 context.setFillColor(buttonColor.cgColor)
             } else {
                 context.setFillColor(UIColor.white.withAlphaComponent(0.5).cgColor)

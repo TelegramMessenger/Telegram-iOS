@@ -248,12 +248,13 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                     arguments.toggleLargeEmoji(value)
                 }, tag: ThemeSettingsEntryTag.tint)
             case let .accentColor(theme, _, color):
-                let colorValue = color?.baseColor.colorValue ?? defaultDayAccentColor
-//                let accentColor = UIColor(rgb: UInt32(bitPattern: colorValue))
-
                 var colors = PresentationThemeBaseColor.allCases
                 if theme.overallDarkAppearance {
                     colors = colors.filter { $0 != .black }
+                }
+                if case let .builtin(name) = theme.name, name == .nightGrayscale {
+                } else {
+                    colors = colors.filter { $0 != .white }
                 }
                 
                 return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, colors: colors, currentColor: color ?? PresentationThemeAccentColor(baseColor: .blue, value: 0.5), updated: { color in

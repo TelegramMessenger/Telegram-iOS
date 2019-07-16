@@ -7,6 +7,7 @@ import SwiftSignalKit
 import PassKit
 import Lottie
 import TelegramUIPreferences
+import TelegramPresentationData
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -18,8 +19,9 @@ private enum ChatMessageGalleryControllerData {
     case document(TelegramMediaFile)
     case gallery(GalleryController)
     case secretGallery(SecretMediaPreviewController)
-    case other(Media)
     case chatAvatars(AvatarGalleryController, Media)
+    case theme(TelegramMediaFile)
+    case other(Media)
 }
 
 private func chatMessageGalleryControllerData(context: AccountContext, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
@@ -128,7 +130,10 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
             if let file = galleryMedia as? TelegramMediaFile {
                 if let fileName = file.fileName {
                     let ext = (fileName as NSString).pathExtension.lowercased()
-                    if ext == "wav" || ext == "opus" {
+                    if ext == "tgios-theme" {
+                        return .theme(file)
+                    }
+                    else if ext == "wav" || ext == "opus" {
                         return .audio(file)
                     } else if ext == "json", let fileSize = file.size, fileSize < 1024 * 1024 {
                         if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let _ = LOTComposition(filePath: path) {
@@ -262,7 +267,6 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
                 if let rootController = navigationController?.view.window?.rootViewController {
                     presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: context.account.postbox, file: file)
                 }
-                //present(ShareController(account: account, subject: .messages([message]), showInChat: nil, externalShare: true, immediateExternalShare: true), nil)
                 return true
             case let .audio(file):
                 let location: PeerMessagesPlaylistLocation
@@ -335,22 +339,25 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
                     })
                     return true
                 }
-        case let .chatAvatars(controller, media):
-            dismissInput()
-            chatAvatarHiddenMedia(controller.hiddenMedia |> map { value -> MessageId? in
-                if value != nil {
-                    return message.id
-                } else {
+            case let .chatAvatars(controller, media):
+                dismissInput()
+                chatAvatarHiddenMedia(controller.hiddenMedia |> map { value -> MessageId? in
+                    if value != nil {
+                        return message.id
+                    } else {
+                        return nil
+                    }
+                }, media)
+                
+                present(controller, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
+                    if let selectedTransitionNode = transitionNode(message.id, media) {
+                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
+                    }
                     return nil
-                }
-            }, media)
-            
-            present(controller, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
-                if let selectedTransitionNode = transitionNode(message.id, media) {
-                    return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
-                }
-                return nil
-            }))
+                }))
+            case let .theme(file):
+                let controller = ThemePreviewController(context: context, previewTheme: makeDefaultDayPresentationTheme(accentColor: nil, serviceBackgroundColor: .black))
+                present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
     return false

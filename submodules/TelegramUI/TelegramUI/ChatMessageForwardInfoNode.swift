@@ -90,7 +90,6 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth, height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             return (CGSize(width: textLayout.size.width + credibilityIconWidth, height: textLayout.size.height), {
-
                 let node: ChatMessageForwardInfoNode
                 if let maybeNode = maybeNode {
                     node = maybeNode

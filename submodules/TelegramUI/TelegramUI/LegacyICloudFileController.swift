@@ -38,17 +38,19 @@ func legacyICloudFileController(theme: PresentationTheme, completion: @escaping 
     legacyController.statusBar.statusBarStyle = .Black
     
     let documentTypes: [String] = [
-        "public.composite-content",
-        "public.text",
-        "public.image",
-        "public.audio",
-        "public.video",
-        "public.movie",
-        "public.font",
-        "org.telegram.Telegram.webp",
-        "com.apple.iwork.pages.pages",
-        "com.apple.iwork.numbers.numbers",
-        "com.apple.iwork.keynote.key"
+        "public.item"
+//        "public.composite-content",
+//        "public.text",
+//        "public.image",
+//        "public.audio",
+//        "public.video",
+//        "public.movie",
+//        "public.font",
+//        "public.data",
+//        "org.telegram.Telegram.webp",
+//        "com.apple.iwork.pages.pages",
+//        "com.apple.iwork.numbers.numbers",
+//        "com.apple.iwork.keynote.key"
     ]
     
     let controller = UIDocumentPickerViewController(documentTypes: documentTypes, in: .open)

@@ -94,7 +94,6 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
     private var item: GroupStickerPackCurrentItem?
     
     private var editableControlNode: ItemListEditableControlNode?
-    private var reorderControlNode: ItemListEditableReorderControlNode?
     
     private let fetchDisposable = MetaDisposable()
     

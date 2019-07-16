@@ -34,7 +34,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
         
         self.topSeparatorNode = ASDisplayNode()
-        self.topSeparatorNode.backgroundColor = theme.chat.inputPanel.panelStrokeColor
+        self.topSeparatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
      
         self.scrollNode = ASScrollNode()
         

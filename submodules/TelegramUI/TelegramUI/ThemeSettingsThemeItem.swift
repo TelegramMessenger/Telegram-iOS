@@ -184,8 +184,6 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         
         super.init()
         
-        self.allowsGroupOpacity = true
-        
         self.addSubnode(self.iconNode)
         self.addSubnode(self.overlayNode)
         self.addSubnode(self.textNode)
@@ -224,8 +222,8 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
 }
 
 
-private let textFont = Font.regular(11.0)
-private let selectedTextFont = Font.bold(11.0)
+private let textFont = Font.regular(12.0)
+private let selectedTextFont = Font.bold(12.0)
 
 class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
@@ -424,7 +422,12 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.colorSlider.value = item.currentColor?.value ?? 0.5
                     }
                     
-                    transition.updateAlpha(node: strongSelf.scrollNode, alpha: item.displayColorSlider ? 0.0 : 1.0)
+                    strongSelf.scrollNode.allowsGroupOpacity = true
+                    transition.updateAlpha(node: strongSelf.scrollNode, alpha: item.displayColorSlider ? 0.0 : 1.0, completion: { [weak self] finished in
+                        if let strongSelf = self, finished {
+                            strongSelf.scrollNode.allowsGroupOpacity = false
+                        }
+                    })
                     transition.updateAlpha(node: strongSelf.colorSlider, alpha: item.displayColorSlider ? 1.0 : 0.0)
                 }
             })

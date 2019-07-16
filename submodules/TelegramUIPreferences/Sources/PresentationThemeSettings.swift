@@ -176,6 +176,7 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
     case yellow
     case gray
     case black
+    case white
     
     public var colorValue: Int32 {        
         switch self {
@@ -199,6 +200,8 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
                 return 0x6d839e
             case .black:
                 return 0x000000
+            case .white:
+                return 0xffffff
         }
         
 //        switch self {

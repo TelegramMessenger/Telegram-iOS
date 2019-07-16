@@ -88,7 +88,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.panelBackgroundNode = ASDisplayNode()
         self.panelBackgroundNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
         self.panelSeparatorNode = ASDisplayNode()
-        self.panelSeparatorNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelStrokeColor
+        self.panelSeparatorNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelSeparatorColor
         self.panelButtonNode = HighlightableButtonNode()
         self.panelButtonNode.setTitle(self.presentationData.strings.Channel_AdminLog_InfoPanelTitle, with: Font.regular(17.0), with: self.presentationData.theme.chat.inputPanel.panelControlAccentColor, for: [])
         
@@ -394,7 +394,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
-           pollActionState: ChatInterfacePollActionState())
+           pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
         self.controllerInteraction = controllerInteraction
         
         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
@@ -486,7 +486,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.panelBackgroundNode.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
-        self.panelSeparatorNode.backgroundColor = theme.chat.inputPanel.panelStrokeColor
+        self.panelSeparatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         self.panelButtonNode.setTitle(presentationData.strings.Channel_AdminLog_InfoPanelTitle, with: Font.regular(17.0), with: theme.chat.inputPanel.panelControlAccentColor, for: [])
     }
     

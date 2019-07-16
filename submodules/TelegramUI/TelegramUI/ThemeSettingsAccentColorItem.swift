@@ -284,6 +284,12 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         i += 1
                     }
                     
+                    for k in (i ..< strongSelf.nodes.count).reversed() {
+                        let node = strongSelf.nodes[k]
+                        strongSelf.nodes.remove(at: k)
+                        node.removeFromSupernode()
+                    }
+                    
                     if let lastNode = strongSelf.nodes.last {
                         let contentSize = CGSize(width: lastNode.frame.maxX + nodeInset, height: strongSelf.scrollNode.frame.height)
                         if strongSelf.scrollNode.view.contentSize != contentSize {

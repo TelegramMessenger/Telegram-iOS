@@ -56,9 +56,13 @@ public extension UIColor {
         if hexString.hasPrefix("#") {
             scanner.scanLocation = 1
         }
-        var num: UInt32 = 0
-        if scanner.scanHexInt32(&num) {
-            self.init(rgb: num)
+        var value: UInt32 = 0
+        if scanner.scanHexInt32(&value) {
+            if hexString.count > 7 {
+                self.init(argb: value)
+            } else {
+                self.init(rgb: value)
+            }
         } else {
             return nil
         }

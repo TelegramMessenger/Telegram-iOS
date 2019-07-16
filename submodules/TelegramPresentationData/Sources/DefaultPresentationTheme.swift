@@ -43,14 +43,14 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
     )
     
-    let auth = PresentationThemeAuth(
-        introStartButtonColor: UIColor(rgb: 0x2ca5e0),
-        introDotColor: UIColor(rgb: 0xd9d9d9)
+    let intro = PresentationThemeIntro(
+        startButtonColor: UIColor(rgb: 0x2ca5e0),
+        dotColor: UIColor(rgb: 0xd9d9d9)
     )
     
     let passcode = PresentationThemePasscode(
         backgroundColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0x46739e), bottomColor: UIColor(rgb: 0x2a5982)),
-        buttonColor: nil
+        buttonColor: .clear
     )
     
     let rootController = PresentationThemeRootController(
@@ -106,6 +106,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         controlSecondaryColor: UIColor(rgb: 0xdedede),
         freeInputField: PresentationInputFieldTheme(
             backgroundColor: UIColor(rgb: 0xd6d6dc),
+            strokeColor: UIColor(rgb: 0xd6d6dc),
             placeholderColor: UIColor(rgb: 0x96979d),
             primaryColor: .black,
             controlColor: UIColor(rgb: 0x96979d)
@@ -207,16 +208,12 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
     let inputPanelMediaRecordingControl = PresentationThemeChatInputPanelMediaRecordingControl(
         buttonColor: accentColor,
         micLevelColor: accentColor.withAlphaComponent(0.2),
-        activeIconColor: .white,
-        panelControlFillColor: UIColor(rgb: 0xf7f7f7),
-        panelControlStrokeColor: UIColor(rgb: 0xb2b2b2),
-        panelControlContentPrimaryColor: UIColor(rgb: 0x9597a0),
-        panelControlContentAccentColor: accentColor
+        activeIconColor: .white
     )
     
     let inputPanel = PresentationThemeChatInputPanel(
         panelBackgroundColor: UIColor(rgb: 0xf7f7f7),
-        panelStrokeColor: UIColor(rgb: 0xb2b2b2),
+        panelSeparatorColor: UIColor(rgb: 0xb2b2b2),
         panelControlAccentColor: accentColor,
         panelControlColor: UIColor(rgb: 0x858e99),
         panelControlDisabledColor: UIColor(rgb: 0x727b87, alpha: 0.5),
@@ -315,9 +312,9 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
     
     return PresentationTheme(
         name: .builtin(day ? .day : .dayClassic),
-        author: nil,
+        author: "Telegram",
         overallDarkAppearance: false,
-        auth: auth,
+        intro: intro,
         passcode: passcode,
         rootController: rootController,
         list: list,

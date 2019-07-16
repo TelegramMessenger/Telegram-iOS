@@ -7,7 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		097A581B22D528680078B73C /* PresentationThemeDecodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097A581A22D528680078B73C /* PresentationThemeDecodable.swift */; };
+		0957DE1522D88B82001B4D57 /* PresentationThemeEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0957DE1422D88B82001B4D57 /* PresentationThemeEncoder.swift */; };
+		0957DE1922D95E0F001B4D57 /* PresentationThemeDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0957DE1822D95E0F001B4D57 /* PresentationThemeDecoder.swift */; };
+		097A581B22D528680078B73C /* PresentationThemeCodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097A581A22D528680078B73C /* PresentationThemeCodable.swift */; };
 		D0AE31AB22B273F20058D3BC /* TelegramPresentationData.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE31A922B273F20058D3BC /* TelegramPresentationData.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0AE31B422B2746B0058D3BC /* PresentationStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE31B122B2746B0058D3BC /* PresentationStrings.swift */; };
 		D0AE31B522B2746B0058D3BC /* PresentationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE31B222B2746B0058D3BC /* PresentationData.swift */; };
@@ -32,7 +34,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		097A581A22D528680078B73C /* PresentationThemeDecodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationThemeDecodable.swift; sourceTree = "<group>"; };
+		0957DE1422D88B82001B4D57 /* PresentationThemeEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationThemeEncoder.swift; sourceTree = "<group>"; };
+		0957DE1822D95E0F001B4D57 /* PresentationThemeDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationThemeDecoder.swift; sourceTree = "<group>"; };
+		097A581A22D528680078B73C /* PresentationThemeCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationThemeCodable.swift; sourceTree = "<group>"; };
 		D0AE31A622B273F20058D3BC /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE31A922B273F20058D3BC /* TelegramPresentationData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramPresentationData.h; sourceTree = "<group>"; };
 		D0AE31AA22B273F20058D3BC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -110,7 +114,9 @@
 				D0AE31B222B2746B0058D3BC /* PresentationData.swift */,
 				D0AE31B122B2746B0058D3BC /* PresentationStrings.swift */,
 				D0AE31B322B2746B0058D3BC /* PresentationTheme.swift */,
-				097A581A22D528680078B73C /* PresentationThemeDecodable.swift */,
+				097A581A22D528680078B73C /* PresentationThemeCodable.swift */,
+				0957DE1422D88B82001B4D57 /* PresentationThemeEncoder.swift */,
+				0957DE1822D95E0F001B4D57 /* PresentationThemeDecoder.swift */,
 				D0AE31A922B273F20058D3BC /* TelegramPresentationData.h */,
 			);
 			path = Sources;
@@ -212,8 +218,9 @@
 			files = (
 				D0AE31D522B27A780058D3BC /* DefaultPresentationTheme.swift in Sources */,
 				D0AE31D422B27A780058D3BC /* DefaultPresentationStrings.swift in Sources */,
-				097A581B22D528680078B73C /* PresentationThemeDecodable.swift in Sources */,
+				097A581B22D528680078B73C /* PresentationThemeCodable.swift in Sources */,
 				D0AE31CB22B279D00058D3BC /* NumericFormat.swift in Sources */,
+				0957DE1922D95E0F001B4D57 /* PresentationThemeDecoder.swift in Sources */,
 				D0AE31B422B2746B0058D3BC /* PresentationStrings.swift in Sources */,
 				D0AE321422B2826A0058D3BC /* ComponentsThemes.swift in Sources */,
 				D0AE31C522B279720058D3BC /* StringPluralization.swift in Sources */,
@@ -223,6 +230,7 @@
 				D0AE31B522B2746B0058D3BC /* PresentationData.swift in Sources */,
 				D0AE31D322B27A780058D3BC /* DefaultDarkAccentPresentationTheme.swift in Sources */,
 				D0AE31B622B2746B0058D3BC /* PresentationTheme.swift in Sources */,
+				0957DE1522D88B82001B4D57 /* PresentationThemeEncoder.swift in Sources */,
 				D0AE31D222B27A780058D3BC /* DefaultDarkPresentationTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

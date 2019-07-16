@@ -11,7 +11,7 @@ private let shadowImage: UIImage = {
         context.setFillColor(UIColor.clear.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
         context.setBlendMode(.normal)
-        context.setShadow(offset: CGSize(width: 0.0, height: 1.5), blur: 4.5, color: UIColor(rgb: 0x000000, alpha: 0.5).cgColor)
+        context.setShadow(offset: CGSize(width: 0.0, height: 1.5), blur: 3.5, color: UIColor(rgb: 0x000000, alpha: 0.65).cgColor)
         context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.5).cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 4.5 + UIScreenPixel, dy: 4.5 + UIScreenPixel))
     })!
@@ -141,9 +141,19 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
             self.update()
         }
     }
-    var value: CGFloat = 0.5 {
-        didSet {
+    
+    var _value: CGFloat = 0.5
+    
+    var value: CGFloat {
+        get {
+            return _value
+        }
+        set {
+            self._value = newValue
             self.update()
+            if let validLayout = self.validLayout {
+                self.updateKnobLayout(size: validLayout, transition: .immediate)
+            }
         }
     }
     
@@ -165,8 +175,7 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
-        let brightnessPanRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.brightnessPan))
-        self.brightnessNode.view.addGestureRecognizer(brightnessPanRecognizer)
+        self.brightnessNode.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.brightnessPan)))
     }
     
     private func update() {
@@ -184,7 +193,7 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
     }
     
     func updateKnobLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        let inset: CGFloat = 16.0
+        let inset: CGFloat = 30.0
         let brightnessKnobSize = CGSize(width: 54.0, height: 54.0)
         let brightnessKnobFrame = CGRect(x: inset - brightnessKnobSize.width / 2.0 + (size.width - inset * 2.0) * (self.value), y: floor((size.height - brightnessKnobSize.height) / 2.0), width: brightnessKnobSize.width, height: brightnessKnobSize.height)
         transition.updateFrame(node: self.brightnessKnobNode, frame: brightnessKnobFrame)
@@ -208,7 +217,7 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
         let transition = recognizer.translation(in: recognizer.view)
         let brightnessWidth: CGFloat = size.width - 16.0 * 2.0
         let newValue = max(0.0, min(1.0, self.value + transition.x / brightnessWidth))
-        self.value = newValue
+        self._value = newValue
         
         var ended = false
         switch recognizer.state {

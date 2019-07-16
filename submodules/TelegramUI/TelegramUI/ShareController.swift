@@ -451,7 +451,7 @@ public final class ShareController: ViewController {
                 var collectableItems: [CollectableExternalShareItem] = []
                 switch strongSelf.subject {
                     case let .url(text):
-                        collectableItems.append(CollectableExternalShareItem(url: text, text: "", mediaReference: nil))
+                        collectableItems.append(CollectableExternalShareItem(url: explicitUrl(text), text: "", mediaReference: nil))
                     case let .text(string):
                         collectableItems.append(CollectableExternalShareItem(url: "", text: string, mediaReference: nil))
                     case let .quote(text, url):
