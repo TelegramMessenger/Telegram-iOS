@@ -400,7 +400,7 @@ private enum MultipartFetchSource {
 private final class MultipartFetchManager {
     let parallelParts: Int
     let defaultPartSize = 128 * 1024
-    let partAlignment = 128 * 1024
+    let partAlignment = 4 * 1024
     
     var resource: TelegramMediaResource
     var resourceReference: MediaResourceReference?
@@ -571,15 +571,19 @@ private final class MultipartFetchManager {
         }
         
         while !intervalsToFetch.isEmpty && self.fetchingParts.count < self.parallelParts && !self.reuploadingToCdn && !self.revalidatingMediaReference {
-            var elevatedIndices: [Int] = []
+            
+            var indicesByPriority: [MediaBoxFetchPriority: [Int]] = [:]
             for i in 0 ..< intervalsToFetch.count {
-                if case .elevated = intervalsToFetch[i].1 {
-                    elevatedIndices.append(i)
+                if indicesByPriority[intervalsToFetch[i].1] == nil {
+                    indicesByPriority[intervalsToFetch[i].1] = []
                 }
+                indicesByPriority[intervalsToFetch[i].1]!.append(i)
             }
             
             let currentIntervalIndex: Int
-            if !elevatedIndices.isEmpty {
+            if let maxIndices = indicesByPriority[.maximum], !maxIndices.isEmpty {
+                currentIntervalIndex = maxIndices[self.nextFetchingPartId % maxIndices.count]
+            } else if let elevatedIndices = indicesByPriority[.elevated], !elevatedIndices.isEmpty {
                 currentIntervalIndex = elevatedIndices[self.nextFetchingPartId % elevatedIndices.count]
             } else {
                 currentIntervalIndex = self.nextFetchingPartId % intervalsToFetch.count

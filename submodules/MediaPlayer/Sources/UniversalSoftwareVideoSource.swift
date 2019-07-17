@@ -19,11 +19,18 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     data = context.mediaBox.resourceData(context.fileReference.media.resource, size: context.size, in: requestRange, mode: .partial)
     let requiredDataIsNotLocallyAvailable = context.requiredDataIsNotLocallyAvailable
     var fetchedData: Data?
+    let fetchDisposable = MetaDisposable()
+    let isInitialized = context.videoStream != nil
+    let mediaBox = context.mediaBox
+    let reference = context.fileReference.resourceReference(context.fileReference.media.resource)
     let disposable = data.start(next: { data in
         if data.count == readCount {
             fetchedData = data
             semaphore.signal()
         } else {
+            if isInitialized {
+                fetchDisposable.set(fetchedMediaResource(mediaBox: mediaBox, reference: reference, ranges: [(requestRange, .maximum)]).start())
+            }
             requiredDataIsNotLocallyAvailable?()
         }
     })
@@ -32,15 +39,11 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
             semaphore.signal()
         }
     })
-    var fetchDisposable: Disposable?
-    if context.videoStream != nil {
-        fetchDisposable = fetchedMediaResource(mediaBox: context.mediaBox, reference: context.fileReference.resourceReference(context.fileReference.media.resource), ranges: [(requestRange, .elevated)]).start()
-    }
     semaphore.wait()
     
     disposable.dispose()
     cancelDisposable.dispose()
-    fetchDisposable?.dispose()
+    fetchDisposable.dispose()
     
     if let fetchedData = fetchedData {
         fetchedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
