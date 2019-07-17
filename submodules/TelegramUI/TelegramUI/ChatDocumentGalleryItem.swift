@@ -382,7 +382,7 @@ class ChatDocumentGalleryItemNode: ZoomableContentGalleryItemNode, WKNavigationD
                 case .Fetching:
                     context.account.postbox.mediaBox.cancelInteractiveResourceFetch(fileReference.media.resource)
                 case .Remote:
-                    self.fetchDisposable.set(fetchedMediaResource(postbox: context.account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
+                    self.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
                 default:
                     break
             }

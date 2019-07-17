@@ -38,7 +38,7 @@ final class SoftwareVideoLayerFrameManager {
         self.layerHolder = layerHolder
         layerHolder.layer.videoGravity = .resizeAspectFill
         layerHolder.layer.masksToBounds = true
-        self.fetchDisposable = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(resource)).start()
+        self.fetchDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(resource)).start()
     }
     
     deinit {

@@ -15,6 +15,7 @@
     if (self != nil) {
         void *avIoBuffer = av_malloc(bufferSize);
         _impl = avio_alloc_context(avIoBuffer, bufferSize, 0, opaqueContext, readPacket, nil, seek);
+        _impl->direct = 1;
         if (_impl == nil) {
             av_free(avIoBuffer);
             return nil;

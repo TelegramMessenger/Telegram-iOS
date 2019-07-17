@@ -2075,6 +2075,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var isContactUpdates: [(PeerId, Bool)] = []
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
     var recentlyUsedStickers: [MediaId: (MessageIndex, TelegramMediaFile)] = [:]
+    var slowModeLastMessageTimeouts:[PeerId : Int32] = [:]
     var recentlyUsedGifs: [MediaId: (MessageIndex, TelegramMediaFile)] = [:]
     var syncRecentGifs = false
     var langPackDifferences: [String: [Api.LangPackDifference]] = [:]
@@ -2179,6 +2180,11 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                             break
                                     }
                                 }
+                            }
+                        }
+                        if !message.flags.contains(.Incoming) && !message.flags.contains(.Unsent) {
+                            if message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+                                slowModeLastMessageTimeouts[message.id.peerId] = max(slowModeLastMessageTimeouts[message.id.peerId] ?? 0, message.timestamp)
                             }
                         }
                         
@@ -2711,6 +2717,22 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         for file in stickerFiles {
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
         }
+    }
+    
+    if !slowModeLastMessageTimeouts.isEmpty {
+        var peerIds:Set<PeerId> = Set()
+        var cachedDatas:[PeerId : CachedChannelData] = [:]
+        for (peerId, timeout) in slowModeLastMessageTimeouts {
+            var cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData ?? CachedChannelData()
+            if let slowModeTimeout = cachedData.slowModeTimeout {
+                cachedData = cachedData.withUpdatedSlowModeValidUntilTimestamp(slowModeValidUntilTimestamp: timeout + slowModeTimeout)
+                peerIds.insert(peerId)
+                cachedDatas[peerId] = cachedData
+            }
+        }
+        transaction.updatePeerCachedData(peerIds: peerIds, update: { peerId, current in
+            return cachedDatas[peerId] ?? current
+        })
     }
     
     if syncRecentGifs {

@@ -39,6 +39,7 @@ struct ChatTextFontAttributes: OptionSet {
     static let bold = ChatTextFontAttributes(rawValue: 1 << 0)
     static let italic = ChatTextFontAttributes(rawValue: 1 << 1)
     static let monospace = ChatTextFontAttributes(rawValue: 1 << 2)
+    static let blockQuote = ChatTextFontAttributes(rawValue: 1 << 3)
 }
 
 func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor) -> NSAttributedString {

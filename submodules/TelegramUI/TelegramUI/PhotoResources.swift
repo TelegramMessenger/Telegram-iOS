@@ -39,9 +39,9 @@ func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference
                 if let _ = decodedThumbnailData {
                     fetchedThumbnail = .complete()
                 } else {
-                    fetchedThumbnail = fetchedMediaResource(postbox: postbox, reference: photoReference.resourceReference(smallestRepresentation.resource), statsCategory: .image)
+                    fetchedThumbnail = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: photoReference.resourceReference(smallestRepresentation.resource), statsCategory: .image)
                 }
-                let fetchedFullSize = fetchedMediaResource(postbox: postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image)
+                let fetchedFullSize = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image)
                 
                 let anyThumbnail: [Signal<MediaResourceData, NoError>]
                 if tryAdditionalRepresentations {
@@ -148,7 +148,7 @@ private func chatMessageFileDatas(account: Account, fileReference: FileMediaRefe
             if !fetched, let _ = decodedThumbnailData {
                 fetchedThumbnail = .single(.local)
             } else if let thumbnailResource = thumbnailResource {
-                fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailResource), statsCategory: statsCategoryForFileWithAttributes(fileReference.media.attributes))
+                fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(thumbnailResource), statsCategory: statsCategoryForFileWithAttributes(fileReference.media.attributes))
             } else {
                 fetchedThumbnail = .complete()
             }
@@ -211,7 +211,7 @@ private func chatMessageImageFileThumbnailDatas(account: Account, fileReference:
         if let decodedThumbnailData = decodedThumbnailData {
             if autoFetchFullSizeThumbnail, let thumbnailRepresentation = thumbnailRepresentation, (thumbnailRepresentation.dimensions.width > 200.0 || thumbnailRepresentation.dimensions.height > 200.0) {
                 return Signal { subscriber in
-                    let fetchedDisposable = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailRepresentation.resource), statsCategory: .video).start()
+                    let fetchedDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(thumbnailRepresentation.resource), statsCategory: .video).start()
                     let thumbnailDisposable = account.postbox.mediaBox.resourceData(thumbnailRepresentation.resource, attemptSynchronously: false).start(next: { next in
                         let data: Data? = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
                         subscriber.putNext(Tuple(data ?? decodedThumbnailData, nil, false))
@@ -226,7 +226,7 @@ private func chatMessageImageFileThumbnailDatas(account: Account, fileReference:
                 return .single(Tuple(decodedThumbnailData, nil, false))
             }
         } else if let thumbnailResource = thumbnailResource {
-            let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError> = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailResource))
+            let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError> = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(thumbnailResource))
             return Signal { subscriber in
                 let fetchedDisposable = fetchedThumbnail.start()
                 let thumbnailDisposable = account.postbox.mediaBox.resourceData(thumbnailResource, pathExtension: pathExtension).start(next: { next in
@@ -262,7 +262,7 @@ private func chatMessageImageFileThumbnailDatas(account: Account, fileReference:
             if let _ = fileReference.media.immediateThumbnailData {
                 fetchedThumbnail = .complete()
             } else if let thumbnailResource = thumbnailResource {
-                fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailResource))
+                fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(thumbnailResource))
             } else {
                 fetchedThumbnail = .complete()
             }
@@ -330,7 +330,7 @@ private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaRef
             } else if let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
                 if autoFetchFullSizeThumbnail, let thumbnailRepresentation = thumbnailRepresentation, (thumbnailRepresentation.dimensions.width > 200.0 || thumbnailRepresentation.dimensions.height > 200.0) {
                     thumbnail = Signal { subscriber in
-                        let fetchedDisposable = fetchedMediaResource(postbox: postbox, reference: fileReference.resourceReference(thumbnailRepresentation.resource), statsCategory: .video).start()
+                        let fetchedDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: fileReference.resourceReference(thumbnailRepresentation.resource), statsCategory: .video).start()
                         let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailRepresentation.resource, attemptSynchronously: synchronousLoad).start(next: { next in
                             let data: Data? = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
                             subscriber.putNext(data ?? decodedThumbnailData)
@@ -346,7 +346,7 @@ private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaRef
                 }
             } else if let thumbnailResource = thumbnailResource {
                 thumbnail = Signal { subscriber in
-                    let fetchedDisposable = fetchedMediaResource(postbox: postbox, reference: fileReference.resourceReference(thumbnailResource), statsCategory: .video).start()
+                    let fetchedDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: fileReference.resourceReference(thumbnailResource), statsCategory: .video).start()
                     let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailResource, attemptSynchronously: synchronousLoad).start(next: { next in
                         subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
                     }, error: subscriber.putError, completed: subscriber.putCompletion)
@@ -893,7 +893,7 @@ private func chatMessagePhotoThumbnailDatas(account: Account, photoReference: Im
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                 return .single(Tuple(nil, loadedData, true))
             } else {
-                let fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: photoReference.resourceReference(smallestRepresentation.resource), statsCategory: .image)
+                let fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: photoReference.resourceReference(smallestRepresentation.resource), statsCategory: .image)
                 
                 let thumbnail = Signal<Data?, NoError> { subscriber in
                     let fetchedDisposable = fetchedThumbnail.start()
@@ -1235,8 +1235,8 @@ private func avatarGalleryThumbnailDatas(postbox: Postbox, representations: [Ima
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                 return .single(Tuple(nil, loadedData, true))
             } else {
-                let fetchedThumbnail = fetchedMediaResource(postbox: postbox, reference: representations[smallestIndex].reference, statsCategory: .image)
-                let fetchedFullSize = fetchedMediaResource(postbox: postbox, reference: representations[largestIndex].reference, statsCategory: .image)
+                let fetchedThumbnail = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: representations[smallestIndex].reference, statsCategory: .image)
+                let fetchedFullSize = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: representations[largestIndex].reference, statsCategory: .image)
                 
                 let thumbnail = Signal<Data?, NoError> { subscriber in
                     let fetchedDisposable = fetchedThumbnail.start()
@@ -1474,7 +1474,7 @@ func gifPaneVideoThumbnail(account: Account, videoReference: FileMediaReference)
             }, completed: {
                 subscriber.putCompletion()
             })
-            let fetched = fetchedMediaResource(postbox: account.postbox, reference: videoReference.resourceReference(thumbnailResource)).start()
+            let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: videoReference.resourceReference(thumbnailResource)).start()
             return ActionDisposable {
                 data.dispose()
                 fetched.dispose()
@@ -1763,7 +1763,7 @@ func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId, photo
 
 public func standaloneChatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference) -> Signal<FetchResourceSourceType, FetchResourceError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
-        return fetchedMediaResource(postbox: account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
+        return fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
             return .single(type)
         }
@@ -1774,7 +1774,7 @@ public func standaloneChatMessagePhotoInteractiveFetched(account: Account, photo
 
 public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
-        return fetchedMediaResource(postbox: context.account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
+        return fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
             if case .remote = type, let peerType = storeToDownloadsPeerType {
                 return storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
@@ -1798,7 +1798,7 @@ func chatMessagePhotoCancelInteractiveFetch(account: Account, photoReference: Im
 }
 
 func chatMessageWebFileInteractiveFetched(account: Account, image: TelegramMediaWebFile) -> Signal<FetchResourceSourceType, FetchResourceError> {
-    return fetchedMediaResource(postbox: account.postbox, reference: .standalone(resource: image.resource), statsCategory: .image)
+    return fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .standalone(resource: image.resource), statsCategory: .image)
 }
 
 func chatMessageWebFileCancelInteractiveFetch(account: Account, image: TelegramMediaWebFile) {
@@ -1820,7 +1820,7 @@ func chatWebpageSnippetFileData(account: Account, fileReference: FileMediaRefere
         }, completed: {
             subscriber.putCompletion()
         }))
-        disposable.add(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(resource)).start())
+        disposable.add(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(resource)).start())
         return disposable
     }
 }
@@ -1841,7 +1841,7 @@ func chatWebpageSnippetPhotoData(account: Account, photoReference: ImageMediaRef
             }, completed: {
                 subscriber.putCompletion()
             }))
-            disposable.add(fetchedMediaResource(postbox: account.postbox, reference: photoReference.resourceReference(closestRepresentation.resource)).start())
+            disposable.add(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: photoReference.resourceReference(closestRepresentation.resource)).start())
             return disposable
         }
     } else {
@@ -1943,7 +1943,7 @@ private func chatSecretMessageVideoData(account: Account, fileReference: FileMed
     if let smallestRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
         let thumbnailResource = smallestRepresentation.resource
         
-        let fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailResource))
+        let fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(thumbnailResource))
         
         let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
         
@@ -2313,8 +2313,8 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                 return .single(Tuple(nil, loadedData, true))
             } else {
-                let fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: representations[smallestIndex].reference)
-                let fetchedFullSize = fetchedMediaResource(postbox: account.postbox, reference: representations[largestIndex].reference)
+                let fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: representations[smallestIndex].reference)
+                let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: representations[largestIndex].reference)
                 
                 let thumbnail = Signal<Data?, NoError> { subscriber in
                     let fetchedDisposable = fetchedThumbnail.start()
@@ -2792,7 +2792,7 @@ func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumA
     if let fileReference = fileReference, let smallestRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
         let thumbnailResource = smallestRepresentation.resource
         
-        let fetchedThumbnail = fetchedMediaResource(postbox: postbox, reference: fileReference.resourceReference(thumbnailResource))
+        let fetchedThumbnail = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: fileReference.resourceReference(thumbnailResource))
         
         let thumbnail = Signal<Data?, NoError> { subscriber in
             let fetchedDisposable = fetchedThumbnail.start()

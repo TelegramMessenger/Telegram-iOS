@@ -646,6 +646,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             imageFrame.origin.x = max(imageFrame.origin.x, leftInset + 10.0)
             
             videoFramePreviewNode.frame = imageFrame
+            videoFramePreviewNode.subnodes?.first?.frame = CGRect(origin: CGPoint(), size: imageFrame.size)
         }
         
         return panelHeight
@@ -1021,6 +1022,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.fetchControl?()
     }
     
+    func setFramePreviewImageIsLoading() {
+        if self.videoFramePreviewNode?.image != nil {
+            //self.videoFramePreviewNode?.subnodes?.first?.alpha = 1.0
+        }
+    }
+    
     func setFramePreviewImage(image: UIImage?) {
         if let image = image {
             let videoFramePreviewNode: ASImageNode
@@ -1031,10 +1038,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 videoFramePreviewNode = ASImageNode()
                 videoFramePreviewNode.displaysAsynchronously = false
                 videoFramePreviewNode.displayWithoutProcessing = true
+                let dimNode = ASDisplayNode()
+                dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+                videoFramePreviewNode.addSubnode(dimNode)
                 self.videoFramePreviewNode = videoFramePreviewNode
                 self.addSubnode(videoFramePreviewNode)
                 animateIn = true
             }
+            videoFramePreviewNode.subnodes?.first?.alpha = 0.0
             let updateLayout = videoFramePreviewNode.image?.size != image.size
             videoFramePreviewNode.image = image
             if updateLayout, let validLayout = self.validLayout {

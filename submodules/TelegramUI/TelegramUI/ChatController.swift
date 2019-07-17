@@ -209,6 +209,9 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     private var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     private var automaticMediaDownloadSettingsDisposable: Disposable?
     
+    private var stickerSettings: ChatInterfaceStickerSettings
+    private var stickerSettingsDisposable: Disposable?
+    
     private var applicationInForegroundDisposable: Disposable?
     
     private var checkedPeerChatServiceActions = false
@@ -264,6 +267,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
+        
+        self.stickerSettings = ChatInterfaceStickerSettings(loopAnimatedStickers: false)
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.fontSize, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation)
         
@@ -1379,8 +1384,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }, cancelInteractiveKeyboardGestures: { [weak self] in
             (self?.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
             self?.chatDisplayNode.cancelInteractiveKeyboardGestures()
-        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
-        pollActionState: ChatInterfacePollActionState())
+        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings)
         
         self.controllerInteraction = controllerInteraction
         
@@ -1881,6 +1885,24 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 strongSelf.controllerInteraction?.automaticMediaDownloadSettings = downloadSettings
                 if strongSelf.isNodeLoaded {
                     strongSelf.chatDisplayNode.updateAutomaticMediaDownloadSettings(downloadSettings)
+                }
+            }
+        })
+        
+        self.stickerSettingsDisposable = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+            var stickerSettings = StickerSettings.defaultSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+                stickerSettings = value
+            }
+            
+            let chatStickerSettings = ChatInterfaceStickerSettings(stickerSettings: stickerSettings)
+            
+            if let strongSelf = self, strongSelf.stickerSettings != chatStickerSettings {
+                strongSelf.stickerSettings = chatStickerSettings
+                strongSelf.controllerInteraction?.stickerSettings = chatStickerSettings
+                if strongSelf.isNodeLoaded {
+                    strongSelf.chatDisplayNode.updateStickerSettings(chatStickerSettings)
                 }
             }
         })
@@ -7063,23 +7085,22 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     }
                 })
             ]
-            
-            if let message = self.chatDisplayNode.historyNode.latestMessageInCurrentHistoryView(), !message.flags.contains(.Incoming) {
-                inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
-                    if let strongSelf = self {
-                        var canEdit = false
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                            if state.interfaceState.effectiveInputState.inputText.length == 0 && state.interfaceState.editMessage == nil {
-                                canEdit = true
-                            }
-                            return state
-                        })
-                        if canEdit {
-                            strongSelf.interfaceInteraction?.setupEditMessage(message.id)
-                        }
-                    }
-                }))
+        }
+        
+        var canEdit = false
+        self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+            if state.interfaceState.effectiveInputState.inputText.length == 0 && state.interfaceState.editMessage == nil {
+                canEdit = true
             }
+            return state
+        })
+        
+        if canEdit, let message = self.chatDisplayNode.historyNode.firstMessageForEditInCurrentHistoryView() {
+            inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.interfaceInteraction?.setupEditMessage(message.id)
+                }
+            }))
         }
         
         let otherShortcuts: [KeyShortcut] = [

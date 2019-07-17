@@ -344,8 +344,8 @@ func fetchedPartialVideoThumbnailData(postbox: Postbox, fileReference: FileMedia
             subscriber.putCompletion()
             return EmptyDisposable
         }
-        let fetchedHead = fetchedMediaResource(postbox: postbox, reference: fileReference.resourceReference(fileReference.media.resource), range: (0 ..< min(size, headerSize), .elevated), statsCategory: .video, reportResultStatus: false, preferBackgroundReferenceRevalidation: false).start()
-        let fetchedTail = fetchedMediaResource(postbox: postbox, reference: fileReference.resourceReference(fileReference.media.resource), range: (max(0, size - tailSize) ..< size, .elevated), statsCategory: .video, reportResultStatus: false, preferBackgroundReferenceRevalidation: false).start()
+        let fetchedHead = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource), range: (0 ..< min(size, headerSize), .elevated), statsCategory: .video, reportResultStatus: false, preferBackgroundReferenceRevalidation: false).start()
+        let fetchedTail = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource), range: (max(0, size - tailSize) ..< size, .elevated), statsCategory: .video, reportResultStatus: false, preferBackgroundReferenceRevalidation: false).start()
         
         return ActionDisposable {
             fetchedHead.dispose()

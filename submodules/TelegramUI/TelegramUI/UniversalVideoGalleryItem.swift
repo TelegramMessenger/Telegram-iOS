@@ -179,7 +179,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var fetchStatus: MediaResourceStatus?
     private var fetchControls: FetchControls?
     
-    private var scrubbingFrame = Promise<UIImage?>(nil)
+    private var scrubbingFrame = Promise<MediaPlayerFramePreviewResult?>(nil)
     private var scrubbingFrames = false
     private var scrubbingFrameDisposable: Disposable?
     
@@ -215,7 +215,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let timecode = timecode {
                 if !strongSelf.scrubbingFrames {
                     strongSelf.scrubbingFrames = true
-                    strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames)
+                    strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
+                    |> map(Optional.init))
                 }
                 videoFramePreview.generateFrame(at: timecode)
             } else {
@@ -279,11 +280,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         self.scrubbingFrameDisposable = (self.scrubbingFrame.get()
-        |> deliverOnMainQueue).start(next: { [weak self] image in
+        |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.footerContentNode.setFramePreviewImage(image: image)
+            if let result = result {
+                switch result {
+                case .waitingForData:
+                    strongSelf.footerContentNode.setFramePreviewImageIsLoading()
+                case let .image(image):
+                    strongSelf.footerContentNode.setFramePreviewImage(image: image)
+                }
+            } else {
+                strongSelf.footerContentNode.setFramePreviewImage(image: nil)
+            }
         })
     }
     

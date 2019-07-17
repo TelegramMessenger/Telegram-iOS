@@ -476,17 +476,17 @@ private enum UploadedMediaFileAndThumbnail {
 
 private func uploadedThumbnail(network: Network, postbox: Postbox, resourceReference: MediaResourceReference) -> Signal<Api.InputFile?, PendingMessageUploadError> {
     return multipartUpload(network: network, postbox: postbox, source: .resource(resourceReference), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
-        |> mapError { _ -> PendingMessageUploadError in return .generic }
-        |> mapToSignal { result -> Signal<Api.InputFile?, PendingMessageUploadError> in
-            switch result {
-                case .progress:
-                    return .complete()
-                case let .inputFile(inputFile):
-                    return .single(inputFile)
-                case .inputSecretFile:
-                    return .single(nil)
-            }
+    |> mapError { _ -> PendingMessageUploadError in return .generic }
+    |> mapToSignal { result -> Signal<Api.InputFile?, PendingMessageUploadError> in
+        switch result {
+            case .progress:
+                return .complete()
+            case let .inputFile(inputFile):
+                return .single(inputFile)
+            case .inputSecretFile:
+                return .single(nil)
         }
+    }
 }
 
 public func statsCategoryForFileWithAttributes(_ attributes: [TelegramMediaFileAttribute]) -> MediaResourceStatsCategory {

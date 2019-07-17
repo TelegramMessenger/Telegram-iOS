@@ -12,13 +12,26 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
     let requestRange: Range<Int> = context.readingOffset ..< (context.readingOffset + readCount)
     
+    context.currentNumberOfReads += 1
+    context.currentReadBytes += readCount
+    
     let semaphore = DispatchSemaphore(value: 0)
-    data = context.mediaBox.resourceData(context.fileReference.media.resource, size: context.size, in: requestRange, mode: .complete)
+    data = context.mediaBox.resourceData(context.fileReference.media.resource, size: context.size, in: requestRange, mode: .partial)
+    let requiredDataIsNotLocallyAvailable = context.requiredDataIsNotLocallyAvailable
     var fetchedData: Data?
+    let fetchDisposable = MetaDisposable()
+    let isInitialized = context.videoStream != nil
+    let mediaBox = context.mediaBox
+    let reference = context.fileReference.resourceReference(context.fileReference.media.resource)
     let disposable = data.start(next: { data in
         if data.count == readCount {
             fetchedData = data
             semaphore.signal()
+        } else {
+            if isInitialized {
+                fetchDisposable.set(fetchedMediaResource(mediaBox: mediaBox, reference: reference, ranges: [(requestRange, .maximum)]).start())
+            }
+            requiredDataIsNotLocallyAvailable?()
         }
     })
     let cancelDisposable = context.cancelRead.start(next: { value in
@@ -30,6 +43,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     
     disposable.dispose()
     cancelDisposable.dispose()
+    fetchDisposable.dispose()
     
     if let fetchedData = fetchedData {
         fetchedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
@@ -87,6 +101,9 @@ private final class UniversalSoftwareVideoSourceImpl {
     fileprivate var readingOffset: Int = 0
     
     fileprivate var cancelRead: Signal<Bool, NoError>
+    fileprivate var requiredDataIsNotLocallyAvailable: (() -> Void)?
+    fileprivate var currentNumberOfReads: Int = 0
+    fileprivate var currentReadBytes: Int = 0
     
     init?(mediaBox: MediaBox, fileReference: FileMediaReference, state: ValuePromise<UniversalSoftwareVideoSourceState>, cancelInitialization: Signal<Bool, NoError>) {
         guard let size = fileReference.media.size else {
@@ -225,10 +242,13 @@ private final class UniversalSoftwareVideoSourceImpl {
     
     func readImage() -> (UIImage?, CGFloat, CGFloat, Bool) {
         if let videoStream = self.videoStream {
-            for _ in 0 ..< 10 {
+            self.currentNumberOfReads = 0
+            self.currentReadBytes = 0
+            for i in 0 ..< 10 {
                 let (decodableFrame, loop) = self.readDecodableFrame()
                 if let decodableFrame = decodableFrame {
                     if let renderedFrame = videoStream.decoder.render(frame: decodableFrame) {
+                        print("Frame rendered in \(self.currentNumberOfReads) reads, \(self.currentReadBytes) bytes, total frames read: \(i + 1)")
                         return (renderedFrame, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
                     }
                 }
@@ -273,11 +293,13 @@ private final class UniversalSoftwareVideoSourceTakeFrameParams: NSObject {
     let timestamp: Double
     let completion: (UIImage?) -> Void
     let cancel: Signal<Bool, NoError>
+    let requiredDataIsNotLocallyAvailable: () -> Void
     
-    init(timestamp: Double, completion: @escaping (UIImage?) -> Void, cancel: Signal<Bool, NoError>) {
+    init(timestamp: Double, completion: @escaping (UIImage?) -> Void, cancel: Signal<Bool, NoError>, requiredDataIsNotLocallyAvailable: @escaping () -> Void) {
         self.timestamp = timestamp
         self.completion = completion
         self.cancel = cancel
+        self.requiredDataIsNotLocallyAvailable = requiredDataIsNotLocallyAvailable
     }
 }
 
@@ -314,6 +336,7 @@ private final class UniversalSoftwareVideoSourceThread: NSObject {
             return
         }
         source.cancelRead = params.cancel
+        source.requiredDataIsNotLocallyAvailable = params.requiredDataIsNotLocallyAvailable
         source.state.set(.generatingFrame)
         let startTime = CFAbsoluteTimeGetCurrent()
         source.seek(timestamp: params.timestamp)
@@ -322,6 +345,11 @@ private final class UniversalSoftwareVideoSourceThread: NSObject {
         source.state.set(.ready)
         print("take frame: \(CFAbsoluteTimeGetCurrent() - startTime) s")
     }
+}
+
+enum UniversalSoftwareVideoSourceTakeFrameResult {
+    case waitingForData
+    case image(UIImage?)
 }
 
 final class UniversalSoftwareVideoSource {
@@ -352,13 +380,15 @@ final class UniversalSoftwareVideoSource {
         self.cancelInitialization.set(true)
     }
     
-    public func takeFrame(at timestamp: Double) -> Signal<UIImage?, NoError> {
+    public func takeFrame(at timestamp: Double) -> Signal<UniversalSoftwareVideoSourceTakeFrameResult, NoError> {
         return Signal { subscriber in
             let cancel = ValuePromise<Bool>(false)
             UniversalSoftwareVideoSourceThread.self.perform(#selector(UniversalSoftwareVideoSourceThread.takeFrame(_:)), on: self.thread, with: UniversalSoftwareVideoSourceTakeFrameParams(timestamp: timestamp, completion: { image in
-                subscriber.putNext(image)
+                subscriber.putNext(.image(image))
                 subscriber.putCompletion()
-            }, cancel: cancel.get()), waitUntilDone: false)
+            }, cancel: cancel.get(), requiredDataIsNotLocallyAvailable: {
+                subscriber.putNext(.waitingForData)
+            }), waitUntilDone: false)
             
             return ActionDisposable {
                 cancel.set(true)

@@ -522,7 +522,7 @@ final class AuthorizedApplicationContext {
             strongSelf.currentAppUpdateInfo = appUpdateInfo
             if let appUpdateInfo = appUpdateInfo {
                 let controller = updateInfoController(context: strongSelf.context, appUpdateInfo: appUpdateInfo)
-                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
+                strongSelf.mainWindow.present(controller, on: .update)
             }
         }))
         

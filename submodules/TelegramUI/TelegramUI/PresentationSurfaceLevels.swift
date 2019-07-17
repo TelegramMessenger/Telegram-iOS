@@ -7,4 +7,5 @@ public extension PresentationSurfaceLevel {
     static let overlayMedia = PresentationSurfaceLevel(rawValue: 2)
     static let notifications = PresentationSurfaceLevel(rawValue: 3)
     static let passcode = PresentationSurfaceLevel(rawValue: 4)
+    static let update = PresentationSurfaceLevel(rawValue: 5)
 }

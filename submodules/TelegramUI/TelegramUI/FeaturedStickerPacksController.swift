@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TelegramUIPreferences
 
 private final class FeaturedStickerPacksControllerArguments {
     let account: Account
@@ -46,7 +47,7 @@ private enum FeaturedStickerPacksEntryId: Hashable {
 }
 
 private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
-    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, Bool, StickerPackItem?, String, Bool)
+    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, Bool, StickerPackItem?, String, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -57,15 +58,15 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     
     var stableId: FeaturedStickerPacksEntryId {
         switch self {
-            case let .pack(_, _, _, info, _, _, _, _):
+            case let .pack(_, _, _, info, _, _, _, _, _):
                 return .pack(info.id)
         }
     }
     
     static func ==(lhs: FeaturedStickerPacksEntry, rhs: FeaturedStickerPacksEntry) -> Bool {
         switch lhs {
-            case let .pack(lhsIndex, lhsTheme, lhsStrings, lhsInfo, lhsUnread, lhsTopItem, lhsCount, lhsInstalled):
-                if case let .pack(rhsIndex, rhsTheme, rhsStrings, rhsInfo, rhsUnread, rhsTopItem, rhsCount, rhsInstalled) = rhs {
+            case let .pack(lhsIndex, lhsTheme, lhsStrings, lhsInfo, lhsUnread, lhsTopItem, lhsCount, lhsPlayAnimatedStickers, lhsInstalled):
+                if case let .pack(rhsIndex, rhsTheme, rhsStrings, rhsInfo, rhsUnread, rhsTopItem, rhsCount, rhsPlayAnimatedStickers, rhsInstalled) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -87,6 +88,9 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
                     if lhsCount != rhsCount {
                         return false
                     }
+                    if lhsPlayAnimatedStickers != rhsPlayAnimatedStickers {
+                        return false
+                    }
                     if lhsInstalled != rhsInstalled {
                         return false
                     }
@@ -99,9 +103,9 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     
     static func <(lhs: FeaturedStickerPacksEntry, rhs: FeaturedStickerPacksEntry) -> Bool {
         switch lhs {
-            case let .pack(lhsIndex, _, _, _, _, _, _, _):
+            case let .pack(lhsIndex, _, _, _, _, _, _,  _, _):
                 switch rhs {
-                    case let .pack(rhsIndex, _, _, _, _, _, _, _):
+                    case let .pack(rhsIndex, _, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                 }
         }
@@ -109,8 +113,8 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
     
     func item(_ arguments: FeaturedStickerPacksControllerArguments) -> ListViewItem {
         switch self {
-            case let .pack(_, theme, strings, info, unread, topItem, count, installed):
-                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: true, sectionId: self.section, action: {
+            case let .pack(_, theme, strings, info, unread, topItem, count, playAnimatedStickers, installed):
+                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { _, _ in
                 }, addPack: {
@@ -130,7 +134,7 @@ private struct FeaturedStickerPacksControllerState: Equatable {
     }
 }
 
-private func featuredStickerPacksControllerEntries(presentationData: PresentationData, state: FeaturedStickerPacksControllerState, view: CombinedView, featured: [FeaturedStickerPackItem], unreadPacks: [ItemCollectionId: Bool]) -> [FeaturedStickerPacksEntry] {
+private func featuredStickerPacksControllerEntries(presentationData: PresentationData, state: FeaturedStickerPacksControllerState, view: CombinedView, featured: [FeaturedStickerPackItem], unreadPacks: [ItemCollectionId: Bool], stickerSettings: StickerSettings)  -> [FeaturedStickerPacksEntry] {
     var entries: [FeaturedStickerPacksEntry] = []
     
     if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView, !featured.isEmpty {
@@ -145,7 +149,7 @@ private func featuredStickerPacksControllerEntries(presentationData: Presentatio
                 if let value = unreadPacks[item.info.id] {
                     unread = value
                 }
-                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, unread, item.topItems.first, presentationData.strings.StickerPack_StickerCount(item.info.count), installedPacks.contains(item.info.id)))
+                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, unread, item.topItems.first, presentationData.strings.StickerPack_StickerCount(item.info.count), stickerSettings.loopAnimatedStickers, installedPacks.contains(item.info.id)))
                 index += 1
             }
         }
@@ -195,9 +199,14 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
     var previousPackCount: Int?
     var initialUnreadPacks: [ItemCollectionId: Bool] = [:]
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
         |> deliverOnMainQueue
-        |> map { presentationData, state, view, featured -> (ItemListControllerState, (ItemListNodeState<FeaturedStickerPacksEntry>, FeaturedStickerPacksEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, view, featured, sharedData -> (ItemListControllerState, (ItemListNodeState<FeaturedStickerPacksEntry>, FeaturedStickerPacksEntry.ItemGenerationArguments)) in
+            var stickerSettings = StickerSettings.defaultSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+                stickerSettings = value
+            }
+            
             let packCount: Int? = featured.count
             
             for item in featured {
@@ -212,7 +221,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.FeaturedStickerPacks_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             
-            let listState = ItemListNodeState(entries: featuredStickerPacksControllerEntries(presentationData: presentationData, state: state, view: view, featured: featured, unreadPacks: initialUnreadPacks), style: .blocks, animateChanges: false)
+            let listState = ItemListNodeState(entries: featuredStickerPacksControllerEntries(presentationData: presentationData, state: state, view: view, featured: featured, unreadPacks: initialUnreadPacks, stickerSettings: stickerSettings), style: .blocks, animateChanges: false)
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
@@ -226,7 +235,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
         var unreadIds: [ItemCollectionId] = []
         for entry in entries {
             switch entry {
-                case let .pack(_, _, _, info, unread, _, _, _):
+                case let .pack(_, _, _, info, unread, _, _, _, _):
                     if unread && !alreadyReadIds.contains(info.id) {
                         unreadIds.append(info.id)
                     }
