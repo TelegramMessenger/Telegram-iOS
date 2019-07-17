@@ -17,6 +17,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     let imageNode: TransformImageNode
     private let animationNode: AnimatedStickerNode
     private var didSetUpAnimationNode = false
+    private var isPlaying = false
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
@@ -90,8 +91,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         self.view.addGestureRecognizer(replyRecognizer)
     }
-    
-    private var visibilityPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             let wasVisible = oldValue != .none
@@ -106,21 +106,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var visibilityStatus: Bool = false {
         didSet {
             if self.visibilityStatus != oldValue {
-                if self.visibilityStatus {
-                    self.animationNode.visibility = true
-                    self.visibilityPromise.set(true)
-                    if let item = self.item, !self.didSetUpAnimationNode {
-                        for media in item.message.media {
-                            if let telegramFile = media as? TelegramMediaFile {
-                                self.didSetUpAnimationNode = true
-                                self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
-                            }
-                        }
-                    }
-                } else {
-                    self.animationNode.visibility = false
-                    self.visibilityPromise.set(false)
-                }
+                self.updateVisibility()
             }
         }
     }
@@ -133,7 +119,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
-                    if self.visibilityStatus {
+                    self.updateVisibility()
+                    if self.visibilityStatus && false {
                         self.didSetUpAnimationNode = true
                         self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
                     }
@@ -142,6 +129,31 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 break
             }
         }
+    }
+    
+    func updateVisibility() {
+        guard let item = self.item else {
+            return
+        }
+        
+        let isPlaying = self.visibilityStatus && item.controllerInteraction.stickerSettings.loopAnimatedStickers
+        if self.isPlaying != isPlaying {
+            self.isPlaying = isPlaying
+            self.animationNode.visibility = isPlaying
+            if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
+                self.didSetUpAnimationNode = true
+                for media in item.message.media {
+                    if let telegramFile = media as? TelegramMediaFile {
+                        self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
+    override func updateStickerSettings() {
+        self.updateVisibility()
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {

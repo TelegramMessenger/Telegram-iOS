@@ -15,6 +15,7 @@ private let textBoldFont = Font.semibold(15.0)
 private let textItalicFont = Font.italic(15.0)
 private let textBoldItalicFont = Font.semiboldItalic(15.0)
 private let textFixedFont = Font.regular(15.0)
+private let textBlockQuoteFont = Font.regular(15.0)
 private let buttonFont = Font.semibold(13.0)
 
 enum ChatMessageAttachedContentActionIcon {
@@ -371,7 +372,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     string.append(NSAttributedString(string: "\n", font: textFont, textColor: messageTheme.primaryTextColor))
                 }
                 if let entities = entities {
-                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont))
+                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont))
                 } else {
                     string.append(NSAttributedString(string: text + "\n", font: textFont, textColor: messageTheme.primaryTextColor))
                 }

@@ -57,7 +57,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         self.contentTextNode = ImmediateTextNode()
         self.contentTextNode.displaysAsynchronously = false
         self.contentTextNode.maximumNumberOfLines = 0
-        self.contentTextNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: theme.primary, linkColor: theme.accent, baseFont: Font.regular(15.0), linkFont: Font.regular(15.0), boldFont: Font.semibold(15.0), italicFont: Font.italic(15.0), boldItalicFont: Font.semiboldItalic(15.0), fixedFont: Font.monospace(15.0))
+        self.contentTextNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: theme.primary, linkColor: theme.accent, baseFont: Font.regular(15.0), linkFont: Font.regular(15.0), boldFont: Font.semibold(15.0), italicFont: Font.italic(15.0), boldItalicFont: Font.semiboldItalic(15.0), fixedFont: Font.monospace(15.0), blockQuoteFont: Font.regular(15.0))
         
         self.toolbarNode = ASDisplayNode()
         self.toolbarSeparatorNode = ASDisplayNode()

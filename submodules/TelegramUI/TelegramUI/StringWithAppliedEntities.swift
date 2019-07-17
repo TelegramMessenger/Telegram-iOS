@@ -45,24 +45,25 @@ func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageT
     return string
 }
 
-func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, underlineLinks: Bool = true, external: Bool = false) -> NSAttributedString {
+func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false) -> NSAttributedString {
     var nsString: NSString?
     let string = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.font: baseFont, NSAttributedStringKey.foregroundColor: baseColor])
     var skipEntity = false
-    let stringLength = string.length
     var underlineAllLinks = false
     if linkColor.isEqual(baseColor) {
         underlineAllLinks = true
     }
     var fontAttributes: [NSRange: ChatTextFontAttributes] = [:]
     
+    var rangeOffset: Int = 0
     for i in 0 ..< entities.count {
         if skipEntity {
             skipEntity = false
             continue
         }
+        let stringLength = string.length
         let entity = entities[i]
-        var range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+        var range = NSRange(location: entity.range.lowerBound + rangeOffset, length: entity.range.upperBound - entity.range.lowerBound)
         if nsString == nil {
             nsString = text as NSString
         }
@@ -188,6 +189,25 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand), value: nsString!.substring(with: range), range: range)
             case .Code, .Pre:
                 string.addAttribute(NSAttributedStringKey.font, value: fixedFont, range: range)
+            case .BlockQuote:
+                if let fontAttribute = fontAttributes[range] {
+                    fontAttributes[range] = fontAttribute.union(.blockQuote)
+                } else {
+                    fontAttributes[range] = .blockQuote
+                }
+                
+                let paragraphBreak = "\n"
+                string.insert(NSAttributedString(string: paragraphBreak), at: range.lowerBound)
+            
+                let paragraphRange = NSRange(location: range.lowerBound + paragraphBreak.count, length: range.upperBound - range.lowerBound)
+                
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.headIndent = 10.0
+                paragraphStyle.tabStops = [NSTextTab(textAlignment: .left, location: paragraphStyle.headIndent, options: [:])]
+                string.addAttribute(NSAttributedStringKey.paragraphStyle, value: paragraphStyle, range: paragraphRange)
+            
+                string.insert(NSAttributedString(string: paragraphBreak), at: paragraphRange.upperBound)
+                rangeOffset += paragraphBreak.count
             case let .Custom(type):
                 if type == ApplicationSpecificEntityType.Timecode {
                     string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
@@ -208,7 +228,9 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
         
         for (range, fontAttributes) in fontAttributes {
             var font: UIFont?
-            if fontAttributes == [.bold, .italic] {
+            if fontAttributes.contains(.blockQuote) {
+                font = blockQuoteFont
+            } else if fontAttributes == [.bold, .italic] {
                 font = boldItalicFont
             } else if fontAttributes == [.bold] {
                 font = boldFont
