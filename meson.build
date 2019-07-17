@@ -72,5 +72,29 @@ if host_machine.system() != 'windows'
     endif
 endif
 
+summary = '''
+
+Summary:
+    rlottie version :        @0@
+    Build type      :        @1@
+    Thread Support  :        @2@
+    Module Support  :        @3@
+    Cache  Support  :        @4@
+    Example         :        @5@
+    Test            :        @6@
+    Prefix          :        @7@
+'''.format(
+        meson.project_version(),
+        get_option('buildtype'),
+        get_option('thread'),
+        get_option('module'),
+        get_option('cache'),
+        get_option('example'),
+        get_option('test'),
+        get_option('prefix'),
+    )
+
+message(summary)
+
 
 
