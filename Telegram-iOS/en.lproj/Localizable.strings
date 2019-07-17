@@ -4471,3 +4471,6 @@ Any member of this group will be able to see messages in the channel.";
 
 "Channel.TooMuchBots" = "Sorry, there are already too many bots in this group. Please remove some of the bots you're not using first.";
 "Channel.BotDoesntSupportGroups" = "Sorry, this bot is telling us it doesn't want to be added to groups. You can't add this bot unless its developers change their mind.";
+
+"StickerPacksSettings.AnimatedStickers" = "Loop Animated Stickers";
+"StickerPacksSettings.AnimatedStickersInfo" = "Animated stickers will play in chat continuously.";

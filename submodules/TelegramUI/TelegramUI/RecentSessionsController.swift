@@ -634,7 +634,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: title, leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(entries: entries, style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: crossfadeState, animateChanges: animateChanges, userInteractionEnabled: emptyStateItem == nil)
+        let listState = ItemListNodeState(entries: entries, style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: crossfadeState, animateChanges: animateChanges, scrollEnabled: emptyStateItem == nil)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

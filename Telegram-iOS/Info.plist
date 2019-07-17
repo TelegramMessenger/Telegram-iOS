@@ -228,9 +228,7 @@
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
-		<string>dbapi-3</string>
 		<string>instagram</string>
-		<string>googledrive</string>
 		<string>comgooglemaps-x-callback</string>
 		<string>foursquare</string>
 		<string>here-location</string>
@@ -257,6 +255,7 @@
 		<string>opera-https</string>
 		<string>firefox-focus</string>
 		<string>ddgQuickLink</string>
+		<string>moovit</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

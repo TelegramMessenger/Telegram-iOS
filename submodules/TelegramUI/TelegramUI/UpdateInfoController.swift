@@ -113,9 +113,9 @@ public func updateInfoController(context: AccountContext, appUpdateInfo: AppUpda
             appIcon = appIcons.filter { $0.isDefault }.first
         }
         
-        let leftNavigationButton = appUpdateInfo.popup ? ItemListNavigationButton(content: .text(presentationData.strings.Update_Skip), style: .regular, enabled: true, action: {
+        let leftNavigationButton = appUpdateInfo.blocking ? nil : ItemListNavigationButton(content: .text(presentationData.strings.Update_Skip), style: .regular, enabled: true, action: {
             dismissImpl?()
-        }) : nil
+        })
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Update_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(entries: updateInfoControllerEntries(theme: presentationData.theme, strings: presentationData.strings, appIcon: appIcon, appUpdateInfo: appUpdateInfo), style: .blocks, animateChanges: false)
         

@@ -54,7 +54,7 @@ private enum ExternalShareResourceStatus {
 
 private func collectExternalShareResource(postbox: Postbox, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory) -> Signal<ExternalShareResourceStatus, NoError> {
     return Signal { subscriber in
-        let fetched = fetchedMediaResource(postbox: postbox, reference: resourceReference, statsCategory: statsCategory).start()
+        let fetched = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, statsCategory: statsCategory).start()
         let data = postbox.mediaBox.resourceData(resourceReference.resource, option: .complete(waitUntilFetchStatus: false)).start(next: { value in
             if value.complete {
                 subscriber.putNext(.done(value))

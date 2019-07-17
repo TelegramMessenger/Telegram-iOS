@@ -288,7 +288,7 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
         previousState = blockedPeersState
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.BlockedUsers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(entries: blockedPeersControllerEntries(presentationData: presentationData, state: state, blockedPeersState: blockedPeersState), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previousStateValue != nil && previousStateValue!.peers.count >= blockedPeersState.peers.count)
+        let listState = ItemListNodeState(entries: blockedPeersControllerEntries(presentationData: presentationData, state: state, blockedPeersState: blockedPeersState), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previousStateValue != nil && previousStateValue!.peers.count >= blockedPeersState.peers.count, scrollEnabled: emptyStateItem == nil)
         
         return (controllerState, (listState, arguments))
     }

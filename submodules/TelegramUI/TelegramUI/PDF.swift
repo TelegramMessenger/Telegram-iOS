@@ -3,7 +3,13 @@ import UIKit
 import Display
 
 func generatePdfPreviewImage(url: URL, size: CGSize) -> UIImage? {
-    guard let document = CGPDFDocument(url as CFURL) else { return nil }
+    guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return nil }
+    return generatePdfPreviewImage(data: data, size: size)
+}
+
+func generatePdfPreviewImage(data: Data, size: CGSize) -> UIImage? {
+    guard let provider = CGDataProvider(data: data as CFData) else { return nil }
+    guard let document = CGPDFDocument(provider) else { return nil }
     guard let firstPage = document.page(at: 1) else { return nil }
     
     let context = DrawingContext(size: size)

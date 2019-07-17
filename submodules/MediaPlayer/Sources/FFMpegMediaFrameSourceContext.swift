@@ -238,12 +238,12 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
                 if streamable {
                     if context.tempFilePath == nil {
                         let fetchRange: Range<Int> = context.readingOffset ..< Int(Int32.max)
-                        context.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: (fetchRange, .elevated), statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
+                        context.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, range: (fetchRange, .elevated), statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
                     }
                 } else if !context.requestedCompleteFetch && context.fetchAutomatically {
                     context.requestedCompleteFetch = true
                     if context.tempFilePath == nil {
-                        context.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
+                        context.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
                     }
                 }
             }
@@ -330,12 +330,12 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         if streamable {
             if self.tempFilePath == nil {
-                self.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: (0 ..< Int(Int32.max), .elevated), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
+                self.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, range: (0 ..< Int(Int32.max), .elevated), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
             }
         } else if !self.requestedCompleteFetch && self.fetchAutomatically {
             self.requestedCompleteFetch = true
             if self.tempFilePath == nil {
-                self.fetchedFullDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
+                self.fetchedFullDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
             }
         }
         
@@ -437,7 +437,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         if streamable {
             if self.tempFilePath == nil {
-                self.fetchedFullDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: (0 ..< Int(Int32.max), .default), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
+                self.fetchedFullDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, range: (0 ..< Int(Int32.max), .default), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
             }
             self.requestedCompleteFetch = true
         }

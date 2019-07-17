@@ -133,7 +133,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: .black))()
                 self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, photoReference: imageReference), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
-                self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: imageReference.resourceReference(largestSize.resource)).start())
+                self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: imageReference.resourceReference(largestSize.resource)).start())
             } else {
                 self._ready.set(.single(Void()))
             }
@@ -286,7 +286,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         if let (context, media) = self.contextAndMedia, let fileReference = media.concrete(TelegramMediaFile.self) {
             if isVisible {
-                self.fetchDisposable.set(fetchedMediaResource(postbox: context.account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
+                self.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
             } else {
                 self.fetchDisposable.set(nil)
             }

@@ -44,11 +44,11 @@ public func peerAvatarImageData(account: Account, peer: Peer, authorOfMessage: M
                     })
                     var fetchedDataDisposable: Disposable?
                     if let peerReference = PeerReference(peer) {
-                        fetchedDataDisposable = fetchedMediaResource(postbox: account.postbox, reference: .avatar(peer: peerReference, resource: smallProfileImage.resource), statsCategory: .generic).start()
+                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .avatar(peer: peerReference, resource: smallProfileImage.resource), statsCategory: .generic).start()
                     } else if let authorOfMessage = authorOfMessage {
-                        fetchedDataDisposable = fetchedMediaResource(postbox: account.postbox, reference: .messageAuthorAvatar(message: authorOfMessage, resource: smallProfileImage.resource), statsCategory: .generic).start()
+                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .messageAuthorAvatar(message: authorOfMessage, resource: smallProfileImage.resource), statsCategory: .generic).start()
                     } else {
-                        fetchedDataDisposable = fetchedMediaResource(postbox: account.postbox, reference: .standalone(resource: smallProfileImage.resource), statsCategory: .generic).start()
+                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .standalone(resource: smallProfileImage.resource), statsCategory: .generic).start()
                     }
                     return ActionDisposable {
                         resourceDataDisposable.dispose()

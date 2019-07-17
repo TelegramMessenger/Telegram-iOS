@@ -28,13 +28,18 @@ private func initializedPreviewContext(queue: Queue, postbox: Postbox, fileRefer
     }
 }
 
+public enum MediaPlayerFramePreviewResult {
+    case image(UIImage)
+    case waitingForData
+}
+
 private final class MediaPlayerFramePreviewImpl {
     private let queue: Queue
     private let context: Promise<QueueLocalObject<FramePreviewContext>>
     private let currentFrameDisposable = MetaDisposable()
     private var currentFrameTimestamp: Double?
     private var nextFrameTimestamp: Double?
-    fileprivate let framePipe = ValuePipe<UIImage>()
+    fileprivate let framePipe = ValuePipe<MediaPlayerFramePreviewResult>()
     
     init(queue: Queue, postbox: Postbox, fileReference: FileMediaReference) {
         self.queue = queue
@@ -63,17 +68,22 @@ private final class MediaPlayerFramePreviewImpl {
                     return
                 }
                 context.with { context in
-                    let disposable = context.source.takeFrame(at: timestamp).start(next: { image in
+                    let disposable = context.source.takeFrame(at: timestamp).start(next: { result in
                         guard let strongSelf = self else {
                             return
                         }
-                        if let image = image {
-                            strongSelf.framePipe.putNext(image)
-                        }
-                        strongSelf.currentFrameTimestamp = nil
-                        if let nextFrameTimestamp = strongSelf.nextFrameTimestamp {
-                            strongSelf.nextFrameTimestamp = nil
-                            strongSelf.generateFrame(at: nextFrameTimestamp)
+                        switch result {
+                        case .waitingForData:
+                            strongSelf.framePipe.putNext(.waitingForData)
+                        case let .image(image):
+                            if let image = image {
+                                strongSelf.framePipe.putNext(.image(image))
+                            }
+                            strongSelf.currentFrameTimestamp = nil
+                            if let nextFrameTimestamp = strongSelf.nextFrameTimestamp {
+                                strongSelf.nextFrameTimestamp = nil
+                                strongSelf.generateFrame(at: nextFrameTimestamp)
+                            }
                         }
                     })
                     takeDisposable.set(disposable)
@@ -97,12 +107,12 @@ public final class MediaPlayerFramePreview {
     private let queue: Queue
     private let impl: QueueLocalObject<MediaPlayerFramePreviewImpl>
     
-    public var generatedFrames: Signal<UIImage?, NoError> {
+    public var generatedFrames: Signal<MediaPlayerFramePreviewResult, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
-                disposable.set(impl.framePipe.signal().start(next: { image in
-                    subscriber.putNext(image)
+                disposable.set(impl.framePipe.signal().start(next: { result in
+                    subscriber.putNext(result)
                 }))
             }
             return disposable
