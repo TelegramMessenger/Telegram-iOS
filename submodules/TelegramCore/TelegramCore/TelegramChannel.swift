@@ -72,6 +72,7 @@ public struct TelegramChannelGroupFlags: OptionSet {
     public init(rawValue: Int32) {
         self.rawValue = rawValue
     }
+    public static let isEnabledSlowMode = TelegramChannelGroupFlags(rawValue: 1 << 0)
 }
 
 public struct TelegramChannelGroupInfo: Equatable {
