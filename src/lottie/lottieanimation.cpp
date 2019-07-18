@@ -203,7 +203,7 @@ public:
 
     std::future<Surface> process(SharedRenderTask task)
     {
-        auto result = task->playerImpl->render(task->frameNo, task->surface);
+        auto result = task->playerImpl->render(task->frameNo, task->surface, task->keepAspectRatio);
         task->sender.set_value(result);
         return std::move(task->receiver);
     }
