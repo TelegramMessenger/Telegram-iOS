@@ -203,7 +203,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                     case .creator:
                         peerText = strings.Channel_Management_LabelOwner
                         action = nil
-                    case let .member(_, _, adminInfo, _):
+                    case let .member(_, _, adminInfo, _, _):
                         if let adminInfo = adminInfo {
                             if let peer = participant.peers[adminInfo.promotedBy] {
                                 if peer.id == participant.peer.id {
@@ -352,14 +352,14 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 switch lhs.participant {
                     case .creator:
                         lhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _):
+                    case let .member(_, invitedAt, _, _, _):
                         lhsInvitedAt = invitedAt
                 }
                 let rhsInvitedAt: Int32
                 switch rhs.participant {
                     case .creator:
                         rhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _):
+                    case let .member(_, invitedAt, _, _, _):
                         rhsInvitedAt = invitedAt
                 }
                 return lhsInvitedAt < rhsInvitedAt
@@ -369,7 +369,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                     switch participant.participant {
                         case .creator:
                             editable = false
-                        case let .member(id, _, adminInfo, _):
+                        case let .member(id, _, adminInfo, _, _):
                             if id == accountPeerId {
                                 editable = false
                             } else if let adminInfo = adminInfo {
@@ -421,14 +421,14 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 switch lhs.participant {
                     case .creator:
                         lhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _):
+                    case let .member(_, invitedAt, _, _, _):
                         lhsInvitedAt = invitedAt
                 }
                 let rhsInvitedAt: Int32
                 switch rhs.participant {
                     case .creator:
                         rhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _):
+                    case let .member(_, invitedAt, _, _, _):
                         rhsInvitedAt = invitedAt
                 }
                 return lhsInvitedAt < rhsInvitedAt
@@ -438,11 +438,13 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                     switch participant.participant {
                     case .creator:
                         editable = false
-                    case let .member(id, _, adminInfo, _):
+                    case let .member(id, _, adminInfo, _, _):
                         if id == accountPeerId {
                             editable = false
                         } else if let adminInfo = adminInfo {
-                            if peer.role == .creator || adminInfo.promotedBy == accountPeerId {
+                            if case .creator = peer.role {
+                                editable = true
+                            } else if adminInfo.promotedBy == accountPeerId {
                                 editable = true
                             } else {
                                 editable = false
@@ -540,7 +542,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                 }
             }))
         } else {
-            removeAdminDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: []))
+            removeAdminDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: []), rank: nil)
             |> deliverOnMainQueue).start(completed: {
                 updateState {
                     return $0.withUpdatedRemovingPeerId(nil)
@@ -563,7 +565,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                         switch participant.participant {
                             case .creator:
                                 return
-                            case let .member(_, _, _, banInfo):
+                            case let .member(_, _, _, banInfo, _):
                                 if let banInfo = banInfo {
                                     var canUnban = false
                                     if banInfo.restrictedBy != context.account.peerId {
@@ -637,12 +639,12 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                 if let peer = peerView.peers[participant.peerId] {
                     switch participant {
                         case .creator:
-                            result.append(RenderedChannelParticipant(participant: .creator(id: peer.id), peer: peer))
+                            result.append(RenderedChannelParticipant(participant: .creator(id: peer.id, rank: nil), peer: peer))
                         case .admin:
                             var peers: [PeerId: Peer] = [:]
                             peers[creator.id] = creator
                             peers[peer.id] = peer
-                            result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil), peer: peer, peers: peers))
+                            result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers))
                         case .member:
                             break
                     }

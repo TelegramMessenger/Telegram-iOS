@@ -288,21 +288,12 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
             entries.append(.settingInfo(theme, strings.AutoNightTheme_AutomaticHelp("\(Int(threshold * 100.0))").0.replacingOccurrences(of: "%%", with: "%")))
     }
     
-    switch switchSetting.trigger {
-        case .none:
-            break
-        case .timeBased, .brightness:
-            entries.append(.themeHeader(theme, strings.AutoNightTheme_PreferredTheme))
-            entries.append(.themeNightBlue(theme, strings.Appearance_ThemeNightBlue, switchSetting.theme == .nightAccent))
-            entries.append(.themeNight(theme, strings.Appearance_ThemeNight, switchSetting.theme == .night))
-    }
-    
     return entries
 }
 
 private func roundTimeToDay(_ timestamp: Int32) -> Int32 {
     let calendar = Calendar.current
-    let offset = 0//TimeZone.current.secondsFromGMT(for: Date())
+    let offset = 0
     let components = calendar.dateComponents([.hour, .minute, .second], from: Date(timeIntervalSince1970: Double(timestamp + Int32(offset))))
     return Int32(components.hour! * 60 * 60 + components.minute! * 60 + components.second!)
 }

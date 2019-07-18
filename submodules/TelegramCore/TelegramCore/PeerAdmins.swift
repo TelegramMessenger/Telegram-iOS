@@ -197,7 +197,7 @@ public func fetchChannelParticipant(account: Account, peerId: PeerId, participan
     } |> switchToLatest
 }
 
-public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: PeerId, rights: TelegramChatAdminRights) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> {
+public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: PeerId, rights: TelegramChatAdminRights, rank: String?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> {
     return fetchChannelParticipant(account: account, peerId: peerId, participantId: adminId)
     |> mapError { error -> UpdateChannelAdminRightsError in
         return .generic
@@ -207,14 +207,14 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
             if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(adminId), let inputUser = apiInputUser(adminPeer) {
                 if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                     let updatedParticipant: ChannelParticipant
-                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, currentAdminInfo, _) = currentParticipant {
+                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, currentAdminInfo, _, _) = currentParticipant {
                         let adminInfo: ChannelParticipantAdminInfo?
                         if !rights.flags.isEmpty {
                             adminInfo = ChannelParticipantAdminInfo(rights: rights, promotedBy: currentAdminInfo?.promotedBy ?? account.peerId, canBeEditedByAccountPeer: true)
                         } else {
                             adminInfo = nil
                         }
-                        updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil)
+                        updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil, rank: rank)
                     } else {
                         let adminInfo: ChannelParticipantAdminInfo?
                         if !rights.flags.isEmpty {
@@ -222,9 +222,9 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                         } else {
                             adminInfo = nil
                         }
-                        updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil)
+                        updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil, rank: rank)
                     }
-                    return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights))
+                    return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights, rank: rank ?? ""))
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], UpdateChannelAdminRightsError> in
                         if error.errorDescription == "USER_NOT_PARTICIPANT" {
@@ -235,10 +235,10 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                             |> mapError { error -> UpdateChannelAdminRightsError in
                                 return .addMemberError(error)
                             }
-                            |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights))
-                                |> mapError { error -> UpdateChannelAdminRightsError in
-                                    return .generic
-                                }
+                            |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights, rank: rank ?? ""))
+                            |> mapError { error -> UpdateChannelAdminRightsError in
+                                return .generic
+                            }
                             |> map { [$0] })
                         } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
                             return .fail(.addMemberError(.restricted))
@@ -258,7 +258,7 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                                         switch currentParticipant {
                                             case .creator:
                                                 wasAdmin = true
-                                            case let .member(_, _, adminInfo, _):
+                                            case let .member(_, _, adminInfo, _, _):
                                                 if let adminInfo = adminInfo, !adminInfo.rights.isEmpty {
                                                     wasAdmin = true
                                                 }
@@ -281,7 +281,7 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                             if let presence = transaction.getPeerPresence(peerId: adminPeer.id) {
                                 presences[adminPeer.id] = presence
                             }
-                            if case let .member(_, _, maybeAdminInfo, _) = updatedParticipant, let adminInfo = maybeAdminInfo {
+                            if case let .member(_, _, maybeAdminInfo, _, _) = updatedParticipant, let adminInfo = maybeAdminInfo {
                                 if let peer = transaction.getPeer(adminInfo.promotedBy) {
                                     peers[peer.id] = peer
                                 }

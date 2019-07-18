@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
+import TelegramUIPreferences
 
 private let shadowImage: UIImage = {
     return generateImage(CGSize(width: 54.0, height: 54.0), opaque: false, scale: nil, rotatedContext: { size, context in
@@ -17,23 +18,25 @@ private let shadowImage: UIImage = {
     })!
 }()
 
-private final class HSVParameter: NSObject {
-    let hue: CGFloat
-    let saturation: CGFloat
+private final class ColorsParameter: NSObject {
+    let leftColor: UIColor
+    let baseColor: UIColor
+    let rightColor: UIColor
     let value: CGFloat
     
-    init(hue: CGFloat, saturation: CGFloat, value: CGFloat) {
-        self.hue = hue
-        self.saturation = saturation
+    init(leftColor: UIColor, baseColor: UIColor, rightColor: UIColor, value: CGFloat) {
+        self.leftColor = leftColor
+        self.baseColor = baseColor
+        self.rightColor = rightColor
         self.value = value
         super.init()
     }
 }
 
 private final class ThemeSettingsColorKnobNode: ASDisplayNode {
-    var hsv: (CGFloat, CGFloat, CGFloat) = (0.0, 0.0, 1.0) {
+    var values: (UIColor, UIColor, UIColor, CGFloat) = (.clear, .clear, .clear, 0.5) {
         didSet {
-            if self.hsv != oldValue {
+            if self.values != oldValue {
                 self.setNeedsDisplay()
             }
         }
@@ -48,11 +51,11 @@ private final class ThemeSettingsColorKnobNode: ASDisplayNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return HSVParameter(hue: self.hsv.0, saturation: self.hsv.1, value: self.hsv.2)
+        return ColorsParameter(leftColor: self.values.0, baseColor: self.values.1, rightColor: self.values.2, value: self.values.3)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
-        guard let parameters = parameters as? HSVParameter else {
+        guard let parameters = parameters as? ColorsParameter else {
             return
         }
         let context = UIGraphicsGetCurrentContext()!
@@ -69,7 +72,15 @@ private final class ThemeSettingsColorKnobNode: ASDisplayNode {
         context.setFillColor(UIColor.white.cgColor)
         context.fillEllipse(in: bounds.insetBy(dx: 3.0, dy: 3.0))
         
-        let color = UIColor(hue: parameters.hue, saturation: parameters.saturation, brightness: parameters.value, alpha: 1.0)
+        let color: UIColor
+        if parameters.value < 0.5 {
+            color = parameters.baseColor.interpolateTo(parameters.leftColor, fraction: 0.5 - parameters.value)!
+        } else if parameters.value > 0.5 {
+            color = parameters.baseColor.interpolateTo(parameters.rightColor, fraction: parameters.value - 0.5)!
+        } else {
+            color = parameters.baseColor
+        }
+        
         context.setFillColor(color.cgColor)
         
         let borderWidth: CGFloat = bounds.width > 30.0 ? 5.0 : 5.0
@@ -78,7 +89,7 @@ private final class ThemeSettingsColorKnobNode: ASDisplayNode {
 }
 
 private final class ThemeSettingsColorBrightnessNode: ASDisplayNode {
-    var hsv: (CGFloat, CGFloat, CGFloat) = (0.0, 1.0, 1.0) {
+    var values: (UIColor, UIColor, UIColor, CGFloat) = (.clear, .clear, .clear, 0.5) {
         didSet {
             self.setNeedsDisplay()
         }
@@ -92,11 +103,11 @@ private final class ThemeSettingsColorBrightnessNode: ASDisplayNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return HSVParameter(hue: self.hsv.0, saturation: self.hsv.1, value: self.hsv.2)
+        return ColorsParameter(leftColor: self.values.0, baseColor: self.values.1, rightColor: self.values.2, value: self.values.3)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
-        guard let parameters = parameters as? HSVParameter else {
+        guard let parameters = parameters as? ColorsParameter else {
             return
         }
         let context = UIGraphicsGetCurrentContext()!
@@ -108,11 +119,8 @@ private final class ThemeSettingsColorBrightnessNode: ASDisplayNode {
         context.addPath(innerPath.cgPath)
         context.clip()
         
-        let leftColor = UIColor(hue: parameters.hue, saturation: parameters.saturation, brightness: parameters.value - 0.4, alpha: 1.0)
-        let rightColor = UIColor(hue: parameters.hue, saturation: parameters.saturation, brightness: parameters.value + 0.4, alpha: 1.0)
-        
-        let colors = [leftColor.cgColor, rightColor.cgColor]
-        var locations: [CGFloat] = [0.0, 1.0]
+        let colors = [parameters.leftColor.cgColor, parameters.baseColor.cgColor, parameters.rightColor.cgColor]
+        var locations: [CGFloat] = [0.0, 0.5, 1.0]
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
         context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: bounds.width, y: 0.0), options: CGGradientDrawingOptions())
     }
@@ -126,18 +134,10 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
     
     var valueChanged: ((CGFloat) -> Void)?
     
-    var baseColor: UIColor = .white {
+    var baseColor: PresentationThemeBaseColor = .white {
         didSet {
-            var hue: CGFloat = 0.0
-            var saturation: CGFloat = 0.0
-            var value: CGFloat = 0.0
-            
-            var newHSV: (CGFloat, CGFloat, CGFloat) = (0.0, 0.0, 0.0)
-            if self.baseColor.getHue(&hue, saturation: &saturation, brightness: &value, alpha: nil) {
-                newHSV = (hue, saturation, value)
-            }
-            
-            self.brightnessNode.hsv = newHSV
+            let colors = self.baseColor.edgeColors
+            self.brightnessNode.values = (colors.0, self.baseColor.color, colors.1, 0.5)
             self.update()
         }
     }
@@ -179,17 +179,8 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
     }
     
     private func update() {
-        var hue: CGFloat = 0.0
-        var saturation: CGFloat = 0.0
-        var value: CGFloat = 0.0
-        
-        let delta = (-0.5 + self.value) * 0.8
-
-        var newHSV: (CGFloat, CGFloat, CGFloat) = (0.0, 0.0, 0.0)
-        if self.baseColor.getHue(&hue, saturation: &saturation, brightness: &value, alpha: nil) {
-            newHSV = (hue, saturation, value + delta)
-        }
-        self.brightnessKnobNode.hsv = newHSV
+        let colors = self.baseColor.edgeColors
+        self.brightnessKnobNode.values = (colors.0, self.baseColor.color, colors.1, self.value)
     }
     
     func updateKnobLayout(size: CGSize, transition: ContainedViewLayoutTransition) {

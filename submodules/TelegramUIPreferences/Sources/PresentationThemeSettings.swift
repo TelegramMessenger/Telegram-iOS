@@ -206,6 +206,35 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
         }
         return UIColor(rgb: value)
     }
+    
+    public var edgeColors: (UIColor, UIColor) {
+        let values: (UIColor, UIColor)
+        switch self {
+            case .blue:
+                values = (UIColor(rgb: 0x003d80), UIColor(rgb: 0x66afff))
+            case .cyan:
+                values = (UIColor(rgb: 0x00c2ed), UIColor(rgb: 0x00c2ed))
+            case .green:
+                values = (UIColor(rgb: 0x29b327), UIColor(rgb: 0x29b327))
+            case .pink:
+                values = (UIColor(rgb: 0xeb6ca4), UIColor(rgb: 0xeb6ca4))
+            case .orange:
+                values = (UIColor(rgb: 0xf08200), UIColor(rgb: 0xf08200))
+            case .purple:
+                values = (UIColor(rgb: 0x9472ee), UIColor(rgb: 0x9472ee))
+            case .red:
+                values = (UIColor(rgb: 0xd33213), UIColor(rgb: 0xd33213))
+            case .yellow:
+                values = (UIColor(rgb: 0xedb400), UIColor(rgb: 0xedb400))
+            case .gray:
+                values = (UIColor(rgb: 0x6d839e), UIColor(rgb: 0x6d839e))
+            case .black:
+                values = (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000))
+            case .white:
+                values = (UIColor(rgb: 0xffffff), UIColor(rgb: 0xffffff))
+        }
+        return values
+    }
 }
 
 public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
@@ -228,17 +257,15 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
     }
     
     public var color: UIColor {
-        var hue: CGFloat = 0.0
-        var saturation: CGFloat = 0.0
-        var value: CGFloat = 0.0
-        
-        let color = self.baseColor.color
-        let delta = (-0.5 + self.value) * 0.8
-        if color.getHue(&hue, saturation: &saturation, brightness: &value, alpha: nil) {
-            return UIColor(hue: hue, saturation: saturation, brightness: min(1.0, max(0.0, value + delta)), alpha: 1.0)
+        let color: UIColor
+        if self.value < 0.5 {
+            color = self.baseColor.color.interpolateTo(self.baseColor.edgeColors.0, fraction: 0.5 - self.value)!
+        } else if self.value > 0.5 {
+            color = self.baseColor.color.interpolateTo(self.baseColor.edgeColors.1, fraction: self.value - 0.5)!
         } else {
-            return color
+            color = self.baseColor.color
         }
+        return color
     }
 }
 

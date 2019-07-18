@@ -261,7 +261,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
-                    strongSelf.actionDisposable.set((authorizeWithCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, code: code, termsOfService: termsOfService?.0)
+                    strongSelf.actionDisposable.set((authorizeWithCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, code: code)
                     |> deliverOnMainQueue).start(next: { result in
                         guard let strongSelf = self else {
                             return
@@ -721,13 +721,13 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         controllers.append(self.phoneEntryController(countryCode: countryCode, number: number))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService, syncContacts):
+                    case let .confirmationCodeEntry(number, type, _, timeout, nextType, syncContacts):
                         var controllers: [ViewController] = []
                         if !self.otherAccountPhoneNumbers.1.isEmpty {
                             controllers.append(self.splashController())
                         }
                         controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
-                        controllers.append(self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService))
+                        controllers.append(self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .passwordEntry(hint, _, _, suggestReset, syncContacts):
                         var controllers: [ViewController] = []
@@ -750,7 +750,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         controllers.append(self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .signUp(_, _, _, firstName, lastName, termsOfService, _):
+                    case let .signUp(_, _, firstName, lastName, termsOfService, _):
                         var controllers: [ViewController] = []
                         var displayCancel = false
                         if !self.otherAccountPhoneNumbers.1.isEmpty {

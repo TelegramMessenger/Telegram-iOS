@@ -6517,19 +6517,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             self.navigationActionDisposable.set((fetchChannelParticipant(account: self.context.account, peerId: peerId, participantId: author.id)
             |> deliverOnMainQueue).start(next: { [weak self] participant in
                 if let strongSelf = self {
-                    var canBan = true
-                    if let participant = participant {
-                        switch participant {
-                            case .creator:
-                                canBan = false
-                            case let .member(_, _, adminInfo, _):
-                                if let adminInfo = adminInfo, !adminInfo.rights.flags.isEmpty {
-                                    if adminInfo.promotedBy != accountPeerId {
-                                        canBan = false
-                                    }
-                                }
-                        }
-                    }
+                    var canBan = participant?.canBeBannedBy(peerId: accountPeerId) ?? true
                     
                     let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                     var items: [ActionSheetItem] = []

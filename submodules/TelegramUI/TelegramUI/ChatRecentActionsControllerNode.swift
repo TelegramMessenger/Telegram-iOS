@@ -697,16 +697,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
             for member in adminsState.list {
                 if member.peer.id == author.id {
-                    switch member.participant {
-                        case .creator:
-                            canBan = false
-                        case let .member(_, _, adminInfo, _):
-                            if let adminInfo = adminInfo {
-                                if adminInfo.promotedBy != self.context.account.peerId {
-                                    canBan = false
-                                }
-                            }
-                    }
+                    canBan = member.participant.canBeBannedBy(peerId: self.context.account.peerId)
                 }
             }
             

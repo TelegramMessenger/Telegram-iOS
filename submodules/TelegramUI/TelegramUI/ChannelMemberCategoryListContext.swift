@@ -18,7 +18,7 @@ extension ChannelParticipant {
         switch self {
             case .creator:
                 return nil
-            case let .member(_, _, adminInfo, _):
+            case let .member(_, _, adminInfo, _, _):
                 return adminInfo
         }
     }
@@ -27,9 +27,23 @@ extension ChannelParticipant {
         switch self {
             case .creator:
                 return nil
-            case let .member(_, _, _, banInfo):
+            case let .member(_, _, _, banInfo, _):
                 return banInfo
         }
+    }
+    
+    func canBeBannedBy(peerId: PeerId) -> Bool {
+        switch self {
+            case .creator:
+                return false
+            case let .member(_, _, adminInfo, _, _):
+                if let adminInfo = adminInfo {
+                    if adminInfo.promotedBy != peerId {
+                        return false
+                    }
+                }
+        }
+        return true
     }
 }
 
@@ -295,7 +309,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             switch self.category {
                 case let .admins(query):
                     if let updated = updated, (query == nil || updated.peer.indexName.matchesByTokens(query!)) {
-                        if case let .member(_, _, adminInfo, _) = updated.participant, adminInfo == nil {
+                        if case let .member(_, _, adminInfo, _, _) = updated.participant, adminInfo == nil {
                         } else {
                             var found = false
                             loop: for i in 0 ..< list.count {

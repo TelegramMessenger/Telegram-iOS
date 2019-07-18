@@ -163,7 +163,7 @@ final class PeerChannelMemberCategoriesContextsManager {
         self.impl.with { impl in
             for (contextPeerId, context) in impl.contexts {
                 if contextPeerId == peerId {
-                    context.replayUpdates([(.member(id: memberId, invitedAt: 0, adminInfo: nil, banInfo: nil), nil, nil)])
+                    context.replayUpdates([(.member(id: memberId, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), nil, nil)])
                 }
             }
         }
@@ -224,8 +224,8 @@ final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights) -> Signal<Void, UpdateChannelAdminRightsError> {
-        return updateChannelAdminRights(account: account, peerId: peerId, adminId: memberId, rights: adminRights)
+    func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights, rank: String?) -> Signal<Void, UpdateChannelAdminRightsError> {
+        return updateChannelAdminRights(account: account, peerId: peerId, adminId: memberId, rights: adminRights, rank: rank)
         |> map(Optional.init)
         |> deliverOnMainQueue
         |> beforeNext { [weak self] result in

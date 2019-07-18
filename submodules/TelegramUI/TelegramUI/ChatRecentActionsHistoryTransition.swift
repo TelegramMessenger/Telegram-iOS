@@ -513,8 +513,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     isBroadcast = false
                 }
                 
-                if case let .member(_, _, _, prevBanInfo) = prev.participant {
-                    if case let .member(_, _, _, newBanInfo) = new.participant {
+                if case let .member(_, _, _, prevBanInfo, _) = prev.participant {
+                    if case let .member(_, _, _, newBanInfo, _) = new.participant {
                         let newFlags = newBanInfo?.rights.flags ?? []
                         
                         var addedRights = newBanInfo?.rights.flags ?? []
@@ -653,8 +653,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     }, to: &text, entities: &entities)
                     text += "\n"
                     
-                    if case let .member(_, _, prevAdminRights, _) = prev.participant {
-                        if case let .member(_, _, newAdminRights, _) = new.participant {
+                    if case let .member(_, _, prevAdminRights, _, _) = prev.participant {
+                        if case let .member(_, _, newAdminRights, _, _) = new.participant {
                             let prevFlags = prevAdminRights?.rights.flags ?? []
                             let newFlags = newAdminRights?.rights.flags ?? []
                             

@@ -151,7 +151,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         supportPeer.set(supportPeerId(account: context.account))
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        var faqUrl = context.sharedContext.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
+        var faqUrl = presentationData.strings.Settings_FAQ_URL
         if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
             faqUrl = "https://telegram.org/faq#general"
         }

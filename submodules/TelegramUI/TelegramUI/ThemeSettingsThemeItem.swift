@@ -46,13 +46,11 @@ private func generateThemeIconImage(theme: PresentationThemeReference, accentCol
         
         let background: UIColor
         let incomingFill: UIColor
-        var incomingStrokeColor: UIColor?
         let outgoingFill: UIColor
         switch theme {
             case .dayClassic:
                 background = UIColor(rgb: 0xd6e2ee)
                 incomingFill = UIColor(rgb: 0xffffff)
-                incomingStrokeColor = UIColor(rgb: 0xc9d6e2)
                 outgoingFill = UIColor(rgb: 0xe1ffc7)
             case .day:
                 background = .white
@@ -403,8 +401,8 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     let previousBaseColor = strongSelf.colorSlider.baseColor
-                    let newBaseColor = item.currentColor?.baseColor.color
-                    strongSelf.colorSlider.baseColor = newBaseColor ?? .black
+                    let newBaseColor = item.currentColor?.baseColor ?? .blue
+                    strongSelf.colorSlider.baseColor = newBaseColor
                     if previousBaseColor != newBaseColor {
                         strongSelf.colorSlider.value = item.currentColor?.value ?? 0.5
                     }
