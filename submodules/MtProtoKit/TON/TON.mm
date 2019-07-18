@@ -366,6 +366,37 @@ using tonlib_api::make_object;
     }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
 }
 
+- (MTSignal *)makeWalletInitialized:(TONKey *)key localPassword:(NSString *)localPassword {
+    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        uint64_t requestId = _nextRequestId;
+        _nextRequestId += 1;
+        
+        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
+            if (object->get_id() == tonlib_api::error::ID) {
+                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
+                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else {
+                [subscriber putCompletion];
+            }
+        }];
+        
+        NSData *publicKeyData = [[NSData alloc] initWithBase64EncodedString:key.publicKey options:0];
+        std::string publicKeyString((uint8_t *)publicKeyData.bytes, (uint8_t *)publicKeyData.bytes + publicKeyData.length);
+        
+        NSData *secretData = [[NSData alloc] initWithBase64EncodedString:key.secret options:0];
+        std::string secretString((uint8_t *)secretData.bytes, (uint8_t *)secretData.bytes + secretData.length);
+        
+        NSData *localPasswordData = [localPassword dataUsingEncoding:NSUTF8StringEncoding];
+        std::string localPasswordString((uint8_t *)localPasswordData.bytes, (uint8_t *)localPasswordData.bytes + localPasswordData.length);
+        
+        auto query = make_object<tonlib_api::testWallet_init>(make_object<tonlib_api::inputKey>(make_object<tonlib_api::key>(publicKeyString, secretString), localPasswordString));
+        _client->send({ requestId, std::move(query) });
+        
+        return [[MTBlockDisposable alloc] initWithBlock:^{
+        }];
+    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+}
+
 - (MTSignal *)importKeyWithLocalPassword:(NSString *)localPassword mnemonicPassword:(NSString *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;

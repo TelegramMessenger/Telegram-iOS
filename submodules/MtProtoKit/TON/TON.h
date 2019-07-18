@@ -41,6 +41,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (MTSignal *)exportKey:(TONKey *)key localPassword:(NSString *)localPassword;
 - (MTSignal *)importKeyWithLocalPassword:(NSString *)localPassword mnemonicPassword:(NSString *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
 - (MTSignal *)deleteKeyWithPublicKey:(NSString *)publicKey;
+- (MTSignal *)makeWalletInitialized:(TONKey *)key localPassword:(NSString *)localPassword;
 
 @end
 

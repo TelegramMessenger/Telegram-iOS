@@ -2406,7 +2406,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                             }
                                             let timestamp = strongSelf.context.account.network.getApproximateRemoteTimestamp()
                                             let _ = (strongSelf.context.account.postbox.transaction { transaction in
-                                                let message1 = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: "balance: \(state.balance)", attributes: [], media: [])
+                                                let message1 = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: "balance: \(state.balance), seqno: \(state.seqno)", attributes: [], media: [])
                                                 let _ = transaction.addMessages([message1], location: .UpperHistoryBlock)
                                             }).start()
                                         })
@@ -2444,6 +2444,15 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                             guard let localAddress = localAddress as? String else {
                                                 return
                                             }
+                                            let _ = strongSelf.context.ton?.getAccountState(withAddress: localAddress).start(next: { state in
+                                                guard let state = state as? TONAccountState else {
+                                                    return
+                                                }
+                                                let _ = (strongSelf.context.account.postbox.transaction { transaction in
+                                                    let message1 = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: "balance: \(state.balance), seqno: \(state.seqno)", attributes: [], media: [])
+                                                    let _ = transaction.addMessages([message1], location: .UpperHistoryBlock)
+                                                }).start()
+                                            })
                                             let _ = strongSelf.context.ton?.sendGrams(from: TONKey(publicKey: components[2], secret: components[3]), localPassword: components[4], fromAddress: localAddress, toAddress: components[5], amount: amount).start(next: nil, error: { error in
                                                 guard let error = error as? TONError else {
                                                     return
@@ -2495,6 +2504,30 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                                 let _ = transaction.addMessages([message1], location: .UpperHistoryBlock)
                                             }).start()
                                         }, completed: nil)
+                                    }
+                                } else if components[1] == "initwallet" {
+                                    if components.count >= 5 {
+                                        let timestamp = strongSelf.context.account.network.getApproximateRemoteTimestamp()
+                                        let _ = (strongSelf.context.account.postbox.transaction { transaction in
+                                            let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: strongSelf.context.account.peerId, text: message.text, attributes: [], media: [])
+                                            let _ = transaction.addMessages([message], location: .UpperHistoryBlock)
+                                        }).start()
+                                        
+                                        let _ = strongSelf.context.ton?.makeWalletInitialized(TONKey(publicKey: components[2], secret: components[3]), localPassword: components[4]).start(next: nil, error: { error in
+                                            guard let error = error as? TONError else {
+                                                return
+                                            }
+                                            let _ = (strongSelf.context.account.postbox.transaction { transaction in
+                                                let message1 = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: "error: \(error.text)", attributes: [], media: [])
+                                                let _ = transaction.addMessages([message1], location: .UpperHistoryBlock)
+                                            }).start()
+                                        }, completed: {
+                                            let timestamp = strongSelf.context.account.network.getApproximateRemoteTimestamp()
+                                            let _ = (strongSelf.context.account.postbox.transaction { transaction in
+                                            let message1 = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: "done", attributes: [], media: [])
+                                            let _ = transaction.addMessages([message1], location: .UpperHistoryBlock)
+                                            }).start()
+                                        })
                                     }
                                 } else if components[1] == "importkey" {
                                     if components.count >= 4 {
