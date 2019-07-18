@@ -15,48 +15,6 @@ import Foundation
     #endif
 #endif
 
-public enum GroupManagementType {
-    case restrictedToAdmins
-    case unrestricted
-}
-
-public enum UpdateGroupManagementTypeError {
-    case generic
-}
-
-public func updateGroupManagementType(account: Account, peerId: PeerId, type: GroupManagementType) -> Signal<Void, UpdateGroupManagementTypeError> {
-    return .complete()
-    /*return account.postbox.transaction { transaction -> Signal<Void, UpdateGroupManagementTypeError> in
-        if let peer = transaction.getPeer(peerId) {
-            if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-                return account.network.request(Api.functions.channels.toggleInvites(channel: inputChannel, enabled: type == .unrestricted ? .boolTrue : .boolFalse))
-                |> mapError { _ -> UpdateGroupManagementTypeError in
-                    return .generic
-                }
-                |> mapToSignal { result -> Signal<Void, UpdateGroupManagementTypeError> in
-                account.stateManager.addUpdates(result)
-                    return .complete()
-                }
-            } else if let group = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.toggleChatAdmins(chatId: group.id.id, enabled: type == .restrictedToAdmins ? .boolTrue : .boolFalse))
-                |> mapError { _ -> UpdateGroupManagementTypeError in
-                    return .generic
-                }
-                |> mapToSignal { result -> Signal<Void, UpdateGroupManagementTypeError> in
-                    account.stateManager.addUpdates(result)
-                    return .complete()
-                }
-            } else {
-                return .complete()
-            }
-        } else {
-            return .complete()
-        }
-    }
-    |> introduceError(UpdateGroupManagementTypeError.self)
-    |> switchToLatest*/
-}
-
 public enum RemoveGroupAdminError {
     case generic
 }
@@ -235,11 +193,13 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                             |> mapError { error -> UpdateChannelAdminRightsError in
                                 return .addMemberError(error)
                             }
-                            |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights, rank: rank ?? ""))
-                            |> mapError { error -> UpdateChannelAdminRightsError in
-                                return .generic
-                            }
-                            |> map { [$0] })
+                            |> then(
+                                account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights, rank: rank ?? ""))
+                                |> mapError { error -> UpdateChannelAdminRightsError in
+                                    return .generic
+                                }
+                                |> map { [$0] }
+                            )
                         } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
                             return .fail(.addMemberError(.restricted))
                         }

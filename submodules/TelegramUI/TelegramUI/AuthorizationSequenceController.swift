@@ -261,7 +261,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
-                    strongSelf.actionDisposable.set((authorizeWithCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, code: code)
+                    strongSelf.actionDisposable.set((authorizeWithCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, code: code, termsOfService: termsOfService?.0)
                     |> deliverOnMainQueue).start(next: { result in
                         guard let strongSelf = self else {
                             return
@@ -721,7 +721,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         controllers.append(self.phoneEntryController(countryCode: countryCode, number: number))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .confirmationCodeEntry(number, type, _, timeout, nextType, syncContacts):
+                    case let .confirmationCodeEntry(number, type, _, timeout, nextType, _):
                         var controllers: [ViewController] = []
                         if !self.otherAccountPhoneNumbers.1.isEmpty {
                             controllers.append(self.splashController())
@@ -750,7 +750,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         controllers.append(self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .signUp(_, _, firstName, lastName, termsOfService, _):
+                    case let .signUp(_, _, _, firstName, lastName, termsOfService, _):
                         var controllers: [ViewController] = []
                         var displayCancel = false
                         if !self.otherAccountPhoneNumbers.1.isEmpty {
