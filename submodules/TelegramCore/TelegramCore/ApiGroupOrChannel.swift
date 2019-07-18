@@ -75,7 +75,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags & Int32(1 << 8)) != 0 {
             var infoFlags = TelegramChannelGroupFlags()
             if (flags & Int32(1 << 22)) != 0 {
-                infoFlags.insert(.isEnabledSlowMode)
+                infoFlags.insert(.slowModeEnabled)
             }
             info = .group(TelegramChannelGroupInfo(flags: infoFlags))
         } else {
