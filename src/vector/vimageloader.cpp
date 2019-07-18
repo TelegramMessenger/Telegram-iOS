@@ -19,12 +19,32 @@ using lottie_image_free_f = void (*)(unsigned char *);
 extern "C" {
 #endif
 
+#ifdef LOTTIE_IMAGE_MODULE_DISABLED
+
+unsigned char *lottie_image_load(char const *filename, int *x, int *y,
+                                 int *comp, int req_comp)
+{
+    return nullptr;
+}
+unsigned char *lottie_image_load_from_data(const char *imageData, int len,
+                                           int *x, int *y, int *comp,
+                                           int req_comp)
+{
+    return nullptr;
+}
+
+void lottie_image_free(unsigned char *data) {}
+
+#else
+
 extern unsigned char *lottie_image_load(char const *filename, int *x, int *y,
                                         int *comp, int req_comp);
 extern unsigned char *lottie_image_load_from_data(const char *imageData,
                                                   int len, int *x, int *y,
                                                   int *comp, int req_comp);
 extern void           lottie_image_free(unsigned char *data);
+
+#endif
 
 #ifdef __cplusplus
 }
