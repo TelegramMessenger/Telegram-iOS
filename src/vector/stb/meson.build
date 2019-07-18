@@ -1,8 +1,6 @@
 
 source_file = ['stb_image.cpp']
 
-compiler_flags = ['-DLOT_BUILD=1']
-
 if get_option('module') == true
     rlottie_image_loader_lib = shared_library('rlottie-image-loader',
                                               source_file,
