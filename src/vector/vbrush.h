@@ -38,7 +38,6 @@ public:
     void setStops(const VGradientStops &stops);
     void setAlpha(float alpha) {mAlpha = alpha;}
     float alpha() const {return mAlpha;}
-    VGradient() = default;
 
 public:
     static constexpr int colorTableSize = 1024;
