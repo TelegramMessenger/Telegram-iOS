@@ -224,7 +224,7 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                         }
                         updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil)
                     }
-                    return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights))
+                    return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights, rank: ""))
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], UpdateChannelAdminRightsError> in
                         if error.errorDescription == "USER_NOT_PARTICIPANT" {
@@ -235,7 +235,7 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                             |> mapError { error -> UpdateChannelAdminRightsError in
                                 return .addMemberError(error)
                             }
-                            |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights))
+                            |> then(account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights, rank: ""))
                                 |> mapError { error -> UpdateChannelAdminRightsError in
                                     return .generic
                                 }
