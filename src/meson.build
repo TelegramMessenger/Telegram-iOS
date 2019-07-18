@@ -13,14 +13,14 @@ subdir('binding')
 
 rlottie_lib_dep  = [ vector_dep, lottie_dep, binding_dep, dependency('threads')]
 
-rlottie_lib = shared_library('rlottie',
-                             include_directories : inc,
-                             version             : meson.project_version(),
-                             dependencies        : rlottie_lib_dep,
-                             install             : true,
-                             cpp_args            : compiler_flags,
-                             gnu_symbol_visibility : 'hidden',
-                            )
+rlottie_lib = library('rlottie',
+                      include_directories   : inc,
+                      version               : meson.project_version(),
+                      dependencies          : rlottie_lib_dep,
+                      install               : true,
+                      cpp_args              : compiler_flags,
+                      gnu_symbol_visibility : 'hidden',
+                     )
 
 # Make rlottie library usable as a Meson subproject.
 rlottie_dep = declare_dependency(
