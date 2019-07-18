@@ -2,9 +2,9 @@ import Foundation
 import UIKit
 
 private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationTheme {
-    let destructiveColor: UIColor = UIColor(rgb: 0xFF6767)
+    let destructiveColor: UIColor = UIColor(rgb: 0xff6767)
     let constructiveColor: UIColor = UIColor(rgb: 0x08a723)
-    let secretColor: UIColor = UIColor(rgb: 0x89DF9E)
+    let secretColor: UIColor = UIColor(rgb: 0x89df9e)
     
     let mainBackgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
     let mainSelectionColor = accentColor.withMultiplied(hue: 1.03, saturation: 0.585, brightness: 0.12)
@@ -83,7 +83,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
         frameColor: mainSecondaryTextColor.withAlphaComponent(0.5),
         handleColor: UIColor(rgb: 0x121212),
         contentColor: accentColor,
-        positiveColor: accentColor,
+        positiveColor: constructiveColor,
         negativeColor: destructiveColor
     )
 
@@ -260,6 +260,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
     )
 
     let chat = PresentationThemeChat(
+        defaultWallpaper: .color(Int32(bitPattern: accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18).rgb)),
         message: message,
         serviceMessage: serviceMessage,
         inputPanel: inputPanel,
@@ -320,14 +321,9 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
     )
 }
 
-public let defaultDarkAccentPresentationTheme = makeDarkAccentPresentationTheme(accentColor: 0x2ea6ff)
+public let defaultDarkAccentPresentationTheme = makeDarkAccentPresentationTheme(accentColor: UIColor(rgb: 0x2ea6ff))
 
-public func makeDarkAccentPresentationTheme(accentColor: Int32?) -> PresentationTheme {
-    let color: UIColor
-    if let accentColor = accentColor {
-        color = UIColor(rgb: UInt32(bitPattern: accentColor))
-    } else {
-        color = UIColor(rgb: UInt32(bitPattern: defaultDayAccentColor))
-    }
-    return makeDarkPresentationTheme(accentColor: color)
+public func makeDarkAccentPresentationTheme(accentColor: UIColor?) -> PresentationTheme {
+    let accentColor = accentColor ?? defaultDayAccentColor
+    return makeDarkPresentationTheme(accentColor: accentColor)
 }

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import TelegramCore
 
 public enum PresentationThemeColorDecodingError: Error {
     case generic
@@ -23,6 +24,37 @@ private func encodeColor<Key>(_ values: inout KeyedEncodingContainer<Key>, _ val
         try values.encode(String(format: "%08x", value.argb), forKey: key)
     } else {
         try values.encode(String(format: "%06x", value.rgb), forKey: key)
+    }
+}
+
+extension TelegramWallpaper: Codable {
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.singleValueContainer()
+        if let value = try? values.decode(String.self) {
+            switch value.lowercased() {
+                case "builtin":
+                    self = .builtin(WallpaperSettings())
+                default:
+                    if let color = UIColor(hexString: value) {
+                        self = .color(Int32(bitPattern: color.rgb))
+                    } else {
+                        throw PresentationThemeColorDecodingError.generic
+                    }
+            }
+        }
+        throw PresentationThemeColorDecodingError.generic
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+            case .builtin:
+                try container.encode("builtin")
+            case let .color(value):
+                try container.encode(String(format: "%06x", value))
+            default:
+                break
+        }
     }
 }
 
@@ -102,10 +134,10 @@ extension PresentationThemeKeyboardColor: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
             switch self {
-            case .light:
-                try container.encode("light")
-            case .dark:
-                try container.encode("dark")
+                case .light:
+                    try container.encode("light")
+                case .dark:
+                    try container.encode("dark")
         }
     }
 }
@@ -1255,6 +1287,7 @@ extension PresentationThemeChatHistoryNavigation: Codable {
 
 extension PresentationThemeChat: Codable {
     enum CodingKeys: String, CodingKey {
+        case defaultWallpaper
         case message
         case serviceMessage
         case inputPanel
@@ -1265,7 +1298,8 @@ extension PresentationThemeChat: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(message: try values.decode(PresentationThemeChatMessage.self, forKey: .message),
+        self.init(defaultWallpaper: try values.decode(TelegramWallpaper.self, forKey: .defaultWallpaper),
+                  message: try values.decode(PresentationThemeChatMessage.self, forKey: .message),
                   serviceMessage: try values.decode(PresentationThemeServiceMessage.self, forKey: .serviceMessage),
                   inputPanel: try values.decode(PresentationThemeChatInputPanel.self, forKey: .inputPanel),
                   inputMediaPanel: try values.decode(PresentationThemeInputMediaPanel.self, forKey: .inputMediaPanel),
@@ -1275,6 +1309,7 @@ extension PresentationThemeChat: Codable {
     
     public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(self.defaultWallpaper, forKey: .defaultWallpaper)
         try values.encode(self.message, forKey: .message)
         try values.encode(self.serviceMessage, forKey: .serviceMessage)
         try values.encode(self.inputPanel, forKey: .inputPanel)
@@ -1367,7 +1402,7 @@ extension PresentationThemeName: Codable {
                         try container.encode("Classic")
                     case .nightAccent:
                         try container.encode("Night Tinted")
-                    case .nightGrayscale:
+                    case .night:
                         try container.encode("Night")
                 }
             case let .custom(name):

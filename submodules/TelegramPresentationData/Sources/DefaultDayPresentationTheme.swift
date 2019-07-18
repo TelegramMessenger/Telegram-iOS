@@ -1,7 +1,8 @@
 import Foundation
 import UIKit
+import TelegramCore
 
-private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroundColor: UIColor, day: Bool) -> PresentationTheme {
+private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgroundColor: UIColor, day: Bool) -> PresentationTheme {
     let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
     let constructiveColor: UIColor = UIColor(rgb: 0x00c900)
     let secretColor: UIColor = UIColor(rgb: 0x00b12c)
@@ -63,8 +64,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
     let switchColors = PresentationThemeSwitch(
         frameColor: UIColor(rgb: 0xe0e0e0),
         handleColor: UIColor(rgb: 0xffffff),
-        contentColor: UIColor(rgb: 0x42d451),
-        positiveColor: UIColor(rgb: 0x00B12C),
+        contentColor: UIColor(rgb: 0x77d572),
+        positiveColor: constructiveColor,
         negativeColor: destructiveColor
     )
     
@@ -265,6 +266,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
     )
     
     let chat = PresentationThemeChat(
+        defaultWallpaper: day ? .color(0xffffff) : .builtin(WallpaperSettings()),
         message: day ? messageDay : message,
         serviceMessage: day ? serviceMessageDay : serviceMessage,
         inputPanel: inputPanel,
@@ -325,21 +327,12 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
     )
 }
 
-public let defaultPresentationTheme = makeDefaultPresentationTheme(accentColor: UIColor(rgb: 0x007ee5), serviceBackgroundColor: defaultServiceBackgroundColor, day: false)
+public let defaultPresentationTheme = makeDefaultDayPresentationTheme(accentColor: UIColor(rgb: 0x007ee5), serviceBackgroundColor: defaultServiceBackgroundColor, day: false)
 
-public let defaultDayAccentColor: Int32 = 0x007ee5
-public let defaultServiceBackgroundColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3)
+public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
+public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
 
-public func makeDefaultPresentationTheme(serviceBackgroundColor: UIColor?) -> PresentationTheme {
-    return makeDefaultPresentationTheme(accentColor: UIColor(rgb: 0x007ee5), serviceBackgroundColor: serviceBackgroundColor ?? .black, day: false)
-}
-
-public func makeDefaultDayPresentationTheme(accentColor: Int32?, serviceBackgroundColor: UIColor) -> PresentationTheme {
-    let color: UIColor
-    if let accentColor = accentColor {
-        color = UIColor(rgb: UInt32(bitPattern: accentColor))
-    } else {
-        color = UIColor(rgb: UInt32(bitPattern: defaultDayAccentColor))
-    }
-    return makeDefaultPresentationTheme(accentColor: color, serviceBackgroundColor: serviceBackgroundColor, day: true)
+public func makeDefaultDayPresentationTheme(accentColor: UIColor? = nil, serviceBackgroundColor: UIColor) -> PresentationTheme {
+    let accentColor = accentColor ?? defaultDayAccentColor
+    return makeDefaultDayPresentationTheme(accentColor: accentColor, serviceBackgroundColor: serviceBackgroundColor, day: true)
 }

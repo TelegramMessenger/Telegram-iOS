@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D03B054022D8866A0000BE1A /* MediaPlayerFramePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B053F22D8866A0000BE1A /* MediaPlayerFramePreview.swift */; };
+		D03B054222D888A00000BE1A /* SoftwareVideoSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B054122D888A00000BE1A /* SoftwareVideoSource.swift */; };
 		D0750C6E22B28E6600BE5F6E /* RingBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = D0750C6B22B28E6500BE5F6E /* RingBuffer.m */; };
 		D0750C6F22B28E6600BE5F6E /* RingByteBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0750C6C22B28E6600BE5F6E /* RingByteBuffer.swift */; };
 		D0750C7022B28E6600BE5F6E /* RingBuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = D0750C6D22B28E6600BE5F6E /* RingBuffer.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -37,9 +39,12 @@
 		D0AE325B22B286A70058D3BC /* MediaTrackDecodableFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE324922B286A70058D3BC /* MediaTrackDecodableFrame.swift */; };
 		D0AE325C22B286A70058D3BC /* MediaTrackFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE324A22B286A70058D3BC /* MediaTrackFrame.swift */; };
 		D0AE325E22B286C30058D3BC /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AE325D22B286C30058D3BC /* AVFoundation.framework */; };
+		D0E8B10C22D8B7E800C82570 /* UniversalSoftwareVideoSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8B10B22D8B7E800C82570 /* UniversalSoftwareVideoSource.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D03B053F22D8866A0000BE1A /* MediaPlayerFramePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPlayerFramePreview.swift; sourceTree = "<group>"; };
+		D03B054122D888A00000BE1A /* SoftwareVideoSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVideoSource.swift; sourceTree = "<group>"; };
 		D0750C6B22B28E6500BE5F6E /* RingBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RingBuffer.m; sourceTree = "<group>"; };
 		D0750C6C22B28E6600BE5F6E /* RingByteBuffer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RingByteBuffer.swift; sourceTree = "<group>"; };
 		D0750C6D22B28E6600BE5F6E /* RingBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RingBuffer.h; sourceTree = "<group>"; };
@@ -72,6 +77,7 @@
 		D0AE324922B286A70058D3BC /* MediaTrackDecodableFrame.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaTrackDecodableFrame.swift; sourceTree = "<group>"; };
 		D0AE324A22B286A70058D3BC /* MediaTrackFrame.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaTrackFrame.swift; sourceTree = "<group>"; };
 		D0AE325D22B286C30058D3BC /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		D0E8B10B22D8B7E800C82570 /* UniversalSoftwareVideoSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalSoftwareVideoSource.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,7 +141,10 @@
 				D0AE323E22B286A60058D3BC /* MediaTrackFrameBuffer.swift */,
 				D0AE324222B286A60058D3BC /* MediaTrackFrameDecoder.swift */,
 				D0AE323C22B286A50058D3BC /* VideoPlayerProxy.swift */,
+				D03B054122D888A00000BE1A /* SoftwareVideoSource.swift */,
+				D03B053F22D8866A0000BE1A /* MediaPlayerFramePreview.swift */,
 				D0AE322222B285F70058D3BC /* UniversalMediaPlayer.h */,
+				D0E8B10B22D8B7E800C82570 /* UniversalSoftwareVideoSource.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -241,6 +250,7 @@
 				D0AE325A22B286A70058D3BC /* FFMpegMediaVideoFrameDecoder.swift in Sources */,
 				D0750C6E22B28E6600BE5F6E /* RingBuffer.m in Sources */,
 				D0AE325422B286A70058D3BC /* MediaTrackFrameDecoder.swift in Sources */,
+				D0E8B10C22D8B7E800C82570 /* UniversalSoftwareVideoSource.swift in Sources */,
 				D0AE325322B286A70058D3BC /* MediaPlayerNode.swift in Sources */,
 				D0AE325122B286A70058D3BC /* MediaPlayer.swift in Sources */,
 				D0AE325722B286A70058D3BC /* MediaPlaybackData.swift in Sources */,
@@ -251,11 +261,13 @@
 				D0AE325222B286A70058D3BC /* FFMpegMediaFrameSourceContext.swift in Sources */,
 				D0AE324E22B286A70058D3BC /* VideoPlayerProxy.swift in Sources */,
 				D0AE325022B286A70058D3BC /* MediaTrackFrameBuffer.swift in Sources */,
+				D03B054022D8866A0000BE1A /* MediaPlayerFramePreview.swift in Sources */,
 				D0AE325C22B286A70058D3BC /* MediaTrackFrame.swift in Sources */,
 				D0AE324F22B286A70058D3BC /* MediaPlayerTimeTextNode.swift in Sources */,
 				D0750C6F22B28E6600BE5F6E /* RingByteBuffer.swift in Sources */,
 				D0AE325822B286A70058D3BC /* FFMpegMediaPassthroughVideoFrameDecoder.swift in Sources */,
 				D0AE325B22B286A70058D3BC /* MediaTrackDecodableFrame.swift in Sources */,
+				D03B054222D888A00000BE1A /* SoftwareVideoSource.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

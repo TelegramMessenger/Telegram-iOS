@@ -46,7 +46,7 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
             return FeaturedStickerPackItemId($0.id).packId
         }
         let initialHash: Int32 = hashForIdsReverse(initialPackIds)
-        return network.request(Api.functions.messages.getFeaturedStickers(hash: initialHash))
+        return network.request(Api.functions.messages.getFeaturedStickers(hash: 0))
             |> retryRequest
             |> mapToSignal { result -> Signal<Void, NoError> in
                 return postbox.transaction { transaction -> Void in

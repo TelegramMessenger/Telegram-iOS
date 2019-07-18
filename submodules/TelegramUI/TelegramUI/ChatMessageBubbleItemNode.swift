@@ -745,7 +745,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             if let rawAuthorNameColor = authorNameColor {
                 var dimColors = false
                 switch item.presentationData.theme.theme.name {
-                    case .builtin(.nightAccent), .builtin(.nightGrayscale):
+                    case .builtin(.nightAccent), .builtin(.night):
                         dimColors = true
                     default:
                         break

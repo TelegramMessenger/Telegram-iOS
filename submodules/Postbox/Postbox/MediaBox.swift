@@ -561,7 +561,7 @@ public final class MediaBox {
                                 case .incremental:
                                     break
                                 case .partial:
-                                    break
+                                    subscriber.putNext(Data())
                             }
                         }
                     }

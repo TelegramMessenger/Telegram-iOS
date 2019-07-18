@@ -197,7 +197,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                         }
                 }
                 if let resourceReference = resourceReference {
-                    self.stickerFetchedDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: resourceReference).start())
+                    self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: resourceReference).start())
                 }
             }
             

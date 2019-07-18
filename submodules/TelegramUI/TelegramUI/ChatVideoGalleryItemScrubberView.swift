@@ -42,6 +42,8 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         }
     }
     
+    var updateScrubbing: (Double?) -> Void = { _ in }
+    var updateScrubbingHandlePosition: (CGFloat) -> Void = { _ in }
     var seek: (Double) -> Void = { _ in }
     
     override init(frame: CGRect) {
@@ -61,6 +63,11 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         
         self.scrubberNode.seek = { [weak self] timestamp in
             self?.seek(timestamp)
+        }
+        
+        self.scrubberNode.update = { [weak self] timestamp, position in
+            self?.updateScrubbing(timestamp)
+            self?.updateScrubbingHandlePosition(position)
         }
         
         self.scrubberNode.playerStatusUpdated = { [weak self] status in

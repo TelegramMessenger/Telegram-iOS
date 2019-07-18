@@ -781,6 +781,7 @@ public final class PresentationThemeChatHistoryNavigation {
 }
 
 public final class PresentationThemeChat {
+    public let defaultWallpaper: TelegramWallpaper
     public let message: PresentationThemeChatMessage
     public let serviceMessage: PresentationThemeServiceMessage
     public let inputPanel: PresentationThemeChatInputPanel
@@ -788,7 +789,8 @@ public final class PresentationThemeChat {
     public let inputButtonPanel: PresentationThemeInputButtonPanel
     public let historyNavigation: PresentationThemeChatHistoryNavigation
     
-    public init(message: PresentationThemeChatMessage, serviceMessage: PresentationThemeServiceMessage, inputPanel: PresentationThemeChatInputPanel, inputMediaPanel: PresentationThemeInputMediaPanel, inputButtonPanel: PresentationThemeInputButtonPanel, historyNavigation: PresentationThemeChatHistoryNavigation) {
+    public init(defaultWallpaper: TelegramWallpaper, message: PresentationThemeChatMessage, serviceMessage: PresentationThemeServiceMessage, inputPanel: PresentationThemeChatInputPanel, inputMediaPanel: PresentationThemeInputMediaPanel, inputButtonPanel: PresentationThemeInputButtonPanel, historyNavigation: PresentationThemeChatHistoryNavigation) {
+        self.defaultWallpaper = defaultWallpaper
         self.message = message
         self.serviceMessage = serviceMessage
         self.inputPanel = inputPanel
@@ -843,7 +845,7 @@ public final class PresentationThemeInAppNotification {
 public enum PresentationThemeBuiltinName {
     case dayClassic
     case day
-    case nightGrayscale
+    case night
     case nightAccent
     
     public var reference: PresentationBuiltinThemeReference {
@@ -852,8 +854,8 @@ public enum PresentationThemeBuiltinName {
                 return .dayClassic
             case .day:
                 return .day
-            case .nightGrayscale:
-                return .nightGrayscale
+            case .night:
+                return .night
             case .nightAccent:
                 return .nightAccent
         }
@@ -889,7 +891,7 @@ public enum PresentationThemeName: Equatable {
                         return "Day"
                     case .dayClassic:
                         return "Classic"
-                    case .nightGrayscale:
+                    case .night:
                         return "Night"
                     case .nightAccent:
                         return "Night"

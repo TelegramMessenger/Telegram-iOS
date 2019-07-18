@@ -167,6 +167,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     private let messageContextDisposable = MetaDisposable()
     
+    private var videoFramePreviewNode: ASImageNode?
+    
+    private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat, CGFloat)?
+    
     var playbackControl: (() -> Void)?
     var seekBackward: (() -> Void)?
     var seekForward: (() -> Void)?
@@ -225,6 +229,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
+    private var scrubbingHandleRelativePosition: CGFloat = 0.0
+    
     var scrubberView: ChatVideoGalleryItemScrubberView? = nil {
         willSet {
             if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
@@ -234,6 +240,15 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         didSet {
             if let scrubberView = self.scrubberView {
                 self.view.addSubview(scrubberView)
+                scrubberView.updateScrubbingHandlePosition = { [weak self] value in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.scrubbingHandleRelativePosition = value
+                    if let validLayout = strongSelf.validLayout {
+                        let _ = strongSelf.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, contentInset: validLayout.5, transition: .immediate)
+                    }
+                }
             }
         }
     }
@@ -500,6 +515,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     }
     
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (size, metrics, leftInset, rightInset, bottomInset, contentInset)
+        
         let width = size.width
         var bottomInset = bottomInset
         if !bottomInset.isZero && bottomInset < 30.0 {
@@ -619,6 +636,17 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             let labelsSpacing: CGFloat = 0.0
             self.authorNameNode.frame = CGRect(origin: CGPoint(x: floor((width - authorNameSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0)), size: authorNameSize)
             self.dateNode.frame = CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0) + authorNameSize.height + labelsSpacing), size: dateSize)
+        }
+        
+        if let videoFramePreviewNode = self.videoFramePreviewNode {
+            let intrinsicImageSize = videoFramePreviewNode.image?.size ?? CGSize(width: 320.0, height: 240.0)
+            let imageSize = intrinsicImageSize.aspectFitted(CGSize(width: 200.0, height: 200.0))
+            var imageFrame = CGRect(origin: CGPoint(x: leftInset + floor(self.scrubbingHandleRelativePosition * (width - leftInset - rightInset) - imageSize.width / 2.0), y: self.scrollNode.frame.minY - 10.0 - imageSize.height), size: imageSize)
+            imageFrame.origin.x = min(imageFrame.origin.x, width - rightInset - 10.0 - imageSize.width)
+            imageFrame.origin.x = max(imageFrame.origin.x, leftInset + 10.0)
+            
+            videoFramePreviewNode.frame = imageFrame
+            videoFramePreviewNode.subnodes?.first?.frame = CGRect(origin: CGPoint(), size: imageFrame.size)
         }
         
         return panelHeight
@@ -992,5 +1020,45 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     @objc private func statusPressed() {
         self.fetchControl?()
+    }
+    
+    func setFramePreviewImageIsLoading() {
+        if self.videoFramePreviewNode?.image != nil {
+            //self.videoFramePreviewNode?.subnodes?.first?.alpha = 1.0
+        }
+    }
+    
+    func setFramePreviewImage(image: UIImage?) {
+        if let image = image {
+            let videoFramePreviewNode: ASImageNode
+            var animateIn = false
+            if let current = self.videoFramePreviewNode {
+                videoFramePreviewNode = current
+            } else {
+                videoFramePreviewNode = ASImageNode()
+                videoFramePreviewNode.displaysAsynchronously = false
+                videoFramePreviewNode.displayWithoutProcessing = true
+                let dimNode = ASDisplayNode()
+                dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+                videoFramePreviewNode.addSubnode(dimNode)
+                self.videoFramePreviewNode = videoFramePreviewNode
+                self.addSubnode(videoFramePreviewNode)
+                animateIn = true
+            }
+            videoFramePreviewNode.subnodes?.first?.alpha = 0.0
+            let updateLayout = videoFramePreviewNode.image?.size != image.size
+            videoFramePreviewNode.image = image
+            if updateLayout, let validLayout = self.validLayout {
+                let _ = self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, contentInset: validLayout.5, transition: .immediate)
+            }
+            if animateIn {
+                videoFramePreviewNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+            }
+        } else if let videoFramePreviewNode = self.videoFramePreviewNode {
+            self.videoFramePreviewNode = nil
+            videoFramePreviewNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak videoFramePreviewNode] _ in
+                videoFramePreviewNode?.removeFromSupernode()
+            })
+        }
     }
 }

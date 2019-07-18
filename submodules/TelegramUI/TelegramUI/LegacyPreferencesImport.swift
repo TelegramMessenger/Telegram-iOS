@@ -183,7 +183,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                             }
                             settings.chatWallpaper = .color(0xffffff)
                         case 2:
-                            settings.theme = .builtin(.nightGrayscale)
+                            settings.theme = .builtin(.night)
                             settings.chatWallpaper = .color(0x00000)
                         case 3:
                             settings.theme = .builtin(.nightAccent)
@@ -213,7 +213,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                     let nightTheme: PresentationBuiltinThemeReference
                     switch autoNightPreferences.preferredPalette {
                         case 1:
-                            nightTheme = .nightGrayscale
+                            nightTheme = .night
                         default:
                             nightTheme = .nightAccent
                     }

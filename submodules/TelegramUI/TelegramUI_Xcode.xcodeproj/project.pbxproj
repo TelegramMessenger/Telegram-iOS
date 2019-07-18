@@ -1012,7 +1012,6 @@
 		D0EC6DC11EB9F58900EBF1C3 /* ChatMediaInputTrendingItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AEE1E9FF881006F2541 /* ChatMediaInputTrendingItem.swift */; };
 		D0EC6DC21EB9F58900EBF1C3 /* ChatMediaInputStickerPackItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E41DB55D0A00C6B04F /* ChatMediaInputStickerPackItem.swift */; };
 		D0EC6DC31EB9F58900EBF1C3 /* ChatMediaInputStickerGridItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08C36821DB66AD40064C744 /* ChatMediaInputStickerGridItem.swift */; };
-		D0EC6DC51EB9F58900EBF1C3 /* SoftwareVideoSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002A0D01E9B99F500A81812 /* SoftwareVideoSource.swift */; };
 		D0EC6DC61EB9F58900EBF1C3 /* MultiplexedSoftwareVideoSourceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002A0D21E9BBE6700A81812 /* MultiplexedSoftwareVideoSourceManager.swift */; };
 		D0EC6DC71EB9F58900EBF1C3 /* SampleBufferPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002A0D41E9BD48400A81812 /* SampleBufferPool.swift */; };
 		D0EC6DC81EB9F58900EBF1C3 /* MultiplexedVideoNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D002A0D61E9BD92100A81812 /* MultiplexedVideoNode.swift */; };
@@ -1429,7 +1428,6 @@
 		9F06830A21A404C4001D8EDB /* NotificationExceptionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionSettingsController.swift; sourceTree = "<group>"; };
 		D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapResourceToAvatarSizes.swift; sourceTree = "<group>"; };
 		D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrepareSecretThumbnailData.swift; sourceTree = "<group>"; };
-		D002A0D01E9B99F500A81812 /* SoftwareVideoSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVideoSource.swift; sourceTree = "<group>"; };
 		D002A0D21E9BBE6700A81812 /* MultiplexedSoftwareVideoSourceManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiplexedSoftwareVideoSourceManager.swift; sourceTree = "<group>"; };
 		D002A0D41E9BD48400A81812 /* SampleBufferPool.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SampleBufferPool.swift; sourceTree = "<group>"; };
 		D002A0D61E9BD92100A81812 /* MultiplexedVideoNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiplexedVideoNode.swift; sourceTree = "<group>"; };
@@ -3079,7 +3077,6 @@
 				D01C06B41FBB7720001561AB /* ChatMediaInputSettingsItem.swift */,
 				D021E0E41DB55D0A00C6B04F /* ChatMediaInputStickerPackItem.swift */,
 				D08C36821DB66AD40064C744 /* ChatMediaInputStickerGridItem.swift */,
-				D002A0D01E9B99F500A81812 /* SoftwareVideoSource.swift */,
 				D002A0D21E9BBE6700A81812 /* MultiplexedSoftwareVideoSourceManager.swift */,
 				D002A0D41E9BD48400A81812 /* SampleBufferPool.swift */,
 				D002A0D61E9BD92100A81812 /* MultiplexedVideoNode.swift */,
@@ -5949,7 +5946,6 @@
 				D0E9BAE81F0574FF00F079A4 /* STPCustomer.m in Sources */,
 				D0C0B59F1EE082F5000F4D2C /* ChatSearchInputPanelNode.swift in Sources */,
 				D079FCD91F05A5550038FADE /* BotCheckoutPasswordEntryController.swift in Sources */,
-				D0EC6DC51EB9F58900EBF1C3 /* SoftwareVideoSource.swift in Sources */,
 				0962E66121B3512500245FD9 /* WebSearchController.swift in Sources */,
 				D0EC6DC61EB9F58900EBF1C3 /* MultiplexedSoftwareVideoSourceManager.swift in Sources */,
 				D0EC6DC71EB9F58900EBF1C3 /* SampleBufferPool.swift in Sources */,

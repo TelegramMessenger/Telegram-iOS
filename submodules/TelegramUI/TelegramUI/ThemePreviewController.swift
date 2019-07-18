@@ -9,32 +9,45 @@ import TelegramPresentationData
 import TelegramUIPreferences
 
 final class ThemePreviewController: ViewController {
+    private let context: AccountContext
+    private let previewTheme: PresentationTheme
+    private let media: AnyMediaReference
+    
     private var controllerNode: ThemePreviewControllerNode {
         return self.displayNode as! ThemePreviewControllerNode
     }
     
-    private let context: AccountContext
-    private let previewTheme: PresentationTheme
+    private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
 
-    init(context: AccountContext, previewTheme: PresentationTheme) {
+    init(context: AccountContext, previewTheme: PresentationTheme, media: AnyMediaReference) {
         self.context = context
         self.previewTheme = previewTheme
+        self.media = media
+        
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
-        self.title = self.presentationData.strings.WallpaperPreview_Title
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+        if let author = previewTheme.author {
+            let titleView = CounterContollerTitleView(theme: self.previewTheme)
+            titleView.title = CounterContollerTitle(title: previewTheme.name.string, counter: author)
+            self.navigationItem.titleView = titleView
+        } else {
+            self.title = previewTheme.name.string
+        }
+        self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.previewTheme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
-                strongSelf.updateThemeAndStrings()
+                strongSelf.updateStrings()
             }
         })
     }
@@ -47,12 +60,23 @@ final class ThemePreviewController: ViewController {
         self.presentationDataDisposable?.dispose()
     }
     
+    public override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
+            self.didPlayPresentationAnimation = true
+            if case .modalSheet = presentationArguments.presentationAnimation {
+                self.controllerNode.animateIn()
+            }
+        }
+    }
+    
     override func loadDisplayNode() {
         super.loadDisplayNode()
         
         self.displayNode = ThemePreviewControllerNode(context: self.context, previewTheme: self.previewTheme, dismiss: { [weak self] in
             if let strongSelf = self {
-                strongSelf.dismiss(animated: true, completion: {})
+                strongSelf.dismiss()
             }
         }, apply: { [weak self] in
             if let strongSelf = self {
@@ -67,17 +91,25 @@ final class ThemePreviewController: ViewController {
                         
                         return PresentationThemeSettings(chatWallpaper: .color(0xffffff), theme: .builtin(.day), themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, themeTintColors: current.themeTintColors, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                     })
-                }).start()
+                }).start(completed: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.dismiss()
+                    }
+                })
             }
         })
         self.displayNodeDidLoad()
-        
-       
     }
     
-    private func updateThemeAndStrings() {
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+    private func updateStrings() {
+    
+    }
+    
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        self.controllerNode.animateOut(completion: { [weak self] in
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+            completion?()
+        })
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -86,4 +118,8 @@ final class ThemePreviewController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
 
+    @objc private func actionPressed() {
+        let controller = ShareController(context: self.context, subject: .media(self.media))
+        self.present(controller, in: .window(.root), blockInteraction: true)
+    }
 }

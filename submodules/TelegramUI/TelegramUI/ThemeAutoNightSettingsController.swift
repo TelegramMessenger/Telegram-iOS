@@ -235,7 +235,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .themeNight(theme, title, value):
                 return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.updateTheme(.nightGrayscale)
+                    arguments.updateTheme(.night)
                 })
         }
     }
@@ -294,7 +294,7 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
         case .timeBased, .brightness:
             entries.append(.themeHeader(theme, strings.AutoNightTheme_PreferredTheme))
             entries.append(.themeNightBlue(theme, strings.Appearance_ThemeNightBlue, switchSetting.theme == .nightAccent))
-            entries.append(.themeNight(theme, strings.Appearance_ThemeNight, switchSetting.theme == .nightGrayscale))
+            entries.append(.themeNight(theme, strings.Appearance_ThemeNight, switchSetting.theme == .night))
     }
     
     return entries

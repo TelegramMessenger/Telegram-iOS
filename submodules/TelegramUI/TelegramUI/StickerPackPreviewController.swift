@@ -155,7 +155,7 @@ final class StickerPackPreviewController: ViewController {
                     for item in topItems {
                         if let item = item as? StickerPackItem, item.file.isAnimatedSticker {
                             let signal = Signal<Bool, NoError> { subscriber in
-                                let fetched = fetchedMediaResource(postbox: account.postbox, reference: FileMediaReference.standalone(media: item.file).resourceReference(item.file.resource)).start()
+                                let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: FileMediaReference.standalone(media: item.file).resourceReference(item.file.resource)).start()
                                 let data = account.postbox.mediaBox.resourceData(item.file.resource).start()
                                 let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, file: item.file, small: false, size: CGSize(width: 160.0, height: 160.0), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
                                     let hasContent = next._0 != nil || next._1 != nil

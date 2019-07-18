@@ -41,4 +41,5 @@ struct TelegramTextAttributes {
     static let BotCommand = "TelegramBotCommand"
     static let Hashtag = "TelegramHashtag"
     static let Timecode = "TelegramTimecode"
+    static let BlockQuote = "TelegramBlockQuote"
 }
