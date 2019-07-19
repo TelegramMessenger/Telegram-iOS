@@ -167,15 +167,27 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             
             if currentMessage.id.peerId.namespace == Namespaces.Peer.CloudChannel, !currentMessage.flags.contains(.Incoming) {
                 let peerId = currentMessage.id.peerId
-                transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
-                    var cachedData = current as? CachedChannelData ?? CachedChannelData()
-                    if let slowModeTimeout = cachedData.slowModeTimeout {
-                        cachedData = cachedData.withUpdatedSlowModeValidUntilTimestamp(slowModeValidUntilTimestamp: currentMessage.timestamp + slowModeTimeout)
-                        return cachedData
-                    } else {
-                        return current
+                if let peer = transaction.getPeer(peerId) {
+                    if let peer = peer as? TelegramChannel {
+                        inner: switch peer.info {
+                        case let .group(info):
+                            if info.flags.contains(.slowModeEnabled), peer.adminRights == nil && !peer.flags.contains(.isCreator) {
+                                transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
+                                    var cachedData = current as? CachedChannelData ?? CachedChannelData()
+                                    if let slowModeTimeout = cachedData.slowModeTimeout {
+                                        cachedData = cachedData.withUpdatedSlowModeValidUntilTimestamp(slowModeValidUntilTimestamp: currentMessage.timestamp + slowModeTimeout)
+                                        return cachedData
+                                    } else {
+                                        return current
+                                    }
+                                })
+                            }
+                        default:
+                            break inner
+                        }
                     }
-                })
+                }
+                
             }
             
             
