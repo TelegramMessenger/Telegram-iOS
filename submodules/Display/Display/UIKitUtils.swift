@@ -56,9 +56,13 @@ public extension UIColor {
         if hexString.hasPrefix("#") {
             scanner.scanLocation = 1
         }
-        var num: UInt32 = 0
-        if scanner.scanHexInt32(&num) {
-            self.init(rgb: num)
+        var value: UInt32 = 0
+        if scanner.scanHexInt32(&value) {
+            if hexString.count > 7 {
+                self.init(argb: value)
+            } else {
+                self.init(rgb: value)
+            }
         } else {
             return nil
         }
@@ -147,6 +151,18 @@ public extension UIColor {
             return UIColor(red: r, green: g, blue: b, alpha: a)
         }
         return self
+    }
+    
+    func interpolateTo(_ color: UIColor, fraction: CGFloat) -> UIColor? {
+        let f = min(max(0, fraction), 1)
+        
+        guard let c1 = self.cgColor.components, let c2 = color.cgColor.components else { return nil }
+        let r: CGFloat = CGFloat(c1[0] + (c2[0] - c1[0]) * f)
+        let g: CGFloat = CGFloat(c1[1] + (c2[1] - c1[1]) * f)
+        let b: CGFloat = CGFloat(c1[2] + (c2[2] - c1[2]) * f)
+        let a: CGFloat = CGFloat(c1[3] + (c2[3] - c1[3]) * f)
+        
+        return UIColor(red: r, green: g, blue: b, alpha: a)
     }
 }
 

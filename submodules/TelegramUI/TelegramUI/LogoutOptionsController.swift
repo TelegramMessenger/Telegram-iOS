@@ -119,6 +119,7 @@ private func logoutOptionsEntries(presentationData: PresentationData, canAddAcco
 func logoutOptionsController(context: AccountContext, navigationController: NavigationController, canAddAccounts: Bool, phoneNumber: String) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var replaceTopControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     
     let supportPeerDisposable = MetaDisposable()
@@ -129,7 +130,15 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         
         dismissImpl?()
     }, setPasscode: {
-        pushControllerImpl?(passcodeOptionsController(context: context))
+        let _ = passcodeOptionsAccessController(context: context, pushController: { controller in
+            replaceTopControllerImpl?(controller)
+        }, completion: { _ in
+            replaceTopControllerImpl?(passcodeOptionsController(context: context))
+        }).start(next: { controller in
+            if let controller = controller {
+                pushControllerImpl?(controller)
+            }
+        })
         dismissImpl?()
     }, clearCache: {
         pushControllerImpl?(storageUsageController(context: context))
@@ -142,7 +151,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         supportPeer.set(supportPeerId(account: context.account))
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        var faqUrl = context.sharedContext.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
+        var faqUrl = presentationData.strings.Settings_FAQ_URL
         if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
             faqUrl = "https://telegram.org/faq#general"
         }
@@ -223,6 +232,9 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
     }
     presentControllerImpl = { [weak controller] value, arguments in
         controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }
+    replaceTopControllerImpl = { [weak navigationController] c in
+        navigationController?.replaceTopController(c, animated: true)
     }
     dismissImpl = { [weak controller] in
         let _ = controller?.dismiss()

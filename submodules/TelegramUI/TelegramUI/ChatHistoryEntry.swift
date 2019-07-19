@@ -25,7 +25,7 @@ public enum ChatHistoryMessageSelection: Equatable {
 }
 
 public struct ChatMessageEntryAttributes: Equatable {
-    let isAdmin: Bool
+    let rank: CachedChannelAdminRank?
     let isContact: Bool
 }
 

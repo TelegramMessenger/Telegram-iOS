@@ -66,11 +66,7 @@ NSData * _Nullable TGGUnzipData(NSData *data, uint sizeLimit)
             }
             
             if (stream.total_out >= output.length) {
-                NSUInteger length = output.length + data.length / 2;
-                if (sizeLimit > 0 && length > sizeLimit) {
-                    return nil;
-                }
-                output.length = length;
+                output.length = output.length + data.length / 2;
             }
             stream.next_out = (uint8_t *)output.mutableBytes + stream.total_out;
             stream.avail_out = (uInt)(output.length - stream.total_out);
@@ -79,6 +75,8 @@ NSData * _Nullable TGGUnzipData(NSData *data, uint sizeLimit)
         if (inflateEnd(&stream) == Z_OK) {
             if (status == Z_STREAM_END) {
                 output.length = stream.total_out;
+            } else if (sizeLimit > 0 && output.length > sizeLimit) {
+                return nil;
             }
         }
     }

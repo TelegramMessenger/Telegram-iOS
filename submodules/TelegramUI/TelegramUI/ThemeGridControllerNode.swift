@@ -633,7 +633,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 
                 let selectionPanelSeparatorNode = ASDisplayNode()
                 selectionPanelSeparatorNode.isLayerBacked = true
-                selectionPanelSeparatorNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelStrokeColor
+                selectionPanelSeparatorNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelSeparatorColor
                 self.addSubnode(selectionPanelSeparatorNode)
                 self.selectionPanelSeparatorNode = selectionPanelSeparatorNode
                 

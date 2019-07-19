@@ -103,7 +103,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
-            self.visibilityStatus = self.visibility != .none && false
+            self.visibilityStatus = self.visibility != .none
         }
     }
     
@@ -190,7 +190,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                             animatedStickerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                             self.addSubnode(animatedStickerNode)
                             animatedStickerNode.setup(account: account, resource: resource, width: 80, height: 80, mode: .cached)
-                            animatedStickerNode.visibility = self.visibilityStatus && false
+                            animatedStickerNode.visibility = self.visibilityStatus
                         }
                         if let animatedStickerNode = self.animatedStickerNode {
                             animatedStickerNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)

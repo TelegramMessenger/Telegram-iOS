@@ -1866,8 +1866,8 @@ final class SharedApplicationContext {
                                         replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                        legacyChannelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                        legacyChannelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                     } else {
@@ -1875,8 +1875,8 @@ final class SharedApplicationContext {
                                         replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [], options: [])
                                         replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [], options: [])
                                         replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], options: [])
+                                            replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], options: [])
                                         legacyChannelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], options: [])
-                                        replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], options: [])
                                         muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], options: [])
                                         muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], options: [])
                                     }
@@ -1892,9 +1892,50 @@ final class SharedApplicationContext {
                 }
             })
         } else {
+            let reply = UIMutableUserNotificationAction()
+            reply.identifier = "reply"
+            reply.title = replyString
+            reply.isDestructive = false
+            if #available(iOS 9.0, *) {
+                reply.isAuthenticationRequired = false
+                reply.behavior = .textInput
+                reply.activationMode = .background
+            } else {
+                reply.isAuthenticationRequired = true
+                reply.activationMode = .foreground
+            }
+            
+            let unknownMessageCategory = UIMutableUserNotificationCategory()
+            unknownMessageCategory.identifier = "unknown"
+            
+            let replyMessageCategory = UIMutableUserNotificationCategory()
+            replyMessageCategory.identifier = "withReply"
+            replyMessageCategory.setActions([reply], for: .default)
+            
+            let replyLegacyMessageCategory = UIMutableUserNotificationCategory()
+            replyLegacyMessageCategory.identifier = "r"
+            replyLegacyMessageCategory.setActions([reply], for: .default)
+            
+            let replyLegacyMediaMessageCategory = UIMutableUserNotificationCategory()
+            replyLegacyMediaMessageCategory.identifier = "m"
+            replyLegacyMediaMessageCategory.setActions([reply], for: .default)
+            
+            let replyMediaMessageCategory = UIMutableUserNotificationCategory()
+            replyMediaMessageCategory.identifier = "withReplyMedia"
+            replyMediaMessageCategory.setActions([reply], for: .default)
+            
+            let legacyChannelMessageCategory = UIMutableUserNotificationCategory()
+            legacyChannelMessageCategory.identifier = "c"
+            
+            let muteMessageCategory = UIMutableUserNotificationCategory()
+            muteMessageCategory.identifier = "withMute"
+           
+            let muteMediaMessageCategory = UIMutableUserNotificationCategory()
+            muteMediaMessageCategory.identifier = "withMuteMedia"
+            
+            let categories = [unknownMessageCategory, replyMessageCategory, replyLegacyMessageCategory, replyLegacyMediaMessageCategory, replyMediaMessageCategory, legacyChannelMessageCategory, muteMessageCategory, muteMediaMessageCategory]
             let settings = UIUserNotificationSettings(types: [.badge, .sound, .alert], categories:[])
             UIApplication.shared.registerUserNotificationSettings(settings)
-            
             UIApplication.shared.registerForRemoteNotifications()
         }
     }

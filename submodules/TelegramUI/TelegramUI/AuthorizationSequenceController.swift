@@ -750,7 +750,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         controllers.append(self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .signUp(_, _, _, firstName, lastName, termsOfService, _):
+                    case let .signUp(_, _, firstName, lastName, termsOfService, _):
                         var controllers: [ViewController] = []
                         var displayCancel = false
                         if !self.otherAccountPhoneNumbers.1.isEmpty {

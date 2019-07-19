@@ -18,21 +18,21 @@ public final class PresentationThemeGradientColors {
     }
 }
 
-public final class PresentationThemeAuth {
-    public let introStartButtonColor: UIColor
-    public let introDotColor: UIColor
+public final class PresentationThemeIntro {
+    public let startButtonColor: UIColor
+    public let dotColor: UIColor
     
-    public init(introStartButtonColor: UIColor, introDotColor: UIColor) {
-        self.introStartButtonColor = introStartButtonColor
-        self.introDotColor = introDotColor
+    public init(startButtonColor: UIColor, dotColor: UIColor) {
+        self.startButtonColor = startButtonColor
+        self.dotColor = dotColor
     }
 }
 
 public final class PresentationThemePasscode {
     public let backgroundColors: PresentationThemeGradientColors
-    public let buttonColor: UIColor?
+    public let buttonColor: UIColor
     
-    public init(backgroundColors: PresentationThemeGradientColors, buttonColor: UIColor?) {
+    public init(backgroundColors: PresentationThemeGradientColors, buttonColor: UIColor) {
         self.backgroundColors = backgroundColors
         self.buttonColor = buttonColor
     }
@@ -62,7 +62,7 @@ public final class PresentationThemeRootTabBar {
     }
 }
 
-public enum PresentationThemeStatusBarStyle: Int32, Codable {
+public enum PresentationThemeStatusBarStyle: Int32 {
     case black = 0
     case white = 1
     
@@ -149,7 +149,7 @@ public final class PresentationThemeRootController {
     }
 }
 
-public enum PresentationThemeActionSheetBackgroundType: Int32, Codable {
+public enum PresentationThemeActionSheetBackgroundType: Int32 {
     case light
     case dark
 }
@@ -260,12 +260,14 @@ public final class PresentationThemeFillStrokeForeground {
 
 public final class PresentationInputFieldTheme {
     public let backgroundColor: UIColor
+    public let strokeColor: UIColor
     public let placeholderColor: UIColor
     public let primaryColor: UIColor
     public let controlColor: UIColor
     
-    public init(backgroundColor: UIColor, placeholderColor: UIColor, primaryColor: UIColor, controlColor: UIColor) {
+    public init(backgroundColor: UIColor, strokeColor: UIColor, placeholderColor: UIColor, primaryColor: UIColor, controlColor: UIColor) {
         self.backgroundColor = backgroundColor
+        self.strokeColor = strokeColor
         self.placeholderColor = placeholderColor
         self.primaryColor = primaryColor
         self.controlColor = controlColor
@@ -646,7 +648,7 @@ public final class PresentationThemeServiceMessage {
     }
 }
 
-public enum PresentationThemeKeyboardColor: Int32, Codable {
+public enum PresentationThemeKeyboardColor: Int32 {
     case light = 0
     case dark = 1
     
@@ -664,25 +666,17 @@ public final class PresentationThemeChatInputPanelMediaRecordingControl {
     public let buttonColor: UIColor
     public let micLevelColor: UIColor
     public let activeIconColor: UIColor
-    public let panelControlFillColor: UIColor
-    public let panelControlStrokeColor: UIColor
-    public let panelControlContentPrimaryColor: UIColor
-    public let panelControlContentAccentColor: UIColor
     
-    init(buttonColor: UIColor, micLevelColor: UIColor, activeIconColor: UIColor, panelControlFillColor: UIColor, panelControlStrokeColor: UIColor, panelControlContentPrimaryColor: UIColor, panelControlContentAccentColor: UIColor) {
+    init(buttonColor: UIColor, micLevelColor: UIColor, activeIconColor: UIColor) {
         self.buttonColor = buttonColor
         self.micLevelColor = micLevelColor
         self.activeIconColor = activeIconColor
-        self.panelControlFillColor = panelControlFillColor
-        self.panelControlStrokeColor = panelControlStrokeColor
-        self.panelControlContentPrimaryColor = panelControlContentPrimaryColor
-        self.panelControlContentAccentColor = panelControlContentAccentColor
     }
 }
 
 public final class PresentationThemeChatInputPanel {
     public let panelBackgroundColor: UIColor
-    public let panelStrokeColor: UIColor
+    public let panelSeparatorColor: UIColor
     public let panelControlAccentColor: UIColor
     public let panelControlColor: UIColor
     public let panelControlDisabledColor: UIColor
@@ -700,9 +694,9 @@ public final class PresentationThemeChatInputPanel {
     public let keyboardColor: PresentationThemeKeyboardColor
     public let mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl
     
-    public init(panelBackgroundColor: UIColor, panelStrokeColor: UIColor, panelControlAccentColor: UIColor, panelControlColor: UIColor, panelControlDisabledColor: UIColor, panelControlDestructiveColor: UIColor, inputBackgroundColor: UIColor, inputStrokeColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputControlColor: UIColor, actionControlFillColor: UIColor, actionControlForegroundColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, mediaRecordingDotColor: UIColor, keyboardColor: PresentationThemeKeyboardColor, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl) {
+    public init(panelBackgroundColor: UIColor, panelSeparatorColor: UIColor, panelControlAccentColor: UIColor, panelControlColor: UIColor, panelControlDisabledColor: UIColor, panelControlDestructiveColor: UIColor, inputBackgroundColor: UIColor, inputStrokeColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputControlColor: UIColor, actionControlFillColor: UIColor, actionControlForegroundColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, mediaRecordingDotColor: UIColor, keyboardColor: PresentationThemeKeyboardColor, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl) {
         self.panelBackgroundColor = panelBackgroundColor
-        self.panelStrokeColor = panelStrokeColor
+        self.panelSeparatorColor = panelSeparatorColor
         self.panelControlAccentColor = panelControlAccentColor
         self.panelControlColor = panelControlColor
         self.panelControlDisabledColor = panelControlDisabledColor
@@ -787,6 +781,7 @@ public final class PresentationThemeChatHistoryNavigation {
 }
 
 public final class PresentationThemeChat {
+    public let defaultWallpaper: TelegramWallpaper
     public let message: PresentationThemeChatMessage
     public let serviceMessage: PresentationThemeServiceMessage
     public let inputPanel: PresentationThemeChatInputPanel
@@ -794,7 +789,8 @@ public final class PresentationThemeChat {
     public let inputButtonPanel: PresentationThemeInputButtonPanel
     public let historyNavigation: PresentationThemeChatHistoryNavigation
     
-    public init(message: PresentationThemeChatMessage, serviceMessage: PresentationThemeServiceMessage, inputPanel: PresentationThemeChatInputPanel, inputMediaPanel: PresentationThemeInputMediaPanel, inputButtonPanel: PresentationThemeInputButtonPanel, historyNavigation: PresentationThemeChatHistoryNavigation) {
+    public init(defaultWallpaper: TelegramWallpaper, message: PresentationThemeChatMessage, serviceMessage: PresentationThemeServiceMessage, inputPanel: PresentationThemeChatInputPanel, inputMediaPanel: PresentationThemeInputMediaPanel, inputButtonPanel: PresentationThemeInputButtonPanel, historyNavigation: PresentationThemeChatHistoryNavigation) {
+        self.defaultWallpaper = defaultWallpaper
         self.message = message
         self.serviceMessage = serviceMessage
         self.inputPanel = inputPanel
@@ -804,7 +800,7 @@ public final class PresentationThemeChat {
     }
 }
 
-public enum PresentationThemeExpandedNotificationBackgroundType: Int32, Codable {
+public enum PresentationThemeExpandedNotificationBackgroundType: Int32 {
     case light
     case dark
 }
@@ -849,7 +845,7 @@ public final class PresentationThemeInAppNotification {
 public enum PresentationThemeBuiltinName {
     case dayClassic
     case day
-    case nightGrayscale
+    case night
     case nightAccent
     
     public var reference: PresentationBuiltinThemeReference {
@@ -858,8 +854,8 @@ public enum PresentationThemeBuiltinName {
                 return .dayClassic
             case .day:
                 return .day
-            case .nightGrayscale:
-                return .nightGrayscale
+            case .night:
+                return .night
             case .nightAccent:
                 return .nightAccent
         }
@@ -886,13 +882,31 @@ public enum PresentationThemeName: Equatable {
                 }
         }
     }
+    
+    public var string: String {
+        switch self {
+            case let .builtin(name):
+                switch name {
+                    case .day:
+                        return "Day"
+                    case .dayClassic:
+                        return "Classic"
+                    case .night:
+                        return "Night"
+                    case .nightAccent:
+                        return "Night"
+                }
+            case let .custom(name):
+                return name
+        }
+    }
 }
 
 public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
     public let author: String?
     public let overallDarkAppearance: Bool
-    public let auth: PresentationThemeAuth
+    public let intro: PresentationThemeIntro
     public let passcode: PresentationThemePasscode
     public let rootController: PresentationThemeRootController
     public let list: PresentationThemeList
@@ -903,11 +917,11 @@ public final class PresentationTheme: Equatable {
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, author: String?, overallDarkAppearance: Bool, auth: PresentationThemeAuth, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification) {
+    public init(name: PresentationThemeName, author: String?, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification) {
         self.name = name
         self.author = author
         self.overallDarkAppearance = overallDarkAppearance
-        self.auth = auth
+        self.intro = intro
         self.passcode = passcode
         self.rootController = rootController
         self.list = list

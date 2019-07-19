@@ -6,7 +6,7 @@ import Display
 
 public enum PresentationBuiltinThemeReference: Int32 {
     case dayClassic = 0
-    case nightGrayscale = 1
+    case night = 1
     case day = 2
     case nightAccent = 3
 }
@@ -176,53 +176,64 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
     case yellow
     case gray
     case black
+    case white
     
-    public var colorValue: Int32 {        
+    public var color: UIColor {
+        let value: UInt32
         switch self {
             case .blue:
-                return 0x007ee5
+                value = 0x007aff
             case .cyan:
-                return 0x00c2ed
+                value = 0x00c2ed
             case .green:
-                return 0x29b327
+                value = 0x29b327
             case .pink:
-                return 0xff5da2
+                value = 0xeb6ca4
             case .orange:
-                return 0xff7519
+                value = 0xf08200
             case .purple:
-                return 0x7748ff
+                value = 0x9472ee
             case .red:
-                return 0xf83b4c
+                value = 0xd33213
             case .yellow:
-                return 0xeba239
+                value = 0xedb400
             case .gray:
-                return 0x6d839e
+                value = 0x6d839e
             case .black:
-                return 0x000000
+                value = 0x000000
+            case .white:
+                value = 0xffffff
         }
-        
-//        switch self {
-//            case .blue:
-//                return 0x007aff
-//            case .cyan:
-//                return 0x00c2ed
-//            case .green:
-//                return 0x70bb23
-//            case .pink:
-//                return 0xeb6ca4
-//            case .orange:
-//                return 0xf08200
-//            case .purple:
-//                return 0x9472ee
-//            case .red:
-//                return 0xd33213
-//            case .yellow:
-//                return 0xedb400
-//            case .gray:
-//                return 0x6d839e
-//            case .black:
-//                return 0x000000
-//        }
+        return UIColor(rgb: value)
+    }
+    
+    public var edgeColors: (UIColor, UIColor) {
+        let values: (UIColor, UIColor)
+        switch self {
+            case .blue:
+                values = (UIColor(rgb: 0x003d80), UIColor(rgb: 0x66afff))
+            case .cyan:
+                values = (UIColor(rgb: 0x00c2ed), UIColor(rgb: 0x00c2ed))
+            case .green:
+                values = (UIColor(rgb: 0x29b327), UIColor(rgb: 0x29b327))
+            case .pink:
+                values = (UIColor(rgb: 0xeb6ca4), UIColor(rgb: 0xeb6ca4))
+            case .orange:
+                values = (UIColor(rgb: 0xf08200), UIColor(rgb: 0xf08200))
+            case .purple:
+                values = (UIColor(rgb: 0x9472ee), UIColor(rgb: 0x9472ee))
+            case .red:
+                values = (UIColor(rgb: 0xd33213), UIColor(rgb: 0xd33213))
+            case .yellow:
+                values = (UIColor(rgb: 0xedb400), UIColor(rgb: 0xedb400))
+            case .gray:
+                values = (UIColor(rgb: 0x6d839e), UIColor(rgb: 0x6d839e))
+            case .black:
+                values = (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000))
+            case .white:
+                values = (UIColor(rgb: 0xffffff), UIColor(rgb: 0xffffff))
+        }
+        return values
     }
 }
 
@@ -245,19 +256,16 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         encoder.encodeDouble(Double(self.value), forKey: "v")
     }
     
-    public var color: Int32 {
-        var hue: CGFloat = 0.0
-        var saturation: CGFloat = 0.0
-        var value: CGFloat = 0.0
-        
-        let color = UIColor(rgb: UInt32(bitPattern: self.baseColor.colorValue))
-        let delta = (-0.5 + self.value) * 0.8
-        if color.getHue(&hue, saturation: &saturation, brightness: &value, alpha: nil) {
-            let newColor = UIColor(hue: hue, saturation: saturation, brightness: min(1.0, max(0.0, value + delta)), alpha: 1.0)
-            return Int32(bitPattern: newColor.rgb)
+    public var color: UIColor {
+        let color: UIColor
+        if self.value < 0.5 {
+            color = self.baseColor.color.interpolateTo(self.baseColor.edgeColors.0, fraction: 0.5 - self.value)!
+        } else if self.value > 0.5 {
+            color = self.baseColor.color.interpolateTo(self.baseColor.edgeColors.1, fraction: self.value - 0.5)!
         } else {
-            return self.baseColor.colorValue
+            color = self.baseColor.color
         }
+        return color
     }
 }
 

@@ -6,7 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 
-private let titleFont = Font.regular(14.0)
+private let titleFont = Font.semibold(14.0)
 
 final class ChatOverlayNavigationBar: ASDisplayNode {
     private let theme: PresentationTheme

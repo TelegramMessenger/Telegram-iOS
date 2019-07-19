@@ -401,10 +401,7 @@ func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Ac
         guard let contentNode = contentNode else {
             return
         }
-        var updatedLink = contentNode.link
-        if !updatedLink.hasPrefix("http") && !updatedLink.hasPrefix("https") {
-            updatedLink = "http://\(updatedLink)"
-        }
+        let updatedLink = explicitUrl(contentNode.link)
         if !updatedLink.isEmpty && isValidUrl(updatedLink) {
             dismissImpl?(true)
             apply(updatedLink)

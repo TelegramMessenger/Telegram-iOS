@@ -37,7 +37,7 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
     })?.stretchableImage(withLeftCapWidth: 15, topCapHeight: 15)
 }
 
-private func generateThemeIconImage(theme: PresentationThemeReference, accentColor: Int32?) -> UIImage {
+private func generateThemeIconImage(theme: PresentationThemeReference, accentColor: UIColor?) -> UIImage {
     return generateImage(CGSize(width: 98.0, height: 62.0), rotatedContext: { size, context in
         guard case let .builtin(theme) = theme else {
             return
@@ -45,48 +45,33 @@ private func generateThemeIconImage(theme: PresentationThemeReference, accentCol
         let bounds = CGRect(origin: CGPoint(), size: size)
         
         let background: UIColor
-        let incomingBubble: UIColor
-        let outgoingBubble: UIColor
+        let incomingFill: UIColor
+        let outgoingFill: UIColor
         switch theme {
             case .dayClassic:
                 background = UIColor(rgb: 0xd6e2ee)
-                incomingBubble = UIColor(rgb: 0xffffff)
-                outgoingBubble = UIColor(rgb: 0xe1ffc7)
+                incomingFill = UIColor(rgb: 0xffffff)
+                outgoingFill = UIColor(rgb: 0xe1ffc7)
             case .day:
                 background = .white
-                incomingBubble = UIColor(rgb: 0xd5dde6)
-                if let accentColor = accentColor {
-                    outgoingBubble = UIColor(rgb: UInt32(bitPattern: accentColor))
-                } else {
-                    outgoingBubble = UIColor(rgb: 0x007aff)
-                }
-            case .nightGrayscale:
+                incomingFill = UIColor(rgb: 0xd5dde6)
+                outgoingFill = accentColor ?? UIColor(rgb: 0x007aff)
+            case .night:
                 background = UIColor(rgb: 0x000000)
-                incomingBubble = UIColor(rgb: 0x1f1f1f)
-                if let accentColorValue = accentColor {
-                    let accentColor = UIColor(rgb: UInt32(bitPattern: accentColorValue))
-                    outgoingBubble = accentColor
-                } else {
-                    outgoingBubble = UIColor(rgb: 0x313131)
-                }
+                incomingFill = UIColor(rgb: 0x1f1f1f)
+                outgoingFill = accentColor ?? UIColor(rgb: 0x007aff)
             case .nightAccent:
-                if let accentColorValue = accentColor {
-                    let accentColor = UIColor(rgb: UInt32(bitPattern: accentColorValue))
-                    background = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
-                    incomingBubble = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
-                    outgoingBubble = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
-                } else {
-                    background = UIColor(rgb: 0x18222d)
-                    incomingBubble = UIColor(rgb: 0x32475e)
-                    outgoingBubble = UIColor(rgb: 0x3d6a97)
-                }
+                let accentColor = accentColor ?? UIColor(rgb: 0x007aff)
+                background = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+                incomingFill = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
+                outgoingFill = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
         }
             
         context.setFillColor(background.cgColor)
         context.fill(bounds)
         
-        let incoming = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: incomingBubble)
-        let outgoing = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: outgoingBubble)
+        let incoming = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: incomingFill)
+        let outgoing = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: outgoingFill)
         
         context.translateBy(x: bounds.width / 2.0, y: bounds.height / 2.0)
         context.scaleBy(x: 1.0, y: -1.0)
@@ -184,8 +169,6 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         
         super.init()
         
-        self.allowsGroupOpacity = true
-        
         self.addSubnode(self.iconNode)
         self.addSubnode(self.overlayNode)
         self.addSubnode(self.textNode)
@@ -224,8 +207,8 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
 }
 
 
-private let textFont = Font.regular(11.0)
-private let selectedTextFont = Font.bold(11.0)
+private let textFont = Font.regular(12.0)
+private let selectedTextFont = Font.bold(12.0)
 
 class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
@@ -375,7 +358,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                                     name = item.strings.Appearance_ThemeCarouselClassic
                                 case .day:
                                     name = item.strings.Appearance_ThemeCarouselDay
-                                case .nightGrayscale:
+                                case .night:
                                     name = "Night" //item.strings.Appearance_ThemeCarouselNight
                                 case .nightAccent:
                                     name = "Tinted Night" //item.strings.Appearance_ThemeCarouselNightBlue
@@ -418,13 +401,18 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     let previousBaseColor = strongSelf.colorSlider.baseColor
-                    let newBaseColor = UIColor(rgb: UInt32(bitPattern: item.currentColor?.baseColor.colorValue ?? 0))
+                    let newBaseColor = item.currentColor?.baseColor ?? .blue
                     strongSelf.colorSlider.baseColor = newBaseColor
                     if previousBaseColor != newBaseColor {
                         strongSelf.colorSlider.value = item.currentColor?.value ?? 0.5
                     }
                     
-                    transition.updateAlpha(node: strongSelf.scrollNode, alpha: item.displayColorSlider ? 0.0 : 1.0)
+                    strongSelf.scrollNode.allowsGroupOpacity = true
+                    transition.updateAlpha(node: strongSelf.scrollNode, alpha: item.displayColorSlider ? 0.0 : 1.0, completion: { [weak self] finished in
+                        if let strongSelf = self, finished {
+                            strongSelf.scrollNode.allowsGroupOpacity = false
+                        }
+                    })
                     transition.updateAlpha(node: strongSelf.colorSlider, alpha: item.displayColorSlider ? 1.0 : 0.0)
                 }
             })

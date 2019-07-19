@@ -178,7 +178,7 @@ final class ThemeGridController: ViewController {
                                     switch theme {
                                         case .day:
                                             fallbackWallpaper = .color(0xffffff)
-                                        case .nightGrayscale:
+                                        case .night:
                                             fallbackWallpaper = .color(0x000000)
                                         case .nightAccent:
                                             fallbackWallpaper = .color(0x18222d)
@@ -251,7 +251,7 @@ final class ThemeGridController: ViewController {
                                             switch theme {
                                                 case .day:
                                                     wallpaper = .color(0xffffff)
-                                                case .nightGrayscale:
+                                                case .night:
                                                     wallpaper = .color(0x000000)
                                                 case .nightAccent:
                                                     wallpaper = .color(0x18222d)

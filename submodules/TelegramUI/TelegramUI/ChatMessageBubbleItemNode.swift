@@ -561,27 +561,26 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
         
         var authorNameString: String?
-        let authorIsAdmin: Bool
+        var authorRank: CachedChannelAdminRank?
         var authorIsChannel: Bool = false
         switch content {
             case let .message(message, _, _, attributes):
                 if let peer = message.peers[message.id.peerId] as? TelegramChannel {
                     if case .broadcast = peer.info {
-                        authorIsAdmin = false
                     } else {
                         if isCrosspostFromChannel, let sourceReference = sourceReference, let _ = firstMessage.peers[sourceReference.messageId.peerId] as? TelegramChannel {
                             authorIsChannel = true
                         }
-                        authorIsAdmin = attributes.isAdmin
+                        authorRank = attributes.rank
                     }
                 } else {
                     if isCrosspostFromChannel, let _ = firstMessage.forwardInfo?.source as? TelegramChannel {
                         authorIsChannel = true
                     }
-                    authorIsAdmin = attributes.isAdmin
+                    authorRank = attributes.rank
                 }
             case .group:
-                authorIsAdmin = false
+                break
         }
         var inlineBotNameString: String?
         var replyMessage: Message?
@@ -745,7 +744,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             if let rawAuthorNameColor = authorNameColor {
                 var dimColors = false
                 switch item.presentationData.theme.theme.name {
-                    case .builtin(.nightAccent), .builtin(.nightGrayscale):
+                    case .builtin(.nightAccent), .builtin(.night):
                         dimColors = true
                     default:
                         break
@@ -862,8 +861,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 
                 let attributedString: NSAttributedString
                 var adminBadgeString: NSAttributedString?
-                if authorIsAdmin {
-                    adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Conversation_Admin)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
+                if let authorRank = authorRank {
+                    let string: String
+                    switch authorRank {
+                        case .owner:
+                            string = item.presentationData.strings.Conversation_Owner
+                        case .admin:
+                            string = item.presentationData.strings.Conversation_Admin
+                        case let .custom(rank):
+                            string = rank
+                    }
+                    adminBadgeString = NSAttributedString(string: " \(string)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                 } else if authorIsChannel {
                     adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Channel_Status)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                 }

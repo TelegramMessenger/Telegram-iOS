@@ -151,7 +151,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
     case passwordEntry(hint: String, number: String?, code: String?, suggestReset: Bool, syncContacts: Bool)
     case passwordRecovery(hint: String, number: String?, code: String?, emailPattern: String, syncContacts: Bool)
     case awaitingAccountReset(protectedUntil: Int32, number: String?, syncContacts: Bool)
-    case signUp(number: String, codeHash: String, code: String, firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?, syncContacts: Bool)
+    case signUp(number: String, codeHash: String, firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?, syncContacts: Bool)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -172,7 +172,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
             case UnauthorizedAccountStateContentsValue.awaitingAccountReset.rawValue:
                 self = .awaitingAccountReset(protectedUntil: decoder.decodeInt32ForKey("protectedUntil", orElse: 0), number: decoder.decodeOptionalStringForKey("number"), syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.signUp.rawValue:
-                self = .signUp(number: decoder.decodeStringForKey("n", orElse: ""), codeHash: decoder.decodeStringForKey("h", orElse: ""), code: decoder.decodeStringForKey("c", orElse: ""), firstName: decoder.decodeStringForKey("f", orElse: ""), lastName: decoder.decodeStringForKey("l", orElse: ""), termsOfService: decoder.decodeObjectForKey("tos", decoder: { UnauthorizedAccountTermsOfService(decoder: $0) }) as? UnauthorizedAccountTermsOfService, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
+                self = .signUp(number: decoder.decodeStringForKey("n", orElse: ""), codeHash: decoder.decodeStringForKey("h", orElse: ""), firstName: decoder.decodeStringForKey("f", orElse: ""), lastName: decoder.decodeStringForKey("l", orElse: ""), termsOfService: decoder.decodeObjectForKey("tos", decoder: { UnauthorizedAccountTermsOfService(decoder: $0) }) as? UnauthorizedAccountTermsOfService, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             default:
                 assertionFailure()
                 self = .empty
@@ -242,11 +242,10 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                     encoder.encodeNil(forKey: "number")
                 }
                 encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")
-            case let .signUp(number, codeHash, code, firstName, lastName, termsOfService, syncContacts):
+            case let .signUp(number, codeHash, firstName, lastName, termsOfService, syncContacts):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.signUp.rawValue, forKey: "v")
                 encoder.encodeString(number, forKey: "n")
                 encoder.encodeString(codeHash, forKey: "h")
-                encoder.encodeString(code, forKey: "c")
                 encoder.encodeString(firstName, forKey: "f")
                 encoder.encodeString(lastName, forKey: "l")
                 if let termsOfService = termsOfService {
@@ -314,8 +313,8 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
-            case let .signUp(number, codeHash, code, firstName, lastName, termsOfService, syncContacts):
-                if case .signUp(number, codeHash, code, firstName, lastName, termsOfService, syncContacts) = rhs {
+            case let .signUp(number, codeHash, firstName, lastName, termsOfService, syncContacts):
+                if case .signUp(number, codeHash, firstName, lastName, termsOfService, syncContacts) = rhs {
                     return true
                 } else {
                     return false

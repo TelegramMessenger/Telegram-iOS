@@ -47,9 +47,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         var groupFlags = TelegramGroupFlags()
         var role: TelegramGroupRole = .member
         if (flags & (1 << 0)) != 0 {
-            role = .creator
+            role = .creator(rank: nil)
         } else if let adminRights = adminRights {
-            role = .admin(TelegramChatAdminRights(apiAdminRights: adminRights))
+            role = .admin(TelegramChatAdminRights(apiAdminRights: adminRights), rank: nil)
         }
         if (flags & (1 << 5)) != 0 {
             groupFlags.insert(.deactivated)
