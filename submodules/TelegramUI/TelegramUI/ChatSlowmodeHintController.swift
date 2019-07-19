@@ -3,23 +3,27 @@ import Display
 import TelegramPresentationData
 import SwiftSignalKit
 
-private func timeoutValue(value: Int32) -> String {
-    let timestamp = Int32(Date().timeIntervalSince1970)
-    let seconds = max(0, value - timestamp)
-    return stringForDuration(seconds)
+private func timeoutValue(strings: PresentationStrings, slowmodeState: ChatSlowmodeState) -> String {
+    switch slowmodeState.variant {
+    case .pendingMessages:
+        return strings.Chat_SlowmodeTooltipPending
+    case let .timestamp(untilTimestamp):
+        let timestamp = Int32(Date().timeIntervalSince1970)
+        let seconds = max(0, untilTimestamp - timestamp)
+        return strings.Chat_SlowmodeTooltip(stringForDuration(seconds)).0
+    }
 }
 
 final class ChatSlowmodeHintController: TooltipController {
     private let strings: PresentationStrings
-    private let activeUntilTimestamp: Int32
+    private let slowmodeState: ChatSlowmodeState
     
     private var timer: SwiftSignalKit.Timer?
     
-    init(strings: PresentationStrings, activeUntilTimestamp: Int32) {
+    init(strings: PresentationStrings, slowmodeState: ChatSlowmodeState) {
         self.strings = strings
-        self.activeUntilTimestamp = activeUntilTimestamp
-        let text = strings.Chat_SlowmodeTooltip(timeoutValue(value: activeUntilTimestamp)).0
-        super.init(content: .text(text), timeout: 2.0, dismissByTapOutside: true)
+        self.slowmodeState = slowmodeState
+        super.init(content: .text(timeoutValue(strings: strings, slowmodeState: slowmodeState)), timeout: 2.0, dismissByTapOutside: true)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -37,8 +41,7 @@ final class ChatSlowmodeHintController: TooltipController {
             guard let strongSelf = self else {
                 return
             }
-            let text = strongSelf.strings.Chat_SlowmodeTooltip(timeoutValue(value: strongSelf.activeUntilTimestamp)).0
-            strongSelf.updateContent(.text(text), animated: false, extendTimer: false)
+            strongSelf.updateContent(.text(timeoutValue(strings: strongSelf.strings, slowmodeState: strongSelf.slowmodeState)), animated: false, extendTimer: false)
         }, queue: .mainQueue())
         self.timer = timer
         timer.start()

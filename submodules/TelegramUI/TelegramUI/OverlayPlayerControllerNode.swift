@@ -66,7 +66,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }, toggleMessagesSelection: { _, _ in
         }, sendMessage: { _ in
         }, sendSticker: { _, _, _, _ in
-        }, sendGif: { _ in
+        }, sendGif: { _, _, _ in
         }, requestMessageActionCallback: { _, _, _ in
         }, requestMessageActionUrlAuth: { _, _, _ in
         }, activateSwitchInline: { _, _ in

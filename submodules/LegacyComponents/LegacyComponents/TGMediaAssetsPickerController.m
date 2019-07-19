@@ -362,7 +362,7 @@
 
     TGMediaSelectionContext *selectionContext = ((TGMediaAssetsController *)self.navigationController).selectionContext;
     if (UIAccessibilityIsVoiceOverRunning() && selectionContext != nil) {
-        [selectionContext toggleItemSelection:asset];
+        [selectionContext toggleItemSelection:asset success:nil];
         return;
     }
     

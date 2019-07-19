@@ -4477,3 +4477,7 @@ Any member of this group will be able to see messages in the channel.";
 "GroupInfo.Permissions.SlowmodeHeader" = "SLOWMODE";
 
 "Chat.SlowmodeTooltip" = "Slowmode is enabled. You can send\nyour next message in %@.";
+"Chat.SlowmodeTooltipPending" = "Slowmode is enabled. You can't send more than one message at once.";
+"Chat.AttachmentLimitExceeded" = "Slowmode is enabled. You can't select more items.";
+"Chat.AttachmentMultipleFilesDisabled" = "Slowmode is enabled. You can't send multiple files at once.";
+"Chat.AttachmentMultipleForwardDisabled" = "Slowmode is enabled. You can't forward multiple messages at once.";

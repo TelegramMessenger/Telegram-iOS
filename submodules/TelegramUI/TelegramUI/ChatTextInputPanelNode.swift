@@ -199,6 +199,7 @@ enum ChatTextInputPanelPasteData {
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var textPlaceholderNode: ImmediateTextNode
     var contextPlaceholderNode: TextNode?
+    var slowmodePlaceholderNode: ChatTextInputSlowmodePlaceholderNode?
     let textInputContainer: ASDisplayNode
     var textInputNode: EditableTextNode?
     
@@ -605,7 +606,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         var isSlowmodeActive = false
-        if interfaceState.slowmodeActiveUntilTimestamp != nil {
+        if interfaceState.slowmodeState != nil {
             isSlowmodeActive = true
             isMediaEnabled = false
         }
@@ -1039,7 +1040,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
-        if let contextPlaceholder = interfaceState.inputTextPanelState.contextPlaceholder {
+        if interfaceState.slowmodeState == nil, let contextPlaceholder = interfaceState.inputTextPanelState.contextPlaceholder {
             let placeholderLayout = TextNode.asyncLayout(self.contextPlaceholderNode)
             let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: contextPlaceholder, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let contextPlaceholderNode = placeholderApply()
@@ -1058,18 +1059,40 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let _ = placeholderApply()
             
             contextPlaceholderNode.frame = CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + audioRecordingItemsVerticalOffset + UIScreenPixel), size: placeholderSize.size)
-            
-            self.textPlaceholderNode.isHidden = true
         } else if let contextPlaceholderNode = self.contextPlaceholderNode {
             self.contextPlaceholderNode = nil
             contextPlaceholderNode.removeFromSupernode()
             self.textPlaceholderNode.alpha = 1.0
-            
-            var hasText = false
-            if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
-                hasText = true
+        }
+        
+        if let slowmodeState = interfaceState.slowmodeState {
+            let slowmodePlaceholderNode: ChatTextInputSlowmodePlaceholderNode
+            if let current = self.slowmodePlaceholderNode {
+                slowmodePlaceholderNode = current
+            } else {
+                slowmodePlaceholderNode = ChatTextInputSlowmodePlaceholderNode(theme: interfaceState.theme)
+                self.slowmodePlaceholderNode = slowmodePlaceholderNode
+                self.insertSubnode(slowmodePlaceholderNode, aboveSubnode: self.textPlaceholderNode)
             }
-            self.textPlaceholderNode.isHidden = hasText
+            let placeholderFrame = CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + audioRecordingItemsVerticalOffset + UIScreenPixel), size: CGSize(width: width - leftInset - rightInset - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: 30.0))
+            slowmodePlaceholderNode.updateState(slowmodeState)
+            slowmodePlaceholderNode.frame = placeholderFrame
+            slowmodePlaceholderNode.updateLayout(size: placeholderFrame.size)
+        } else if let slowmodePlaceholderNode = self.slowmodePlaceholderNode {
+            self.slowmodePlaceholderNode = nil
+            slowmodePlaceholderNode.removeFromSupernode()
+        }
+        
+        var inputHasText = false
+        if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
+            inputHasText = true
+        }
+        
+        if interfaceState.slowmodeState != nil || interfaceState.inputTextPanelState.contextPlaceholder != nil {
+            self.textPlaceholderNode.isHidden = true
+            self.slowmodePlaceholderNode?.isHidden = inputHasText
+        } else {
+            self.textPlaceholderNode.isHidden = inputHasText
         }
         
         transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + audioRecordingItemsVerticalOffset + UIScreenPixel), size: self.textPlaceholderNode.frame.size))
@@ -1179,6 +1202,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if !self.actionButtons.sendButton.alpha.isZero {
                 self.actionButtons.sendButton.alpha = 0.0
+                self.actionButtons.sendButtonRadialStatusNode?.alpha = 0.0
                 self.actionButtons.updateAccessibility()
                 if animated {
                     self.actionButtons.animatingSendButton = true
@@ -1189,6 +1213,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         }
                     })
                     self.actionButtons.sendButton.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
+                    self.actionButtons.sendButtonRadialStatusNode?.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
+                   
+                   self.actionButtons.sendButtonRadialStatusNode?.alpha = 0.0
+                    self.actionButtons.sendButtonRadialStatusNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 }
             }
             if self.searchLayoutClearButton.alpha.isZero {
@@ -1213,19 +1241,24 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 hideMicButton = true
                 if self.actionButtons.sendButton.alpha.isZero {
                     self.actionButtons.sendButton.alpha = 1.0
+                    self.actionButtons.sendButtonRadialStatusNode?.alpha = 1.0
                     self.actionButtons.updateAccessibility()
                     if animated {
                         self.actionButtons.sendButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        self.actionButtons.sendButtonRadialStatusNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                         if animateWithBounce {
                             self.actionButtons.sendButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+                            self.actionButtons.sendButtonRadialStatusNode?.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
                         } else {
                             self.actionButtons.sendButton.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
+                            self.actionButtons.sendButtonRadialStatusNode?.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
                         }
                     }
                 }
             } else {
                 if !self.actionButtons.sendButton.alpha.isZero {
                     self.actionButtons.sendButton.alpha = 0.0
+                    self.actionButtons.sendButtonRadialStatusNode?.alpha = 0.0
                     self.actionButtons.updateAccessibility()
                     if animated {
                         self.actionButtons.animatingSendButton = true
@@ -1235,6 +1268,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                                 strongSelf.applyUpdateSendButtonIcon()
                             }
                         })
+                        self.actionButtons.sendButtonRadialStatusNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                     }
                 }
             }

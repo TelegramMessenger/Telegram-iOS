@@ -152,8 +152,8 @@ public final class PendingMessageManager {
     
     private let queue = Queue()
     
-    private let _hasPendingMessages = ValuePromise<Bool>(false, ignoreRepeated: true)
-    public var hasPendingMessages: Signal<Bool, NoError> {
+    private let _hasPendingMessages = ValuePromise<Set<PeerId>>(Set(), ignoreRepeated: true)
+    public var hasPendingMessages: Signal<Set<PeerId>, NoError> {
         return self._hasPendingMessages.get()
     }
     
@@ -252,7 +252,12 @@ public final class PendingMessageManager {
                 })
             }
             
-            self._hasPendingMessages.set(!self.pendingMessageIds.isEmpty)
+            var peersWithPendingMessages = Set<PeerId>()
+            for id in self.pendingMessageIds {
+                peersWithPendingMessages.insert(id.peerId)
+            }
+            
+            self._hasPendingMessages.set(peersWithPendingMessages)
         }
     }
     

@@ -292,7 +292,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if let _ = effectivePresentationInterfaceState.interfaceState.editMessage {
                     strongSelf.interfaceInteraction?.editMessage()
                 } else {
-                    if let _ = effectivePresentationInterfaceState.slowmodeActiveUntilTimestamp {
+                    if let _ = effectivePresentationInterfaceState.slowmodeState {
                         if let rect = strongSelf.frameForInputActionButton() {
                             strongSelf.interfaceInteraction?.displaySlowmodeTooltip(strongSelf, rect)
                         }
@@ -1615,6 +1615,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
             return textInputPanelNode.frameForInputActionButton().flatMap {
                 return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
+            }
+        } else if let recordingPreviewPanelNode = self.inputPanelNode as? ChatRecordingPreviewInputPanelNode {
+            return recordingPreviewPanelNode.frameForInputActionButton().flatMap {
+                return $0.offsetBy(dx: recordingPreviewPanelNode.frame.minX, dy: recordingPreviewPanelNode.frame.minY)
             }
         }
         return nil

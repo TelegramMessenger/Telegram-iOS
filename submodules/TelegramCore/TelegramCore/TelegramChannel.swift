@@ -435,4 +435,18 @@ public extension TelegramChannel {
         }
         return nil
     }
+    
+    public var isRestrictedBySlowmode: Bool {
+        if self.flags.contains(.isCreator) {
+            return false
+        }
+        if let adminRights = self.adminRights, !adminRights.flags.isEmpty {
+            return false
+        }
+        if case let .group(group) = self.info {
+            return group.flags.contains(.slowModeEnabled)
+        } else {
+            return false
+        }
+    }
 }

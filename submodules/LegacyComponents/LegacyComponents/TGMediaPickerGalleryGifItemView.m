@@ -185,7 +185,7 @@
         TGMediaSelectionContext *selectionContext = ((id<TGModernGallerySelectableItem>)self.item).selectionContext;
         id<TGMediaSelectableItem> item = ((id<TGModernGallerySelectableItem>)self.item).selectableMediaItem;
         
-        [selectionContext toggleItemSelection:item animated:true sender:nil];
+        [selectionContext toggleItemSelection:item animated:true sender:nil success:nil];
     }
     else
     {

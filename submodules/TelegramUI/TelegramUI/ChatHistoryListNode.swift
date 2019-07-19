@@ -675,10 +675,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                                 let _ = applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: messageIndex).start()
                         }
-                        /*case let .group(groupId):
-                            let _ = context.account.postbox.transaction({ transaction -> Void in
-                                transaction.applyGroupFeedInteractiveReadMaxIndex(groupId: groupId, index: messageIndex)
-                            }).start()*/
                     }
                 }
             }

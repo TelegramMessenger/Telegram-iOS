@@ -659,8 +659,13 @@
     
     [_checkButton setSelected:!_checkButton.selected animated:true];
     
-    if (selectableItem != nil)
+    if (selectableItem != nil) {
         [_selectionContext setItem:selectableItem selected:_checkButton.selected animated:animated sender:_checkButton];
+        bool value = [_selectionContext isItemSelected:selectableItem];
+        if (value != _checkButton.selected) {
+            [_checkButton setSelected:value animated:true];
+        }
+    }
 }
 
 - (void)photoCounterButtonPressed
