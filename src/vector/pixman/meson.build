@@ -1,7 +1,7 @@
 
 source_file = ['vregion.cpp']
 
-if host_machine.cpu_family() == 'arm' or host_machine.cpu_family() == 'aarch64'
+if host_machine.cpu_family() == 'arm'
   source_file += 'pixman-arm-neon-asm.S'
 endif
 
