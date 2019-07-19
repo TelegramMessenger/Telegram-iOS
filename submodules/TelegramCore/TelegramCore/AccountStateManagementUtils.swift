@@ -2723,11 +2723,22 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         var peerIds:Set<PeerId> = Set()
         var cachedDatas:[PeerId : CachedChannelData] = [:]
         for (peerId, timeout) in slowModeLastMessageTimeouts {
-            var cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData ?? CachedChannelData()
-            if let slowModeTimeout = cachedData.slowModeTimeout {
-                cachedData = cachedData.withUpdatedSlowModeValidUntilTimestamp(slowModeValidUntilTimestamp: timeout + slowModeTimeout)
-                peerIds.insert(peerId)
-                cachedDatas[peerId] = cachedData
+            if let peer = transaction.getPeer(peerId) {
+                if let peer = peer as? TelegramChannel {
+                    inner: switch peer.info {
+                    case let .group(info):
+                        if info.flags.contains(.slowModeEnabled), peer.adminRights == nil && !peer.flags.contains(.isCreator)  {
+                            var cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData ?? CachedChannelData()
+                            if let slowModeTimeout = cachedData.slowModeTimeout {
+                                cachedData = cachedData.withUpdatedSlowModeValidUntilTimestamp(slowModeValidUntilTimestamp: timeout + slowModeTimeout)
+                                peerIds.insert(peerId)
+                                cachedDatas[peerId] = cachedData
+                            }
+                        }
+                    default:
+                        break inner
+                    }
+                }
             }
         }
         transaction.updatePeerCachedData(peerIds: peerIds, update: { peerId, current in
