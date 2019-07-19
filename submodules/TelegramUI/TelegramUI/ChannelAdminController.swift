@@ -36,6 +36,7 @@ private enum ChannelAdminEntryStableId: Hashable {
     case info
     case rankTitle
     case rank
+    case rankInfo
     case rightsTitle
     case right(TelegramChatAdminRightsFlags)
     case addAdminsInfo
@@ -50,14 +51,16 @@ private enum ChannelAdminEntryStableId: Hashable {
                 return 1
             case .rank:
                 return 2
-            case .rightsTitle:
+            case .rankInfo:
                 return 3
-            case .addAdminsInfo:
+            case .rightsTitle:
                 return 4
-            case .dismiss:
+            case .addAdminsInfo:
                 return 5
-            case .transfer:
+            case .dismiss:
                 return 6
+            case .transfer:
+                return 7
             case let .right(flags):
                 return flags.rawValue.hashValue
         }
@@ -79,6 +82,12 @@ private enum ChannelAdminEntryStableId: Hashable {
                 }
             case .rank:
                 if case .rank = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .rankInfo:
+                if case .rankInfo = rhs {
                     return true
                 } else {
                     return false
@@ -121,6 +130,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
     case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, TelegramUserPresence?)
     case rankTitle(PresentationTheme, String, Int32, Int32)
     case rank(PresentationTheme, String, String)
+    case rankInfo(PresentationTheme, String)
     case rightsTitle(PresentationTheme, String)
     case rightItem(PresentationTheme, Int, String, TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags, Bool, Bool)
     case addAdminsInfo(PresentationTheme, String)
@@ -131,7 +141,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
         switch self {
             case .info:
                 return ChannelAdminSection.info.rawValue
-            case .rankTitle, .rank:
+            case .rankTitle, .rank, .rankInfo:
                 return ChannelAdminSection.rank.rawValue
             case .rightsTitle, .rightItem, .addAdminsInfo:
                 return ChannelAdminSection.rights.rawValue
@@ -150,6 +160,8 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 return .rankTitle
             case .rank:
                 return .rank
+            case .rankInfo:
+                return .rankInfo
             case .rightsTitle:
                 return .rightsTitle
             case let .rightItem(_, _, _, right, _, _, _):
@@ -195,6 +207,12 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 }
             case let .rank(lhsTheme, lhsPlaceholder, lhsValue):
                 if case let .rank(rhsTheme, rhsPlaceholder, rhsValue) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .rankInfo(lhsTheme, lhsText):
+                if case let .rankInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -276,16 +294,23 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
+            case .rankInfo:
+                switch rhs {
+                    case .info, .rankTitle, .rank, .rankInfo:
+                        return false
+                    default:
+                        return true
+                }
             case .rightsTitle:
                 switch rhs {
-                    case .info, .rankTitle, .rank, .rightsTitle:
+                    case .info, .rankTitle, .rank, .rankInfo, .rightsTitle:
                         return false
                     default:
                         return true
                 }
             case let .rightItem(_, lhsIndex, _, _, _, _, _):
                 switch rhs {
-                    case .info, .rightsTitle:
+                    case .info, .rankTitle, .rank, .rankInfo, .rightsTitle:
                         return false
                     case let .rightItem(_, rhsIndex, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -294,14 +319,14 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 }
             case .addAdminsInfo:
                 switch rhs {
-                    case .info, .rightsTitle, .rightItem, .addAdminsInfo:
+                    case .info, .rankTitle, .rank, .rankInfo, .rightsTitle, .rightItem, .addAdminsInfo:
                         return false
                     default:
                         return true
                 }
             case .transfer:
                 switch rhs {
-                    case .info, .rightsTitle, .rightItem, .addAdminsInfo, .transfer:
+                    case .info, .rankTitle, .rank, .rankInfo, .rightsTitle, .rightItem, .addAdminsInfo, .transfer:
                         return false
                     default:
                         return true
@@ -325,6 +350,8 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                     arguments.updateRank(text, updatedText)
                 }, action: {
                 })
+            case let .rankInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .rightsTitle(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .rightItem(theme, _, text, right, flags, value, enabled):
@@ -482,6 +509,8 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             isCreator = true
         }
         
+        let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
+        
         let currentRank: String?
         if let updatedRank = state.updatedRank {
             currentRank = updatedRank
@@ -493,6 +522,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
         
         entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), Int32(currentRank?.count ?? 0), rankMaxLength))
         entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? ""))
+        entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).0))
         
         if isCreator {
         } else {

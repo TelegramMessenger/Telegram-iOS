@@ -184,7 +184,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))) {
+    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))) {
         let currentFile = self.file
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
@@ -194,7 +194,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let currentMessage = self.message
         
-        return { context, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize in
+        return { context, presentationData, message, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, constrainedSize in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                 var updatedStatusSignal: Signal<(FileMediaResourceStatus, MediaResourceStatus?), NoError>?
@@ -298,7 +298,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 for attribute in file.attributes {
                     if case let .Audio(voice, duration, title, performer, waveform) = attribute {
                         isAudio = true
-                        if let currentUpdatedStatusSignal = updatedStatusSignal {
+                        
+                        if let forcedResourceStatus =  forcedResourceStatus {
+                            updatedStatusSignal = .single((forcedResourceStatus, nil))
+                        } else if let currentUpdatedStatusSignal = updatedStatusSignal {
                             updatedStatusSignal = currentUpdatedStatusSignal
                             |> map { status, _ in
                                 switch status.mediaStatus {
@@ -856,12 +859,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.fetchingCompactTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingCompactSize)
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> ChatMessageInteractiveFileNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> ChatMessageInteractiveFileNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { context, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize in
+        return { context, presentationData, message, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, constrainedSize in
             var fileNode: ChatMessageInteractiveFileNode
-            var fileLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void)))
+            var fileLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 fileNode = node
@@ -871,7 +874,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 fileLayout = fileNode.asyncLayout()
             }
             
-            let (initialWidth, continueLayout) = fileLayout(context, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize)
+            let (initialWidth, continueLayout) = fileLayout(context, presentationData, message, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize)
