@@ -207,6 +207,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var mediaRecordingAccessibilityArea: AccessibilityAreaNode?
     
     let attachmentButton: HighlightableButtonNode
+    let attachmentButtonDisabledNode: HighlightableButtonNode
     let searchLayoutClearButton: HighlightableButton
     let searchLayoutProgressView: UIImageView
     var audioRecordingInfoContainerNode: ASDisplayNode?
@@ -334,6 +335,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.attachmentButton = HighlightableButtonNode()
         self.attachmentButton.accessibilityLabel = "Send media"
         self.attachmentButton.isAccessibilityElement = true
+        self.attachmentButtonDisabledNode = HighlightableButtonNode()
         self.searchLayoutClearButton = HighlightableButton()
         self.searchLayoutProgressView = UIImageView(image: searchLayoutProgressImage)
         self.searchLayoutProgressView.isHidden = true
@@ -343,7 +345,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         super.init()
         
         self.attachmentButton.addTarget(self, action: #selector(self.attachmentButtonPressed), forControlEvents: .touchUpInside)
+        self.attachmentButtonDisabledNode.addTarget(self, action: #selector(self.attachmentButtonPressed), forControlEvents: .touchUpInside)
         self.addSubnode(self.attachmentButton)
+        self.addSubnode(self.attachmentButtonDisabledNode)
         
         self.addSubnode(self.actionButtons)
         
@@ -600,8 +604,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 isMediaEnabled = false
             }
         }
+        var isSlowmodeActive = false
+        if interfaceState.slowmodeActiveUntilTimestamp != nil {
+            isSlowmodeActive = true
+            isMediaEnabled = false
+        }
         transition.updateAlpha(layer: self.attachmentButton.layer, alpha: isMediaEnabled ? 1.0 : 0.5)
         self.attachmentButton.isEnabled = isMediaEnabled
+        self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive
         
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
@@ -959,6 +969,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         transition.updateFrame(layer: self.attachmentButton.layer, frame: CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - minimalHeight + audioRecordingItemsVerticalOffset), size: CGSize(width: 40.0, height: minimalHeight)))
+        transition.updateFrame(node: self.attachmentButtonDisabledNode, frame: self.attachmentButton.frame)
         
         var composeButtonsOffset: CGFloat = 0.0
         var textInputBackgroundWidthOffset: CGFloat = 0.0
@@ -1621,9 +1632,20 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         return nil
     }
     
+    func frameForAttachmentButton() -> CGRect? {
+        if !self.attachmentButton.alpha.isZero {
+            return self.attachmentButton.frame.insetBy(dx: 0.0, dy: 6.0).offsetBy(dx: 2.0, dy: 0.0)
+        }
+        return nil
+    }
+    
     func frameForInputActionButton() -> CGRect? {
-        if !self.actionButtons.micButton.alpha.isZero {
-            return self.actionButtons.frame.insetBy(dx: 0.0, dy: 6.0).offsetBy(dx: 2.0, dy: 0.0)
+        if !self.actionButtons.alpha.isZero {
+            if self.actionButtons.micButton.alpha.isZero {
+                return self.actionButtons.frame.insetBy(dx: 0.0, dy: 6.0).offsetBy(dx: 4.0, dy: 0.0)
+            } else {
+                return self.actionButtons.frame.insetBy(dx: 0.0, dy: 6.0).offsetBy(dx: 2.0, dy: 0.0)
+            }
         }
         return nil
     }

@@ -324,6 +324,8 @@
 		D0208ADC1FA346A4001F0D5F /* RaiseToListen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0208ADB1FA346A4001F0D5F /* RaiseToListen.swift */; };
 		D020A9DA1FEAE675008C66F7 /* OverlayPlayerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D020A9D91FEAE675008C66F7 /* OverlayPlayerController.swift */; };
 		D020A9DC1FEAE6E7008C66F7 /* OverlayPlayerControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D020A9DB1FEAE6E7008C66F7 /* OverlayPlayerControllerNode.swift */; };
+		D025402322E1C92D00AC0195 /* ChatSlowmodeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D025402222E1C92D00AC0195 /* ChatSlowmodeItem.swift */; };
+		D025402522E1E00100AC0195 /* ChatSlowmodeHintController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D025402422E1E00100AC0195 /* ChatSlowmodeHintController.swift */; };
 		D025A4231F79344500563950 /* FetchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D025A4221F79344500563950 /* FetchManager.swift */; };
 		D025A4261F79428E00563950 /* FetchManagerLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D025A4251F79428E00563950 /* FetchManagerLocation.swift */; };
 		D02660941F34CE5C000E2DC5 /* LegacyLocationVenueIconDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02660931F34CE5C000E2DC5 /* LegacyLocationVenueIconDataSource.swift */; };
@@ -1633,6 +1635,8 @@
 		D023ED2D1DDB5BEC00BD496D /* LegacyAttachmentMenu.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyAttachmentMenu.swift; sourceTree = "<group>"; };
 		D023ED2F1DDB605D00BD496D /* LegacyEmptyController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyEmptyController.swift; sourceTree = "<group>"; };
 		D023ED311DDB60CF00BD496D /* LegacyNavigationController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyNavigationController.swift; sourceTree = "<group>"; };
+		D025402222E1C92D00AC0195 /* ChatSlowmodeItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSlowmodeItem.swift; sourceTree = "<group>"; };
+		D025402422E1E00100AC0195 /* ChatSlowmodeHintController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSlowmodeHintController.swift; sourceTree = "<group>"; };
 		D025A4221F79344500563950 /* FetchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchManager.swift; sourceTree = "<group>"; };
 		D025A4251F79428E00563950 /* FetchManagerLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchManagerLocation.swift; sourceTree = "<group>"; };
 		D02660931F34CE5C000E2DC5 /* LegacyLocationVenueIconDataSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyLocationVenueIconDataSource.swift; sourceTree = "<group>"; };
@@ -4450,6 +4454,7 @@
 				D050A463229C052A0044F11A /* ChannelDiscussionGroupSetupSearchItem.swift */,
 				D050A465229C06460044F11A /* ChannelDiscussionGroupSearchContainerNode.swift */,
 				090E778922A9F23C00CD99F5 /* ChannelOwnershipTransferController.swift */,
+				D025402222E1C92D00AC0195 /* ChatSlowmodeItem.swift */,
 			);
 			name = "Peer Info";
 			sourceTree = "<group>";
@@ -4703,6 +4708,7 @@
 				D01848E721A03BDA00B6DEBD /* ChatSearchState.swift */,
 				D06350AD2229A7F800FA2B32 /* InChatPrefetchManager.swift */,
 				0921F60D228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift */,
+				D025402422E1E00100AC0195 /* ChatSlowmodeHintController.swift */,
 			);
 			name = Chat;
 			sourceTree = "<group>";
@@ -5449,6 +5455,7 @@
 				D01C06BC1FBBB0D8001561AB /* CheckNode.swift in Sources */,
 				D0EC6CDF1EB9F58800EBF1C3 /* PresentationResourceKey.swift in Sources */,
 				D0EC6CE01EB9F58800EBF1C3 /* PresentationResourcesRootController.swift in Sources */,
+				D025402322E1C92D00AC0195 /* ChatSlowmodeItem.swift in Sources */,
 				D0EC6CE11EB9F58800EBF1C3 /* PresentationResourcesItemList.swift in Sources */,
 				09DD88F121BE1090000766BC /* CallRatingController.swift in Sources */,
 				D05D8B3F2192FC6E0064586F /* LocalizationListControllerNode.swift in Sources */,
@@ -5606,6 +5613,7 @@
 				D0EC6D2D1EB9F58800EBF1C3 /* TapLongTapOrDoubleTapGestureRecognizer.swift in Sources */,
 				09C3466D2167D63A00B76780 /* Accessibility.swift in Sources */,
 				D0FA08C020483F9600DD23FC /* ExtractVideoData.swift in Sources */,
+				D025402522E1E00100AC0195 /* ChatSlowmodeHintController.swift in Sources */,
 				D008177D22B46B7E008A895F /* TGContactModel.m in Sources */,
 				D0BE30492061C0F500FBE6D8 /* SecureIdAuthHeaderNode.swift in Sources */,
 				D0EC6D301EB9F58800EBF1C3 /* RadialProgressNode.swift in Sources */,

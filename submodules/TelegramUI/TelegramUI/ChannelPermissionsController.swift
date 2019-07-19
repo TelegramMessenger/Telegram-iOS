@@ -18,8 +18,9 @@ private final class ChannelPermissionsControllerArguments {
     let openPeerInfo: (Peer) -> Void
     let openKicked: () -> Void
     let presentRestrictedPermissionAlert: (TelegramChatBannedRightsFlags) -> Void
+    let updateSlowmode: (Int32) -> Void
     
-    init(account: Account, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void) {
+    init(account: Account, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, updateSlowmode: @escaping (Int32) -> Void) {
         self.account = account
         self.updatePermission = updatePermission
         self.addPeer = addPeer
@@ -29,11 +30,13 @@ private final class ChannelPermissionsControllerArguments {
         self.openPeerInfo = openPeerInfo
         self.openKicked = openKicked
         self.presentRestrictedPermissionAlert = presentRestrictedPermissionAlert
+        self.updateSlowmode = updateSlowmode
     }
 }
 
 private enum ChannelPermissionsSection: Int32 {
     case permissions
+    case slowmode
     case kicked
     case exceptions
 }
@@ -46,6 +49,8 @@ private enum ChannelPermissionsEntryStableId: Hashable {
 private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case permissionsHeader(PresentationTheme, String)
     case permission(PresentationTheme, Int, String, Bool, TelegramChatBannedRightsFlags, Bool?)
+    case slowmodeHeader(PresentationTheme, String)
+    case slowmode(PresentationTheme, PresentationStrings, Int32)
     case kicked(PresentationTheme, String, String)
     case exceptionsHeader(PresentationTheme, String)
     case add(PresentationTheme, String)
@@ -55,6 +60,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
         switch self {
             case .permissionsHeader, .permission:
                 return ChannelPermissionsSection.permissions.rawValue
+            case .slowmodeHeader, .slowmode:
+                return ChannelPermissionsSection.slowmode.rawValue
             case .kicked:
                 return ChannelPermissionsSection.kicked.rawValue
             case .exceptionsHeader, .add, .peerItem:
@@ -68,6 +75,10 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return .index(0)
             case let .permission(_, index, _, _, _, _):
                 return .index(1 + index)
+            case .slowmodeHeader:
+                return .index(998)
+            case .slowmode:
+                return .index(999)
             case .kicked:
                 return .index(1000)
             case .exceptionsHeader:
@@ -89,6 +100,18 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 }
             case let .permission(theme, index, title, value, rights, enabled):
                 if case .permission(theme, index, title, value, rights, enabled) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .slowmodeHeader(lhsTheme, lhsValue):
+                if case let .slowmodeHeader(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .slowmode(lhsTheme, lhsStrings, lhsValue):
+                if case let .slowmode(rhsTheme, rhsStrings, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -185,6 +208,12 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                         arguments.presentRestrictedPermissionAlert(rights)
                     }
                 })
+            case let .slowmodeHeader(theme, value):
+                return ItemListSectionHeaderItem(theme: theme, text: value, sectionId: self.section)
+            case let .slowmode(theme, strings, value):
+                return ChatSlowmodeItem(theme: theme, strings: strings, value: value, enabled: true, sectionId: self.section, updated: { value in
+                    arguments.updateSlowmode(value)
+                })
             case let .kicked(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openKicked()
@@ -234,6 +263,7 @@ private struct ChannelPermissionsControllerState: Equatable {
     var removingPeerId: PeerId?
     var searchingMembers: Bool = false
     var modifiedRightsFlags: TelegramChatBannedRightsFlags?
+    var modifiedSlowmodeTimeout: Int32?
 }
 
 func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags) -> String {
@@ -363,6 +393,9 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
             rightIndex += 1
         }
         
+        entries.append(.slowmodeHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeHeader))
+        entries.append(.slowmode(presentationData.theme, presentationData.strings, state.modifiedSlowmodeTimeout ?? (cachedData.slowModeTimeout ?? 0)))
+        
         entries.append(.kicked(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Removed, cachedData.participantsSummary.kickedCount.flatMap({ $0 == 0 ? "" : "\($0)" }) ?? ""))
         entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))
         entries.append(.add(presentationData.theme, presentationData.strings.GroupInfo_Permissions_AddException))
@@ -386,6 +419,8 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
             entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights, true))
             rightIndex += 1
         }
+        
+        entries.append(.slowmode(presentationData.theme, presentationData.strings, 0))
         
         entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))
         entries.append(.add(presentationData.theme, presentationData.strings.GroupInfo_Permissions_AddException))
@@ -585,6 +620,30 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
             text = presentationData.strings.GroupPermission_NotAvailableInPublicGroups
         }
         presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+    }, updateSlowmode: { value in
+        let _ = (peerView.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { view in
+            if let channel = view.peers[peerId] as? TelegramChannel, let _ = view.cachedData as? CachedChannelData {
+                updateState { state in
+                    var state = state
+                    state.modifiedSlowmodeTimeout = value
+                    return state
+                }
+                let state = stateValue.with { $0 }
+                if let modifiedSlowmodeTimeout = state.modifiedSlowmodeTimeout {
+                    updateDefaultRightsDisposable.set(updateChannelSlowModeInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: peerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value).start())
+                }
+            } else if let group = view.peers[peerId] as? TelegramGroup, let _ = view.cachedData as? CachedGroupData {
+                updateState { state in
+                    var state = state
+                    state.modifiedSlowmodeTimeout = value
+                    return state
+                }
+                    /*updateDefaultRightsDisposable.set((updateDefaultChannelMemberBannedRights(account: context.account, peerId: peerId, rights: TelegramChatBannedRights(flags: completeRights(modifiedRightsFlags), untilDate: Int32.max))
+                        |> deliverOnMainQueue).start())*/
+            }
+        })
     })
     
     let previousParticipants = Atomic<[RenderedChannelParticipant]?>(value: nil)

@@ -181,7 +181,7 @@ public class PeerMediaCollectionController: TelegramController {
                     strongSelf.updateInterfaceState(animated: true, { $0.withToggledSelectedMessages(ids, value: value) })
                 }
             }, sendMessage: { _ in
-            },sendSticker: { _, _ in
+            },sendSticker: { _, _, _, _ in
             }, sendGif: { _ in
             }, requestMessageActionCallback: { _, _, _ in
             }, requestMessageActionUrlAuth: { _, _, _ in
@@ -350,7 +350,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _ in
+        }, sendSticker: { _, _, _ in
         }, unblockPeer: {
         }, pinMessage: { _ in
         }, unpinMessage: {
@@ -374,6 +374,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, unarchiveChat: {
         }, openLinkEditing: {
         }, reportPeerIrrelevantGeoLocation: {
+        }, displaySlowmodeTooltip: { _, _ in
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

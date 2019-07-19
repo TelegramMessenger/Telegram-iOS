@@ -292,6 +292,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if let _ = effectivePresentationInterfaceState.interfaceState.editMessage {
                     strongSelf.interfaceInteraction?.editMessage()
                 } else {
+                    if let _ = effectivePresentationInterfaceState.slowmodeActiveUntilTimestamp {
+                        if let rect = strongSelf.frameForInputActionButton() {
+                            strongSelf.interfaceInteraction?.displaySlowmodeTooltip(strongSelf, rect)
+                        }
+                        return
+                    }
+                    
                     let timestamp = CACurrentMediaTime()
                     if lastSendTimestamp + 0.15 > timestamp {
                         return
@@ -1607,6 +1614,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     func frameForInputActionButton() -> CGRect? {
         if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
             return textInputPanelNode.frameForInputActionButton().flatMap {
+                return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
+            }
+        }
+        return nil
+    }
+    
+    func frameForAttachmentButton() -> CGRect? {
+        if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
+            return textInputPanelNode.frameForAttachmentButton().flatMap {
                 return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
             }
         }
