@@ -52,7 +52,7 @@ if get_option('test') == true
 endif
 
 
-if host_machine.system() != 'windows'
+if get_option('cmake') == true and host_machine.system() != 'windows'
     cmake_bin = find_program('cmake', required: false)
     if cmake_bin.found()
         cmake = import('cmake')

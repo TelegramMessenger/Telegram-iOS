@@ -33,8 +33,10 @@ option('example',
    value: true,
    description: 'Enable building examples')
 
-option('text',
-   type: 'boolean',
-   value: false,
-   description: 'Enable text module')
+option('cmake',
+  type: 'boolean',
+  value: false,
+  description: 'Enable Generating  CMake config files')
+
+
 
