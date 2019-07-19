@@ -89,6 +89,25 @@ private func isParticipantMember(_ participant: ChannelParticipant, infoIsMember
     }
 }
 
+private extension CachedChannelAdminRank {
+    init(participant: ChannelParticipant) {
+        switch participant {
+            case let .creator(_, rank):
+                if let rank = rank {
+                    self = .custom(rank)
+                } else {
+                    self = .owner
+                }
+            case let .member(_, _, _, _, rank):
+                if let rank = rank {
+                    self = .custom(rank)
+                } else {
+                    self = .admin
+                }
+        }
+    }
+}
+
 private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategoryListContext {
     private let postbox: Postbox
     private let network: Network
@@ -100,10 +119,18 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
         didSet {
             self.listStatePromise.set(.single(self.listStateValue))
             if case .admins(nil) = self.category, case .ready = self.listStateValue.loadingState {
-                let ids: Set<PeerId> = Set(self.listStateValue.list.map { $0.peer.id })
-                let previousIds: Set<PeerId> = Set(oldValue.list.map { $0.peer.id })
-                if ids != previousIds {
-                    let _ = updateCachedChannelAdminIds(postbox: self.postbox, peerId: self.peerId, ids: ids).start()
+                let ranks: [PeerId: CachedChannelAdminRank] = self.listStateValue.list.reduce([:]) { (ranks, participant) in
+                    var ranks = ranks
+                    ranks[participant.participant.peerId] = CachedChannelAdminRank(participant: participant.participant)
+                    return ranks
+                }
+                let previousRanks: [PeerId: CachedChannelAdminRank] = oldValue.list.reduce([:]) { (ranks, participant) in
+                    var ranks = ranks
+                    ranks[participant.participant.peerId] = CachedChannelAdminRank(participant: participant.participant)
+                    return ranks
+                }
+                if ranks != previousRanks {
+                    let _ = updateCachedChannelAdminRanks(postbox: self.postbox, peerId: self.peerId, ranks: ranks).start()
                 }
             }
         }

@@ -93,8 +93,8 @@ private enum GroupInfoEntryTag {
 
 private enum GroupInfoMemberStatus: Equatable {
     case member
-    case admin(String?)
-    case owner(String?)
+    case admin(rank: String?)
+    case owner(rank: String?)
 }
 
 private enum GroupEntryStableId: Hashable, Equatable {
@@ -530,10 +530,10 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case let .member(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, peer, participant, presence, memberStatus, editing, actions, enabled, selectable):
                 let label: String?
                 switch memberStatus {
-                    case .owner:
-                        label = strings.GroupInfo_LabelOwner
-                    case .admin:
-                        label = strings.GroupInfo_LabelAdmin
+                    case let .owner(rank):
+                        label = rank ?? strings.GroupInfo_LabelOwner
+                    case let .admin(rank):
+                        label = rank ?? strings.GroupInfo_LabelAdmin
                     case .member:
                         label = nil
                 }
@@ -1014,10 +1014,10 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 switch sortedParticipants[i] {
                     case .creator:
                         participant = .creator(id: sortedParticipants[i].peerId, rank: nil)
-                        memberStatus = .owner(nil)
+                        memberStatus = .owner(rank: nil)
                     case .admin:
                         participant = .member(id: sortedParticipants[i].peerId, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: nil, rank: nil)
-                        memberStatus = .admin(nil)
+                        memberStatus = .admin(rank: nil)
                     case .member:
                         participant = .member(id: sortedParticipants[i].peerId, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil)
                         memberStatus = .member
@@ -1133,10 +1133,10 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             let memberStatus: GroupInfoMemberStatus
             switch participant.participant {
                 case let .creator(_, rank):
-                    memberStatus = .owner(rank)
+                    memberStatus = .owner(rank: rank)
                 case let .member(_, _, adminInfo, _, rank):
                     if adminInfo != nil {
-                        memberStatus = .admin(rank)
+                        memberStatus = .admin(rank: rank)
                     } else {
                         memberStatus = .member
                     }

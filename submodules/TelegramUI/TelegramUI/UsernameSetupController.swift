@@ -253,11 +253,11 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
             }
             
             checkAddressNameDisposable.set((validateAddressNameInteractive(account: context.account, domain: .account, name: text)
-                |> deliverOnMainQueue).start(next: { result in
-                    updateState { state in
-                        return state.withUpdatedAddressNameValidationStatus(result)
-                    }
-                }))
+            |> deliverOnMainQueue).start(next: { result in
+                updateState { state in
+                    return state.withUpdatedAddressNameValidationStatus(result)
+                }
+            }))
         }
     }, shareLink: {
         let _ = (context.account.postbox.loadedPeerWithId(context.account.peerId)

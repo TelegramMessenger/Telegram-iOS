@@ -373,4 +373,8 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     @objc internal func textFieldDidBeginEditing(_ textField: UITextField) {
         self.item?.receivedFocus?()
     }
+    
+    func animateError() {
+        self.textNode.layer.addShakeAnimation()
+    }
 }

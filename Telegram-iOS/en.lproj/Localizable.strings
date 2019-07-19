@@ -4498,3 +4498,9 @@ Any member of this group will be able to see messages in the channel.";
 
 "Appearance.ThemePreview.ChatList.8.Name" = "What";
 "Appearance.ThemePreview.ChatList.8.Text" = "Hola!";
+
+"Conversation.Owner" = "owner";
+
+"Group.EditAdmin.RankTitle" = "ROLE";
+"Group.EditAdmin.RankOwnerPlaceholder" = "owner";
+"Group.EditAdmin.RankAdminPlaceholder" = "admin";
