@@ -54,8 +54,12 @@ int FFMpegCodecIdMPEG4 = AV_CODEC_ID_MPEG4;
     return result >= 0;
 }
 
-- (void)seekFrameForStreamIndex:(int32_t)streamIndex pts:(int64_t)pts {
-    av_seek_frame(_impl, streamIndex, pts, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+- (void)seekFrameForStreamIndex:(int32_t)streamIndex pts:(int64_t)pts positionOnKeyframe:(bool)positionOnKeyframe {
+    int options = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
+    if (!positionOnKeyframe) {
+        options |= AVSEEK_FLAG_ANY;
+    }
+    av_seek_frame(_impl, streamIndex, pts, options);
 }
 
 - (bool)readFrameIntoPacket:(FFMpegPacket *)packet {

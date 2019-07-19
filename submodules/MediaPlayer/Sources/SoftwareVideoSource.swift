@@ -174,7 +174,7 @@ public final class SoftwareVideoSource {
                 } else {
                     if let avFormatContext = self.avFormatContext, let videoStream = self.videoStream {
                         endOfStream = true
-                        avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0)
+                        avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0, positionOnKeyframe: true)
                     } else {
                         endOfStream = true
                         break
@@ -228,7 +228,7 @@ public final class SoftwareVideoSource {
     public func seek(timestamp: Double) {
         if let stream = self.videoStream, let avFormatContext = self.avFormatContext {
             let pts = CMTimeMakeWithSeconds(timestamp, preferredTimescale: stream.timebase.timescale)
-            avFormatContext.seekFrame(forStreamIndex: Int32(stream.index), pts: pts.value)
+            avFormatContext.seekFrame(forStreamIndex: Int32(stream.index), pts: pts.value, positionOnKeyframe: true)
             stream.decoder.reset()
         }
     }

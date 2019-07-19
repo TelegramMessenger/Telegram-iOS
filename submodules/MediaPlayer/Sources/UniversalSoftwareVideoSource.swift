@@ -6,6 +6,7 @@ import FFMpeg
 
 private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<UniversalSoftwareVideoSourceImpl>.fromOpaque(userData!).takeUnretainedValue()
+    
     let data: Signal<Data, NoError>
     
     let resourceSize: Int = context.size
@@ -217,17 +218,8 @@ private final class UniversalSoftwareVideoSourceImpl {
                     frames.append(frame)
                 }
             } else {
-                if endOfStream {
-                    break
-                } else {
-                    if let avFormatContext = self.avFormatContext, let videoStream = self.videoStream {
-                        endOfStream = true
-                        avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0)
-                    } else {
-                        endOfStream = true
-                        break
-                    }
-                }
+                endOfStream = true
+                break
             }
         }
         
@@ -240,31 +232,33 @@ private final class UniversalSoftwareVideoSourceImpl {
         return (frames.first, endOfStream)
     }
     
-    func readImage() -> (UIImage?, CGFloat, CGFloat, Bool) {
-        if let videoStream = self.videoStream {
-            self.currentNumberOfReads = 0
-            self.currentReadBytes = 0
-            for i in 0 ..< 10 {
-                let (decodableFrame, loop) = self.readDecodableFrame()
-                if let decodableFrame = decodableFrame {
-                    if let renderedFrame = videoStream.decoder.render(frame: decodableFrame) {
-                        print("Frame rendered in \(self.currentNumberOfReads) reads, \(self.currentReadBytes) bytes, total frames read: \(i + 1)")
-                        return (renderedFrame, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
-                    }
-                }
-            }
-            return (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), true)
-        } else {
-            return (nil, 0.0, 1.0, false)
+    private func seek(timestamp: Double) {
+        if let stream = self.videoStream, let avFormatContext = self.avFormatContext {
+            let pts = CMTimeMakeWithSeconds(timestamp, preferredTimescale: stream.timebase.timescale)
+            avFormatContext.seekFrame(forStreamIndex: Int32(stream.index), pts: pts.value, positionOnKeyframe: true)
+            stream.decoder.reset()
         }
     }
     
-    public func seek(timestamp: Double) {
-        if let stream = self.videoStream, let avFormatContext = self.avFormatContext {
-            let pts = CMTimeMakeWithSeconds(timestamp, preferredTimescale: stream.timebase.timescale)
-            avFormatContext.seekFrame(forStreamIndex: Int32(stream.index), pts: pts.value)
-            stream.decoder.reset()
+    func readImage(at timestamp: Double) -> (UIImage?, CGFloat, CGFloat, Bool) {
+        guard let videoStream = self.videoStream, let _ = self.avFormatContext else {
+            return (nil, 0.0, 1.0, false)
         }
+        
+        self.seek(timestamp: timestamp)
+    
+        self.currentNumberOfReads = 0
+        self.currentReadBytes = 0
+        for i in 0 ..< 10 {
+            let (decodableFrame, loop) = self.readDecodableFrame()
+            if let decodableFrame = decodableFrame {
+                if let renderedFrame = videoStream.decoder.render(frame: decodableFrame) {
+                    print("Frame rendered in \(self.currentNumberOfReads) reads, \(self.currentReadBytes) bytes, total frames read: \(i + 1)")
+                    return (renderedFrame, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+                }
+            }
+        }
+        return (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), true)
     }
 }
 
@@ -339,8 +333,7 @@ private final class UniversalSoftwareVideoSourceThread: NSObject {
         source.requiredDataIsNotLocallyAvailable = params.requiredDataIsNotLocallyAvailable
         source.state.set(.generatingFrame)
         let startTime = CFAbsoluteTimeGetCurrent()
-        source.seek(timestamp: params.timestamp)
-        let image = source.readImage().0
+        let image = source.readImage(at: params.timestamp).0
         params.completion(image)
         source.state.set(.ready)
         print("take frame: \(CFAbsoluteTimeGetCurrent() - startTime) s")

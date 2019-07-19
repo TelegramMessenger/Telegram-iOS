@@ -551,7 +551,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             for stream in [initializedState.videoStream, initializedState.audioStream] {
                 if let stream = stream {
                     let pts = CMTimeMakeWithSeconds(timestamp, preferredTimescale: stream.timebase.timescale)
-                    initializedState.avFormatContext.seekFrame(forStreamIndex: Int32(stream.index), pts: pts.value)
+                    initializedState.avFormatContext.seekFrame(forStreamIndex: Int32(stream.index), pts: pts.value, positionOnKeyframe: true)
                     break
                 }
             }
