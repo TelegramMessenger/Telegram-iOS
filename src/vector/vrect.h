@@ -29,7 +29,7 @@ public:
     VRect() = default;
     VRect(int x, int y, int w, int h):x1(x),y1(y),x2(x+w),y2(y+h){}
     explicit VRect(VPoint pt, VSize sz):VRect(pt.x(), pt.y(), sz.width(), sz.height()){}
-    explicit VRect(const VRectF &r);
+    operator VRectF() const;
     V_CONSTEXPR bool empty() const {return x1 >= x2 || y1 >= y2;}
     V_CONSTEXPR int left() const {return x1;}
     V_CONSTEXPR int top() const {return y1;}
@@ -120,8 +120,9 @@ public:
     VRectF(double x, double y, double w, double h):
         x1(float(x)),y1(float(y)),
         x2(float(x+w)),y2(float(y+h)){}
-
-    explicit VRectF(const VRect &r):VRectF(r.x(), r.y(), r.width(), r.height()){}
+    operator VRect() const {
+        return {int(left()), int(right()), int(width()), int(height())};
+    }
 
     V_CONSTEXPR bool  empty() const {return x1 >= x2 || y1 >= y2;}
     V_CONSTEXPR float left() const {return x1;}
@@ -157,8 +158,11 @@ private:
     float y2{0};
 };
 
-inline VRect::VRect(const VRectF &r):x1(int(r.left())),y1(int(r.top())),
-                                     x2(int(r.right())),y2(int(r.bottom())){}
+inline VRect::operator VRectF() const
+{
+       return {double(left()), double(right()), double(width()), double(height())};
+}
+
 V_END_NAMESPACE
 
 #endif  // VRECT_H
