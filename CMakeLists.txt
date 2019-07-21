@@ -7,10 +7,14 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE MinSizeRel)
 endif()
 
-add_definitions(-DLOT_BUILD)
+if (NOT DEFINED BUILD_SHARED_LIBS)
+    # Keep the previous behavior of the build system, consistent with Meson.
+    set(BUILD_SHARED_LIBS ON)
+endif()
 
 #declare target
-add_library( rlottie SHARED  "" )
+add_library( rlottie )
+set_target_properties( rlottie PROPERTIES DEFINE_SYMBOL LOT_BUILD )
 
 #declare version of the target
 set(player_version_major 0)
@@ -64,10 +68,10 @@ target_link_libraries(rlottie
                         "${CMAKE_THREAD_LIBS_INIT}"
                      )
 
-# for dlopen, dlsym and dlclose dependancy
-target_link_libraries(rlottie
-                    PRIVATE
-                    ${CMAKE_DL_LIBS})
+if (LOTTIE_MODULE)
+    # for dlopen, dlsym and dlclose dependancy
+    target_link_libraries(rlottie PRIVATE ${CMAKE_DL_LIBS})
+endif()
 
 if(APPLE)
     target_link_libraries(rlottie
