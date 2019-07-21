@@ -117,10 +117,9 @@ class VRectF {
 public:
     VRectF() = default;
 
-    explicit VRectF(float x, float y, float w, float h):x1(x),y1(y),x2(x+w),y2(y+h){}
-
-    explicit VRectF(int x, int y, int w, int h):x1(float(x)),y1(float(y)),
-                                       x2(float(x+w)),y2(float(y+h)){}
+    VRectF(double x, double y, double w, double h):
+        x1(float(x)),y1(float(y)),
+        x2(float(x+w)),y2(float(y+h)){}
 
     explicit VRectF(const VRect &r):VRectF(r.x(), r.y(), r.width(), r.height()){}
 
