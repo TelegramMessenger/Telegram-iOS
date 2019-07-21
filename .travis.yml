@@ -1,35 +1,19 @@
-dist: trusty
-
 sudo: false
 
-language: cpp
+os:
+  - linux
 
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - g++-5
+language:
+  - cpp
 
-matrix:
-  include:
-    - os: linux
-      compiler: clang
-      env:
-        build_type=release
-        options=""
-        - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++"
-        
-    - os: linux
-      compiler: gcc
-      env:
-        build_type=release
-        options=""
-        - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+services:
+  - docker
 
 before_install:
-    - eval "${MATRIX_EVAL}"
-    
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker pull smohantty/rlottie-ci-setup; fi
+
 script:
-  - cmake -DLIB_INSTALL_DIR=/usr/lib .
-  - cmake --build . -- -j2
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo FROM smohantty/rlottie-ci-setup > Dockerfile; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo ADD . /root >> Dockerfile; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker build -t withgit .; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker run withgit /bin/sh -c "cd /root && TRAVIS=true meson -Dtest=true builddir && ninja -C builddir test && ninja -C builddir install"; fi
