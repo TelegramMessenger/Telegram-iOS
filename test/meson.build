@@ -5,6 +5,7 @@ gtest_dep  = dependency('gtest')
 
 vector_test_sources = [
     'testsuite.cpp',
+    'test_vrect.cpp',
     'test_vpath.cpp',
     ]
 
@@ -33,8 +34,3 @@ animation_testsuite = executable('animationTestSuite',
                               )
 
 test('Animation Testsuite', animation_testsuite)
-
-executable('vectorTest',
-           'vectortest.cpp',
-           include_directories : inc,
-           dependencies : [rlottie_lib_dep])
