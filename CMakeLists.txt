@@ -24,6 +24,7 @@ add_library(rlottie::rlottie ALIAS rlottie)
 option(LOTTIE_MODULE "Enable LOTTIE MODULE SUPPORT" ON)
 option(LOTTIE_THREAD "Enable LOTTIE THREAD SUPPORT" ON)
 option(LOTTIE_CACHE "Enable LOTTIE CACHE SUPPORT" ON)
+option(LOTTIE_TEST "Build LOTTIE AUTOTESTS" OFF)
 
 CONFIGURE_FILE(${CMAKE_CURRENT_LIST_DIR}/cmake/config.h.in config.h)
 
@@ -86,6 +87,11 @@ endif (NOT LIB_INSTALL_DIR)
 add_subdirectory(inc)
 add_subdirectory(src)
 add_subdirectory(example)
+
+if (LOTTIE_TEST)
+    enable_testing()
+    add_subdirectory(test)
+endif()
 
 SET(PREFIX ${CMAKE_INSTALL_PREFIX})
 SET(EXEC_DIR ${PREFIX})
