@@ -21,45 +21,48 @@
 
 #include <cstring>
 #include <fstream>
-#include <unordered_map>
-using namespace std;
 
 #ifdef LOTTIE_CACHE_SUPPORT
 
-class LottieFileCache {
+#include <unordered_map>
+#include <mutex>
+
+class LottieModelCache {
 public:
-    static LottieFileCache &instance()
+    static LottieModelCache &instance()
     {
-        static LottieFileCache CACHE;
+        static LottieModelCache CACHE;
         return CACHE;
     }
     std::shared_ptr<LOTModel> find(const std::string &key)
     {
+        std::lock_guard<std::mutex> guard(mMutex);
+
         auto search = mHash.find(key);
-        if (search != mHash.end()) {
-            return search->second;
-        } else {
-            return nullptr;
-        }
+
+        return (search != mHash.end()) ? search->second : nullptr;
+
     }
     void add(const std::string &key, std::shared_ptr<LOTModel> value)
     {
+        std::lock_guard<std::mutex> guard(mMutex);
         mHash[key] = std::move(value);
     }
 
 private:
-    LottieFileCache() = default;
+    LottieModelCache() = default;
 
-    std::unordered_map<std::string, std::shared_ptr<LOTModel>> mHash;
+    std::unordered_map<std::string, std::shared_ptr<LOTModel>>  mHash;
+    std::mutex                                                  mMutex;
 };
 
 #else
 
-class LottieFileCache {
+class LottieModelCache {
 public:
-    static LottieFileCache &instance()
+    static LottieModelCache &instance()
     {
-        static LottieFileCache CACHE;
+        static LottieModelCache CACHE;
         return CACHE;
     }
     std::shared_ptr<LOTModel> find(const std::string &) { return nullptr; }
@@ -80,7 +83,7 @@ static std::string dirname(const std::string &path)
 
 bool LottieLoader::load(const std::string &path)
 {
-    mModel = LottieFileCache::instance().find(path);
+    mModel = LottieModelCache::instance().find(path);
     if (mModel) return true;
 
     std::ifstream f;
@@ -99,7 +102,7 @@ bool LottieLoader::load(const std::string &path)
 
         if (!mModel) return false;
 
-        LottieFileCache::instance().add(path, mModel);
+        LottieModelCache::instance().add(path, mModel);
 
         f.close();
     }
@@ -110,7 +113,7 @@ bool LottieLoader::load(const std::string &path)
 bool LottieLoader::loadFromData(std::string &&jsonData, const std::string &key,
                                 const std::string &resourcePath)
 {
-    mModel = LottieFileCache::instance().find(key);
+    mModel = LottieModelCache::instance().find(key);
     if (mModel) return true;
 
     LottieParser parser(const_cast<char *>(jsonData.c_str()),
@@ -119,7 +122,7 @@ bool LottieLoader::loadFromData(std::string &&jsonData, const std::string &key,
 
     if (!mModel) return false;
 
-    LottieFileCache::instance().add(key, mModel);
+    LottieModelCache::instance().add(key, mModel);
 
     return true;
 }
