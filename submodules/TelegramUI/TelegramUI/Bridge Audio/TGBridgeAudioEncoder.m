@@ -114,9 +114,9 @@ typedef enum {
     static ATQueue *queue = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
-                  {
-                      queue = [[ATQueue alloc] initWithName:@"org.telegram.opusAudioEncoderQueue"];
-                  });
+    {
+        queue = [[ATQueue alloc] initWithName:@"org.telegram.opusAudioEncoderQueue"];
+    });
     
     return queue;
 }
@@ -420,11 +420,11 @@ static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 100
     static ATQueue *queue = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
-                  {
-                      queue = [[ATQueue alloc] init];
-                      queue->_nativeQueue = dispatch_get_main_queue();
-                      queue->_isMainQueue = true;
-                  });
+    {
+        queue = [[ATQueue alloc] init];
+        queue->_nativeQueue = dispatch_get_main_queue();
+        queue->_isMainQueue = true;
+    });
     
     return queue;
 }
@@ -434,9 +434,9 @@ static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 100
     static ATQueue *queue = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
-                  {
-                      queue = [[ATQueue alloc] initWithNativeQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)];
-                  });
+    {
+        queue = [[ATQueue alloc] initWithNativeQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)];
+    });
     
     return queue;
 }
@@ -446,9 +446,9 @@ static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 100
     static ATQueue *queue = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
-                  {
-                      queue = [[ATQueue alloc] initWithNativeQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)];
-                  });
+    {
+        queue = [[ATQueue alloc] initWithNativeQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)];
+    });
     
     return queue;
 }

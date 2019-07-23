@@ -337,6 +337,13 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                 case let .admins(query):
                     if let updated = updated, (query == nil || updated.peer.indexName.matchesByTokens(query!)) {
                         if case let .member(_, _, adminInfo, _, _) = updated.participant, adminInfo == nil {
+                            loop: for i in 0 ..< list.count {
+                                if list[i].peer.id == updated.peer.id {
+                                    list.remove(at: i)
+                                    updatedList = true
+                                    break loop
+                                }
+                            }
                         } else {
                             var found = false
                             loop: for i in 0 ..< list.count {

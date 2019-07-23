@@ -22,6 +22,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let returnKeyType: UIReturnKeyType
     let spacing: CGFloat
     let clearButton: Bool
+    let enabled: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     let textUpdated: (String) -> Void
@@ -29,7 +30,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let receivedFocus: (() -> Void)?
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, processPaste: ((String) -> String)? = nil, receivedFocus: (() -> Void)? = nil, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, processPaste: ((String) -> String)? = nil, receivedFocus: (() -> Void)? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.text = text
@@ -38,6 +39,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.returnKeyType = returnKeyType
         self.spacing = spacing
         self.clearButton = clearButton
+        self.enabled = enabled
         self.tag = tag
         self.sectionId = sectionId
         self.textUpdated = textUpdated
@@ -313,6 +315,9 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                         strongSelf.textNode.textField.attributedPlaceholder = attributedPlaceholderText
                         strongSelf.textNode.textField.accessibilityHint = attributedPlaceholderText.string
                     }
+                    
+                    strongSelf.textNode.isUserInteractionEnabled = item.enabled
+                    strongSelf.textNode.alpha = item.enabled ? 1.0 : 0.4
                 }
             })
         }

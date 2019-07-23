@@ -14,13 +14,15 @@ private final class ChannelAdminControllerArguments {
     let transferOwnership: () -> Void
     let updateRank: (String, String) -> Void
     let dismissAdmin: () -> Void
+    let dismissInput: () -> Void
     
-    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, dismissAdmin: @escaping () -> Void) {
+    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void) {
         self.account = account
         self.toggleRight = toggleRight
         self.transferOwnership = transferOwnership
         self.updateRank = updateRank
         self.dismissAdmin = dismissAdmin
+        self.dismissInput = dismissInput
     }
 }
 
@@ -30,6 +32,18 @@ private enum ChannelAdminSection: Int32 {
     case rights
     case transfer
     case dismiss
+}
+
+private enum ChannelAdminEntryTag: ItemListItemTag {
+    case rank
+
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? ChannelAdminEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 private enum ChannelAdminEntryStableId: Hashable {
@@ -129,7 +143,7 @@ private enum ChannelAdminEntryStableId: Hashable {
 private enum ChannelAdminEntry: ItemListNodeEntry {
     case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, TelegramUserPresence?)
     case rankTitle(PresentationTheme, String, Int32, Int32)
-    case rank(PresentationTheme, String, String)
+    case rank(PresentationTheme, String, String, Bool)
     case rankInfo(PresentationTheme, String)
     case rightsTitle(PresentationTheme, String)
     case rightItem(PresentationTheme, Int, String, TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags, Bool, Bool)
@@ -205,8 +219,8 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .rank(lhsTheme, lhsPlaceholder, lhsValue):
-                if case let .rank(rhsTheme, rhsPlaceholder, rhsValue) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue {
+            case let .rank(lhsTheme, lhsPlaceholder, lhsValue, lhsEnabled):
+                if case let .rank(rhsTheme, rhsPlaceholder, rhsValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -343,12 +357,13 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 }, avatarTapped: {
                 })
             case let .rankTitle(theme, text, count, limit):
-                let accessoryText = ItemListSectionHeaderAccessoryText(value: "\(limit - count)", color: count > limit ? .destructive : .generic)
+                let accessoryText = count > 0 ? ItemListSectionHeaderAccessoryText(value: "\(limit - count)", color: count > limit ? .destructive : .generic) : nil
                 return ItemListSectionHeaderItem(theme: theme, text: text, accessoryText: accessoryText, sectionId: self.section)
-            case let .rank(theme, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: true), spacing: 0.0, clearButton: true, tag: nil, sectionId: self.section, textUpdated: { updatedText in
+            case let .rank(theme, placeholder, text, enabled):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: true), spacing: 0.0, clearButton: enabled, enabled: enabled, tag: ChannelAdminEntryTag.rank, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateRank(text, updatedText)
                 }, action: {
+                    arguments.dismissInput()
                 })
             case let .rankInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
@@ -509,20 +524,23 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             isCreator = true
         }
         
-        let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
-        
-        let currentRank: String?
-        if let updatedRank = state.updatedRank {
-            currentRank = updatedRank
-        } else if let initialParticipant = initialParticipant {
-            currentRank = initialParticipant.rank
-        } else {
-            currentRank = nil
+        if case .group = channel.info {
+            let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
+            
+            let currentRank: String?
+            if let updatedRank = state.updatedRank {
+                currentRank = updatedRank
+            } else if let initialParticipant = initialParticipant {
+                currentRank = initialParticipant.rank
+            } else {
+                currentRank = nil
+            }
+            
+            let enabled = !state.updating && (admin.id != accountPeerId || isCreator)
+            entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), enabled ? Int32(currentRank?.count ?? 0) : 0, rankMaxLength))
+            entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", enabled))
+            entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).0))
         }
-        
-        entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), Int32(currentRank?.count ?? 0), rankMaxLength))
-        entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? ""))
-        entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).0))
         
         if isCreator {
         } else {
@@ -635,8 +653,9 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             currentRank = nil
         }
         
-        entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), Int32(currentRank?.count ?? 0), rankMaxLength))
-        entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? ""))
+        let enabled = !state.updating && (admin.id != accountPeerId || isCreator)
+        entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), enabled ? Int32(currentRank?.count ?? 0) : 0, rankMaxLength))
+        entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", enabled))
         
         if isCreator {
         } else {
@@ -705,6 +724,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     actionsDisposable.add(transferOwnershipDisposable)
     
     var dismissImpl: (() -> Void)?
+    var dismissInputImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var errorImpl: (() -> Void)?
     
@@ -785,6 +805,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
             })
         ])])
         presentControllerImpl?(actionSheet, nil)
+    }, dismissInput: {
+        dismissInputImpl?()
     })
     
     let combinedView = context.account.postbox.combinedView(keys: [.peer(peerId: peerId, components: .all), .peer(peerId: adminId, components: .all)])
@@ -805,6 +827,12 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
             leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                 dismissImpl?()
             })
+        }
+        
+        var focusItemTag: ItemListItemTag?
+        var isCreator = false
+        if let initialParticipant = initialParticipant, case .creator = initialParticipant {
+            focusItemTag = ChannelAdminEntryTag.rank
         }
         
         var rightNavigationButton: ItemListNavigationButton?
@@ -1017,7 +1045,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_Management_LabelEditor), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
-        let listState = ItemListNodeState(entries: channelAdminControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelView: channelView, adminView: adminView, initialParticipant: initialParticipant), style: .blocks, emptyStateItem: nil, animateChanges: true)
+        let listState = ItemListNodeState(entries: channelAdminControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelView: channelView, adminView: adminView, initialParticipant: initialParticipant), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: nil, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     }
@@ -1027,7 +1055,11 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     
     let controller = ItemListController(context: context, state: signal)
     dismissImpl = { [weak controller] in
+        controller?.view.endEditing(true)
         controller?.dismiss()
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window(.root), with: presentationArguments)
