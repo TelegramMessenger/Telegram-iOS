@@ -56,7 +56,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     }
     
     func setDoneEnabled(_ enabled: Bool) {
-        self.doneButton.alpha = enabled ? 1.0 : 0.3
+        self.doneButton.alpha = enabled ? 1.0 : 0.4
         self.doneButton.isUserInteractionEnabled = enabled
     }
     

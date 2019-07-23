@@ -212,12 +212,14 @@ public final class ChatMessageItemAssociatedData: Equatable {
     let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     let isRecentActions: Bool
     let contactsPeerIds: Set<PeerId>
+    let forcedResourceStatus: FileMediaResourceStatus?
     
-    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set()) {
+    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set(), forcedResourceStatus: FileMediaResourceStatus? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
         self.contactsPeerIds = contactsPeerIds
+        self.forcedResourceStatus = forcedResourceStatus
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -231,6 +233,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.contactsPeerIds != rhs.contactsPeerIds {
+            return false
+        }
+        if lhs.forcedResourceStatus != rhs.forcedResourceStatus {
             return false
         }
         return true

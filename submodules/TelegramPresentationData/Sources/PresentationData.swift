@@ -259,19 +259,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
         }
         
         let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color ?? defaultDayAccentColor
-        switch effectiveTheme {
-            case let .builtin(reference):
-                switch reference {
-                    case .dayClassic:
-                        themeValue = defaultPresentationTheme
-                    case .day:
-                        themeValue = makeDefaultDayPresentationTheme(accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
-                    case .night:
-                        themeValue = makeDarkPresentationTheme(accentColor: effectiveAccentColor)
-                    case .nightAccent:
-                        themeValue = makeDarkAccentPresentationTheme(accentColor: effectiveAccentColor)
-                }
-        }
+        themeValue = makePresentationTheme(themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
         
         if effectiveTheme != themeSettings.theme {
             switch effectiveChatWallpaper {
@@ -536,20 +524,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         
                         let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color ?? defaultDayAccentColor
                         
-                        let themeValue: PresentationTheme
-                        switch effectiveTheme {
-                            case let .builtin(reference):
-                                switch reference {
-                                    case .dayClassic:
-                                        themeValue = makeDefaultDayPresentationTheme(serviceBackgroundColor: serviceBackgroundColor)
-                                    case .night:
-                                        themeValue = makeDarkPresentationTheme(accentColor: effectiveAccentColor)
-                                    case .nightAccent:
-                                        themeValue = makeDarkAccentPresentationTheme(accentColor: effectiveAccentColor)
-                                    case .day:
-                                        themeValue = makeDefaultDayPresentationTheme(accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor)
-                                }
-                        }
+                        let themeValue = makePresentationTheme(themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor)
                         
                         if effectiveTheme != themeSettings.theme && themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] == nil {
                             switch effectiveChatWallpaper {

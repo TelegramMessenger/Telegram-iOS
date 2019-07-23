@@ -92,7 +92,7 @@ private final class AccessoryItemIconButton: HighlightTrackingButton {
             case .keyboard:
                 return (PresentationResourcesChat.chatInputTextFieldKeyboardImage(theme), nil, 1.0, UIEdgeInsets())
             case let .stickers(enabled):
-                return (PresentationResourcesChat.chatInputTextFieldStickersImage(theme), nil, enabled ? 1.0 : 0.5, UIEdgeInsets())
+                return (PresentationResourcesChat.chatInputTextFieldStickersImage(theme), nil, enabled ? 1.0 : 0.4, UIEdgeInsets())
             case .inputButtons:
                 return (PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), nil, 1.0, UIEdgeInsets())
             case .commands:
@@ -610,7 +610,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             isSlowmodeActive = true
             isMediaEnabled = false
         }
-        transition.updateAlpha(layer: self.attachmentButton.layer, alpha: isMediaEnabled ? 1.0 : 0.5)
+        transition.updateAlpha(layer: self.attachmentButton.layer, alpha: isMediaEnabled ? 1.0 : 0.4)
         self.attachmentButton.isEnabled = isMediaEnabled
         self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive
         

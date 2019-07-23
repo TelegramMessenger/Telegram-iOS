@@ -172,7 +172,9 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                         } else {
                             adminInfo = nil
                         }
-                        updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil, rank: rank)
+                        updatedParticipant = .member(id: adminId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil, rank: rank)
+                    } else if let currentParticipant = currentParticipant, case .creator = currentParticipant {
+                        updatedParticipant = .creator(id: adminId, rank: rank)
                     } else {
                         let adminInfo: ChannelParticipantAdminInfo?
                         if !rights.flags.isEmpty {
@@ -180,7 +182,7 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                         } else {
                             adminInfo = nil
                         }
-                        updatedParticipant = ChannelParticipant.member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil, rank: rank)
+                        updatedParticipant = .member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil, rank: rank)
                     }
                     return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights.apiAdminRights, rank: rank ?? ""))
                     |> map { [$0] }

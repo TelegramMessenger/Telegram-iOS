@@ -1815,8 +1815,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }, associatedController: contextMenuController)
                 self.messageActionSheetController = (controller, stableId)
                 self.accessibilityElementsHidden = true
-                if let sheetActions = sheetActions, !sheetActions.isEmpty {
-                    self.controllerInteraction.presentGlobalOverlayController(controller, nil)
+                if let sheetActions = sheetActions, !sheetActions.isEmpty, let (layout, _) = self.validLayout {
+                    var isSlideOver = false
+                    if case .compact = layout.metrics.widthClass, case .regular = layout.metrics.heightClass {
+                        isSlideOver = true
+                    }
+                    if isSlideOver {
+                        self.controllerInteraction.presentController(controller, nil)
+                    } else {
+                        self.controllerInteraction.presentGlobalOverlayController(controller, nil)
+                    }
                 }
                 animateIn = true
             }
