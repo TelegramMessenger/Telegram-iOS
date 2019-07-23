@@ -68,7 +68,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     var presentInGlobalOverlay: ((ViewController, Any?) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
-    var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
+    var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -200,13 +200,15 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                             var menuItems: [PeekControllerMenuItem] = []
                             if let stickerPack = strongSelf.stickerPack, case let .result(info, _, _) = stickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                                 if strongSelf.sendSticker != nil {
-                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
+                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: { _, _ in
                                         if let strongSelf = self {
-                                            strongSelf.sendSticker?(.standalone(media: item.file), itemNode, itemNode.bounds)
+                                            return strongSelf.sendSticker?(.standalone(media: item.file), itemNode, itemNode.bounds) ?? false
+                                        } else {
+                                            return false
                                         }
                                     }))
                                 }
-                                menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
                                         if let strongSelf = self {
                                             if isStarred {
                                                 let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -214,8 +216,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                                                 let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                             }
                                         }
-                                    }))
-                                menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: {}))
+                                    return true
+                                }))
+                                menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { _, _ in return true }))
                             }
                             return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                         } else {

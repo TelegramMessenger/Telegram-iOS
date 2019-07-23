@@ -11,11 +11,11 @@ final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
     fileprivate let account: Account
     fileprivate let theme: PresentationTheme
     fileprivate let result: ChatContextResult
-    private let resultSelected: (ChatContextResult) -> Void
+    fileprivate let resultSelected: (ChatContextResult, ASDisplayNode, CGRect) -> Bool
     
     let selectable: Bool = true
     
-    public init(account: Account, theme: PresentationTheme, result: ChatContextResult, resultSelected: @escaping (ChatContextResult) -> Void) {
+    public init(account: Account, theme: PresentationTheme, result: ChatContextResult, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) {
         self.account = account
         self.theme = theme
         self.result = result
@@ -68,10 +68,6 @@ final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
             }
         }
     }
-    
-    func selected(listView: ListView) {
-        self.resultSelected(self.result)
-    }
 }
 
 private let titleFont = Font.medium(16.0)
@@ -95,6 +91,8 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
     private var resourceStatus: MediaResourceStatus?
 
     private var currentIconImageResource: TelegramMediaResource?
+    
+    private var item: VerticalListContextResultsChatInputPanelItem?
     
     init() {
         self.titleNode = TextNode()
@@ -267,6 +265,8 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             
             return (nodeLayout, { _ in
                 if let strongSelf = self {
+                    strongSelf.item = item
+                    
                     strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
                     strongSelf.topSeparatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
                     strongSelf.backgroundColor = item.theme.list.plainBackgroundColor
@@ -390,5 +390,12 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                 }
             }
         }
+    }
+    
+    override func selected() {
+        guard let item = self.item else {
+            return
+        }
+        item.resultSelected(item.result, self, self.bounds)
     }
 }

@@ -62,6 +62,7 @@ public enum AdminLogEventAction {
     case pollStopped(Message)
     case linkedPeerUpdated(previous: Peer?, updated: Peer?)
     case changeGeoLocation(previous: PeerGeoLocation?, updated: PeerGeoLocation?)
+    case updateSlowmode(previous: Int32?, updated: Int32?)
 }
 
 public enum ChannelAdminLogEventError {
@@ -219,7 +220,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                     case let .channelAdminLogEventActionChangeLocation(prevValue, newValue):
                                         action = .changeGeoLocation(previous: PeerGeoLocation(apiLocation: prevValue), updated: PeerGeoLocation(apiLocation: newValue))
                                     case let .channelAdminLogEventActionToggleSlowMode(prevValue, newValue):
-                                        break
+                                        action = .updateSlowmode(previous: prevValue == 0 ? nil : prevValue, updated: newValue == 0 ? nil : newValue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {

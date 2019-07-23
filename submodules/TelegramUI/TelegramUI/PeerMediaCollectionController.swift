@@ -181,8 +181,10 @@ public class PeerMediaCollectionController: TelegramController {
                     strongSelf.updateInterfaceState(animated: true, { $0.withToggledSelectedMessages(ids, value: value) })
                 }
             }, sendMessage: { _ in
-            },sendSticker: { _, _, _, _ in
+            }, sendSticker: { _, _, _, _ in
+                return false
             }, sendGif: { _, _, _ in
+                return false
             }, requestMessageActionCallback: { _, _, _ in
             }, requestMessageActionUrlAuth: { _, _, _ in
             }, activateSwitchInline: { _, _ in
@@ -336,7 +338,8 @@ public class PeerMediaCollectionController: TelegramController {
         }, navigateToChat: { _ in
         }, openPeerInfo: {
         }, togglePeerNotifications: {
-        }, sendContextResult: { _, _ in
+        }, sendContextResult: { _, _, _, _ in
+            return false
         }, sendBotCommand: { _, _ in
         }, sendBotStart: { _ in
         }, botSwitchChatWithPayload: { _, _ in
@@ -351,6 +354,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _, _, _ in
+            return false
         }, unblockPeer: {
         }, pinMessage: { _ in
         }, unpinMessage: {

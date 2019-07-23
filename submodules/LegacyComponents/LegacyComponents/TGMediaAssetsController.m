@@ -294,6 +294,7 @@
             }
             
             bool groupingButtonVisible = strongSelf->_selectionContext.allowGrouping && onlyGroupableMedia && strongSelf->_selectionContext.count > 1;
+            groupingButtonVisible = false;
             [strongSelf->_toolbarView setCenterButtonHidden:!groupingButtonVisible animated:true];
             
             return groupingButtonVisible;

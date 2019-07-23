@@ -1088,11 +1088,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             inputHasText = true
         }
         
-        if interfaceState.slowmodeState != nil || interfaceState.inputTextPanelState.contextPlaceholder != nil {
+        if (interfaceState.slowmodeState != nil && interfaceState.editMessageState == nil) || interfaceState.inputTextPanelState.contextPlaceholder != nil {
             self.textPlaceholderNode.isHidden = true
             self.slowmodePlaceholderNode?.isHidden = inputHasText
         } else {
             self.textPlaceholderNode.isHidden = inputHasText
+            self.slowmodePlaceholderNode?.isHidden = true
         }
         
         transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + self.textInputViewRealInsets.top + audioRecordingItemsVerticalOffset + UIScreenPixel), size: self.textPlaceholderNode.frame.size))
@@ -1170,14 +1171,24 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     private func updateTextNodeText(animated: Bool) {
-        var hasText = false
+        var inputHasText = false
         var hideMicButton = false
         if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
-            hasText = true
+            inputHasText = true
             hideMicButton = true
         }
-        self.textPlaceholderNode.isHidden = hasText
-        self.updateActionButtons(hasText: hasText, hideMicButton: hideMicButton, animated: animated)
+        
+        if let interfaceState = self.presentationInterfaceState {
+            if (interfaceState.slowmodeState != nil && interfaceState.editMessageState == nil) || interfaceState.inputTextPanelState.contextPlaceholder != nil {
+                self.textPlaceholderNode.isHidden = true
+                self.slowmodePlaceholderNode?.isHidden = inputHasText
+            } else {
+                self.textPlaceholderNode.isHidden = inputHasText
+                self.slowmodePlaceholderNode?.isHidden = true
+            }
+        }
+        
+        self.updateActionButtons(hasText: inputHasText, hideMicButton: hideMicButton, animated: animated)
         self.updateTextHeight()
     }
     

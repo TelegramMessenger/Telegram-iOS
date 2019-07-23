@@ -38,7 +38,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         
         transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(), size: size))
         
-        if let slowmodeState = interfaceState.slowmodeState {
+        if let slowmodeState = interfaceState.slowmodeState, interfaceState.editMessageState == nil {
             let sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode
             if let current = self.sendButtonRadialStatusNode {
                 sendButtonRadialStatusNode = current
@@ -51,7 +51,12 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
             
             transition.updateSublayerTransformScale(layer: self.sendButton.layer, scale: CGPoint(x: 0.7575, y: 0.7575))
             
-            sendButtonRadialStatusNode.frame = CGRect(origin: CGPoint(x: self.sendButton.frame.midX - 33.0 / 2.0, y: self.sendButton.frame.midY - 33.0 / 2.0), size: CGSize(width: 33.0, height: 33.0))
+            let defaultSendButtonSize: CGFloat = 25.0
+            let defaultOriginX = floorToScreenPixels((self.sendButton.bounds.width - defaultSendButtonSize) / 2.0)
+            let defaultOriginY = floorToScreenPixels((self.sendButton.bounds.height - defaultSendButtonSize) / 2.0)
+            
+            let radialStatusFrame = CGRect(origin: CGPoint(x: defaultOriginX - 4.0, y: defaultOriginY - 4.0), size: CGSize(width: 33.0, height: 33.0))
+            sendButtonRadialStatusNode.frame = radialStatusFrame
             sendButtonRadialStatusNode.slowmodeState = slowmodeState
         } else {
             if let sendButtonRadialStatusNode = self.sendButtonRadialStatusNode {

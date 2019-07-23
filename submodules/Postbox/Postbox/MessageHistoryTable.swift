@@ -562,7 +562,7 @@ final class MessageHistoryTable: Table {
         return messageIds
     }
     
-    func applyInteractiveMaxReadIndex(_ messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
+    func applyInteractiveMaxReadIndex(postbox: Postbox, messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
         var topMessageId: (MessageId.Id, Bool)?
         if let index = self.topIndexEntry(peerId: messageIndex.id.peerId, namespace: messageIndex.id.namespace) {
             if let message = self.getMessage(index) {
@@ -572,7 +572,7 @@ final class MessageHistoryTable: Table {
             }
         }
         
-        let (combinedState, result, messageIds) = self.readStateTable.applyInteractiveMaxReadIndex(messageIndex, incomingStatsInRange: { namespace, fromId, toId in
+        let (combinedState, result, messageIds) = self.readStateTable.applyInteractiveMaxReadIndex(postbox: postbox, messageIndex: messageIndex, incomingStatsInRange: { namespace, fromId, toId in
             return self.messageHistoryIndexTable.incomingMessageCountInRange(messageIndex.id.peerId, namespace: namespace, minId: fromId, maxId: toId)
         }, incomingIndexStatsInRange: { fromIndex, toIndex in
             return self.incomingMessageCountInRange(messageIndex.id.peerId, namespace: messageIndex.id.namespace, fromIndex: fromIndex, toIndex: toIndex)

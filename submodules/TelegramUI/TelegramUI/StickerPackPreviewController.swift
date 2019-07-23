@@ -38,13 +38,17 @@ final class StickerPackPreviewController: ViewController {
     
     private var presentationDataDisposable: Disposable?
     
-    var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)? {
+    var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? {
         didSet {
             if self.isNodeLoaded {
                 if let sendSticker = self.sendSticker {
                     self.controllerNode.sendSticker = { [weak self] file, sourceNode, sourceRect in
-                        sendSticker(file, sourceNode, sourceRect)
-                        self?.dismiss()
+                        if sendSticker(file, sourceNode, sourceRect) {
+                            self?.dismiss()
+                            return true
+                        } else {
+                            return false
+                        }
                     }
                 } else {
                     self.controllerNode.sendSticker = nil
@@ -135,8 +139,12 @@ final class StickerPackPreviewController: ViewController {
         }
         if let sendSticker = self.sendSticker {
             self.controllerNode.sendSticker = { [weak self] file, sourceNode, sourceRect in
-                sendSticker(file, sourceNode, sourceRect)
-                self?.dismiss()
+                if sendSticker(file, sourceNode, sourceRect) {
+                    self?.dismiss()
+                    return true
+                } else {
+                    return false
+                }
             }
         }
         let account = self.context.account
