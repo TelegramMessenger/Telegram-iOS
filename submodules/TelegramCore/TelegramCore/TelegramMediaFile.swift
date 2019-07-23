@@ -330,7 +330,9 @@ public final class TelegramMediaFile: Media, Equatable {
     public var isSticker: Bool {
         for attribute in self.attributes {
             if case .Sticker = attribute {
-                return !isAnimatedSticker
+                if let s = self.size, s < 200 * 1024 {
+                    return !isAnimatedSticker
+                }
             }
         }
         return false
