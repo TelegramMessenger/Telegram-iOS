@@ -3825,6 +3825,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         if let highlightedItemIndex = self.highlightedItemIndex {
+            for itemNode in self.itemNodes {
+                if itemNode.index == highlightedItemIndex {
+                    itemNode.selected()
+                    break
+                }
+            }
             self.items[highlightedItemIndex].selected(listView: self)
         }
         self.selectionTouchLocation = nil
