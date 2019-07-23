@@ -240,7 +240,7 @@ std::future<Surface> AnimationImpl::renderAsync(size_t    frameNo,
  */
 std::unique_ptr<Animation> Animation::loadFromData(
     std::string jsonData, const std::string &key,
-    const std::string &resourcePath)
+    const std::string &resourcePath, bool cachePolicy)
 {
     if (jsonData.empty()) {
         vWarning << "jason data is empty";
@@ -249,7 +249,7 @@ std::unique_ptr<Animation> Animation::loadFromData(
 
     LottieLoader loader;
     if (loader.loadFromData(std::move(jsonData), key,
-                            (resourcePath.empty() ? " " : resourcePath))) {
+                            (resourcePath.empty() ? " " : resourcePath), cachePolicy)) {
         auto animation = std::unique_ptr<Animation>(new Animation);
         animation->d->init(loader.model());
         return animation;
@@ -257,7 +257,8 @@ std::unique_ptr<Animation> Animation::loadFromData(
     return nullptr;
 }
 
-std::unique_ptr<Animation> Animation::loadFromFile(const std::string &path)
+std::unique_ptr<Animation>
+Animation::loadFromFile(const std::string &path, bool cachePolicy)
 {
     if (path.empty()) {
         vWarning << "File path is empty";
@@ -265,7 +266,7 @@ std::unique_ptr<Animation> Animation::loadFromFile(const std::string &path)
     }
 
     LottieLoader loader;
-    if (loader.load(path)) {
+    if (loader.load(path, cachePolicy)) {
         auto animation = std::unique_ptr<Animation>(new Animation);
         animation->d->init(loader.model());
         return animation;

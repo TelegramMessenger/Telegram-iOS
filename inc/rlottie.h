@@ -260,6 +260,10 @@ public:
      *  @brief Constructs an animation object from file path.
      *
      *  @param[in] path Lottie resource file path
+     *  @param[in] cachePolicy whether to cache or not the model data.
+     *             use only when need to explicit disabl caching for a
+     *             particular resource. To disable caching at library level
+     *             use @see configureModelCacheSize() instead.
      *
      *  @return Animation object that can render the contents of the
      *          Lottie resource represented by file path.
@@ -267,7 +271,7 @@ public:
      *  @internal
      */
     static std::unique_ptr<Animation>
-    loadFromFile(const std::string &path);
+    loadFromFile(const std::string &path, bool cachePolicy=true);
 
     /**
      *  @brief Constructs an animation object from JSON string data.
@@ -275,6 +279,10 @@ public:
      *  @param[in] jsonData The JSON string data.
      *  @param[in] key the string that will be used to cache the JSON string data.
      *  @param[in] resourcePath the path will be used to search for external resource.
+     *  @param[in] cachePolicy whether to cache or not the model data.
+     *             use only when need to explicit disabl caching for a
+     *             particular resource. To disable caching at library level
+     *             use @see configureModelCacheSize() instead.
      *
      *  @return Animation object that can render the contents of the
      *          Lottie resource represented by JSON string data.
@@ -282,7 +290,8 @@ public:
      *  @internal
      */
     static std::unique_ptr<Animation>
-    loadFromData(std::string jsonData, const std::string &key, const std::string &resourcePath="");
+    loadFromData(std::string jsonData, const std::string &key,
+                 const std::string &resourcePath="", bool cachePolicy=true);
 
     /**
      *  @brief Returns default framerate of the Lottie resource.

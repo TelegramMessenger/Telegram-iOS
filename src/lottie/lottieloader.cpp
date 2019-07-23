@@ -105,10 +105,12 @@ static std::string dirname(const std::string &path)
     return std::string(path, 0, len);
 }
 
-bool LottieLoader::load(const std::string &path)
+bool LottieLoader::load(const std::string &path, bool cachePolicy)
 {
-    mModel = LottieModelCache::instance().find(path);
-    if (mModel) return true;
+    if (cachePolicy) {
+        mModel = LottieModelCache::instance().find(path);
+        if (mModel) return true;
+    }
 
     std::ifstream f;
     f.open(path);
@@ -126,7 +128,8 @@ bool LottieLoader::load(const std::string &path)
 
         if (!mModel) return false;
 
-        LottieModelCache::instance().add(path, mModel);
+        if (cachePolicy)
+            LottieModelCache::instance().add(path, mModel);
 
         f.close();
     }
@@ -135,10 +138,12 @@ bool LottieLoader::load(const std::string &path)
 }
 
 bool LottieLoader::loadFromData(std::string &&jsonData, const std::string &key,
-                                const std::string &resourcePath)
+                                const std::string &resourcePath, bool cachePolicy)
 {
-    mModel = LottieModelCache::instance().find(key);
-    if (mModel) return true;
+    if (cachePolicy) {
+        mModel = LottieModelCache::instance().find(key);
+        if (mModel) return true;
+    }
 
     LottieParser parser(const_cast<char *>(jsonData.c_str()),
                         resourcePath.c_str());
@@ -146,7 +151,8 @@ bool LottieLoader::loadFromData(std::string &&jsonData, const std::string &key,
 
     if (!mModel) return false;
 
-    LottieModelCache::instance().add(key, mModel);
+    if (cachePolicy)
+        LottieModelCache::instance().add(key, mModel);
 
     return true;
 }
