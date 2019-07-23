@@ -146,9 +146,9 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                 menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
                                     if let strongSelf = self {
                                         let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController())
-                                                    controller.sendSticker = { file in
+                                                    controller.sendSticker = { file, sourceNode, sourceRect in
                                                         if let strongSelf = self {
-                                                            strongSelf.interfaceInteraction?.sendSticker(file)
+                                                            strongSelf.interfaceInteraction?.sendSticker(file, sourceNode, sourceRect)
                                                         }
                                                     }
                                                     

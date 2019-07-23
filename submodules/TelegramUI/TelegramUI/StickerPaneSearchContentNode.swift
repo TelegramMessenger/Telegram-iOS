@@ -12,10 +12,10 @@ import TelegramUIPrivateModule
 final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void
     let install: (StickerPackCollectionInfo) -> Void
-    let sendSticker: (FileMediaReference) -> Void
+    let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo) -> Void, sendSticker: @escaping (FileMediaReference) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo) -> Void, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.open = open
         self.install = install
         self.sendSticker = sendSticker
@@ -92,8 +92,8 @@ private enum StickerSearchEntry: Identifiable, Comparable {
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> GridItem {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
-            return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: {
-                interaction.sendSticker(.standalone(media: stickerItem.file))
+            return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
+                interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
             })
         case let .global(_, info, topItems, installed):
             return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, info: info, topItems: topItems, installed: installed, unread: false, open: {
@@ -214,9 +214,9 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 strongSelf.view.window?.endEditing(true)
                 
                 let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                controller.sendSticker = { [weak self] fileReference in
+                controller.sendSticker = { [weak self] fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
-                        strongSelf.controllerInteraction.sendSticker(fileReference, false)
+                        strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
                     }
                 }
                 strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -240,9 +240,9 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                     return .complete()
                 }).start()
             }
-        }, sendSticker: { [weak self] file in
+        }, sendSticker: { [weak self] file, sourceNode, sourceRect in
             if let strongSelf = self {
-                strongSelf.controllerInteraction.sendSticker(file, false)
+                strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
             }
         }, getItemIsPreviewed: { item in
             return inputNodeInteraction.previewedStickerPackItem == .pack(item)

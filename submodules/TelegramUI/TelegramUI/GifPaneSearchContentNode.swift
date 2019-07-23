@@ -231,10 +231,10 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
                 multiplexedNode.frame = CGRect(origin: CGPoint(), size: layout)
             }
             
-            self.view.addSubview(multiplexedNode)
+            self.addSubnode(multiplexedNode)
             
-            multiplexedNode.fileSelected = { [weak self] fileReference in
-                self?.controllerInteraction.sendGif(fileReference)
+            multiplexedNode.fileSelected = { [weak self] fileReference, sourceNode, sourceRect in
+                self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
             }
             
             multiplexedNode.didScroll = { [weak self] offset, height in

@@ -68,7 +68,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     var presentInGlobalOverlay: ((ViewController, Any?) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
-    var sendSticker: ((FileMediaReference) -> Void)?
+    var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -202,7 +202,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                                 if strongSelf.sendSticker != nil {
                                     menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
                                         if let strongSelf = self {
-                                            strongSelf.sendSticker?(.standalone(media: item.file))
+                                            strongSelf.sendSticker?(.standalone(media: item.file), itemNode, itemNode.bounds)
                                         }
                                     }))
                                 }

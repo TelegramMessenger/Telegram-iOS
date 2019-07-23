@@ -170,6 +170,11 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
             horizontalOffset += UIScreenPixel
         }
         
+        var isSlideOver = false
+        if case .compact = layout.metrics.widthClass, case .regular = layout.metrics.heightClass {
+            isSlideOver = true
+        }
+        
         transition.updateFrame(node: self.sideDimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: max(0.0, horizontalOffset), height: max(0.0, layout.size.height - inputHeight))))
         transition.updateFrame(node: self.sideInputDimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - inputHeight), size: CGSize(width: max(0.0, horizontalOrigin), height: max(0.0, inputHeight))))
         transition.updateFrame(node: self.inputDimNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: layout.size.height - inputHeight), size: CGSize(width: layout.size.width, height: inputHeight)))
@@ -185,12 +190,19 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
             itemsHeight += actionNode.bounds.height
         }
         
-        let containerFrame = CGRect(origin: CGPoint(x: horizontalOrigin + floor((layout.size.width - containerWidth) / 2.0), y: layout.size.height - height - itemsHeight - inputHeight), size: CGSize(width: containerWidth, height: itemsHeight))
+        var containerFrame = CGRect(origin: CGPoint(x: horizontalOrigin + floor((layout.size.width - containerWidth) / 2.0), y: layout.size.height - height - itemsHeight), size: CGSize(width: containerWidth, height: itemsHeight))
+        if isSlideOver {
+            containerFrame = containerFrame.offsetBy(dx: 0.0, dy: -inputHeight)
+        }
         transition.updateFrame(node: self.itemsContainerNode, frame: containerFrame)
         transition.updateFrame(node: self.itemsShadowNode, frame: containerFrame.insetBy(dx: -shadowInset, dy: -shadowInset))
         
         height += itemsHeight
-        height += inputHeight
+        
+        if isSlideOver {
+            height += inputHeight
+        }
+        
         height += 6.0
         
         return height

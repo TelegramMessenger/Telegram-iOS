@@ -98,6 +98,10 @@
 {
     [_checkButton setSelected:!_checkButton.selected animated:true];
     [self.selectionContext setItem:(id<TGMediaSelectableItem>)self.item selected:_checkButton.selected animated:false sender:_checkButton];
+    bool value = [self.selectionContext isItemSelected:(id<TGMediaSelectableItem>)self.item];
+    if (value != _checkButton.selected) {
+        [_checkButton setSelected:value animated:true];
+    }
 }
 
 - (void)setChecked:(bool)checked animated:(bool)animated

@@ -219,21 +219,8 @@ final class SharedApplicationContext {
         precondition(!testIsLaunched)
         testIsLaunched = true
         
-        if #available(iOS 11.0, *) {
-            let curDevice = DCDevice.current
-            if curDevice.isSupported {
-                curDevice.generateToken(completionHandler: { (data, error) in
-                    if let tokenData = data {
-                        #if DEBUG
-                        print("\(tokenData.base64EncodedString())")
-                        #endif
-                        self.deviceToken.set(.single(data))
-                    } else {
-                        print("Error: \(error!.localizedDescription)")
-                    }
-                })
-            }
-        }
+        self.deviceToken.set(voipTokenPromise.get()
+        |> map(Optional.init))
         
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         

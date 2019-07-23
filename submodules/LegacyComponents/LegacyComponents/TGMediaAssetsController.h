@@ -72,6 +72,9 @@ typedef enum
 
 @property (nonatomic, readonly) TGMediaAssetsPickerController *pickerController;
 @property (nonatomic, readonly) bool allowGrouping;
+@property (nonatomic, readonly) int selectionLimit;
+
+@property (nonatomic, copy) void (^selectionLimitExceeded)(void);
 
 - (UIBarButtonItem *)rightBarButtonItem;
 
@@ -82,8 +85,8 @@ typedef enum
 
 - (void)dismiss;
 
-+ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping;
-+ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection;
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping selectionLimit:(int)selectionLimit;
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection selectionLimit:(int)selectionLimit;
 
 + (TGMediaAssetType)assetTypeForIntent:(TGMediaAssetsControllerIntent)intent;
 

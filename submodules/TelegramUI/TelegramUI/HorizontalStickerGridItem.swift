@@ -152,7 +152,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(.standalone(media: item.file))
+            interfaceInteraction.sendSticker(.standalone(media: item.file), self, self.bounds)
         }
     }
     

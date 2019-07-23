@@ -78,7 +78,7 @@ final class ChatRecentActionsController: TelegramController {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _ in
+        }, sendSticker: { _, _, _ in
         }, unblockPeer: {
         }, pinMessage: { _ in
         }, unpinMessage: {
@@ -102,6 +102,7 @@ final class ChatRecentActionsController: TelegramController {
         }, unarchiveChat: {
         }, openLinkEditing: {  
         }, reportPeerIrrelevantGeoLocation: {
+        }, displaySlowmodeTooltip: { _, _ in
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView

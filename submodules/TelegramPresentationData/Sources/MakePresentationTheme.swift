@@ -8,13 +8,13 @@ public func makePresentationTheme(themeReference: PresentationThemeReference, ac
         case let .builtin(reference):
             switch reference {
                 case .dayClassic:
-                    theme = makeDefaultDayPresentationTheme(serviceBackgroundColor: serviceBackgroundColor)
+                    theme = makeDefaultDayPresentationTheme(serviceBackgroundColor: serviceBackgroundColor, day: false)
                 case .night:
                     theme = makeDarkPresentationTheme(accentColor: accentColor)
                 case .nightAccent:
                     theme = makeDarkAccentPresentationTheme(accentColor: accentColor)
                 case .day:
-                    theme = makeDefaultDayPresentationTheme(accentColor: accentColor, serviceBackgroundColor: serviceBackgroundColor)
+                    theme = makeDefaultDayPresentationTheme(accentColor: accentColor, serviceBackgroundColor: serviceBackgroundColor, day: true)
             }
     }
     return theme

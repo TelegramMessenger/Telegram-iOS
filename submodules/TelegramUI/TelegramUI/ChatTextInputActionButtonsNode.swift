@@ -7,6 +7,7 @@ import TelegramPresentationData
 final class ChatTextInputActionButtonsNode: ASDisplayNode {
     let micButton: ChatTextInputMediaRecordingButton
     let sendButton: HighlightableButton
+    var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
     var sendButtonHasApplyIcon = false
     var animatingSendButton = false
     let expandMediaInputButton: HighlightableButtonNode
@@ -34,7 +35,32 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         transition.updateFrame(layer: self.micButton.layer, frame: CGRect(origin: CGPoint(), size: size))
         self.micButton.layoutItems()
+        
         transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(), size: size))
+        
+        if let slowmodeState = interfaceState.slowmodeState {
+            let sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode
+            if let current = self.sendButtonRadialStatusNode {
+                sendButtonRadialStatusNode = current
+            } else {
+                sendButtonRadialStatusNode = ChatSendButtonRadialStatusNode(color: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
+                sendButtonRadialStatusNode.alpha = self.sendButton.alpha
+                self.sendButtonRadialStatusNode = sendButtonRadialStatusNode
+                self.addSubnode(sendButtonRadialStatusNode)
+            }
+            
+            transition.updateSublayerTransformScale(layer: self.sendButton.layer, scale: CGPoint(x: 0.7575, y: 0.7575))
+            
+            sendButtonRadialStatusNode.frame = CGRect(origin: CGPoint(x: self.sendButton.frame.midX - 33.0 / 2.0, y: self.sendButton.frame.midY - 33.0 / 2.0), size: CGSize(width: 33.0, height: 33.0))
+            sendButtonRadialStatusNode.slowmodeState = slowmodeState
+        } else {
+            if let sendButtonRadialStatusNode = self.sendButtonRadialStatusNode {
+                self.sendButtonRadialStatusNode = nil
+                sendButtonRadialStatusNode.removeFromSupernode()
+            }
+            transition.updateSublayerTransformScale(layer: self.sendButton.layer, scale: CGPoint(x: 1.0, y: 1.0))
+        }
+        
         transition.updateFrame(node: self.expandMediaInputButton, frame: CGRect(origin: CGPoint(), size: size))
         var expanded = false
         if case let .media(_, maybeExpanded) = interfaceState.inputMode, maybeExpanded != nil {

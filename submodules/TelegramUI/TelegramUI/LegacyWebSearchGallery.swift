@@ -153,7 +153,7 @@ private class LegacyWebSearchGalleryItemView: TGModernGalleryImageItemView, TGMo
     
     @objc func singleTap() {
         if let item = item as? LegacyWebSearchGalleryItem, let selectionContext = item.selectionContext {
-            selectionContext.toggleItemSelection(item.selectableMediaItem())
+            selectionContext.toggleItemSelection(item.selectableMediaItem(), success: nil)
         }
     }
     

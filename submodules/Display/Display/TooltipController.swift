@@ -53,21 +53,22 @@ public final class TooltipControllerPresentationArguments {
     }
 }
 
-public final class TooltipController: ViewController {
+open class TooltipController: ViewController {
     private var controllerNode: TooltipControllerNode {
         return self.displayNode as! TooltipControllerNode
     }
     
-    public var content: TooltipControllerContent {
-        didSet {
-            if self.content != oldValue {
-                if self.isNodeLoaded {
-                    self.controllerNode.updateText(self.content.text, transition: .animated(duration: 0.25, curve: .easeInOut))
-                    if self.timeoutTimer != nil {
-                        self.timeoutTimer?.invalidate()
-                        self.timeoutTimer = nil
-                        self.beginTimeout()
-                    }
+    public private(set) var content: TooltipControllerContent
+    
+    open func updateContent(_ content: TooltipControllerContent, animated: Bool, extendTimer: Bool) {
+        if self.content != content {
+            self.content = content
+            if self.isNodeLoaded {
+                self.controllerNode.updateText(self.content.text, transition: animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate)
+                if extendTimer, self.timeoutTimer != nil {
+                    self.timeoutTimer?.invalidate()
+                    self.timeoutTimer = nil
+                    self.beginTimeout()
                 }
             }
         }
@@ -99,21 +100,21 @@ public final class TooltipController: ViewController {
         self.timeoutTimer?.invalidate()
     }
     
-    public override func loadDisplayNode() {
+    override open func loadDisplayNode() {
         self.displayNode = TooltipControllerNode(content: self.content, dismiss: { [weak self] in
             self?.dismiss()
         }, dismissByTapOutside: self.dismissByTapOutside)
         self.displayNodeDidLoad()
     }
     
-    override public func viewDidAppear(_ animated: Bool) {
+    override open func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.controllerNode.animateIn()
         self.beginTimeout()
     }
     
-    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         if self.layout != nil && self.layout! != layout {
@@ -135,7 +136,7 @@ public final class TooltipController: ViewController {
         }
     }
     
-    public override func viewWillAppear(_ animated: Bool) {
+    override open func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         self.controllerNode.animateIn()
@@ -157,7 +158,7 @@ public final class TooltipController: ViewController {
         }
     }
     
-    override public func dismiss(completion: (() -> Void)? = nil) {
+    override open func dismiss(completion: (() -> Void)? = nil) {
         self.dismissed?()
         self.controllerNode.animateOut { [weak self] in
             self?.presentingViewController?.dismiss(animated: false)
@@ -165,7 +166,7 @@ public final class TooltipController: ViewController {
         }
     }
     
-    public func dismissImmediately() {
+    open func dismissImmediately() {
         self.dismissed?()
         self.presentingViewController?.dismiss(animated: false)
     }

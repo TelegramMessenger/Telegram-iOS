@@ -10,7 +10,7 @@ import TelegramPresentationData
 private func fixListScrolling(_ multiplexedNode: MultiplexedVideoNode) {
     let searchBarHeight: CGFloat = 56.0
     
-    let contentOffset = multiplexedNode.contentOffset.y
+    let contentOffset = multiplexedNode.view.contentOffset.y
     let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
     
     if contentOffset < 60.0 {
@@ -111,7 +111,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         }
     }
     
-    func fileAt(point: CGPoint) -> FileMediaReference? {
+    func fileAt(point: CGPoint) -> (FileMediaReference, CGRect)? {
         if let multiplexedNode = self.multiplexedNode {
             return multiplexedNode.fileAt(point: point.offsetBy(dx: -multiplexedNode.frame.minX, dy: -multiplexedNode.frame.minY))
         } else {
@@ -135,7 +135,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                 multiplexedNode.frame = CGRect(origin: CGPoint(), size: layout.0)
             }
             
-            self.view.addSubview(multiplexedNode)
+            self.addSubnode(multiplexedNode)
             multiplexedNode.addSubnode(self.searchPlaceholderNode)
             
             let gifs = self.account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)])
@@ -159,13 +159,13 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                     strongSelf.multiplexedNode?.files = gifs
                     strongSelf.emptyNode.isHidden = !gifs.isEmpty
                     if (previousFiles ?? []).isEmpty && !gifs.isEmpty {
-                        strongSelf.multiplexedNode?.contentOffset = CGPoint(x: 0.0, y: 60.0)
+                        strongSelf.multiplexedNode?.view.contentOffset = CGPoint(x: 0.0, y: 60.0)
                     }
                 }
             }))
             
-            multiplexedNode.fileSelected = { [weak self] fileReference in
-                self?.controllerInteraction.sendGif(fileReference)
+            multiplexedNode.fileSelected = { [weak self] fileReference, sourceNode, sourceRect in
+                self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
             }
             
             multiplexedNode.didScroll = { [weak self] offset, height in

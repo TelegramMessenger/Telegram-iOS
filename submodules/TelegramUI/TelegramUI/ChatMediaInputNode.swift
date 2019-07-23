@@ -844,7 +844,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                     menuItems = [
                                         PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
                                             if let strongSelf = self {
-                                                strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false)
+                                                strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, itemNode, itemNode.bounds)
                                             }
                                         }),
                                         PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
@@ -863,9 +863,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     case let .Sticker(_, packReference, _):
                                                         if let packReference = packReference {
                                                             let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                                                            controller.sendSticker = { file in
+                                                            controller.sendSticker = { file, sourceNode, sourceRect in
                                                                 if let strongSelf = self {
-                                                                    strongSelf.controllerInteraction.sendSticker(file, false)
+                                                                    strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
                                                                 }
                                                             }
                                                             
@@ -890,7 +890,7 @@ final class ChatMediaInputNode: ChatInputNode {
                             return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
                                 PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
                                     if let strongSelf = self {
-                                        strongSelf.controllerInteraction.sendGif(file)
+                                        strongSelf.controllerInteraction.sendGif(file, itemNode, itemNode.bounds)
                                     }
                                 }),
                                 PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: {
@@ -912,11 +912,11 @@ final class ChatMediaInputNode: ChatInputNode {
                 for pane in panes {
                     if pane.supernode != nil, pane.frame.contains(point) {
                         if let pane = pane as? ChatMediaInputGifPane {
-                            if let file = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
+                            if let (file, rect) = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
                                 return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
                                     PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
                                         if let strongSelf = self {
-                                            strongSelf.controllerInteraction.sendGif(file)
+                                            strongSelf.controllerInteraction.sendGif(file, pane, rect)
                                         }
                                     }),
                                     PeekControllerMenuItem(title: strongSelf.strings.Common_Delete, color: .destructive, action: {
@@ -945,7 +945,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                         menuItems = [
                                             PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
                                                 if let strongSelf = self {
-                                                    strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false)
+                                                    strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, itemNode, itemNode.bounds)
                                                 }
                                             }),
                                             PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
@@ -964,9 +964,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                             case let .Sticker(_, packReference, _):
                                                                 if let packReference = packReference {
                                                                     let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                                                                    controller.sendSticker = { file in
+                                                                    controller.sendSticker = { file, sourceNode, sourceRect in
                                                                         if let strongSelf = self {
-                                                                            strongSelf.controllerInteraction.sendSticker(file, false)
+                                                                            strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
                                                                         }
                                                                     }
                                                           

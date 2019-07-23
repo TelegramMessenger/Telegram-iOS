@@ -19,6 +19,7 @@ private func generatePlayIcon(_ theme: PresentationTheme) -> UIImage? {
 final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     private let deleteButton: HighlightableButtonNode
     private let sendButton: HighlightableButtonNode
+    private var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
     private let playButton: HighlightableButtonNode
     private let pauseButton: HighlightableButtonNode
     private let waveformButton: ASButtonNode
@@ -147,6 +148,30 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         
         transition.updateFrame(node: self.deleteButton, frame: CGRect(origin: CGPoint(x: leftInset, y: -1.0), size: CGSize(width: 48.0, height: panelHeight)))
         transition.updateFrame(node: self.sendButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel, y: -UIScreenPixel), size: CGSize(width: 44.0, height: panelHeight)))
+        
+        if let slowmodeState = interfaceState.slowmodeState {
+            let sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode
+            if let current = self.sendButtonRadialStatusNode {
+                sendButtonRadialStatusNode = current
+            } else {
+                sendButtonRadialStatusNode = ChatSendButtonRadialStatusNode(color: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
+                sendButtonRadialStatusNode.alpha = self.sendButton.alpha
+                self.sendButtonRadialStatusNode = sendButtonRadialStatusNode
+                self.addSubnode(sendButtonRadialStatusNode)
+            }
+            
+            transition.updateSublayerTransformScale(layer: self.sendButton.layer, scale: CGPoint(x: 0.7575, y: 0.7575))
+            
+            sendButtonRadialStatusNode.frame = CGRect(origin: CGPoint(x: self.sendButton.frame.midX - 33.0 / 2.0, y: self.sendButton.frame.midY - 33.0 / 2.0), size: CGSize(width: 33.0, height: 33.0))
+            sendButtonRadialStatusNode.slowmodeState = slowmodeState
+        } else {
+            if let sendButtonRadialStatusNode = self.sendButtonRadialStatusNode {
+                self.sendButtonRadialStatusNode = nil
+                sendButtonRadialStatusNode.removeFromSupernode()
+            }
+            transition.updateSublayerTransformScale(layer: self.sendButton.layer, scale: CGPoint(x: 1.0, y: 1.0))
+        }
+        
         transition.updateFrame(node: self.playButton, frame: CGRect(origin: CGPoint(x: leftInset + 52.0, y: 10.0), size: CGSize(width: 26.0, height: 26.0)))
         transition.updateFrame(node: self.pauseButton, frame: CGRect(origin: CGPoint(x: leftInset + 50.0, y: 10.0), size: CGSize(width: 26.0, height: 26.0)))
         transition.updateFrame(node: self.waveformBackgroundNode, frame: CGRect(origin: CGPoint(x: leftInset + 45.0, y: 7.0 - UIScreenPixel), size: CGSize(width: width - leftInset - rightInset - 90.0, height: 33.0)))
@@ -171,6 +196,20 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         return defaultHeight(metrics: metrics)
+    }
+    
+    func frameForInputActionButton() -> CGRect? {
+        return self.sendButton.frame
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.deleteButton.frame.contains(point) {
+            return self.deleteButton.view
+        }
+        if self.sendButton.frame.contains(point) {
+           return self.sendButton.view
+        }
+        return super.hitTest(point, with: event)
     }
 }
 

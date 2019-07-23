@@ -118,10 +118,10 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping
 {
-    return [self initWithContext:context camera:hasCamera selfPortrait:selfPortrait forProfilePhoto:forProfilePhoto assetType:assetType saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping allowSelection:true allowEditing:!selfPortrait document:false];
+    return [self initWithContext:context camera:hasCamera selfPortrait:selfPortrait forProfilePhoto:forProfilePhoto assetType:assetType saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping allowSelection:true allowEditing:!selfPortrait document:false selectionLimit:30];
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping allowSelection:(bool)allowSelection allowEditing:(bool)allowEditing document:(bool)document
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping allowSelection:(bool)allowSelection allowEditing:(bool)allowEditing document:(bool)document selectionLimit:(int)selectionLimit
 {
     self = [super initWithType:TGMenuSheetItemTypeDefault];
     if (self != nil)
@@ -142,7 +142,16 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         
         if (!forProfilePhoto && allowSelection)
         {
-            _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping];
+            _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping selectionLimit:selectionLimit];
+            _selectionContext.selectionLimitExceeded = ^{
+                __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
+                if (strongSelf == nil) {
+                    return;
+                }
+                if (strongSelf->_selectionLimitExceeded) {
+                    strongSelf->_selectionLimitExceeded();
+                }
+            };
             if (allowGrouping)
                 _selectionContext.grouping = ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_mediaGroupingDisabled_v0"] boolValue];
             [_selectionContext setItemSourceUpdatedSignal:[_assetsLibrary libraryChanged]];

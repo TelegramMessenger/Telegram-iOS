@@ -33,7 +33,7 @@ final class ThemePreviewController: ViewController {
         
         if let author = previewTheme.author {
             let titleView = CounterContollerTitleView(theme: self.previewTheme)
-            titleView.title = CounterContollerTitle(title: previewTheme.name.string, counter: author)
+            titleView.title = CounterContollerTitle(title: self.previewTheme.name.string, counter: author)
             self.navigationItem.titleView = titleView
         } else {
             self.title = previewTheme.name.string

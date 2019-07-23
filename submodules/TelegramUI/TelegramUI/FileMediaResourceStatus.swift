@@ -5,17 +5,17 @@ import Postbox
 import SwiftSignalKit
 import UniversalMediaPlayer
 
-enum FileMediaResourcePlaybackStatus {
+enum FileMediaResourcePlaybackStatus: Equatable {
     case playing
     case paused
 }
 
-struct FileMediaResourceStatus {
+struct FileMediaResourceStatus: Equatable {
     let mediaStatus: FileMediaResourceMediaStatus
     let fetchStatus: MediaResourceStatus
 }
 
-enum FileMediaResourceMediaStatus {
+enum FileMediaResourceMediaStatus: Equatable {
     case fetchStatus(MediaResourceStatus)
     case playbackStatus(FileMediaResourcePlaybackStatus)
 }

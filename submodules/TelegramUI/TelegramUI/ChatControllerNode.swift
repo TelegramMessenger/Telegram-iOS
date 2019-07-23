@@ -292,6 +292,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if let _ = effectivePresentationInterfaceState.interfaceState.editMessage {
                     strongSelf.interfaceInteraction?.editMessage()
                 } else {
+                    if let _ = effectivePresentationInterfaceState.slowmodeState {
+                        if let rect = strongSelf.frameForInputActionButton() {
+                            strongSelf.interfaceInteraction?.displaySlowmodeTooltip(strongSelf, rect)
+                        }
+                        return
+                    }
+                    
                     let timestamp = CACurrentMediaTime()
                     if lastSendTimestamp + 0.15 > timestamp {
                         return
@@ -1609,6 +1616,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return textInputPanelNode.frameForInputActionButton().flatMap {
                 return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
             }
+        } else if let recordingPreviewPanelNode = self.inputPanelNode as? ChatRecordingPreviewInputPanelNode {
+            return recordingPreviewPanelNode.frameForInputActionButton().flatMap {
+                return $0.offsetBy(dx: recordingPreviewPanelNode.frame.minX, dy: recordingPreviewPanelNode.frame.minY)
+            }
+        }
+        return nil
+    }
+    
+    func frameForAttachmentButton() -> CGRect? {
+        if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
+            return textInputPanelNode.frameForAttachmentButton().flatMap {
+                return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
+            }
         }
         return nil
     }
@@ -1795,8 +1815,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }, associatedController: contextMenuController)
                 self.messageActionSheetController = (controller, stableId)
                 self.accessibilityElementsHidden = true
-                if let sheetActions = sheetActions, !sheetActions.isEmpty {
-                    self.controllerInteraction.presentGlobalOverlayController(controller, nil)
+                if let sheetActions = sheetActions, !sheetActions.isEmpty, let (layout, _) = self.validLayout {
+                    var isSlideOver = false
+                    if case .compact = layout.metrics.widthClass, case .regular = layout.metrics.heightClass {
+                        isSlideOver = true
+                    }
+                    if isSlideOver {
+                        self.controllerInteraction.presentController(controller, nil)
+                    } else {
+                        self.controllerInteraction.presentGlobalOverlayController(controller, nil)
+                    }
                 }
                 animateIn = true
             }

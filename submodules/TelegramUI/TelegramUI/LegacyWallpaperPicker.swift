@@ -23,7 +23,7 @@ func legacyWallpaperPicker(context: AccountContext, presentationData: Presentati
                     } else {
                         Queue.mainQueue().async {
                             subscriber.putNext({ context in
-                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: nil, saveEditedPhotos: false, allowGrouping: false)
+                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: nil, saveEditedPhotos: false, allowGrouping: false, selectionLimit: 1)
                                 return controller!
                             })
                             subscriber.putCompletion()
@@ -32,7 +32,7 @@ func legacyWallpaperPicker(context: AccountContext, presentationData: Presentati
                 })
             } else {
                 subscriber.putNext({ context in
-                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: nil, saveEditedPhotos: false, allowGrouping: false)
+                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: nil, saveEditedPhotos: false, allowGrouping: false, selectionLimit: 1)
                     return controller!
                 })
                 subscriber.putCompletion()

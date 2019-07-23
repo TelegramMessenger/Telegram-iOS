@@ -14,20 +14,18 @@ private final class ThemeSettingsControllerArguments {
     let openWallpaperSettings: () -> Void
     let selectAccentColor: (PresentationThemeAccentColor) -> Void
     let toggleColorSlider: (Bool) -> Void
-    let toggleTintAllColors: (Bool) -> Void
     let openAutoNightTheme: () -> Void
     let toggleLargeEmoji: (Bool) -> Void
     let disableAnimations: (Bool) -> Void
     let selectAppIcon: (String) -> Void
     
-    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, toggleColorSlider: @escaping (Bool) -> Void, toggleTintAllColors: @escaping (Bool) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, toggleColorSlider: @escaping (Bool) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void) {
         self.context = context
         self.selectTheme = selectTheme
         self.selectFontSize = selectFontSize
         self.openWallpaperSettings = openWallpaperSettings
         self.selectAccentColor = selectAccentColor
         self.toggleColorSlider = toggleColorSlider
-        self.toggleTintAllColors = toggleTintAllColors
         self.openAutoNightTheme = openAutoNightTheme
         self.toggleLargeEmoji = toggleLargeEmoji
         self.disableAnimations = disableAnimations
@@ -307,24 +305,15 @@ private struct ThemeSettingsState: Equatable {
     }
 }
 
-private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeReference: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool, availableAppIcons: [PresentationAppIcon], currentAppIconName: String?, displayColorSlider: Bool, tintAllColors: Bool) -> [ThemeSettingsControllerEntry] {
+private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeReference: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool, availableAppIcons: [PresentationAppIcon], currentAppIconName: String?, displayColorSlider: Bool) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
     entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme.uppercased()))
     entries.append(.chatPreview(presentationData.theme, theme, wallpaper, fontSize, presentationData.strings, dateTimeFormat, presentationData.nameDisplayOrder))
     
-    var availableThemes: [PresentationThemeReference] = [.builtin(.dayClassic), .builtin(.day)]
-    if tintAllColors {
-        availableThemes.append(.builtin(.nightAccent))
-    } else {
-        availableThemes.append(.builtin(.night))
-    }
-    
+    let availableThemes: [PresentationThemeReference] = [.builtin(.dayClassic), .builtin(.day), .builtin(.night), .builtin(.nightAccent)]
     entries.append(.themeItem(presentationData.theme, presentationData.strings, availableThemes, themeReference, themeSpecificAccentColors, themeSpecificAccentColors[themeReference.index], displayColorSlider))
     
-    if theme.name == .builtin(.nightAccent) || theme.name == .builtin(.night) {
-        entries.append(.themeTint(presentationData.theme, strings.Appearance_TintAllColors, tintAllColors))
-    }
     if theme.name != .builtin(.dayClassic) {
         entries.append(.accentColor(presentationData.theme, strings.Appearance_AccentColor, themeSpecificAccentColors[themeReference.index]))
     }
@@ -435,8 +424,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         }).start()
     }, toggleColorSlider: { forceHidden in
         updateState { $0.withDisplayColorSlider(forceHidden ? false : !$0.displayColorSlider) }
-    }, toggleTintAllColors: { value in
-        
     }, openAutoNightTheme: {
         pushControllerImpl?(themeAutoNightSettingsController(context: context))
     }, toggleLargeEmoji: { largeEmoji in
@@ -472,13 +459,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             wallpaper = settings.chatWallpaper
         }
         
-        var tintAllColors = settings.themeTintColors
-        if !tintAllColors, case let .builtin(theme) = settings.theme, case .nightAccent = theme {
-            tintAllColors = true
-        }
-    
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeReference: settings.theme, themeSpecificAccentColors: settings.themeSpecificAccentColors, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, displayColorSlider: state.displayColorSlider, tintAllColors: tintAllColors), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeReference: settings.theme, themeSpecificAccentColors: settings.themeSpecificAccentColors, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, displayColorSlider: state.displayColorSlider), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
                 
         return (controllerState, (listState, arguments))
     }
