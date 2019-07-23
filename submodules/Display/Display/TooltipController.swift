@@ -22,7 +22,7 @@ public enum TooltipControllerContent: Equatable {
     }
 }
 
-private enum SourceAndRect {
+public enum SourceAndRect {
     case node(() -> (ASDisplayNode, CGRect)?)
     case view(() -> (UIView, CGRect)?)
     
@@ -42,7 +42,7 @@ private enum SourceAndRect {
 }
 
 public final class TooltipControllerPresentationArguments {
-    fileprivate let sourceAndRect: SourceAndRect
+    public let sourceAndRect: SourceAndRect
     
     public init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect)?) {
         self.sourceAndRect = .node(sourceNodeAndRect)
@@ -76,6 +76,7 @@ open class TooltipController: ViewController {
     
     private let timeout: Double
     private let dismissByTapOutside: Bool
+    private let dismissByTapOutsideSource: Bool
     private let dismissImmediatelyOnLayoutUpdate: Bool
     private var timeoutTimer: SwiftSignalKit.Timer?
     
@@ -83,10 +84,11 @@ open class TooltipController: ViewController {
     
     public var dismissed: (() -> Void)?
     
-    public init(content: TooltipControllerContent, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false) {
+    public init(content: TooltipControllerContent, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false) {
         self.content = content
         self.timeout = timeout
         self.dismissByTapOutside = dismissByTapOutside
+        self.dismissByTapOutsideSource = dismissByTapOutsideSource
         self.dismissImmediatelyOnLayoutUpdate = dismissImmediatelyOnLayoutUpdate
         
         super.init(navigationBarPresentationData: nil)
@@ -103,7 +105,7 @@ open class TooltipController: ViewController {
     override open func loadDisplayNode() {
         self.displayNode = TooltipControllerNode(content: self.content, dismiss: { [weak self] in
             self?.dismiss()
-        }, dismissByTapOutside: self.dismissByTapOutside)
+        }, dismissByTapOutside: self.dismissByTapOutside, dismissByTapOutsideSource: self.dismissByTapOutsideSource)
         self.displayNodeDidLoad()
     }
     
