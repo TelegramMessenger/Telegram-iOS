@@ -26,6 +26,7 @@ class LOTModel;
 class LottieLoader
 {
 public:
+   static void configureModelCacheSize(size_t cacheSize);
    bool load(const std::string &filePath);
    bool loadFromData(std::string &&jsonData, const std::string &key, const std::string &resourcePath);
    std::shared_ptr<LOTModel> model();

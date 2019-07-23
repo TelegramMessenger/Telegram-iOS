@@ -43,6 +43,23 @@ struct LOTLayerNode;
 
 namespace rlottie {
 
+/**
+ *  @brief Configures rlottie model cache policy.
+ *
+ *  Provides Library level control to configure model cache
+ *  policy. Setting it to 0 will disable
+ *  the cache as well as flush all the previously cached content.
+ *
+ *  @param[in] cacheSize  Maximum Model Cache size.
+ *
+ *  @note to disable Caching configure with 0 size.
+ *  @note to flush the current Cache content configure it with 0 and
+ *        then reconfigure with the new size.
+ *
+ *  @internal
+ */
+LOT_EXPORT void configureModelCacheSize(size_t cacheSize);
+
 struct Color {
     Color() = default;
     Color(float r, float g , float b):_r(r), _g(g), _b(b){}

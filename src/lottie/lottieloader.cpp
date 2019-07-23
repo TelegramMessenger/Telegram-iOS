@@ -38,6 +38,8 @@ public:
     {
         std::lock_guard<std::mutex> guard(mMutex);
 
+        if (!mcacheSize) return nullptr;
+
         auto search = mHash.find(key);
 
         return (search != mHash.end()) ? search->second : nullptr;
@@ -46,7 +48,22 @@ public:
     void add(const std::string &key, std::shared_ptr<LOTModel> value)
     {
         std::lock_guard<std::mutex> guard(mMutex);
+
+        if (!mcacheSize) return;
+
+        //@TODO just remove the 1st element
+        // not the best of LRU logic
+        if (mcacheSize == mHash.size()) mHash.erase(mHash.cbegin());
+
         mHash[key] = std::move(value);
+    }
+
+    void configureCacheSize(size_t cacheSize)
+    {
+        std::lock_guard<std::mutex> guard(mMutex);
+        mcacheSize = cacheSize;
+
+        if (!mcacheSize) mHash.clear();
     }
 
 private:
@@ -54,6 +71,7 @@ private:
 
     std::unordered_map<std::string, std::shared_ptr<LOTModel>>  mHash;
     std::mutex                                                  mMutex;
+    size_t                                                      mcacheSize{10};
 };
 
 #else
@@ -67,9 +85,15 @@ public:
     }
     std::shared_ptr<LOTModel> find(const std::string &) { return nullptr; }
     void add(const std::string &, std::shared_ptr<LOTModel>) {}
+    void configureCacheSize(size_t) {}
 };
 
 #endif
+
+void LottieLoader::configureModelCacheSize(size_t cacheSize)
+{
+    LottieModelCache::instance().configureCacheSize(cacheSize);
+}
 
 static std::string dirname(const std::string &path)
 {

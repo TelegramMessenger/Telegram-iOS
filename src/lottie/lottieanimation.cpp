@@ -25,6 +25,11 @@
 
 using namespace rlottie;
 
+LOT_EXPORT void configureModelCacheSize(size_t cacheSize)
+{
+    LottieLoader::configureModelCacheSize(cacheSize);
+}
+
 struct RenderTask {
     RenderTask() { receiver = sender.get_future(); }
     std::promise<Surface> sender;
