@@ -125,6 +125,9 @@ typedef enum
     UIView *(^_transitionInView)();
     id<TGLiveUploadInterface> _liveUploadInterface;
     
+    int32_t _slowmodeTimestamp;
+    UIView * (^_slowmodeView)(void);
+    
 	TGVideoMessageCaptureControllerAssets *_assets;
 }
 
@@ -134,12 +137,7 @@ typedef enum
 
 @implementation TGVideoMessageCaptureController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface
-{
-    return [self initWithContext:context assets:assets transitionInView:transitionInView parentController:parentController controlsFrame:controlsFrame isAlreadyLocked:isAlreadyLocked liveUploadInterface:liveUploadInterface pallete:nil];
-}
-
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface pallete:(TGModernConversationInputMicPallete *)pallete
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)(void))transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface pallete:(TGModernConversationInputMicPallete *)pallete slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -150,6 +148,8 @@ typedef enum
         _liveUploadInterface = liveUploadInterface;
         _assets = assets;
         _pallete = pallete;
+        _slowmodeTimestamp = slowmodeTimestamp;
+        _slowmodeView = [slowmodeView copy];
         
         _url = [TGVideoMessageCaptureController tempOutputPath];
         _queue = [[SQueue alloc] init];
@@ -325,7 +325,7 @@ typedef enum
     CGRect controlsFrame = _controlsFrame;
     controlsFrame.size.width = _wrapperView.frame.size.width;
     
-    _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame assets:_assets];
+    _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame assets:_assets slowmodeTimestamp:_slowmodeTimestamp slowmodeView:_slowmodeView];
     _controlsView.pallete = self.pallete;
     _controlsView.clipsToBounds = true;
     _controlsView.parent = self;
@@ -358,13 +358,14 @@ typedef enum
 
         };
     };
-    _controlsView.sendPressed = ^
+    _controlsView.sendPressed = ^bool 
     {
         __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
-        if (strongSelf != nil)
-        {
-            [strongSelf sendPressed];
-        };
+        if (strongSelf != nil) {
+            return [strongSelf sendPressed];
+        } else {
+            return false;
+        }
     };
     [self.view addSubview:_controlsView];
     
@@ -647,6 +648,10 @@ typedef enum
     [_controlsView setLocked];
 }
 
+- (CGRect)frameForSendButton {
+    return [_controlsView convertRect:[_controlsView frameForSendButton] toView:self.view];
+}
+
 - (bool)stop
 {
     if (!_capturePipeline.isRecording)
@@ -664,12 +669,23 @@ typedef enum
     return true;
 }
 
-- (void)sendPressed
+- (bool)sendPressed
 {
+    if (_slowmodeTimestamp != 0) {
+        int32_t timestamp = (int32_t)[[NSDate date] timeIntervalSince1970];
+        if (timestamp < _slowmodeTimestamp) {
+            if (_displaySlowmodeTooltip) {
+                _displaySlowmodeTooltip();
+            }
+            return false;
+        }
+    }
+    
     [self finishWithURL:_url dimensions:CGSizeMake(240.0f, 240.0f) duration:_duration liveUploadData:_liveUploadData thumbnailImage:_thumbnailImage];
     
     _automaticDismiss = true;
     [self dismiss:false];
+    return true;
 }
 
 - (void)unmutePressed

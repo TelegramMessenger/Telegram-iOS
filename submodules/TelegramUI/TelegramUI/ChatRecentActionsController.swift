@@ -64,7 +64,8 @@ final class ChatRecentActionsController: TelegramController {
         }, navigateToChat: { _ in
         }, openPeerInfo: {
         }, togglePeerNotifications: {
-        }, sendContextResult: { _, _ in
+        }, sendContextResult: { _, _, _, _ in
+            return false
         }, sendBotCommand: { _, _ in
         }, sendBotStart: { _ in
         }, botSwitchChatWithPayload: { _, _ in
@@ -79,6 +80,7 @@ final class ChatRecentActionsController: TelegramController {
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _, _, _ in
+            return false
         }, unblockPeer: {
         }, pinMessage: { _ in
         }, unpinMessage: {

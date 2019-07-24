@@ -90,7 +90,7 @@ private enum VerticalListContextResultsChatInputContextPanelEntry: Comparable, I
         }
     }
     
-    func item(account: Account, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult) -> Void) -> ListViewItem {
+    func item(account: Account, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> ListViewItem {
         switch self {
             case let .action(theme, title):
                 return VerticalListContextResultsChatInputPanelButtonItem(theme: theme, title: title, pressed: actionSelected)
@@ -106,7 +106,7 @@ private struct VerticalListContextResultsChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [VerticalListContextResultsChatInputContextPanelEntry], to toEntries: [VerticalListContextResultsChatInputContextPanelEntry], account: Account, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult) -> Void) -> VerticalListContextResultsChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [VerticalListContextResultsChatInputContextPanelEntry], to toEntries: [VerticalListContextResultsChatInputContextPanelEntry], account: Account, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> VerticalListContextResultsChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -172,16 +172,17 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction, let switchPeer = results.switchPeer {
                 interfaceInteraction.botSwitchChatWithPayload(results.botId, switchPeer.startParam)
             }
-            }, resultSelected: { [weak self] result in
-                if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                    interfaceInteraction.sendContextResult(results, result)
-                }
+        }, resultSelected: { [weak self] result, node, rect in
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                strongSelf.listView.clearHighlightAnimated(true)
+                return interfaceInteraction.sendContextResult(results, result, node, rect)
+            } else {
+                return false
+            }
         })
         self.currentEntries = to
         self.enqueueTransition(transition, firstTime: firstTime)
     }
-    
-    
     
     private func enqueueTransition(_ transition: VerticalListContextResultsChatInputContextPanelTransition, firstTime: Bool) {
         enqueuedTransitions.append((transition, firstTime))

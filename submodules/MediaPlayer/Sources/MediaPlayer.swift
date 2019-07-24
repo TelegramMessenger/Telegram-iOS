@@ -784,7 +784,7 @@ private final class MediaPlayerContext {
             }
         } else if let worstStatus = worstStatus, case let .finished(finishedAt) = worstStatus, finishedAt.isFinite {
             let nextTickDelay = max(0.0, finishedAt - timestamp) / self.baseRate
-            if nextTickDelay.isLessThanOrEqualTo(0.0) {
+            if nextTickDelay.isLessThanOrEqualTo(0.0) || timestamp.isEqual(to: 0.0) {
                 rate = 0.0
                 performActionAtEndNow = true
             } else {

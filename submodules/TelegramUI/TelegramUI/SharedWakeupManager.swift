@@ -60,6 +60,8 @@ public final class SharedWakeupManager {
     private var tasksDisposable: Disposable?
     private var currentTask: (UIBackgroundTaskIdentifier, Double, SwiftSignalKit.Timer)?
     
+    private var managedPausedInBackgroundPlayer: Disposable?
+    
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
     
     public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>) {
@@ -91,13 +93,26 @@ public final class SharedWakeupManager {
             strongSelf.checkTasks()
         })
         
+        self.managedPausedInBackgroundPlayer = combineLatest(queue: .mainQueue(), mediaManager.activeGlobalMediaPlayerAccountId, inForeground).start(next: { [weak mediaManager] accountAndActive, inForeground in
+            guard let mediaManager = mediaManager else {
+                return
+            }
+            if !inForeground, let accountAndActive = accountAndActive, !accountAndActive.1 {
+                mediaManager.audioSession.dropAll()
+            }
+        })
+        
         self.tasksDisposable = (activeAccounts
         |> deliverOnMainQueue
         |> mapToSignal { primary, accounts -> Signal<[(Account, Bool, AccountTasks)], NoError> in
             let signals: [Signal<(Account, Bool, AccountTasks), NoError>] = accounts.map { _, account in
                 let hasActiveMedia = mediaManager.activeGlobalMediaPlayerAccountId
-                |> map { id -> Bool in
-                    return id == account.id
+                |> map { idAndStatus -> Bool in
+                    if let (id, isPlaying) = idAndStatus {
+                        return id == account.id && isPlaying
+                    } else {
+                        return false
+                    }
                 }
                 |> distinctUntilChanged
                 let isPlayingBackgroundAudio = combineLatest(queue: .mainQueue(), hasActiveMedia, hasActiveAudioSession)
@@ -157,6 +172,7 @@ public final class SharedWakeupManager {
         self.inForegroundDisposable?.dispose()
         self.hasActiveAudioSessionDisposable?.dispose()
         self.tasksDisposable?.dispose()
+        self.managedPausedInBackgroundPlayer?.dispose()
         if let (taskId, _, timer) = self.currentTask {
             timer.invalidate()
             self.endBackgroundTask(taskId)

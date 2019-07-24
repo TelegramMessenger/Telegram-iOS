@@ -51,6 +51,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case permission(PresentationTheme, Int, String, Bool, TelegramChatBannedRightsFlags, Bool?)
     case slowmodeHeader(PresentationTheme, String)
     case slowmode(PresentationTheme, PresentationStrings, Int32)
+    case slowmodeInfo(PresentationTheme, String)
     case kicked(PresentationTheme, String, String)
     case exceptionsHeader(PresentationTheme, String)
     case add(PresentationTheme, String)
@@ -60,7 +61,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
         switch self {
             case .permissionsHeader, .permission:
                 return ChannelPermissionsSection.permissions.rawValue
-            case .slowmodeHeader, .slowmode:
+            case .slowmodeHeader, .slowmode, .slowmodeInfo:
                 return ChannelPermissionsSection.slowmode.rawValue
             case .kicked:
                 return ChannelPermissionsSection.kicked.rawValue
@@ -79,12 +80,14 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return .index(998)
             case .slowmode:
                 return .index(999)
-            case .kicked:
+            case .slowmodeInfo:
                 return .index(1000)
-            case .exceptionsHeader:
+            case .kicked:
                 return .index(1001)
-            case .add:
+            case .exceptionsHeader:
                 return .index(1002)
+            case .add:
+                return .index(1003)
             case let .peerItem(_, _, _, _, _, participant, _, _, _, _):
                 return .peer(participant.peer.id)
         }
@@ -112,6 +115,12 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 }
             case let .slowmode(lhsTheme, lhsStrings, lhsValue):
                 if case let .slowmode(rhsTheme, rhsStrings, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .slowmodeInfo(lhsTheme, lhsValue):
+                if case let .slowmodeInfo(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -214,6 +223,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ChatSlowmodeItem(theme: theme, strings: strings, value: value, enabled: true, sectionId: self.section, updated: { value in
                     arguments.updateSlowmode(value)
                 })
+            case let .slowmodeInfo(theme, value):
+                return ItemListTextItem(theme: theme, text: .plain(value), sectionId: self.section)
             case let .kicked(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openKicked()
@@ -395,6 +406,7 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
         
         entries.append(.slowmodeHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeHeader))
         entries.append(.slowmode(presentationData.theme, presentationData.strings, state.modifiedSlowmodeTimeout ?? (cachedData.slowModeTimeout ?? 0)))
+        entries.append(.slowmodeInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeInfo))
         
         entries.append(.kicked(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Removed, cachedData.participantsSummary.kickedCount.flatMap({ $0 == 0 ? "" : "\($0)" }) ?? ""))
         entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))
@@ -438,6 +450,7 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var cancelSlowmodeDraggingImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -624,7 +637,7 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { view in
-            if let channel = view.peers[peerId] as? TelegramChannel, let _ = view.cachedData as? CachedChannelData {
+            if let _ = view.peers[peerId] as? TelegramChannel, let _ = view.cachedData as? CachedChannelData {
                 updateState { state in
                     var state = state
                     state.modifiedSlowmodeTimeout = value
@@ -634,14 +647,52 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
                 if let modifiedSlowmodeTimeout = state.modifiedSlowmodeTimeout {
                     updateDefaultRightsDisposable.set(updateChannelSlowModeInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: peerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value).start())
                 }
-            } else if let group = view.peers[peerId] as? TelegramGroup, let _ = view.cachedData as? CachedGroupData {
+            } else if let _ = view.peers[peerId] as? TelegramGroup, let _ = view.cachedData as? CachedGroupData {
+                cancelSlowmodeDraggingImpl?()
+                
                 updateState { state in
                     var state = state
                     state.modifiedSlowmodeTimeout = value
                     return state
                 }
-                    /*updateDefaultRightsDisposable.set((updateDefaultChannelMemberBannedRights(account: context.account, peerId: peerId, rights: TelegramChatBannedRights(flags: completeRights(modifiedRightsFlags), untilDate: Int32.max))
-                        |> deliverOnMainQueue).start())*/
+                
+                let state = stateValue.with { $0 }
+                guard let modifiedSlowmodeTimeout = state.modifiedSlowmodeTimeout else {
+                    return
+                }
+                
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let progress = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                presentControllerImpl?(progress, nil)
+                
+                let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
+                |> mapError { _ -> UpdateChannelSlowModeError in
+                    return .generic
+                }
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<PeerId?, UpdateChannelSlowModeError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { upgradedPeerId -> Signal<PeerId?, UpdateChannelSlowModeError> in
+                    guard let upgradedPeerId = upgradedPeerId else {
+                        return .single(nil)
+                    }
+                    return updateChannelSlowModeInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value)
+                    |> mapToSignal { _ -> Signal<PeerId?, UpdateChannelSlowModeError> in
+                        return .complete()
+                    }
+                    |> then(.single(upgradedPeerId))
+                }
+                |> deliverOnMainQueue
+                updateDefaultRightsDisposable.set((signal
+                |> deliverOnMainQueue).start(next: { [weak progress] peerId in
+                    if let peerId = peerId {
+                        upgradedToSupergroupImpl?(peerId, {})
+                    }
+                    progress?.dismiss()
+                }, error: { [weak progress] _ in
+                    progress?.dismiss()
+                }))
             }
         })
     })
@@ -714,6 +765,16 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)
+        }
+    }
+    cancelSlowmodeDraggingImpl = { [weak controller] in
+        guard let controller = controller else {
+            return
+        }
+        controller.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatSlowmodeItemNode {
+                itemNode.cancelDragging()
+            }
         }
     }
     upgradedToSupergroupImpl = { [weak controller] upgradedPeerId, f in

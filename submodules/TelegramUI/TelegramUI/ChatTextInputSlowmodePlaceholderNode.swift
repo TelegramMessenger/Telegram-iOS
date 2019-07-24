@@ -6,6 +6,8 @@ import TelegramPresentationData
 final class ChatTextInputSlowmodePlaceholderNode: ASDisplayNode {
     private var theme: PresentationTheme
     private let iconNode: ASImageNode
+    private let iconArrowContainerNode: ASDisplayNode
+    private let iconArrowNode: ASImageNode
     private let textNode: ImmediateTextNode
     
     private var slowmodeState: ChatSlowmodeState?
@@ -21,13 +23,23 @@ final class ChatTextInputSlowmodePlaceholderNode: ASDisplayNode {
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconTimer"), color: theme.chat.inputPanel.inputPlaceholderColor)
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/SlowmodeFrame"), color: theme.chat.inputPanel.inputPlaceholderColor)
+        
+        self.iconArrowNode = ASImageNode()
+        self.iconArrowNode.displaysAsynchronously = false
+        self.iconArrowNode.displayWithoutProcessing = true
+        self.iconArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/SlowmodeArrow"), color: theme.chat.inputPanel.inputPlaceholderColor)
+        self.iconArrowNode.frame = CGRect(origin: CGPoint(), size: self.iconArrowNode.image?.size ?? CGSize())
+        
+        self.iconArrowContainerNode = ASDisplayNode()
+        self.iconArrowContainerNode.addSubnode(self.iconArrowNode)
         
         super.init()
         
         self.isUserInteractionEnabled = false
         
         self.addSubnode(self.iconNode)
+        self.addSubnode(self.iconArrowContainerNode)
         self.addSubnode(self.textNode)
     }
     
@@ -59,6 +71,20 @@ final class ChatTextInputSlowmodePlaceholderNode: ASDisplayNode {
                 let timestamp = Int32(Date().timeIntervalSince1970)
                 let timeout = max(0, timeoutTimestamp - timestamp)
                 self.textNode.attributedText = NSAttributedString(string: stringForDuration(timeout), font: Font.regular(17.0), textColor: self.theme.chat.inputPanel.inputPlaceholderColor)
+                if timeout <= 30 {
+                    if self.iconArrowNode.layer.animation(forKey: "rotation") == nil {
+                        let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+                        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+                        basicAnimation.duration = 1.0
+                        basicAnimation.fromValue = NSNumber(value: Float(0.0))
+                        basicAnimation.toValue = NSNumber(value: Float(Double.pi * 2.0))
+                        basicAnimation.repeatCount = Float.infinity
+                        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+                        self.iconArrowNode.layer.add(basicAnimation, forKey: "rotation")
+                    }
+                } else {
+                    self.iconArrowNode.layer.removeAnimation(forKey: "rotation")
+                }
             }
         }
         if let validLayout = self.validLayout {
@@ -71,9 +97,14 @@ final class ChatTextInputSlowmodePlaceholderNode: ASDisplayNode {
         
         var leftInset: CGFloat = 0.0
         if let image = self.iconNode.image {
-            let imageSize = image.size.aspectFitted(CGSize(width: 20.0, height: 20.0))
-            leftInset += imageSize.width + 2.0
-            self.iconNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: imageSize)
+            let imageSize = image.size
+            leftInset += imageSize.width + 4.0
+            let iconArrowFrame = CGRect(origin: CGPoint(x: 0.0, y: 1.0), size: imageSize)
+            self.iconNode.frame = iconArrowFrame
+            
+            if let arrowImage = self.iconArrowNode.image {
+                self.iconArrowContainerNode.frame = CGRect(origin: CGPoint(x: iconArrowFrame.minX, y: iconArrowFrame.maxY - arrowImage.size.height), size: arrowImage.size)
+            }
         }
         
         let textSize = self.textNode.updateLayout(size)

@@ -125,6 +125,8 @@ class ChatSlowmodeItemNode: ListViewItemNode {
     override func didLoad() {
         super.didLoad()
         
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
+        
         let sliderView = TGPhotoEditorSliderView()
         sliderView.enablePanHandling = true
         sliderView.trackCornerRadius = 1.0
@@ -146,6 +148,7 @@ class ChatSlowmodeItemNode: ListViewItemNode {
             }
             
             sliderView.value = CGFloat(value)
+            self.reportedValue = item.value
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
             sliderView.backColor = item.theme.list.disclosureArrowColor
             sliderView.startColor = item.theme.list.disclosureArrowColor
@@ -183,13 +186,9 @@ class ChatSlowmodeItemNode: ListViewItemNode {
                 
                 let valueString: String
                 if value == 0 {
-                    valueString = "Off"
-                } else if value < 60 {
-                    valueString = "\(value)"
-                } else if value < 60 * 60 {
-                    valueString = "\(value / 60)m"
+                    valueString = item.strings.Profile_MessageLifetimeForever
                 } else {
-                    valueString = "\(value / (60 * 60))h"
+                    valueString = shortTimeIntervalString(strings: item.strings, value: value)
                 }
                 let (textLayout, textApply) = makeTextLayouts[i](TextNodeLayoutArguments(attributedString: NSAttributedString(string: valueString, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
                 textLayoutAndApply.append((textLayout, textApply))
@@ -299,6 +298,10 @@ class ChatSlowmodeItemNode: ListViewItemNode {
             self.reportedValue = value
             item.updated(value)
         }
+    }
+    
+    func cancelDragging() {
+        self.sliderView?.cancelTracking(with: nil)
     }
 }
 

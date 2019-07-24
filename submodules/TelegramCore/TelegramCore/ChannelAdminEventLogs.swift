@@ -48,7 +48,6 @@ public enum AdminLogEventAction {
     case changePhoto(prev: [TelegramMediaImageRepresentation], new: [TelegramMediaImageRepresentation])
     case toggleInvites(Bool)
     case toggleSignatures(Bool)
-    case toggleSlowMode(prev: Int32, newValue: Int32)
     case updatePinned(Message?)
     case editMessage(prev: Message, new: Message)
     case deleteMessage(Message)
@@ -63,6 +62,7 @@ public enum AdminLogEventAction {
     case pollStopped(Message)
     case linkedPeerUpdated(previous: Peer?, updated: Peer?)
     case changeGeoLocation(previous: PeerGeoLocation?, updated: PeerGeoLocation?)
+    case updateSlowmode(previous: Int32?, updated: Int32?)
 }
 
 public enum ChannelAdminLogEventError {
@@ -220,7 +220,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                     case let .channelAdminLogEventActionChangeLocation(prevValue, newValue):
                                         action = .changeGeoLocation(previous: PeerGeoLocation(apiLocation: prevValue), updated: PeerGeoLocation(apiLocation: newValue))
                                     case let .channelAdminLogEventActionToggleSlowMode(prevValue, newValue):
-                                        action = .toggleSlowMode(prev: prevValue, newValue: newValue)
+                                        action = .updateSlowmode(previous: prevValue == 0 ? nil : prevValue, updated: newValue == 0 ? nil : newValue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {
