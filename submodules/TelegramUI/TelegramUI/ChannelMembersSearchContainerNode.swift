@@ -317,8 +317,9 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         }
         
         let removeMemberDisposable = self.removeMemberDisposable
-        let interaction = ChannelMembersSearchContainerInteraction(peerSelected: { peer, participant in
+        let interaction = ChannelMembersSearchContainerInteraction(peerSelected: { [weak self] peer, participant in
             openPeer(peer, participant)
+            self?.listNode.clearHighlightAnimated(true)
         }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
             updateState { state in
                 var state = state

@@ -13,14 +13,16 @@ private final class ChannelAdminControllerArguments {
     let toggleRight: (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void
     let transferOwnership: () -> Void
     let updateRank: (String, String) -> Void
+    let updateFocusedOnRank: (Bool) -> Void
     let dismissAdmin: () -> Void
     let dismissInput: () -> Void
     
-    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void) {
+    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void) {
         self.account = account
         self.toggleRight = toggleRight
         self.transferOwnership = transferOwnership
         self.updateRank = updateRank
+        self.updateFocusedOnRank = updateFocusedOnRank
         self.dismissAdmin = dismissAdmin
         self.dismissInput = dismissInput
     }
@@ -142,7 +144,7 @@ private enum ChannelAdminEntryStableId: Hashable {
 
 private enum ChannelAdminEntry: ItemListNodeEntry {
     case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, TelegramUserPresence?)
-    case rankTitle(PresentationTheme, String, Int32, Int32)
+    case rankTitle(PresentationTheme, String, Int32?, Int32)
     case rank(PresentationTheme, String, String, Bool)
     case rankInfo(PresentationTheme, String)
     case rightsTitle(PresentationTheme, String)
@@ -357,11 +359,16 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 }, avatarTapped: {
                 })
             case let .rankTitle(theme, text, count, limit):
-                let accessoryText = count > 0 ? ItemListSectionHeaderAccessoryText(value: "\(limit - count)", color: count > limit ? .destructive : .generic) : nil
+                var accessoryText: ItemListSectionHeaderAccessoryText?
+                if let count = count {
+                    accessoryText = ItemListSectionHeaderAccessoryText(value: "\(limit - count)", color: count > limit ? .destructive : .generic)
+                }
                 return ItemListSectionHeaderItem(theme: theme, text: text, accessoryText: accessoryText, sectionId: self.section)
             case let .rank(theme, placeholder, text, enabled):
                 return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: true), spacing: 0.0, clearButton: enabled, enabled: enabled, tag: ChannelAdminEntryTag.rank, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateRank(text, updatedText)
+                }, updatedFocus: { focus in
+                    arguments.updateFocusedOnRank(focus)
                 }, action: {
                     arguments.dismissInput()
                 })
@@ -391,11 +398,13 @@ private struct ChannelAdminControllerState: Equatable {
     let updatedFlags: TelegramChatAdminRightsFlags?
     let updatedRank: String?
     let updating: Bool
+    let focusedOnRank: Bool
     
-    init(updatedFlags: TelegramChatAdminRightsFlags? = nil, updatedRank: String? = nil, updating: Bool = false) {
+    init(updatedFlags: TelegramChatAdminRightsFlags? = nil, updatedRank: String? = nil, updating: Bool = false, focusedOnRank: Bool = false) {
         self.updatedFlags = updatedFlags
         self.updatedRank = updatedRank
         self.updating = updating
+        self.focusedOnRank = focusedOnRank
     }
     
     static func ==(lhs: ChannelAdminControllerState, rhs: ChannelAdminControllerState) -> Bool {
@@ -408,19 +417,26 @@ private struct ChannelAdminControllerState: Equatable {
         if lhs.updating != rhs.updating {
             return false
         }
+        if lhs.focusedOnRank != rhs.focusedOnRank {
+            return false
+        }
         return true
     }
     
     func withUpdatedUpdatedFlags(_ updatedFlags: TelegramChatAdminRightsFlags?) -> ChannelAdminControllerState {
-        return ChannelAdminControllerState(updatedFlags: updatedFlags, updatedRank: self.updatedRank, updating: self.updating)
+        return ChannelAdminControllerState(updatedFlags: updatedFlags, updatedRank: self.updatedRank, updating: self.updating, focusedOnRank: self.focusedOnRank)
     }
     
     func withUpdatedUpdatedRank(_ updatedRank: String?) -> ChannelAdminControllerState {
-        return ChannelAdminControllerState(updatedFlags: self.updatedFlags, updatedRank: updatedRank, updating: self.updating)
+        return ChannelAdminControllerState(updatedFlags: self.updatedFlags, updatedRank: updatedRank, updating: self.updating, focusedOnRank: self.focusedOnRank)
     }
     
     func withUpdatedUpdating(_ updating: Bool) -> ChannelAdminControllerState {
-        return ChannelAdminControllerState(updatedFlags: self.updatedFlags, updatedRank: self.updatedRank, updating: updating)
+        return ChannelAdminControllerState(updatedFlags: self.updatedFlags, updatedRank: self.updatedRank, updating: updating, focusedOnRank: self.focusedOnRank)
+    }
+    
+    func withUpdatedFocusedOnRank(_ focusedOnRank: Bool) -> ChannelAdminControllerState {
+        return ChannelAdminControllerState(updatedFlags: self.updatedFlags, updatedRank: self.updatedRank, updating: self.updating, focusedOnRank: focusedOnRank)
     }
 }
 
@@ -513,7 +529,7 @@ private func areAllAdminRightsEnabled(_ flags: TelegramChatAdminRightsFlags, gro
     }
 }
 
-private func channelAdminControllerEntries(presentationData: PresentationData, state: ChannelAdminControllerState, accountPeerId: PeerId, channelView: PeerView, adminView: PeerView, initialParticipant: ChannelParticipant?) -> [ChannelAdminEntry] {
+private func channelAdminControllerEntries(presentationData: PresentationData, state: ChannelAdminControllerState, accountPeerId: PeerId, channelView: PeerView, adminView: PeerView, initialParticipant: ChannelParticipant?, canEdit: Bool) -> [ChannelAdminEntry] {
     var entries: [ChannelAdminEntry] = []
     
     if let channel = channelView.peers[channelView.peerId] as? TelegramChannel, let admin = adminView.peers[adminView.peerId] {
@@ -536,8 +552,8 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 currentRank = nil
             }
             
-            let enabled = !state.updating && (admin.id != accountPeerId || isCreator)
-            entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), enabled ? Int32(currentRank?.count ?? 0) : 0, rankMaxLength))
+            let enabled = !state.updating && canEdit
+            entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), enabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
             entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", enabled))
             entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).0))
         }
@@ -653,8 +669,8 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             currentRank = nil
         }
         
-        let enabled = !state.updating && (admin.id != accountPeerId || isCreator)
-        entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), enabled ? Int32(currentRank?.count ?? 0) : 0, rankMaxLength))
+        let enabled = !state.updating && canEdit
+        entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), enabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
         entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", enabled))
         
         if isCreator {
@@ -773,6 +789,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         if updatedRank != previousRank {
             updateState { $0.withUpdatedUpdatedRank(updatedRank) }
         }
+    }, updateFocusedOnRank: { focusedOnRank in
+        updateState { $0.withUpdatedFocusedOnRank(focusedOnRank) }
     }, dismissAdmin: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
@@ -830,7 +848,6 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         }
         
         var focusItemTag: ItemListItemTag?
-        var isCreator = false
         if let initialParticipant = initialParticipant, case .creator = initialParticipant {
             focusItemTag = ChannelAdminEntryTag.rank
         }
@@ -846,7 +863,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                         var updateRank: String?
                         updateState { current in
                             updateFlags = current.updatedFlags
-                            updateRank = current.updatedRank
+                            updateRank = current.updatedRank?.trimmingCharacters(in: .whitespacesAndNewlines)
                             return current
                         }
                         
@@ -915,7 +932,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                         var updateRank: String?
                         updateState { current in
                             updateFlags = current.updatedFlags
-                            updateRank = current.updatedRank
+                            updateRank = current.updatedRank?.trimmingCharacters(in: .whitespacesAndNewlines)
                             return current
                         }
                         
@@ -946,7 +963,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             updateState { current in
                                 return current.withUpdatedUpdating(true)
                             }
-                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: "") |> deliverOnMainQueue).start(error: { error in
+                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
                                 if case let .addMemberError(error) = error, case .restricted = error, let admin = adminView.peers[adminView.peerId] {
                                     var text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
                                     if case .group = channel.info {
@@ -967,7 +984,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                     updateState { current in
                         updateFlags = current.updatedFlags
                         if let updatedRank = current.updatedRank, !updatedRank.isEmpty {
-                            updateRank = updatedRank
+                            updateRank = updatedRank.trimmingCharacters(in: .whitespacesAndNewlines)
                         }
                         return current
                     }
@@ -1045,7 +1062,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_Management_LabelEditor), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
-        let listState = ItemListNodeState(entries: channelAdminControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelView: channelView, adminView: adminView, initialParticipant: initialParticipant), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: nil, animateChanges: true)
+        let listState = ItemListNodeState(entries: channelAdminControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelView: channelView, adminView: adminView, initialParticipant: initialParticipant, canEdit: canEdit), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: nil, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     }

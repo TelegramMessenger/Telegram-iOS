@@ -211,21 +211,21 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
         let values: (UIColor, UIColor)
         switch self {
             case .blue:
-                values = (UIColor(rgb: 0x003d80), UIColor(rgb: 0x66afff))
+                values = (UIColor(rgb: 0x394cb5), UIColor(rgb: 0x7fd3fb))
             case .cyan:
                 values = (UIColor(rgb: 0x00c2ed), UIColor(rgb: 0x00c2ed))
             case .green:
-                values = (UIColor(rgb: 0x29b327), UIColor(rgb: 0x29b327))
+                values = (UIColor(rgb: 0x608236), UIColor(rgb: 0xb1e786))
             case .pink:
-                values = (UIColor(rgb: 0xeb6ca4), UIColor(rgb: 0xeb6ca4))
+                values = (UIColor(rgb: 0xad4974), UIColor(rgb: 0xeca2d0))
             case .orange:
-                values = (UIColor(rgb: 0xf08200), UIColor(rgb: 0xf08200))
+                values = (UIColor(rgb: 0xbe5d29), UIColor(rgb: 0xf3ae68))
             case .purple:
-                values = (UIColor(rgb: 0x9472ee), UIColor(rgb: 0x9472ee))
+                values = (UIColor(rgb: 0x544292), UIColor(rgb: 0xb2a3e3))
             case .red:
-                values = (UIColor(rgb: 0xd33213), UIColor(rgb: 0xd33213))
+                values = (UIColor(rgb: 0x94211b), UIColor(rgb: 0xe47e66))
             case .yellow:
-                values = (UIColor(rgb: 0xedb400), UIColor(rgb: 0xedb400))
+                values = (UIColor(rgb: 0xdda23a), UIColor(rgb: 0xfbe589))
             case .gray:
                 values = (UIColor(rgb: 0x6d839e), UIColor(rgb: 0x6d839e))
             case .black:

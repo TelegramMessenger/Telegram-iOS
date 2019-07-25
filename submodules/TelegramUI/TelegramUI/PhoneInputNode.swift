@@ -241,7 +241,7 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
         if self.previousCountryCodeText != realRegionPrefix || forceNotifyCountryCodeUpdated {
             self.previousCountryCodeText = realRegionPrefix
-            let code = removePlus(realRegionPrefix).trimmingCharacters(in: CharacterSet.whitespaces)
+            let code = removePlus(realRegionPrefix).trimmingCharacters(in: .whitespaces)
             var countryName: String?
             if self.countryNameForCode?.0 == Int32(code) {
                 countryName = self.countryNameForCode?.1

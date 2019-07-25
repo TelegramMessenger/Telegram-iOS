@@ -93,6 +93,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.panelButtonNode.setTitle(self.presentationData.strings.Channel_AdminLog_InfoPanelTitle, with: Font.regular(17.0), with: self.presentationData.theme.chat.inputPanel.panelControlAccentColor, for: [])
         
         self.listNode = ListView()
+        self.listNode.dynamicBounceEnabled = !self.presentationData.disableAnimations
         self.listNode.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
         self.loadingNode = ChatLoadingNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper)
         self.emptyNode = ChatRecentActionsEmptyNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper)
@@ -441,7 +442,6 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.historyDisposable = appliedTransition.start()
         
-       
         let mediaManager = self.context.sharedContext.mediaManager
         self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
