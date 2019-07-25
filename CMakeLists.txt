@@ -3,6 +3,10 @@ cmake_minimum_required( VERSION 3.3 )
 #declare project
 project( rlottie VERSION 0.0.1 LANGUAGES C CXX ASM)
 
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE MinSizeRel)
+endif()
+
 add_definitions(-DLOT_BUILD)
 
 #declare target
@@ -38,7 +42,6 @@ target_compile_options(rlottie
                     PUBLIC
                     PRIVATE
                         -std=c++14
-                        -Os
                         -fno-exceptions
                         -fno-unwind-tables
                         -fno-asynchronous-unwind-tables
