@@ -1175,7 +1175,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         {
             selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:self.allowGrouping selectionLimit:30];
             if (self.allowGrouping)
-                selectionContext.grouping = ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_mediaGroupingDisabled_v0"] boolValue];
+                selectionContext.grouping = true;
             _selectionContext = selectionContext;
         }
         

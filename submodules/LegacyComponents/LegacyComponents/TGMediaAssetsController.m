@@ -243,7 +243,7 @@
         __weak TGMediaAssetsController *weakSelf = self;
         _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping selectionLimit:selectionLimit];
         if (allowGrouping)
-            _selectionContext.grouping = ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_mediaGroupingDisabled_v0"] boolValue];
+            _selectionContext.grouping = true;
         _selectionContext.selectionLimitExceeded = ^{
             __strong TGMediaAssetsController *strongSelf = weakSelf;
             if (strongSelf == nil)

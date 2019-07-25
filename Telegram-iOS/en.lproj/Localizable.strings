@@ -4484,6 +4484,7 @@ Any member of this group will be able to see messages in the channel.";
 "Chat.AttachmentLimitExceeded" = "Slowmode is enabled. You can't select more items.";
 "Chat.AttachmentMultipleFilesDisabled" = "Slowmode is enabled. You can't send multiple files at once.";
 "Chat.AttachmentMultipleForwardDisabled" = "Slowmode is enabled. You can't forward multiple messages at once.";
+"Chat.MultipleTextMessagesDisabled" = "Slowmode is enabled. You can't send multiple messages at once.";
 "StickerPacksSettings.AnimatedStickersInfo" = "Animated stickers in a chat will play continuously.";
 
 "Appearance.ThemePreview.ChatList.1.Name" = "Eva Summer";

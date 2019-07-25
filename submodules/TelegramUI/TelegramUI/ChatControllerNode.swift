@@ -127,7 +127,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     var requestUpdateChatInterfaceState: (Bool, Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _, _ in }
     var requestUpdateInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _, _ in }
-    var sendMessages: ([EnqueueMessage]) -> Void = { _ in }
+    var sendMessages: ([EnqueueMessage], Bool) -> Void = { _, _ in }
     var displayAttachmentMenu: () -> Void = { }
     var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
     var updateTypingActivity: (Bool) -> Void = { _ in }
@@ -345,7 +345,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         
                         if case .peer = strongSelf.chatLocation {
-                            strongSelf.sendMessages(messages)
+                            strongSelf.sendMessages(messages, messages.count > 1)
                         }
                     }
                 }

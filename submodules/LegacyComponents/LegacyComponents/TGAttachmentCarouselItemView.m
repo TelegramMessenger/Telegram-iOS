@@ -153,7 +153,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                 }
             };
             if (allowGrouping)
-                _selectionContext.grouping = ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_mediaGroupingDisabled_v0"] boolValue];
+                _selectionContext.grouping = true;
             [_selectionContext setItemSourceUpdatedSignal:[_assetsLibrary libraryChanged]];
             _selectionContext.updatedItemsSignal = ^SSignal *(NSArray *items)
             {

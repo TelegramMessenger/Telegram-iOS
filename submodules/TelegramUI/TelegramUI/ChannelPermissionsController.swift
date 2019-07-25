@@ -450,7 +450,6 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
-    var cancelSlowmodeDraggingImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -648,8 +647,6 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
                     updateDefaultRightsDisposable.set(updateChannelSlowModeInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: peerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value).start())
                 }
             } else if let _ = view.peers[peerId] as? TelegramGroup, let _ = view.cachedData as? CachedGroupData {
-                cancelSlowmodeDraggingImpl?()
-                
                 updateState { state in
                     var state = state
                     state.modifiedSlowmodeTimeout = value
@@ -765,16 +762,6 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)
-        }
-    }
-    cancelSlowmodeDraggingImpl = { [weak controller] in
-        guard let controller = controller else {
-            return
-        }
-        controller.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ChatSlowmodeItemNode {
-                itemNode.cancelDragging()
-            }
         }
     }
     upgradedToSupergroupImpl = { [weak controller] upgradedPeerId, f in

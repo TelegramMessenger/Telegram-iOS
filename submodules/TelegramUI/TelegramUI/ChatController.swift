@@ -2391,20 +2391,30 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
         }
         
-        self.chatDisplayNode.sendMessages = { [weak self] messages in
+        self.chatDisplayNode.sendMessages = { [weak self] messages, isAnyMessageTextPartitioned in
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
                 strongSelf.commitPurposefulAction()
                 
-                let forwardCount = messages.reduce(0, { count, message -> Int in
-                    if case .forward = message {
-                        return count + 1
-                    } else {
-                        return count
+                if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode {
+                    let forwardCount = messages.reduce(0, { count, message -> Int in
+                        if case .forward = message {
+                            return count + 1
+                        } else {
+                            return count
+                        }
+                    })
+                    
+                    var errorText: String?
+                    if forwardCount > 1 {
+                        errorText = strongSelf.presentationData.strings.Chat_AttachmentMultipleForwardDisabled
+                    } else if isAnyMessageTextPartitioned {
+                        errorText = strongSelf.presentationData.strings.Chat_MultipleTextMessagesDisabled
                     }
-                })
-                if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode, forwardCount > 1 {
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentMultipleForwardDisabled, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                    return
+                    
+                    if let errorText = errorText {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        return
+                    }
                 }
                 
                 let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages(messages))
@@ -2430,7 +2440,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             guard let strongSelf = self else {
                 return
             }
-            if let _ = strongSelf.presentationInterfaceState.slowmodeState {
+            if strongSelf.presentationInterfaceState.interfaceState.editMessage == nil, let _ = strongSelf.presentationInterfaceState.slowmodeState {
                 if let rect = strongSelf.chatDisplayNode.frameForAttachmentButton() {
                     strongSelf.interfaceInteraction?.displaySlowmodeTooltip(strongSelf.chatDisplayNode, rect)
                 }

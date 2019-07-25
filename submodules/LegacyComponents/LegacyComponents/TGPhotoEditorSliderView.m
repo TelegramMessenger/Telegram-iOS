@@ -602,7 +602,9 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     }
     
     [self setNeedsLayout];
-    [self sendActionsForControlEvents:UIControlEventValueChanged];
+    if (!_limitValueChangedToLatestState) {
+        [self sendActionsForControlEvents:UIControlEventValueChanged];
+    }
     
     return true;
 }

@@ -608,11 +608,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var isSlowmodeActive = false
         if interfaceState.slowmodeState != nil {
             isSlowmodeActive = true
-            isMediaEnabled = false
+            if !isEditingMedia {
+                isMediaEnabled = false
+            }
         }
         transition.updateAlpha(layer: self.attachmentButton.layer, alpha: isMediaEnabled ? 1.0 : 0.4)
         self.attachmentButton.isEnabled = isMediaEnabled
-        self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive
+        self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive || isMediaEnabled
         
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
