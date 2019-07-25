@@ -605,9 +605,6 @@ private final class MultipartFetchManager {
             while 1024 * 1024 % downloadRange.count != 0 {
                 downloadRange = downloadRange.lowerBound ..< (downloadRange.upperBound - 1)
             }
-            if case .maximum = priority {
-                print("fetch maximum \(downloadRange.lowerBound), \(downloadRange.count)")
-            }
             
             var intervalIndexSet = IndexSet(integersIn: intervalsToFetch[currentIntervalIndex].0)
             intervalIndexSet.remove(integersIn: downloadRange)

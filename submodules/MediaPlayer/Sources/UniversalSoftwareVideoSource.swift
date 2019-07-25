@@ -249,11 +249,11 @@ private final class UniversalSoftwareVideoSourceImpl {
     
         self.currentNumberOfReads = 0
         self.currentReadBytes = 0
-        for i in 0 ..< 10 {
+        for _ in 0 ..< 10 {
             let (decodableFrame, loop) = self.readDecodableFrame()
             if let decodableFrame = decodableFrame {
                 if let renderedFrame = videoStream.decoder.render(frame: decodableFrame) {
-                    print("Frame rendered in \(self.currentNumberOfReads) reads, \(self.currentReadBytes) bytes, total frames read: \(i + 1)")
+                    //print("Frame rendered in \(self.currentNumberOfReads) reads, \(self.currentReadBytes) bytes, total frames read: \(i + 1)")
                     return (renderedFrame, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
                 }
             }
@@ -332,11 +332,11 @@ private final class UniversalSoftwareVideoSourceThread: NSObject {
         source.cancelRead = params.cancel
         source.requiredDataIsNotLocallyAvailable = params.requiredDataIsNotLocallyAvailable
         source.state.set(.generatingFrame)
-        let startTime = CFAbsoluteTimeGetCurrent()
         let image = source.readImage(at: params.timestamp).0
-        params.completion(image)
+        source.cancelRead = .single(false)
+        source.requiredDataIsNotLocallyAvailable = nil
         source.state.set(.ready)
-        print("take frame: \(CFAbsoluteTimeGetCurrent() - startTime) s")
+        params.completion(image)
     }
 }
 

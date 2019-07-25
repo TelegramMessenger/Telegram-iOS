@@ -63,26 +63,28 @@ private final class MediaPlayerFramePreviewImpl {
         let takeDisposable = MetaDisposable()
         let disposable = (self.context.get()
         |> take(1)).start(next: { [weak self] context in
-            queue.async {
+            queue.justDispatch {
                 guard context.queue === queue else {
                     return
                 }
                 context.with { context in
                     let disposable = context.source.takeFrame(at: timestamp).start(next: { result in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        switch result {
-                        case .waitingForData:
-                            strongSelf.framePipe.putNext(.waitingForData)
-                        case let .image(image):
-                            if let image = image {
-                                strongSelf.framePipe.putNext(.image(image))
+                        queue.async {
+                            guard let strongSelf = self else {
+                                return
                             }
-                            strongSelf.currentFrameTimestamp = nil
-                            if let nextFrameTimestamp = strongSelf.nextFrameTimestamp {
-                                strongSelf.nextFrameTimestamp = nil
-                                strongSelf.generateFrame(at: nextFrameTimestamp)
+                            switch result {
+                            case .waitingForData:
+                                strongSelf.framePipe.putNext(.waitingForData)
+                            case let .image(image):
+                                if let image = image {
+                                    strongSelf.framePipe.putNext(.image(image))
+                                }
+                                strongSelf.currentFrameTimestamp = nil
+                                if let nextFrameTimestamp = strongSelf.nextFrameTimestamp {
+                                    strongSelf.nextFrameTimestamp = nil
+                                    strongSelf.generateFrame(at: nextFrameTimestamp)
+                                }
                             }
                         }
                     })
@@ -91,8 +93,10 @@ private final class MediaPlayerFramePreviewImpl {
             }
         })
         self.currentFrameDisposable.set(ActionDisposable {
-            takeDisposable.dispose()
-            disposable.dispose()
+            queue.async {
+                takeDisposable.dispose()
+                disposable.dispose()
+            }
         })
     }
     
