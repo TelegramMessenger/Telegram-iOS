@@ -2021,14 +2021,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if canDismiss, let inputHeight = derivedLayoutState.inputNodeHeight, currentLocation.y + (self.keyboardGestureAccessoryHeight ?? 0.0) > validLayout.size.height - inputHeight {
             self.upperInputPositionBound = nil
-            self.requestUpdateInterfaceState(.animated(duration: 0.25, curve: .spring), true, { state in
-                if case .none = state.inputMode {
-                    return state
-                }
-                return state.updatedInputMode { _ in
-                    return .none
-                }
-            })
+            self.dismissInput()
         } else {
             self.upperInputPositionBound = nil
             self.updateLayoutInternal(transition: .animated(duration: 0.25, curve: .spring))
