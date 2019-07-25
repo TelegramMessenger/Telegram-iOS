@@ -4526,3 +4526,5 @@ Any member of this group will be able to see messages in the channel.";
 "Group.EditAdmin.RankInfo" = "A title that will be shown instead of '%@'.";
 "Group.EditAdmin.RankOwnerPlaceholder" = "owner";
 "Group.EditAdmin.RankAdminPlaceholder" = "admin";
+
+"Conversation.SendMessage.SendSilently" = "Send Without Sound";
