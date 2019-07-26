@@ -473,6 +473,7 @@
 		D07E413B208A432100FCA8F0 /* ChatListTitleProxyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E413A208A432100FCA8F0 /* ChatListTitleProxyNode.swift */; };
 		D07E413D208A494D00FCA8F0 /* ProxyServerActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E413C208A494D00FCA8F0 /* ProxyServerActionSheetController.swift */; };
 		D080B27F1F4C7C6000AA3847 /* InstantPageManagedMediaId.swift in Sources */ = {isa = PBXBuildFile; fileRef = D080B27E1F4C7C6000AA3847 /* InstantPageManagedMediaId.swift */; };
+		D081A9A922EB26AE0069C449 /* PhoneLabelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081A9A822EB26AE0069C449 /* PhoneLabelController.swift */; };
 		D081E104217F57D2003CD921 /* LanguageLinkPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081E103217F57D2003CD921 /* LanguageLinkPreviewController.swift */; };
 		D081E106217F5834003CD921 /* LanguageLinkPreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081E105217F5834003CD921 /* LanguageLinkPreviewControllerNode.swift */; };
 		D081E108217F583F003CD921 /* LanguageLinkPreviewContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081E107217F583F003CD921 /* LanguageLinkPreviewContentNode.swift */; };
@@ -1887,6 +1888,7 @@
 		D07E413A208A432100FCA8F0 /* ChatListTitleProxyNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListTitleProxyNode.swift; sourceTree = "<group>"; };
 		D07E413C208A494D00FCA8F0 /* ProxyServerActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyServerActionSheetController.swift; sourceTree = "<group>"; };
 		D080B27E1F4C7C6000AA3847 /* InstantPageManagedMediaId.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageManagedMediaId.swift; sourceTree = "<group>"; };
+		D081A9A822EB26AE0069C449 /* PhoneLabelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneLabelController.swift; sourceTree = "<group>"; };
 		D081E103217F57D2003CD921 /* LanguageLinkPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageLinkPreviewController.swift; sourceTree = "<group>"; };
 		D081E105217F5834003CD921 /* LanguageLinkPreviewControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageLinkPreviewControllerNode.swift; sourceTree = "<group>"; };
 		D081E107217F583F003CD921 /* LanguageLinkPreviewContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageLinkPreviewContentNode.swift; sourceTree = "<group>"; };
@@ -4465,6 +4467,7 @@
 				D050A465229C06460044F11A /* ChannelDiscussionGroupSearchContainerNode.swift */,
 				090E778922A9F23C00CD99F5 /* ChannelOwnershipTransferController.swift */,
 				D025402222E1C92D00AC0195 /* ChatSlowmodeItem.swift */,
+				D081A9A822EB26AE0069C449 /* PhoneLabelController.swift */,
 			);
 			name = "Peer Info";
 			sourceTree = "<group>";
@@ -6026,6 +6029,7 @@
 				D0BFAE5B20AB35D200793CF2 /* IconSwitchNode.swift in Sources */,
 				D0EC6DE01EB9F58900EBF1C3 /* ChatTextInputAudioRecordingCancelIndicator.swift in Sources */,
 				0962E67F21BA786A00245FD9 /* WebSearchItem.swift in Sources */,
+				D081A9A922EB26AE0069C449 /* PhoneLabelController.swift in Sources */,
 				D09D88711F86D36700BEB4C9 /* CountryList.swift in Sources */,
 				D0EC6DE11EB9F58900EBF1C3 /* ChatMessageSelectionInputPanelNode.swift in Sources */,
 				D04281FA200E5CDC009DDE36 /* ChatRecentActionsControllerState.swift in Sources */,
