@@ -645,8 +645,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 let keyboardAppearance = interfaceState.theme.chat.inputPanel.keyboardColor.keyboardAppearance
                 if let textInputNode = self.textInputNode, textInputNode.keyboardAppearance != keyboardAppearance, textInputNode.isFirstResponder() {
-                    textInputNode.resignFirstResponder()
-                    textInputNode.becomeFirstResponder()
+                    if textInputNode.isCurrentlyEmoji() {
+                        textInputNode.initialPrimaryLanguage = "emoji"
+                        textInputNode.resetInitialPrimaryLanguage()
+                    }
                     textInputNode.keyboardAppearance = keyboardAppearance
                 }
                 

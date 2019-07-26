@@ -11,14 +11,8 @@ public class EditableTextNode: ASEditableTextNode {
             guard newValue != self.keyboardAppearance else {
                 return
             }
-            let resigning = self.isFirstResponder()
-            if resigning {
-                self.resignFirstResponder()
-            }
             super.keyboardAppearance = newValue
-            if resigning {
-                self.becomeFirstResponder()
-            }
+            self.textView.reloadInputViews()
         }
     }
 }
