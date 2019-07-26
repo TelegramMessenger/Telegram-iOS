@@ -111,7 +111,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
     } else if let galleryMedia = galleryMedia {
         if let mapMedia = galleryMedia as? TelegramMediaMap {
             return .map(mapMedia)
-        } else if let file = galleryMedia as? TelegramMediaFile, file.isSticker {
+        } else if let file = galleryMedia as? TelegramMediaFile, (file.isSticker || file.isAnimatedSticker) {
             for attribute in file.attributes {
                 if case let .Sticker(_, reference, _) = attribute {
                     if let reference = reference {
@@ -153,7 +153,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     #endif
                 }
                 
-                if !file.isVideo, !internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName) {
+                if !file.isVideo {
                     return .document(file)
                 }
             }
