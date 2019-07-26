@@ -1046,15 +1046,16 @@ final class SharedApplicationContext {
             }
             self.authContextValue = context
             if let context = context {
-                let isReady: Signal<Bool, NoError> = .single(true)
+                let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+                let statusController = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                self.mainWindow.present(statusController, on: .root)
+                let isReady: Signal<Bool, NoError> = context.isReady.get()
                 authContextReadyDisposable.set((isReady
                 |> filter { $0 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
-                    self.mainWindow.present(context.rootController, on: .root)
-                    //self.mainWindow.viewController = context.rootController
-                    //self.mainWindow.topLevelOverlayControllers = context.overlayControllers
-                }))
+                    statusController.dismiss()
+                    self.mainWindow.present(context.rootController, on: .root)                }))
             } else {
                 authContextReadyDisposable.set(nil)
             }

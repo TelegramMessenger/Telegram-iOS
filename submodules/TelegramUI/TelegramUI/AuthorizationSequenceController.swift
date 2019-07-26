@@ -38,6 +38,12 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     
     private var didPlayPresentationAnimation = false
     
+    private let _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    private var didSetReady = false
+    
     public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
         self.sharedContext = sharedContext
         self.account = account
@@ -769,6 +775,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         super.setViewControllers(viewControllers, animated: animated)
         if wasEmpty {
             self.topViewController?.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        }
+        if !self.didSetReady {
+            self.didSetReady = true
+            self._ready.set(.single(true))
         }
     }
     
