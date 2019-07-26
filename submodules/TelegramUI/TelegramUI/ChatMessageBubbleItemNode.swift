@@ -1587,7 +1587,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             if mosaicStatusNode !== strongSelf.mosaicStatusNode {
                 strongSelf.mosaicStatusNode?.removeFromSupernode()
                 strongSelf.mosaicStatusNode = mosaicStatusNode
-                strongSelf.insertSubnode(mosaicStatusNode, belowSubnode: strongSelf.messageAccessibilityArea)
+                strongSelf.insertSubnode(mosaicStatusNode, aboveSubnode: strongSelf.messageAccessibilityArea)
             }
             let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
             mosaicStatusNode.frame = CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size)
