@@ -222,12 +222,12 @@ enum TwoStepVerificationUnlockSettingsControllerMode {
     case manage(password: String, email: String, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
-struct TwoStepVerificationPendingEmailState {
+struct TwoStepVerificationPendingEmailState: Equatable {
     let password: String?
     let email: TwoStepVerificationPendingEmail
 }
 
-enum TwoStepVerificationAccessConfiguration {
+enum TwoStepVerificationAccessConfiguration: Equatable {
     case notSet(pendingEmail: TwoStepVerificationPendingEmailState?)
     case set(hint: String, hasRecoveryEmail: Bool, hasSecureValues: Bool)
     
@@ -241,12 +241,12 @@ enum TwoStepVerificationAccessConfiguration {
     }
 }
 
-enum TwoStepVerificationUnlockSettingsControllerData {
+enum TwoStepVerificationUnlockSettingsControllerData: Equatable {
     case access(configuration: TwoStepVerificationAccessConfiguration?)
     case manage(password: String, emailSet: Bool, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
-func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: TwoStepVerificationUnlockSettingsControllerMode) -> ViewController {
+func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: TwoStepVerificationUnlockSettingsControllerMode, openSetupPasswordImmediately: Bool = false) -> ViewController {
     let initialState = TwoStepVerificationUnlockSettingsControllerState()
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -833,6 +833,10 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
         }
         didAppear = true
         initialFocusImpl?()
+        
+        if openSetupPasswordImmediately {
+            arguments.openSetupPassword()
+        }
     }
     
     if case let .access(intro, _) = mode, intro {

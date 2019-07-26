@@ -100,7 +100,7 @@ public enum UpdateTwoStepVerificationPasswordError {
     case invalidEmail
 }
 
-public struct TwoStepVerificationPendingEmail {
+public struct TwoStepVerificationPendingEmail: Equatable {
     public let pattern: String
     public let codeLength: Int32?
     
