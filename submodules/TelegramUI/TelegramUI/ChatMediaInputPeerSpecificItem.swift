@@ -58,7 +58,7 @@ final class ChatMediaInputPeerSpecificItem: ListViewItem {
     }
 }
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 10.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 12.0)!
 private let boundingSize = CGSize(width: 41.0, height: 41.0)
 private let boundingImageSize = CGSize(width: 28.0, height: 28.0)
 private let highlightSize = CGSize(width: 35.0, height: 35.0)
@@ -83,7 +83,7 @@ final class ChatMediaInputPeerSpecificItemNode: ListViewItemNode {
         self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         self.avatarNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
-        let imageSize = CGSize(width: 32.0, height: 32.0)
+        let imageSize = CGSize(width: 26.0, height: 26.0)
         self.avatarNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
         
         self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - highlightSize.height) / 2.0)), size: highlightSize)

@@ -352,6 +352,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         self.addSubnode(self.actionButtons)
         
+        self.actionButtons.sendButtonLongPressed = { [weak self] in
+            self?.interfaceInteraction?.displaySendMessageOptions()
+        }
+        
         self.actionButtons.micButton.recordingDisabled = { [weak self] in
             self?.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .tooltip)
         }

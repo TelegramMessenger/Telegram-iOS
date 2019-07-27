@@ -6,15 +6,20 @@ import TelegramPresentationData
 
 final class ChatTextInputActionButtonsNode: ASDisplayNode {
     let micButton: ChatTextInputMediaRecordingButton
-    let sendButton: HighlightableButton
+    let sendButton: HighlightTrackingButton
     var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
     var sendButtonHasApplyIcon = false
     var animatingSendButton = false
     let expandMediaInputButton: HighlightableButtonNode
     
+    var sendButtonLongPressed: (() -> Void)?
+    
     init(theme: PresentationTheme, presentController: @escaping (ViewController) -> Void) {
         self.micButton = ChatTextInputMediaRecordingButton(theme: theme, presentController: presentController)
-        self.sendButton = HighlightableButton()
+        self.sendButton = HighlightTrackingButton()
+        self.sendButton.adjustsImageWhenHighlighted = false
+        self.sendButton.adjustsImageWhenDisabled = false
+        
         self.expandMediaInputButton = HighlightableButtonNode()
         
         super.init()
@@ -22,9 +27,34 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         self.isAccessibilityElement = true
         self.accessibilityTraits = UIAccessibilityTraitButton | UIAccessibilityTraitNotEnabled
         
+        self.sendButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.sendButton.layer.animateScale(from: 1.0, to: 0.75, duration: 0.7, removeOnCompletion: false)
+                } else if let presentationLayer = strongSelf.sendButton.layer.presentation() {
+                    strongSelf.sendButton.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
+                }
+            }
+        }
+        
         self.view.addSubview(self.micButton)
         self.view.addSubview(self.sendButton)
         self.addSubnode(self.expandMediaInputButton)
+    }
+    
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let gestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress(_:)))
+        gestureRecognizer.minimumPressDuration = 0.7
+        self.sendButton.addGestureRecognizer(gestureRecognizer)
+    }
+    
+    @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            self.sendButtonLongPressed?()
+        }
     }
     
     func updateTheme(theme: PresentationTheme) {

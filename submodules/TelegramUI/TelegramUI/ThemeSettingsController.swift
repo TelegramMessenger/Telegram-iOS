@@ -257,7 +257,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, colors: colors, currentColor: color ?? PresentationThemeAccentColor(baseColor: .blue, value: 0.5), updated: { color in
                     arguments.selectAccentColor(color)
                 }, toggleSlider: { baseColor in
-                    arguments.toggleColorSlider(baseColor == .white)
+                    arguments.toggleColorSlider(baseColor == .white || baseColor == .black)
                 }, tag: ThemeSettingsEntryTag.accentColor)
             case let .autoNightTheme(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, icon: nil, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
@@ -416,7 +416,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 themeSpecificChatWallpapers[current.theme.index] = chatWallpaper
             }
             
-            if color.baseColor == .white {
+            if color.baseColor == .white || color.baseColor == .black {
                 updateState { $0.withDisplayColorSlider(false) }
             }
 

@@ -12,6 +12,24 @@
 		090E777622A6945900CD99F5 /* BlackClassicIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 090E777222A6945800CD99F5 /* BlackClassicIcon@3x.png */; };
 		090E777722A6945900CD99F5 /* BlueClassicIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 090E777322A6945800CD99F5 /* BlueClassicIcon@2x.png */; };
 		092F368521542D6C001A9F49 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 092F368321542D6C001A9F49 /* Localizable.strings */; };
+		094DDF0822E7A0D3004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF0222E7A0D3004B0256 /* Localizable.strings */; };
+		094DDF0922E7A0D3004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF0422E7A0D3004B0256 /* InfoPlist.strings */; };
+		094DDF0A22E7A0D3004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF0622E7A0D3004B0256 /* AppIntentVocabulary.plist */; };
+		094DDF3222E7A61B004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF2C22E7A61B004B0256 /* Localizable.strings */; };
+		094DDF3322E7A61B004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF2E22E7A61B004B0256 /* InfoPlist.strings */; };
+		094DDF3422E7A61B004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF3022E7A61B004B0256 /* AppIntentVocabulary.plist */; };
+		094DDF3C22E7A98E004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF3622E7A98E004B0256 /* Localizable.strings */; };
+		094DDF3D22E7A98E004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF3822E7A98E004B0256 /* InfoPlist.strings */; };
+		094DDF3E22E7A98E004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF3A22E7A98E004B0256 /* AppIntentVocabulary.plist */; };
+		094DDF4622E7A9A8004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4022E7A9A8004B0256 /* Localizable.strings */; };
+		094DDF4722E7A9A8004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4222E7A9A8004B0256 /* InfoPlist.strings */; };
+		094DDF4822E7A9A8004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4422E7A9A8004B0256 /* AppIntentVocabulary.plist */; };
+		094DDF5722E8C310004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4A22E8C30F004B0256 /* Localizable.strings */; };
+		094DDF5822E8C310004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4C22E8C30F004B0256 /* InfoPlist.strings */; };
+		094DDF5922E8C310004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4E22E8C30F004B0256 /* AppIntentVocabulary.plist */; };
+		094DDF5A22E8C310004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF5122E8C30F004B0256 /* Localizable.strings */; };
+		094DDF5B22E8C310004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF5322E8C30F004B0256 /* InfoPlist.strings */; };
+		094DDF5C22E8C310004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF5522E8C30F004B0256 /* AppIntentVocabulary.plist */; };
 		0956AF2F217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0956AF2E217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m */; };
 		0972C6E021791D950069E98A /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0972C6DF21791D950069E98A /* UserNotifications.framework */; };
 		0972C6E421792D130069E98A /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0972C6E221792D120069E98A /* InfoPlist.strings */; };
@@ -514,6 +532,24 @@
 		090E777222A6945800CD99F5 /* BlackClassicIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicIcon@3x.png"; sourceTree = "<group>"; };
 		090E777322A6945800CD99F5 /* BlueClassicIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicIcon@2x.png"; sourceTree = "<group>"; };
 		092F368421542D6C001A9F49 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Share/en.lproj/Localizable.strings; sourceTree = SOURCE_ROOT; };
+		094DDF0322E7A0D3004B0256 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF0522E7A0D3004B0256 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF0722E7A0D3004B0256 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = fr; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		094DDF2D22E7A61B004B0256 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF2F22E7A61B004B0256 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF3122E7A61B004B0256 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = tr; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		094DDF3722E7A98E004B0256 /* ca */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ca; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF3922E7A98E004B0256 /* ca */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ca; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF3B22E7A98E004B0256 /* ca */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = ca; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		094DDF4122E7A9A8004B0256 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF4322E7A9A8004B0256 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF4522E7A9A8004B0256 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = uk; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		094DDF4B22E8C30F004B0256 /* ms */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ms; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF4D22E8C30F004B0256 /* ms */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ms; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF4F22E8C30F004B0256 /* ms */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = ms; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		094DDF5222E8C30F004B0256 /* id */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = id; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF5422E8C30F004B0256 /* id */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = id; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF5622E8C30F004B0256 /* id */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = id; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
 		0956AF2B217B4642008106D0 /* WatchCommunicationManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchCommunicationManager.swift; sourceTree = "<group>"; };
 		0956AF2D217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGNeoUnsupportedMessageViewModel.h; sourceTree = "<group>"; };
 		0956AF2E217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGNeoUnsupportedMessageViewModel.m; sourceTree = "<group>"; };
@@ -1213,6 +1249,66 @@
 			path = en.lproj;
 			sourceTree = "<group>";
 		};
+		094DDF0122E7A0D3004B0256 /* fr.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF0222E7A0D3004B0256 /* Localizable.strings */,
+				094DDF0422E7A0D3004B0256 /* InfoPlist.strings */,
+				094DDF0622E7A0D3004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = fr.lproj;
+			sourceTree = "<group>";
+		};
+		094DDF2B22E7A61B004B0256 /* tr.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF2C22E7A61B004B0256 /* Localizable.strings */,
+				094DDF2E22E7A61B004B0256 /* InfoPlist.strings */,
+				094DDF3022E7A61B004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = tr.lproj;
+			sourceTree = "<group>";
+		};
+		094DDF3522E7A98E004B0256 /* ca.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF3622E7A98E004B0256 /* Localizable.strings */,
+				094DDF3822E7A98E004B0256 /* InfoPlist.strings */,
+				094DDF3A22E7A98E004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = ca.lproj;
+			sourceTree = "<group>";
+		};
+		094DDF3F22E7A9A8004B0256 /* uk.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF4022E7A9A8004B0256 /* Localizable.strings */,
+				094DDF4222E7A9A8004B0256 /* InfoPlist.strings */,
+				094DDF4422E7A9A8004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = uk.lproj;
+			sourceTree = "<group>";
+		};
+		094DDF4922E8C30F004B0256 /* ms.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF4A22E8C30F004B0256 /* Localizable.strings */,
+				094DDF4C22E8C30F004B0256 /* InfoPlist.strings */,
+				094DDF4E22E8C30F004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = ms.lproj;
+			sourceTree = "<group>";
+		};
+		094DDF5022E8C30F004B0256 /* id.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF5122E8C30F004B0256 /* Localizable.strings */,
+				094DDF5322E8C30F004B0256 /* InfoPlist.strings */,
+				094DDF5522E8C30F004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = id.lproj;
+			sourceTree = "<group>";
+		};
 		0972C6E121792CED0069E98A /* ru.lproj */ = {
 			isa = PBXGroup;
 			children = (
@@ -1868,13 +1964,19 @@
 				D0612E481D58B478000C8F02 /* Application.swift */,
 				D09DCBB41D0C854D00F51FFE /* en.lproj */,
 				D0CE6F47213EDA4400BCD44B /* ar.lproj */,
+				094DDF3522E7A98E004B0256 /* ca.lproj */,
 				D0CE6F4E213EDA4400BCD44B /* de.lproj */,
 				D0CE6F40213EDA4400BCD44B /* es.lproj */,
+				094DDF0122E7A0D3004B0256 /* fr.lproj */,
+				094DDF5022E8C30F004B0256 /* id.lproj */,
 				D0CE6F24213EDA4300BCD44B /* it.lproj */,
 				D0CE6F2B213EDA4300BCD44B /* ko.lproj */,
+				094DDF4922E8C30F004B0256 /* ms.lproj */,
 				D0CE6F32213EDA4300BCD44B /* nl.lproj */,
 				D0CE6F1D213EDA4200BCD44B /* pt.lproj */,
 				D0CE6F39213EDA4300BCD44B /* ru.lproj */,
+				094DDF2B22E7A61B004B0256 /* tr.lproj */,
+				094DDF3F22E7A9A8004B0256 /* uk.lproj */,
 				D00859A01B28189D00EAF753 /* Info.plist */,
 				D09A59B71B5876B600FC3724 /* Telegram-Bridging-Header.h */,
 				D02E31221BD803E800CD3F01 /* main.m */,
@@ -2225,9 +2327,9 @@
 		D09DCBB41D0C854D00F51FFE /* en.lproj */ = {
 			isa = PBXGroup;
 			children = (
-				D00ED7581FE94630001F38BD /* AppIntentVocabulary.plist */,
 				D09DCBB51D0C856B00F51FFE /* Localizable.strings */,
 				D00ED75B1FE95287001F38BD /* InfoPlist.strings */,
+				D00ED7581FE94630001F38BD /* AppIntentVocabulary.plist */,
 			);
 			name = en.lproj;
 			sourceTree = "<group>";
@@ -2342,15 +2444,15 @@
 		D0E41A3A1D65A69C00FBFC00 /* Widget */ = {
 			isa = PBXGroup;
 			children = (
-				0972C6E121792CED0069E98A /* ru.lproj */,
+				D04FA1AE2145E37F0006EF45 /* en.lproj */,
 				D04FA1B62145E3800006EF45 /* ar.lproj */,
 				D04FA1B32145E37F0006EF45 /* de.lproj */,
-				D04FA1AE2145E37F0006EF45 /* en.lproj */,
 				D04FA1C52145E3810006EF45 /* es.lproj */,
 				D04FA1BF2145E3800006EF45 /* it.lproj */,
 				D04FA1BC2145E3800006EF45 /* ko.lproj */,
 				D04FA1B92145E3800006EF45 /* nl.lproj */,
 				D04FA1C22145E3810006EF45 /* pt.lproj */,
+				0972C6E121792CED0069E98A /* ru.lproj */,
 				D0ADF955212B3B6400310BBC /* Widget-AppStoreLLC.entitlements */,
 				D0B2F75A204F51E400D3BFB9 /* Widget-AppStore.entitlements */,
 				D0B2F75B204F51E500D3BFB9 /* Widget-HockeyApp.entitlements */,
@@ -2658,6 +2760,12 @@
 				es,
 				ar,
 				de,
+				fr,
+				tr,
+				ca,
+				uk,
+				ms,
+				id,
 			);
 			mainGroup = D00859931B28189D00EAF753;
 			productRefGroup = D008599D1B28189D00EAF753 /* Products */;
@@ -2728,6 +2836,9 @@
 				D04DCC341F71C80000B021D7 /* 7.m4a in Resources */,
 				09E9600722C23FF200B13673 /* BlackNotificationIcon@3x.png in Resources */,
 				09EBE2A522B004EA00F670AB /* BlueFilledIconIpad.png in Resources */,
+				094DDF5C22E8C310004B0256 /* AppIntentVocabulary.plist in Resources */,
+				094DDF3C22E7A98E004B0256 /* Localizable.strings in Resources */,
+				094DDF3422E7A61B004B0256 /* AppIntentVocabulary.plist in Resources */,
 				D0CE6F60213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D0CE6F63213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D00ED75D1FE95287001F38BD /* InfoPlist.strings in Resources */,
@@ -2747,16 +2858,21 @@
 				09E9601322C2441000B13673 /* BlackClassicNotificationIcon@2x.png in Resources */,
 				D0E8C2DE2285EA55009F26E8 /* BlackIcon@2x.png in Resources */,
 				D09DCBB71D0C856B00F51FFE /* Localizable.strings in Resources */,
+				094DDF5722E8C310004B0256 /* Localizable.strings in Resources */,
 				D0CE6F66213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D08DB0B8213F4D1D00F2ADBF /* powerful_mask@2x.png in Resources */,
 				D08DB0B4213F4D1D00F2ADBF /* knot_down@2x.png in Resources */,
+				094DDF4822E7A9A8004B0256 /* AppIntentVocabulary.plist in Resources */,
 				09EC5CDA22CBBF9600292E42 /* telegram_plane1@2x.png in Resources */,
 				D08DB0BC213F4D1D00F2ADBF /* start_arrow@2x.png in Resources */,
 				D08DB0B6213F4D1D00F2ADBF /* powerful_infinity@2x.png in Resources */,
+				094DDF5B22E8C310004B0256 /* InfoPlist.strings in Resources */,
 				09EBE2AA22B004EA00F670AB /* BlueIconLargeIpad@2x.png in Resources */,
 				D0CE6F5B213EDA4400BCD44B /* Localizable.strings in Resources */,
 				09EBE2AF22B004EA00F670AB /* BlackIconIpad@2x.png in Resources */,
+				094DDF5922E8C310004B0256 /* AppIntentVocabulary.plist in Resources */,
 				09A4193422B7A4D500637EB4 /* BlackClassicIconIpad.png in Resources */,
+				094DDF4622E7A9A8004B0256 /* Localizable.strings in Resources */,
 				09A4193222B7A4D500637EB4 /* BlueClassicIconIpad.png in Resources */,
 				D0CE6F62213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D08DB0A8213F4D1D00F2ADBF /* fast_arrow_shadow@2x.png in Resources */,
@@ -2767,13 +2883,17 @@
 				09E9601722C2441000B13673 /* BlackClassicNotificationIcon.png in Resources */,
 				D0CE6F64213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D0CE6F6C213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
+				094DDF3E22E7A98E004B0256 /* AppIntentVocabulary.plist in Resources */,
+				094DDF3D22E7A98E004B0256 /* InfoPlist.strings in Resources */,
 				D04DCC231F71C80000B021D7 /* 100.m4a in Resources */,
 				09E9600A22C23FF200B13673 /* BlueNotificationIcon@2x.png in Resources */,
+				094DDF3222E7A61B004B0256 /* Localizable.strings in Resources */,
 				09A218EF22A1570A00DE6898 /* BlueIcon@2x.png in Resources */,
 				D04DCC281F71C80000B021D7 /* 105.m4a in Resources */,
 				D08DB0BB213F4D1D00F2ADBF /* private_screw@2x.png in Resources */,
 				D0CE6F5F213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D04DCC2D1F71C80000B021D7 /* 110.m4a in Resources */,
+				094DDF5A22E8C310004B0256 /* Localizable.strings in Resources */,
 				D04DCC2B1F71C80000B021D7 /* 108.m4a in Resources */,
 				D00859AC1B28189D00EAF753 /* LaunchScreen.xib in Resources */,
 				D08DB0B5213F4D1D00F2ADBF /* knot_up1@2x.png in Resources */,
@@ -2803,6 +2923,7 @@
 				09EBE2B022B004EA00F670AB /* BlueFilledIconLargeIpad@2x.png in Resources */,
 				D0CE6F58213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D08DB0AF213F4D1D00F2ADBF /* ic_pencil@2x.png in Resources */,
+				094DDF5822E8C310004B0256 /* InfoPlist.strings in Resources */,
 				09E9601822C2441000B13673 /* BlueClassicNotificationIcon@3x.png in Resources */,
 				D0CE6F67213EDA4400BCD44B /* Localizable.strings in Resources */,
 				09A4193322B7A4D500637EB4 /* BlueClassicIconLargeIpad@2x.png in Resources */,
@@ -2811,12 +2932,16 @@
 				D052974622B0073F004ABAF6 /* WhiteFilledIcon@3x.png in Resources */,
 				D08DB0B7213F4D1D00F2ADBF /* powerful_infinity_white@2x.png in Resources */,
 				D00859A91B28189D00EAF753 /* Images.xcassets in Resources */,
+				094DDF0922E7A0D3004B0256 /* InfoPlist.strings in Resources */,
 				D001D5AA1F878DA300DF975A /* PhoneCountries.txt in Resources */,
+				094DDF0822E7A0D3004B0256 /* Localizable.strings in Resources */,
+				094DDF4722E7A9A8004B0256 /* InfoPlist.strings in Resources */,
 				D0CE6F56213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D0CE6F65213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D0E8B8B12044496C00605593 /* voip_busy.caf in Resources */,
 				09EBE2A622B004EA00F670AB /* BlueIconIpad@2x.png in Resources */,
 				D08DB0A7213F4D1D00F2ADBF /* fast_arrow@2x.png in Resources */,
+				094DDF0A22E7A0D3004B0256 /* AppIntentVocabulary.plist in Resources */,
 				D0E8B8AF2044496C00605593 /* voip_fail.caf in Resources */,
 				D0CE6F55213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D08DB0B2213F4D1D00F2ADBF /* ic_smile_eye@2x.png in Resources */,
@@ -2834,6 +2959,7 @@
 				09EBE2A822B004EA00F670AB /* BlackFilledIconIpad@2x.png in Resources */,
 				D021D4D9219CAEDD0064BEBA /* Config-Fork.xcconfig in Resources */,
 				D08DB0AD213F4D1D00F2ADBF /* ic_cam@2x.png in Resources */,
+				094DDF3322E7A61B004B0256 /* InfoPlist.strings in Resources */,
 				090E777622A6945900CD99F5 /* BlackClassicIcon@3x.png in Resources */,
 				D0E8B8B02044496C00605593 /* voip_ringback.caf in Resources */,
 				09E9600822C23FF200B13673 /* BlackNotificationIcon.png in Resources */,
@@ -3166,6 +3292,150 @@
 				092F368421542D6C001A9F49 /* en */,
 			);
 			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF0222E7A0D3004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF0322E7A0D3004B0256 /* fr */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF0422E7A0D3004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF0522E7A0D3004B0256 /* fr */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF0622E7A0D3004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF0722E7A0D3004B0256 /* fr */,
+			);
+			name = AppIntentVocabulary.plist;
+			sourceTree = "<group>";
+		};
+		094DDF2C22E7A61B004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF2D22E7A61B004B0256 /* tr */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF2E22E7A61B004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF2F22E7A61B004B0256 /* tr */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF3022E7A61B004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF3122E7A61B004B0256 /* tr */,
+			);
+			name = AppIntentVocabulary.plist;
+			sourceTree = "<group>";
+		};
+		094DDF3622E7A98E004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF3722E7A98E004B0256 /* ca */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF3822E7A98E004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF3922E7A98E004B0256 /* ca */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF3A22E7A98E004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF3B22E7A98E004B0256 /* ca */,
+			);
+			name = AppIntentVocabulary.plist;
+			sourceTree = "<group>";
+		};
+		094DDF4022E7A9A8004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4122E7A9A8004B0256 /* uk */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF4222E7A9A8004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4322E7A9A8004B0256 /* uk */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF4422E7A9A8004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4522E7A9A8004B0256 /* uk */,
+			);
+			name = AppIntentVocabulary.plist;
+			sourceTree = "<group>";
+		};
+		094DDF4A22E8C30F004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4B22E8C30F004B0256 /* ms */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF4C22E8C30F004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4D22E8C30F004B0256 /* ms */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF4E22E8C30F004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4F22E8C30F004B0256 /* ms */,
+			);
+			name = AppIntentVocabulary.plist;
+			sourceTree = "<group>";
+		};
+		094DDF5122E8C30F004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF5222E8C30F004B0256 /* id */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF5322E8C30F004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF5422E8C30F004B0256 /* id */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF5522E8C30F004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF5622E8C30F004B0256 /* id */,
+			);
+			name = AppIntentVocabulary.plist;
 			sourceTree = "<group>";
 		};
 		0972C6E221792D120069E98A /* InfoPlist.strings */ = {

@@ -38,6 +38,8 @@
 		092F36902157AB46001A9F49 /* ItemListCallListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */; };
 		09310D32213ED5FC0020033A /* anim_ungroup.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1A213BC5DE0020033A /* anim_ungroup.json */; };
 		09310D33213ED5FC0020033A /* anim_group.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1B213BC5DE0020033A /* anim_group.json */; };
+		0940932422E73DFB003846A3 /* ChatSendMessageActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0940932322E73DFB003846A3 /* ChatSendMessageActionSheetController.swift */; };
+		0940932622E73E12003846A3 /* ChatSendMessageActionSheetControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0940932522E73E12003846A3 /* ChatSendMessageActionSheetControllerNode.swift */; };
 		0941A9A0210B057200EBE194 /* OpenInActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */; };
 		0941A9A4210B0E2E00EBE194 /* OpenInAppIconResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */; };
 		0941A9A6210B822D00EBE194 /* OpenInOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A5210B822D00EBE194 /* OpenInOptions.swift */; };
@@ -1268,6 +1270,8 @@
 		092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListCallListItem.swift; sourceTree = "<group>"; };
 		09310D1A213BC5DE0020033A /* anim_ungroup.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_ungroup.json; sourceTree = "<group>"; };
 		09310D1B213BC5DE0020033A /* anim_group.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_group.json; sourceTree = "<group>"; };
+		0940932322E73DFB003846A3 /* ChatSendMessageActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSendMessageActionSheetController.swift; sourceTree = "<group>"; };
+		0940932522E73E12003846A3 /* ChatSendMessageActionSheetControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSendMessageActionSheetControllerNode.swift; sourceTree = "<group>"; };
 		0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInActionSheetController.swift; sourceTree = "<group>"; };
 		0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInAppIconResources.swift; sourceTree = "<group>"; };
 		0941A9A5210B822D00EBE194 /* OpenInOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInOptions.swift; sourceTree = "<group>"; };
@@ -4708,6 +4712,8 @@
 				D0AF32391FB1D8D60097362B /* ChatOverlayNavigationBar.swift */,
 				D0BCC3D320404CC7008126C2 /* ChatMessageActionSheetController.swift */,
 				D0BCC3D520404CD8008126C2 /* ChatMessageActionSheetControllerNode.swift */,
+				0940932322E73DFB003846A3 /* ChatSendMessageActionSheetController.swift */,
+				0940932522E73E12003846A3 /* ChatSendMessageActionSheetControllerNode.swift */,
 				D0F69E181D6B8AD10046BCD6 /* Items */,
 				D03ADB461D703250005A521C /* Interface State */,
 				D03ADB491D704427005A521C /* Accessory Panels */,
@@ -6184,6 +6190,7 @@
 				09F215A422649C2200AEDF6D /* PasscodeEntryLabelNode.swift in Sources */,
 				D099D74D1EEFEE1500A3128C /* GameController.swift in Sources */,
 				09749BCF21F236F2008FDDE9 /* ModernCheckNode.swift in Sources */,
+				0940932422E73DFB003846A3 /* ChatSendMessageActionSheetController.swift in Sources */,
 				D0EC6E2C1EB9F58900EBF1C3 /* ComposeControllerNode.swift in Sources */,
 				D0EC6E2D1EB9F58900EBF1C3 /* CounterContollerTitleView.swift in Sources */,
 				D0AEAE292080FD660013176E /* StickerPaneSearchGlobaltem.swift in Sources */,
@@ -6223,6 +6230,7 @@
 				D0EC6E3F1EB9F58900EBF1C3 /* ItemListTextItem.swift in Sources */,
 				D0EC6E401EB9F58900EBF1C3 /* ItemListActivityTextItem.swift in Sources */,
 				0958FBB9218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift in Sources */,
+				0940932622E73E12003846A3 /* ChatSendMessageActionSheetControllerNode.swift in Sources */,
 				D00817D022B47A14008A895F /* WakeupManager.swift in Sources */,
 				D0AF798822C2E26500CECCB8 /* matrix.cc in Sources */,
 				D0EC6E411EB9F58900EBF1C3 /* ItemListEditableItem.swift in Sources */,

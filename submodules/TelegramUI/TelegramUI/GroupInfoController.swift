@@ -1823,6 +1823,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                                     default:
                                         break
                                 }
+                            } else if case .tooMuchJoined = error  {
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             }
                             
                             contactsController?.dismiss()

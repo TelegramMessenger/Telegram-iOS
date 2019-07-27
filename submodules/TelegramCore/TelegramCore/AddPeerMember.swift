@@ -100,7 +100,7 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], AddChannelMemberError> in
                         switch error.errorDescription {
-                            case "CHANNELS_TOO_MUCH":
+                            case "USER_CHANNELS_TOO_MUCH":
                                 return .fail(.tooMuchJoined)
                             case "USERS_TOO_MUCH":
                                 return .fail(.limitExceeded)
@@ -195,7 +195,6 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
         }
         
         if let peer = transaction.getPeer(peerId), let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-            
             let signal = account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
             |> mapError { error -> AddChannelMemberError in
                 switch error.errorDescription {

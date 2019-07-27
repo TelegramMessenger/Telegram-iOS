@@ -33,5 +33,7 @@
 		<string>merchant.privatbank.test.telergramios</string>
 		<string>merchant.privatbank.prod.telergram</string>
 	</array>
+    <key>com.apple.developer.carplay-messaging</key><true/>
+    <key>com.apple.developer.carplay-calling</key><true/>
 </dict>
 </plist>

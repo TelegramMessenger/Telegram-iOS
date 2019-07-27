@@ -40,7 +40,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
         switch self {
             case let .MessageEntry(message, presentationData, _, _, _, _):
                 var type = 2
-                if presentationData.largeEmoji && message.elligibleForLargeEmoji && messageTextIsElligibleForLargeEmoji(message.text) {
+                if presentationData.largeEmoji && message.elligibleForLargeEmoji && messageIsElligibleForLargeEmoji(message) {
                     type = 3
                 }
                 return UInt64(message.stableId) | ((UInt64(type) << 40))
