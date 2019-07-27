@@ -559,6 +559,10 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, text as NSString)
                 })
             }
+        }, sendCurrentMessage: { [weak self] silentPosting in
+            if let strongSelf = self {
+                strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting)
+            }
         }, sendMessage: { [weak self] text in
             guard let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) else {
                 return
@@ -2391,7 +2395,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
         }
         
-        self.chatDisplayNode.sendMessages = { [weak self] messages, isAnyMessageTextPartitioned in
+        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, isAnyMessageTextPartitioned in
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
                 strongSelf.commitPurposefulAction()
                 
@@ -2417,7 +2421,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     }
                 }
                 
-                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages(messages))
+                let transformedMessages: [EnqueueMessage]
+                if let silentPosting = silentPosting {
+                    transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting)
+                } else {
+                    transformedMessages = strongSelf.transformEnqueueMessages(messages)
+                }
+                
+                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
                 |> deliverOnMainQueue).start(next: { _ in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
@@ -3631,7 +3642,12 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             strongSelf.slowmodeTooltipController = slowmodeTooltipController
             
             strongSelf.window?.presentInGlobalOverlay(slowmodeTooltipController)
-        }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
+            }, displaySendMessageOptions: { [weak self] in
+                if let strongSelf = self, let sendButtonFrame = strongSelf.chatDisplayNode.sendButtonFrame(), let textInputNode = strongSelf.chatDisplayNode.textInputNode() {
+                    let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, sendButtonFrame: sendButtonFrame, textInputNode: textInputNode)
+                    strongSelf.presentInGlobalOverlay(controller, with: nil)
+                }
+            }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
         switch self.chatLocation {
             case let .peer(peerId):
@@ -5081,8 +5097,12 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
     }
     
-    private func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
+    func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
         let silentPosting = self.presentationInterfaceState.interfaceState.silentPosting
+        return transformEnqueueMessages(messages, silentPosting: silentPosting)
+    }
+    
+    private func transformEnqueueMessages(_ messages: [EnqueueMessage], silentPosting: Bool) -> [EnqueueMessage] {
         return messages.map { message in
             if silentPosting {
                 return message.withUpdatedAttributes { attributes in
