@@ -1225,6 +1225,7 @@
 		D0FA08C020483F9600DD23FC /* ExtractVideoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08BF20483F9600DD23FC /* ExtractVideoData.swift */; };
 		D0FA08C8204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C7204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift */; };
 		D0FA08CA2049BEAC00DD23FC /* ChatEmptyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C92049BEAC00DD23FC /* ChatEmptyNode.swift */; };
+		D0FAB13E22EBC25300D8BED2 /* ChatMessageBubbleBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FAB13D22EBC25300D8BED2 /* ChatMessageBubbleBackdrop.swift */; };
 		D0FB87B21F7C4C19004DE005 /* FetchMediaUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FB87B11F7C4C19004DE005 /* FetchMediaUtils.swift */; };
 		D0FBE84F2273395C00B33B52 /* ChatListArchiveInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FBE84E2273395C00B33B52 /* ChatListArchiveInfoItem.swift */; };
 		D0FC194D201F82A000FEDBB2 /* OpenResolvedUrl.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FC194C201F82A000FEDBB2 /* OpenResolvedUrl.swift */; };
@@ -2488,6 +2489,7 @@
 		D0FA0AC41E77431A005BB9B7 /* InstalledStickerPacksController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstalledStickerPacksController.swift; sourceTree = "<group>"; };
 		D0FA34FE1EA5834C00E56FFA /* ItemListControllerSegmentedTitleView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListControllerSegmentedTitleView.swift; sourceTree = "<group>"; };
 		D0FA35001EA6127000E56FFA /* StorageUsageController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StorageUsageController.swift; sourceTree = "<group>"; };
+		D0FAB13D22EBC25300D8BED2 /* ChatMessageBubbleBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageBubbleBackdrop.swift; sourceTree = "<group>"; };
 		D0FB87B11F7C4C19004DE005 /* FetchMediaUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchMediaUtils.swift; sourceTree = "<group>"; };
 		D0FBE84E2273395C00B33B52 /* ChatListArchiveInfoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListArchiveInfoItem.swift; sourceTree = "<group>"; };
 		D0FC194C201F82A000FEDBB2 /* OpenResolvedUrl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenResolvedUrl.swift; sourceTree = "<group>"; };
@@ -4782,6 +4784,7 @@
 				D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */,
 				099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */,
 				D0439B5A228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift */,
+				D0FAB13D22EBC25300D8BED2 /* ChatMessageBubbleBackdrop.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -6333,6 +6336,7 @@
 				D0EC6E741EB9F58900EBF1C3 /* ThemeGridController.swift in Sources */,
 				D0EC6E751EB9F58900EBF1C3 /* ThemeGridControllerNode.swift in Sources */,
 				D0EC6E761EB9F58900EBF1C3 /* SettingsController.swift in Sources */,
+				D0FAB13E22EBC25300D8BED2 /* ChatMessageBubbleBackdrop.swift in Sources */,
 				D0EC6E771EB9F58900EBF1C3 /* NotificationsAndSounds.swift in Sources */,
 				D0EC6E781EB9F58900EBF1C3 /* NotificationSoundSelection.swift in Sources */,
 				D056CD741FF2996B00880D28 /* ExternalMusicAlbumArtResources.swift in Sources */,

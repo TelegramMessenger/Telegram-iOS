@@ -53,12 +53,14 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: Media
                         var image: UIImage?
                         let _ = mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                             if data.complete {
+                                print("background image: \(data.path)")
                                 image = UIImage(contentsOfFile: data.path)?.precomposed()
                             }
                         })
                         backgroundImage = image
                     }
                     if backgroundImage == nil, let path = mediaBox.completedResourcePath(file.file.resource) {
+                        print("background image: \(path)")
                         backgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                     }
                 }

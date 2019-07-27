@@ -677,8 +677,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         for itemNode in self.itemNodes {
-            let position = itemNode.position
-            itemNode.position = CGPoint(x: position.x, y: position.y - deltaY)
+            itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: -deltaY), within: self.visibleSize)
             
             if self.dynamicBounceEnabled && itemNode.wantsScrollDynamics {
                 useScrollDynamics = true
@@ -908,7 +907,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             for itemNode in self.itemNodes {
                 var frame = itemNode.frame
                 frame.origin.y += offset
-                itemNode.frame = frame
+                itemNode.updateFrame(frame, within: self.visibleSize)
                 if let accessoryItemNode = itemNode.accessoryItemNode {
                     itemNode.layoutAccessoryItemNode(accessoryItemNode, leftInset: self.insets.left, rightInset: self.insets.right)
                 }
@@ -1890,7 +1889,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         node.contentSize = layout.contentSize
         node.insets = layout.insets
         node.apparentHeight = animated ? 0.0 : layout.size.height
-        node.frame = nodeFrame
+        node.updateFrame(nodeFrame, within: self.visibleSize)
         if let accessoryItemNode = node.accessoryItemNode {
             node.layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
         }
@@ -1905,14 +1904,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if nextNode.index == nil && nextNode.subnodes == nil || nextNode.subnodes!.isEmpty {
                 let nextHeight = nextNode.apparentHeight
                 if abs(nextHeight - previousApparentHeight) < CGFloat.ulpOfOne {
-                    if let animation = nextNode.animationForKey("apparentHeight") {
+                    if let _ = nextNode.animationForKey("apparentHeight") {
                         node.apparentHeight = previousApparentHeight
                         
                         offsetHeight = 0.0
                         
-                        var offsetPosition = nextNode.position
-                        offsetPosition.y += nextHeight
-                        nextNode.position = offsetPosition
+                        nextNode.updateFrame(nextNode.frame.offsetBy(dx: 0.0, dy: nextHeight), within: self.visibleSize)
+                        
                         nextNode.apparentHeight = 0.0
                         
                         nextNode.removeApparentHeightAnimation()
@@ -2015,7 +2013,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 while i >= 0 {
                     var frame = self.itemNodes[i].frame
                     frame.origin.y -= offsetHeight
-                    self.itemNodes[i].frame = frame
+                    self.itemNodes[i].updateFrame(frame, within: self.visibleSize)
                     if let accessoryItemNode = self.itemNodes[i].accessoryItemNode {
                         self.itemNodes[i].layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                     }
@@ -2026,7 +2024,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 while i < self.itemNodes.count {
                     var frame = self.itemNodes[i].frame
                     frame.origin.y += offsetHeight
-                    self.itemNodes[i].frame = frame
+                    self.itemNodes[i].updateFrame(frame, within: self.visibleSize)
                     if let accessoryItemNode = self.itemNodes[i].accessoryItemNode {
                         self.itemNodes[i].layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                     }
@@ -2253,7 +2251,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 for i in index + 1 ..< self.itemNodes.count {
                                     var frame = self.itemNodes[i].frame
                                     frame.origin.y -= height
-                                    self.itemNodes[i].frame = frame
+                                    self.itemNodes[i].updateFrame(frame, within: self.visibleSize)
                                     if let accessoryItemNode = self.itemNodes[i].accessoryItemNode {
                                         self.itemNodes[i].layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                                     }
@@ -2264,7 +2262,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 for i in (0 ..< index).reversed() {
                                     var frame = self.itemNodes[i].frame
                                     frame.origin.y += height
-                                    self.itemNodes[i].frame = frame
+                                    self.itemNodes[i].updateFrame(frame, within: self.visibleSize)
                                     if let accessoryItemNode = self.itemNodes[i].accessoryItemNode {
                                         self.itemNodes[i].layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                                     }
@@ -2350,7 +2348,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         if offset != 0.0 {
                             var frame = itemNode.frame
                             frame.origin.y += offset
-                            itemNode.frame = frame
+                            itemNode.updateFrame(frame, within: self.visibleSize)
                         }
                         
                         index += 1
@@ -2419,7 +2417,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     for itemNode in self.itemNodes {
                         var frame = itemNode.frame
                         frame.origin.y += offset
-                        itemNode.frame = frame
+                        itemNode.updateFrame(frame, within: self.visibleSize)
                         if let accessoryItemNode = itemNode.accessoryItemNode {
                             itemNode.layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                         }
@@ -2439,7 +2437,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 for itemNode in self.itemNodes {
                                     var frame = itemNode.frame
                                     frame.origin.y += offset
-                                    itemNode.frame = frame
+                                    itemNode.updateFrame(frame, within: self.visibleSize)
                                     if let accessoryItemNode = itemNode.accessoryItemNode {
                                         itemNode.layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                                     }
@@ -2487,8 +2485,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.visibleSize = updateSizeAndInsets.size
                 
                 for itemNode in self.itemNodes {
-                    let position = itemNode.position
-                    itemNode.position = CGPoint(x: position.x, y: position.y + offsetFix)
+                    itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offsetFix), within: self.visibleSize)
                 }
                 
                 let (snappedTopInset, snapToBoundsOffset) = self.snapToBounds(snapTopItem: scrollToItem != nil, stackFromBottom: self.stackFromBottom, updateSizeAndInsets: updateSizeAndInsets, isExperimentalSnapToScrollToItem: isExperimentalSnapToScrollToItem)
@@ -2497,8 +2494,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     offsetFix += snappedTopInset
                     
                     for itemNode in self.itemNodes {
-                        let position = itemNode.position
-                        itemNode.position = CGPoint(x: position.x, y: position.y + snappedTopInset)
+                        itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: snappedTopInset), within: self.visibleSize)
                     }
                 }
                 
@@ -2608,8 +2604,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             
             if !snappedTopInset.isZero && previousApparentFrames.isEmpty {
                 for itemNode in self.itemNodes {
-                    let position = itemNode.position
-                    itemNode.position = CGPoint(x: position.x, y: position.y + snappedTopInset)
+                    itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: snappedTopInset), within: self.visibleSize)
                 }
             }
             
@@ -2653,7 +2648,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     for (previousNode, previousFrame) in previousApparentFrames {
                         if previousNode.supernode == nil {
                             temporaryPreviousNodes.append(previousNode)
-                            previousNode.frame = previousFrame
+                            previousNode.updateFrame(previousFrame, within: self.visibleSize)
                             if previousUpperBound == nil || previousUpperBound! > previousFrame.minY {
                                 previousUpperBound = previousFrame.minY
                             }
@@ -2671,7 +2666,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     for (previousNode, previousFrame) in previousApparentFrames {
                         if previousNode.supernode == nil {
                             temporaryPreviousNodes.append(previousNode)
-                            previousNode.frame = previousFrame
+                            previousNode.updateFrame(previousFrame, within: self.visibleSize)
                             if previousUpperBound == nil || previousUpperBound! > previousFrame.minY {
                                 previousUpperBound = previousFrame.minY
                             }
@@ -2719,7 +2714,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if let offset = offset, !offset.isZero {
                     let lowestNodeToInsertBelow = self.lowestNodeToInsertBelow()
                     for itemNode in temporaryPreviousNodes {
-                        itemNode.frame = itemNode.frame.offsetBy(dx: 0.0, dy: offset)
+                        itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offset), within: self.visibleSize)
                         if let lowestNodeToInsertBelow = lowestNodeToInsertBelow {
                             self.insertSubnode(itemNode, belowSubnode: lowestNodeToInsertBelow)
                         } else if let verticalScrollIndicator = self.verticalScrollIndicator {
@@ -3547,9 +3542,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             for itemNode in self.itemNodes {
                 let offset = offsetRanges.offsetForIndex(index)
                 if offset != 0.0 {
-                    var position = itemNode.position
-                    position.y += offset
-                    itemNode.position = position
+                    itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offset), within: self.visibleSize)
                 }
                 
                 index += 1
