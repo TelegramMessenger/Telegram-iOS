@@ -622,6 +622,12 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                     }
                     if let closestFrame = closestFrame {
                         actualPts = closestFrame.pts
+                    } else {
+                        if let videoStream = initializedState.videoStream {
+                            actualPts = videoStream.duration
+                        } else {
+                            actualPts = extraVideoFrames.last!.pts
+                        }
                     }
                 }
                 if let audioStream = initializedState.audioStream {
