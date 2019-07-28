@@ -140,23 +140,22 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             return
         }
         
-        let filteredPersons = initialPersons.filter({ person in
+        var filteredPersons: [INPerson] = []
+        for person in initialPersons {
             if let contactIdentifier = person.contactIdentifier, !contactIdentifier.isEmpty {
-                return true
+                filteredPersons.append(person)
             }
             
             if #available(iOSApplicationExtension 10.3, *) {
                 if let siriMatches = person.siriMatches {
                     for match in siriMatches {
                         if let contactIdentifier = match.contactIdentifier, !contactIdentifier.isEmpty {
-                            return true
+                            filteredPersons.append(match)
                         }
                     }
                 }
             }
-            
-            return false
-        })
+        }
         
         if filteredPersons.isEmpty {
             completion([INPersonResolutionResult.needsValue()])

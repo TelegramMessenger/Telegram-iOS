@@ -98,7 +98,7 @@
     
     _autorotationWasEnabled = [TGViewController autorotationAllowed];
     [TGViewController disableAutorotation];
-        
+    
     [self animateIn];
 }
 
@@ -164,7 +164,7 @@
     if (cancel) {
         [UIView animateWithDuration:0.3 delay:0.0 options:7 << 16 animations:^{
             _containerView.center = CGPointMake(_containerView.center.x + 160.0, _containerView.center.y + 44.0);
-        } completion:^(bool finished) {
+        } completion:^(BOOL finished) {
             [self dismiss];
         }];
     }
