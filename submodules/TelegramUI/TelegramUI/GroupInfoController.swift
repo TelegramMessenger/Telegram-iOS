@@ -531,9 +531,9 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 let label: String?
                 switch memberStatus {
                     case let .owner(rank):
-                        label = rank ?? strings.GroupInfo_LabelOwner
+                        label = rank?.trimmingEmojis ?? strings.GroupInfo_LabelOwner
                     case let .admin(rank):
-                        label = rank ?? strings.GroupInfo_LabelAdmin
+                        label = rank?.trimmingEmojis ?? strings.GroupInfo_LabelAdmin
                     case .member:
                         label = nil
                 }

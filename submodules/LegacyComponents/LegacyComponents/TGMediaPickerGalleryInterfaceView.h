@@ -14,6 +14,7 @@
 
 @property (nonatomic, copy) void (^captionSet)(id<TGModernGalleryItem>, NSString *, NSArray *);
 @property (nonatomic, copy) void (^donePressed)(id<TGModernGalleryItem>);
+@property (nonatomic, copy) void (^doneLongPressed)(id<TGModernGalleryItem>);
 
 @property (nonatomic, copy) void (^photoStripItemSelected)(NSInteger index);
 
@@ -32,6 +33,7 @@
 @property (nonatomic, assign) bool capturing;
 
 @property (nonatomic, readonly) TGPhotoEditorTab currentTabs;
+@property (nonatomic, readonly) CGRect doneButtonFrame;
 
 @property (nonatomic, readonly) UIView *timerButton;
 

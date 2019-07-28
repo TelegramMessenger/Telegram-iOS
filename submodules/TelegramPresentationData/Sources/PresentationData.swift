@@ -253,7 +253,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
         
         let parameters = AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting)
         if automaticThemeShouldSwitchNow(parameters, currentTheme: themeSettings.theme) {
-            effectiveTheme = themeSettings.themeTintColors ? .builtin(.nightAccent) : .builtin(.night)
+            effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
         } else {
             effectiveTheme = themeSettings.theme
         }
@@ -513,7 +513,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         var effectiveChatWallpaper: TelegramWallpaper = currentWallpaper
                         
                         if shouldSwitch {
-                            let automaticTheme: PresentationThemeReference = themeSettings.themeTintColors ? .builtin(.nightAccent) : .builtin(.night)
+                            let automaticTheme: PresentationThemeReference = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
                             if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[automaticTheme.index] {
                                 effectiveChatWallpaper = themeSpecificWallpaper
                             }

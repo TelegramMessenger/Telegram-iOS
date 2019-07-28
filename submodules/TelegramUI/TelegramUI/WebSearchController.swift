@@ -55,7 +55,7 @@ enum WebSearchMode {
 }
 
 enum WebSearchControllerMode {
-    case media(completion: (ChatContextResultCollection, TGMediaSelectionContext, TGMediaEditingContext) -> Void)
+    case media(completion: (ChatContextResultCollection, TGMediaSelectionContext, TGMediaEditingContext, Bool) -> Void)
     case avatar(initialQuery: String?, completion: (UIImage) -> Void)
     
     var mode: WebSearchMode {
@@ -231,7 +231,7 @@ final class WebSearchController: ViewController {
                     selectionState.setItem(currentItem, selected: true)
                 }
                 if case let .media(sendSelected) = mode {
-                    sendSelected(results, selectionState, editingState)
+                    sendSelected(results, selectionState, editingState, false)
                 }
             }
         }, avatarCompleted: { result in

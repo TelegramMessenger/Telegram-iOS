@@ -483,11 +483,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     guard let strings = try? encoder.encode(theme), let _ = try? strings.write(toFile: path, atomically: true, encoding: .utf8) else {
                         return
                     }
-
-//                    let encoder = JSONEncoder()
-//                    guard let data = try? encoder.encode(theme), let _ = try? data.write(to: URL(fileURLWithPath: path)) else {
-//                        return
-//                    }
                     
                     let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
                     controller.peerSelected = { [weak controller] peerId in

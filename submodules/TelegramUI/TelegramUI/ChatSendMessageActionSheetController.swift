@@ -28,8 +28,6 @@ final class ChatSendMessageActionSheetController: ViewController {
         
         self.statusBar.statusBarStyle = .Hide
         self.statusBar.ignoreInCall = true
-        
-        self.lockOrientation = true
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -64,6 +62,15 @@ final class ChatSendMessageActionSheetController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, transition: transition)
+        
+        if !self.lockOrientation {
+            self.lockOrientation = true
+            if layout.size.width > layout.size.height {
+                self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .landscape)
+            } else {
+                self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+            }
+        }
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {

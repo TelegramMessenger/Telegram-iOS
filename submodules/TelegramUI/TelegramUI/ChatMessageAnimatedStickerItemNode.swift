@@ -120,14 +120,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     self.telegramFile = telegramFile
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
                     self.updateVisibility()
-                    if self.visibilityStatus && false {
-                        self.didSetUpAnimationNode = true
-                        self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
-                    }
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                 }
                 break
             }
+        }
+    
+        if self.telegramFile == nil {
+            self.updateVisibility()
         }
     }
     
@@ -142,11 +142,24 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             self.animationNode.visibility = isPlaying
             if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
+                var telegramFile: TelegramMediaFile?
                 for media in item.message.media {
-                    if let telegramFile = media as? TelegramMediaFile {
-                        self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
+                    if let file = media as? TelegramMediaFile {
+                        telegramFile = file
                         break
                     }
+                }
+                
+                if let telegramFile = telegramFile {
+                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
+                } else if item.message.text == "👍" {
+                    self.animationNode.setup(account: item.context.account, resource: LocalBundleResource(name: "thumbsup", ext: "tgs"), width: 384, height: 384, mode: .cached)
+                } else if item.message.text == "😂" {
+                    self.animationNode.setup(account: item.context.account, resource: LocalBundleResource(name: "lol", ext: "tgs"), width: 384, height: 384, mode: .cached)
+                } else if item.message.text == "😒" {
+                    self.animationNode.setup(account: item.context.account, resource: LocalBundleResource(name: "meh", ext: "tgs"), width: 384, height: 384, mode: .cached)
+                } else if item.message.text == "❤️" {
+                    self.animationNode.setup(account: item.context.account, resource: LocalBundleResource(name: "heart", ext: "tgs"), width: 384, height: 384, mode: .cached)
                 }
             }
         }
@@ -179,6 +192,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {
                     imageSize = thumbnailSize.aspectFitted(displaySize)
                 }
+            } else {
+                imageSize = CGSize(width: floor(displaySize.width * 0.683), height: floor(displaySize.height * 0.683))
             }
             
             let avatarInset: CGFloat

@@ -367,6 +367,8 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
             case let .rank(theme, placeholder, text, enabled):
                 return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: true), spacing: 0.0, clearButton: enabled, enabled: enabled, tag: ChannelAdminEntryTag.rank, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateRank(text, updatedText)
+                }, shouldUpdateText: { text in
+                    return !text.containsEmoji
                 }, updatedFocus: { focus in
                     arguments.updateFocusedOnRank(focus)
                 }, action: {

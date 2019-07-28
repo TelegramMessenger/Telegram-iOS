@@ -121,6 +121,7 @@
         pickerController.recipientName = recipientName;
         pickerController.hasTimer = strongController.hasTimer;
         pickerController.onlyCrop = strongController.onlyCrop;
+        pickerController.hasSilentPosting = strongController.hasSilentPosting;
         [strongController pushViewController:pickerController animated:true];
     };
     [groupsController loadViewIfNeeded];
@@ -198,6 +199,12 @@
 {
     _hasTimer = hasTimer;
     self.pickerController.hasTimer = hasTimer;
+}
+
+- (void)setHasSilentPosting:(bool)hasSilentPosting
+{
+    _hasSilentPosting = hasSilentPosting;
+    self.pickerController.hasSilentPosting = hasSilentPosting;
 }
 
 - (void)setOnlyCrop:(bool)onlyCrop
@@ -444,7 +451,7 @@
     {
         __strong TGMediaAssetsController *strongSelf = weakSelf;
         if (strongSelf != nil)
-            [strongSelf completeWithCurrentItem:nil];
+            [strongSelf completeWithCurrentItem:nil silentPosting:false];
     };
 }
 
@@ -525,12 +532,12 @@
         self.avatarCompletionBlock(image);
 }
 
-- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem
+- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting
 {
     if (self.completionBlock != nil)
     {
         NSArray *signals = [self resultSignalsWithCurrentItem:currentItem descriptionGenerator:self.descriptionGenerator];
-        self.completionBlock(signals);
+        self.completionBlock(signals, silentPosting);
     }
     else if (self.singleCompletionBlock != nil)
     {

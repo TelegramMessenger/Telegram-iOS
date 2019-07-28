@@ -386,7 +386,11 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
         
         if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && self.message.elligibleForLargeEmoji && messageIsElligibleForLargeEmoji(self.message) {
-            viewClassName = ChatMessageStickerItemNode.self
+            if ["👍", "😂", "😒", "❤️"].contains(self.message.text) {
+                viewClassName = ChatMessageAnimatedStickerItemNode.self
+            } else {
+                viewClassName = ChatMessageStickerItemNode.self
+            }
         }
         
         let configure = {

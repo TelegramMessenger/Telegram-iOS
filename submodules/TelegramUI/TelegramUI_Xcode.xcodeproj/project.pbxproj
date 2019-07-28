@@ -34,6 +34,10 @@
 		091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02DADBE2138D76F00116225 /* Vision.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		0921F60B228C8765001A13D7 /* ItemListPlaceholderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0921F60A228C8765001A13D7 /* ItemListPlaceholderItem.swift */; };
 		0921F60E228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0921F60D228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift */; };
+		092A65CE22EC98B10032E20C /* meh.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 092A65CB22EC98AF0032E20C /* meh.tgs */; };
+		092A65CF22EC98B10032E20C /* lol.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 092A65CC22EC98AF0032E20C /* lol.tgs */; };
+		092A65D022EC98B10032E20C /* thumbsup.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 092A65CD22EC98B00032E20C /* thumbsup.tgs */; };
+		092A65D322ED6F8D0032E20C /* heart.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 092A65D222ED6F8C0032E20C /* heart.tgs */; };
 		092F368D2154AAEA001A9F49 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */; };
 		092F36902157AB46001A9F49 /* ItemListCallListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */; };
 		09310D32213ED5FC0020033A /* anim_ungroup.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1A213BC5DE0020033A /* anim_ungroup.json */; };
@@ -1266,6 +1270,10 @@
 		091954782294754E00E11046 /* AnimatedStickerUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedStickerUtils.swift; sourceTree = "<group>"; };
 		0921F60A228C8765001A13D7 /* ItemListPlaceholderItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListPlaceholderItem.swift; sourceTree = "<group>"; };
 		0921F60D228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageActionUrlAuthController.swift; sourceTree = "<group>"; };
+		092A65CB22EC98AF0032E20C /* meh.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; path = meh.tgs; sourceTree = "<group>"; };
+		092A65CC22EC98AF0032E20C /* lol.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; path = lol.tgs; sourceTree = "<group>"; };
+		092A65CD22EC98B00032E20C /* thumbsup.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; path = thumbsup.tgs; sourceTree = "<group>"; };
+		092A65D222ED6F8C0032E20C /* heart.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; path = heart.tgs; sourceTree = "<group>"; };
 		092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
 		092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListCallListItem.swift; sourceTree = "<group>"; };
 		09310D1A213BC5DE0020033A /* anim_ungroup.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_ungroup.json; sourceTree = "<group>"; };
@@ -2589,6 +2597,17 @@
 			name = "Animated Stickers";
 			sourceTree = "<group>";
 		};
+		092A65D122EC98B30032E20C /* Emoji */ = {
+			isa = PBXGroup;
+			children = (
+				092A65CC22EC98AF0032E20C /* lol.tgs */,
+				092A65CB22EC98AF0032E20C /* meh.tgs */,
+				092A65CD22EC98B00032E20C /* thumbsup.tgs */,
+				092A65D222ED6F8C0032E20C /* heart.tgs */,
+			);
+			path = Emoji;
+			sourceTree = "<group>";
+		};
 		092F368B2154AAD6001A9F49 /* Fonts */ = {
 			isa = PBXGroup;
 			children = (
@@ -3243,6 +3262,7 @@
 		D0471B521EFD8EBC0074D609 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				092A65D122EC98B30032E20C /* Emoji */,
 				09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */,
 				D0955FB32191278C00F89427 /* PresentationStrings.mapping */,
 				09310D13213BC5DE0020033A /* Animations */,
@@ -5270,6 +5290,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				09874E4F21078FA100E190B8 /* Generic.html in Resources */,
+				092A65CE22EC98B10032E20C /* meh.tgs in Resources */,
 				09874E5021078FA100E190B8 /* GenericUserScript.js in Resources */,
 				09874E5121078FA100E190B8 /* Instagram.html in Resources */,
 				09874E5221078FA100E190B8 /* Twitch.html in Resources */,
@@ -5322,6 +5343,7 @@
 				D0E9BAAC1F056F4C00F079A4 /* stp_card_jcb@3x.png in Resources */,
 				D0E9BA911F056F4C00F079A4 /* stp_card_amex@2x.png in Resources */,
 				D0E9BA931F056F4C00F079A4 /* stp_card_amex_template@2x.png in Resources */,
+				092A65CF22EC98B10032E20C /* lol.tgs in Resources */,
 				D0E9BAA91F056F4C00F079A4 /* stp_card_form_front@2x.png in Resources */,
 				D0E9BAA41F056F4C00F079A4 /* stp_card_discover_template@3x.png in Resources */,
 				D0E9BAA81F056F4C00F079A4 /* stp_card_form_back@3x.png in Resources */,
@@ -5335,12 +5357,14 @@
 				D0E9BA9C1F056F4C00F079A4 /* stp_card_cvc_amex@3x.png in Resources */,
 				D0E9BA991F056F4C00F079A4 /* stp_card_cvc@2x.png in Resources */,
 				D0471B541EFD8ECA0074D609 /* currencies.json in Resources */,
+				092A65D022EC98B10032E20C /* thumbsup.tgs in Resources */,
 				0947350E2275D72100EA2312 /* anim_hide.json in Resources */,
 				D0E9BAB21F056F4C00F079A4 /* stp_card_mastercard_template@3x.png in Resources */,
 				D0E9BA981F056F4C00F079A4 /* stp_card_applepay_template@3x.png in Resources */,
 				D0E9BAA51F056F4C00F079A4 /* stp_card_form_applepay@2x.png in Resources */,
 				D0E9BAB81F056F4C00F079A4 /* stp_card_visa_template@3x.png in Resources */,
 				D0AF797822C2E26500CECCB8 /* meson.build in Resources */,
+				092A65D322ED6F8D0032E20C /* heart.tgs in Resources */,
 				D0E9BA9B1F056F4C00F079A4 /* stp_card_cvc_amex@2x.png in Resources */,
 				D0E9BAB61F056F4C00F079A4 /* stp_card_visa@3x.png in Resources */,
 				D0E9BAA61F056F4C00F079A4 /* stp_card_form_applepay@3x.png in Resources */,

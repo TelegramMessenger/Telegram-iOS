@@ -8,7 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import DeviceAccess
 
-func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
@@ -58,10 +58,13 @@ func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions:
         carouselItem.selectionLimitExceeded = {
             presentSelectionLimitExceeded()
         }
-        if (peer is TelegramUser) && peer.id != context.account.peerId {
-            carouselItem.hasTimer = true
+        if peer.id != context.account.peerId {
+            if peer is TelegramUser {
+                carouselItem.hasTimer = true
+            }
+            carouselItem.hasSilentPosting = !isSecretChat
         }
-        carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles in
+        carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles, silentPosting in
             if let controller = controller, let carouselItem = carouselItem {
                 let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
                 let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: saveEditedPhotos)
@@ -69,7 +72,7 @@ func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions:
                     presentCantSendMultipleFiles()
                 } else {
                     controller.dismiss(animated: true)
-                    sendMessagesWithSignals(signals)
+                    sendMessagesWithSignals(signals, silentPosting)
                 }
             }
         };
@@ -181,8 +184,12 @@ func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEditedPhoto
     legacyController.bind(controller: navigationController)
     
     var hasTimer = false
-    if (peer is TelegramUser) && peer.id != context.account.peerId {
-        hasTimer = true
+    var hasSilentPosting = false
+    if peer.id != context.account.peerId {
+        if peer is TelegramUser {
+            hasTimer = true
+        }
+        hasSilentPosting = true
     }
     let recipientName = peer.displayTitle
     
