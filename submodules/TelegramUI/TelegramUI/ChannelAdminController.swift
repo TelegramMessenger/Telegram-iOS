@@ -16,8 +16,9 @@ private final class ChannelAdminControllerArguments {
     let updateFocusedOnRank: (Bool) -> Void
     let dismissAdmin: () -> Void
     let dismissInput: () -> Void
+    let animateError: () -> Void
     
-    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void) {
+    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void, animateError: @escaping () -> Void) {
         self.account = account
         self.toggleRight = toggleRight
         self.transferOwnership = transferOwnership
@@ -25,6 +26,7 @@ private final class ChannelAdminControllerArguments {
         self.updateFocusedOnRank = updateFocusedOnRank
         self.dismissAdmin = dismissAdmin
         self.dismissInput = dismissInput
+        self.animateError = animateError
     }
 }
 
@@ -368,7 +370,11 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: true), spacing: 0.0, clearButton: enabled, enabled: enabled, tag: ChannelAdminEntryTag.rank, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateRank(text, updatedText)
                 }, shouldUpdateText: { text in
-                    return !text.containsEmoji
+                    if text.containsEmoji {
+                        arguments.animateError()
+                        return false
+                    }
+                    return true
                 }, updatedFocus: { focus in
                     arguments.updateFocusedOnRank(focus)
                 }, action: {
@@ -827,6 +833,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         presentControllerImpl?(actionSheet, nil)
     }, dismissInput: {
         dismissInputImpl?()
+    }, animateError: {
+        errorImpl?()
     })
     
     let combinedView = context.account.postbox.combinedView(keys: [.peer(peerId: peerId, components: .all), .peer(peerId: adminId, components: .all)])

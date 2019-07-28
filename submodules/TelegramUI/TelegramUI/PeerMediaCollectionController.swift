@@ -654,7 +654,7 @@ public class PeerMediaCollectionController: TelegramController {
                             
                             if peerId == strongSelf.context.account.peerId {
                                 let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
-                                    return .forward(source: id, grouping: .auto)
+                                    return .forward(source: id, grouping: .auto, attributes: [])
                                 })
                                 |> deliverOnMainQueue).start(next: { [weak self] messageIds in
                                     if let strongSelf = self {

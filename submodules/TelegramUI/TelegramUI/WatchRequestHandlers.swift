@@ -212,7 +212,7 @@ final class WatchSendMessageHandler: WatchRequestHandler {
                     } else if let args = subscription as? TGBridgeSendForwardedMessageSubscription {
                         let peerId = makePeerIdFromBridgeIdentifier(args.targetPeerId)
                         if let forwardPeerId = makePeerIdFromBridgeIdentifier(args.peerId) {
-                            messageSignal = .single((.forward(source: MessageId(peerId: forwardPeerId, namespace: Namespaces.Message.Cloud, id: args.messageId), grouping: .none), peerId))
+                            messageSignal = .single((.forward(source: MessageId(peerId: forwardPeerId, namespace: Namespaces.Message.Cloud, id: args.messageId), grouping: .none, attributes: []), peerId))
                         }
                     }
                     

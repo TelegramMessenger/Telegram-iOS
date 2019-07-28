@@ -2062,7 +2062,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                         for id in forwardMessageIds {
-                            messages.append(.forward(source: id, grouping: .auto))
+                            messages.append(.forward(source: id, grouping: .auto, attributes: []))
                         }
                     }
                     

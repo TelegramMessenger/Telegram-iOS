@@ -82,7 +82,7 @@ private final class ActionSheetItemNode: ASDisplayNode {
 }
 
 final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let presentationData: PresentationData
+    private var presentationData: PresentationData
     private let sendButtonFrame: CGRect
     private let textFieldFrame: CGRect
     private let textInputNode: EditableTextNode
@@ -141,7 +141,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.sendButtonNode = HighlightableButtonNode()
         self.sendButtonNode.imageNode.displayWithoutProcessing = false
         self.sendButtonNode.imageNode.displaysAsynchronously = false
-        self.sendButtonNode.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(self.presentationData.theme), for: [])
         
         self.messageClipNode = ASDisplayNode()
         self.messageClipNode.clipsToBounds = true
@@ -229,6 +228,35 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
     }
     
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
+            self.effectView.effect = UIBlurEffect(style: .dark)
+        } else {
+            self.effectView.effect = UIBlurEffect(style: .light)
+        }
+        
+        if self.presentationData.theme.chatList.searchBarKeyboardColor == .light {
+            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.04)
+        } else {
+            self.dimNode.backgroundColor = presentationData.theme.chatList.backgroundColor.withAlphaComponent(0.2)
+        }
+        
+        self.contentContainerNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
+        self.textCoverNode.backgroundColor = self.presentationData.theme.chat.inputPanel.inputBackgroundColor
+        self.buttonCoverNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
+        self.sendButtonNode.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(self.presentationData.theme), for: [])
+        
+        if let toAttributedText = self.textInputNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
+            toAttributedText.addAttribute(NSAttributedStringKey.foregroundColor, value: self.presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (toAttributedText.string as NSString).length))
+            self.toMessageTextNode.attributedText = toAttributedText
+        }
+        
+        let graphics = PresentationResourcesChat.principalGraphics(self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper)
+        self.messageBackgroundNode.image = graphics.chatMessageBackgroundOutgoingImage
+    }
+    
     func animateIn() {
         UIView.animate(withDuration: 0.4, animations: {
             if #available(iOS 9.0, *) {
@@ -270,7 +298,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.toMessageTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, removeOnCompletion: false)
         
         if let layout = self.validLayout {
-            let duration = 0.6
+            let duration = 0.4
             
             self.sendButtonNode.layer.animateScale(from: 0.75, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionLinear)
             self.sendButtonNode.layer.animatePosition(from: self.sendButtonFrame.center, to: self.sendButtonNode.position, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
@@ -349,7 +377,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         
         if let layout = self.validLayout {
-            let duration = 0.6
+            let duration = 0.4
             
             self.sendButtonNode.layer.animatePosition(from: self.sendButtonNode.position, to: self.sendButtonFrame.center, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                 completedButton = true

@@ -294,8 +294,18 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         |> introduceError(IntentHandlingError.self)
         |> mapToSignal { account -> Signal<[INMessage], IntentHandlingError> in
             account.shouldBeServiceTaskMaster.set(.single(.now))
-            return unreadMessages(account: account)
+            
+            let completedUpdating: Signal<Bool, IntentHandlingError> = (.single(true) |> then(account.stateManager.isUpdating))
             |> introduceError(IntentHandlingError.self)
+            |> filter { !$0 }
+            |> take(1)
+            |> timeout(3.0, queue: Queue.mainQueue(), alternate: .fail(.generic))
+            
+            return completedUpdating
+            |> mapToSignal { value -> Signal<[INMessage], IntentHandlingError> in
+                return unreadMessages(account: account)
+                |> introduceError(IntentHandlingError.self)
+            }
             |> afterDisposed {
                 account.shouldBeServiceTaskMaster.set(.single(.never))
             }

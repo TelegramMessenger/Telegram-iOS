@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import SwiftSignalKit
 import TelegramPresentationData
 
 final class ChatSendMessageActionSheetController: ViewController {
@@ -13,6 +14,8 @@ final class ChatSendMessageActionSheetController: ViewController {
     private let controllerInteraction: ChatControllerInteraction?
     private let sendButtonFrame: CGRect
     private let textInputNode: EditableTextNode
+    
+    private var presentationDataDisposable: Disposable?
     
     private var didPlayPresentationAnimation = false
     
@@ -26,12 +29,23 @@ final class ChatSendMessageActionSheetController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
+        self.presentationDataDisposable = (context.sharedContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updatePresentationData(presentationData)
+            }
+        })
+        
         self.statusBar.statusBarStyle = .Hide
         self.statusBar.ignoreInCall = true
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
     }
     
     override func loadDisplayNode() {

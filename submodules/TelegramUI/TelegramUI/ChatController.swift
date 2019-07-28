@@ -5818,7 +5818,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 strongController.dismiss()
             } else if peerId == strongSelf.context.account.peerId {
                 let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
-                    return .forward(source: id, grouping: .auto)
+                    return .forward(source: id, grouping: .auto, attributes: [])
                 })
                 |> deliverOnMainQueue).start(next: { messageIds in
                     if let strongSelf = self {

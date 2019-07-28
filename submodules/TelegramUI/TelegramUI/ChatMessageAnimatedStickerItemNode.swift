@@ -74,6 +74,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
                 }
+                
+                if strongSelf.telegramFile == nil {
+                    if strongSelf.animationNode.frame.contains(point) {
+                        return .waitForDoubleTap
+                    }
+                }
             }
             return .waitForSingleTap
         }

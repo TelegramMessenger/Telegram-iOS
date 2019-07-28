@@ -14,8 +14,10 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
         for entry in view.0.entries {
             if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _) = entry {
                 var hasUnread = false
+                var fixedCombinedReadStates: MessageHistoryViewReadState?
                 if let readState = readState {
                     hasUnread = readState.count != 0
+                    fixedCombinedReadStates = .peer([index.messageIndex.id.peerId: readState])
                 }
                 var isMuted = false
                 if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
@@ -25,12 +27,17 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
                 }
                 
                 if !isMuted && hasUnread {
-                    signals.append(account.postbox.aroundMessageHistoryViewForLocation(.peer(index.messageIndex.id.peerId), anchor: .upperBound, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: nil, orderStatistics: .combinedLocation)
+                    signals.append(account.postbox.aroundMessageHistoryViewForLocation(.peer(index.messageIndex.id.peerId), anchor: .upperBound, count: 10, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: Set(), tagMask: nil, orderStatistics: .combinedLocation)
                     |> take(1)
                     |> map { view -> [INMessage] in
                         var messages: [INMessage] = []
                         for entry in view.0.entries {
-                            if !entry.isRead {
+                            var isRead = true
+                            if let readState = readState {
+                                isRead = readState.isIncomingMessageIndexRead(entry.message.index)
+                            }
+                            
+                            if !isRead {
                                 if let message = messageWithTelegramMessage(entry.message, account: account) {
                                     messages.append(message)
                                 }
@@ -150,7 +157,8 @@ private func messageWithTelegramMessage(_ telegramMessage: Message, account: Acc
         personHandle = INPersonHandle(value: user.phone ?? "", type: .phoneNumber)
     }
     
-    let sender = INPerson(personHandle: personHandle, nameComponents: nil, displayName: user.displayTitle, image: nil, contactIdentifier: nil, customIdentifier: "tg\(user.id.toInt64())")
+    let personIdentifier = "tg\(user.id.toInt64())"
+    let sender = INPerson(personHandle: personHandle, nameComponents: nil, displayName: user.displayTitle, image: nil, contactIdentifier: personIdentifier, customIdentifier: personIdentifier)
     let date = Date(timeIntervalSince1970: TimeInterval(telegramMessage.timestamp))
     
     let message: INMessage
