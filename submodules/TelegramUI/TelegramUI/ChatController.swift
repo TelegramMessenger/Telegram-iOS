@@ -3749,20 +3749,21 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 self.failedMessageEventsDisposable.set((self.context.account.pendingMessageManager.failedMessageEvents(peerId: peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] reason in
                     if let strongSelf = self {
-                        let subjectFlags: TelegramChatBannedRightsFlags = .banSendMedia
-                        
                         let text: String
                         let moreInfo: Bool
                         switch reason {
-                            case .flood:
-                                text = strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood
-                                moreInfo = true
-                            case .publicBan:
-                                text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
-                                moreInfo = true
-                            case .mediaRestricted:
-                                strongSelf.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .alert)
-                                return
+                        case .flood:
+                            text = strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood
+                            moreInfo = true
+                        case .publicBan:
+                            text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
+                            moreInfo = true
+                        case .mediaRestricted:
+                            strongSelf.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .alert)
+                            return
+                        case .slowmodeActive:
+                            text = strongSelf.presentationData.strings.Chat_SlowmodeSendError
+                            moreInfo = false
                         }
                         let actions: [TextAlertAction]
                         if moreInfo {
@@ -5826,7 +5827,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 return nil
                             }
                             return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
-                            |> mapToSignal { status -> Signal<Bool, NoError> in
+                            |> mapToSignal { status, _ -> Signal<Bool, NoError> in
                                 if status != nil {
                                     return .never()
                                 } else {

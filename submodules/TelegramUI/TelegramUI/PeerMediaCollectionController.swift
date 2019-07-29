@@ -663,7 +663,7 @@ public class PeerMediaCollectionController: TelegramController {
                                                 return nil
                                             }
                                             return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
-                                            |> mapToSignal { status -> Signal<Bool, NoError> in
+                                            |> mapToSignal { status, _ -> Signal<Bool, NoError> in
                                                 if status != nil {
                                                     return .never()
                                                 } else {
