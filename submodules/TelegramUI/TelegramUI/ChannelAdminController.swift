@@ -761,6 +761,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     var dismissInputImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var errorImpl: (() -> Void)?
+    var scrollToRankImpl: (() -> Void)?
     
     let actualPeerId = Atomic<PeerId>(value: peerId)
     let upgradedToSupergroupImpl: (PeerId, @escaping () -> Void) -> Void = { peerId, completion in
@@ -809,6 +810,10 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         }
     }, updateFocusedOnRank: { focusedOnRank in
         updateState { $0.withUpdatedFocusedOnRank(focusedOnRank) }
+        
+        if focusedOnRank {
+            scrollToRankImpl?()
+        }
     }, dismissAdmin: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
@@ -1082,7 +1087,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_Management_LabelEditor), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
-        let listState = ItemListNodeState(entries: channelAdminControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelView: channelView, adminView: adminView, initialParticipant: initialParticipant, canEdit: canEdit), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: nil, animateChanges: true)
+        let listState = ItemListNodeState(entries: channelAdminControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelView: channelView, adminView: adminView, initialParticipant: initialParticipant, canEdit: canEdit), style: .blocks, focusItemTag: focusItemTag, ensureVisibleItemTag: nil, emptyStateItem: nil, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     }
@@ -1091,6 +1096,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.experimentalSnapScrollToItem = true
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
@@ -1110,6 +1116,27 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                 itemNode.animateError()
             }
         }
+    }
+    scrollToRankImpl = { [weak controller] in
+        controller?.afterLayout({
+            guard let controller = controller else {
+                return
+            }
+            
+            var resultItemNode: ListViewItemNode?
+            let _ = controller.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListSingleLineInputItemNode {
+                    if let tag = itemNode.tag as? ChannelAdminEntryTag, tag == .rank {
+                        resultItemNode = itemNode
+                        return true
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                controller.ensureItemNodeVisible(resultItemNode)
+            }
+        })
     }
     
     return controller
