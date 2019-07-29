@@ -359,9 +359,9 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                                 case .day:
                                     name = item.strings.Appearance_ThemeCarouselDay
                                 case .night:
-                                    name = "Night" //item.strings.Appearance_ThemeCarouselNight
+                                    name = item.strings.Appearance_ThemeCarouselNewNight
                                 case .nightAccent:
-                                    name = "Tinted Night" //item.strings.Appearance_ThemeCarouselNightBlue
+                                    name = item.strings.Appearance_ThemeCarouselTintedNight
                             }
                         } else {
                             name = nil

@@ -25,7 +25,7 @@ public final class TabBarAccountSwitchController: ViewController {
     private let sourceNodes: [ASDisplayNode]
     
     private var presentationData: PresentationData
-    private var animatedAppearance = false
+    private var didPlayPresentationAnimation = false
     private var changedAccount = false
     
     private let hapticFeedback = HapticFeedback()
@@ -76,8 +76,8 @@ public final class TabBarAccountSwitchController: ViewController {
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        if !self.animatedAppearance {
-            self.animatedAppearance = true
+        if !self.didPlayPresentationAnimation {
+            self.didPlayPresentationAnimation = true
             
             self.hapticFeedback.impact()
             self.controllerNode.animateIn()
@@ -97,7 +97,7 @@ public final class TabBarAccountSwitchController: ViewController {
     
     public func dismiss(sourceNodes: [ASDisplayNode]) {
         self.controllerNode.animateOut(sourceNodes: sourceNodes, changedAccount: self.changedAccount, completion: { [weak self] in
-            self?.animatedAppearance = false
+            self?.didPlayPresentationAnimation = false
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
     }

@@ -120,6 +120,9 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     return .complete()
                 }
             }
+            |> afterNext { account in
+                account.resetStateManagement()
+            }
             |> take(1)
         }
         self.accountPromise.set(account)
@@ -140,23 +143,22 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             return
         }
         
-        let filteredPersons = initialPersons.filter({ person in
+        var filteredPersons: [INPerson] = []
+        for person in initialPersons {
             if let contactIdentifier = person.contactIdentifier, !contactIdentifier.isEmpty {
-                return true
+                filteredPersons.append(person)
             }
             
             if #available(iOSApplicationExtension 10.3, *) {
                 if let siriMatches = person.siriMatches {
                     for match in siriMatches {
                         if let contactIdentifier = match.contactIdentifier, !contactIdentifier.isEmpty {
-                            return true
+                            filteredPersons.append(match)
                         }
                     }
                 }
             }
-            
-            return false
-        })
+        }
         
         if filteredPersons.isEmpty {
             completion([INPersonResolutionResult.needsValue()])
@@ -223,7 +225,36 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     // MARK: - INSendMessageIntentHandling
     
     func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
-       self.resolve(persons: intent.recipients, with: completion)
+        if #available(iOSApplicationExtension 11.0, *) {
+            if let peerId = intent.conversationIdentifier.flatMap(Int64.init) {
+                let account = self.accountPromise.get()
+                
+                let signal = account
+                |> mapToSignal { account -> Signal<INPerson?, NoError> in
+                    return matchingCloudContact(postbox: account.postbox, peerId: PeerId(peerId))
+                    |> map { user -> INPerson? in
+                        if let user = user {
+                            return personWithUser(stableId: "tg\(peerId)", user: user)
+                        } else {
+                            return nil
+                        }
+                    }
+                }
+                
+                self.resolvePersonsDisposable.set((signal
+                |> deliverOnMainQueue).start(next: { person in
+                    if let person = person {
+                        completion([INPersonResolutionResult.success(with: person)])
+                    } else {
+                        completion([INPersonResolutionResult.needsValue()])
+                    }
+                }))
+            } else {
+                self.resolve(persons: intent.recipients, with: completion)
+            }
+        } else {
+            self.resolve(persons: intent.recipients, with: completion)
+        }
     }
     
     func resolveContent(for intent: INSendMessageIntent, with completion: @escaping (INStringResolutionResult) -> Void) {
@@ -295,8 +326,18 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         |> introduceError(IntentHandlingError.self)
         |> mapToSignal { account -> Signal<[INMessage], IntentHandlingError> in
             account.shouldBeServiceTaskMaster.set(.single(.now))
-            return unreadMessages(account: account)
+            
+            let completedUpdating: Signal<Bool, IntentHandlingError> = (.single(true) |> then(account.stateManager.isUpdating))
             |> introduceError(IntentHandlingError.self)
+            |> filter { !$0 }
+            |> take(1)
+            |> timeout(3.0, queue: Queue.mainQueue(), alternate: .fail(.generic))
+            
+            return completedUpdating
+            |> mapToSignal { value -> Signal<[INMessage], IntentHandlingError> in
+                return unreadMessages(account: account)
+                |> introduceError(IntentHandlingError.self)
+            }
             |> afterDisposed {
                 account.shouldBeServiceTaskMaster.set(.single(.never))
             }

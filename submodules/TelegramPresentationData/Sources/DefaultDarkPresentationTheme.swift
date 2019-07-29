@@ -215,7 +215,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
         inputTextColor: .white,
         inputControlColor: UIColor(rgb: 0x7b7b7b),
         actionControlFillColor: accentColor,
-        actionControlForegroundColor: .white,
+        actionControlForegroundColor: badgeTextColor,
         primaryTextColor: .white,
         secondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         mediaRecordingDotColor: destructiveColor,

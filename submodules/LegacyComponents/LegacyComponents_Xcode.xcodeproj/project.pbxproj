@@ -21,6 +21,8 @@
 		0916FEA820A1EA7B0084A755 /* TGPassportScanView.m in Sources */ = {isa = PBXBuildFile; fileRef = 0916FEA620A1EA7B0084A755 /* TGPassportScanView.m */; };
 		0916FEAB20A1EBFA0084A755 /* TGPassportMRZ.m in Sources */ = {isa = PBXBuildFile; fileRef = 0916FEA920A1EBF90084A755 /* TGPassportMRZ.m */; };
 		0916FEAC20A1EBFA0084A755 /* TGPassportMRZ.h in Headers */ = {isa = PBXBuildFile; fileRef = 0916FEAA20A1EBFA0084A755 /* TGPassportMRZ.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		092A65C922EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.h in Headers */ = {isa = PBXBuildFile; fileRef = 092A65C722EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.h */; };
+		092A65CA22EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.m in Sources */ = {isa = PBXBuildFile; fileRef = 092A65C822EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.m */; };
 		09750F761F2FA816001B9886 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09750F741F2FA5E8001B9886 /* SSignalKit.framework */; };
 		09750FB71F30DB0E001B9886 /* TGClipboardGalleryModel.h in Headers */ = {isa = PBXBuildFile; fileRef = 09750FAF1F30DB0E001B9886 /* TGClipboardGalleryModel.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		09750FB81F30DB0E001B9886 /* TGClipboardGalleryModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 09750FB01F30DB0E001B9886 /* TGClipboardGalleryModel.m */; };
@@ -1190,6 +1192,8 @@
 		0916FEA620A1EA7B0084A755 /* TGPassportScanView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGPassportScanView.m; sourceTree = "<group>"; };
 		0916FEA920A1EBF90084A755 /* TGPassportMRZ.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPassportMRZ.m; sourceTree = "<group>"; };
 		0916FEAA20A1EBFA0084A755 /* TGPassportMRZ.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPassportMRZ.h; sourceTree = "<group>"; };
+		092A65C722EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGMediaPickerSendActionSheetController.h; sourceTree = "<group>"; };
+		092A65C822EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGMediaPickerSendActionSheetController.m; sourceTree = "<group>"; };
 		09750F741F2FA5E8001B9886 /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegraph-grvwvmixbmcefwboxkzfazvpcrxb/Build/Products/Release Hockeyapp-iphonesimulator/SSignalKit.framework"; sourceTree = "<group>"; };
 		09750FAF1F30DB0E001B9886 /* TGClipboardGalleryModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGClipboardGalleryModel.h; sourceTree = "<group>"; };
 		09750FB01F30DB0E001B9886 /* TGClipboardGalleryModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGClipboardGalleryModel.m; sourceTree = "<group>"; };
@@ -3525,6 +3529,8 @@
 				D07BCA4A1F2A9DAB00ED97AA /* TGModernAnimatedImagePlayer.m */,
 				D07BCA4D1F2A9DDD00ED97AA /* FLAnimatedImage.h */,
 				D07BCA4E1F2A9DDD00ED97AA /* FLAnimatedImage.m */,
+				092A65C722EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.h */,
+				092A65C822EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.m */,
 			);
 			name = "Media Picker";
 			sourceTree = "<group>";
@@ -4412,6 +4418,7 @@
 				D07BCB641F2B6A5600ED97AA /* TGEmbedPlayerScrubber.h in Headers */,
 				D07BCAF31F2B509200ED97AA /* TGAttachmentAssetCell.h in Headers */,
 				D07BC8951F2A375800ED97AA /* TGPhotoCropControl.h in Headers */,
+				092A65C922EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.h in Headers */,
 				D07BC73B1F2A2A7D00ED97AA /* PGPhotoEditorRawDataOutput.h in Headers */,
 				D01778B61F1FFFE30044446D /* TGToolbarButton.h in Headers */,
 				D07BCBB71F2B6F6300ED97AA /* CBCoubNew.h in Headers */,
@@ -5063,6 +5070,7 @@
 				D01778161F1F961D0044446D /* TGMessageEntityCode.m in Sources */,
 				D07BC7281F2A2A5300ED97AA /* UICollectionView+Utils.m in Sources */,
 				D07BCB671F2B6A5600ED97AA /* TGEmbedPlayerState.m in Sources */,
+				092A65CA22EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.m in Sources */,
 				D07BCA911F2B443700ED97AA /* TGMediaAssetsMomentsController.m in Sources */,
 				D07BCBC41F2B6F6300ED97AA /* CBJSONCoubMapper.m in Sources */,
 				D07BC7871F2A2B3700ED97AA /* TGPhotoEditorTabController.m in Sources */,

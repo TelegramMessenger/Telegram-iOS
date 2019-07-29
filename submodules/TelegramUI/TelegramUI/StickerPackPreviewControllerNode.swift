@@ -200,9 +200,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                             var menuItems: [PeekControllerMenuItem] = []
                             if let stickerPack = strongSelf.stickerPack, case let .result(info, _, _) = stickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                                 if strongSelf.sendSticker != nil {
-                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: { _, _ in
+                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
                                         if let strongSelf = self {
-                                            return strongSelf.sendSticker?(.standalone(media: item.file), itemNode, itemNode.bounds) ?? false
+                                            return strongSelf.sendSticker?(.standalone(media: item.file), node, rect) ?? false
                                         } else {
                                             return false
                                         }

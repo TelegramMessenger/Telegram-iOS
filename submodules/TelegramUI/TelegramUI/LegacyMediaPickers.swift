@@ -15,11 +15,16 @@ func guessMimeTypeByFileExtension(_ ext: String) -> String {
 }
 
 func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void) {
+    let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
+    
     controller.captionsEnabled = captionsEnabled
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
-    if (peer is TelegramUser) && peer.id != context.account.peerId {
-        controller.hasTimer = true
+    if peer.id != context.account.peerId {
+        if peer is TelegramUser {
+            controller.hasTimer = true
+        }
+        controller.hasSilentPosting = !isSecretChat
     }
     controller.dismissalBlock = {
     }

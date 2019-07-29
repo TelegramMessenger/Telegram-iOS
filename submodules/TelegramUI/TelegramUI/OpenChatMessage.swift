@@ -111,7 +111,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
     } else if let galleryMedia = galleryMedia {
         if let mapMedia = galleryMedia as? TelegramMediaMap {
             return .map(mapMedia)
-        } else if let file = galleryMedia as? TelegramMediaFile, file.isSticker {
+        } else if let file = galleryMedia as? TelegramMediaFile, (file.isSticker || file.isAnimatedSticker) {
             for attribute in file.attributes {
                 if case let .Sticker(_, reference, _) = attribute {
                     if let reference = reference {
@@ -130,10 +130,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
             if let file = galleryMedia as? TelegramMediaFile {
                 if let fileName = file.fileName {
                     let ext = (fileName as NSString).pathExtension.lowercased()
-                    if ext == "tgios-theme" {
-                        return .theme(file)
-                    }
-                    else if ext == "wav" || ext == "opus" {
+                    if ext == "wav" || ext == "opus" {
                         return .audio(file)
                     } else if ext == "json", let fileSize = file.size, fileSize < 1024 * 1024 {
                         if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let _ = LOTComposition(filePath: path) {
@@ -153,7 +150,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     #endif
                 }
                 
-                if !file.isVideo, !internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName) {
+                if !file.isVideo {
                     return .document(file)
                 }
             }

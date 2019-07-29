@@ -121,6 +121,7 @@
         pickerController.recipientName = recipientName;
         pickerController.hasTimer = strongController.hasTimer;
         pickerController.onlyCrop = strongController.onlyCrop;
+        pickerController.hasSilentPosting = strongController.hasSilentPosting;
         [strongController pushViewController:pickerController animated:true];
     };
     [groupsController loadViewIfNeeded];
@@ -200,6 +201,12 @@
     self.pickerController.hasTimer = hasTimer;
 }
 
+- (void)setHasSilentPosting:(bool)hasSilentPosting
+{
+    _hasSilentPosting = hasSilentPosting;
+    self.pickerController.hasSilentPosting = hasSilentPosting;
+}
+
 - (void)setOnlyCrop:(bool)onlyCrop
 {
     _onlyCrop = onlyCrop;
@@ -243,7 +250,7 @@
         __weak TGMediaAssetsController *weakSelf = self;
         _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping selectionLimit:selectionLimit];
         if (allowGrouping)
-            _selectionContext.grouping = ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_mediaGroupingDisabled_v0"] boolValue];
+            _selectionContext.grouping = true;
         _selectionContext.selectionLimitExceeded = ^{
             __strong TGMediaAssetsController *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -444,7 +451,7 @@
     {
         __strong TGMediaAssetsController *strongSelf = weakSelf;
         if (strongSelf != nil)
-            [strongSelf completeWithCurrentItem:nil];
+            [strongSelf completeWithCurrentItem:nil silentPosting:false];
     };
 }
 
@@ -525,12 +532,12 @@
         self.avatarCompletionBlock(image);
 }
 
-- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem
+- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting
 {
     if (self.completionBlock != nil)
     {
         NSArray *signals = [self resultSignalsWithCurrentItem:currentItem descriptionGenerator:self.descriptionGenerator];
-        self.completionBlock(signals);
+        self.completionBlock(signals, silentPosting);
     }
     else if (self.singleCompletionBlock != nil)
     {

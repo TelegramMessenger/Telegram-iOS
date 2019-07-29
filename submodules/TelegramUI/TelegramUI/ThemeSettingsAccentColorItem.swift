@@ -24,10 +24,12 @@ private func generateSwatchImage(color: PresentationThemeAccentColor, selected: 
             context.fillEllipse(in: bounds.insetBy(dx: 4.0, dy: 4.0))
             context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
             
-            context.setFillColor(UIColor.white.cgColor)
-            context.fillEllipse(in: CGRect(x: 11.0, y: 18.0, width: 4.0, height: 4.0))
-            context.fillEllipse(in: CGRect(x: 18.0, y: 18.0, width: 4.0, height: 4.0))
-            context.fillEllipse(in: CGRect(x: 25.0, y: 18.0, width: 4.0, height: 4.0))
+            if color.baseColor != .white && color.baseColor != .black {
+                context.setFillColor(UIColor.white.cgColor)
+                context.fillEllipse(in: CGRect(x: 11.0, y: 18.0, width: 4.0, height: 4.0))
+                context.fillEllipse(in: CGRect(x: 18.0, y: 18.0, width: 4.0, height: 4.0))
+                context.fillEllipse(in: CGRect(x: 25.0, y: 18.0, width: 4.0, height: 4.0))
+            }
         } else {
             context.fillEllipse(in: bounds)
         }

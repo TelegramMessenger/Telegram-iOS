@@ -28,12 +28,13 @@
 @property (nonatomic) bool asFile;
 @property (nonatomic) bool inhibitMute;
 @property (nonatomic) bool disableStickers;
+@property (nonatomic) bool hasSilentPosting;
 
 @property (nonatomic, strong) NSArray *underlyingViews;
 @property (nonatomic, assign) bool openEditor;
 
 @property (nonatomic, copy) void (^cameraPressed)(TGAttachmentCameraView *cameraView);
-@property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles);
+@property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles, bool silentPosting);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
 
 @property (nonatomic, copy) void (^editorOpened)(void);

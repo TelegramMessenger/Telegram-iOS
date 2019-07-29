@@ -27,6 +27,7 @@
 @property (nonatomic, assign) bool onlyCrop;
 @property (nonatomic, assign) bool inhibitMute;
 @property (nonatomic, strong) NSString *recipientName;
+@property (nonatomic, assign) bool hasSilentPosting;
 
 @property (nonatomic, strong) TGMediaAssetsPallete *pallete;
 

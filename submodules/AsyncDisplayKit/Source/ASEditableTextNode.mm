@@ -83,7 +83,6 @@
 @interface ASPanningOverriddenUITextView : ASTextKitComponentsTextView
 {
   BOOL _shouldBlockPanGesture;
-  BOOL _initializedPrimaryInputLanguage;
 }
 
 @property (nonatomic, copy) bool (^shouldCopy)();
@@ -93,6 +92,7 @@
 @property (nonatomic, copy) void (^backspaceWhileEmpty)();
 
 @property (nonatomic, strong) NSString * _Nullable initialPrimaryLanguage;
+@property (nonatomic) bool initializedPrimaryInputLanguage;
 
 @end
 
@@ -198,6 +198,10 @@
       _backspaceWhileEmpty();
     }
   }
+}
+
+- (UIKeyboardAppearance)keyboardAppearance {
+  return [super keyboardAppearance];
 }
 
 - (UITextInputMode *)textInputMode {
@@ -642,6 +646,14 @@
   }
 }
 
+- (void)setInitialPrimaryLanguage:(NSString *)initialPrimaryLanguage {
+  ((ASPanningOverriddenUITextView *)_textKitComponents.textView).initialPrimaryLanguage = initialPrimaryLanguage;
+}
+
+- (void)resetInitialPrimaryLanguage {
+  ((ASPanningOverriddenUITextView *)_textKitComponents.textView).initializedPrimaryInputLanguage = false;
+}
+
 - (void)dropAutocorrection {
   _isPreservingSelection = YES; // Used in -textViewDidChangeSelection: to avoid informing our delegate about our preservation.
   _isPreservingText = YES;
@@ -662,6 +674,15 @@
   
   _isPreservingSelection = NO;
   _isPreservingText = NO;
+}
+
+- (bool)isCurrentlyEmoji {
+  NSString *value = [[UITextInputMode currentInputMode] primaryLanguage];
+  if ([value isEqualToString:@"emoji"]) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 #pragma mark - Core

@@ -1046,15 +1046,16 @@ final class SharedApplicationContext {
             }
             self.authContextValue = context
             if let context = context {
-                let isReady: Signal<Bool, NoError> = .single(true)
+                let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+                let statusController = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                self.mainWindow.present(statusController, on: .root)
+                let isReady: Signal<Bool, NoError> = context.isReady.get()
                 authContextReadyDisposable.set((isReady
                 |> filter { $0 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
-                    self.mainWindow.present(context.rootController, on: .root)
-                    //self.mainWindow.viewController = context.rootController
-                    //self.mainWindow.topLevelOverlayControllers = context.overlayControllers
-                }))
+                    statusController.dismiss()
+                    self.mainWindow.present(context.rootController, on: .root)                }))
             } else {
                 authContextReadyDisposable.set(nil)
             }
@@ -1842,7 +1843,7 @@ final class SharedApplicationContext {
             notificationCenter.getNotificationSettings(completionHandler: { settings in
                 switch (settings.authorizationStatus, authorize) {
                     case (.authorized, _), (.notDetermined, true):
-                        notificationCenter.requestAuthorization(options: [.badge, .sound, .alert], completionHandler: { result, _ in
+                        notificationCenter.requestAuthorization(options: [.badge, .sound, .alert, .carPlay], completionHandler: { result, _ in
                             completion(result)
                             if result {
                                 Queue.mainQueue().async {
@@ -1856,26 +1857,32 @@ final class SharedApplicationContext {
                                     let legacyChannelMessageCategory: UNNotificationCategory
                                     let muteMessageCategory: UNNotificationCategory
                                     let muteMediaMessageCategory: UNNotificationCategory
+                                    
                                     if #available(iOS 11.0, *) {
                                         var options: UNNotificationCategoryOptions = []
                                         if includeNames {
                                             options.insert(.hiddenPreviewsShowTitle)
                                         }
                                         
+                                        var carPlayOptions = options
+                                        carPlayOptions.insert(.allowInCarPlay)
+                                        
                                         unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                        replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                        replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                        replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
+                                        replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
                                         replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         legacyChannelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                     } else {
+                                        let carPlayOptions: UNNotificationCategoryOptions = [.allowInCarPlay]
+                                        
                                         unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], options: [])
-                                        replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [], options: [])
-                                        replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [], options: [])
+                                        replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: carPlayOptions)
+                                        replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: carPlayOptions)
                                         replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], options: [])
-                                            replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], options: [])
+                                        replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], options: [])
                                         legacyChannelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], options: [])
                                         muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], options: [])
                                         muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], options: [])

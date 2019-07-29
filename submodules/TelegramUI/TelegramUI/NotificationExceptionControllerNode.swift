@@ -902,7 +902,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                         updateState { state in
                             var state = state
                             for value in values {
-                                state = state.withUpdatedPeerMuteInterval(value.peer, nil).withUpdatedPeerSound(value.peer, .default)
+                                state = state.withUpdatedPeerMuteInterval(value.peer, nil).withUpdatedPeerSound(value.peer, .default).withUpdatedPeerDisplayPreviews(value.peer, .default)
                             }
                             return state
                         }
@@ -910,6 +910,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                             for value in values {
                                 updatePeerNotificationSoundInteractive(transaction: transaction, peerId: value.peer.id, sound: .default)
                                 updatePeerMuteSetting(transaction: transaction, peerId: value.peer.id, muteInterval: nil)
+                                updatePeerDisplayPreviewsSetting(transaction: transaction, peerId: value.peer.id, displayPreviews: .default)
                             }
                         }
                         |> deliverOnMainQueue).start(completed: {

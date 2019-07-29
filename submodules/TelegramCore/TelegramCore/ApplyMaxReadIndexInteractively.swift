@@ -123,30 +123,34 @@ public func togglePeerUnreadMarkInteractively(postbox: Postbox, viewTracker: Acc
 }
 
 public func togglePeerUnreadMarkInteractively(transaction: Transaction, viewTracker: AccountViewTracker, peerId: PeerId, setToValue: Bool? = nil) {
-    let namespace: MessageId.Namespace
+    let principalNamespace: MessageId.Namespace
     if peerId.namespace == Namespaces.Peer.SecretChat {
-        namespace = Namespaces.Message.SecretIncoming
+        principalNamespace = Namespaces.Message.SecretIncoming
     } else {
-        namespace = Namespaces.Message.Cloud
+        principalNamespace = Namespaces.Message.Cloud
     }
+    var hasUnread = false
     if let states = transaction.getPeerReadStates(peerId) {
-        for i in 0 ..< states.count {
-            if states[i].0 == namespace {
-                if states[i].1.isUnread {
-                    if setToValue == nil || !(setToValue!) {
-                        if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: namespace) {
-                            let _ = transaction.applyInteractiveReadMaxIndex(index)
-                        } else {
-                            transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: false, interactive: true)
-                        }
-                        viewTracker.updateMarkAllMentionsSeen(peerId: peerId)
-                    }
-                } else if namespace == Namespaces.Message.Cloud || namespace == Namespaces.Message.SecretIncoming {
-                    if setToValue == nil || setToValue! {
-                        transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: true, interactive: true)
-                    }
-                }
+        for state in states {
+            if state.1.isUnread {
+                hasUnread = true
+                break
             }
+        }
+    }
+    
+    if hasUnread {
+        if setToValue == nil || !(setToValue!) {
+            if let index = transaction.getTopPeerMessageIndex(peerId: peerId) {
+                let _ = transaction.applyInteractiveReadMaxIndex(index)
+            } else {
+                transaction.applyMarkUnread(peerId: peerId, namespace: principalNamespace, value: false, interactive: true)
+            }
+            viewTracker.updateMarkAllMentionsSeen(peerId: peerId)
+        }
+    } else {
+        if setToValue == nil || setToValue! {
+            transaction.applyMarkUnread(peerId: peerId, namespace: principalNamespace, value: true, interactive: true)
         }
     }
 }

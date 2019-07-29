@@ -352,6 +352,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         self.addSubnode(self.actionButtons)
         
+        self.actionButtons.sendButtonLongPressed = { [weak self] in
+            self?.interfaceInteraction?.displaySendMessageOptions()
+        }
+        
         self.actionButtons.micButton.recordingDisabled = { [weak self] in
             self?.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .tooltip)
         }
@@ -608,11 +612,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var isSlowmodeActive = false
         if interfaceState.slowmodeState != nil {
             isSlowmodeActive = true
-            isMediaEnabled = false
+            if !isEditingMedia {
+                isMediaEnabled = false
+            }
         }
         transition.updateAlpha(layer: self.attachmentButton.layer, alpha: isMediaEnabled ? 1.0 : 0.4)
         self.attachmentButton.isEnabled = isMediaEnabled
-        self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive
+        self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive || isMediaEnabled
         
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
@@ -643,8 +649,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 let keyboardAppearance = interfaceState.theme.chat.inputPanel.keyboardColor.keyboardAppearance
                 if let textInputNode = self.textInputNode, textInputNode.keyboardAppearance != keyboardAppearance, textInputNode.isFirstResponder() {
-                    textInputNode.resignFirstResponder()
-                    textInputNode.becomeFirstResponder()
+                    if textInputNode.isCurrentlyEmoji() {
+                        textInputNode.initialPrimaryLanguage = "emoji"
+                        textInputNode.resetInitialPrimaryLanguage()
+                    }
                     textInputNode.keyboardAppearance = keyboardAppearance
                 }
                 
@@ -724,6 +732,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                     self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize)
                 }
+                
+                self.actionButtons.sendButtonLongPressEnabled = peer.id != interfaceState.accountPeerId && peer.id.namespace != Namespaces.Peer.SecretChat
             }
             
             let sendButtonHasApplyIcon = interfaceState.interfaceState.editMessage != nil

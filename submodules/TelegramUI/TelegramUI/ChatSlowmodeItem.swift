@@ -128,6 +128,7 @@ class ChatSlowmodeItemNode: ListViewItemNode {
         self.view.disablesInteractiveTransitionGestureRecognizer = true
         
         let sliderView = TGPhotoEditorSliderView()
+        sliderView.limitValueChangedToLatestState = true
         sliderView.enablePanHandling = true
         sliderView.trackCornerRadius = 1.0
         sliderView.lineSize = 2.0
@@ -299,9 +300,4 @@ class ChatSlowmodeItemNode: ListViewItemNode {
             item.updated(value)
         }
     }
-    
-    func cancelDragging() {
-        self.sliderView?.cancelTracking(with: nil)
-    }
 }
-

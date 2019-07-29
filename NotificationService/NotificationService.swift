@@ -295,6 +295,7 @@ class NotificationService: UNNotificationServiceExtension {
             
             var peerId: PeerId?
             var messageId: Int32?
+            var silent = false
             
             if let msgId = dict["msg_id"] as? String {
                 userInfo["msg_id"] = msgId
@@ -317,6 +318,9 @@ class NotificationService: UNNotificationServiceExtension {
                 if let id = Int32(channelId) {
                     peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)
                 }
+            }
+            if let silentValue = dict["silent"] as? String {
+                silent = silentValue == "1"
             }
             
             var attachment: ParsedMediaAttachment?
@@ -412,6 +416,9 @@ class NotificationService: UNNotificationServiceExtension {
                     self.bestAttemptContent?.body = alert
                 } else if let alert = aps["alert"] as? [AnyHashable: Any] {
                     self.bestAttemptContent?.title = alert["title"] as? String ?? ""
+                    if let title = self.bestAttemptContent?.title, !title.isEmpty && silent {
+                        self.bestAttemptContent?.title = "\(title) 🔕"
+                    }
                     self.bestAttemptContent?.subtitle = alert["subtitle"] as? String ?? ""
                     self.bestAttemptContent?.body = alert["body"] as? String ?? ""
                 }

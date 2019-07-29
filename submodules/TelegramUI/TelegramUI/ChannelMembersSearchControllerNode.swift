@@ -129,6 +129,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         
         let interaction = ChannelMembersSearchInteraction(openPeer: { [weak self] peer, participant in
             self?.requestOpenPeerFromSearch?(peer, participant)
+            self?.listNode.clearHighlightAnimated(true)
         })
         
         let previousEntries = Atomic<[ChannelMembersSearchEntry]?>(value: nil)

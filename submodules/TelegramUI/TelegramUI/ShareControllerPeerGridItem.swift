@@ -126,7 +126,7 @@ final class ShareControllerPeerGridItem: GridItem {
 }
 
 final class ShareControllerPeerGridItemNode: GridItemNode {
-    private var currentState: (Account, RenderedPeer, Bool)?
+    private var currentState: (Account, RenderedPeer, Bool, PeerPresence?)?
     private let peerNode: SelectablePeerNode
     
     var controllerInteraction: ShareControllerInteraction?
@@ -138,8 +138,8 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         
         self.peerNode.toggleSelection = { [weak self] in
             if let strongSelf = self {
-                if let (_, peer, search) = strongSelf.currentState {
-                    if let actualPeer = peer.peers[peer.peerId] {
+                if let (_, peer, search, _) = strongSelf.currentState {
+                    if let _ = peer.peers[peer.peerId] {
                         strongSelf.controllerInteraction?.togglePeer(peer, search)
                     }
                 }
@@ -149,7 +149,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     }
     
     func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, presence: PeerPresence?, search: Bool, synchronousLoad: Bool) {
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != peer {
+        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != peer || !arePeerPresencesEqual(self.currentState!.3, presence) {
             let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: theme.chatList.secretTitleColor, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.checkContentColor, avatarPlaceholderColor: theme.list.mediaPlaceholderColor)
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -163,7 +163,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             
             self.peerNode.theme = itemTheme
             self.peerNode.setup(account: account, theme: theme, strings: strings, peer: peer, online: online, synchronousLoad: synchronousLoad)
-            self.currentState = (account, peer, search)
+            self.currentState = (account, peer, search, presence)
             self.setNeedsLayout()
         }
         self.updateSelection(animated: false)
@@ -171,7 +171,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     
     func updateSelection(animated: Bool) {
         var selected = false
-        if let controllerInteraction = self.controllerInteraction, let (_, peer, _) = self.currentState {
+        if let controllerInteraction = self.controllerInteraction, let (_, peer, _, _) = self.currentState {
             selected = controllerInteraction.selectedPeerIds.contains(peer.peerId)
         }
         

@@ -425,7 +425,7 @@ public final class ShareController: ViewController {
                                 messagesToEnqueue.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             for message in messages {
-                                messagesToEnqueue.append(.forward(source: message.id, grouping: .auto))
+                                messagesToEnqueue.append(.forward(source: message.id, grouping: .auto, attributes: []))
                             }
                             let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messagesToEnqueue).start()
                         }
@@ -663,19 +663,29 @@ public final class ShareController: ViewController {
             self.currentAccount.viewTracker.tailChatListView(groupId: .root, count: 150)
             |> take(1)
         )
-        |> map { accountPeer, view -> ([(RenderedPeer, PeerPresence?)], Peer) in
-            var peers: [(RenderedPeer, PeerPresence?)] = []
+        |> mapToSignal { accountPeer, view -> Signal<([(RenderedPeer, PeerPresence?)], Peer), NoError> in
+            var peers: [RenderedPeer] = []
             for entry in view.0.entries.reversed() {
                 switch entry {
-                    case let .MessageEntry(_, _, _, _, _, renderedPeer, presence, _):
+                    case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _):
                         if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
-                            peers.append((renderedPeer, presence))
+                            peers.append(renderedPeer)
                         }
                     default:
                         break
                 }
             }
-            return (peers, accountPeer)
+            let key = PostboxViewKey.peerPresences(peerIds: Set(peers.map { $0.peerId }))
+            return account.postbox.combinedView(keys: [key])
+            |> map { views -> ([(RenderedPeer, PeerPresence?)], Peer) in
+                var resultPeers: [(RenderedPeer, PeerPresence?)] = []
+                if let presencesView = views.views[key] as? PeerPresencesView {
+                    for peer in peers {
+                        resultPeers.append((peer, presencesView.presences[peer.peerId]))
+                    }
+                }
+                return (resultPeers, accountPeer)
+            }
         })
         self.peersDisposable.set((self.peers.get()
         |> deliverOnMainQueue).start(next: { [weak self] next in

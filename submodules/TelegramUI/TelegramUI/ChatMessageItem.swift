@@ -317,7 +317,6 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         self.effectiveAuthorId = effectiveAuthor?.id
         
-        
         self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, presentationData: presentationData, action: { timestamp in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
@@ -385,8 +384,12 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
         }
         
-        if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && self.message.elligibleForLargeEmoji && messageTextIsElligibleForLargeEmoji(message.text) {
-            viewClassName = ChatMessageStickerItemNode.self
+        if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && self.message.elligibleForLargeEmoji && messageIsElligibleForLargeEmoji(self.message) {
+            if let _ = animatedEmojiResource(emoji: self.message.text) {
+                viewClassName = ChatMessageAnimatedStickerItemNode.self
+            } else {
+                viewClassName = ChatMessageStickerItemNode.self
+            }
         }
         
         let configure = {

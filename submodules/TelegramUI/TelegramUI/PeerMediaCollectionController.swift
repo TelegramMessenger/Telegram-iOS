@@ -180,6 +180,7 @@ public class PeerMediaCollectionController: TelegramController {
                 if let strongSelf = self, strongSelf.isNodeLoaded {
                     strongSelf.updateInterfaceState(animated: true, { $0.withToggledSelectedMessages(ids, value: value) })
                 }
+            }, sendCurrentMessage: { _ in    
             }, sendMessage: { _ in
             }, sendSticker: { _, _, _, _ in
                 return false
@@ -379,6 +380,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, openLinkEditing: {
         }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
+        }, displaySendMessageOptions: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })
@@ -652,7 +654,7 @@ public class PeerMediaCollectionController: TelegramController {
                             
                             if peerId == strongSelf.context.account.peerId {
                                 let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
-                                    return .forward(source: id, grouping: .auto)
+                                    return .forward(source: id, grouping: .auto, attributes: [])
                                 })
                                 |> deliverOnMainQueue).start(next: { [weak self] messageIds in
                                     if let strongSelf = self {

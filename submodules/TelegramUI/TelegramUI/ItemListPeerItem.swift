@@ -181,7 +181,7 @@ private let titleBoldFont = Font.medium(17.0)
 private let statusFont = Font.regular(14.0)
 private let labelFont = Font.regular(13.0)
 private let labelDisclosureFont = Font.regular(17.0)
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 17.0)!
+private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 15.0)!
 private let badgeFont = Font.regular(15.0)
 
 class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
@@ -809,7 +809,13 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
             return
         }
         
-        let leftInset: CGFloat = 65.0 + params.leftInset
+        let leftInset: CGFloat
+        switch item.height {
+        case .generic:
+            leftInset = 59.0 + params.leftInset
+        case .peerList:
+            leftInset = 65.0 + params.leftInset
+        }
         
         let editingOffset: CGFloat
         if let editableControlNode = self.editableControlNode {
@@ -848,7 +854,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
         
         transition.updateFrame(node: self.labelBadgeNode, frame: CGRect(origin: CGPoint(x: offset + params.width - rightLabelInset - badgeWidth, y: self.labelBadgeNode.frame.minY), size: CGSize(width: badgeWidth, height: badgeDiameter)))
         
-        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + params.leftInset + 15.0, y: self.avatarNode.frame.minY), size: CGSize(width: 40.0, height: 40.0)))
+        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + params.leftInset + 15.0, y: self.avatarNode.frame.minY), size: self.avatarNode.bounds.size))
     }
     
     override func revealOptionsInteractivelyOpened() {

@@ -643,19 +643,22 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         return result
                     }, to: &text, entities: &entities)
                 } else {
-                    appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessagePromotedName(new.peer.displayTitle) : self.presentationData.strings.Channel_AdminLog_MessagePromotedNameUsername(new.peer.displayTitle, "@" + new.peer.addressName!), generateEntities: { index in
-                        var result: [MessageTextEntityType] = []
-                        if index == 0 {
-                            result.append(.TextMention(peerId: new.peer.id))
-                        } else if index == 1 {
-                            result.append(.Mention)
-                        }
-                        return result
-                    }, to: &text, entities: &entities)
-                    text += "\n"
+                    var appendedRightsHeader = false
                     
-                    if case let .member(_, _, prevAdminRights, _, _) = prev.participant {
-                        if case let .member(_, _, newAdminRights, _, _) = new.participant {
+                    if case let .creator(_, prevRank) = prev.participant, case let .creator(_, newRank) = new.participant, prevRank != newRank {
+                        appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRankName(new.peer.displayTitle, newRank ?? "") : self.presentationData.strings.Channel_AdminLog_MessageRankUsername(new.peer.displayTitle, "@" + new.peer.addressName!, newRank ?? ""), generateEntities: { index in
+                            var result: [MessageTextEntityType] = []
+                            if index == 0 {
+                                result.append(.TextMention(peerId: new.peer.id))
+                            } else if index == 1 {
+                                result.append(.Mention)
+                            } else if index == 2 {
+                                result.append(.Bold)
+                            }
+                            return result
+                        }, to: &text, entities: &entities)
+                    } else if case let .member(_, _, prevAdminRights, _, prevRank) = prev.participant {
+                        if case let .member(_, _, newAdminRights, _, newRank) = new.participant {
                             let prevFlags = prevAdminRights?.rights.flags ?? []
                             let newFlags = newAdminRights?.rights.flags ?? []
                             
@@ -684,6 +687,22 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             
                             for (flag, string) in order {
                                 if prevFlags.contains(flag) != newFlags.contains(flag) {
+                                    if !appendedRightsHeader {
+                                        appendedRightsHeader = true
+                                        appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessagePromotedName(new.peer.displayTitle) : self.presentationData.strings.Channel_AdminLog_MessagePromotedNameUsername(new.peer.displayTitle, "@" + new.peer.addressName!), generateEntities: { index in
+                                            var result: [MessageTextEntityType] = []
+                                            if index == 0 {
+                                                result.append(.TextMention(peerId: new.peer.id))
+                                            } else if index == 1 {
+                                                result.append(.Mention)
+                                            } else if index == 2 {
+                                                result.append(.Bold)
+                                            }
+                                            return result
+                                        }, to: &text, entities: &entities)
+                                        text += "\n"
+                                    }
+                                    
                                     text += "\n"
                                     if !prevFlags.contains(flag) {
                                         text += "+"
@@ -691,6 +710,31 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                         text += "-"
                                     }
                                     appendAttributedText(text: string, withEntities: [.Italic], to: &text, entities: &entities)
+                                }
+                            }
+                            
+                            if prevRank != newRank {
+                                if appendedRightsHeader {
+                                    text += "\n\n"
+                                    appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageRank(newRank ?? ""), generateEntities: { index in
+                                        var result: [MessageTextEntityType] = []
+                                        if index == 0 {
+                                            result.append(.Bold)
+                                        }
+                                        return result
+                                    }, to: &text, entities: &entities)
+                                } else {
+                                    appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRankName(new.peer.displayTitle, newRank ?? "") : self.presentationData.strings.Channel_AdminLog_MessageRankUsername(new.peer.displayTitle, "@" + new.peer.addressName!, newRank ?? ""), generateEntities: { index in
+                                        var result: [MessageTextEntityType] = []
+                                        if index == 0 {
+                                            result.append(.TextMention(peerId: new.peer.id))
+                                        } else if index == 1 {
+                                            result.append(.Mention)
+                                        } else if index == 2 {
+                                            result.append(.Bold)
+                                        }
+                                        return result
+                                    }, to: &text, entities: &entities)
                                 }
                             }
                         }

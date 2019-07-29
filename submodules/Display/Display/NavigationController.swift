@@ -125,7 +125,10 @@ open class NavigationController: UINavigationController, ContainableController, 
     public var isOpaqueWhenInOverlay: Bool = true
     public var blocksBackgroundWhenInOverlay: Bool = true
     
-    public var ready: Promise<Bool> = Promise(true)
+    private let _ready = Promise<Bool>(true)
+    open var ready: Promise<Bool> {
+        return self._ready
+    }
     
     private var masterDetailsBlackout: MasterDetailLayoutBlackout?
     private var backgroundDetailsMode: NavigationEmptyDetailsBackgoundMode?
@@ -836,10 +839,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                     bottomController.viewWillAppear(true)
                     let bottomView = bottomController.view!
                     
-                    if let bottomController = bottomController as? ViewController {
-                        bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
-                    }
-                    
                     let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar, didUpdateProgress: { [weak self] progress, transition in
                         if let strongSelf = self {
                             for i in 0 ..< strongSelf._viewControllers.count {
@@ -853,6 +852,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                             }
                         }
                     })
+                    if let bottomController = bottomController as? ViewController {
+                        bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
+                    }
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
                 }
             case UIGestureRecognizerState.changed:

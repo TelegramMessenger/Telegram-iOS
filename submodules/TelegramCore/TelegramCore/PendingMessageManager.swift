@@ -900,9 +900,7 @@ public final class PendingMessageManager {
                 var replyMessageId: Int32?
                 
                 var flags: Int32 = 0
-                
-                flags |= (1 << 7)
-                
+        
                 for attribute in message.attributes {
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
                         replyMessageId = replyAttribute.messageId.id
@@ -923,11 +921,16 @@ public final class PendingMessageManager {
                     }
                 }
                 
-                if let _ = replyMessageId {
-                    flags |= Int32(1 << 0)
-                }
-                if let _ = messageEntities {
-                    flags |= Int32(1 << 3)
+                if case .forward = content.content {
+                } else {
+                    flags |= (1 << 7)
+                    
+                    if let _ = replyMessageId {
+                        flags |= Int32(1 << 0)
+                    }
+                    if let _ = messageEntities {
+                        flags |= Int32(1 << 3)
+                    }
                 }
                 
                 let dependencyTag = PendingMessageRequestDependencyTag(messageId: messageId)
@@ -941,7 +944,7 @@ public final class PendingMessageManager {
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: 0, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer), tag: dependencyTag)
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer), tag: dependencyTag)
                             |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))

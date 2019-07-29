@@ -26,11 +26,12 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let action: () -> Void
     let textUpdated: (String) -> Void
+    let shouldUpdateText: (String) -> Bool
     let processPaste: ((String) -> String)?
-    let receivedFocus: (() -> Void)?
+    let updatedFocus: ((Bool) -> Void)?
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, processPaste: ((String) -> String)? = nil, receivedFocus: (() -> Void)? = nil, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.text = text
@@ -43,8 +44,9 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.tag = tag
         self.sectionId = sectionId
         self.textUpdated = textUpdated
+        self.shouldUpdateText = shouldUpdateText
         self.processPaste = processPaste
-        self.receivedFocus = receivedFocus
+        self.updatedFocus = updatedFocus
         self.action = action
     }
     
@@ -351,6 +353,10 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     }
     
     @objc internal func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if let item = self.item, !item.shouldUpdateText(string) {
+            return false
+        }
+        
         if string.count > 1, let item = self.item, let processPaste = item.processPaste {
             let result = processPaste(string)
             if result != string {
@@ -376,7 +382,11 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     }
     
     @objc internal func textFieldDidBeginEditing(_ textField: UITextField) {
-        self.item?.receivedFocus?()
+        self.item?.updatedFocus?(true)
+    }
+    
+    @objc internal func textFieldDidEndEditing(_ textField: UITextField) {
+        self.item?.updatedFocus?(false)
     }
     
     func animateError() {

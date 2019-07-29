@@ -142,7 +142,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, strong) NSString * _Nullable initialPrimaryLanguage;
 
+- (void)resetInitialPrimaryLanguage;
 - (void)dropAutocorrection;
+- (bool)isCurrentlyEmoji;
 
 @end
 
