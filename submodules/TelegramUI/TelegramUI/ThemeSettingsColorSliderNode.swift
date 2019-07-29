@@ -131,6 +131,7 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
     private let brightnessKnobNode: ThemeSettingsColorKnobNode
     
     private var validLayout: CGSize?
+    private var panning = false
     
     var valueChanged: ((CGFloat) -> Void)?
     
@@ -143,6 +144,7 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
     }
     
     var _value: CGFloat = 0.5
+    var lastReportedValue: CGFloat?
     
     var value: CGFloat {
         get {
@@ -196,7 +198,9 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
         let inset: CGFloat = 16.0
         transition.updateFrame(node: self.brightnessNode, frame: CGRect(x: inset, y: floor((size.height - 30.0) / 2.0), width: size.width - inset * 2.0, height: 30.0))
         
-        self.updateKnobLayout(size: size, transition: .immediate)
+        if !self.panning {
+            self.updateKnobLayout(size: size, transition: .immediate)
+        }
     }
     
     @objc private func brightnessPan(_ recognizer: UIPanGestureRecognizer) {
@@ -213,18 +217,27 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
         var ended = false
         switch recognizer.state {
             case .changed:
+                self.panning = true
                 self.updateKnobLayout(size: size, transition: .immediate)
                 recognizer.setTranslation(CGPoint(), in: recognizer.view)
             case .ended:
                 self.updateKnobLayout(size: size, transition: .immediate)
+                self.panning = false
                 ended = true
             default:
                 break
         }
         
-        if self.value != previousValue || ended {
+        var update = true
+        if let lastReportedValue = self.lastReportedValue, abs(self.value - lastReportedValue) < 0.05 {
+            update = false
+        }
+        
+        if update || ended {
             self.update()
             self.valueChanged?(self.value)
+            self.lastReportedValue = self.value
+            print("upda")
         }
     }
 }

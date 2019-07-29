@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import TelegramCore
 
-private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgroundColor: UIColor, day: Bool) -> PresentationTheme {
+private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgroundColor: UIColor, day: Bool, preview: Bool) -> PresentationTheme {
     let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
     let constructiveColor: UIColor = UIColor(rgb: 0x00c900)
     let secretColor: UIColor = UIColor(rgb: 0x00b12c)
@@ -323,16 +323,17 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         chatList: chatList,
         chat: chat,
         actionSheet: actionSheet,
-        inAppNotification: inAppNotification
+        inAppNotification: inAppNotification,
+        preview: preview
     )
 }
 
-public let defaultPresentationTheme = makeDefaultDayPresentationTheme(accentColor: UIColor(rgb: 0x007ee5), serviceBackgroundColor: defaultServiceBackgroundColor, day: false)
+public let defaultPresentationTheme = makeDefaultDayPresentationTheme(accentColor: UIColor(rgb: 0x007ee5), serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
 
-public func makeDefaultDayPresentationTheme(accentColor: UIColor? = nil, serviceBackgroundColor: UIColor, day: Bool) -> PresentationTheme {
+public func makeDefaultDayPresentationTheme(accentColor: UIColor? = nil, serviceBackgroundColor: UIColor, day: Bool, preview: Bool) -> PresentationTheme {
     let accentColor = accentColor ?? defaultDayAccentColor
-    return makeDefaultDayPresentationTheme(accentColor: accentColor, serviceBackgroundColor: serviceBackgroundColor, day: day)
+    return makeDefaultDayPresentationTheme(accentColor: accentColor, serviceBackgroundColor: serviceBackgroundColor, day: day, preview: preview)
 }

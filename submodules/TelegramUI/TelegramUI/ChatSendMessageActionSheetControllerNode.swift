@@ -6,6 +6,9 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 
+private let leftInset: CGFloat = 16.0
+private let rightInset: CGFloat = 46.0
+
 private final class ActionSheetItemNode: ASDisplayNode {
     private let title: String
     private let action: () -> Void
@@ -15,6 +18,8 @@ private final class ActionSheetItemNode: ASDisplayNode {
     private let buttonNode: HighlightTrackingButtonNode
     private let iconNode: ASImageNode
     private let titleNode: ImmediateTextNode
+    
+    private var maxWidth: CGFloat?
     
     init(theme: PresentationTheme, title: String, action: @escaping () -> Void) {
         self.title = title
@@ -62,13 +67,17 @@ private final class ActionSheetItemNode: ASDisplayNode {
     func updateTheme(_ theme: PresentationTheme) {
         self.separatorNode.backgroundColor = theme.actionSheet.opaqueItemSeparatorColor
         self.highlightedBackgroundNode.backgroundColor = theme.actionSheet.opaqueItemHighlightedBackgroundColor
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.actionSheet.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.regular(17.0), textColor: theme.actionSheet.primaryTextColor)
         self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
+        
+        if let maxWidth = self.maxWidth {
+            let _ = self.titleNode.updateLayout(CGSize(width: maxWidth - leftInset - rightInset, height: .greatestFiniteMagnitude))
+        }
     }
     
     func updateLayout(maxWidth: CGFloat) -> (CGFloat, CGFloat, (CGFloat) -> Void) {
-        let leftInset: CGFloat = 16.0
-        let rightInset: CGFloat = 46.0
+        self.maxWidth = maxWidth
+        
         let titleSize = self.titleNode.updateLayout(CGSize(width: maxWidth - leftInset - rightInset, height: .greatestFiniteMagnitude))
         let height: CGFloat = 44.0
         
