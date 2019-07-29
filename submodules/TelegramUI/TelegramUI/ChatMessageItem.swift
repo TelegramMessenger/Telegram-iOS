@@ -212,12 +212,14 @@ public final class ChatMessageItemAssociatedData: Equatable {
     let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     let isRecentActions: Bool
     let contactsPeerIds: Set<PeerId>
+    let forcedResourceStatus: FileMediaResourceStatus?
     
-    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set()) {
+    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set(), forcedResourceStatus: FileMediaResourceStatus? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
         self.contactsPeerIds = contactsPeerIds
+        self.forcedResourceStatus = forcedResourceStatus
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -231,6 +233,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.contactsPeerIds != rhs.contactsPeerIds {
+            return false
+        }
+        if lhs.forcedResourceStatus != rhs.forcedResourceStatus {
             return false
         }
         return true
@@ -312,7 +317,6 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         self.effectiveAuthorId = effectiveAuthor?.id
         
-        
         self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, presentationData: presentationData, action: { timestamp in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
@@ -341,7 +345,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
             if !hasActionMedia && !isBroadcastChannel {
                 if let effectiveAuthor = effectiveAuthor {
-                    accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, emptyColor: presentationData.theme.theme.chat.bubble.incoming.withoutWallpaper.fill)
+                    accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, emptyColor: presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill)
                 }
             }
         }
@@ -380,8 +384,12 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
         }
         
-        if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && self.message.elligibleForLargeEmoji && messageTextIsElligibleForLargeEmoji(message.text) {
-            viewClassName = ChatMessageStickerItemNode.self
+        if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && self.message.elligibleForLargeEmoji && messageIsElligibleForLargeEmoji(self.message) {
+            if let _ = animatedEmojiResource(emoji: self.message.text) {
+                viewClassName = ChatMessageAnimatedStickerItemNode.self
+            } else {
+                viewClassName = ChatMessageStickerItemNode.self
+            }
         }
         
         let configure = {

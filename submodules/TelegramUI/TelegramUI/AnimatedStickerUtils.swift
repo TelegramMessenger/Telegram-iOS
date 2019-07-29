@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import Display
+import TelegramCore
 import AVFoundation
 import Lottie
 import TelegramUIPrivateModule
@@ -11,80 +12,57 @@ import GZip
 import RLottie
 import MobileCoreServices
 
-private func validateAnimationItems(_ items: [Any]?, shapes: Bool = true) -> Bool {
-    if let items = items {
-        for case let item as [AnyHashable: Any] in items {
-            if let type = item["ty"] as? String {
-                if type == "rp" || type == "sr" || type == "gs" {
-                    return false
-                }
-            }
-            
-            if shapes, let subitems = item["it"] as? [Any] {
-                if !validateAnimationItems(subitems, shapes: false) {
-                    return false
-                }
-            }
-        }
-    }
-    return true;
-}
-
-private func validateAnimationLayers(_ layers: [Any]?) -> Bool {
-    if let layers = layers {
-        for case let layer as [AnyHashable: Any] in layers {
-            if let ddd = layer["ddd"] as? Int, ddd != 0 {
-                return false
-            }
-            if let sr = layer["sr"] as? Int, sr != 1 {
-                return false
-            }
-            if let _ = layer["tm"] {
-                return false
-            }
-            if let ty = layer["ty"] as? Int {
-                if ty == 1 || ty == 2 || ty == 5 || ty == 9 {
-                    return false
-                }
-            }
-            if let hasMask = layer["hasMask"] as? Bool, hasMask {
-                return false
-            }
-            if let _ = layer["masksProperties"] {
-                return false
-            }
-            if let _ = layer["tt"] {
-                return false
-            }
-            if let ao = layer["ao"] as? Int, ao == 1 {
-                return false
-            }
-            
-            if let shapes = layer["shapes"] as? [Any], !validateAnimationItems(shapes, shapes: true) {
-                return false
-            }
-        }
-    }
-    return true
-}
-
-func validateAnimationComposition(json: [AnyHashable: Any]) -> Bool {
-    let validDimensions: [Int] = [100, 512]
-    let validFramerates: [Int] = [30, 60]
+public struct LocalBundleResourceId: MediaResourceId {
+    public let name: String
+    public let ext: String
     
-    guard let tgs = json["tgs"] as? Int, tgs == 1 else {
-        return false
+    public var uniqueId: String {
+        return "local-bundle-\(self.name)-\(self.ext)"
     }
-    guard let width = json["w"] as? Int, validDimensions.contains(width) else {
-        return false
+    
+    public var hashValue: Int {
+        return self.name.hashValue
     }
-    guard let height = json["h"] as? Int, validDimensions.contains(height)  else {
-        return false
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if let to = to as? LocalBundleResourceId {
+            return self.name == to.name && self.ext == to.ext
+        } else {
+            return false
+        }
     }
-    guard let fps = json["fr"] as? Int, validFramerates.contains(fps)  else {
-        return false
+}
+
+public class LocalBundleResource: TelegramMediaResource {
+    public let name: String
+    public let ext: String
+    
+    public init(name: String, ext: String) {
+        self.name = name
+        self.ext = ext
     }
-    return true
+    
+    public required init(decoder: PostboxDecoder) {
+        self.name = decoder.decodeStringForKey("n", orElse: "")
+        self.ext = decoder.decodeStringForKey("e", orElse: "")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.name, forKey: "n")
+        encoder.encodeString(self.ext, forKey: "e")
+    }
+    
+    public var id: MediaResourceId {
+        return LocalBundleResourceId(name: self.name, ext: self.ext)
+    }
+    
+    public func isEqual(to: MediaResource) -> Bool {
+        if let to = to as? LocalBundleResource {
+            return self.name == to.name && self.ext == to.ext
+        } else {
+            return false
+        }
+    }
 }
 
 func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: String) -> Signal<TempBoxFile, NoError> {
@@ -98,7 +76,7 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
                 return
             }
             
-            let decompressedData = TGGUnzipData(data, 1024 * 1024)
+            let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
                 if cancelled.with({ $0 }) {
                     return
@@ -183,7 +161,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
         
         threadPool.addTask(ThreadPoolTask({ _ in
             if cancelled.with({ $0 }) {
-                print("cancelled 1")
+               //print("cancelled 1")
                 return
             }
             
@@ -193,12 +171,12 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
             var deltaTime: Double = 0
             var compressionTime: Double = 0
             
-            let decompressedData = TGGUnzipData(data, 1024 * 1024)
+            let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
                 let endFrame = Int(player.frameCount)
                 
                 if cancelled.with({ $0 }) {
-                    print("cancelled 2")
+                    //print("cancelled 2")
                     return
                 }
                 
@@ -250,7 +228,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 
                 while currentFrame < endFrame {
                     if cancelled.with({ $0 }) {
-                        print("cancelled 3")
+                        //print("cancelled 3")
                         return
                     }
                     
@@ -306,4 +284,51 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
             let _ = cancelled.swap(true)
         }
     })
+}
+
+private final class LocalBundleResourceCopyFile : MediaResourceDataFetchCopyLocalItem {
+    let path: String
+    init(path: String) {
+        self.path = path
+    }
+    func copyTo(url: URL) -> Bool {
+        do {
+            try FileManager.default.copyItem(at: URL(fileURLWithPath: self.path), to: url)
+            return true
+        } catch {
+            return false
+        }
+    }
+}
+
+func fetchLocalBundleResource(postbox: Postbox, resource: LocalBundleResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    return Signal { subscriber in
+        if let path = frameworkBundle.path(forResource: resource.name, ofType: resource.ext), let _ = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+            subscriber.putNext(.copyLocalItem(LocalBundleResourceCopyFile(path: path)))
+            subscriber.putCompletion()
+        }
+        return EmptyDisposable
+    }
+}
+
+private let emojis: [String: (String, CGFloat)] = [
+    "👍": ("thumbs_up_1", 450.0),
+    "👍🏻": ("thumbs_up_2", 450.0),
+    "👍🏼": ("thumbs_up_3", 450.0),
+    "👍🏽": ("thumbs_up_4", 450.0),
+    "👍🏾": ("thumbs_up_5", 450.0),
+    "👍🏿": ("thumbs_up_6", 450.0),
+    "😂": ("lol", 350.0),
+    "😒": ("meh", 350.0),
+    "❤️": ("heart", 350.0),
+    "🥳": ("celeb", 430.0),
+    "😳": ("confused", 350.0)
+]
+
+func animatedEmojiResource(emoji: String) -> (LocalBundleResource, CGFloat)? {
+    if let (name, size) = emojis[emoji] {
+        return (LocalBundleResource(name: name, ext: "tgs"), size)
+    } else {
+        return nil
+    }
 }

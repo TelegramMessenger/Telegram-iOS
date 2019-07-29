@@ -15,6 +15,7 @@ private let textBoldFont = Font.semibold(15.0)
 private let textItalicFont = Font.italic(15.0)
 private let textBoldItalicFont = Font.semiboldItalic(15.0)
 private let textFixedFont = Font.regular(15.0)
+private let textBlockQuoteFont = Font.regular(15.0)
 private let buttonFont = Font.semibold(13.0)
 
 enum ChatMessageAttachedContentActionIcon {
@@ -348,32 +349,32 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             let string = NSMutableAttributedString()
             var notEmpty = false
             
-            let bubbleTheme = presentationData.theme.theme.chat.bubble
+            let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
             
             if let title = title, !title.isEmpty {
-                string.append(NSAttributedString(string: title, font: titleFont, textColor: incoming ? bubbleTheme.incomingAccentTextColor : bubbleTheme.outgoingAccentTextColor))
+                string.append(NSAttributedString(string: title, font: titleFont, textColor: messageTheme.accentTextColor))
                 notEmpty = true
             }
             
             if let subtitle = subtitle, subtitle.length > 0 {
                 if notEmpty {
-                    string.append(NSAttributedString(string: "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
+                    string.append(NSAttributedString(string: "\n", font: textFont, textColor: messageTheme.primaryTextColor))
                 }
                 let updatedSubtitle = NSMutableAttributedString()
                 updatedSubtitle.append(subtitle)
-                updatedSubtitle.addAttribute(.foregroundColor, value: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, range: NSMakeRange(0, subtitle.length))
+                updatedSubtitle.addAttribute(.foregroundColor, value: messageTheme.primaryTextColor, range: NSMakeRange(0, subtitle.length))
                 string.append(updatedSubtitle)
                 notEmpty = true
             }
             
             if let text = text, !text.isEmpty {
                 if notEmpty {
-                    string.append(NSAttributedString(string: "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
+                    string.append(NSAttributedString(string: "\n", font: textFont, textColor: messageTheme.primaryTextColor))
                 }
                 if let entities = entities {
-                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont))
+                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont))
                 } else {
-                    string.append(NSAttributedString(string: text + "\n", font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor))
+                    string.append(NSAttributedString(string: text + "\n", font: textFont, textColor: messageTheme.primaryTextColor))
                 }
                 notEmpty = true
             }
@@ -439,7 +440,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                         }
                         
-                        let (_, refineLayout) = contentFileLayout(context, presentationData, message, file, automaticDownload, message.effectivelyIncoming(context.account.peerId), false, statusType, CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height))
+                        let (_, refineLayout) = contentFileLayout(context, presentationData, message, file, automaticDownload, message.effectivelyIncoming(context.account.peerId), false, associatedData.forcedResourceStatus, statusType, CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = media as? TelegramMediaImage {
@@ -499,10 +500,10 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         
                         var skipStandardStatus = false
                         if let count = webpageGalleryMediaCount {
-                            additionalImageBadgeContent = .text(inset: 0.0, backgroundColor: presentationData.theme.theme.chat.bubble.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.theme.chat.bubble.mediaDateAndStatusTextColor, text: NSAttributedString(string: "1 \(presentationData.strings.Common_of) \(count)"))
+                            additionalImageBadgeContent = .text(inset: 0.0, backgroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor, text: NSAttributedString(string: "1 \(presentationData.strings.Common_of) \(count)"))
                             skipStandardStatus = imageMode
                         } else if let mediaBadge = mediaBadge {
-                            additionalImageBadgeContent = .text(inset: 0.0, backgroundColor: presentationData.theme.theme.chat.bubble.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.theme.chat.bubble.mediaDateAndStatusTextColor, text: NSAttributedString(string: mediaBadge))
+                            additionalImageBadgeContent = .text(inset: 0.0, backgroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor, text: NSAttributedString(string: mediaBadge))
                         }
                         
                         if !skipStandardStatus {
@@ -624,7 +625,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 var imageApply: (() -> Void)?
                 if let inlineImageSize = inlineImageSize, let inlineImageDimensions = inlineImageDimensions {
                     let imageCorners = ImageCorners(topLeft: .Corner(4.0), topRight: .Corner(4.0), bottomLeft: .Corner(4.0), bottomRight: .Corner(4.0))
-                    let arguments = TransformImageArguments(corners: imageCorners, imageSize: inlineImageDimensions.aspectFilled(inlineImageSize), boundingSize: inlineImageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: incoming ? presentationData.theme.theme.chat.bubble.incomingMediaPlaceholderColor : presentationData.theme.theme.chat.bubble.outgoingMediaPlaceholderColor)
+                    let arguments = TransformImageArguments(corners: imageCorners, imageSize: inlineImageDimensions.aspectFilled(inlineImageSize), boundingSize: inlineImageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: incoming ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor)
                     imageApply = imageLayout(arguments)
                 }
                 
@@ -643,7 +644,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             buttonIconImage = PresentationResourcesChat.chatMessageAttachedContentButtonIconInstantIncoming(presentationData.theme.theme)!
                             buttonHighlightedIconImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIconInstantIncoming(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)!
                         }
-                        titleColor = presentationData.theme.theme.chat.bubble.incomingAccentTextColor
+                        titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
                         let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: true, wallpaper: !presentationData.theme.wallpaper.isEmpty)
                         titleHighlightedColor = bubbleColor.fill
                     } else {
@@ -653,7 +654,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             buttonIconImage = PresentationResourcesChat.chatMessageAttachedContentButtonIconInstantOutgoing(presentationData.theme.theme)!
                             buttonHighlightedIconImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIconInstantOutgoing(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)!
                         }
-                        titleColor = presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
+                        titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
                         let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: false, wallpaper: !presentationData.theme.wallpaper.isEmpty)
                         titleHighlightedColor = bubbleColor.fill
                     }
@@ -1006,7 +1007,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: message.effectivelyIncoming(context.account.peerId) ? theme.theme.chat.bubble.incomingLinkHighlightColor : theme.theme.chat.bubble.outgoingLinkHighlightColor)
+                    linkHighlightingNode = LinkHighlightingNode(color: message.effectivelyIncoming(context.account.peerId) ? theme.theme.chat.message.incoming.linkHighlightColor : theme.theme.chat.message.outgoing.linkHighlightColor)
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
                 }

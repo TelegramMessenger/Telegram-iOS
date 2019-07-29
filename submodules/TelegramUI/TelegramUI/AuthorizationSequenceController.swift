@@ -38,6 +38,12 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     
     private var didPlayPresentationAnimation = false
     
+    private let _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    private var didSetReady = false
+    
     public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
         self.sharedContext = sharedContext
         self.account = account
@@ -277,7 +283,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         }
                                         var dismissImpl: (() -> Void)?
                                         let alertTheme = AlertControllerTheme(presentationTheme: strongSelf.theme)
-                                        let attributedText = stringWithAppliedEntities(termsOfService.text, entities: termsOfService.entities, baseColor: alertTheme.primaryColor, linkColor: alertTheme.accentColor, baseFont: Font.regular(13.0), linkFont: Font.regular(13.0), boldFont: Font.semibold(13.0), italicFont: Font.italic(13.0), boldItalicFont: Font.semiboldItalic(13.0), fixedFont: Font.regular(13.0))
+                                        let attributedText = stringWithAppliedEntities(termsOfService.text, entities: termsOfService.entities, baseColor: alertTheme.primaryColor, linkColor: alertTheme.accentColor, baseFont: Font.regular(13.0), linkFont: Font.regular(13.0), boldFont: Font.semibold(13.0), italicFont: Font.italic(13.0), boldItalicFont: Font.semiboldItalic(13.0), fixedFont: Font.regular(13.0), blockQuoteFont: Font.regular(13.0))
                                         let contentNode = TextAlertContentNode(theme: alertTheme, title: NSAttributedString(string: strongSelf.strings.Login_TermsOfServiceHeader, font: Font.medium(17.0), textColor: alertTheme.primaryColor, paragraphAlignment: .center), text: attributedText, actions: [
                                             TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_TermsOfServiceAgree, action: {
                                                 dismissImpl?()
@@ -721,13 +727,13 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         controllers.append(self.phoneEntryController(countryCode: countryCode, number: number))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService, syncContacts):
+                    case let .confirmationCodeEntry(number, type, _, timeout, nextType, _):
                         var controllers: [ViewController] = []
                         if !self.otherAccountPhoneNumbers.1.isEmpty {
                             controllers.append(self.splashController())
                         }
                         controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
-                        controllers.append(self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService))
+                        controllers.append(self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .passwordEntry(hint, _, _, suggestReset, syncContacts):
                         var controllers: [ViewController] = []
@@ -750,7 +756,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         controllers.append(self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .signUp(_, _, _, firstName, lastName, termsOfService, _):
+                    case let .signUp(_, _, firstName, lastName, termsOfService, _):
                         var controllers: [ViewController] = []
                         var displayCancel = false
                         if !self.otherAccountPhoneNumbers.1.isEmpty {
@@ -769,6 +775,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         super.setViewControllers(viewControllers, animated: animated)
         if wasEmpty {
             self.topViewController?.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        }
+        if !self.didSetReady {
+            self.didSetReady = true
+            self._ready.set(.single(true))
         }
     }
     

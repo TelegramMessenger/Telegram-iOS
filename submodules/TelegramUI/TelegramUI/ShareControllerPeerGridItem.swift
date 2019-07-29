@@ -111,7 +111,7 @@ final class ShareControllerPeerGridItem: GridItem {
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ShareControllerPeerGridItemNode()
         node.controllerInteraction = self.controllerInteraction
-        node.setup(account: self.account, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, search: self.search, synchronousLoad: synchronousLoad)
+        node.setup(account: self.account, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, search: self.search, synchronousLoad: synchronousLoad, force: false)
         return node
     }
     
@@ -121,13 +121,14 @@ final class ShareControllerPeerGridItem: GridItem {
             return
         }
         node.controllerInteraction = self.controllerInteraction
-        node.setup(account: self.account, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, search: self.search, synchronousLoad: false)
+        node.setup(account: self.account, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, search: self.search, synchronousLoad: false, force: false)
     }
 }
 
 final class ShareControllerPeerGridItemNode: GridItemNode {
-    private var currentState: (Account, RenderedPeer, Bool)?
+    private var currentState: (Account, PresentationTheme, PresentationStrings, RenderedPeer, Bool, PeerPresence?)?
     private let peerNode: SelectablePeerNode
+    private var presenceManager: PeerPresenceStatusManager?
     
     var controllerInteraction: ShareControllerInteraction?
     
@@ -138,18 +139,24 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         
         self.peerNode.toggleSelection = { [weak self] in
             if let strongSelf = self {
-                if let (_, peer, search) = strongSelf.currentState {
-                    if let actualPeer = peer.peers[peer.peerId] {
+                if let (_, _, _, peer, search, _) = strongSelf.currentState {
+                    if let _ = peer.peers[peer.peerId] {
                         strongSelf.controllerInteraction?.togglePeer(peer, search)
                     }
                 }
             }
         }
         self.addSubnode(self.peerNode)
+        self.presenceManager = PeerPresenceStatusManager(update: { [weak self] in
+            guard let strongSelf = self, let currentState = strongSelf.currentState else {
+                return
+            }
+            strongSelf.setup(account: currentState.0, theme: currentState.1, strings: currentState.2, peer: currentState.3, presence: currentState.5, search: currentState.4, synchronousLoad: false, force: true)
+        })
     }
     
-    func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, presence: PeerPresence?, search: Bool, synchronousLoad: Bool) {
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != peer {
+    func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, presence: PeerPresence?, search: Bool, synchronousLoad: Bool, force: Bool) {
+        if force || self.currentState == nil || self.currentState!.0 !== account || self.currentState!.3 != peer || !arePeerPresencesEqual(self.currentState!.5, presence) {
             let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: theme.chatList.secretTitleColor, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.checkContentColor, avatarPlaceholderColor: theme.list.mediaPlaceholderColor)
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -163,15 +170,18 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             
             self.peerNode.theme = itemTheme
             self.peerNode.setup(account: account, theme: theme, strings: strings, peer: peer, online: online, synchronousLoad: synchronousLoad)
-            self.currentState = (account, peer, search)
+            self.currentState = (account, theme, strings, peer, search, presence)
             self.setNeedsLayout()
+            if let presence = presence as? TelegramUserPresence {
+                self.presenceManager?.reset(presence: presence)
+            }
         }
         self.updateSelection(animated: false)
     }
     
     func updateSelection(animated: Bool) {
         var selected = false
-        if let controllerInteraction = self.controllerInteraction, let (_, peer, _) = self.currentState {
+        if let controllerInteraction = self.controllerInteraction, let (_, _, _, peer, _, _) = self.currentState {
             selected = controllerInteraction.selectedPeerIds.contains(peer.peerId)
         }
         

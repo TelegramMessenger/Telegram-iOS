@@ -30,7 +30,7 @@ func presentLegacyWebSearchEditor(context: AccountContext, theme: PresentationTh
     |> take(1)
     |> deliverOnMainQueue).start(next: { screenImage in
         let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: initialLayout)
-        legacyController.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+        legacyController.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
         
         let controller = TGPhotoEditorController(context: legacyController.context, item: item, intent: TGPhotoEditorControllerAvatarIntent, adjustments: nil, caption: nil, screenImage: screenImage ?? UIImage(), availableTabs: TGPhotoEditorController.defaultTabsForAvatarIntent(), selectedTab: .cropTab)!
         legacyController.bind(controller: controller)

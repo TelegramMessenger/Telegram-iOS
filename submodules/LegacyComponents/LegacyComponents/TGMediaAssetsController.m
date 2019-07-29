@@ -59,17 +59,17 @@
 
 @implementation TGMediaAssetsController
 
-+ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping selectionLimit:(int)selectionLimit
 {
-    return [self controllerWithContext:context assetGroup:assetGroup intent:intent recipientName:recipientName saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping inhibitSelection:false];
+    return [self controllerWithContext:context assetGroup:assetGroup intent:intent recipientName:recipientName saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping inhibitSelection:false selectionLimit:selectionLimit];
 }
 
-+ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection selectionLimit:(int)selectionLimit
 {
     if (intent != TGMediaAssetsControllerSendMediaIntent)
         allowGrouping = false;
     
-    TGMediaAssetsController *assetsController = [[TGMediaAssetsController alloc] initWithContext:context intent:intent saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping];
+    TGMediaAssetsController *assetsController = [[TGMediaAssetsController alloc] initWithContext:context intent:intent saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping selectionLimit:selectionLimit];
     
     __weak TGMediaAssetsController *weakController = assetsController;
     void (^catchToolbarView)(bool) = ^(bool enabled)
@@ -121,6 +121,7 @@
         pickerController.recipientName = recipientName;
         pickerController.hasTimer = strongController.hasTimer;
         pickerController.onlyCrop = strongController.onlyCrop;
+        pickerController.hasSilentPosting = strongController.hasSilentPosting;
         [strongController pushViewController:pickerController animated:true];
     };
     [groupsController loadViewIfNeeded];
@@ -200,6 +201,12 @@
     self.pickerController.hasTimer = hasTimer;
 }
 
+- (void)setHasSilentPosting:(bool)hasSilentPosting
+{
+    _hasSilentPosting = hasSilentPosting;
+    self.pickerController.hasSilentPosting = hasSilentPosting;
+}
+
 - (void)setOnlyCrop:(bool)onlyCrop
 {
     _onlyCrop = onlyCrop;
@@ -220,7 +227,7 @@
     return pickerController;
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context intent:(TGMediaAssetsControllerIntent)intent saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context intent:(TGMediaAssetsControllerIntent)intent saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping selectionLimit:(int)selectionLimit
 {
     self = [super initWithNavigationBarClass:[TGNavigationBar class] toolbarClass:[UIToolbar class]];
     if (self != nil)
@@ -241,9 +248,17 @@
         _assetsLibrary = [TGMediaAssetsLibrary libraryForAssetType:[TGMediaAssetsController assetTypeForIntent:intent]];
         
         __weak TGMediaAssetsController *weakSelf = self;
-        _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping];
+        _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping selectionLimit:selectionLimit];
         if (allowGrouping)
-            _selectionContext.grouping = ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_mediaGroupingDisabled_v0"] boolValue];
+            _selectionContext.grouping = true;
+        _selectionContext.selectionLimitExceeded = ^{
+            __strong TGMediaAssetsController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            if (strongSelf->_selectionLimitExceeded) {
+                strongSelf->_selectionLimitExceeded();
+            }
+        };
         [_selectionContext setItemSourceUpdatedSignal:[_assetsLibrary libraryChanged]];
         _selectionContext.updatedItemsSignal = ^SSignal *(NSArray *items)
         {
@@ -286,6 +301,7 @@
             }
             
             bool groupingButtonVisible = strongSelf->_selectionContext.allowGrouping && onlyGroupableMedia && strongSelf->_selectionContext.count > 1;
+            groupingButtonVisible = false;
             [strongSelf->_toolbarView setCenterButtonHidden:!groupingButtonVisible animated:true];
             
             return groupingButtonVisible;
@@ -435,7 +451,7 @@
     {
         __strong TGMediaAssetsController *strongSelf = weakSelf;
         if (strongSelf != nil)
-            [strongSelf completeWithCurrentItem:nil];
+            [strongSelf completeWithCurrentItem:nil silentPosting:false];
     };
 }
 
@@ -516,12 +532,12 @@
         self.avatarCompletionBlock(image);
 }
 
-- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem
+- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting
 {
     if (self.completionBlock != nil)
     {
         NSArray *signals = [self resultSignalsWithCurrentItem:currentItem descriptionGenerator:self.descriptionGenerator];
-        self.completionBlock(signals);
+        self.completionBlock(signals, silentPosting);
     }
     else if (self.singleCompletionBlock != nil)
     {

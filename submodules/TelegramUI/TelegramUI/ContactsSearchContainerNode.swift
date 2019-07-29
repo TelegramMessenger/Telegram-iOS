@@ -130,7 +130,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     private let openPeer: (ContactListPeer) -> Void
     
     private let dimNode: ASDisplayNode
-    private let listNode: ListView
+    let listNode: ListView
     
     private let searchQuery = Promise<String?>()
     private let searchDisposable = MetaDisposable()
@@ -167,6 +167,8 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
         
         let themeAndStringsPromise = self.themeAndStringsPromise
         
+        let previousFoundRemoteContacts = Atomic<([FoundPeer], [FoundPeer])?>(value: nil)
+        
         let searchItems = self.searchQuery.get()
         |> mapToSignal { query -> Signal<[ContactListSearchEntry]?, NoError> in
             if let query = query, !query.isEmpty {
@@ -178,7 +180,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                 }
                 let foundRemoteContacts: Signal<([FoundPeer], [FoundPeer])?, NoError>
                 if categories.contains(.global) {
-                    foundRemoteContacts = .single(nil)
+                    foundRemoteContacts = .single(previousFoundRemoteContacts.with({ $0 }))
                     |> then(
                         searchPeers(account: context.account, query: query)
                         |> map { ($0.0, $0.1) }
@@ -199,6 +201,8 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                 return combineLatest(foundLocalContacts, foundRemoteContacts, foundDeviceContacts, themeAndStringsPromise.get())
                 |> delay(0.1, queue: Queue.concurrentDefaultQueue())
                 |> map { localPeersAndPresences, remotePeers, deviceContacts, themeAndStrings -> [ContactListSearchEntry] in
+                    let _ = previousFoundRemoteContacts.swap(remotePeers)
+                    
                     var entries: [ContactListSearchEntry] = []
                     var existingPeerIds = Set<PeerId>()
                     var disabledPeerIds = Set<PeerId>()
@@ -289,6 +293,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                     return entries
                 }
             } else {
+                let _ = previousFoundRemoteContacts.swap(nil)
                 return .single(nil)
             }
         }
@@ -315,6 +320,12 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     
     deinit {
         self.searchDisposable.dispose()
+    }
+    
+    override func scrollToTop() {
+        if !self.listNode.isHidden {
+            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        }
     }
     
     override func didLoad() {
@@ -374,6 +385,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
             
             var options = ListViewDeleteAndInsertOptions()
             options.insert(.PreferSynchronousDrawing)
+            options.insert(.PreferSynchronousResourceLoading)
             
             let isSearching = transition.isSearching
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in

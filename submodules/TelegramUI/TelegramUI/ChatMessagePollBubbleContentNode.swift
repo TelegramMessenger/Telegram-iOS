@@ -285,7 +285,7 @@ private func generatePercentageImage(presentationData: ChatPresentationData, inc
     return generateImage(CGSize(width: 42.0, height: 20.0), rotatedContext: { size, context in
         UIGraphicsPushContext(context)
         context.clear(CGRect(origin: CGPoint(), size: size))
-        let string = NSAttributedString(string: "\(value)%", font: percentageFont, textColor: incoming ? presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor, paragraphAlignment: .right)
+        let string = NSAttributedString(string: "\(value)%", font: percentageFont, textColor: incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor, paragraphAlignment: .right)
         string.draw(in: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: size))
         UIGraphicsPopContext()
     })!
@@ -380,7 +380,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             
             let incoming = message.effectivelyIncoming(accountPeerId)
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: option.text, font: presentationData.messageFont, textColor: incoming ? presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: max(1.0, constrainedWidth - leftInset - rightInset), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: option.text, font: presentationData.messageFont, textColor: incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: max(1.0, constrainedWidth - leftInset - rightInset), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
             
             let contentHeight: CGFloat = max(46.0, titleLayout.size.height + 22.0)
             
@@ -404,7 +404,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     let previousResult = node.currentResult
                     node.currentResult = optionResult
                     
-                    node.highlightedBackgroundNode.backgroundColor = (incoming ? presentationData.theme.theme.chat.bubble.incomingAccentTextColor : presentationData.theme.theme.chat.bubble.outgoingAccentTextColor).withAlphaComponent(0.15)
+                    node.highlightedBackgroundNode.backgroundColor = (incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor).withAlphaComponent(0.15)
                     
                     node.buttonNode.accessibilityLabel = option.text
                     
@@ -434,7 +434,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         }
                         let radioSize: CGFloat = 22.0
                         radioNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: CGSize(width: radioSize, height: radioSize))
-                        radioNode.update(staticColor: incoming ? presentationData.theme.theme.chat.bubble.incomingPolls.radioButton : presentationData.theme.theme.chat.bubble.outgoingPolls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.bubble.incomingPolls.radioProgress : presentationData.theme.theme.chat.bubble.outgoingPolls.radioProgress, isAnimating: inProgress)
+                        radioNode.update(staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress, isAnimating: inProgress)
                     } else if let radioNode = node.radioNode {
                         node.radioNode = nil
                         if animated {
@@ -468,11 +468,11 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     node.buttonNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: contentHeight))
                     node.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: contentHeight + UIScreenPixel))
                     
-                    node.separatorNode.backgroundColor = incoming ? presentationData.theme.theme.chat.bubble.incomingPolls.separator : presentationData.theme.theme.chat.bubble.outgoingPolls.separator
+                    node.separatorNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.separator : presentationData.theme.theme.chat.message.outgoing.polls.separator
                     node.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - UIScreenPixel), size: CGSize(width: width - leftInset, height: UIScreenPixel))
                     
                     if node.resultBarNode.image == nil {
-                        node.resultBarNode.image = generateStretchableFilledCircleImage(diameter: 6.0, color: incoming ? presentationData.theme.theme.chat.bubble.incomingPolls.bar : presentationData.theme.theme.chat.bubble.outgoingPolls.bar)
+                        node.resultBarNode.image = generateStretchableFilledCircleImage(diameter: 6.0, color: incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar)
                     }
                     
                     let minBarWidth: CGFloat = 6.0
@@ -635,9 +635,9 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
 
-                let bubbleTheme = item.presentationData.theme.theme.chat.bubble
+                let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
-                let attributedText = NSAttributedString(string: poll?.text ?? "", font: item.presentationData.messageBoldFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor)
+                let attributedText = NSAttributedString(string: poll?.text ?? "", font: item.presentationData.messageBoldFont, textColor: messageTheme.primaryTextColor)
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 0.0, bottom: 5.0, right: 0.0)
                 
@@ -648,7 +648,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     typeText = item.presentationData.strings.MessagePoll_LabelAnonymous
                 }
-                let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: typeText, font: labelsFont, textColor: incoming ? bubbleTheme.incomingSecondaryTextColor : bubbleTheme.outgoingSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: typeText, font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 let votersString: String
                 if let totalVoters = poll?.results.totalVoters {
@@ -660,7 +660,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     votersString = " "
                 }
-                let (votersLayout, votersApply) = makeVotersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: votersString, font: labelsFont, textColor: incoming ? bubbleTheme.incomingSecondaryTextColor : bubbleTheme.outgoingSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
+                let (votersLayout, votersApply) = makeVotersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: votersString, font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
                 
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))

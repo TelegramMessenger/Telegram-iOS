@@ -178,7 +178,12 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 }
             }
         } else {
-            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), mimeType: mimeType, attributes: [.FileName(fileName: fileName ?? "file")], hintFileIsLarge: data.count > 5 * 1024 * 1024)
+            var thumbnailData: Data?
+            if mimeType == "application/pdf", let image = generatePdfPreviewImage(data: data, size: CGSize(width: 256.0, height: 256.0)), let jpegData = UIImageJPEGRepresentation(image, 0.5) {
+                thumbnailData = jpegData
+            }
+            
+            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), thumbnailData: thumbnailData, mimeType: mimeType, attributes: [.FileName(fileName: fileName ?? "file")], hintFileIsLarge: data.count > 5 * 1024 * 1024)
             |> mapError { _ -> Void in return Void() }
             |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
                 switch event {

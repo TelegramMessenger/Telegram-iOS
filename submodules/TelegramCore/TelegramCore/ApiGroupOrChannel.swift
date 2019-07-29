@@ -47,9 +47,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         var groupFlags = TelegramGroupFlags()
         var role: TelegramGroupRole = .member
         if (flags & (1 << 0)) != 0 {
-            role = .creator
+            role = .creator(rank: nil)
         } else if let adminRights = adminRights {
-            role = .admin(TelegramChatAdminRights(apiAdminRights: adminRights))
+            role = .admin(TelegramChatAdminRights(apiAdminRights: adminRights), rank: nil)
         }
         if (flags & (1 << 5)) != 0 {
             groupFlags.insert(.deactivated)
@@ -73,7 +73,10 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         
         let info: TelegramChannelInfo
         if (flags & Int32(1 << 8)) != 0 {
-            let infoFlags = TelegramChannelGroupFlags()
+            var infoFlags = TelegramChannelGroupFlags()
+            if (flags & Int32(1 << 22)) != 0 {
+                infoFlags.insert(.slowModeEnabled)
+            }
             info = .group(TelegramChannelGroupInfo(flags: infoFlags))
         } else {
             var infoFlags = TelegramChannelBroadcastFlags()
@@ -95,6 +98,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         }
         if (flags & Int32(1 << 19)) != 0 {
             channelFlags.insert(.isScam)
+        }
+        if (flags & Int32(1 << 21)) != 0 {
+            channelFlags.insert(.hasGeo)
         }
         
         let restrictionInfo: PeerAccessRestrictionInfo?

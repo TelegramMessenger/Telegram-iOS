@@ -55,7 +55,7 @@ public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChan
                             case let .channelParticipant(participant, _):
                                 updatedParticipant = ChannelParticipant(apiParticipant: participant)
                         }
-                        if case let .member(_, _, maybeAdminInfo, _) = updatedParticipant {
+                        if case let .member(_, _, maybeAdminInfo, _, _) = updatedParticipant {
                             if let adminInfo = maybeAdminInfo {
                                 if let peer = transaction.getPeer(adminInfo.promotedBy) {
                                     peers[peer.id] = peer

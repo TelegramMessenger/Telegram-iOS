@@ -674,7 +674,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                         self.swipeToReplyFeedback?.impact()
                         
-                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
+                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
                         self.swipeToReplyNode = swipeToReplyNode
                         self.addSubnode(swipeToReplyNode)
                         animateReplyNodeIn = true
@@ -829,7 +829,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 self.highlightedState = highlighted
                 
                 if highlighted {
-                    self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.bubble.mediaHighlightOverlayColor, animated: false)
+                    self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
                 } else {
                     self.imageNode.setOverlayColor(nil, animated: animated)
                 }

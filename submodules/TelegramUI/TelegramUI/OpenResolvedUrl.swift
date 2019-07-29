@@ -22,7 +22,7 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     }
 }
 
-func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)? = nil, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch resolvedUrl {
         case let .externalUrl(url):
@@ -77,7 +77,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
         case let .stickerPack(name):
             dismissInput()
             let controller = StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: navigationController)
-            controller.sendSticker = sendFile
+            controller.sendSticker = sendSticker
             present(controller, nil)
         case let .instantView(webpage, anchor):
             navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))

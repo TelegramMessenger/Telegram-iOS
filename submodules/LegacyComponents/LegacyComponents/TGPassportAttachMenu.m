@@ -51,7 +51,7 @@
     
     __weak TGMenuSheetController *weakController = controller;
     __weak TGViewController *weakParentController = parentController;
-    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:intent == TGPassportAttachIntentSelfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false allowSelection:intent == TGPassportAttachIntentMultiple allowEditing:true document:true];
+    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:intent == TGPassportAttachIntentSelfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false allowSelection:intent == TGPassportAttachIntentMultiple allowEditing:true document:true selectionLimit: 10];
     __weak TGAttachmentCarouselItemView *weakCarouselItem = carouselItem;
     carouselItem.onlyCrop = true;
     carouselItem.parentController = parentController;
@@ -67,7 +67,7 @@
         
         [TGPassportAttachMenu _displayCameraWithView:cameraView menuController:strongController parentController:strongParentController context:context intent:intent uploadAction:uploadAction];
     };
-    carouselItem.sendPressed = ^(TGMediaAsset *currentItem, __unused bool asFiles)
+    carouselItem.sendPressed = ^(TGMediaAsset *currentItem, __unused bool asFiles, __unused bool silentPosting)
     {
         __strong TGMenuSheetController *strongController = weakController;
         if (strongController == nil)
@@ -227,7 +227,7 @@
         TGMediaAssetsControllerIntent assetsIntent = (intent == TGPassportAttachIntentMultiple) ? TGMediaAssetsControllerPassportMultipleIntent : TGMediaAssetsControllerPassportIntent;
         
         [strongParentController presentWithContext:^UIViewController *(id<LegacyComponentsContext> context) {
-            TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:assetsIntent recipientName:nil saveEditedPhotos:false allowGrouping:false];
+            TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:assetsIntent recipientName:nil saveEditedPhotos:false allowGrouping:false selectionLimit:10];
             controller.onlyCrop = true;
             __weak TGMediaAssetsController *weakController = controller;
             controller.singleCompletionBlock = ^(id<TGMediaEditableItem> currentItem, TGMediaEditingContext *editingContext) {

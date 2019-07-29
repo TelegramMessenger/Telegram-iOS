@@ -470,7 +470,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             additionalData.append(.cachedPeerDataMessages(peerId))
             additionalData.append(.peerNotificationSettings(peerId))
             if peerId.namespace == Namespaces.Peer.CloudChannel {
-                additionalData.append(.cacheEntry(cachedChannelAdminIdsEntryId(peerId: peerId)))
+                additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: peerId)))
                 additionalData.append(.peer(peerId))
             }
             if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
@@ -675,10 +675,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                                 let _ = applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: messageIndex).start()
                         }
-                        /*case let .group(groupId):
-                            let _ = context.account.postbox.transaction({ transaction -> Void in
-                                transaction.applyGroupFeedInteractiveReadMaxIndex(groupId: groupId, index: messageIndex)
-                            }).start()*/
                     }
                 }
             }

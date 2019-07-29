@@ -309,19 +309,19 @@
         strongSelf->_galleryMixin = nil;
     };
     
-    mixin.completeWithItem = ^(TGMediaPickerGalleryItem *item)
+    mixin.completeWithItem = ^(TGMediaPickerGalleryItem *item, bool silentPosting)
     {
         __strong TGMediaAssetsPickerController *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
-        [(TGMediaAssetsController *)strongSelf.navigationController completeWithCurrentItem:item.asset];
+        [(TGMediaAssetsController *)strongSelf.navigationController completeWithCurrentItem:item.asset silentPosting:silentPosting];
     };
 }
 
 - (TGMediaPickerModernGalleryMixin *)_galleryMixinForContext:(id<LegacyComponentsContext>)context item:(id)item thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities inhibitDocumentCaptions:(bool)inhibitDocumentCaptions asFile:(bool)asFile
 {
-    return [[TGMediaPickerModernGalleryMixin alloc] initWithContext:context item:item fetchResult:_fetchResult parentController:self thumbnailImage:thumbnailImage selectionContext:selectionContext editingContext:editingContext suggestionContext:suggestionContext hasCaptions:hasCaptions allowCaptionEntities:allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:asFile itemsLimit:0 recipientName:self.recipientName];
+    return [[TGMediaPickerModernGalleryMixin alloc] initWithContext:context item:item fetchResult:_fetchResult parentController:self thumbnailImage:thumbnailImage selectionContext:selectionContext editingContext:editingContext suggestionContext:suggestionContext hasCaptions:hasCaptions allowCaptionEntities:allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:asFile itemsLimit:0 recipientName:self.recipientName hasSilentPosting:self.hasSilentPosting];
 }
 
 - (TGMediaPickerModernGalleryMixin *)galleryMixinForIndexPath:(NSIndexPath *)indexPath previewMode:(bool)previewMode outAsset:(TGMediaAsset **)outAsset
@@ -362,7 +362,7 @@
 
     TGMediaSelectionContext *selectionContext = ((TGMediaAssetsController *)self.navigationController).selectionContext;
     if (UIAccessibilityIsVoiceOverRunning() && selectionContext != nil) {
-        [selectionContext toggleItemSelection:asset];
+        [selectionContext toggleItemSelection:asset success:nil];
         return;
     }
     

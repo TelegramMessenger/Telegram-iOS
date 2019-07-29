@@ -221,7 +221,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
                 
-                self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: imageReference.resourceReference(largestSize.resource)).start())
+                self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: imageReference.resourceReference(largestSize.resource)).start())
                 self.setupStatus(resource: largestSize.resource)
             } else {
                 self._ready.set(.single(Void()))
@@ -463,7 +463,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     case .Fetching:
                         self.context.account.postbox.mediaBox.cancelInteractiveResourceFetch(resource.resource)
                     case .Remote:
-                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: resource, statsCategory: statsCategory ?? .generic).start())
+                        self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: resource, statsCategory: statsCategory ?? .generic).start())
                     default:
                         break
                 }

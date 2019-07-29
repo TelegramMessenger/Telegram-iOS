@@ -889,15 +889,17 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             return;
         }
         
-        //bool debugResetTransport = false;
-        
         bool extendedPadding = false;
-        if (transport.proxySettings != nil && transport.proxySettings.secret.length != 0) {
-            if ([MTSocksProxySettings secretSupportsExtendedPadding:transport.proxySettings.secret]) {
+        if (transport.proxySettings != nil && transport.proxySettings.secret != nil) {
+            MTProxySecret *parsedSecret = [MTProxySecret parseData:transport.proxySettings.secret];
+            if ([parsedSecret isKindOfClass:[MTProxySecretType1 class]] || [parsedSecret isKindOfClass:[MTProxySecretType2 class]]) {
                 extendedPadding = true;
             }
-        } else if ([MTSocksProxySettings secretSupportsExtendedPadding:scheme.address.secret]) {
-            extendedPadding = true;
+        } else if (scheme.address.secret != nil) {
+            MTProxySecret *parsedSecret = [MTProxySecret parseData:scheme.address.secret];
+            if ([parsedSecret isKindOfClass:[MTProxySecretType1 class]] || [parsedSecret isKindOfClass:[MTProxySecretType2 class]]) {
+                extendedPadding = true;
+            }
         }
         
         if ([self canAskForTransactions])
@@ -1900,14 +1902,14 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 bool stop = false;
                 int64_t reqMsgId = 0;
                 
-                if (true)
-                {
+                /*if (true)
+                {*/
                     while (!stop && reqMsgId == 0)
                     {
                         int32_t signature = [messageIs readInt32:&stop];
                         [self findReqMsgId:messageIs signature:signature reqMsgId:&reqMsgId failed:&stop];
                     }
-                }
+                /*}
                 else
                 {
                     int32_t signature = [messageIs readInt32];
@@ -1927,7 +1929,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                                 reqMsgId = [messageIs readInt64];
                         }
                     }
-                }
+                }*/
                 
                 if (reqMsgId != 0)
                     completion(token, @(reqMsgId));
@@ -2369,8 +2371,6 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             *parseError = true;
         return nil;
     }
-    
-#warning check message id
     
     NSMutableArray *messages = [[NSMutableArray alloc] init];
     NSTimeInterval timestamp = embeddedMessageId / 4294967296.0;

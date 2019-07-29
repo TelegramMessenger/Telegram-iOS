@@ -26,7 +26,7 @@ public final class CallController: ViewController {
     public let call: PresentationCall
     
     private var presentationData: PresentationData
-    private var animatedAppearance = false
+    private var didPlayPresentationAnimation = false
     
     private var peer: Peer?
     
@@ -217,7 +217,7 @@ public final class CallController: ViewController {
         }
         
         self.controllerNode.dismissedInteractively = { [weak self] in
-            self?.animatedAppearance = false
+            self?.didPlayPresentationAnimation = false
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
@@ -242,8 +242,8 @@ public final class CallController: ViewController {
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        if !self.animatedAppearance {
-            self.animatedAppearance = true
+        if !self.didPlayPresentationAnimation {
+            self.didPlayPresentationAnimation = true
             
             self.controllerNode.animateIn()
         }
@@ -257,7 +257,7 @@ public final class CallController: ViewController {
     
     override public func dismiss(completion: (() -> Void)? = nil) {
         self.controllerNode.animateOut(completion: { [weak self] in
-            self?.animatedAppearance = false
+            self?.didPlayPresentationAnimation = false
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
             
             completion?()

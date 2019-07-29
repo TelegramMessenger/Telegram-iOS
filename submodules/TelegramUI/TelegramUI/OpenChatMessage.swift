@@ -7,6 +7,7 @@ import SwiftSignalKit
 import PassKit
 import Lottie
 import TelegramUIPreferences
+import TelegramPresentationData
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -18,8 +19,9 @@ private enum ChatMessageGalleryControllerData {
     case document(TelegramMediaFile)
     case gallery(GalleryController)
     case secretGallery(SecretMediaPreviewController)
-    case other(Media)
     case chatAvatars(AvatarGalleryController, Media)
+    case theme(TelegramMediaFile)
+    case other(Media)
 }
 
 private func chatMessageGalleryControllerData(context: AccountContext, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
@@ -109,7 +111,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
     } else if let galleryMedia = galleryMedia {
         if let mapMedia = galleryMedia as? TelegramMediaMap {
             return .map(mapMedia)
-        } else if let file = galleryMedia as? TelegramMediaFile, file.isSticker {
+        } else if let file = galleryMedia as? TelegramMediaFile, (file.isSticker || file.isAnimatedSticker) {
             for attribute in file.attributes {
                 if case let .Sticker(_, reference, _) = attribute {
                     if let reference = reference {
@@ -148,7 +150,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     #endif
                 }
                 
-                if !file.isVideo, !internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName) {
+                if !file.isVideo {
                     return .document(file)
                 }
             }
@@ -191,7 +193,7 @@ func chatMessagePreviewControllerData(context: AccountContext, message: Message,
     return nil
 }
 
-func openChatMessage(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode = .default, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> (UIView?, UIView?))?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
+func openChatMessage(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode = .default, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> (UIView?, UIView?))?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
     if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: mode, synchronousLoad: false, actionInteraction: actionInteraction) {
         switch mediaData {
             case let .url(url):
@@ -262,7 +264,6 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
                 if let rootController = navigationController?.view.window?.rootViewController {
                     presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: context.account.postbox, file: file)
                 }
-                //present(ShareController(account: account, subject: .messages([message]), showInChat: nil, externalShare: true, immediateExternalShare: true), nil)
                 return true
             case let .audio(file):
                 let location: PeerMessagesPlaylistLocation
@@ -335,22 +336,25 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
                     })
                     return true
                 }
-        case let .chatAvatars(controller, media):
-            dismissInput()
-            chatAvatarHiddenMedia(controller.hiddenMedia |> map { value -> MessageId? in
-                if value != nil {
-                    return message.id
-                } else {
+            case let .chatAvatars(controller, media):
+                dismissInput()
+                chatAvatarHiddenMedia(controller.hiddenMedia |> map { value -> MessageId? in
+                    if value != nil {
+                        return message.id
+                    } else {
+                        return nil
+                    }
+                }, media)
+                
+                present(controller, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
+                    if let selectedTransitionNode = transitionNode(message.id, media) {
+                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
+                    }
                     return nil
-                }
-            }, media)
-            
-            present(controller, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
-                if let selectedTransitionNode = transitionNode(message.id, media) {
-                    return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
-                }
-                return nil
-            }))
+                }))
+            case let .theme(media):
+                let controller = ThemePreviewController(context: context, previewTheme: makeDefaultDayPresentationTheme(accentColor: nil, serviceBackgroundColor: .black, day: true, preview: false), media: .message(message: MessageReference(message), media: media))
+                present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
     return false

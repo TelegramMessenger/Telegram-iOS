@@ -939,12 +939,13 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             
             if let offset = offset {
                 let timingFunction = curve.timingFunction
+                let mediaTimingFunction = curve.mediaTimingFunction
                 
                 for (index, itemNode) in self.itemNodes where existingItemIndices.contains(index) {
-                    itemNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                    itemNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction, additive: true)
                 }
                 for (wrappedSection, sectionNode) in self.sectionNodes where existingSections.contains(wrappedSection) {
-                    sectionNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                    sectionNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction, additive: true)
                 }
                 
                 for index in self.itemNodes.keys {
@@ -953,7 +954,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         if let previousFrame = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
                             self.removeItemNodeWithIndex(index, removeNode: false)
                             let position = CGPoint(x: previousFrame.midX, y: previousFrame.midY)
-                            itemNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y - boundsOffset), to: CGPoint(x: position.x, y: position.y + contentOffset.y - boundsOffset - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, force: true, completion: { [weak itemNode] _ in
+                            itemNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y - boundsOffset), to: CGPoint(x: position.x, y: position.y + contentOffset.y - boundsOffset - offset), duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: false, force: true, completion: { [weak itemNode] _ in
                                 itemNode?.removeFromSupernode()
                             })
                         } else {
@@ -965,7 +966,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 for itemNode in removedNodes {
                     if let previousFrame = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
                         let position = CGPoint(x: previousFrame.midX, y: previousFrame.midY)
-                        itemNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, force: true, completion: { [weak itemNode] _ in
+                        itemNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: false, force: true, completion: { [weak itemNode] _ in
                             itemNode?.removeFromSupernode()
                         })
                     } else {
@@ -979,7 +980,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         if let previousFrame = previousItemFrames[WrappedGridItemNode(node: sectionNode)] {
                             self.removeSectionNodeWithSection(wrappedSection, removeNode: false)
                             let position = CGPoint(x: previousFrame.midX, y: previousFrame.midY)
-                            sectionNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, force: true, completion: { [weak sectionNode] _ in
+                            sectionNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: false, force: true, completion: { [weak sectionNode] _ in
                                 sectionNode?.removeFromSupernode()
                             })
                         } else {
@@ -1006,6 +1007,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             }
         } else if let previousItemFrames = previousItemFrames, case let .animated(duration, curve) = itemTransition {
             let timingFunction = curve.timingFunction
+            let mediaTimingFunction = curve.mediaTimingFunction
             let contentOffset = self.scrollView.contentOffset
             
             for index in self.itemNodes.keys {
@@ -1021,7 +1023,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         self.removeItemNodeWithIndex(index, removeNode: true)
                     }
                 } else if let previousFrame = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
-                    itemNode.layer.animatePosition(from: CGPoint(x: previousFrame.midX, y: previousFrame.midY + contentOffset.y), to: itemNode.layer.position, duration: duration, timingFunction: timingFunction)
+                    itemNode.layer.animatePosition(from: CGPoint(x: previousFrame.midX, y: previousFrame.midY + contentOffset.y), to: itemNode.layer.position, duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction)
                 } else {
                     itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12, timingFunction: kCAMediaTimingFunctionEaseIn)
                     itemNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
@@ -1051,7 +1053,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         self.removeSectionNodeWithSection(wrappedSection, removeNode: true)
                     }
                 } else if let previousFrame = previousItemFrames[WrappedGridItemNode(node: sectionNode)] {
-                    sectionNode.layer.animatePosition(from: CGPoint(x: previousFrame.midX, y: previousFrame.midY + contentOffset.y), to: sectionNode.layer.position, duration: duration, timingFunction: timingFunction)
+                    sectionNode.layer.animatePosition(from: CGPoint(x: previousFrame.midX, y: previousFrame.midY + contentOffset.y), to: sectionNode.layer.position, duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction)
                 } else {
                     sectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseIn)
                 }

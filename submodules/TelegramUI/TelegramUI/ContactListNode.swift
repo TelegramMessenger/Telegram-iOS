@@ -1444,6 +1444,8 @@ final class ContactListNode: ASDisplayNode {
                 if transition.firstTime {
                     options.insert(.Synchronous)
                     options.insert(.LowLatency)
+                    options.insert(.PreferSynchronousDrawing)
+                    options.insert(.PreferSynchronousResourceLoading)
                 } else if transition.animation != .none {
                     if transition.animation == .insertion {
                         options.insert(.AnimateInsertion)

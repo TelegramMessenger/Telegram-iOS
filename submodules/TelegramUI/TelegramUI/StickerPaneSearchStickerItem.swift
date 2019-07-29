@@ -65,12 +65,12 @@ final class StickerPaneSearchStickerItem: GridItem {
     let account: Account
     let code: String?
     let stickerItem: FoundStickerItem
-    let selected: () -> Void
+    let selected: (ASDisplayNode, CGRect) -> Void
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     
     let section: GridSection?
     
-    init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping () -> Void) {
+    init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping (ASDisplayNode, CGRect) -> Void) {
         self.account = account
         self.stickerItem = stickerItem
         self.inputNodeInteraction = inputNodeInteraction
@@ -119,7 +119,7 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
     private var isPlaying = false
     
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
-    var selected: (() -> Void)?
+    var selected: ((ASDisplayNode, CGRect) -> Void)?
     
     var stickerItem: FoundStickerItem? {
         return self.currentState?.1
@@ -202,7 +202,7 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
     }
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
-        self.selected?()
+        self.selected?(self, self.bounds)
     }
     
     func transitionNode() -> ASDisplayNode? {

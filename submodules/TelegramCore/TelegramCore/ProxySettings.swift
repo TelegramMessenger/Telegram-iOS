@@ -47,22 +47,6 @@ public enum ProxyServerConnection: Equatable, Hashable, PostboxCoding {
                 encoder.encodeBytes(MemoryBuffer(data: secret), forKey: "secret")
         }
     }
-    
-    public var hashValue: Int {
-        switch self {
-            case let .socks5(username, password):
-                var hash = 0
-                if let username = username {
-                    hash = hash &* 31 &+ username.hashValue
-                }
-                if let password = password {
-                    hash = hash &* 31 &+ password.hashValue
-                }
-                return hash
-            case let .mtp(secret):
-                return secret.hashValue
-        }
-    }
 }
 
 public struct ProxyServerSettings: PostboxCoding, Equatable, Hashable {

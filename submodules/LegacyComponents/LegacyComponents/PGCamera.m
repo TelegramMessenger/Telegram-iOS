@@ -92,8 +92,10 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)handleEnteredBackground:(NSNotification *)__unused notification
 {
-    if (self.isCapturing)
+    if (self.isCapturing) {
         _wasCapturingOnEnterBackground = true;
+        [_previewView fadeOutAnimated:false];
+    }
     
     [self stopCaptureForPause:true completion:nil];
 }
@@ -103,7 +105,13 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     if (_wasCapturingOnEnterBackground)
     {
         _wasCapturingOnEnterBackground = false;
-        [self startCaptureForResume:true completion:nil];
+        __weak PGCamera *weakSelf = self;
+        [self startCaptureForResume:true completion:^{
+            __strong PGCamera *strongSelf = weakSelf;
+            if (strongSelf != nil) {
+                [strongSelf->_previewView fadeInAnimated:true];
+            }
+        }];
     }
 }
 

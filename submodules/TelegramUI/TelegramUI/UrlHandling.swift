@@ -92,9 +92,9 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     } else if queryItem.name == "pass" {
                                         pass = value
                                     } else if queryItem.name == "secret" {
-                                        let data = dataWithHexString(value)
-                                        if data.count == 16 || (data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data)) {
-                                            secret = data
+                                        let parsedSecret = MTProxySecret.parse(value)
+                                        if let parsedSecret = parsedSecret {
+                                            secret = parsedSecret.serialize()
                                         }
                                     }
                                 }
@@ -270,7 +270,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                         }
                     } else {
                         if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                            return .peer(peer.id, .info)
+                            return .peer(peer.id, .chat(textInputState: nil, messageId: nil))
                         } else {
                             return .peer(peer.id, .chat(textInputState: nil, messageId: nil))
                         }

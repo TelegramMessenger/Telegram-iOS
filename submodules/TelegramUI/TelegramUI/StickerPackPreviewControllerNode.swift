@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TelegramUIPreferences
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -67,7 +68,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     var presentInGlobalOverlay: ((ViewController, Any?) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
-    var sendSticker: ((FileMediaReference) -> Void)?
+    var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -75,6 +76,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     private var stickerPack: LoadedStickerPack?
     private var stickerPackUpdated = false
     private var stickerPackInitiallyInstalled : Bool?
+    private var stickerSettings: StickerSettings?
     
     private var currentItems: [StickerPackPreviewGridEntry] = []
     
@@ -131,13 +133,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         super.init()
         
-        self.interaction = StickerPackPreviewInteraction(sendSticker: { [weak self] item in
-            if let strongSelf = self, let sendSticker = strongSelf.sendSticker {
-                /*if sendSticker(item.file) {
-                    strongSelf.cancel?()
-                }*/
-            }
-        })
+        self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: false)
         
         self.backgroundColor = nil
         self.isOpaque = false
@@ -204,13 +200,15 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                             var menuItems: [PeekControllerMenuItem] = []
                             if let stickerPack = strongSelf.stickerPack, case let .result(info, _, _) = stickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                                 if strongSelf.sendSticker != nil {
-                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
+                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
                                         if let strongSelf = self {
-                                            strongSelf.sendSticker?(.standalone(media: item.file))
+                                            return strongSelf.sendSticker?(.standalone(media: item.file), node, rect) ?? false
+                                        } else {
+                                            return false
                                         }
                                     }))
                                 }
-                                menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
                                         if let strongSelf = self {
                                             if isStarred {
                                                 let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -218,8 +216,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                                                 let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                             }
                                         }
-                                    }))
-                                menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: {}))
+                                    return true
+                                }))
+                                menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { _, _ in return true }))
                             }
                             return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                         } else {
@@ -375,7 +374,8 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                     
                     if self.currentItems.isEmpty && !updatedItems.isEmpty {
                         let entities = generateTextEntities(info.title, enabledTypes: [.mention])
-                        self.contentTitleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: Font.medium(20.0), linkFont: Font.medium(20.0), boldFont: Font.medium(20.0), italicFont: Font.medium(20.0), boldItalicFont: Font.medium(20.0), fixedFont: Font.medium(20.0))
+                        let font = Font.medium(20.0)
+                        self.contentTitleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: font, linkFont: font, boldFont: font, italicFont: font, boldItalicFont: font, fixedFont: font, blockQuoteFont: font)
                         animateIn = true
                     }
                     transaction = StickerPackPreviewGridTransaction(previousList: self.currentItems, list: updatedItems, account: self.context.account, interaction: self.interaction)
@@ -510,16 +510,16 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         } else {
             dismissOnAction = true
         }
-        if let stickerPack = self.stickerPack {
+        if let stickerPack = self.stickerPack, let stickerSettings = self.stickerSettings {
             switch stickerPack {
                 case let .result(info, items, installed):
                     if installed {
                         let _ = removeStickerPackInteractively(postbox: self.context.account.postbox, id: info.id, option: .delete).start()
-                        updateStickerPack(.result(info: info, items: items, installed: false))
+                        self.updateStickerPack(.result(info: info, items: items, installed: false), stickerSettings: stickerSettings)
                     } else {
                         let _ = addStickerPackInteractively(postbox: self.context.account.postbox, info: info, items: items).start()
                         if !dismissOnAction {
-                            updateStickerPack(.result(info: info, items: items, installed: true))
+                            self.updateStickerPack(.result(info: info, items: items, installed: true), stickerSettings: stickerSettings)
                         }
                     }
                     if dismissOnAction {
@@ -566,9 +566,13 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         })
     }
     
-    func updateStickerPack(_ stickerPack: LoadedStickerPack) {
+    func updateStickerPack(_ stickerPack: LoadedStickerPack, stickerSettings: StickerSettings) {
         self.stickerPack = stickerPack
+        self.stickerSettings = stickerSettings
         self.stickerPackUpdated = true
+        
+        self.interaction.playAnimatedStickers = stickerSettings.loopAnimatedStickers
+        
         if let _ = self.containerLayout {
             self.dequeueUpdateStickerPack()
         }

@@ -17,6 +17,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     let imageNode: TransformImageNode
     private let animationNode: AnimatedStickerNode
     private var didSetUpAnimationNode = false
+    private var isPlaying = false
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
@@ -26,6 +27,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var shareButtonNode: HighlightableButtonNode?
     
     var telegramFile: TelegramMediaFile?
+    var emojiResource: LocalBundleResource?
     private let disposable = MetaDisposable()
     
     private var viaBotNode: TextNode?
@@ -36,6 +38,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
     private var highlightedState: Bool = false
+    
+    private var hapticFeedback: HapticFeedback?
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
@@ -73,6 +77,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
                 }
+                
+                if strongSelf.telegramFile == nil {
+                    if strongSelf.animationNode.frame.contains(point) {
+                        return .waitForDoubleTap
+                    }
+                }
             }
             return .waitForSingleTap
         }
@@ -90,8 +100,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         self.view.addGestureRecognizer(replyRecognizer)
     }
-    
-    private var visibilityPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             let wasVisible = oldValue != .none
@@ -106,21 +115,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var visibilityStatus: Bool = false {
         didSet {
             if self.visibilityStatus != oldValue {
-                if self.visibilityStatus {
-                    self.animationNode.visibility = true
-                    self.visibilityPromise.set(true)
-                    if let item = self.item, !self.didSetUpAnimationNode {
-                        for media in item.message.media {
-                            if let telegramFile = media as? TelegramMediaFile {
-                                self.didSetUpAnimationNode = true
-                                self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
-                            }
-                        }
-                    }
-                } else {
-                    self.animationNode.visibility = false
-                    self.visibilityPromise.set(false)
-                }
+                self.updateVisibility()
             }
         }
     }
@@ -133,15 +128,56 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
-                    if self.visibilityStatus {
-                        self.didSetUpAnimationNode = true
-                        self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
-                    }
+                    self.updateVisibility()
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                 }
                 break
             }
         }
+    
+        if self.telegramFile == nil {
+            self.emojiResource = animatedEmojiResource(emoji: item.message.text)?.0
+            
+            if let emojiResource = self.emojiResource {
+                let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: emojiResource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: 0, attributes: [])
+                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: dummyFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
+                self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: dummyFile)).start())
+            }
+            
+            self.updateVisibility()
+        }
+    }
+    
+    func updateVisibility() {
+        guard let item = self.item else {
+            return
+        }
+        
+        let isPlaying = self.visibilityStatus && item.controllerInteraction.stickerSettings.loopAnimatedStickers
+        if self.isPlaying != isPlaying {
+            self.isPlaying = isPlaying
+            self.animationNode.visibility = isPlaying
+            if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
+                self.didSetUpAnimationNode = true
+                var telegramFile: TelegramMediaFile?
+                for media in item.message.media {
+                    if let file = media as? TelegramMediaFile {
+                        telegramFile = file
+                        break
+                    }
+                }
+                
+                if let telegramFile = telegramFile {
+                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
+                } else if let emojiResource = self.emojiResource {
+                    self.animationNode.setup(account: item.context.account, resource: emojiResource, width: 384, height: 384, mode: .cached)
+                }
+            }
+        }
+    }
+    
+    override func updateStickerSettings() {
+        self.updateVisibility()
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
@@ -161,11 +197,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
+            var isEmoji = false
             if let telegramFile = telegramFile {
                 if let dimensions = telegramFile.dimensions {
                     imageSize = dimensions.aspectFitted(displaySize)
                 } else if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {
                     imageSize = thumbnailSize.aspectFitted(displaySize)
+                }
+            } else {
+                if let (_, size) = animatedEmojiResource(emoji: item.message.text) {
+                    imageSize = CGSize(width: floor(displaySize.width * size / 512.0), height: floor(displaySize.height * size / 512.0))
+                    isEmoji = true
                 }
             }
             
@@ -252,7 +294,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let imageInset: CGFloat = 10.0
             let innerImageSize = imageSize
             imageSize = CGSize(width: imageSize.width + imageInset * 2.0, height: imageSize.height + imageInset * 2.0)
-            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
+            var imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
+            if isEmoji {
+                imageFrame = imageFrame.offsetBy(dx: incoming ? -imageInset : imageInset, dy: 0.0)
+            }
             
             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: innerImageSize, boundingSize: innerImageSize, intrinsicInsets: UIEdgeInsets(top: imageInset, left: imageInset, bottom: imageInset, right: imageInset))
             
@@ -599,7 +644,34 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                             
                             if let item = self.item, self.imageNode.frame.contains(location) {
-                                let _ = item.controllerInteraction.openMessage(item.message, .default)
+                                if self.telegramFile != nil {
+                                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                                } else if let emoji = self.emojiResource, emoji.name == "heart" {
+                                    let hapticFeedback: HapticFeedback
+                                    if let currentHapticFeedback = self.hapticFeedback {
+                                        hapticFeedback = currentHapticFeedback
+                                    } else {
+                                        hapticFeedback = HapticFeedback()
+                                        self.hapticFeedback = hapticFeedback
+                                    }
+                                    hapticFeedback.prepareImpact()
+                                    hapticFeedback.impact(.heavy)
+                                    Queue.mainQueue().after(0.2) {
+                                        hapticFeedback.impact(.medium)
+                                        Queue.mainQueue().after(0.68) {
+                                            hapticFeedback.impact(.medium)
+                                            Queue.mainQueue().after(0.2) {
+                                                hapticFeedback.impact(.medium)
+                                                Queue.mainQueue().after(0.68) {
+                                                    hapticFeedback.impact(.medium)
+                                                    Queue.mainQueue().after(0.2) {
+                                                        hapticFeedback.impact(.medium)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 return
                             }
                             
@@ -649,7 +721,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                     self.swipeToReplyFeedback?.impact()
                     
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
                     self.swipeToReplyNode = swipeToReplyNode
                     self.addSubnode(swipeToReplyNode)
                     animateReplyNodeIn = true
@@ -780,7 +852,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 self.highlightedState = highlighted
                 
                 if highlighted {
-                    self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.bubble.mediaHighlightOverlayColor, animated: false)
+                    self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
                 } else {
                     self.imageNode.setOverlayColor(nil, animated: animated)
                 }

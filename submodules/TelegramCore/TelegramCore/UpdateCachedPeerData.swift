@@ -280,7 +280,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                 }
                                 
                                 switch fullChat {
-                                    case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, pts):
+                                    case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, slowmodeSeconds, slowmodeNextSendDate, pts):
                                         var channelFlags = CachedChannelFlags()
                                         if (flags & (1 << 3)) != 0 {
                                             channelFlags.insert(.canDisplayParticipants)
@@ -403,6 +403,8 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 .withUpdatedMigrationReference(migrationReference)
                                                 .withUpdatedLinkedDiscussionPeerId(linkedDiscussionPeerId)
                                                 .withUpdatedPeerGeoLocation(peerGeoLocation: peerGeoLocation)
+                                                .withUpdatedSlowModeTimeout(slowModeTimeout: slowmodeSeconds)
+                                                .withUpdatedSlowModeValidUntilTimestamp(slowModeValidUntilTimestamp: slowmodeNextSendDate)
                                         })
                                     
                                         if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

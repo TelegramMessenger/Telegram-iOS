@@ -83,7 +83,7 @@ public func cachedStickerPack(postbox: Postbox, network: Network, reference: Sti
                         if cached.hash != info.hash {
                             return (current, true, previousHash)
                         } else {
-                            return (current, false, previousHash)
+                            return (current, true, previousHash)
                         }
                     } else {
                         return (.fetching, true, nil)
@@ -95,7 +95,7 @@ public func cachedStickerPack(postbox: Postbox, network: Network, reference: Sti
                         if cached.hash != info.hash {
                             return (current, true, previousHash)
                         } else {
-                            return (current, false, previousHash)
+                            return (current, true, previousHash)
                         }
                     } else {
                         return (.fetching, true, nil)

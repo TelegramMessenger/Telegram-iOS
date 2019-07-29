@@ -4464,3 +4464,43 @@ Any member of this group will be able to see messages in the channel.";
 "CreateGroup.ChannelsTooMuch" = "Sorry, you are a member of too many groups and channels. Please leave some before creating a new one.";
 "Join.ChannelsTooMuch" = "Sorry, you are a member of too many groups and channels. Please leave some before joining one.";
 "Invite.ChannelsTooMuch" = "Sorry, the target user is a member of too many groups and channels. Please ask them to leave some first.";
+
+"Appearance.TintAllColors" = "Tint All Colors";
+
+"Contacts.DeselectAll" = "Deselect All";
+
+"Channel.TooMuchBots" = "Sorry, there are already too many bots in this group. Please remove some of the bots you're not using first.";
+"Channel.BotDoesntSupportGroups" = "Sorry, this bot is telling us it doesn't want to be added to groups. You can't add this bot unless its developers change their mind.";
+
+"StickerPacksSettings.AnimatedStickers" = "Loop Animated Stickers";
+"StickerPacksSettings.AnimatedStickersInfo" = "Animated stickers will play in chat continuously.";
+"GroupInfo.Permissions.SlowmodeHeader" = "SLOWMODE";
+"GroupInfo.Permissions.SlowmodeInfo" = "Members will be restricted to send one message per this interval.";
+"Channel.AdminLog.DisabledSlowmode" = "%@ disabled slowmode";
+"Channel.AdminLog.SetSlowmode" = "%1$@ set slowmode to %2$@";
+
+"Chat.SlowmodeTooltip" = "Slowmode is enabled. You can send\nyour next message in %@.";
+"Chat.SlowmodeTooltipPending" = "Slowmode is enabled. You can't send more than one message at once.";
+"Chat.AttachmentLimitExceeded" = "Slowmode is enabled. You can't select more items.";
+"Chat.AttachmentMultipleFilesDisabled" = "Slowmode is enabled. You can't send multiple files at once.";
+"Chat.AttachmentMultipleForwardDisabled" = "Slowmode is enabled. You can't forward multiple messages at once.";
+"Chat.MultipleTextMessagesDisabled" = "Slowmode is enabled. You can't send multiple messages at once.";
+"Share.MultipleMessagesDisabled" = "Slowmode is enabled. You can't send multiple messages at once.";
+"Chat.SlowmodeSendError" = "Slowmode is enabled.";
+"StickerPacksSettings.AnimatedStickersInfo" = "Animated stickers in a chat will play continuously.";
+
+"Conversation.Owner" = "owner";
+
+"Group.EditAdmin.RankTitle" = "CUSTOM TITLE";
+"Group.EditAdmin.RankInfo" = "A title that will be shown instead of '%@'.";
+"Group.EditAdmin.RankOwnerPlaceholder" = "owner";
+"Group.EditAdmin.RankAdminPlaceholder" = "admin";
+
+"Conversation.SendMessage.SendSilently" = "Send Without Sound";
+
+"Appearance.ThemeCarouselTintedNight" = "Tinted Night";
+"Appearance.ThemeCarouselNewNight" = "Night";
+
+"Channel.AdminLog.MessageRankName" = "changed custom title for %1$@:\n%2$@";
+"Channel.AdminLog.MessageRankUsername" = "changed custom title for %1$@ (%2$@):\n%3$@";
+"Channel.AdminLog.MessageRank" = "changed custom title:\n%1$@";

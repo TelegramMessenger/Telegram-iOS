@@ -18,12 +18,12 @@ private final class PrivacyAndSecurityControllerArguments {
     let openForwardPrivacy: () -> Void
     let openPhoneNumberPrivacy: () -> Void
     let openPasscode: () -> Void
-    let openTwoStepVerification: () -> Void
+    let openTwoStepVerification: (TwoStepVerificationAccessConfiguration?) -> Void
     let openActiveSessions: () -> Void
     let setupAccountAutoremove: () -> Void
     let openDataSettings: () -> Void
     
-    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openProfilePhotoPrivacy: @escaping () -> Void, openForwardPrivacy: @escaping () -> Void, openPhoneNumberPrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping () -> Void, openActiveSessions: @escaping () -> Void, setupAccountAutoremove: @escaping () -> Void, openDataSettings: @escaping () -> Void) {
+    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openProfilePhotoPrivacy: @escaping () -> Void, openForwardPrivacy: @escaping () -> Void, openPhoneNumberPrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping (TwoStepVerificationAccessConfiguration?) -> Void, openActiveSessions: @escaping () -> Void, setupAccountAutoremove: @escaping () -> Void, openDataSettings: @escaping () -> Void) {
         self.account = account
         self.openBlockedUsers = openBlockedUsers
         self.openLastSeenPrivacy = openLastSeenPrivacy
@@ -70,7 +70,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case groupPrivacy(PresentationTheme, String, String)
     case selectivePrivacyInfo(PresentationTheme, String)
     case passcode(PresentationTheme, String, Bool, String)
-    case twoStepVerification(PresentationTheme, String, String)
+    case twoStepVerification(PresentationTheme, String, String, TwoStepVerificationAccessConfiguration?)
     case activeSessions(PresentationTheme, String, String)
     case accountHeader(PresentationTheme, String)
     case accountTimeout(PresentationTheme, String, String)
@@ -192,8 +192,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .twoStepVerification(lhsTheme, lhsText, lhsValue):
-                if case let .twoStepVerification(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .twoStepVerification(lhsTheme, lhsText, lhsValue, lhsData):
+                if case let .twoStepVerification(rhsTheme, rhsText, rhsValue, rhsData) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsData == rhsData {
                     return true
                 } else {
                     return false
@@ -279,9 +279,9 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: UIImage(bundleImageName: hasFaceId ? "Settings/MenuIcons/FaceId" : "Settings/MenuIcons/TouchId")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openPasscode()
                 })
-            case let .twoStepVerification(theme, text, value):
+            case let .twoStepVerification(theme, text, value, data):
                 return ItemListDisclosureItem(theme: theme, icon: UIImage(bundleImageName: "Settings/MenuIcons/TwoStepAuth")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    arguments.openTwoStepVerification()
+                    arguments.openTwoStepVerification(data)
                 })
             case let .activeSessions(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, icon: UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
@@ -344,7 +344,7 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
     }
 }
 
-private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?, accessChallengeData: PostboxAccessChallengeData, blockedPeerCount: Int?, activeSessionsCount: Int, hasTwoStepAuth: Bool) -> [PrivacyAndSecurityEntry] {
+private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?, accessChallengeData: PostboxAccessChallengeData, blockedPeerCount: Int?, activeSessionsCount: Int, twoStepAuthData: TwoStepVerificationAccessConfiguration?) -> [PrivacyAndSecurityEntry] {
     var entries: [PrivacyAndSecurityEntry] = []
     
     entries.append(.blockedPeers(presentationData.theme, presentationData.strings.Settings_BlockedUsers, blockedPeerCount == nil ? "" : (blockedPeerCount == 0 ? presentationData.strings.PrivacySettings_BlockedPeersEmpty : "\(blockedPeerCount!)")))
@@ -368,7 +368,16 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     } else {
         entries.append(.passcode(presentationData.theme, presentationData.strings.PrivacySettings_Passcode, false, passcodeValue))
     }
-    entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth, hasTwoStepAuth ? presentationData.strings.PrivacySettings_PasscodeOn : presentationData.strings.PrivacySettings_PasscodeOff))
+    var twoStepAuthString = ""
+    if let twoStepAuthData = twoStepAuthData {
+        switch twoStepAuthData {
+        case .set:
+            twoStepAuthString = presentationData.strings.PrivacySettings_PasscodeOn
+        case .notSet:
+            twoStepAuthString = presentationData.strings.PrivacySettings_PasscodeOff
+        }
+    }
+    entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth, twoStepAuthString, twoStepAuthData))
     
     entries.append(.privacyHeader(presentationData.theme, presentationData.strings.PrivacySettings_PrivacyTitle))
     if let privacySettings = privacySettings {
@@ -416,7 +425,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var pushControllerImpl: ((ViewController) -> Void)?
+    var pushControllerImpl: ((ViewController, Bool) -> Void)?
     var replaceTopControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
@@ -437,27 +446,23 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     let updateTwoStepAuthDisposable = MetaDisposable()
     actionsDisposable.add(updateTwoStepAuthDisposable)
     
-    let hasTwoStepAuth = ValuePromise<Bool>(false)
+    let twoStepAuthDataValue = Promise<TwoStepVerificationAccessConfiguration?>(nil)
     let updateHasTwoStepAuth: () -> Void = {
+        let signal = twoStepVerificationConfiguration(account: context.account)
+        |> map { value -> TwoStepVerificationAccessConfiguration? in
+            return  TwoStepVerificationAccessConfiguration(configuration: value, password: nil)
+        }
+        |> deliverOnMainQueue
         updateTwoStepAuthDisposable.set(
-            (
-                twoStepAuthData(context.account.network)
-                |> map { value -> Bool in
-                    return value.currentPasswordDerivation != nil || value.unconfirmedEmailPattern != nil
-                }
-                |> `catch` { _ -> Signal<Bool, NoError> in
-                    return .single(false)
-                }
-                |> deliverOnMainQueue
-            ).start(next: { value in
-                hasTwoStepAuth.set(value)
+            signal.start(next: { value in
+                twoStepAuthDataValue.set(.single(value))
             })
         )
     }
     updateHasTwoStepAuth()
     
     let arguments = PrivacyAndSecurityControllerArguments(account: context.account, openBlockedUsers: {
-        pushControllerImpl?(blockedPeersController(context: context, blockedPeersContext: blockedPeersContext))
+        pushControllerImpl?(blockedPeersController(context: context, blockedPeersContext: blockedPeersContext), true)
     }, openLastSeenPrivacy: {
         let signal = privacySettingsPromise.get()
         |> take(1)
@@ -478,7 +483,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         }
                         currentInfoDisposable.set(applySetting.start())
                     }
-                }))
+                }), true)
             }
         }))
     }, openGroupsPrivacy: {
@@ -501,7 +506,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         }
                         currentInfoDisposable.set(applySetting.start())
                     }
-                }))
+                }), true)
             }
         }))
     }, openVoiceCallPrivacy: {
@@ -538,7 +543,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         }
                         currentInfoDisposable.set(applySetting.start())
                     }
-                }))
+                }), true)
             }
         }))
     }, openProfilePhotoPrivacy: {
@@ -561,7 +566,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         }
                         currentInfoDisposable.set(applySetting.start())
                     }
-                }))
+                }), true)
             }
         }))
     }, openForwardPrivacy: {
@@ -584,7 +589,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         }
                         currentInfoDisposable.set(applySetting.start())
                     }
-                }))
+                }), true)
             }
         }))
     }, openPhoneNumberPrivacy: {
@@ -607,7 +612,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         }
                         currentInfoDisposable.set(applySetting.start())
                     }
-                }))
+                }), true)
             }
         }))
     }, openPasscode: {
@@ -617,13 +622,34 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             replaceTopControllerImpl?(passcodeOptionsController(context: context))
         }).start(next: { controller in
             if let controller = controller {
-                pushControllerImpl?(controller)
+                pushControllerImpl?(controller, true)
             }
         })
-    }, openTwoStepVerification: {
-        pushControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: nil)))
+    }, openTwoStepVerification: { data in
+        var intro = false
+        if let data = data {
+            switch data {
+            case .set:
+                break
+            case let .notSet(pendingEmail):
+                intro = pendingEmail == nil
+            }
+        }
+        if intro {
+            var dismissInto: (() -> Void)?
+            let controller = PrivacyIntroController(context: context, mode: .twoStepVerification, arguments: PrivacyIntroControllerPresentationArguments(fadeIn: false, animateIn: true), proceedAction: {
+                pushControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: intro, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })), openSetupPasswordImmediately: true), false)
+                dismissInto?()
+            })
+            dismissInto = { [weak controller] in
+                controller?.dismiss()
+            }
+            presentControllerImpl?(controller)
+        } else {
+            pushControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: intro, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) }))), true)
+        }
     }, openActiveSessions: {
-        pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext))
+        pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext), true)
     }, setupAccountAutoremove: {
         let signal = privacySettingsPromise.get()
         |> take(1)
@@ -683,7 +709,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             }
         }))
     }, openDataSettings: {
-        pushControllerImpl?(dataPrivacyController(context: context))
+        pushControllerImpl?(dataPrivacyController(context: context), true)
     })
     
     actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
@@ -693,8 +719,8 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         updatedSettings?(settings)
     }))
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account), blockedPeersContext.state, activeSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), hasTwoStepAuth.get())
-    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeSessionsState, accessChallengeData, hasTwoStepAuth -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account), blockedPeersContext.state, activeSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), twoStepAuthDataValue.get())
+    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeSessionsState, accessChallengeData, twoStepAuthData -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
         var rightNavigationButton: ItemListNavigationButton?
         if privacySettings == nil || state.updatingAccountTimeoutValue != nil {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
@@ -702,7 +728,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PrivacySettings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
-        let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, accessChallengeData: accessChallengeData.data, blockedPeerCount: blockedPeersState.totalCount, activeSessionsCount: activeSessionsState.sessions.count, hasTwoStepAuth: hasTwoStepAuth), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, accessChallengeData: accessChallengeData.data, blockedPeerCount: blockedPeersState.totalCount, activeSessionsCount: activeSessionsState.sessions.count, twoStepAuthData: twoStepAuthData), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -711,8 +737,8 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     }
     
     let controller = ItemListController(context: context, state: signal)
-    pushControllerImpl = { [weak controller] c in
-        (controller?.navigationController as? NavigationController)?.pushViewController(c)
+    pushControllerImpl = { [weak controller] c, animated in
+        (controller?.navigationController as? NavigationController)?.pushViewController(c, animated: animated)
     }
     replaceTopControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: true)

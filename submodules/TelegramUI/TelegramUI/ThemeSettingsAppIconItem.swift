@@ -149,8 +149,8 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
 }
 
 
-private let textFont = Font.regular(11.0)
-private let itemSize = Font.regular(11.0)
+private let textFont = Font.regular(12.0)
+private let selectedTextFont = Font.bold(12.0)
 
 class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
@@ -302,7 +302,7 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     break
                             }
                         
-                            imageNode.setup(theme: item.theme, icon: image, title: NSAttributedString(string: name, font: textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: bordered, selected: selected, action: { [weak self, weak imageNode] in
+                            imageNode.setup(theme: item.theme, icon: image, title: NSAttributedString(string: name, font: selected ? selectedTextFont : textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: bordered, selected: selected, action: { [weak self, weak imageNode] in
                                 item.updated(icon.name)
                                 if let imageNode = imageNode {
                                     self?.scrollToNode(imageNode, animated: true)

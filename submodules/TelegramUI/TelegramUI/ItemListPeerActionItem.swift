@@ -5,21 +5,28 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
+enum ItemListPeerActionItemHeight {
+    case generic
+    case peerList
+}
+
 class ItemListPeerActionItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let icon: UIImage?
     let title: String
     let alwaysPlain: Bool
     let editing: Bool
+    let height: ItemListPeerActionItemHeight
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(theme: PresentationTheme, icon: UIImage?, title: String, alwaysPlain: Bool = false, sectionId: ItemListSectionId, editing: Bool, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, icon: UIImage?, title: String, alwaysPlain: Bool = false, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, editing: Bool, action: @escaping () -> Void) {
         self.theme = theme
         self.icon = icon
         self.title = title
         self.alwaysPlain = alwaysPlain
         self.editing = editing
+        self.height = height
         self.sectionId = sectionId
         self.action = action
     }
@@ -137,7 +144,19 @@ class ItemListPeerActionItemNode: ListViewItemNode {
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
             }
-            let leftInset: CGFloat = 65.0 + params.leftInset
+            let leftInset: CGFloat
+            let height: CGFloat
+            let verticalOffset: CGFloat
+            switch item.height {
+                case .generic:
+                    height = 44.0
+                    verticalOffset = -3.0
+                    leftInset = 59.0 + params.leftInset
+                case .peerList:
+                    height = 50.0
+                    verticalOffset = 0.0
+                    leftInset = 65.0 + params.leftInset
+            }
             
             let editingOffset: CGFloat = (item.editing ? 38.0 : 0.0)
             
@@ -146,7 +165,7 @@ class ItemListPeerActionItemNode: ListViewItemNode {
             let separatorHeight = UIScreenPixel
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
-            let contentSize = CGSize(width: params.width, height: 50.0)
+            let contentSize = CGSize(width: params.width, height: height)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -209,9 +228,9 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
                     
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + editingOffset, y: 14.0), size: titleLayout.size))
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + editingOffset, y: 14.0 + verticalOffset), size: titleLayout.size))
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: height + UIScreenPixel + UIScreenPixel))
                 }
             })
         }

@@ -154,6 +154,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let footerContentNode: ChatItemGalleryFooterContentNode
     
     private var videoNode: UniversalVideoNode?
+    private var videoFramePreview: MediaPlayerFramePreview?
     private var pictureInPictureNode: UniversalVideoGalleryItemPictureInPictureNode?
     private let statusButtonNode: HighlightableButtonNode
     private let statusNode: RadialStatusNode
@@ -178,6 +179,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var fetchStatus: MediaResourceStatus?
     private var fetchControls: FetchControls?
     
+    private var scrubbingFrame = Promise<MediaPlayerFramePreviewResult?>(nil)
+    private var scrubbingFrames = false
+    private var scrubbingFrameDisposable: Disposable?
+    
     var playbackCompleted: (() -> Void)?
     
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
@@ -201,6 +206,24 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.scrubberView.seek = { [weak self] timecode in
             self?.videoNode?.seek(timecode)
+        }
+        
+        self.scrubberView.updateScrubbing = { [weak self] timecode in
+            guard let strongSelf = self, let videoFramePreview = strongSelf.videoFramePreview else {
+                return
+            }
+            if let timecode = timecode {
+                if !strongSelf.scrubbingFrames {
+                    strongSelf.scrubbingFrames = true
+                    strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
+                    |> map(Optional.init))
+                }
+                videoFramePreview.generateFrame(at: timecode)
+            } else {
+                strongSelf.scrubbingFrame.set(.single(nil))
+                videoFramePreview.cancelPendingFrames()
+                strongSelf.scrubbingFrames = false
+            }
         }
         
         self.statusButtonNode.addSubnode(self.statusNode)
@@ -255,10 +278,28 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     break
             }
         }
+        
+        self.scrubbingFrameDisposable = (self.scrubbingFrame.get()
+        |> deliverOnMainQueue).start(next: { [weak self] result in
+            guard let strongSelf = self else {
+                return
+            }
+            if let result = result {
+                switch result {
+                case .waitingForData:
+                    strongSelf.footerContentNode.setFramePreviewImageIsLoading()
+                case let .image(image):
+                    strongSelf.footerContentNode.setFramePreviewImage(image: image)
+                }
+            } else {
+                strongSelf.footerContentNode.setFramePreviewImage(image: nil)
+            }
+        })
     }
     
     deinit {
         self.statusDisposable.dispose()
+        self.scrubbingFrameDisposable?.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {
@@ -304,6 +345,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var isAnimated = false
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
+                self.videoFramePreview = MediaPlayerFramePreview(postbox: item.context.account.postbox, fileReference: content.fileReference)
             } else if let _ = item.content as? SystemVideoContent {
                 self._title.set(.single(item.presentationData.strings.Message_Video))
             } else if let content = item.content as? WebEmbedVideoContent, case .iframe = webEmbedType(content: content.webpageContent) {

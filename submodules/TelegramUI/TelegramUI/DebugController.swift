@@ -56,9 +56,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetHoles(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
-    case animatedStickers(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
-    case alternateIcon(PresentationTheme)
+    case playAnimatedEmojiOnce(PresentationTheme, Bool)
+    case exportTheme(PresentationTheme)
     case versionInfo(PresentationTheme)
     
     var section: ItemListSectionId {
@@ -71,7 +71,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .animatedStickers, .photoPreview, .alternateIcon:
+            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .playAnimatedEmojiOnce, .exportTheme:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -118,11 +118,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 17
             case .optimizeDatabase:
                 return 18
-            case .animatedStickers:
-                return 19
             case .photoPreview:
+                return 19
+            case .playAnimatedEmojiOnce:
                 return 20
-            case .alternateIcon:
+            case .exportTheme:
                 return 21
             case .versionInfo:
                 return 22
@@ -462,10 +462,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         arguments.presentController(controller, nil)
                     })
                 })
-            case let .animatedStickers(theme):
-                return ItemListSwitchItem(theme: theme, title: "AJSON", value: GlobalExperimentalSettings.animatedStickers, sectionId: self.section, style: .blocks, updated: { value in
-                    GlobalExperimentalSettings.animatedStickers = value
-                })
             case let .photoPreview(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Photo Preview", value: value, sectionId: self.section, style: .blocks, updated: { value in
                     let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -476,13 +472,44 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         })
                     }).start()
                 })
-            case let .alternateIcon(theme):
-                return ItemListActionItem(theme: theme, title: "Change Icon", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    if arguments.sharedContext.applicationBindings.getAlternateIconName() == "Black" {
-                        arguments.sharedContext.applicationBindings.requestSetAlternateIconName(nil, { _ in })
-                    } else {
-                        arguments.sharedContext.applicationBindings.requestSetAlternateIconName("Black", { _ in })
+            case let .playAnimatedEmojiOnce(theme, value):
+                return ItemListSwitchItem(theme: theme, title: "Play Emoji Once", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                            var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                            settings.playAnimatedEmojiOnce = value
+                            return settings
+                        })
+                    }).start()
+                })
+            case let .exportTheme(theme):
+                return ItemListActionItem(theme: theme, title: "Export Theme", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    guard let context = arguments.context else {
+                        return
                     }
+                    
+                    var randomId: Int64 = 0
+                    arc4random_buf(&randomId, 8)
+                    let path = NSTemporaryDirectory() + "\(randomId)"
+                    
+                    let encoder = PresentationThemeEncoder()
+                    guard let strings = try? encoder.encode(theme), let _ = try? strings.write(toFile: path, atomically: true, encoding: .utf8) else {
+                        return
+                    }
+                    
+                    let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
+                    controller.peerSelected = { [weak controller] peerId in
+                        if let strongController = controller {
+                            strongController.dismiss()
+                            
+                            let id = arc4random64()
+                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: "\(theme.name.string).tgios-theme")])
+                            let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                            
+                            let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+                        }
+                    }
+                    arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 })
             case let .versionInfo(theme):
                 let bundle = Bundle.main
@@ -522,7 +549,8 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetHoles(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
-    entries.append(.alternateIcon(presentationData.theme))
+    entries.append(.playAnimatedEmojiOnce(presentationData.theme, experimentalSettings.playAnimatedEmojiOnce))
+
     entries.append(.versionInfo(presentationData.theme))
     
     return entries

@@ -8,8 +8,11 @@
 
 @interface TGMediaSelectionContext : NSObject
 
-- (instancetype)initWithGroupingAllowed:(bool)allowGrouping;
+- (instancetype)initWithGroupingAllowed:(bool)allowGrouping selectionLimit:(int)selectionLimit;
+
 @property (nonatomic, readonly) bool allowGrouping;
+@property (nonatomic, readonly) int selectionLimit;
+@property (nonatomic, copy) void (^selectionLimitExceeded)(void);
 
 @property (nonatomic, assign) bool grouping;
 - (SSignal *)groupingChangedSignal;
@@ -18,13 +21,13 @@
 @property (nonatomic, copy) SSignal *(^updatedItemsSignal)(NSArray *items);
 - (void)setItemSourceUpdatedSignal:(SSignal *)signal;
 
-- (void)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected;
-- (void)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected animated:(bool)animated sender:(id)sender;
+- (bool)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected;
+- (bool)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected animated:(bool)animated sender:(id)sender;
 
 - (NSUInteger)indexOfItem:(id<TGMediaSelectableItem>)item;
 
-- (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item;
-- (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item animated:(bool)animated sender:(id)sender;
+- (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item success:(bool *)success;
+- (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item animated:(bool)animated sender:(id)sender success:(bool *)success;
 
 - (void)clear;
 

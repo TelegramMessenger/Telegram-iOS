@@ -360,6 +360,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     [_landscapeToolsWrapperView addSubview:_landscapeSettingsView];
     
     [self setCurrentSwatch:_portraitSettingsView.swatch sender:nil];
+    
+    if (![self _updateControllerInset:false])
+        [self controllerInsetUpdated:UIEdgeInsetsZero];
 }
 
 - (void)setupCanvas

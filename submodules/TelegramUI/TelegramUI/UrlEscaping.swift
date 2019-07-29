@@ -43,3 +43,11 @@ func isValidUrl(_ url: String) -> Bool {
         return false
     }
 }
+
+func explicitUrl(_ url: String) -> String {
+    var url = url
+    if !url.hasPrefix("http") && !url.hasPrefix("https") {
+        url = "http://\(url)"
+    }
+    return url
+}

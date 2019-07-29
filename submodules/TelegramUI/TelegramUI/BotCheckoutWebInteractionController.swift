@@ -34,7 +34,7 @@ final class BotCheckoutWebInteractionController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: (context.sharedContext.currentPresentationData.with { $0 })))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         

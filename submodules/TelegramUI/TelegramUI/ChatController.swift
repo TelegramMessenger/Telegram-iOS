@@ -85,6 +85,19 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
     return true
 }
 
+private func calculateSlowmodeActiveUntilTimestamp(account: Account, untilTimestamp: Int32?) -> Int32? {
+    guard let untilTimestamp = untilTimestamp else {
+        return nil
+    }
+    let timestamp = Int32(Date().timeIntervalSince1970)
+    let remainingTime = max(0, untilTimestamp - timestamp)
+    if remainingTime == 0 {
+        return nil
+    } else {
+        return untilTimestamp
+    }
+}
+
 let ChatControllerCount = Atomic<Int32>(value: 0)
 
 public final class ChatController: TelegramController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
@@ -208,6 +221,9 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     private var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     private var automaticMediaDownloadSettingsDisposable: Disposable?
     
+    private var stickerSettings: ChatInterfaceStickerSettings
+    private var stickerSettingsDisposable: Disposable?
+    
     private var applicationInForegroundDisposable: Disposable?
     
     private var checkedPeerChatServiceActions = false
@@ -222,6 +238,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     private weak var mediaRestrictedTooltipController: TooltipController?
     private var mediaRestrictedTooltipControllerMode = true
     
+    private weak var slowmodeTooltipController: ChatSlowmodeHintController?
+    
     private var screenCaptureEventsDisposable: Disposable?
     private let chatAdditionalDataDisposable = MetaDisposable()
     
@@ -233,6 +251,9 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     
     private var beginMediaRecordingRequestId: Int = 0
     private var lockMediaRecordingRequestId: Int?
+    
+    private var updateSlowmodeStatusDisposable = MetaDisposable()
+    private var updateSlowmodeStatusTimerValue: Int32?
 
     public override var customData: Any? {
         return self.chatLocation
@@ -263,6 +284,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
+        
+        self.stickerSettings = ChatInterfaceStickerSettings(loopAnimatedStickers: false)
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.fontSize, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation)
         
@@ -375,8 +398,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 self?.controllerInteraction?.callPeer(peerId)
             }, enqueueMessage: { message in
                 self?.sendMessages([message])
-            }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference in
-                self?.controllerInteraction?.sendSticker(fileReference, false)
+            }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference, sourceNode, sourceRect in
+                return self?.controllerInteraction?.sendSticker(fileReference, false, sourceNode, sourceRect) ?? false
             } : nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
                 if let strongSelf = self {
                     strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { entry in
@@ -455,6 +478,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 return
             }
             if let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(message.id) {
+                (strongSelf.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
                 var updatedMessages = messages
                 for i in 0 ..< updatedMessages.count {
                     if updatedMessages[i].id == message.id {
@@ -535,6 +559,10 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, text as NSString)
                 })
             }
+        }, sendCurrentMessage: { [weak self] silentPosting in
+            if let strongSelf = self {
+                strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting)
+            }
         }, sendMessage: { [weak self] text in
             guard let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) else {
                 return
@@ -552,34 +580,47 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
             }
             strongSelf.sendMessages([.message(text: text, attributes: attributes, mediaReference: nil, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
-        }, sendSticker: { [weak self] fileReference, clearInput in
-            if let strongSelf = self {
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                    if let strongSelf = self {
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
-                            var current = current
-                            current = current.updatedInterfaceState { interfaceState in
-                                var interfaceState = interfaceState
-                                interfaceState = interfaceState.withUpdatedReplyMessageId(nil)
-                                if clearInput {
-                                    interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString()))
-                                }
-                                return interfaceState
-                            }.updatedInputMode { current in
-                                if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
-                                    return .media(mode: mode, expanded: nil)
-                                }
-                                return current
-                            }
-                            
-                            return current
-                        })
-                    }
-                })
-                strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
+        }, sendSticker: { [weak self] fileReference, clearInput, sourceNode, sourceRect in
+            guard let strongSelf = self else {
+                return false
             }
-        }, sendGif: { [weak self] fileReference in
+            
+            if let _ = strongSelf.presentationInterfaceState.slowmodeState {
+                strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceNode, sourceRect)
+                return false
+            }
+                
+            strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
+                        var current = current
+                        current = current.updatedInterfaceState { interfaceState in
+                            var interfaceState = interfaceState
+                            interfaceState = interfaceState.withUpdatedReplyMessageId(nil)
+                            if clearInput {
+                                interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString()))
+                            }
+                            return interfaceState
+                        }.updatedInputMode { current in
+                            if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
+                                return .media(mode: mode, expanded: nil)
+                            }
+                            return current
+                        }
+                        
+                        return current
+                    })
+                }
+            })
+            strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
+            return true
+        }, sendGif: { [weak self] fileReference, sourceNode, sourceRect in
             if let strongSelf = self {
+                if let _ = strongSelf.presentationInterfaceState.slowmodeState {
+                    strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceNode, sourceRect)
+                    return false
+                }
+                
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
@@ -594,6 +635,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 })
                 strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: fileReference.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
             }
+            return true
         }, requestMessageActionCallback: { [weak self] messageId, data, isGame in
             if let strongSelf = self {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
@@ -1377,8 +1419,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }, cancelInteractiveKeyboardGestures: { [weak self] in
             (self?.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
             self?.chatDisplayNode.cancelInteractiveKeyboardGestures()
-        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
-        pollActionState: ChatInterfacePollActionState())
+        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings)
         
         self.controllerInteraction = controllerInteraction
         
@@ -1669,29 +1710,6 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         }
                     }))
                 }
-            /*case let .group(groupId):
-                if case let .group(topPeersView) = self.chatLocationInfoData {
-                    let key: PostboxViewKey = .chatListTopPeers(groupId: groupId)
-                    topPeersView.set(context.account.postbox.combinedView(keys: [key])
-                        |> mapToSignal { view -> Signal<ChatListTopPeersView, NoError> in
-                            if let entry = view.views[key] as? ChatListTopPeersView {
-                                return .single(entry)
-                            }
-                            return .complete()
-                        })
-                    self.peerDisposable.set((topPeersView.get()
-                        |> deliverOnMainQueue).start(next: { [weak self] topPeersView in
-                            if let strongSelf = self {
-                                strongSelf.chatTitleView?.titleContent = .group(topPeersView.peers)
-                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatMultipleAvatarsNavigationNode)?.setPeers(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, peers: topPeersView.peers, animated: strongSelf.didSetChatLocationInfoReady)
-                            
-                                if !strongSelf.didSetChatLocationInfoReady {
-                                    strongSelf.didSetChatLocationInfoReady = true
-                                    strongSelf._chatLocationInfoReady.set(.single(true))
-                                }
-                            }
-                        }))
-                }*/
         }
         
         self.botCallbackAlertMessageDisposable = (self.botCallbackAlertMessage.get()
@@ -1883,6 +1901,24 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
         })
         
+        self.stickerSettingsDisposable = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+            var stickerSettings = StickerSettings.defaultSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+                stickerSettings = value
+            }
+            
+            let chatStickerSettings = ChatInterfaceStickerSettings(stickerSettings: stickerSettings)
+            
+            if let strongSelf = self, strongSelf.stickerSettings != chatStickerSettings {
+                strongSelf.stickerSettings = chatStickerSettings
+                strongSelf.controllerInteraction?.stickerSettings = chatStickerSettings
+                if strongSelf.isNodeLoaded {
+                    strongSelf.chatDisplayNode.updateStickerSettings(chatStickerSettings)
+                }
+            }
+        })
+        
         self.applicationInForegroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
         |> distinctUntilChanged
         |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
@@ -1970,6 +2006,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         self.preloadHistoryPeerIdDisposable.dispose()
         self.reportIrrelvantGeoDisposable?.dispose()
         self.reminderActivity?.invalidate()
+        self.updateSlowmodeStatusDisposable.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -1986,7 +2023,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     
     private func themeAndStringsUpdated() {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.chatTitleView?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
@@ -2015,8 +2052,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 var peerIsBlocked: Bool = false
                 var callsAvailable: Bool = true
                 var callsPrivate: Bool = false
+                var slowmodeState: ChatSlowmodeState?
                 if let cachedData = combinedInitialData.cachedData as? CachedChannelData {
                     pinnedMessageId = cachedData.pinnedMessageId
+                    if let channel = combinedInitialData.initialData?.peer as? TelegramChannel, channel.isRestrictedBySlowmode, let timeout = cachedData.slowModeTimeout {
+                        if let slowmodeUntilTimestamp = calculateSlowmodeActiveUntilTimestamp(account: strongSelf.context.account, untilTimestamp: cachedData.slowModeValidUntilTimestamp) {
+                            slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .timestamp(slowmodeUntilTimestamp))
+                        }
+                    }
                 } else if let cachedData = combinedInitialData.cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
                     callsAvailable = cachedData.callsAvailable
@@ -2024,7 +2067,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     pinnedMessageId = cachedData.pinnedMessageId
                 } else if let cachedData = combinedInitialData.cachedData as? CachedGroupData {
                     pinnedMessageId = cachedData.pinnedMessageId
-                } else if let cachedData = combinedInitialData.cachedData as? CachedSecretChatData {
+                } else if let _ = combinedInitialData.cachedData as? CachedSecretChatData {
                 }
                 var pinnedMessage: Message?
                 if let pinnedMessageId = pinnedMessageId {
@@ -2080,6 +2123,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     if let editMessage = interfaceState.editMessage, let message = combinedInitialData.initialData?.associatedMessages[editMessage.messageId] {
                         updated = updatedChatEditInterfaceMessagetState(state: updated, message: message)
                     }
+                    updated = updated.updatedSlowmodeState(slowmodeState)
                     return updated
                 })
             }
@@ -2122,14 +2166,41 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
         })
         
-        self.cachedDataDisposable = self.chatDisplayNode.historyNode.cachedPeerDataAndMessages.start(next: { [weak self] cachedData, messages in
+        let hasPendingMessages: Signal<Bool, NoError>
+        if case let .peer(peerId) = self.chatLocation {
+            hasPendingMessages = self.context.account.pendingMessageManager.hasPendingMessages
+            |> mapToSignal { peerIds -> Signal<Bool, NoError> in
+                let value = peerIds.contains(peerId)
+                if value {
+                    return .single(true)
+                } else {
+                    return .single(false)
+                    |> delay(0.1, queue: .mainQueue())
+                }
+            }
+            |> distinctUntilChanged
+        } else {
+            hasPendingMessages = .single(false)
+        }
+        
+        self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages, hasPendingMessages).start(next: { [weak self] cachedDataAndMessages, hasPendingMessages in
             if let strongSelf = self {
+                let (cachedData, messages) = cachedDataAndMessages
+                
                 var pinnedMessageId: MessageId?
                 var peerIsBlocked: Bool = false
                 var callsAvailable: Bool = false
                 var callsPrivate: Bool = false
+                var slowmodeState: ChatSlowmodeState?
                 if let cachedData = cachedData as? CachedChannelData {
                     pinnedMessageId = cachedData.pinnedMessageId
+                    if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode, let timeout = cachedData.slowModeTimeout {
+                        if hasPendingMessages {
+                            slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .pendingMessages)
+                        } else if let slowmodeUntilTimestamp = calculateSlowmodeActiveUntilTimestamp(account: strongSelf.context.account, untilTimestamp: cachedData.slowModeValidUntilTimestamp) {
+                            slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .timestamp(slowmodeUntilTimestamp))
+                        }
+                    }
                 } else if let cachedData = cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
                     callsAvailable = cachedData.callsAvailable
@@ -2156,9 +2227,15 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 
                 let callsDataUpdated = strongSelf.presentationInterfaceState.callsAvailable != callsAvailable || strongSelf.presentationInterfaceState.callsPrivate != callsPrivate
                 
-                if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage?.stableVersion != pinnedMessage?.stableVersion || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated {
+                if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage?.stableVersion != pinnedMessage?.stableVersion || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState  {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                        return state.updatedPinnedMessageId(pinnedMessageId).updatedPinnedMessage(pinnedMessage).updatedPeerIsBlocked(peerIsBlocked).updatedCallsAvailable(callsAvailable).updatedCallsPrivate(callsPrivate).updatedTitlePanelContext({ context in
+                        return state
+                        .updatedPinnedMessageId(pinnedMessageId)
+                        .updatedPinnedMessage(pinnedMessage)
+                        .updatedPeerIsBlocked(peerIsBlocked)
+                        .updatedCallsAvailable(callsAvailable)
+                        .updatedCallsPrivate(callsPrivate)
+                        .updatedTitlePanelContext({ context in
                             if pinnedMessageId != nil {
                                 if !context.contains(where: {
                                     switch $0 {
@@ -2191,6 +2268,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 }
                             }
                         })
+                        .updatedSlowmodeState(slowmodeState)
                     })
                 }
             }
@@ -2317,11 +2395,40 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
         }
         
-        self.chatDisplayNode.sendMessages = { [weak self] messages in
+        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, isAnyMessageTextPartitioned in
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
                 strongSelf.commitPurposefulAction()
                 
-                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages(messages))
+                if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode {
+                    let forwardCount = messages.reduce(0, { count, message -> Int in
+                        if case .forward = message {
+                            return count + 1
+                        } else {
+                            return count
+                        }
+                    })
+                    
+                    var errorText: String?
+                    if forwardCount > 1 {
+                        errorText = strongSelf.presentationData.strings.Chat_AttachmentMultipleForwardDisabled
+                    } else if isAnyMessageTextPartitioned {
+                        errorText = strongSelf.presentationData.strings.Chat_MultipleTextMessagesDisabled
+                    }
+                    
+                    if let errorText = errorText {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        return
+                    }
+                }
+                
+                let transformedMessages: [EnqueueMessage]
+                if let silentPosting = silentPosting {
+                    transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting)
+                } else {
+                    transformedMessages = strongSelf.transformEnqueueMessages(messages)
+                }
+                
+                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
                 |> deliverOnMainQueue).start(next: { _ in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
@@ -2342,6 +2449,12 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         
         self.chatDisplayNode.displayAttachmentMenu = { [weak self] in
             guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.presentationInterfaceState.interfaceState.editMessage == nil, let _ = strongSelf.presentationInterfaceState.slowmodeState {
+                if let rect = strongSelf.chatDisplayNode.frameForAttachmentButton() {
+                    strongSelf.interfaceInteraction?.displaySlowmodeTooltip(strongSelf.chatDisplayNode, rect)
+                }
                 return
             }
             if case .peer = strongSelf.chatLocation, let messageId = strongSelf.presentationInterfaceState.interfaceState.editMessage?.messageId {
@@ -2836,8 +2949,17 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
                 let _ = togglePeerMuted(account: strongSelf.context.account, peerId: peerId).start()
             }
-        }, sendContextResult: { [weak self] results, result in
-            self?.enqueueChatContextResult(results, result)
+        }, sendContextResult: { [weak self] results, result, node, rect in
+            guard let strongSelf = self else {
+                return false
+            }
+            if let _ = strongSelf.presentationInterfaceState.slowmodeState {
+                strongSelf.interfaceInteraction?.displaySlowmodeTooltip(node, rect)
+                return false
+            }
+            
+            strongSelf.enqueueChatContextResult(results, result)
+            return true
         }, sendBotCommand: { [weak self] botPeer, command in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
@@ -3022,7 +3144,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         }
                         
                         if let tooltipController = strongSelf.mediaRestrictedTooltipController, strongSelf.mediaRestrictedTooltipControllerMode == isStickers {
-                            tooltipController.content = .text(banDescription)
+                            tooltipController.updateContent(.text(banDescription), animated: true, extendTimer: true)
                         } else if let rect = rect {
                             strongSelf.mediaRestrictedTooltipController?.dismiss()
                             let tooltipController = TooltipController(content: .text(banDescription))
@@ -3122,24 +3244,11 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     strongSelf.present(controller, in: .window(.root))
                 }
             }
-        }, sendSticker: { [weak self] file in
+        }, sendSticker: { [weak self] file, sourceNode, sourceRect in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                    if let strongSelf = self {
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState {
-                                $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreview(nil)
-                                
-                                }.updatedInputMode { current in
-                                if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
-                                    return .media(mode: mode, expanded: nil)
-                                }
-                                return current
-                            }
-                        })
-                    }
-                })
-                strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: file.abstract, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
+                return strongSelf.controllerInteraction?.sendSticker(file, true, sourceNode, sourceRect) ?? false
+            } else {
+                return false
             }
         }, unblockPeer: { [weak self] in
             self?.unblockPeer()
@@ -3303,10 +3412,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.scrollToNextMessage()
             }
-        }, openGrouping: { [weak self] in
-            /*if let strongSelf = self, case let .group(groupId) = strongSelf.chatLocation {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(FeedGroupingController(context: strongSelf.context, groupId: groupId))
-            }*/
+        }, openGrouping: {
         }, toggleSilentPost: { [weak self] in
             if let strongSelf = self {
                 var value: Bool = false
@@ -3330,7 +3436,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 }
                 
                 if let tooltipController = strongSelf.silentPostTooltipController {
-                    tooltipController.content = .text(text)
+                    tooltipController.updateContent(.text(text), animated: true, extendTimer: true)
                 } else if let rect = rect {
                     let tooltipController = TooltipController(content: .text(text))
                     strongSelf.silentPostTooltipController = tooltipController
@@ -3510,6 +3616,47 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 })
             })]
             strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.ReportGroupLocation_Title, text: strongSelf.presentationData.strings.ReportGroupLocation_Text, actions: actions), in: .window(.root))
+        }, displaySlowmodeTooltip: { [weak self] node, nodeRect in
+            guard let strongSelf = self, let slowmodeState = strongSelf.presentationInterfaceState.slowmodeState else {
+                return
+            }
+            let rect = node.view.convert(nodeRect, to: strongSelf.view)
+            if let slowmodeTooltipController = strongSelf.slowmodeTooltipController {
+                if let arguments = slowmodeTooltipController.presentationArguments as? TooltipControllerPresentationArguments, case let .node(f) = arguments.sourceAndRect, let (previousNode, previousRect) = f() {
+                    if previousNode === strongSelf.chatDisplayNode && previousRect == rect {
+                        return
+                    }
+                }
+                
+                strongSelf.slowmodeTooltipController = nil
+                slowmodeTooltipController.dismiss()
+            }
+            let slowmodeTooltipController = ChatSlowmodeHintController(strings: strongSelf.presentationData.strings, slowmodeState: 
+                slowmodeState)
+            slowmodeTooltipController.presentationArguments = TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                if let strongSelf = self {
+                    return (strongSelf.chatDisplayNode, rect)
+                }
+                return nil
+            })
+            strongSelf.slowmodeTooltipController = slowmodeTooltipController
+            
+            strongSelf.window?.presentInGlobalOverlay(slowmodeTooltipController)
+        }, displaySendMessageOptions: { [weak self] in
+            if let strongSelf = self, let sendButtonFrame = strongSelf.chatDisplayNode.sendButtonFrame(), let textInputNode = strongSelf.chatDisplayNode.textInputNode(), let layout = strongSelf.validLayout {
+                if layout.size.width > layout.size.height {
+                    strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .landscape)
+                } else {
+                    strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+                }
+                
+                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, sendButtonFrame: sendButtonFrame, textInputNode: textInputNode, completion: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
+                    }
+                })
+                strongSelf.presentInGlobalOverlay(controller, with: nil)
+            }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
         switch self.chatLocation {
@@ -3612,20 +3759,21 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 self.failedMessageEventsDisposable.set((self.context.account.pendingMessageManager.failedMessageEvents(peerId: peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] reason in
                     if let strongSelf = self {
-                        let subjectFlags: TelegramChatBannedRightsFlags = .banSendMedia
-                        
                         let text: String
                         let moreInfo: Bool
                         switch reason {
-                            case .flood:
-                                text = strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood
-                                moreInfo = true
-                            case .publicBan:
-                                text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
-                                moreInfo = true
-                            case .mediaRestricted:
-                                strongSelf.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .alert)
-                                return
+                        case .flood:
+                            text = strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood
+                            moreInfo = true
+                        case .publicBan:
+                            text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
+                            moreInfo = true
+                        case .mediaRestricted:
+                            strongSelf.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .alert)
+                            return
+                        case .slowmodeActive:
+                            text = strongSelf.presentationData.strings.Chat_SlowmodeSendError
+                            moreInfo = false
                         }
                         let actions: [TextAlertAction]
                         if moreInfo {
@@ -4023,6 +4171,17 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 })
                             }
                         }
+                    }, error: { [weak self] error in
+                        if let strongSelf = self {
+                            switch error {
+                                case let .inlineBotLocationRequest(peerId):
+                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_ShareInlineBotLocationConfirmation, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                        let _ = ApplicationSpecificNotice.setInlineBotLocationRequest(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId, value: Int32(Date().timeIntervalSince1970 + 10 * 60)).start()
+                                    }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                        let _ = ApplicationSpecificNotice.setInlineBotLocationRequest(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId, value: 0).start()
+                                    })]), in: .window(.root))
+                            }
+                        }
                     }))
                     inScope = false
                     if let inScopeResult = inScopeResult {
@@ -4191,6 +4350,9 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
         
         self.presentationInterfaceState = updatedChatPresentationInterfaceState
+        
+        self.updateSlowmodeStatus()
+        
         if self.isNodeLoaded {
             self.chatDisplayNode.updateChatPresentationInterfaceState(updatedChatPresentationInterfaceState, transition: transition, interactive: interactive)
         }
@@ -4233,7 +4395,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         
         switch updatedChatPresentationInterfaceState.mode {
             case .standard:
-                self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+                self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
                     self.deferScreenEdgeGestures = []
             case .overlay:
                 self.statusBar.statusBarStyle = .Hide
@@ -4394,10 +4556,6 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                     }
                                 }
                         }))
-                    /*case .group:
-                        if case let .group(groupId) = self.chatLocation {
-                            (self.navigationController as? NavigationController)?.pushViewController(ChatListController(context: self.context, groupId: groupId, controlsHistoryPreload: false))
-                        }*/
                 }
             case .search:
                 self.interfaceInteraction?.beginMessageSearch(.everything, "")
@@ -4517,14 +4675,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
             let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, editMediaOptions: editMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText.string, openGallery: {
-                self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals in
+                self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals, silentPosting in
                     if !inputText.string.isEmpty {
                         //strongSelf.clearInputText()
                     }
                     if editMediaOptions != nil {
                         self?.editMessageMediaWithLegacySignals(signals)
                     } else {
-                        self?.enqueueMediaMessages(signals: signals)
+                        self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
                     }
                 })
             }, openCamera: { [weak self] cameraView, menuController in
@@ -4534,7 +4692,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             if editMediaOptions != nil {
                                 strongSelf.editMessageMediaWithLegacySignals(signals!)
                             } else {
-                                strongSelf.enqueueMediaMessages(signals: signals)
+                                strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false)
                             }
                             if !inputText.string.isEmpty {
                                 //strongSelf.clearInputText()
@@ -4556,14 +4714,24 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 self?.presentContactPicker()
             }, openPoll: {
                 self?.presentPollCreation()
-            }, sendMessagesWithSignals: { [weak self] signals in
+            }, presentSelectionLimitExceeded: {
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentLimitExceeded, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }, presentCantSendMultipleFiles: {
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentMultipleFilesDisabled, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }, sendMessagesWithSignals: { [weak self] signals, silentPosting in
                 if !inputText.string.isEmpty {
                     //strongSelf.clearInputText()
                 }
                 if editMediaOptions != nil {
                     self?.editMessageMediaWithLegacySignals(signals!)
                 } else {
-                    self?.enqueueMediaMessages(signals: signals)
+                    self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
                 }
             }, selectRecentlyUsedInlineBot: { [weak self] peer in
                 if let strongSelf = self, let addressName = peer.addressName {
@@ -4599,11 +4767,11 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             ActionSheetButtonItem(title: self.presentationData.strings.Conversation_FilePhotoOrVideo, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
-                    strongSelf.presentMediaPicker(fileMode: true, editingMedia: editingMessage, completion: { signals in
+                    strongSelf.presentMediaPicker(fileMode: true, editingMedia: editingMessage, completion: { signals, silentPosting in
                         if editingMessage {
                             self?.editMessageMediaWithLegacySignals(signals)
                         } else {
-                            self?.enqueueMediaMessages(signals: signals)
+                            self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
                         }
                     })
                 }
@@ -4667,7 +4835,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, completion: @escaping ([Any]) -> Void) {
+    private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, completion: @escaping ([Any], Bool) -> Void) {
         let postbox = self.context.account.postbox
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> Signal<(GeneratedMediaStoreSettings, SearchBotsConfiguration), NoError> in
             let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
@@ -4682,10 +4850,15 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 return
             }
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
-            let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true).start(next: { generator in
+            var selectionLimit: Int = 30
+            if let channel = peer as? TelegramChannel, channel.isRestrictedBySlowmode {
+                selectionLimit = 10
+            }
+            
+            let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, selectionLimit: selectionLimit).start(next: { generator in
                 if let strongSelf = self {
                     let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
-                    legacyController.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBar.style.style
+                    legacyController.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBarStyle.style
                     legacyController.controllerLoaded = { [weak legacyController] in
                         legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
                     }
@@ -4695,7 +4868,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     
                     configureLegacyAssetPicker(controller, context: strongSelf.context, peer: peer, initialCaption: inputText.string, presentWebSearch: { [weak self, weak legacyController] in
                         if let strongSelf = self {
-                            let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: searchBotsConfiguration, mode: .media(completion: { results, selectionState, editingState in
+                            let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: searchBotsConfiguration, mode: .media(completion: { results, selectionState, editingState, silentPosting in
                                 if let legacyController = legacyController {
                                     legacyController.dismiss()
                                 }
@@ -4705,24 +4878,23 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                     }
                                 }, enqueueMediaMessages: { signals in
                                     if let strongSelf = self {
-                                        strongSelf.enqueueMediaMessages(signals: signals)
+                                        strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
                                     }
                                 })
                             }))
                             strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                         }
+                    }, presentSelectionLimitExceeded: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentLimitExceeded, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     })
                     controller.descriptionGenerator = legacyAssetPickerItemGenerator()
-                    controller.completionBlock = { [weak legacyController, weak self] signals in
-                        if let strongSelf = self {
-                            if !inputText.string.isEmpty {
-                                //strongSelf.clearInputText()
-                            }
-                        }
-                        
+                    controller.completionBlock = { [weak legacyController] signals, silentPosting in
                         if let legacyController = legacyController {
                             legacyController.dismiss()
-                            completion(signals!)
+                            completion(signals!, silentPosting)
                         }
                     }
                     controller.dismissalBlock = { [weak legacyController] in
@@ -4751,14 +4923,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
         |> deliverOnMainQueue).start(next: { [weak self] configuration in
             if let strongSelf = self {
-                let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: configuration, mode: .media(completion: { [weak self] results, selectionState, editingState in
+                let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: configuration, mode: .media(completion: { [weak self] results, selectionState, editingState, silentPosting in
                     legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self] result in
                         if let strongSelf = self {
                             strongSelf.enqueueChatContextResult(results, result, hideVia: true)
                         }
                     }, enqueueMediaMessages: { [weak self] signals in
                         if let strongSelf = self {
-                            strongSelf.enqueueMediaMessages(signals: signals)
+                            strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
                         }
                     })
                 }))
@@ -4936,8 +5108,12 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
     }
     
-    private func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
+    func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
         let silentPosting = self.presentationInterfaceState.interfaceState.silentPosting
+        return transformEnqueueMessages(messages, silentPosting: silentPosting)
+    }
+    
+    private func transformEnqueueMessages(_ messages: [EnqueueMessage], silentPosting: Bool) -> [EnqueueMessage] {
         return messages.map { message in
             if silentPosting {
                 return message.withUpdatedAttributes { attributes in
@@ -4970,11 +5146,12 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
     }
     
-    private func enqueueMediaMessages(signals: [Any]?) {
+    private func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool) {
         if case .peer = self.chatLocation {
             self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: self.context.account, signals: signals!)
             |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self {
+                    let messages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting)
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                         if let strongSelf = self {
@@ -4998,7 +5175,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                 strongSelf.chatDisplayNode.dismissInput()
                 let _ = presentLegacyPasteMenu(context: strongSelf.context, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, images: images, sendMessagesWithSignals: { signals in
-                    self?.enqueueMediaMessages(signals: signals)
+                    self?.enqueueMediaMessages(signals: signals, silentPosting: false)
                 }, present: { [weak self] controller, arguments in
                     if let strongSelf = self {
                         strongSelf.present(controller, in: .window(.root), with: arguments)
@@ -5131,7 +5308,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     self.recorderFeedback?.prepareImpact(.light)
                 }
                 
-                self.videoRecorder.set(.single(legacyInstantVideoController(theme: self.presentationData.theme, panelFrame: currentInputPanelFrame, context: self.context, peerId: peerId, send: { [weak self] message in
+                self.videoRecorder.set(.single(legacyInstantVideoController(theme: self.presentationData.theme, panelFrame: currentInputPanelFrame, context: self.context, peerId: peerId, slowmodeState: self.presentationInterfaceState.slowmodeState, send: { [weak self] message in
                     if let strongSelf = self {
                         let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                         strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
@@ -5144,15 +5321,23 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         let updatedMessage = message.withUpdatedReplyToMessageId(replyMessageId)
                         strongSelf.sendMessages([updatedMessage])
                     }
+                }, displaySlowmodeTooltip: { [weak self] node, rect in
+                    self?.interfaceInteraction?.displaySlowmodeTooltip(node, rect)
                 })))
             }
         }
     }
     
     private func dismissMediaRecorder(_ action: ChatFinishMediaRecordingAction) {
+        var updatedAction = action
+        if let _ = self.presentationInterfaceState.slowmodeState {
+            updatedAction = .preview
+        }
+        
         if let audioRecorderValue = self.audioRecorderValue {
             audioRecorderValue.stop()
-            switch action {
+            
+            switch updatedAction {
                 case .dismiss:
                     break
                 case .preview:
@@ -5211,11 +5396,19 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
             self.audioRecorder.set(.single(nil))
         } else if let videoRecorderValue = self.videoRecorderValue {
-            if case .send = action {
+            if case .send = updatedAction {
                 videoRecorderValue.completeVideo()
                 self.videoRecorder.set(.single(nil))
             } else {
-                self.videoRecorder.set(.single(nil))
+                if videoRecorderValue.stopVideo() {
+                    self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                        $0.updatedInputTextPanelState { panelState in
+                            return panelState.withUpdatedMediaRecordingState(.video(status: .editing, isLocked: false))
+                        }
+                    })
+                } else {
+                    self.videoRecorder.set(.single(nil))
+                }
             }
         }
     }
@@ -5261,6 +5454,13 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     
     private func sendMediaRecording() {
         if let recordedMediaPreview = self.presentationInterfaceState.recordedMediaPreview {
+            if let _ = self.presentationInterfaceState.slowmodeState {
+                if let rect = self.chatDisplayNode.frameForInputActionButton() {
+                    self.interfaceInteraction?.displaySlowmodeTooltip(self.chatDisplayNode, rect)
+                }
+                return
+            }
+            
             let waveformBuffer = MemoryBuffer(data: recordedMediaPreview.waveform.makeBitstream())
             
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
@@ -5296,8 +5496,6 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     switch self.chatLocation {
                         case let .peer(peerId):
                             derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
-                        /*case let .group(groupId):
-                            derivedSearchState = ChatSearchState(query: search.query, location: .group(groupId), loadMoreState: loadMoreStateFromResultsState(search.resultsState))*/
                     }
                 case .members:
                     derivedSearchState = nil
@@ -5631,7 +5829,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 strongController.dismiss()
             } else if peerId == strongSelf.context.account.peerId {
                 let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
-                    return .forward(source: id, grouping: .auto)
+                    return .forward(source: id, grouping: .auto, attributes: [])
                 })
                 |> deliverOnMainQueue).start(next: { messageIds in
                     if let strongSelf = self {
@@ -5640,7 +5838,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 return nil
                             }
                             return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
-                            |> mapToSignal { status -> Signal<Bool, NoError> in
+                            |> mapToSignal { status, _ -> Signal<Bool, NoError> in
                                 if status != nil {
                                     return .never()
                                 } else {
@@ -6148,8 +6346,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 default:
                     break
                 }
-        }, sendFile: { [weak self] f in
-            self?.interfaceInteraction?.sendSticker(f)
+        }, sendSticker: { [weak self] f, sourceNode, sourceRect in
+            return self?.interfaceInteraction?.sendSticker(f, sourceNode, sourceRect) ?? false
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak self] in
@@ -6289,7 +6487,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                     let sourceRect = rect.insetBy(dx: -2.0, dy: -2.0)
                                     gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                                     return (gallery, sourceRect)
-                                case let .instantPage(gallery, centralIndex, galleryMedia):
+                                case .instantPage:
                                     break
                             }
                         }
@@ -6483,19 +6681,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             self.navigationActionDisposable.set((fetchChannelParticipant(account: self.context.account, peerId: peerId, participantId: author.id)
             |> deliverOnMainQueue).start(next: { [weak self] participant in
                 if let strongSelf = self {
-                    var canBan = true
-                    if let participant = participant {
-                        switch participant {
-                            case .creator:
-                                canBan = false
-                            case let .member(_, _, adminInfo, _):
-                                if let adminInfo = adminInfo, !adminInfo.rights.flags.isEmpty {
-                                    if adminInfo.promotedBy != accountPeerId {
-                                        canBan = false
-                                    }
-                                }
-                        }
-                    }
+                    var canBan = participant?.canBeBannedBy(peerId: accountPeerId) ?? true
                     
                     let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                     var items: [ActionSheetItem] = []
@@ -6703,7 +6889,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
         
         if let tooltipController = self.mediaRecordingModeTooltipController {
-            tooltipController.content = .text(text)
+            tooltipController.updateContent(.text(text), animated: true, extendTimer: true)
         } else if let rect = rect {
             let tooltipController = TooltipController(content: .text(text))
             self.mediaRecordingModeTooltipController = tooltipController
@@ -6831,23 +7017,22 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     }
                 })
             ]
-            
-            if let message = self.chatDisplayNode.historyNode.latestMessageInCurrentHistoryView(), !message.flags.contains(.Incoming) {
-                inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
-                    if let strongSelf = self {
-                        var canEdit = false
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                            if state.interfaceState.effectiveInputState.inputText.length == 0 && state.interfaceState.editMessage == nil {
-                                canEdit = true
-                            }
-                            return state
-                        })
-                        if canEdit {
-                            strongSelf.interfaceInteraction?.setupEditMessage(message.id)
-                        }
-                    }
-                }))
+        }
+        
+        var canEdit = false
+        self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+            if state.interfaceState.effectiveInputState.inputText.length == 0 && state.interfaceState.editMessage == nil {
+                canEdit = true
             }
+            return state
+        })
+        
+        if canEdit, let message = self.chatDisplayNode.historyNode.firstMessageForEditInCurrentHistoryView() {
+            inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.interfaceInteraction?.setupEditMessage(message.id)
+                }
+            }))
         }
         
         let otherShortcuts: [KeyShortcut] = [
@@ -6970,6 +7155,36 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         } else if let reminderActivity = self.reminderActivity {
             self.reminderActivity = nil
             reminderActivity.invalidate()
+        }
+    }
+    
+    private func updateSlowmodeStatus() {
+        if let slowmodeState = self.presentationInterfaceState.slowmodeState, case let .timestamp(slowmodeActiveUntilTimestamp) = slowmodeState.variant {
+            let timestamp = Int32(Date().timeIntervalSince1970)
+            let remainingTime = max(0, slowmodeActiveUntilTimestamp - timestamp)
+            if remainingTime == 0 {
+                self.updateSlowmodeStatusTimerValue = nil
+                self.updateSlowmodeStatusDisposable.set(nil)
+                self.updateChatPresentationInterfaceState(interactive: false, {
+                    $0.updatedSlowmodeState(nil)
+                })
+            } else {
+                if self.updateSlowmodeStatusTimerValue != slowmodeActiveUntilTimestamp {
+                    self.updateSlowmodeStatusTimerValue = slowmodeActiveUntilTimestamp
+                    self.updateSlowmodeStatusDisposable.set((Signal<Never, NoError>.complete()
+                    |> suspendAwareDelay(Double(remainingTime), granularity: 1.0, queue: .mainQueue())
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.updateSlowmodeStatusTimerValue = nil
+                        strongSelf.updateSlowmodeStatus()
+                    }))
+                }
+            }
+        } else if let _ = self.updateSlowmodeStatusTimerValue {
+            self.updateSlowmodeStatusTimerValue = nil
+            self.updateSlowmodeStatusDisposable.set(nil)
         }
     }
 }

@@ -93,6 +93,16 @@ extension String {
         return emojis
     }
     
+    var trimmingEmojis: String {
+        var string: String = ""
+        self.enumerateSubstrings(in: self.startIndex ..< self.endIndex, options: .byComposedCharacterSequences) { substring, _, _, _ in
+            if let substring = substring, !substring.containsEmoji {
+                string.append(substring)
+            }
+        }
+        return string
+    }
+    
     var normalizedEmoji: String {
         var string = ""
         

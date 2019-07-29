@@ -27,7 +27,7 @@ final class ChannelStatsController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
 
         self.navigationItem.title = self.presentationData.strings.ChannelInfo_Stats
     }

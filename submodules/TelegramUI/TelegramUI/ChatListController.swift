@@ -116,7 +116,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         let title: String
         if case .root = self.groupId {
@@ -401,7 +401,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         self.titleView.theme = self.presentationData.theme
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
         if self.isNodeLoaded {

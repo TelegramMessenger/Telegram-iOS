@@ -312,7 +312,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     func fetchControl(_ control: UniversalVideoNodeFetchControl) {
         switch control {
             case .fetch:
-                self.fetchDisposable.set(fetchedMediaResource(postbox: self.postbox, reference: self.fileReference.resourceReference(self.fileReference.media.resource), statsCategory: statsCategoryForFileWithAttributes(self.fileReference.media.attributes)).start())
+                self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.postbox.mediaBox, reference: self.fileReference.resourceReference(self.fileReference.media.resource), statsCategory: statsCategoryForFileWithAttributes(self.fileReference.media.attributes)).start())
             case .cancel:
                 self.postbox.mediaBox.cancelInteractiveResourceFetch(self.fileReference.media.resource)
         }

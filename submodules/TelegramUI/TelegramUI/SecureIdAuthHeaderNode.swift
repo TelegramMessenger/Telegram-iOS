@@ -36,7 +36,7 @@ final class SecureIdAuthHeaderNode: ASDisplayNode {
         self.iconNode.isLayerBacked = true
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Secure ID/ViewPassportIcon"), color: theme.list.freeMonoIcon)
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Secure ID/ViewPassportIcon"), color: theme.list.freeMonoIconColor)
         
         super.init()
         

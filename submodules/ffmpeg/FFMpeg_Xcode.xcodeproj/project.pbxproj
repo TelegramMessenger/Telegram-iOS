@@ -36,6 +36,7 @@
 		D04555D721BF8B2F007A6DD9 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D04555D621BF8B2F007A6DD9 /* AudioToolbox.framework */; };
 		D04555D921BF8B4E007A6DD9 /* libiconv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D04555D821BF8B4E007A6DD9 /* libiconv.tbd */; };
 		D04555DB21BF8B77007A6DD9 /* libopus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D04555DA21BF8B77007A6DD9 /* libopus.a */; };
+		D0E8B10E22D8E97B00C82570 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E8B10D22D8E97B00C82570 /* VideoToolbox.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -71,6 +72,7 @@
 		D04555D821BF8B4E007A6DD9 /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
 		D04555DA21BF8B77007A6DD9 /* libopus.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopus.a; path = opus/lib/libopus.a; sourceTree = "<group>"; };
 		D0CAD6A621C049D9001E3055 /* ffmpeg-4.1 */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "ffmpeg-4.1"; sourceTree = "<group>"; };
+		D0E8B10D22D8E97B00C82570 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,6 +80,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0E8B10E22D8E97B00C82570 /* VideoToolbox.framework in Frameworks */,
 				D000CABF21F76B1B0011B15D /* libbz2.tbd in Frameworks */,
 				D04555DB21BF8B77007A6DD9 /* libopus.a in Frameworks */,
 				D04555D921BF8B4E007A6DD9 /* libiconv.tbd in Frameworks */,
@@ -142,6 +145,7 @@
 		D04554C921BF1119007A6DD9 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0E8B10D22D8E97B00C82570 /* VideoToolbox.framework */,
 				D000CABE21F76B1B0011B15D /* libbz2.tbd */,
 				D04555DA21BF8B77007A6DD9 /* libopus.a */,
 				D04555D821BF8B4E007A6DD9 /* libiconv.tbd */,

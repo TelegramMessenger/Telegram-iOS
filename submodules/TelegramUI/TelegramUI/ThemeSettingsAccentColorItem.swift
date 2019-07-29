@@ -13,8 +13,8 @@ private func generateSwatchImage(color: PresentationThemeAccentColor, selected: 
         
         context.clear(bounds)
         
-        let fillColor = UIColor(rgb: UInt32(bitPattern: color.color))
-        let strokeColor = UIColor(rgb: UInt32(bitPattern: color.baseColor.colorValue))
+        let fillColor = color.color
+        let strokeColor = color.baseColor.color
         
         context.setFillColor(fillColor.cgColor)
         context.setStrokeColor(strokeColor.cgColor)
@@ -23,6 +23,13 @@ private func generateSwatchImage(color: PresentationThemeAccentColor, selected: 
         if selected {
             context.fillEllipse(in: bounds.insetBy(dx: 4.0, dy: 4.0))
             context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
+            
+            if false, color.baseColor != .white && color.baseColor != .black {
+                context.setFillColor(UIColor.white.cgColor)
+                context.fillEllipse(in: CGRect(x: 11.0, y: 18.0, width: 4.0, height: 4.0))
+                context.fillEllipse(in: CGRect(x: 18.0, y: 18.0, width: 4.0, height: 4.0))
+                context.fillEllipse(in: CGRect(x: 25.0, y: 18.0, width: 4.0, height: 4.0))
+            }
         } else {
             context.fillEllipse(in: bounds)
         }
@@ -36,10 +43,10 @@ class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
     let colors: [PresentationThemeBaseColor]
     let currentColor: PresentationThemeAccentColor
     let updated: (PresentationThemeAccentColor) -> Void
-    let toggleSlider: () -> Void
+    let toggleSlider: (PresentationThemeBaseColor) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, sectionId: ItemListSectionId, colors: [PresentationThemeBaseColor], currentColor: PresentationThemeAccentColor, updated: @escaping (PresentationThemeAccentColor) -> Void, toggleSlider: @escaping () -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, sectionId: ItemListSectionId, colors: [PresentationThemeBaseColor], currentColor: PresentationThemeAccentColor, updated: @escaping (PresentationThemeAccentColor) -> Void, toggleSlider: @escaping (PresentationThemeBaseColor) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.colors = colors
         self.currentColor = currentColor
@@ -262,10 +269,14 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             accentColor = PresentationThemeAccentColor(baseColor: color, value: 0.5)
                         }
                         
-                        imageNode.setup(color: accentColor, selected: selected, action: { [weak self, weak imageNode] in
+                        imageNode.setup(color: accentColor, selected: selected, action: { [weak self, weak imageNode, weak selectedNode] in
                             item.updated(accentColor)
                             if let imageNode = imageNode {
                                 self?.scrollToNode(imageNode, animated: true)
+                            }
+                            
+                            if imageNode == selectedNode {
+                                item.toggleSlider(accentColor.baseColor)
                             }
                         })
                         
@@ -273,6 +284,12 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         nodeOffset += nodeSize.width + 18.0
                         
                         i += 1
+                    }
+                    
+                    for k in (i ..< strongSelf.nodes.count).reversed() {
+                        let node = strongSelf.nodes[k]
+                        strongSelf.nodes.remove(at: k)
+                        node.removeFromSupernode()
                     }
                     
                     if let lastNode = strongSelf.nodes.last {

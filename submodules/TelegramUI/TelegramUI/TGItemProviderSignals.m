@@ -553,7 +553,7 @@ static void set_bits(uint8_t *bytes, int32_t bitOffset, int32_t numBits, int32_t
     // add output reader to reader
     [iPodAssetReader addOutput: readerOutput];
     
-    if (! [iPodAssetReader startReading]) {
+    if (![iPodAssetReader startReading]) {
         NSLog(@"Unable to start reading!");
         return nil;
     }
@@ -563,7 +563,6 @@ static void set_bits(uint8_t *bytes, int32_t bitOffset, int32_t numBits, int32_t
     int _waveformPeakCount = 0;
     
     while (iPodAssetReader.status == AVAssetReaderStatusReading) {
-        // Check if the available buffer space is enough to hold at least one cycle of the sample data
         CMSampleBufferRef nextBuffer = [readerOutput copyNextSampleBuffer];
         
         if (nextBuffer) {

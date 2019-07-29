@@ -68,9 +68,11 @@ enum PrivacyIntroControllerMode {
 
 final public class PrivacyIntroControllerPresentationArguments {
     let fadeIn: Bool
+    let animateIn: Bool
     
-    public init(fadeIn: Bool = false) {
+    public init(fadeIn: Bool = false, animateIn: Bool = false) {
         self.fadeIn = fadeIn
+        self.animateIn = animateIn
     }
 }
 
@@ -87,6 +89,8 @@ final class PrivacyIntroController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var isDismissed: Bool = false
+    
     init(context: AccountContext, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), proceedAction: @escaping () -> Void) {
         self.context = context
         self.mode = mode
@@ -97,9 +101,13 @@ final class PrivacyIntroController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.title = self.mode.controllerTitle(strings: self.presentationData.strings)
+        
+        if arguments.animateIn {
+            self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+        }
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -124,8 +132,12 @@ final class PrivacyIntroController: ViewController {
         self.presentationDataDisposable?.dispose()
     }
     
+    @objc private func cancelPressed() {
+        self.dismiss()
+    }
+    
     private func updateThemeAndStrings() {
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.controllerNode.updatePresentationData(self.presentationData)
@@ -138,8 +150,25 @@ final class PrivacyIntroController: ViewController {
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        if self.arguments.fadeIn {
-            self.controllerNode.animateIn()
+        if self.arguments.animateIn {
+            self.controllerNode.animateIn(slide: true)
+        } else if self.arguments.fadeIn {
+            self.controllerNode.animateIn(slide: false)
+        }
+    }
+    
+    override func dismiss(completion: (() -> Void)? = nil) {
+        if !self.isDismissed {
+            self.isDismissed = true
+            if self.arguments.animateIn {
+                self.controllerNode.animateOut(completion: { [weak self] in
+                    self?.presentingViewController?.dismiss(animated: false, completion: nil)
+                    completion?()
+                })
+            } else {
+                self.presentingViewController?.dismiss(animated: false, completion: nil)
+                completion?()
+            }
         }
     }
     

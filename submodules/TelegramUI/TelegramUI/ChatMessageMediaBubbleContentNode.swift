@@ -81,13 +81,13 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     
                     if !item.message.containsSecretMedia {
-                        if telegramFile.isAnimated {
+                        if telegramFile.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs {
                             if case .full = automaticDownload {
-                                automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
+                                automaticPlayback = true
                             } else {
                                 automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
                             }
-                        } else if telegramFile.isVideo && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
+                        } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
                             if case .full = automaticDownload {
                                 automaticPlayback = true
                             } else {
@@ -356,7 +356,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             self.highlightedState = highlighted
             
             if highlighted {
-                self.interactiveImageNode.setOverlayColor(item.presentationData.theme.theme.chat.bubble.mediaHighlightOverlayColor, animated: false)
+                self.interactiveImageNode.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
             } else {
                 self.interactiveImageNode.setOverlayColor(nil, animated: animated)
             }

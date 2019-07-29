@@ -25,10 +25,13 @@
         size_t height = 0;
         _animation->size(width, height);
         
-        if (width != height || (width != 100 && width != 512)) {
+        if (width > 1024 || height > 1024) {
             return nil;
         }
-        if ((_frameRate > 30 && _frameRate != 60) || _animation->duration() > 4.5) {
+        
+        _dimensions = CGSizeMake(width, height);
+        
+        if ((_frameRate > 60) || _animation->duration() > 4.5) {
             return nil;
         }
     }

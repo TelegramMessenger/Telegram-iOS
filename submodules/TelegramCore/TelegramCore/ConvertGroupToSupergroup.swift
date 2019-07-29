@@ -37,17 +37,17 @@ public func convertGroupToSupergroup(account: Account, peerId: PeerId) -> Signal
             
             if let createdPeerId = createdPeerId {
                 return account.postbox.multiplePeersView([createdPeerId])
-                    |> filter { view in
-                        return view.peers[createdPeerId] != nil
-                    }
-                    |> take(1)
-                    |> map { _ in
-                        return createdPeerId
-                    }
-                    |> mapError { _ -> ConvertGroupToSupergroupError in
-                        return .generic
-                    }
-                    |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
+                |> filter { view in
+                    return view.peers[createdPeerId] != nil
+                }
+                |> take(1)
+                |> map { _ in
+                    return createdPeerId
+                }
+                |> mapError { _ -> ConvertGroupToSupergroupError in
+                    return .generic
+                }
+                |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
             }
             return .fail(.generic)
         }

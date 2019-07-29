@@ -25,7 +25,7 @@ public enum ChatHistoryMessageSelection: Equatable {
 }
 
 public struct ChatMessageEntryAttributes: Equatable {
-    let isAdmin: Bool
+    let rank: CachedChannelAdminRank?
     let isContact: Bool
 }
 
@@ -40,8 +40,12 @@ enum ChatHistoryEntry: Identifiable, Comparable {
         switch self {
             case let .MessageEntry(message, presentationData, _, _, _, _):
                 var type = 2
-                if presentationData.largeEmoji && message.elligibleForLargeEmoji && messageTextIsElligibleForLargeEmoji(message.text) {
-                    type = 3
+                if presentationData.largeEmoji && message.elligibleForLargeEmoji && messageIsElligibleForLargeEmoji(message) {
+                    if animatedEmojiResource(emoji: message.text) != nil {
+                        type = 3
+                    } else {
+                        type = 4
+                    }
                 }
                 return UInt64(message.stableId) | ((UInt64(type) << 40))
             case let .MessageGroupEntry(groupInfo, _, _):

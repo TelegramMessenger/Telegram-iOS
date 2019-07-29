@@ -195,7 +195,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             var updatedPlaybackStatus: Signal<FileMediaResourceStatus, NoError>?
             if let updatedFile = updatedFile, updatedMedia || updatedMessageId {
-                updatedPlaybackStatus = combineLatest(messageFileMediaResourceStatus(context: item.context, file: updatedFile, message: item.message, isRecentActions: item.associatedData.isRecentActions), item.context.account.pendingMessageManager.pendingMessageStatus(item.message.id))
+                updatedPlaybackStatus = combineLatest(messageFileMediaResourceStatus(context: item.context, file: updatedFile, message: item.message, isRecentActions: item.associatedData.isRecentActions), item.context.account.pendingMessageManager.pendingMessageStatus(item.message.id) |> map { $0.0 })
                 |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
                     if let pendingStatus = pendingStatus {
                         var progress = pendingStatus.progress
@@ -309,7 +309,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let updatedFile = updatedFile, updatedMedia {
                         if let resource = updatedFile.previewRepresentations.first?.resource {
-                            strongSelf.fetchedThumbnailDisposable.set(fetchedMediaResource(postbox: item.context.account.postbox, reference: FileMediaReference.message(message: MessageReference(item.message), media: updatedFile).resourceReference(resource)).start())
+                            strongSelf.fetchedThumbnailDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, reference: FileMediaReference.message(message: MessageReference(item.message), media: updatedFile).resourceReference(resource)).start())
                         } else {
                             strongSelf.fetchedThumbnailDisposable.set(nil)
                         }
@@ -342,9 +342,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 case .bubble:
                                     durationFillColor = .clear
                                     if item.message.effectivelyIncoming(item.context.account.peerId) {
-                                        durationTextColor = theme.theme.chat.bubble.incomingSecondaryTextColor
+                                        durationTextColor = theme.theme.chat.message.incoming.secondaryTextColor
                                     } else {
-                                        durationTextColor = theme.theme.chat.bubble.outgoingSecondaryTextColor
+                                        durationTextColor = theme.theme.chat.message.outgoing.secondaryTextColor
                                     }
                             }
                             let durationNode: ChatInstantVideoMessageDurationNode
@@ -455,7 +455,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         guard let item = self.item, let status = self.status, let videoFrame = self.videoFrame else {
             return
         }
-        let bubbleTheme = item.presentationData.theme.theme.chat.bubble
+        let messageTheme = item.presentationData.theme.theme.chat.message
         
         let isSecretMedia = item.message.containsSecretMedia
         var secretBeginTimeAndTimeout: (Double, Double)?
@@ -533,7 +533,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         
         if progressRequired {
             if self.statusNode == nil {
-                let statusNode = RadialStatusNode(backgroundNodeColor: item.presentationData.theme.theme.chat.bubble.mediaOverlayControlBackgroundColor)
+                let statusNode = RadialStatusNode(backgroundNodeColor: item.presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor)
                 self.isUserInteractionEnabled = false
                 statusNode.frame = CGRect(origin: CGPoint(x: videoFrame.origin.x + floor((videoFrame.size.width - 50.0) / 2.0), y: videoFrame.origin.y + floor((videoFrame.size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
                 self.statusNode = statusNode
@@ -559,18 +559,18 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     case let .Fetching(_, progress):
                         if let isBuffering = isBuffering {
                             if isBuffering {
-                                state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: nil, cancelEnabled: true)
+                                state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: nil, cancelEnabled: true)
                             } else {
                                 state = .none
                             }
                         } else {
                             let adjustedProgress = max(progress, 0.027)
-                            state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                            state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
                         }
                     case .Local:
                         if isSecretMedia && self.secretProgressIcon != nil {
                             if let (beginTime, timeout) = secretBeginTimeAndTimeout {
-                                state = .secretTimeout(color: bubbleTheme.mediaOverlayControlForegroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout, sparks: true)
+                                state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout, sparks: true)
                             } else {
                                 state = .customIcon(secretProgressIcon!)
                             }
@@ -578,7 +578,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             state = .none
                         }
                     case .Remote:
-                        state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
+                        state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
                 }
             default:
                 var isLocal = false
@@ -586,7 +586,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     isLocal = true
                 }
                 if (isBuffering ?? false) && !isLocal {
-                    state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: nil, cancelEnabled: true)
+                    state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: nil, cancelEnabled: true)
                 } else {
                     state = .none
                 }

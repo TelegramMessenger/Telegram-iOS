@@ -179,7 +179,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.notFoundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GifsNotFoundIcon"), color: theme.list.freeMonoIcon)
+        self.notFoundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GifsNotFoundIcon"), color: theme.list.freeMonoIconColor)
         self.notFoundLabel.attributedText = NSAttributedString(string: strings.Gif_NoGifsFound, font: Font.medium(14.0), textColor: theme.list.freeTextColor)
     }
     
@@ -231,10 +231,10 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
                 multiplexedNode.frame = CGRect(origin: CGPoint(), size: layout)
             }
             
-            self.view.addSubview(multiplexedNode)
+            self.addSubnode(multiplexedNode)
             
-            multiplexedNode.fileSelected = { [weak self] fileReference in
-                self?.controllerInteraction.sendGif(fileReference)
+            multiplexedNode.fileSelected = { [weak self] fileReference, sourceNode, sourceRect in
+                self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
             }
             
             multiplexedNode.didScroll = { [weak self] offset, height in

@@ -272,7 +272,7 @@ private final class FetchManagerCategoryContext {
                         parsedRanges = resultRanges
                     }
                     activeContext.disposable?.dispose()
-                    activeContext.disposable = (fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
+                    activeContext.disposable = (fetchedMediaResource(mediaBox: self.postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
                     |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
                         if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, let peerType = entry.storeToDownloadsPeerType {
                             return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
@@ -413,7 +413,7 @@ private final class FetchManagerCategoryContext {
                         })
                     } else if ranges.isEmpty {
                     } else {
-                        activeContext.disposable = (fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
+                        activeContext.disposable = (fetchedMediaResource(mediaBox: self.postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
                         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
                             if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, let peerType = entry.storeToDownloadsPeerType {
                                 return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)

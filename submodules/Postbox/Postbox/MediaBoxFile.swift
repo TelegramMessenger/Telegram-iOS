@@ -709,7 +709,8 @@ private final class MediaBoxFileMissingRange {
 private final class MediaBoxFileMissingRanges {
     private var requestedRanges = Bag<MediaBoxFileMissingRange>()
     
-    private var missingRanges = IndexSet()
+    private var missingRangesFlattened = IndexSet()
+    private var missingRangesByPriority: [MediaBoxFetchPriority: IndexSet] = [:]
     
     func clear() -> [((MediaResourceDataFetchError) -> Void, () -> Void)] {
         let errorsAndCompletions = self.requestedRanges.copyItems().map({ ($0.error, $0.completion) })
@@ -722,92 +723,43 @@ private final class MediaBoxFileMissingRanges {
     }
     
     private func missingRequestedIntervals() -> [(Range<Int>, MediaBoxFetchPriority)] {
-        var resolvedIntervals: [(Range<Int>, MediaBoxFetchPriority)] = []
+        var intervalsByPriority: [MediaBoxFetchPriority: IndexSet] = [:]
+        var remainingIntervals = IndexSet()
         for item in self.requestedRanges.copyItems() {
             var requestedInterval = IndexSet(integersIn: Int(item.range.lowerBound) ..< Int(item.range.upperBound))
-            requestedInterval.formIntersection(self.missingRanges)
-            for range in requestedInterval.rangeView {
+            requestedInterval.formIntersection(self.missingRangesFlattened)
+            if !requestedInterval.isEmpty {
+                if intervalsByPriority[item.priority] == nil {
+                    intervalsByPriority[item.priority] = IndexSet()
+                }
+                intervalsByPriority[item.priority]?.formUnion(requestedInterval)
+                remainingIntervals.formUnion(requestedInterval)
+            }
+        }
+        
+        var result: [(Range<Int>, MediaBoxFetchPriority)] = []
+        
+        for priority in intervalsByPriority.keys.sorted(by: { $0.rawValue > $1.rawValue }) {
+            let currentIntervals = intervalsByPriority[priority]!.intersection(remainingIntervals)
+            remainingIntervals.subtract(currentIntervals)
+            for range in currentIntervals.rangeView {
                 if !range.isEmpty {
-                    resolvedIntervals.append((range, item.priority))
+                    result.append((range, priority))
                 }
             }
         }
-        outer: while resolvedIntervals.count > 1 {
-            var hadOverlap = false
-            for i in 0 ..< resolvedIntervals.count {
-                inner: for j in 0 ..< resolvedIntervals.count {
-                    if i == j {
-                        continue inner
-                    }
-                    if resolvedIntervals[i].0.overlaps(resolvedIntervals[j].0) {
-                        hadOverlap = true
-                        if resolvedIntervals[i].0 == resolvedIntervals[j].0 {
-                            if resolvedIntervals[i].1.rawValue > resolvedIntervals[j].1.rawValue {
-                                resolvedIntervals.remove(at: j)
-                            } else {
-                                resolvedIntervals.remove(at: i)
-                            }
-                            continue outer
-                        }
-                        let lowerBound: Int
-                        let lowerPriority: MediaBoxFetchPriority
-                        if resolvedIntervals[i].0.lowerBound == resolvedIntervals[j].0.lowerBound {
-                            lowerBound = resolvedIntervals[i].0.lowerBound
-                            lowerPriority = MediaBoxFetchPriority(rawValue: max(resolvedIntervals[i].1.rawValue, resolvedIntervals[j].1.rawValue))!
-                        } else if resolvedIntervals[i].0.lowerBound < resolvedIntervals[j].0.lowerBound {
-                            lowerBound = resolvedIntervals[i].0.lowerBound
-                            lowerPriority = resolvedIntervals[i].1
-                        } else {
-                            lowerBound = resolvedIntervals[j].0.lowerBound
-                            lowerPriority = resolvedIntervals[j].1
-                        }
-                        let upperBound: Int
-                        let upperPriority: MediaBoxFetchPriority
-                        if resolvedIntervals[i].0.upperBound == resolvedIntervals[j].0.upperBound {
-                            upperBound = resolvedIntervals[i].0.upperBound
-                            upperPriority = MediaBoxFetchPriority(rawValue: max(resolvedIntervals[i].1.rawValue, resolvedIntervals[j].1.rawValue))!
-                        } else if resolvedIntervals[i].0.upperBound > resolvedIntervals[j].0.upperBound {
-                            upperBound = resolvedIntervals[i].0.upperBound
-                            upperPriority = resolvedIntervals[i].1
-                        } else {
-                            upperBound = resolvedIntervals[j].0.upperBound
-                            upperPriority = resolvedIntervals[j].1
-                        }
-                        let middleBound = max(resolvedIntervals[i].0.lowerBound, resolvedIntervals[j].0.lowerBound)
-                        resolvedIntervals[i] = (lowerBound ..< middleBound, lowerPriority)
-                        resolvedIntervals[j] = (middleBound ..< upperBound, upperPriority)
-                        if resolvedIntervals[i].0.isEmpty || resolvedIntervals[j].0.isEmpty {
-                            if j > i {
-                                if resolvedIntervals[j].0.isEmpty {
-                                    resolvedIntervals.remove(at: j)
-                                }
-                                if resolvedIntervals[i].0.isEmpty {
-                                    resolvedIntervals.remove(at: i)
-                                }
-                            } else {
-                                if resolvedIntervals[i].0.isEmpty {
-                                    resolvedIntervals.remove(at: i)
-                                }
-                                if resolvedIntervals[j].0.isEmpty {
-                                    resolvedIntervals.remove(at: j)
-                                }
-                            }
-                        }
-                        continue outer
-                    }
-                }
-            }
-            if !hadOverlap {
-                break
-            }
-        }
-        return resolvedIntervals
+        
+        return result
     }
     
     func fill(_ range: Range<Int32>) -> ([(Range<Int>, MediaBoxFetchPriority)], [() -> Void])? {
         let intRange: Range<Int> = Int(range.lowerBound) ..< Int(range.upperBound)
-        if self.missingRanges.intersects(integersIn: intRange) {
-            self.missingRanges.remove(integersIn: intRange)
+        if self.missingRangesFlattened.intersects(integersIn: intRange) {
+            self.missingRangesFlattened.remove(integersIn: intRange)
+            for priority in self.missingRangesByPriority.keys {
+                self.missingRangesByPriority[priority]!.remove(integersIn: intRange)
+            }
+            
             var completions: [() -> Void] = []
             for (index, item) in self.requestedRanges.copyItemsWithIndices() {
                 if item.range.overlaps(range) {
@@ -837,14 +789,24 @@ private final class MediaBoxFileMissingRanges {
     }
     
     private func update(fileMap: MediaBoxFileMap) -> [(Range<Int>, MediaBoxFetchPriority)]? {
-        var requested = IndexSet()
+        var byPriority: [MediaBoxFetchPriority: IndexSet] = [:]
+        var flattened = IndexSet()
         for item in self.requestedRanges.copyItems() {
             let intRange: Range<Int> = Int(item.range.lowerBound) ..< Int(item.range.upperBound)
-            requested.insert(integersIn: intRange)
+            if byPriority[item.priority] == nil {
+                byPriority[item.priority] = IndexSet()
+            }
+            byPriority[item.priority]!.insert(integersIn: intRange)
+            flattened.insert(integersIn: intRange)
         }
-        requested.subtract(fileMap.ranges)
-        if requested != self.missingRanges {
-            self.missingRanges = requested
+        for priority in byPriority.keys {
+            byPriority[priority]!.subtract(fileMap.ranges)
+        }
+        flattened.subtract(fileMap.ranges)
+        if byPriority != self.missingRangesByPriority {
+            self.missingRangesByPriority = byPriority
+            self.missingRangesFlattened = flattened
+            
             return self.missingRequestedIntervals()
         }
         return nil

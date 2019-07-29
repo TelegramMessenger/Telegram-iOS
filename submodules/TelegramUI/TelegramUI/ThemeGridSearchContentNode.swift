@@ -477,6 +477,9 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                                 if let _ = searchContext.loadMoreIndex, let nextOffset = searchContext.result.nextOffset {
                                     let collection = searchContext.result.collection
                                     return requestChatContextResults(account: self.context.account, botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(collection.geoPoint), offset: nextOffset)
+                                    |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
+                                        return .single(nil)
+                                    }
                                     |> map { nextResults -> (ChatContextResultCollection, String?) in
                                         var results: [ChatContextResult] = []
                                         var existingIds = Set<String>()
@@ -650,8 +653,8 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                         placeholder = self.presentationData.strings.Wallpaper_Search
                     case let .color(color, query):
                         let prefixString = NSMutableAttributedString()
-                        prefixString.append(NSAttributedString(string: self.presentationData.strings.WallpaperSearch_ColorPrefix, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.activeNavigationSearchBar.inputTextColor))
-                        prefixString.append(NSAttributedString(string: "\(color.localizedString(strings: self.presentationData.strings)) ", font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.activeNavigationSearchBar.accentColor))
+                        prefixString.append(NSAttributedString(string: self.presentationData.strings.WallpaperSearch_ColorPrefix, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationSearchBar.inputTextColor))
+                        prefixString.append(NSAttributedString(string: "\(color.localizedString(strings: self.presentationData.strings)) ", font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationSearchBar.accentColor))
                         prefix = prefixString
                         text = query
                         placeholder = self.presentationData.strings.Wallpaper_SearchShort

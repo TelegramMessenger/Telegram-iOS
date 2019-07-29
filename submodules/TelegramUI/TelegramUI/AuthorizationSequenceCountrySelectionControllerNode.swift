@@ -165,7 +165,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
             self.searchTableView.reloadData()
             self.searchTableView.isHidden = true
         } else {
-            let normalizedQuery = query.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            let normalizedQuery = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             
             var results: [((String, String), String, Int)] = []
             for (_, items) in self.sections {

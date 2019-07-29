@@ -279,7 +279,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 
                 let selectionPanelSeparatorNode = ASDisplayNode()
                 selectionPanelSeparatorNode.isLayerBacked = true
-                selectionPanelSeparatorNode.backgroundColor = self.mediaCollectionInterfaceState.theme.chat.inputPanel.panelStrokeColor
+                selectionPanelSeparatorNode.backgroundColor = self.mediaCollectionInterfaceState.theme.chat.inputPanel.panelSeparatorColor
                 self.addSubnode(selectionPanelSeparatorNode)
                 self.selectionPanelSeparatorNode = selectionPanelSeparatorNode
                 

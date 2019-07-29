@@ -5,6 +5,7 @@
 #import <LegacyComponents/TGModernButton.h>
 //#import "TGModernConversationInputMicButton.h"
 #import <LegacyComponents/TGVideoMessageScrubber.h>
+#import <SSignalKit/SSignalKit.h>
 
 #import "LegacyComponentsInternal.h"
 #import "TGColor.h"
@@ -41,23 +42,35 @@ static CGRect viewFrame(UIView *view)
     TGModernButton *_deleteButton;
     TGModernButton *_sendButton;
     
+    int32_t _slowmodeTimestamp;
+    UIView * (^_generateSlowmodeView)(void);
+    UIView *_slowmodeView;
+    
     UIImageView *_recordIndicatorView;
     UILabel *_recordDurationLabel;
     
     CFAbsoluteTime _recordingInterfaceShowTime;
     
 	TGVideoMessageCaptureControllerAssets *_assets;
+    
+    STimer *_slowmodeTimer;
 }
 @end
 
 @implementation TGVideoMessageControls
 
-- (instancetype)initWithFrame:(CGRect)frame assets:(TGVideoMessageCaptureControllerAssets *)assets {
+- (instancetype)initWithFrame:(CGRect)frame assets:(TGVideoMessageCaptureControllerAssets *)assets slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView {
     self = [super initWithFrame:frame];
     if (self != nil) {
         _assets = assets;
+        _slowmodeTimestamp = slowmodeTimestamp;
+        _generateSlowmodeView = [slowmodeView copy];
     }
     return self;
+}
+
+- (void)dealloc {
+    [_slowmodeTimer invalidate];
 }
 
 - (void)captureStarted
@@ -341,7 +354,7 @@ static CGRect viewFrame(UIView *view)
 {
     UIImage *deleteImage = _assets.actionDelete;
     
-    _deleteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 45.0f, 45.0f)];
+    _deleteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, (self.bounds.size.height - 45.0f) / 2.0f, 45.0f, 45.0f)];
     [_deleteButton setImage:deleteImage forState:UIControlStateNormal];
     _deleteButton.adjustsImageWhenDisabled = false;
     _deleteButton.adjustsImageWhenHighlighted = false;
@@ -361,6 +374,34 @@ static CGRect viewFrame(UIView *view)
     _sendButton.adjustsImageWhenHighlighted = false;
     [_sendButton addTarget:self action:@selector(sendButtonPressed) forControlEvents:UIControlEventTouchUpInside];
     [self addSubview:_sendButton];
+    
+    if (_slowmodeTimestamp != 0) {
+        int32_t timestamp = (int32_t)[[NSDate date] timeIntervalSince1970];
+        if (timestamp < _slowmodeTimestamp) {
+            if (_generateSlowmodeView) {
+                _slowmodeView = _generateSlowmodeView();
+            }
+            if (_slowmodeView) {
+                _slowmodeView.alpha = 0.0f;
+                [self addSubview:_slowmodeView];
+                
+                __weak TGVideoMessageControls *weakSelf = self;
+                _slowmodeTimer = [[STimer alloc] initWithTimeout:0.5 repeat:true completion:^{
+                    __strong TGVideoMessageControls *strongSelf = weakSelf;
+                    if (strongSelf != nil) {
+                        int32_t timestamp = (int32_t)[[NSDate date] timeIntervalSince1970];
+                        if (timestamp >= strongSelf->_slowmodeTimestamp) {
+                            [strongSelf->_slowmodeTimer invalidate];
+                            [strongSelf->_slowmodeView removeFromSuperview];
+                            strongSelf->_slowmodeView = nil;
+                            [strongSelf setNeedsLayout];
+                        }
+                    }
+                } queue:[SQueue mainQueue]];
+                [_slowmodeTimer start];
+            }
+        }
+    }
     
     _scrubberView = [[TGVideoMessageScrubber alloc] init];
     _scrubberView.pallete = self.pallete;
@@ -413,6 +454,7 @@ static CGRect viewFrame(UIView *view)
     [UIView animateWithDuration:0.3 animations:^
     {
         _sendButton.alpha = 1.0f;
+        _slowmodeView.alpha = 1.0f;
     }];
 }
 
@@ -440,8 +482,12 @@ static CGRect viewFrame(UIView *view)
 {
     _sendButton.userInteractionEnabled = false;
     
-    if (self.sendPressed != nil)
-        self.sendPressed();
+    if (self.sendPressed != nil) {
+        if (!self.sendPressed()) {
+            _sendButton.userInteractionEnabled = true;
+        }
+    }
+        
 }
 
 - (void)cancelPressed
@@ -478,6 +524,10 @@ static CGRect viewFrame(UIView *view)
 - (void)removeDotAnimation {
     [_recordIndicatorView.layer removeAnimationForKey:@"opacity-dot"];
 }
+    
+static CGFloat floorToScreenPixels(CGFloat value) {
+    return CGFloor(value * UIScreen.mainScreen.scale) / UIScreen.mainScreen.scale;
+}
 
 - (void)layoutSubviews
 {
@@ -491,8 +541,25 @@ static CGRect viewFrame(UIView *view)
     }
     
     setViewFrame(_sendButton, CGRectMake(self.frame.size.width - _sendButton.frame.size.width, 0.0f, _sendButton.frame.size.width, self.frame.size.height));
-    _deleteButton.center = CGPointMake(24.0f, 22.0f);
+    if (_slowmodeView) {
+        _sendButton.layer.sublayerTransform = CATransform3DMakeScale(0.7575, 0.7575, 1.0);
+        
+        CGFloat defaultSendButtonSize = 25.0f;
+        CGFloat defaultOriginX = _sendButton.frame.origin.x + floorToScreenPixels((_sendButton.bounds.size.width - defaultSendButtonSize) / 2.0f);
+        CGFloat defaultOriginY = _sendButton.frame.origin.y + floorToScreenPixels((_sendButton.bounds.size.height - defaultSendButtonSize) / 2.0f);
+        
+        CGRect radialStatusFrame = CGRectMake(defaultOriginX - 4.0f, defaultOriginY - 4.0f, 33.0f, 33.0f);
+        
+        _slowmodeView.frame = radialStatusFrame;
+    } else {
+        _sendButton.layer.sublayerTransform = CATransform3DIdentity;
+    }
+    _deleteButton.center = CGPointMake(24.0f, self.bounds.size.height / 2.0f);
     setViewFrame(_scrubberView, CGRectMake(46.0f, (self.frame.size.height - 33.0f) / 2.0f, self.frame.size.width - 46.0f * 2.0f, 33.0f));
+}
+
+- (CGRect)frameForSendButton {
+    return _sendButton.frame;
 }
 
 @end

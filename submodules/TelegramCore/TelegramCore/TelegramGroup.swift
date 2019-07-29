@@ -6,16 +6,16 @@ import Foundation
 #endif
 
 public enum TelegramGroupRole: Equatable, PostboxCoding {
-    case creator
-    case admin(TelegramChatAdminRights)
+    case creator(rank: String?)
+    case admin(TelegramChatAdminRights, rank: String?)
     case member
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_v", orElse: 0) {
             case 0:
-                self = .creator
+                self = .creator(rank: decoder.decodeOptionalStringForKey("rank"))
             case 1:
-                self = .admin(decoder.decodeObjectForKey("r", decoder: { TelegramChatAdminRights(decoder: $0) }) as! TelegramChatAdminRights)
+                self = .admin(decoder.decodeObjectForKey("r", decoder: { TelegramChatAdminRights(decoder: $0) }) as! TelegramChatAdminRights, rank: decoder.decodeOptionalStringForKey("rank"))
             case 2:
                 self = .member
             default:
@@ -26,11 +26,21 @@ public enum TelegramGroupRole: Equatable, PostboxCoding {
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case .creator:
+            case let .creator(rank):
                 encoder.encodeInt32(0, forKey: "_v")
-            case let .admin(rights):
+                if let rank = rank {
+                    encoder.encodeString(rank, forKey: "rank")
+                } else {
+                    encoder.encodeNil(forKey: "rank")
+                }
+            case let .admin(rights, rank):
                 encoder.encodeInt32(1, forKey: "_v")
                 encoder.encodeObject(rights, forKey: "r")
+                if let rank = rank {
+                    encoder.encodeString(rank, forKey: "rank")
+                } else {
+                    encoder.encodeNil(forKey: "rank")
+                }
             case .member:
                 encoder.encodeInt32(2, forKey: "_v")
         }
@@ -108,7 +118,7 @@ public final class TelegramGroup: Peer {
         if let role = decoder.decodeObjectForKey("rv", decoder: { TelegramGroupRole(decoder: $0) }) as? TelegramGroupRole {
             self.role = role
         } else if let roleValue = decoder.decodeOptionalInt32ForKey("r"), roleValue == 0 {
-            self.role = .creator
+            self.role = .creator(rank: nil)
         } else {
             self.role = .member
         }

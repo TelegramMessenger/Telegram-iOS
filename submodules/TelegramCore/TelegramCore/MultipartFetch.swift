@@ -289,10 +289,8 @@ private enum MultipartFetchSource {
             case .none:
                 return .never()
             case let .master(location, download):
-                var updatedLength = roundUp(Int(limit), to: 4096)
-                while updatedLength % 4096 != 0 || 1048576 % updatedLength != 0 {
-                    updatedLength += 1
-                }
+                assert(limit % 4096 == 0)
+                assert(1048576 % limit == 0)
                 
                 switch location {
                     case let .generic(_, location):
@@ -302,7 +300,7 @@ private enum MultipartFetchSource {
                             case .revalidate:
                                 return .fail(.revalidateMediaReference)
                             case let .location(parsedLocation):
-                                return download.request(Api.functions.upload.getFile(location: parsedLocation, offset: offset, limit: Int32(updatedLength)), tag: tag, continueInBackground: continueInBackground)
+                                return download.request(Api.functions.upload.getFile(location: parsedLocation, offset: offset, limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground)
                                 |> mapError { error -> MultipartFetchDownloadError in
                                     if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {
                                         return .revalidateMediaReference
@@ -331,7 +329,7 @@ private enum MultipartFetchSource {
                                 }
                         }
                     case let .web(_, location):
-                        return download.request(Api.functions.upload.getWebFile(location: location, offset: offset, limit: Int32(updatedLength)), tag: tag, continueInBackground: continueInBackground)
+                        return download.request(Api.functions.upload.getWebFile(location: location, offset: offset, limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground)
                         |> mapError { error -> MultipartFetchDownloadError in
                             return .generic
                         }
@@ -400,7 +398,7 @@ private enum MultipartFetchSource {
 private final class MultipartFetchManager {
     let parallelParts: Int
     let defaultPartSize = 128 * 1024
-    let partAlignment = 128 * 1024
+    let partAlignment = 4 * 1024
     
     var resource: TelegramMediaResource
     var resourceReference: MediaResourceReference?
@@ -571,15 +569,19 @@ private final class MultipartFetchManager {
         }
         
         while !intervalsToFetch.isEmpty && self.fetchingParts.count < self.parallelParts && !self.reuploadingToCdn && !self.revalidatingMediaReference {
-            var elevatedIndices: [Int] = []
+            
+            var indicesByPriority: [MediaBoxFetchPriority: [Int]] = [:]
             for i in 0 ..< intervalsToFetch.count {
-                if case .elevated = intervalsToFetch[i].1 {
-                    elevatedIndices.append(i)
+                if indicesByPriority[intervalsToFetch[i].1] == nil {
+                    indicesByPriority[intervalsToFetch[i].1] = []
                 }
+                indicesByPriority[intervalsToFetch[i].1]!.append(i)
             }
             
             let currentIntervalIndex: Int
-            if !elevatedIndices.isEmpty {
+            if let maxIndices = indicesByPriority[.maximum], !maxIndices.isEmpty {
+                currentIntervalIndex = maxIndices[self.nextFetchingPartId % maxIndices.count]
+            } else if let elevatedIndices = indicesByPriority[.elevated], !elevatedIndices.isEmpty {
                 currentIntervalIndex = elevatedIndices[self.nextFetchingPartId % elevatedIndices.count]
             } else {
                 currentIntervalIndex = self.nextFetchingPartId % intervalsToFetch.count
@@ -592,9 +594,16 @@ private final class MultipartFetchManager {
                 let previousBoundary = (downloadRange.lowerBound / self.partAlignment) * self.partAlignment
                 downloadRange = previousBoundary ..< downloadRange.upperBound
             }
+            if downloadRange.upperBound % self.partAlignment != 0 {
+                let nextBoundary = (downloadRange.upperBound / self.partAlignment + 1) * self.partAlignment
+                downloadRange = downloadRange.lowerBound ..< nextBoundary
+            }
             if downloadRange.lowerBound / (1024 * 1024) != (downloadRange.upperBound - 1) / (1024 * 1024) {
                 let nextBoundary = (downloadRange.lowerBound / (1024 * 1024) + 1) * (1024 * 1024)
                 downloadRange = downloadRange.lowerBound ..< nextBoundary
+            }
+            while 1024 * 1024 % downloadRange.count != 0 {
+                downloadRange = downloadRange.lowerBound ..< (downloadRange.upperBound - 1)
             }
             
             var intervalIndexSet = IndexSet(integersIn: intervalsToFetch[currentIntervalIndex].0)
@@ -605,12 +614,8 @@ private final class MultipartFetchManager {
                 intervalsToFetch.insert((interval, priority), at: insertIndex)
                 insertIndex += 1
             }
-            var requestLimit = downloadRange.count
-            if requestLimit % self.partAlignment != 0 {
-                requestLimit = (requestLimit / self.partAlignment + 1) * self.partAlignment
-            }
             
-            let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(requestLimit), tag: self.parameters?.tag, resource: self.resource, resourceReference: self.resourceReference, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
+            let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(downloadRange.count), tag: self.parameters?.tag, resource: self.resource, resourceReference: self.resourceReference, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
             |> deliverOn(self.queue)
             let partDisposable = MetaDisposable()
             self.fetchingParts[downloadRange.lowerBound] = (downloadRange.count, partDisposable)

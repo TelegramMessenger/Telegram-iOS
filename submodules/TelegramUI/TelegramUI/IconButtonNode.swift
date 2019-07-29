@@ -16,7 +16,7 @@ final class IconButtonNode: HighlightTrackingButtonNode {
     
     override var isEnabled: Bool {
         didSet {
-            self.alpha = self.isEnabled ? 1.0 : 0.5
+            self.alpha = self.isEnabled ? 1.0 : 0.4
         }
     }
     

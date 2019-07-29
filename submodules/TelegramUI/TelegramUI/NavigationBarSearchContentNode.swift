@@ -78,8 +78,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         if abs(newProgress - self.expansionProgress) > 0.0001 {
             self.expansionProgress = newProgress
         
-            let animationCurve: ContainedViewLayoutTransitionCurve = .custom(0.33, 0.52, 0.25, 0.99)
-            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: animationCurve) : .immediate
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: ContainedViewLayoutTransitionCurve.slide) : .immediate
             if let validLayout = self.validLayout, animated {
                 self.updatePlaceholder(self.expansionProgress, size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: transition)
             }
@@ -130,7 +129,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         let overscrollProgress = max(0.0, max(0.0, self.expansionProgress - 1.0 + fraction) / fraction - visibleProgress)
         
         let searchBarNodeLayout = self.placeholderNode.asyncLayout()
-        let (searchBarHeight, searchBarApply) = searchBarNodeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.activeNavigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.activeNavigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.activeNavigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.backgroundColor ?? .clear, transition)
+        let (searchBarHeight, searchBarApply) = searchBarNodeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.navigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.backgroundColor ?? .clear, transition)
         searchBarApply()
         
         let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: 8.0 + overscrollProgress * fieldHeight), size: CGSize(width: baseWidth, height: fieldHeight))

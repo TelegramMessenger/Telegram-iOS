@@ -140,10 +140,10 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                 var menuItems: [PeekControllerMenuItem] = []
                                 menuItems = [
-                                    PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
-                                        controllerInteraction.sendSticker(.standalone(media: item.file), true)
+                                    PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {  _, _ in
+                                        return controllerInteraction.sendSticker(.standalone(media: item.file), true, itemNode, itemNode.bounds)
                                     }),
-                                    PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                    PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
                                         if let strongSelf = self {
                                             if isStarred {
                                                 let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -151,17 +151,20 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                 let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                             }
                                         }
+                                        return true
                                     }),
-                                    PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
+                                    PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
                                         if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                             loop: for attribute in item.file.attributes {
                                                 switch attribute {
                                                 case let .Sticker(_, packReference, _):
                                                     if let packReference = packReference {
                                                         let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: controllerInteraction.navigationController())
-                                                        controller.sendSticker = { file in
+                                                        controller.sendSticker = { file, sourceNode, sourceRect in
                                                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                                                controllerInteraction.sendSticker(file, true)
+                                                                return controllerInteraction.sendSticker(file, true, sourceNode, sourceRect)
+                                                            } else {
+                                                                return false
                                                             }
                                                         }
                                                         
@@ -174,8 +177,9 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                 }
                                             }
                                         }
+                                        return true
                                     }),
-                                    PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
+                                    PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { _, _ in return true })
                                 ]
                                 return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                             } else {

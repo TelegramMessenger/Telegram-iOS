@@ -362,6 +362,7 @@ API_AVAILABLE(ios(10))
         }
         if (signature.data != nil) {
             _dataDict[@"data"] = [MTSha1(signature.data) base64EncodedStringWithOptions:0];
+            _dataDict[@"data1"] = [signature.data base64EncodedStringWithOptions:0];
         }
     }
     return self;
@@ -371,6 +372,7 @@ API_AVAILABLE(ios(10))
     NSMutableDictionary *dataDict = [[NSMutableDictionary alloc] initWithDictionary:_dataDict];
     if (appToken != nil) {
         dataDict[@"device_token"] = [appToken base64EncodedStringWithOptions:0];
+        dataDict[@"device_token_type"] = @"voip";
     }
     NSData *data = [NSJSONSerialization dataWithJSONObject:dataDict options:0 error:nil];
     return data;

@@ -366,9 +366,8 @@ public final class TelegramMediaFile: Media, Equatable {
     public var isAnimatedSticker: Bool {
         if let _ = self.fileName, self.mimeType == "application/x-tgsticker" {
             return true
-        } else {
-            return false
         }
+        return false
     }
     
     public var isMusic: Bool {

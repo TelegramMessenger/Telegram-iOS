@@ -37,7 +37,7 @@ extern int FFMpegCodecIdMPEG4;
 - (void)setIOContext:(FFMpegAVIOContext *)ioContext;
 - (bool)openInput;
 - (bool)findStreamInfo;
-- (void)seekFrameForStreamIndex:(int32_t)streamIndex pts:(int64_t)pts;
+- (void)seekFrameForStreamIndex:(int32_t)streamIndex pts:(int64_t)pts positionOnKeyframe:(bool)positionOnKeyframe;
 - (bool)readFrameIntoPacket:(FFMpegPacket *)packet;
 - (NSArray<NSNumber *> *)streamIndicesForType:(FFMpegAVFormatStreamType)type;
 - (bool)isAttachedPicAtStreamIndex:(int32_t)streamIndex;

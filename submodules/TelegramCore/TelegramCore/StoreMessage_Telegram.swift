@@ -68,6 +68,9 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             if isAnimated {
                 refinedTag = nil
             }
+            if file.isAnimatedSticker {
+                refinedTag = nil
+            }
             if let refinedTag = refinedTag {
                 tags.insert(refinedTag)
             }

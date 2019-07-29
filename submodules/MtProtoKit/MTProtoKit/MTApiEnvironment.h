@@ -1,6 +1,35 @@
-
-
 #import <Foundation/Foundation.h>
+
+@interface MTProxySecret : NSObject <NSCoding>
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull secret;
+
++ (MTProxySecret * _Nullable)parse:(NSString * _Nonnull)string;
++ (MTProxySecret * _Nullable)parseData:(NSData * _Nonnull)data;
+- (NSData * _Nonnull)serialize;
+- (NSString * _Nonnull)serializeToString;
+
+@end
+
+@interface MTProxySecretType0 : MTProxySecret
+
+- (instancetype _Nullable)initWithSecret:(NSData * _Nonnull)secret;
+
+@end
+
+@interface MTProxySecretType1 : MTProxySecret
+
+- (instancetype _Nullable)initWithSecret:(NSData * _Nonnull)secret;
+
+@end
+
+@interface MTProxySecretType2 : MTProxySecret
+
+@property (nonatomic, strong, readonly) NSString * _Nonnull domain;
+
+- (instancetype _Nullable)initWithSecret:(NSData * _Nonnull)secret domain:(NSString * _Nonnull)domain;
+
+@end
 
 @interface MTSocksProxySettings : NSObject
 
@@ -11,8 +40,6 @@
 @property (nonatomic, strong, readonly) NSData *secret;
 
 - (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port username:(NSString *)username password:(NSString *)password secret:(NSData *)secret;
-
-+ (bool)secretSupportsExtendedPadding:(NSData *)data;
 
 @end
 

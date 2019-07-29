@@ -11,7 +11,7 @@ func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (V
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let _ = legacyWallpaperPicker(context: context, presentationData: presentationData).start(next: { generator in
         let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: presentationData.theme)
-        legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBar.style.style
+        legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
         
         let controller = generator(legacyController.context)
         legacyController.bind(controller: controller)

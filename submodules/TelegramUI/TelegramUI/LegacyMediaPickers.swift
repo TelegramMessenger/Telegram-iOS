@@ -14,14 +14,22 @@ func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?) {
+func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void) {
+    let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
+    
     controller.captionsEnabled = captionsEnabled
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
-    if (peer is TelegramUser) && peer.id != context.account.peerId {
-        controller.hasTimer = true
+    if peer.id != context.account.peerId {
+        if peer is TelegramUser {
+            controller.hasTimer = true
+        }
+        controller.hasSilentPosting = !isSecretChat
     }
     controller.dismissalBlock = {
+    }
+    controller.selectionLimitExceeded = {
+        presentSelectionLimitExceeded()
     }
     controller.localMediaCacheEnabled = false
     controller.shouldStoreAssets = storeCreatedAssets
@@ -31,7 +39,7 @@ func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: 
     controller.editingContext.setInitialCaption(initialCaption, entities: [])
 }
 
-func legacyAssetPicker(context: AccountContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
+func legacyAssetPicker(context: AccountContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool, selectionLimit: Int) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
     let isSecretChat = (peer?.id.namespace ?? 0) == Namespaces.Peer.SecretChat
     
     return Signal { subscriber in
@@ -50,7 +58,7 @@ func legacyAssetPicker(context: AccountContext, presentationData: PresentationDa
                     } else {
                         Queue.mainQueue().async {
                             subscriber.putNext({ context in
-                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, inhibitSelection: editingMedia)
+                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, inhibitSelection: editingMedia, selectionLimit: Int32(selectionLimit))
                                 return controller!
                             })
                             subscriber.putCompletion()
@@ -59,7 +67,7 @@ func legacyAssetPicker(context: AccountContext, presentationData: PresentationDa
                 })
             } else {
                 subscriber.putNext({ context in
-                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping)
+                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, selectionLimit: Int32(selectionLimit))
                     return controller!
                 })
                 subscriber.putCompletion()

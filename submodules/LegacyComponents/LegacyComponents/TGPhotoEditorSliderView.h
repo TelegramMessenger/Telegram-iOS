@@ -21,6 +21,8 @@
 
 @property (nonatomic, readonly) bool knobStartedDragging;
 
+@property (nonatomic) bool limitValueChangedToLatestState;
+
 @property (nonatomic, assign) CGFloat knobPadding;
 @property (nonatomic, assign) CGFloat lineSize;
 @property (nonatomic, strong) UIColor *backColor;

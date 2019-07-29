@@ -60,7 +60,7 @@ const CGFloat TGClipboardPreviewEdgeInset = 8.0f;
         [_collectionView registerClass:[TGClipboardPreviewCell class] forCellWithReuseIdentifier:TGClipboardPreviewCellIdentifier];
         [self addSubview:_collectionView];
         
-        _selectionContext = [[TGMediaSelectionContext alloc] init];
+        _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:false selectionLimit:30];
         
         for (UIImage *image in _images)
         {
@@ -255,9 +255,6 @@ const CGFloat TGClipboardPreviewEdgeInset = 8.0f;
         if (strongSelf != nil && strongSelf.sendPressed != nil)
             strongSelf.sendPressed(item.image);
     };
-    
-    //mixin.editorOpened = self.editorOpened;
-    //mixin.editorClosed = self.editorClosed;
 }
 
 - (TGClipboardGalleryMixin *)galleryMixinForIndexPath:(NSIndexPath *)indexPath

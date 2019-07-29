@@ -1173,9 +1173,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         TGMediaSelectionContext *selectionContext = _selectionContext;
         if (selectionContext == nil)
         {
-            selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:self.allowGrouping];
+            selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:self.allowGrouping selectionLimit:30];
             if (self.allowGrouping)
-                selectionContext.grouping = ![[[NSUserDefaults standardUserDefaults] objectForKey:@"TG_mediaGroupingDisabled_v0"] boolValue];
+                selectionContext.grouping = true;
             _selectionContext = selectionContext;
         }
         
@@ -1620,6 +1620,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             controller.shouldStoreAssets = self.shouldStoreCapturedAssets;
             controller.suggestionContext = self.suggestionContext;
             controller.hasTimer = self.hasTimer;
+            controller.hasSilentPosting = self.hasSilentPosting;
             
             __weak TGCameraPhotoPreviewController *weakController = controller;
             controller.beginTransitionIn = ^CGRect

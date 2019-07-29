@@ -27,7 +27,7 @@ final class LegacyEmptyController: TGViewController {
                 return
             }
             if let presentationData = presentationData {
-                legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBar.style.style
+                legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
             }
             presentedController.navigation_setDismiss({ [weak legacyController] in
                 legacyController?.dismiss()

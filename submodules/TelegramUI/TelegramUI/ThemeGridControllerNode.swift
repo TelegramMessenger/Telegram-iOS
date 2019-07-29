@@ -633,7 +633,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 
                 let selectionPanelSeparatorNode = ASDisplayNode()
                 selectionPanelSeparatorNode.isLayerBacked = true
-                selectionPanelSeparatorNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelStrokeColor
+                selectionPanelSeparatorNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelSeparatorColor
                 self.addSubnode(selectionPanelSeparatorNode)
                 self.selectionPanelSeparatorNode = selectionPanelSeparatorNode
                 
@@ -718,7 +718,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
             let targetProgress: CGFloat
             
             let duration: Double = 0.3
-            let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: .easeInOut)
+            let curve = ContainedViewLayoutTransitionCurve.slide
+            let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: curve)
+            let timingFunction = curve.timingFunction
+            let mediaTimingFunction = curve.mediaTimingFunction
             
             if searchNode.expansionProgress < 0.6 {
                 scrollToItem = GridNodeScrollToItem(index: 0, position: .top(navigationBarSearchContentHeight), transition: transition, directionHint: .up, adjustForSection: true, adjustForTopInset: true)
@@ -735,11 +738,11 @@ final class ThemeGridControllerNode: ASDisplayNode {
             
             let offset = (self.gridNode.scrollView.contentOffset.y + self.gridNode.scrollView.contentInset.top) - previousOffset
             
-            self.backgroundNode.layer.animatePosition(from: self.backgroundNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.backgroundNode.layer.position, duration: duration)
-            self.separatorNode.layer.animatePosition(from: self.separatorNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.separatorNode.layer.position, duration: duration)
-            self.colorItemNode.layer.animatePosition(from: self.colorItemNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.colorItemNode.layer.position, duration: duration)
-            self.galleryItemNode.layer.animatePosition(from: self.galleryItemNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.galleryItemNode.layer.position, duration: duration)
-            self.descriptionItemNode.layer.animatePosition(from: self.descriptionItemNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.descriptionItemNode.layer.position, duration: duration)
+            self.backgroundNode.layer.animatePosition(from: self.backgroundNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.backgroundNode.layer.position, duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction)
+            self.separatorNode.layer.animatePosition(from: self.separatorNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.separatorNode.layer.position, duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction)
+            self.colorItemNode.layer.animatePosition(from: self.colorItemNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.colorItemNode.layer.position, duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction)
+            self.galleryItemNode.layer.animatePosition(from: self.galleryItemNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.galleryItemNode.layer.position, duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction)
+            self.descriptionItemNode.layer.animatePosition(from: self.descriptionItemNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.descriptionItemNode.layer.position, duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction)
             
             return true
         }

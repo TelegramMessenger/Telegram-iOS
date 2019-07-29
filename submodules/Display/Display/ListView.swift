@@ -149,6 +149,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var rotated = false
     public final var experimentalSnapScrollToItem = false
     
+    public final var scrollEnabled: Bool = true {
+        didSet {
+            self.scroller.isScrollEnabled = self.scrollEnabled
+        }
+    }
+    
     private final var invisibleInset: CGFloat = 500.0
     public var preloadPages: Bool = true {
         didSet {
@@ -2789,7 +2795,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 reverseAnimation = reverseBasicAnimation
                             } else {
                                 let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
-                                basicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: 0.33, 0.52, 0.25, 0.99)
+                                basicAnimation.timingFunction = ContainedViewLayoutTransitionCurve.slide.mediaTimingFunction
                                 basicAnimation.duration = (duration ?? 0.3) * UIView.animationDurationFactor()
                                 basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -offset, 0.0))
                                 basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
@@ -2797,7 +2803,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 basicAnimation.isAdditive = true
                                 
                                 let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
-                                reverseBasicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: 0.33, 0.52, 0.25, 0.99)
+                                reverseBasicAnimation.timingFunction = ContainedViewLayoutTransitionCurve.slide.mediaTimingFunction
                                 reverseBasicAnimation.duration = (duration ?? 0.3) * UIView.animationDurationFactor()
                                 reverseBasicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))
                                 reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
@@ -2966,7 +2972,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(controlPoints: p1, p2, p3, p4))
                             case .easeInOut:
                                 if transition.1 {
-                                    headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(controlPoints: 0.33, 0.52, 0.25, 0.99))
+                                    headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: ContainedViewLayoutTransitionCurve.slide.mediaTimingFunction)
                                 } else {
                                     headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut))
                                 }
@@ -3819,6 +3825,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         if let highlightedItemIndex = self.highlightedItemIndex {
+            for itemNode in self.itemNodes {
+                if itemNode.index == highlightedItemIndex {
+                    itemNode.selected()
+                    break
+                }
+            }
             self.items[highlightedItemIndex].selected(listView: self)
         }
         self.selectionTouchLocation = nil

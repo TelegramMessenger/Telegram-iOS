@@ -30,6 +30,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let defaultAction: ShareControllerAction?
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
+    private let presentError: (String?, String) -> Void
     
     private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
@@ -70,11 +71,12 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private var hapticFeedback: HapticFeedback?
     
-    init(sharedContext: SharedAccountContext, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
+    init(sharedContext: SharedAccountContext, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
+        self.presentError = presentError
         
         self.defaultAction = defaultAction
         self.requestLayout = requestLayout
@@ -500,6 +502,15 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 defaultAction.action()
             }
         } else {
+            if !self.inputFieldNode.text.isEmpty {
+                for peer in self.controllerInteraction!.selectedPeers {
+                    if let channel = peer.peer as? TelegramChannel, channel.isRestrictedBySlowmode {
+                        self.presentError(channel.title, self.presentationData.strings.Share_MultipleMessagesDisabled)
+                        return
+                    }
+                }
+            }
+            
             self.inputFieldNode.deactivateInput()
             let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
             transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
@@ -600,6 +611,11 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func updatePeers(account: Account, switchableAccounts: [AccountWithInfo], peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, defaultAction: ShareControllerAction?) {
+        if let peersContentNode = self.peersContentNode, peersContentNode.accountPeer.id == accountPeer.id {
+            peersContentNode.peersValue.set(.single(peers))
+            return
+        }
+        
         let animated = self.peersContentNode == nil
         let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, account: account, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()

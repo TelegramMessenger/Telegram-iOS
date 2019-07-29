@@ -209,7 +209,7 @@ func fetchICloudFileResource(resource: ICloudFileResource) -> Signal<MediaResour
             if resource.thumbnail {
                 let tempFile = TempBox.shared.tempFile(fileName: "thumb.jpg")
                 var data = Data()
-                if let image = generatePdfPreviewImage(url: url, size: CGSize(width: 320.0, height: 320.0)), let jpegData = UIImageJPEGRepresentation(image, 0.5) {
+                if let image = generatePdfPreviewImage(url: url, size: CGSize(width: 256, height: 256.0)), let jpegData = UIImageJPEGRepresentation(image, 0.5) {
                     data = jpegData
                 }
                 if let _ = try? data.write(to: URL(fileURLWithPath: tempFile.path)) {

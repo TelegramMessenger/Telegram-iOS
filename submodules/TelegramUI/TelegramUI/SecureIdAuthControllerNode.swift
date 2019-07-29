@@ -37,7 +37,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         self.requestLayout = requestLayout
         self.interaction = interaction
         
-        self.activityIndicator = ActivityIndicator(type: .custom(presentationData.theme.list.freeMonoIcon, 22.0, 2.0, false))
+        self.activityIndicator = ActivityIndicator(type: .custom(presentationData.theme.list.freeMonoIconColor, 22.0, 2.0, false))
         self.activityIndicator.isHidden = true
         
         self.scrollNode = ASScrollNode()

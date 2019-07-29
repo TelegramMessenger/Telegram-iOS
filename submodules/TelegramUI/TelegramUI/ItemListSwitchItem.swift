@@ -220,7 +220,7 @@ class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {
                     currentDisabledOverlayNode = ASDisplayNode()
-                    currentDisabledOverlayNode?.backgroundColor = itemBackgroundColor.withAlphaComponent(0.5)
+                    currentDisabledOverlayNode?.backgroundColor = itemBackgroundColor.withAlphaComponent(0.6)
                 }
             } else {
                 currentDisabledOverlayNode = nil

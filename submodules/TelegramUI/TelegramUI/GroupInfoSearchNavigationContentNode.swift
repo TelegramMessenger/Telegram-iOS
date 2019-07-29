@@ -70,7 +70,7 @@ final class GroupInfoSearchNavigationContentNode: NavigationBarContentNode, Item
             default:
                 placeholderText = self.strings.Conversation_SearchByName_Placeholder
         }
-        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: self.theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
+        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: self.theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
     }
     
     override var nominalHeight: CGFloat {
