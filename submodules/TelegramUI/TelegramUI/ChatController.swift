@@ -3644,7 +3644,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             strongSelf.window?.presentInGlobalOverlay(slowmodeTooltipController)
             }, displaySendMessageOptions: { [weak self] in
                 if let strongSelf = self, let sendButtonFrame = strongSelf.chatDisplayNode.sendButtonFrame(), let textInputNode = strongSelf.chatDisplayNode.textInputNode() {
-                    let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, sendButtonFrame: sendButtonFrame, textInputNode: textInputNode)
+                    let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, sendButtonFrame: sendButtonFrame, textInputNode: textInputNode)
                     strongSelf.presentInGlobalOverlay(controller, with: nil)
                 }
             }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))

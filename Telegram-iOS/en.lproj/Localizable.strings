@@ -4499,6 +4499,6 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.ThemeCarouselTintedNight" = "Tinted Night";
 "Appearance.ThemeCarouselNewNight" = "Night";
 
-"Channel.AdminLog.MessageRank" = "changed custom title for %1$@:\n%2$@";
-"Channel.AdminLog.MessageRankUsername" = "changed custom title for %1$@ (%2$@):\n%2$@";
+"Channel.AdminLog.MessageRankName" = "changed custom title for %1$@:\n%2$@";
+"Channel.AdminLog.MessageRankUsername" = "changed custom title for %1$@ (%2$@):\n%3$@";
 "Channel.AdminLog.MessageRank" = "changed custom title:\n%1$@";

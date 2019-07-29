@@ -12,6 +12,7 @@ final class ChatSendMessageActionSheetController: ViewController {
     
     private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction?
+    private let interfaceState: ChatPresentationInterfaceState
     private let sendButtonFrame: CGRect
     private let textInputNode: EditableTextNode
     
@@ -21,9 +22,10 @@ final class ChatSendMessageActionSheetController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
 
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, sendButtonFrame: CGRect, textInputNode: EditableTextNode) {
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, sendButtonFrame: CGRect, textInputNode: EditableTextNode) {
         self.context = context
         self.controllerInteraction = controllerInteraction
+        self.interfaceState = interfaceState
         self.sendButtonFrame = sendButtonFrame
         self.textInputNode = textInputNode
         
@@ -49,7 +51,12 @@ final class ChatSendMessageActionSheetController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, send: { [weak self] in
+        var accessoryPanelNode: AccessoryPanelNode?
+        if let panel = accessoryPanelForChatPresentationIntefaceState(self.interfaceState, context: self.context, currentPanel: nil, interfaceInteraction: nil), panel is ReplyAccessoryPanelNode || panel is ForwardAccessoryPanelNode {
+            accessoryPanelNode = panel
+        }
+        
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, accessoryPanelNode: accessoryPanelNode, send: { [weak self] in
             self?.controllerInteraction?.sendCurrentMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in

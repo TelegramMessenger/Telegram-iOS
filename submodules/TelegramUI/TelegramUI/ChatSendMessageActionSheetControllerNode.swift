@@ -86,6 +86,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     private let sendButtonFrame: CGRect
     private let textFieldFrame: CGRect
     private let textInputNode: EditableTextNode
+    private let accessoryPanelNode: AccessoryPanelNode?
     
     private let send: (() -> Void)?
     private let cancel: (() -> Void)?
@@ -108,11 +109,12 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private var validLayout: ContainerViewLayout?
     
-    init(context: AccountContext, sendButtonFrame: CGRect, textInputNode: EditableTextNode, send: (() -> Void)?, sendSilently: (() -> Void)?, cancel: (() -> Void)?) {
+    init(context: AccountContext, sendButtonFrame: CGRect, textInputNode: EditableTextNode, accessoryPanelNode: AccessoryPanelNode?, send: (() -> Void)?, sendSilently: (() -> Void)?, cancel: (() -> Void)?) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.sendButtonFrame = sendButtonFrame
         self.textFieldFrame = textInputNode.convert(textInputNode.bounds, to: nil)
         self.textInputNode = textInputNode
+        self.accessoryPanelNode = accessoryPanelNode
         self.send = send
         self.cancel = cancel
         
@@ -193,7 +195,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.addSubnode(self.dimNode)
         
         self.addSubnode(self.contentContainerNode)
-        
         self.addSubnode(self.scrollNode)
         
         self.addSubnode(self.sendButtonNode)
@@ -202,6 +203,10 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.messageClipNode.addSubnode(self.fromMessageTextNode)
         self.messageClipNode.addSubnode(self.toMessageTextNode)
 
+        if let accessoryPanelNode = self.accessoryPanelNode {
+             self.messageClipNode.addSubnode(accessoryPanelNode)
+        }
+        
         self.contentNodes.forEach(self.contentContainerNode.addSubnode)
     }
     
@@ -258,6 +263,8 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     }
     
     func animateIn() {
+        self.textInputNode.textView.setContentOffset(self.textInputNode.textView.contentOffset, animated: false)
+        
         UIView.animate(withDuration: 0.4, animations: {
             if #available(iOS 9.0, *) {
                 if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
@@ -334,6 +341,8 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     func animateOut(cancel: Bool, completion: @escaping () -> Void) {
         self.isUserInteractionEnabled = false
+        
+        self.scrollNode.view.setContentOffset(self.scrollNode.view.contentOffset, animated: false)
         
         var completedEffect = false
         var completedButton = false
