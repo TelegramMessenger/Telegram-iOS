@@ -900,20 +900,7 @@ public final class PendingMessageManager {
                 var replyMessageId: Int32?
                 
                 var flags: Int32 = 0
-                
-                if case .forward = content.content {
-                    
-                } else {
-                    flags |= (1 << 7)
-                    
-                    if let _ = replyMessageId {
-                        flags |= Int32(1 << 0)
-                    }
-                    if let _ = messageEntities {
-                        flags |= Int32(1 << 3)
-                    }
-                }
-                
+        
                 for attribute in message.attributes {
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
                         replyMessageId = replyAttribute.messageId.id
@@ -931,6 +918,18 @@ public final class PendingMessageManager {
                         if attribute.flags.contains(.muted) {
                             flags |= Int32(1 << 5)
                         }
+                    }
+                }
+                
+                if case .forward = content.content {
+                } else {
+                    flags |= (1 << 7)
+                    
+                    if let _ = replyMessageId {
+                        flags |= Int32(1 << 0)
+                    }
+                    if let _ = messageEntities {
+                        flags |= Int32(1 << 3)
                     }
                 }
                 
