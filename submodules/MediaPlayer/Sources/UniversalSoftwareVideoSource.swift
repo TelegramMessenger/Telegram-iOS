@@ -120,7 +120,7 @@ private final class UniversalSoftwareVideoSourceImpl {
         
         self.cancelRead = cancelInitialization
         
-        let ioBufferSize = 64 * 1024
+        let ioBufferSize = 1 * 1024
         
         guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, seek: seekCallback) else {
             return nil

@@ -39,7 +39,7 @@ int FFMpegCodecIdMPEG4 = AV_CODEC_ID_MPEG4;
 - (bool)openInput {
     AVDictionary *options = nil;
     av_dict_set(&options, "usetoc", "1", 0);
-    int result = avformat_open_input(&_impl, "http://localhost/file", nil, &options);
+    int result = avformat_open_input(&_impl, "file", nil, &options);
     av_dict_free(&options);
     if (_impl != nil) {
         _impl->flags |= AVFMT_FLAG_FAST_SEEK;
