@@ -732,6 +732,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                     self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize)
                 }
+                
+                self.actionButtons.sendButtonLongPressEnabled = peer.id != interfaceState.accountPeerId && peer.id.namespace != Namespaces.Peer.SecretChat
             }
             
             let sendButtonHasApplyIcon = interfaceState.interfaceState.editMessage != nil

@@ -16,8 +16,9 @@ private final class ChannelAdminControllerArguments {
     let updateFocusedOnRank: (Bool) -> Void
     let dismissAdmin: () -> Void
     let dismissInput: () -> Void
+    let animateError: () -> Void
     
-    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void) {
+    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void, animateError: @escaping () -> Void) {
         self.account = account
         self.toggleRight = toggleRight
         self.transferOwnership = transferOwnership
@@ -25,6 +26,7 @@ private final class ChannelAdminControllerArguments {
         self.updateFocusedOnRank = updateFocusedOnRank
         self.dismissAdmin = dismissAdmin
         self.dismissInput = dismissInput
+        self.animateError = animateError
     }
 }
 
@@ -296,37 +298,16 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case .rankTitle:
-                switch rhs {
-                    case .info, .rankTitle:
-                        return false
-                    default:
-                        return true
-                }
-            case .rank:
-                switch rhs {
-                    case .info, .rankTitle, .rank:
-                        return false
-                    default:
-                        return true
-                }
-            case .rankInfo:
-                switch rhs {
-                    case .info, .rankTitle, .rank, .rankInfo:
-                        return false
-                    default:
-                        return true
-                }
             case .rightsTitle:
                 switch rhs {
-                    case .info, .rankTitle, .rank, .rankInfo, .rightsTitle:
+                    case .info, .rightsTitle:
                         return false
                     default:
                         return true
                 }
             case let .rightItem(_, lhsIndex, _, _, _, _, _):
                 switch rhs {
-                    case .info, .rankTitle, .rank, .rankInfo, .rightsTitle:
+                    case .info, .rightsTitle:
                         return false
                     case let .rightItem(_, rhsIndex, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -335,14 +316,35 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 }
             case .addAdminsInfo:
                 switch rhs {
-                    case .info, .rankTitle, .rank, .rankInfo, .rightsTitle, .rightItem, .addAdminsInfo:
+                    case .info, .rightsTitle, .rightItem, .addAdminsInfo:
                         return false
                     default:
                         return true
                 }
             case .transfer:
                 switch rhs {
-                    case .info, .rankTitle, .rank, .rankInfo, .rightsTitle, .rightItem, .addAdminsInfo, .transfer:
+                    case .info, .rightsTitle, .rightItem, .addAdminsInfo, .transfer:
+                        return false
+                    default:
+                        return true
+                }
+            case .rankTitle:
+                switch rhs {
+                    case .info, .rightsTitle, .rightItem, .addAdminsInfo, .transfer, .rankTitle:
+                        return false
+                    default:
+                        return true
+                }
+            case .rank:
+                switch rhs {
+                    case .info, .rightsTitle, .rightItem, .addAdminsInfo, .transfer, .rankTitle, .rank:
+                        return false
+                    default:
+                        return true
+                }
+            case .rankInfo:
+                switch rhs {
+                    case .info, .rightsTitle, .rightItem, .addAdminsInfo, .transfer, .rankTitle, .rank, .rankInfo:
                         return false
                     default:
                         return true
@@ -367,6 +369,12 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
             case let .rank(theme, placeholder, text, enabled):
                 return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: true), spacing: 0.0, clearButton: enabled, enabled: enabled, tag: ChannelAdminEntryTag.rank, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateRank(text, updatedText)
+                }, shouldUpdateText: { text in
+                    if text.containsEmoji {
+                        arguments.animateError()
+                        return false
+                    }
+                    return true
                 }, updatedFocus: { focus in
                     arguments.updateFocusedOnRank(focus)
                 }, action: {
@@ -540,57 +548,42 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             isCreator = true
         }
         
-        if case .group = channel.info {
-            let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
-            
-            let currentRank: String?
-            if let updatedRank = state.updatedRank {
-                currentRank = updatedRank
-            } else if let initialParticipant = initialParticipant {
-                currentRank = initialParticipant.rank
-            } else {
-                currentRank = nil
-            }
-            
-            let enabled = !state.updating && canEdit
-            entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), enabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
-            entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", enabled))
-            entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).0))
+        var canTransfer = false
+        var canDismiss = false
+        
+        let isGroup: Bool
+        let maskRightsFlags: TelegramChatAdminRightsFlags
+        let rightsOrder: [TelegramChatAdminRightsFlags]
+        
+        switch channel.info {
+            case .broadcast:
+                isGroup = false
+                maskRightsFlags = .broadcastSpecific
+                rightsOrder = [
+                    .canChangeInfo,
+                    .canPostMessages,
+                    .canEditMessages,
+                    .canDeleteMessages,
+                    .canInviteUsers,
+                    .canAddAdmins
+                ]
+            case .group:
+                isGroup = true
+                maskRightsFlags = .groupSpecific
+                rightsOrder = [
+                    .canChangeInfo,
+                    .canDeleteMessages,
+                    .canBanUsers,
+                    .canInviteUsers,
+                    .canPinMessages,
+                    .canAddAdmins
+                ]
         }
         
         if isCreator {
         } else {
             entries.append(.rightsTitle(presentationData.theme, presentationData.strings.Channel_EditAdmin_PermissionsHeader))
         
-            let isGroup: Bool
-            let maskRightsFlags: TelegramChatAdminRightsFlags
-            let rightsOrder: [TelegramChatAdminRightsFlags]
-            
-            switch channel.info {
-                case .broadcast:
-                    isGroup = false
-                    maskRightsFlags = .broadcastSpecific
-                    rightsOrder = [
-                        .canChangeInfo,
-                        .canPostMessages,
-                        .canEditMessages,
-                        .canDeleteMessages,
-                        .canInviteUsers,
-                        .canAddAdmins
-                    ]
-                case .group:
-                    isGroup = true
-                    maskRightsFlags = .groupSpecific
-                    rightsOrder = [
-                        .canChangeInfo,
-                        .canDeleteMessages,
-                        .canBanUsers,
-                        .canInviteUsers,
-                        .canPinMessages,
-                        .canAddAdmins
-                    ]
-            }
-            
             if canEditAdminRights(accountPeerId: accountPeerId, channelView: channelView, initialParticipant: initialParticipant) {
                 let accountUserRightsFlags: TelegramChatAdminRightsFlags
                 if channel.flags.contains(.isCreator) {
@@ -623,11 +616,10 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 }
                 
                 if let admin = admin as? TelegramUser, admin.botInfo == nil && !admin.isDeleted && channel.flags.contains(.isCreator) && areAllAdminRightsEnabled(currentRightsFlags, group: isGroup) {
-                    entries.append(.transfer(presentationData.theme, isGroup ? presentationData.strings.Group_EditAdmin_TransferOwnership : presentationData.strings.Channel_EditAdmin_TransferOwnership))
+                    canTransfer = true
                 }
             
                 if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty && admin.id != accountPeerId {
-                    var canDismiss = false
                     if channel.flags.contains(.isCreator) {
                         canDismiss = true
                     } else {
@@ -642,9 +634,6 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                                 }
                         }
                     }
-                    if canDismiss {
-                        entries.append(.dismiss(presentationData.theme, presentationData.strings.Channel_Moderator_AccessLevelRevoke))
-                    }
                 }
             } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminInfo, _, _) = initialParticipant, let adminInfo = maybeAdminInfo {
                 var index = 0
@@ -653,6 +642,32 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     index += 1
                 }
             }
+        }
+        
+        if canTransfer {
+            entries.append(.transfer(presentationData.theme, isGroup ? presentationData.strings.Group_EditAdmin_TransferOwnership : presentationData.strings.Channel_EditAdmin_TransferOwnership))
+        }
+        
+        if case .group = channel.info {
+            let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
+            
+            let currentRank: String?
+            if let updatedRank = state.updatedRank {
+                currentRank = updatedRank
+            } else if let initialParticipant = initialParticipant {
+                currentRank = initialParticipant.rank
+            } else {
+                currentRank = nil
+            }
+            
+            let rankEnabled = !state.updating && canEdit
+            entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
+            entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
+            entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).0))
+        }
+        
+        if canDismiss {
+            entries.append(.dismiss(presentationData.theme, presentationData.strings.Channel_Moderator_AccessLevelRevoke))
         }
     } else if let group = channelView.peers[channelView.peerId] as? TelegramGroup, let admin = adminView.peers[adminView.peerId] {
         entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, admin, adminView.peerPresences[admin.id] as? TelegramUserPresence))
@@ -669,11 +684,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             currentRank = nil
         }
         
-        let enabled = !state.updating && canEdit
-        entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), enabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
-        entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", enabled))
+        let rankEnabled = !state.updating && canEdit
         
         if isCreator {
+            entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
+            entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
         } else {
             entries.append(.rightsTitle(presentationData.theme, presentationData.strings.Channel_EditAdmin_PermissionsHeader))
             
@@ -714,6 +729,9 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             if let admin = admin as? TelegramUser, case .creator = group.role, admin.botInfo == nil && !admin.isDeleted && areAllAdminRightsEnabled(currentRightsFlags, group: true) {
                 entries.append(.transfer(presentationData.theme, presentationData.strings.Group_EditAdmin_TransferOwnership))
             }
+            
+            entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
+            entries.append(.rank(presentationData.theme, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
             
             if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, !adminInfo.rights.flags.isEmpty && admin.id != accountPeerId {
                 entries.append(.dismiss(presentationData.theme, presentationData.strings.Channel_Moderator_AccessLevelRevoke))
@@ -825,6 +843,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         presentControllerImpl?(actionSheet, nil)
     }, dismissInput: {
         dismissInputImpl?()
+    }, animateError: {
+        errorImpl?()
     })
     
     let combinedView = context.account.postbox.combinedView(keys: [.peer(peerId: peerId, components: .all), .peer(peerId: adminId, components: .all)])

@@ -67,7 +67,7 @@
         
         [TGPassportAttachMenu _displayCameraWithView:cameraView menuController:strongController parentController:strongParentController context:context intent:intent uploadAction:uploadAction];
     };
-    carouselItem.sendPressed = ^(TGMediaAsset *currentItem, __unused bool asFiles)
+    carouselItem.sendPressed = ^(TGMediaAsset *currentItem, __unused bool asFiles, __unused bool silentPosting)
     {
         __strong TGMenuSheetController *strongController = weakController;
         if (strongController == nil)

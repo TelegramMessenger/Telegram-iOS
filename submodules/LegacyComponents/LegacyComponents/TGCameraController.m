@@ -1620,6 +1620,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             controller.shouldStoreAssets = self.shouldStoreCapturedAssets;
             controller.suggestionContext = self.suggestionContext;
             controller.hasTimer = self.hasTimer;
+            controller.hasSilentPosting = self.hasSilentPosting;
             
             __weak TGCameraPhotoPreviewController *weakController = controller;
             controller.beginTransitionIn = ^CGRect

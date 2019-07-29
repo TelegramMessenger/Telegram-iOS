@@ -1183,7 +1183,7 @@ public class Account {
         
         self.networkTypeValue.set(currentNetworkType())
         
-        let serviceTasksMasterBecomeMaster = shouldBeServiceTaskMaster.get()
+        let serviceTasksMasterBecomeMaster = self.shouldBeServiceTaskMaster.get()
         |> distinctUntilChanged
         |> deliverOn(self.serviceQueue)
         
@@ -1193,7 +1193,7 @@ public class Account {
             }
         }))
         
-        let shouldBeMaster = combineLatest(shouldBeServiceTaskMaster.get(), postbox.isMasterClient())
+        let shouldBeMaster = combineLatest(self.shouldBeServiceTaskMaster.get(), postbox.isMasterClient())
         |> map { [weak self] shouldBeMaster, isMaster -> Bool in
             if shouldBeMaster == .always && !isMaster {
                 self?.postbox.becomeMasterClient()

@@ -288,6 +288,15 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
             entries.append(.settingInfo(theme, strings.AutoNightTheme_AutomaticHelp("\(Int(threshold * 100.0))").0.replacingOccurrences(of: "%%", with: "%")))
     }
     
+    switch switchSetting.trigger {
+        case .none:
+            break
+        case .timeBased, .brightness:
+            entries.append(.themeHeader(theme, strings.AutoNightTheme_PreferredTheme))
+            entries.append(.themeNightBlue(theme, strings.Appearance_ThemeCarouselTintedNight, switchSetting.theme == .nightAccent))
+            entries.append(.themeNight(theme, strings.Appearance_ThemeCarouselNewNight, switchSetting.theme == .night))
+    }
+    
     return entries
 }
 

@@ -53,6 +53,16 @@ func matchingCloudContacts(postbox: Postbox, contacts: [MatchingDeviceContact]) 
     }
 }
 
+func matchingCloudContact(postbox: Postbox, peerId: PeerId) -> Signal<TelegramUser?, NoError> {
+    return postbox.transaction { transaction -> TelegramUser? in
+        if let user = transaction.getPeer(peerId) as? TelegramUser {
+            return user
+        } else {
+            return nil
+        }
+    }
+}
+
 func personWithUser(stableId: String, user: TelegramUser) -> INPerson {
     var nameComponents = PersonNameComponents()
     nameComponents.givenName = user.firstName

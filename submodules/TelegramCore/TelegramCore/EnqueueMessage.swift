@@ -16,7 +16,7 @@ public enum EnqueueMessageGrouping {
 
 public enum EnqueueMessage {
     case message(text: String, attributes: [MessageAttribute], mediaReference: AnyMediaReference?, replyToMessageId: MessageId?, localGroupingKey: Int64?)
-    case forward(source: MessageId, grouping: EnqueueMessageGrouping)
+    case forward(source: MessageId, grouping: EnqueueMessageGrouping, attributes: [MessageAttribute])
     
     public func withUpdatedReplyToMessageId(_ replyToMessageId: MessageId?) -> EnqueueMessage {
         switch self {
@@ -31,8 +31,8 @@ public enum EnqueueMessage {
         switch self {
             case let .message(text, attributes, mediaReference, replyToMessageId, localGroupingKey):
                 return .message(text: text, attributes: f(attributes), mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey)
-            case .forward:
-                return self
+            case let .forward(source, grouping, attributes):
+                return .forward(source: source, grouping: grouping, attributes: f(attributes))
         }
     }
 }
@@ -96,6 +96,8 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
             case _ as TextEntitiesMessageAttribute:
                 return true
             case _ as InlineBotMessageAttribute:
+                return true
+            case _ as NotificationInfoMessageAttribute:
                 return true
             default:
                 return false
@@ -246,10 +248,10 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         }
                     }
                     if canBeForwarded {
-                        updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none)))
+                        updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none, attributes: [])))
                     }
                 }
-            case let .forward(sourceId, _):
+            case let .forward(sourceId, _, _):
                 if let sourceMessage = forwardedMessageToBeReuploaded(transaction: transaction, id: sourceId) {
                     var mediaReference: AnyMediaReference?
                     if sourceMessage.id.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -383,7 +385,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                     
                     storeMessages.append(StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
-                case let .forward(source, grouping):
+                case let .forward(source, grouping, requestedAttributes):
                     let sourceMessage = transaction.getMessage(source)
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         if let peer = peer as? TelegramSecretChat {
@@ -407,6 +409,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 attributes.append(SourceReferenceMessageAttribute(messageId: sourceMessage.id))
                             }
                             
+                            attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(requestedAttributes))
                             attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes))
                             
                             var sourceReplyMarkup: ReplyMarkupMessageAttribute? = nil

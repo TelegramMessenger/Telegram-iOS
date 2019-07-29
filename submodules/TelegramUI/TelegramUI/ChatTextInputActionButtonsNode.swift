@@ -14,6 +14,13 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     
     var sendButtonLongPressed: (() -> Void)?
     
+    private var gestureRecognizer: UILongPressGestureRecognizer?
+    var sendButtonLongPressEnabled = false {
+        didSet {
+            self.gestureRecognizer?.isEnabled = self.sendButtonLongPressEnabled
+        }
+    }
+    
     init(theme: PresentationTheme, presentController: @escaping (ViewController) -> Void) {
         self.micButton = ChatTextInputMediaRecordingButton(theme: theme, presentController: presentController)
         self.sendButton = HighlightTrackingButton()
@@ -29,10 +36,20 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         
         self.sendButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if highlighted {
-                    strongSelf.sendButton.layer.animateScale(from: 1.0, to: 0.75, duration: 0.7, removeOnCompletion: false)
-                } else if let presentationLayer = strongSelf.sendButton.layer.presentation() {
-                    strongSelf.sendButton.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
+                if strongSelf.sendButtonHasApplyIcon || !strongSelf.sendButtonLongPressEnabled {
+                    if highlighted {
+                        strongSelf.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.alpha = 0.4
+                    } else {
+                        strongSelf.alpha = 1.0
+                        strongSelf.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    }
+                } else {
+                    if highlighted {
+                        strongSelf.sendButton.layer.animateScale(from: 1.0, to: 0.75, duration: 0.4, removeOnCompletion: false)
+                    } else if let presentationLayer = strongSelf.sendButton.layer.presentation() {
+                        strongSelf.sendButton.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
+                    }
                 }
             }
         }
@@ -42,17 +59,17 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         self.addSubnode(self.expandMediaInputButton)
     }
     
-    
     override func didLoad() {
         super.didLoad()
         
         let gestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress(_:)))
-        gestureRecognizer.minimumPressDuration = 0.7
+        gestureRecognizer.minimumPressDuration = 0.4
+        self.gestureRecognizer = gestureRecognizer
         self.sendButton.addGestureRecognizer(gestureRecognizer)
     }
     
     @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
-        if gestureRecognizer.state == .began {
+        if !self.sendButtonHasApplyIcon && gestureRecognizer.state == .began {
             self.sendButtonLongPressed?()
         }
     }

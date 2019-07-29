@@ -869,7 +869,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         case .admin:
                             string = item.presentationData.strings.Conversation_Admin
                         case let .custom(rank):
-                            string = rank
+                            string = rank.trimmingEmojis
                     }
                     adminBadgeString = NSAttributedString(string: " \(string)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                 } else if authorIsChannel {

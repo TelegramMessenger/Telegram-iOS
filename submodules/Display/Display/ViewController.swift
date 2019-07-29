@@ -35,7 +35,7 @@ public enum ViewControllerPresentationAnimation {
     case modalSheet
 }
 
-public struct ViewControllerSupportedOrientations {
+public struct ViewControllerSupportedOrientations: Equatable {
     public var regularSize: UIInterfaceOrientationMask
     public var compactSize: UIInterfaceOrientationMask
     
@@ -67,7 +67,13 @@ open class ViewControllerPresentationArguments {
     
     public let presentationContext: PresentationContext
     
-    public final var supportedOrientations: ViewControllerSupportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
+    public final var supportedOrientations: ViewControllerSupportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown) {
+        didSet {
+            if self.supportedOrientations != oldValue {
+                self.window?.invalidateSupportedOrientations()
+            }
+        }
+    }
     public final var lockedOrientation: UIInterfaceOrientationMask?
     public final var lockOrientation: Bool = false {
         didSet {

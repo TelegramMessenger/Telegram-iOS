@@ -427,7 +427,7 @@ public final class ShareController: ViewController {
                         messagesToEnqueue.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                     }
                     for message in messages {
-                        messagesToEnqueue.append(.forward(source: message.id, grouping: .auto))
+                        messagesToEnqueue.append(.forward(source: message.id, grouping: .auto, attributes: []))
                     }
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messagesToEnqueue))
                 }

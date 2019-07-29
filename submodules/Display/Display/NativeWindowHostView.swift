@@ -225,6 +225,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     var presentNativeImpl: ((UIViewController) -> Void)?
     var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
     var invalidatePreferNavigationUIHiddenImpl: (() -> Void)?
+    var invalidateSupportedOrientationsImpl: (() -> Void)?
     var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
     var forEachControllerImpl: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElementsImpl: (() -> [Any]?)?
@@ -323,6 +324,10 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.invalidatePreferNavigationUIHiddenImpl?()
     }
     
+    func invalidateSupportedOrientations() {
+        self.invalidateSupportedOrientationsImpl?()
+    }
+    
     func cancelInteractiveKeyboardGestures() {
         self.cancelInteractiveKeyboardGesturesImpl?()
     }
@@ -392,6 +397,10 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     
     window.invalidatePreferNavigationUIHiddenImpl = { [weak hostView] in
         return hostView?.invalidatePreferNavigationUIHidden?()
+    }
+    
+    window.invalidateSupportedOrientationsImpl = { [weak hostView] in
+        return hostView?.invalidateSupportedOrientations?()
     }
     
     window.cancelInteractiveKeyboardGesturesImpl = { [weak hostView] in
