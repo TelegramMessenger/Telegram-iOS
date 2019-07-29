@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 
 private final class ActionSheetItemNode: ASDisplayNode {
+    private let title: String
     private let action: () -> Void
     
     private let separatorNode: ASDisplayNode
@@ -16,6 +17,7 @@ private final class ActionSheetItemNode: ASDisplayNode {
     private let titleNode: ImmediateTextNode
     
     init(theme: PresentationTheme, title: String, action: @escaping () -> Void) {
+        self.title = title
         self.action = action
         
         self.separatorNode = ASDisplayNode()
@@ -55,6 +57,13 @@ private final class ActionSheetItemNode: ASDisplayNode {
                 }
             }
         }
+    }
+    
+    func updateTheme(_ theme: PresentationTheme) {
+        self.separatorNode.backgroundColor = theme.actionSheet.opaqueItemSeparatorColor
+        self.highlightedBackgroundNode.backgroundColor = theme.actionSheet.opaqueItemHighlightedBackgroundColor
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.actionSheet.primaryTextColor)
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
     }
     
     func updateLayout(maxWidth: CGFloat) -> (CGFloat, CGFloat, (CGFloat) -> Void) {
@@ -260,6 +269,10 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         let graphics = PresentationResourcesChat.principalGraphics(self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper)
         self.messageBackgroundNode.image = graphics.chatMessageBackgroundOutgoingImage
+        
+        for node in self.contentNodes {
+            node.updateTheme(presentationData.theme)
+        }
     }
     
     func animateIn() {

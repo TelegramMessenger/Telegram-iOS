@@ -15,19 +15,23 @@ final class ChatSendMessageActionSheetController: ViewController {
     private let interfaceState: ChatPresentationInterfaceState
     private let sendButtonFrame: CGRect
     private let textInputNode: EditableTextNode
+    private let completion: () -> Void
     
     private var presentationDataDisposable: Disposable?
     
     private var didPlayPresentationAnimation = false
     
+    private var validLayout: ContainerViewLayout?
+    
     private let hapticFeedback = HapticFeedback()
 
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, sendButtonFrame: CGRect, textInputNode: EditableTextNode) {
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, sendButtonFrame: CGRect, textInputNode: EditableTextNode, completion: @escaping () -> Void) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.interfaceState = interfaceState
         self.sendButtonFrame = sendButtonFrame
         self.textInputNode = textInputNode
+        self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
         
@@ -80,18 +84,11 @@ final class ChatSendMessageActionSheetController: ViewController {
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.validLayout = layout
+        
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, transition: transition)
-        
-        if !self.lockOrientation {
-            self.lockOrientation = true
-            if layout.size.width > layout.size.height {
-                self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .landscape)
-            } else {
-                self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
-            }
-        }
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
@@ -100,6 +97,7 @@ final class ChatSendMessageActionSheetController: ViewController {
     
     private func dismiss(cancel: Bool) {
         self.controllerNode.animateOut(cancel: cancel, completion: { [weak self] in
+            self?.completion()
             self?.didPlayPresentationAnimation = false
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })

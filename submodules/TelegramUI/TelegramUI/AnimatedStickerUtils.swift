@@ -285,3 +285,45 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
         }
     })
 }
+
+private final class LocalBundleResourceCopyFile : MediaResourceDataFetchCopyLocalItem {
+    let path: String
+    init(path: String) {
+        self.path = path
+    }
+    func copyTo(url: URL) -> Bool {
+        do {
+            try FileManager.default.copyItem(at: URL(fileURLWithPath: self.path), to: url)
+            return true
+        } catch {
+            return false
+        }
+    }
+}
+
+func fetchLocalBundleResource(postbox: Postbox, resource: LocalBundleResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    return Signal { subscriber in
+        if let path = frameworkBundle.path(forResource: resource.name, ofType: resource.ext), let _ = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+            subscriber.putNext(.copyLocalItem(LocalBundleResourceCopyFile(path: path)))
+            subscriber.putCompletion()
+        }
+        return EmptyDisposable
+    }
+}
+
+private let emojis: [String: String] = [
+    "👍": "thumbsup",
+    "😂": "lol",
+    "😒": "meh",
+    "❤️": "heart",
+    "🥳": "celeb",
+    "😳": "confused"
+]
+
+func animatedEmojiResource(emoji: String) -> LocalBundleResource? {
+    if let name = emojis[emoji] {
+        return LocalBundleResource(name: name, ext: "tgs")
+    } else {
+        return nil
+    }
+}

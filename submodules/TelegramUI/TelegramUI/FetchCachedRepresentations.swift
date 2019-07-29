@@ -113,17 +113,17 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
         return fetchEmojiRepresentation(account: account, resource: resource, representation: representation)
     } else if let representation = representation as? CachedAnimatedStickerRepresentation {
         let data: Signal<MediaResourceData, NoError>
-        if let resource = resource as? LocalBundleResource {
-            data = Signal { subscriber in
-                if let path = frameworkBundle.path(forResource: resource.name, ofType: resource.ext), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                    subscriber.putNext(MediaResourceData(path: path, offset: 0, size: data.count, complete: true))
-                    subscriber.putCompletion()
-                }
-                return EmptyDisposable
-            }
-        } else {
+//        if let resource = resource as? LocalBundleResource {
+//            data = Signal { subscriber in
+//                if let path = frameworkBundle.path(forResource: resource.name, ofType: resource.ext), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+//                    subscriber.putNext(MediaResourceData(path: path, offset: 0, size: data.count, complete: true))
+//                    subscriber.putCompletion()
+//                }
+//                return EmptyDisposable
+//            }
+//        } else {
             data = account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        }
+//        }
         return data
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             if !data.complete {
@@ -936,3 +936,4 @@ private func fetchAnimatedStickerRepresentation(account: Account, resource: Medi
     })
     |> runOn(Queue.concurrentDefaultQueue())
 }
+

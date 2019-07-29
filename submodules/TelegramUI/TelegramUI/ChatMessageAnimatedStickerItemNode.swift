@@ -27,6 +27,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var shareButtonNode: HighlightableButtonNode?
     
     var telegramFile: TelegramMediaFile?
+    var emojiResource: LocalBundleResource?
     private let disposable = MetaDisposable()
     
     private var viaBotNode: TextNode?
@@ -133,6 +134,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     
         if self.telegramFile == nil {
+            self.emojiResource = animatedEmojiResource(emoji: item.message.text)
+            
+            if let emojiResource = self.emojiResource {
+                let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: emojiResource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: 0, attributes: [])
+                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: dummyFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
+                self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: dummyFile)).start())
+            }
+            
             self.updateVisibility()
         }
     }
@@ -158,14 +167,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if let telegramFile = telegramFile {
                     self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
-                } else if item.message.text == "👍" {
-                    self.animationNode.setup(account: item.context.account, resource: LocalBundleResource(name: "thumbsup", ext: "tgs"), width: 384, height: 384, mode: .cached)
-                } else if item.message.text == "😂" {
-                    self.animationNode.setup(account: item.context.account, resource: LocalBundleResource(name: "lol", ext: "tgs"), width: 384, height: 384, mode: .cached)
-                } else if item.message.text == "😒" {
-                    self.animationNode.setup(account: item.context.account, resource: LocalBundleResource(name: "meh", ext: "tgs"), width: 384, height: 384, mode: .cached)
-                } else if item.message.text == "❤️" {
-                    self.animationNode.setup(account: item.context.account, resource: LocalBundleResource(name: "heart", ext: "tgs"), width: 384, height: 384, mode: .cached)
+                } else if let emojiResource = self.emojiResource {
+                    self.animationNode.setup(account: item.context.account, resource: emojiResource, width: 384, height: 384, mode: .cached)
                 }
             }
         }
@@ -193,6 +196,19 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
             if let telegramFile = telegramFile {
+                var displaySize = displaySize
+                if !GlobalExperimentalSettings.isAppStoreBuild, let fileName = telegramFile.fileName {
+                    let components = fileName.components(separatedBy: "_size")
+                    if let size = components.last?.lowercased() {
+                        var size = size
+                        size.removeLast(4)
+                        if let sizeValue = Int(size), sizeValue > 0 && sizeValue < 512 {
+                            let side: CGFloat = floor(displaySize.width * CGFloat(sizeValue) / 512.0)
+                            displaySize = CGSize(width: side, height: side)
+                        }
+                    }
+                }
+                
                 if let dimensions = telegramFile.dimensions {
                     imageSize = dimensions.aspectFitted(displaySize)
                 } else if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {
