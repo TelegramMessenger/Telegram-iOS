@@ -57,7 +57,7 @@ public class LocalBundleResource: TelegramMediaResource {
     }
     
     public func isEqual(to: MediaResource) -> Bool {
-        if let to = to as? LocalBundleResourceId {
+        if let to = to as? LocalBundleResource {
             return self.name == to.name && self.ext == to.ext
         } else {
             return false

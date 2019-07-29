@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationTheme {
+private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> PresentationTheme {
     let destructiveColor: UIColor = UIColor(rgb: 0xeb5545)
     let constructiveColor: UIColor = UIColor(rgb: 0x08a723)
     let secretColor: UIColor = UIColor(rgb: 0x00b12c)
@@ -313,13 +313,14 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
         chatList: chatList,
         chat: chat,
         actionSheet: actionSheet,
-        inAppNotification: inAppNotification
+        inAppNotification: inAppNotification,
+        preview: preview
     )
 }
 
-public let defaultDarkPresentationTheme = makeDarkPresentationTheme(accentColor: UIColor(rgb: 0x2ea6ff))
+public let defaultDarkPresentationTheme = makeDarkPresentationTheme(accentColor: UIColor(rgb: 0x2ea6ff), preview: false)
 
-public func makeDarkPresentationTheme(accentColor: UIColor?) -> PresentationTheme {
+public func makeDarkPresentationTheme(accentColor: UIColor?, preview: Bool) -> PresentationTheme {
     let accentColor = accentColor ?? defaultDayAccentColor
-    return makeDarkPresentationTheme(accentColor: accentColor)
+    return makeDarkPresentationTheme(accentColor: accentColor, preview: preview)
 }

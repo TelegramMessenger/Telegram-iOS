@@ -71,7 +71,7 @@ struct PresentationResourcesChat {
         let hasWallpaper = !wallpaper.isEmpty
         let key: PresentationResourceKey = !hasWallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
         return theme.object(key.rawValue, { theme in
-            return PrincipalThemeEssentialGraphics(theme.chat, wallpaper: wallpaper)
+            return PrincipalThemeEssentialGraphics(theme.chat, wallpaper: wallpaper, preview: theme.preview)
         }) as! PrincipalThemeEssentialGraphics
     }
     

@@ -67,7 +67,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case wallpaper(PresentationTheme, String)
     case accentColor(PresentationTheme, String, PresentationThemeAccentColor?)
     case autoNightTheme(PresentationTheme, String, String)
-    case themeTint(PresentationTheme, String, Bool)
     case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor], PresentationThemeAccentColor?, Bool)
     case iconHeader(PresentationTheme, String)
     case iconItem(PresentationTheme, PresentationStrings, [PresentationAppIcon], String?)
@@ -78,7 +77,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .themeListHeader, .chatPreview, .themeItem, .themeTint, .accentColor:
+            case .themeListHeader, .chatPreview, .themeItem, .accentColor:
                 return ThemeSettingsControllerSection.chatPreview.rawValue
             case .fontSizeHeader, .fontSize:
                 return ThemeSettingsControllerSection.fontSize.rawValue
@@ -99,8 +98,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return 1
             case .themeItem:
                 return 2
-            case .themeTint:
-                return 3
             case .accentColor:
                 return 4
             case .wallpaper:
@@ -136,12 +133,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 }
             case let .wallpaper(lhsTheme, lhsText):
                 if case let .wallpaper(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .themeTint(lhsTheme, lhsTitle, lhsValue):
-                if case let .themeTint(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -239,10 +230,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openWallpaperSettings()
                 })
-            case let .themeTint(theme, title, value):
-                return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleLargeEmoji(value)
-                }, tag: ThemeSettingsEntryTag.tint)
             case let .accentColor(theme, _, color):
                 var colors = PresentationThemeBaseColor.allCases
                 if theme.overallDarkAppearance {
@@ -450,7 +437,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let disableAnimations = settings.disableAnimations
         
         let accentColor = settings.themeSpecificAccentColors[settings.theme.index]?.color ?? defaultDayAccentColor
-        let theme = makePresentationTheme(themeReference: settings.theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
+        let theme = makePresentationTheme(themeReference: settings.theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, preview: true)
 
         let wallpaper: TelegramWallpaper
         if let themeSpecificWallpaper = settings.themeSpecificChatWallpapers[settings.theme.index] {
