@@ -120,6 +120,9 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     return .complete()
                 }
             }
+            |> afterNext { account in
+                account.resetStateManagement()
+            }
             |> take(1)
         }
         self.accountPromise.set(account)
@@ -222,7 +225,36 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     // MARK: - INSendMessageIntentHandling
     
     func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
-       self.resolve(persons: intent.recipients, with: completion)
+        if #available(iOSApplicationExtension 11.0, *) {
+            if let peerId = intent.conversationIdentifier.flatMap(Int64.init) {
+                let account = self.accountPromise.get()
+                
+                let signal = account
+                |> mapToSignal { account -> Signal<INPerson?, NoError> in
+                    return matchingCloudContact(postbox: account.postbox, peerId: PeerId(peerId))
+                    |> map { user -> INPerson? in
+                        if let user = user {
+                            return personWithUser(stableId: "tg\(peerId)", user: user)
+                        } else {
+                            return nil
+                        }
+                    }
+                }
+                
+                self.resolvePersonsDisposable.set((signal
+                |> deliverOnMainQueue).start(next: { person in
+                    if let person = person {
+                        completion([INPersonResolutionResult.success(with: person)])
+                    } else {
+                        completion([INPersonResolutionResult.needsValue()])
+                    }
+                }))
+            } else {
+                self.resolve(persons: intent.recipients, with: completion)
+            }
+        } else {
+            self.resolve(persons: intent.recipients, with: completion)
+        }
     }
     
     func resolveContent(for intent: INSendMessageIntent, with completion: @escaping (INStringResolutionResult) -> Void) {
