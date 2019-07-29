@@ -987,6 +987,10 @@ std::shared_ptr<LOTMaskData> LottieParserImpl::parseMaskObject()
             obj->mInv = GetBool();
         } else if (0 == strcmp(key, "mode")) {
             const char *str = GetString();
+            if (!str) {
+                obj->mMode = LOTMaskData::Mode::None;
+                continue;
+            }
             switch (str[0]) {
             case 'n':
                 obj->mMode = LOTMaskData::Mode::None;
