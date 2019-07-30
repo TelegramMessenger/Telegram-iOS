@@ -380,7 +380,9 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             animationNode.started = { [weak self] in
                                 self?.imageNode.alpha = 0.0
                             }
-                            animationNode.setup(account: item.account, resource: animatedStickerFile.resource, width: 160, height: 160, mode: .cached)
+                            let dimensions = animatedStickerFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                            let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                            animationNode.setup(account: item.account, resource: animatedStickerFile.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                         }
                     }
                     

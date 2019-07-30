@@ -271,7 +271,7 @@ final class CachedAnimatedStickerRepresentation: CachedMediaResourceRepresentati
     let height: Int32
     
     var uniqueId: String {
-        return "animated-sticker-\(self.width)x\(self.height)-v5"
+        return "animated-sticker-\(self.width)x\(self.height)-v6"
     }
     
     init(width: Int32, height: Int32) {

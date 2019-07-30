@@ -113,7 +113,9 @@ final class TrendingTopItemNode: ASDisplayNode {
             animationNode.started = { [weak self] in
                 self?.imageNode.alpha = 0.0
             }
-            animationNode.setup(account: account, resource: item.file.resource, width: 160, height: 160, mode: .cached)
+            let dimensions = item.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+            let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+            animationNode.setup(account: account, resource: item.file.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
             self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
         } else {
             self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
