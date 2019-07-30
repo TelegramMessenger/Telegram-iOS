@@ -71,4 +71,31 @@ public extension Message {
         
         return false
     }
+    
+    public var secretMediaDuration: Int32? {
+        var found = false
+        for attribute in self.attributes {
+            if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+                found = true
+                break
+            }
+        }
+        
+        if !found {
+            return nil
+        }
+        
+        for media in self.media {
+            switch media {
+            case _ as TelegramMediaImage:
+                return nil
+            case let file as TelegramMediaFile:
+                return file.duration
+            default:
+                break
+            }
+        }
+        
+        return nil
+    }
 }
