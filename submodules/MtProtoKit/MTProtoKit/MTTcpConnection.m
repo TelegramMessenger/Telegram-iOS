@@ -720,17 +720,19 @@ struct ctr_state {
                             uint32_t intHeader = 0;
                             memcpy(&intHeader, encryptedControlBytes, 4);
                             
-                            if (retryCount == 9) {
-                                assert(false);
-                            } else {
-                                if (intHeader == 0x44414548 ||
-                                    intHeader == 0x54534f50 ||
-                                    intHeader == 0x20544547 ||
-                                    intHeader == 0x4954504f ||
-                                    intHeader == 0xdddddddd ||
-                                    intHeader == 0xeeeeeeee ||
-                                    intHeader == 0x02010316) {
-                                    continue;
+                            if (effectiveSecret) {
+                                if (retryCount == 9) {
+                                    assert(false);
+                                } else {
+                                    if (intHeader == 0x44414548 ||
+                                        intHeader == 0x54534f50 ||
+                                        intHeader == 0x20544547 ||
+                                        intHeader == 0x4954504f ||
+                                        intHeader == 0xdddddddd ||
+                                        intHeader == 0xeeeeeeee ||
+                                        intHeader == 0x02010316) {
+                                        continue;
+                                    }
                                 }
                             }
                             

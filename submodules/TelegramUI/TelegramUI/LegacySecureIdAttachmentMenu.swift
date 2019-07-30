@@ -51,8 +51,25 @@ func presentLegacySecureIdAttachmentMenu(context: AccountContext, present: @esca
             mappedIntent = TGPassportAttachIntentSelfie
     }
     
+    var uploadStarted = false
+    
     guard let attachMenu = TGPassportAttachMenu.present(with: legacyController.context, parentController: emptyController, menuController: nil, title: "", intent: mappedIntent, uploadAction: { signal, completed in
         if let signal = signal {
+            if uploadStarted {
+                completed?()
+                return
+            }
+            uploadStarted = true
+            let statusController = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            let statusDisposable = (Signal<Never, NoError> { subscriber in
+                present(statusController)
+                return ActionDisposable {
+                    statusController.dismiss()
+                }
+            }
+            |> runOn(.mainQueue())
+            |> delay(0.1, queue: .mainQueue())).start()
+            
             let _ = (processedLegacySecureIdAttachmentItems(postbox: context.account.postbox, signal: signal)
             |> mapToSignal { resources -> Signal<([TelegramMediaResource], SecureIdRecognizedDocumentData?), NoError> in
                 switch type {
@@ -70,6 +87,7 @@ func presentLegacySecureIdAttachmentMenu(context: AccountContext, present: @esca
             }
             |> deliverOnMainQueue).start(next: { resourcesAndData in
                 completion(resourcesAndData.0, resourcesAndData.1)
+                statusDisposable.dispose()
                 completed?()
             })
         } else {

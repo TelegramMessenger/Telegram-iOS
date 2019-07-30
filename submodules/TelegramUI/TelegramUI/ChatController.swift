@@ -2680,7 +2680,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             if isAction && (actions.options == .deleteGlobally || actions.options == .deleteLocally) {
                                 let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: actions.options == .deleteLocally ? .forLocalPeer : .forEveryone).start()
                             } else if (messages.first?.flags.isSending ?? false) {
-                                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone, deleteAllInGroup: true).start()
                             } else {
                                 strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options)
                             }
