@@ -114,7 +114,7 @@ public func phoneLabelController(context: AccountContext, currentLabel: String, 
                 arguments.complete()
             })
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Notifications_TextTone), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PhoneLabel_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(entries: phoneLabelEntries(presentationData: presentationData, state: state), style: .blocks)
             
             return (controllerState, (listState, arguments))
