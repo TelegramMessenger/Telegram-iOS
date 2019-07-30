@@ -31,7 +31,7 @@ func stickerFromLegacyDocument(_ documentAttachment: TGDocumentMediaAttachment) 
 
 func legacyComponentsStickers(postbox: Postbox, namespace: Int32) -> SSignal {
     return SSignal { subscriber in
-        let disposable = (postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [namespace], aroundIndex: nil, count: 1000)).start(next: { view in
+        let disposable = (postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [namespace], aroundIndex: nil, count: 200 * 200)).start(next: { view in
             var stickerPackDocuments: [ItemCollectionId: [Any]] = [:]
             
             for entry in view.entries {
