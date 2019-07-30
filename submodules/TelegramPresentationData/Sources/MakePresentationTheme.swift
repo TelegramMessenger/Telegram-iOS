@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import TelegramUIPreferences
 
-public func makePresentationTheme(themeReference: PresentationThemeReference, accentColor: UIColor, serviceBackgroundColor: UIColor, baseColor: PresentationThemeBaseColor?, preview: Bool = false) -> PresentationTheme {
+public func makePresentationTheme(themeReference: PresentationThemeReference, accentColor: UIColor?, serviceBackgroundColor: UIColor, baseColor: PresentationThemeBaseColor?, preview: Bool = false) -> PresentationTheme {
     let theme: PresentationTheme
     switch themeReference {
         case let .builtin(reference):

@@ -258,7 +258,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
             effectiveTheme = themeSettings.theme
         }
         
-        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color ?? defaultDayAccentColor
+        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
         themeValue = makePresentationTheme(themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.baseColor ?? .blue)
         
         if effectiveTheme != themeSettings.theme {
@@ -522,8 +522,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                             effectiveTheme = themeSettings.theme
                         }
                         
-                        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color ?? defaultDayAccentColor
-                        
+                        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
                         let themeValue = makePresentationTheme(themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor, baseColor: themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.baseColor ?? .blue)
                         
                         if effectiveTheme != themeSettings.theme && themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] == nil {

@@ -59,7 +59,7 @@ private func generateThemeIconImage(theme: PresentationThemeReference, accentCol
             case .night:
                 background = UIColor(rgb: 0x000000)
                 incomingFill = UIColor(rgb: 0x1f1f1f)
-                outgoingFill = accentColor ?? UIColor(rgb: 0x007aff)
+                outgoingFill = accentColor ?? UIColor(rgb: 0x313131)
             case .nightAccent:
                 let accentColor = accentColor ?? UIColor(rgb: 0x007aff)
                 background = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
@@ -402,7 +402,9 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     
                     let previousBaseColor = strongSelf.colorSlider.baseColor
                     let newBaseColor = item.currentColor?.baseColor ?? .blue
-                    strongSelf.colorSlider.baseColor = newBaseColor
+                    if newBaseColor != .black && newBaseColor != .white {
+                        strongSelf.colorSlider.baseColor = newBaseColor
+                    }
                     if previousBaseColor != newBaseColor {
                         strongSelf.colorSlider.value = item.currentColor?.value ?? 0.5
                     }
