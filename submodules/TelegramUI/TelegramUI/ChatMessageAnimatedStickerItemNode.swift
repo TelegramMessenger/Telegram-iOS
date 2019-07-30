@@ -136,15 +136,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
     
-        if self.telegramFile == nil {
-            self.emojiFile = item.associatedData.animatedEmojiStickers[item.message.text.trimmedEmoji]?.file
-            
-            if let emojiFile = self.emojiFile {
-                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
+        if self.telegramFile == nil, let emojiFile = item.associatedData.animatedEmojiStickers[item.message.text.trimmedEmoji]?.file {
+            if self.emojiFile?.id != emojiFile.id {
+                self.emojiFile = emojiFile
+                let dimensions = emojiFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)), thumbnail: false))
                 self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: emojiFile)).start())
+                self.updateVisibility()
             }
-            
-            self.updateVisibility()
         }
     }
     
@@ -179,7 +178,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if let file = file {
                     let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                    let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                    let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 480.0, height: 480.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
                     self.animationNode.setup(account: item.context.account, resource: file.resource, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 }
             }

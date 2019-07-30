@@ -189,8 +189,6 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                     return
                 }
                 
-                let scale = size.width / 512.0
-                
                 let bytesPerRow = (4 * Int(size.width) + 15) & (~15)
                 
                 var currentFrame: Int32 = 0
