@@ -257,15 +257,15 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
     }
     
     public var color: UIColor {
-        let color: UIColor
-        if self.value < 0.5 {
-            color = self.baseColor.color.interpolateTo(self.baseColor.edgeColors.0, fraction: 0.5 - self.value)!
-        } else if self.value > 0.5 {
-            color = self.baseColor.color.interpolateTo(self.baseColor.edgeColors.1, fraction: self.value - 0.5)!
-        } else {
-            color = self.baseColor.color
-        }
-        return color
+//        let color: UIColor
+//        if self.value < 0.5 {
+//            color = self.baseColor.color.interpolateTo(self.baseColor.edgeColors.0, fraction: 0.5 - self.value)!
+//        } else if self.value > 0.5 {
+//            color = self.baseColor.color.interpolateTo(self.baseColor.edgeColors.1, fraction: self.value - 0.5)!
+//        } else {
+//            color = self.baseColor.color
+//        }
+        return self.baseColor.color
     }
 }
 

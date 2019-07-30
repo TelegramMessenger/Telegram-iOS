@@ -105,6 +105,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     private let textFieldFrame: CGRect
     private let textInputNode: EditableTextNode
     private let accessoryPanelNode: AccessoryPanelNode?
+    private let forwardedCount: Int?
     
     private let send: (() -> Void)?
     private let cancel: (() -> Void)?
@@ -127,12 +128,14 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private var validLayout: ContainerViewLayout?
     
-    init(context: AccountContext, sendButtonFrame: CGRect, textInputNode: EditableTextNode, accessoryPanelNode: AccessoryPanelNode?, send: (() -> Void)?, sendSilently: (() -> Void)?, cancel: (() -> Void)?) {
+    init(context: AccountContext, sendButtonFrame: CGRect, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, cancel: (() -> Void)?) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.sendButtonFrame = sendButtonFrame
         self.textFieldFrame = textInputNode.convert(textInputNode.bounds, to: nil)
         self.textInputNode = textInputNode
-        self.accessoryPanelNode = accessoryPanelNode
+        self.accessoryPanelNode = nil
+        self.forwardedCount = forwardedCount
+        
         self.send = send
         self.cancel = cancel
         
@@ -198,9 +201,13 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.sendButtonNode.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(self.presentationData.theme), for: [])
         self.sendButtonNode.addTarget(self, action: #selector(sendButtonPressed), forControlEvents: .touchUpInside)
         
-        self.fromMessageTextNode.attributedText = textInputNode.attributedText
-        
-        if let toAttributedText = textInputNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
+        if let attributedText = textInputNode.attributedText, !attributedText.string.isEmpty {
+            self.fromMessageTextNode.attributedText = attributedText
+        } else {
+            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedStringKey.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedStringKey.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
+        }
+
+        if let toAttributedText = self.fromMessageTextNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
             toAttributedText.addAttribute(NSAttributedStringKey.foregroundColor, value: self.presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (toAttributedText.string as NSString).length))
             self.toMessageTextNode.attributedText = toAttributedText
         }
@@ -222,7 +229,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.messageClipNode.addSubnode(self.toMessageTextNode)
 
         if let accessoryPanelNode = self.accessoryPanelNode {
-             self.messageClipNode.addSubnode(accessoryPanelNode)
+             self.addSubnode(accessoryPanelNode)
         }
         
         self.contentNodes.forEach(self.contentContainerNode.addSubnode)
@@ -332,7 +339,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             self.sendButtonNode.layer.animateScale(from: 0.75, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionLinear)
             self.sendButtonNode.layer.animatePosition(from: self.sendButtonFrame.center, to: self.sendButtonNode.position, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
             
-            let initialWidth = self.textFieldFrame.width + 32.0
+            var initialWidth = self.textFieldFrame.width + 32.0
+            if self.textInputNode.textView.attributedText.string.isEmpty {
+                initialWidth = ceil(layout.size.width - self.textFieldFrame.origin.x - self.sendButtonFrame.width - layout.safeInsets.left - layout.safeInsets.right + 21.0)
+            }
+            
             let fromFrame = CGRect(origin: CGPoint(), size: CGSize(width: initialWidth, height: self.textFieldFrame.height + 2.0))
             let delta = (fromFrame.height - self.messageClipNode.bounds.height) / 2.0
             
@@ -390,14 +401,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             intermediateCompletion()
         })
         
-        Queue.mainQueue().after(0.7) {
-            completedAlpha = true
-            completedButton = true
-            completedBubble = true
-            completedEffect = true
-            intermediateCompletion()
-        }
-        
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
         self.contentContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in })
         
@@ -430,7 +433,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 self.sendButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false)
             }
             
-            let initialWidth = self.textFieldFrame.width + 32.0
+            var initialWidth = self.textFieldFrame.width + 32.0
+            if self.textInputNode.textView.attributedText.string.isEmpty {
+                initialWidth = ceil(layout.size.width - self.textFieldFrame.origin.x - self.sendButtonFrame.width - layout.safeInsets.left - layout.safeInsets.right + 21.0)
+            }
+            
             let toFrame = CGRect(origin: CGPoint(), size: CGSize(width: initialWidth, height: self.textFieldFrame.height + 1.0))
             let delta = (toFrame.height - self.messageClipNode.bounds.height) / 2.0
             
@@ -453,10 +460,18 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 let textOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
                 self.fromMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: delta * 2.0 + textOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
                 self.toMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: delta * 2.0 + textOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            } else {
+                completedBubble = true
             }
             
             self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 160.0, y: 0.0), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
             self.contentContainerNode.layer.animateScale(from: 1.0, to: 0.4, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        }
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if let layout = self.validLayout {
+            self.containerLayoutUpdated(layout, transition: .immediate)
         }
     }
     
@@ -484,10 +499,13 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let insets = layout.insets(options: [.statusBar, .input])
         let inputHeight = layout.inputHeight ?? 0.0
         
+        let contentOffset = self.scrollNode.view.contentOffset.y
+        
         var contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width - layout.safeInsets.right, y: layout.size.height - 6.0 - insets.bottom - contentSize.height)
         if inputHeight > 0.0 {
             contentOrigin.y += 60.0
         }
+        contentOrigin.y = min(contentOrigin.y + contentOffset, layout.size.height - 6.0 - layout.intrinsicInsets.bottom - contentSize.height)
         
         transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: contentOrigin, size: contentSize))
         var nextY: CGFloat = 0.0
@@ -502,6 +520,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         if inputHeight.isZero {
             sendButtonFrame.origin.y -= 60.0
         }
+        sendButtonFrame.origin.y = min(sendButtonFrame.origin.y + contentOffset, layout.size.height - layout.intrinsicInsets.bottom - initialSendButtonFrame.height)
         transition.updateFrame(node: self.sendButtonNode, frame: sendButtonFrame)
         
         var messageFrame = self.textFieldFrame
@@ -512,8 +531,12 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             messageFrame.origin.y += 60.0
         }
         
-        if self.textInputNode.textView.numberOfLines == 1 {
-            let textWidth = min(self.textInputNode.textView.sizeThatFits(layout.size).width + 36.0, messageFrame.width)
+        if self.textInputNode.textView.attributedText.string.isEmpty {
+            messageFrame.size.width = ceil(layout.size.width - messageFrame.origin.x - sendButtonFrame.width - layout.safeInsets.left - layout.safeInsets.right + 8.0)
+        }
+        
+        if self.textInputNode.textView.numberOfLines == 1 || self.textInputNode.textView.attributedText.string.isEmpty {
+            let textWidth = min(self.fromMessageTextNode.textView.sizeThatFits(layout.size).width + 36.0, messageFrame.width)
             messageFrame.origin.x += messageFrame.width - textWidth
             messageFrame.size.width = textWidth
         }
@@ -540,6 +563,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         textFrame.size.height = self.textInputNode.textView.contentSize.height
         self.fromMessageTextNode.frame = textFrame
         self.toMessageTextNode.frame = textFrame
+        
+        if let accessoryPanelNode = self.accessoryPanelNode {
+            let size = accessoryPanelNode.calculateSizeThatFits(CGSize(width: messageFrame.width, height: 45.0))
+            accessoryPanelNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.textFieldFrame.minY - size.height - 7.0), size: size)
+        }
     }
     
     @objc private func dimTapGesture(_ recognizer: UITapGestureRecognizer) {

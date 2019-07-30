@@ -371,10 +371,15 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         
                         if fileUpdated {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
-                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, representation: representation)
+                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: representation.resource)
                         }
-                    case .animated:
+                    case let .animated(resource):
                         imageSize = imageBoundingSize
+                    
+                        if fileUpdated {
+                            imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageBoundingSize, boundingSize: imageBoundingSize, intrinsicInsets: UIEdgeInsets()))
+                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: resource, animated: true)
+                        }
                 }
                 if fileUpdated, let resourceReference = resourceReference {
                     updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, reference: resourceReference)
@@ -552,6 +557,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             case .still:
                                 transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
                             case let .animated(resource):
+                                transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
+                                
                                 let animationNode: AnimatedStickerNode
                                 if let current = strongSelf.animationNode {
                                     animationNode = current
@@ -562,6 +569,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                     animationNode.setup(account: item.account, resource: resource, width: 80, height: 80, mode: .cached)
                                 }
                                 animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
+                                animationNode.isHidden = !item.playAnimatedStickers
+                                strongSelf.imageNode.isHidden = item.playAnimatedStickers
                                 if let animationNode = strongSelf.animationNode {
                                     transition.updateFrame(node: animationNode, frame: imageFrame)
                                 }

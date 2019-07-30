@@ -10,7 +10,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var playAnimatedEmojiOnce: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
-        return ExperimentalUISettings(keepChatNavigationStack: false, skipReadHistory: false, crashOnLongQueries: false, chatListPhotos: false, playAnimatedEmojiOnce: false)
+        return ExperimentalUISettings(keepChatNavigationStack: false, skipReadHistory: false, crashOnLongQueries: false, chatListPhotos: false, playAnimatedEmojiOnce: true)
     }
     
     public init(keepChatNavigationStack: Bool, skipReadHistory: Bool, crashOnLongQueries: Bool, chatListPhotos: Bool, playAnimatedEmojiOnce: Bool) {
@@ -26,7 +26,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.skipReadHistory = decoder.decodeInt32ForKey("skipReadHistory", orElse: 0) != 0
         self.crashOnLongQueries = decoder.decodeInt32ForKey("crashOnLongQueries", orElse: 0) != 0
         self.chatListPhotos = decoder.decodeInt32ForKey("chatListPhotos", orElse: 0) != 0
-        self.playAnimatedEmojiOnce = decoder.decodeInt32ForKey("playAnimatedEmojiOnce", orElse: 0) != 0
+        self.playAnimatedEmojiOnce = decoder.decodeInt32ForKey("playAnimatedEmojiOnce", orElse: 1) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
