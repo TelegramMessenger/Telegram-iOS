@@ -20,6 +20,8 @@ extension StickerPackReference {
                 return .inputStickerSetID(id: id, accessHash: accessHash)
             case let .name(name):
                 return .inputStickerSetShortName(shortName: name)
+            case .animatedEmoji:
+                return .inputStickerSetAnimatedEmoji
         }
     }
 }

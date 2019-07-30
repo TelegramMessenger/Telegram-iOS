@@ -128,6 +128,8 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                         if !found {
                             fetchReference = packReference
                         }
+                    case .animatedEmoji:
+                        break
                 }
                 if let fetchReference = fetchReference {
                     return network.request(Api.functions.messages.getStickerSet(stickerset: fetchReference.apiInputStickerSet))

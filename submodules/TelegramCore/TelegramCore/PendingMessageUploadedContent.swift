@@ -417,6 +417,8 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                             stickerSet = .inputStickerSetID(id: id, accessHash: accessHash)
                         case let .name(name):
                             stickerSet = .inputStickerSetShortName(shortName: name)
+                        default:
+                            stickerSet = .inputStickerSetEmpty
                     }
                 }
                 var inputMaskCoords: Api.MaskCoords?
