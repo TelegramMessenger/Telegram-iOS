@@ -82,12 +82,16 @@ private final class AnimatedStickerFrame {
     let type: AnimationRendererFrameType
     let width: Int
     let height: Int
+    let bytesPerRow: Int
+    let isLastFrame: Bool
     
-    init(data: Data, type: AnimationRendererFrameType, width: Int, height: Int) {
+    init(data: Data, type: AnimationRendererFrameType, width: Int, height: Int, bytesPerRow: Int, isLastFrame: Bool) {
         self.data = data
         self.type = type
         self.width = width
         self.height = height
+        self.bytesPerRow = bytesPerRow
+        self.isLastFrame = isLastFrame
     }
 }
 
@@ -103,6 +107,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
     private let data: Data
     private var scratchBuffer: Data
     let width: Int
+    let bytesPerRow: Int
     let height: Int
     let frameRate: Int
     private let initialOffset: Int
@@ -118,6 +123,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
         var offset = 0
         var width = 0
         var height = 0
+        var bytesPerRow = 0
         var frameRate = 0
         
         if !self.data.withUnsafeBytes({ (bytes: UnsafePointer<UInt8>) -> Bool in
@@ -127,19 +133,23 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
             offset += 4
             var widthValue: Int32 = 0
             var heightValue: Int32 = 0
+            var bytesPerRowValue: Int32 = 0
             memcpy(&widthValue, bytes.advanced(by: offset), 4)
             offset += 4
             memcpy(&heightValue, bytes.advanced(by: offset), 4)
             offset += 4
+            memcpy(&bytesPerRowValue, bytes.advanced(by: offset), 4)
+            offset += 4
             width = Int(widthValue)
             height = Int(heightValue)
+            bytesPerRow = Int(bytesPerRowValue)
             
             return true
         }) {
             return nil
         }
         
-        assert(width % 16 == 0)
+        self.bytesPerRow = bytesPerRow
         
         self.width = width
         self.height = height
@@ -148,8 +158,8 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
         self.initialOffset = offset
         self.offset = offset
         
-        self.decodeBuffer = Data(count: width * 4 * height)
-        self.frameBuffer = Data(count: width * 4 * height)
+        self.decodeBuffer = Data(count: self.bytesPerRow * height)
+        self.frameBuffer = Data(count: self.bytesPerRow * height)
         let frameBufferLength = self.frameBuffer.count
         self.frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
             memset(bytes, 0, frameBufferLength)
@@ -162,6 +172,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
     
     func takeFrame() -> AnimatedStickerFrame {
         var frameData: Data?
+        var isLastFrame = false
         
         let dataLength = self.data.count
         let decodeBufferLength = self.decodeBuffer.count
@@ -192,6 +203,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
             
             self.offset += Int(frameLength)
             if self.offset == dataLength {
+                isLastFrame = true
                 self.offset = self.initialOffset
                 self.frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                     memset(bytes, 0, frameBufferLength)
@@ -199,7 +211,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
             }
         }
         
-        return AnimatedStickerFrame(data: frameData!, type: .yuva, width: self.width, height: self.height)
+        return AnimatedStickerFrame(data: frameData!, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, isLastFrame: isLastFrame)
     }
 }
 
@@ -208,6 +220,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
     private let data: Data
     private let width: Int
     private let height: Int
+    private let bytesPerRow: Int
     private let frameCount: Int
     let frameRate: Int
     private var currentFrame: Int
@@ -218,6 +231,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         self.data = data
         self.width = width
         self.height = height
+        self.bytesPerRow = (4 * Int(width) + 15) & (~15)
         self.currentFrame = 0
         guard let rawData = TGGUnzipData(data, 8 * 1024 * 1024) else {
             return nil
@@ -228,7 +242,6 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         self.animation = animation
         self.frameCount = Int(animation.frameCount)
         self.frameRate = Int(animation.frameRate)
-        assert(width % 16 == 0)
     }
     
     deinit {
@@ -238,12 +251,12 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
     func takeFrame() -> AnimatedStickerFrame {
         let frameIndex = self.currentFrame % self.frameCount
         self.currentFrame += 1
-        var frameData = Data(count: self.width * self.height * 4)
+        var frameData = Data(count: self.bytesPerRow * self.height)
         frameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-            memset(bytes, 0, self.width * self.height * 4)
-            self.animation.renderFrame(with: Int32(frameIndex), into: bytes, width: Int32(self.width), height: Int32(self.height))
+            memset(bytes, 0, self.bytesPerRow * self.height)
+            self.animation.renderFrame(with: Int32(frameIndex), into: bytes, width: Int32(self.width), height: Int32(self.height), bytesPerRow: Int32(self.bytesPerRow))
         }
-        return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height)
+        return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, isLastFrame: frameIndex == self.frameCount)
     }
 }
 
@@ -350,6 +363,9 @@ final class AnimatedStickerNode: ASDisplayNode {
     }
         
     func setup(account: Account, resource: MediaResource, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
+        if width < 2 || height < 2 {
+            return
+        }
         self.playbackMode = playbackMode
         switch mode {
             case .direct:
@@ -426,7 +442,7 @@ final class AnimatedStickerNode: ASDisplayNode {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, data: frame.data, type: frame.type, completion: {
+                        strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, completion: {
                             guard let strongSelf = self else {
                                 return
                             }
@@ -434,6 +450,10 @@ final class AnimatedStickerNode: ASDisplayNode {
                                 strongSelf.started()
                             }
                         })
+                        if case .once = strongSelf.playbackMode, frame.isLastFrame {
+                            strongSelf.stop()
+                            strongSelf.isPlaying = false
+                        }
                     }
                 }
                 frameQueue.with { frameQueue in
@@ -448,6 +468,12 @@ final class AnimatedStickerNode: ASDisplayNode {
     func stop() {
         self.reportedStarted = false
         self.timer.swap(nil)?.invalidate()
+    }
+    
+    func playIfNeeded() {
+        if !self.isPlaying {
+            self.play()
+        }
     }
     
     func updateLayout(size: CGSize) {

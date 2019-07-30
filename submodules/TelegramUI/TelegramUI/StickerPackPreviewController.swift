@@ -165,7 +165,8 @@ final class StickerPackPreviewController: ViewController {
                             let signal = Signal<Bool, NoError> { subscriber in
                                 let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: FileMediaReference.standalone(media: item.file).resourceReference(item.file.resource)).start()
                                 let data = account.postbox.mediaBox.resourceData(item.file.resource).start()
-                                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, file: item.file, small: false, size: CGSize(width: 160.0, height: 160.0), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
+                                let dimensions = item.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, file: item.file, small: false, size: dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
                                     let hasContent = next._0 != nil || next._1 != nil
                                     subscriber.putNext(hasContent)
                                     if hasContent {

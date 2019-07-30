@@ -127,7 +127,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
+                    let dimensions = telegramFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false))
                     self.updateVisibility()
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                 }
@@ -153,11 +154,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return
         }
         
-        let isPlaying = self.visibilityStatus && item.controllerInteraction.stickerSettings.loopAnimatedStickers
+        let isPlaying = self.visibilityStatus
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             self.animationNode.visibility = isPlaying
-            if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
+            if self.isPlaying && !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
                 var telegramFile: TelegramMediaFile?
                 for media in item.message.media {
@@ -166,11 +167,21 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         break
                     }
                 }
-                
+
                 if let telegramFile = telegramFile {
-                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
+                    var playbackMode: AnimatedStickerPlaybackMode = .loop
+                    if !item.controllerInteraction.stickerSettings.loopAnimatedStickers {
+                        playbackMode = .once
+                    }
+                    let dimensions = telegramFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    let fittedSize = dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 } else if let emojiResource = self.emojiResource {
-                    self.animationNode.setup(account: item.context.account, resource: emojiResource, width: 384, height: 384, mode: .cached)
+                    var playbackMode: AnimatedStickerPlaybackMode = .loop
+                    if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
+                        playbackMode = .once
+                    }
+                    self.animationNode.setup(account: item.context.account, resource: emojiResource, width: 384, height: 384, playbackMode: playbackMode, mode: .cached)
                 }
             }
         }
@@ -646,26 +657,32 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             if let item = self.item, self.imageNode.frame.contains(location) {
                                 if self.telegramFile != nil {
                                     let _ = item.controllerInteraction.openMessage(item.message, .default)
-                                } else if let emoji = self.emojiResource, emoji.name == "heart" {
-                                    let hapticFeedback: HapticFeedback
-                                    if let currentHapticFeedback = self.hapticFeedback {
-                                        hapticFeedback = currentHapticFeedback
-                                    } else {
-                                        hapticFeedback = HapticFeedback()
-                                        self.hapticFeedback = hapticFeedback
+                                } else if let emoji = self.emojiResource {
+                                    if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
+                                        self.animationNode.playIfNeeded()
                                     }
-                                    hapticFeedback.prepareImpact()
-                                    hapticFeedback.impact(.heavy)
-                                    Queue.mainQueue().after(0.2) {
-                                        hapticFeedback.impact(.medium)
-                                        Queue.mainQueue().after(0.68) {
+                                    
+                                    if emoji.name == "heart" {
+                                        let hapticFeedback: HapticFeedback
+                                        if let currentHapticFeedback = self.hapticFeedback {
+                                            hapticFeedback = currentHapticFeedback
+                                        } else {
+                                            hapticFeedback = HapticFeedback()
+                                            self.hapticFeedback = hapticFeedback
+                                        }
+                                        hapticFeedback.prepareImpact()
+                                        hapticFeedback.impact(.heavy)
+                                        Queue.mainQueue().after(0.2) {
                                             hapticFeedback.impact(.medium)
-                                            Queue.mainQueue().after(0.2) {
+                                            Queue.mainQueue().after(0.74) {
                                                 hapticFeedback.impact(.medium)
-                                                Queue.mainQueue().after(0.68) {
+                                                Queue.mainQueue().after(0.2) {
                                                     hapticFeedback.impact(.medium)
-                                                    Queue.mainQueue().after(0.2) {
+                                                    Queue.mainQueue().after(0.74) {
                                                         hapticFeedback.impact(.medium)
+                                                        Queue.mainQueue().after(0.2) {
+                                                            hapticFeedback.impact(.medium)
+                                                        }
                                                     }
                                                 }
                                             }

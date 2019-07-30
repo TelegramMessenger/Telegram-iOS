@@ -611,10 +611,13 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }
         self.recentListNode.isHidden = filter.contains(.excludeRecent)
     
+        let currentRemotePeers = Atomic<([FoundPeer], [FoundPeer])?>(value: nil)
+        
         let presentationDataPromise = self.presentationDataPromise
         let foundItems = self.searchQuery.get()
         |> mapToSignal { query -> Signal<([ChatListSearchEntry], Bool)?, NoError> in
             guard let query = query, !query.isEmpty else {
+                let _ = currentRemotePeers.swap(nil)
                 return .single(nil)
             }
             
@@ -651,8 +654,9 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             }
             
             let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError>
+            let currentRemotePeersValue = currentRemotePeers.with { $0 } ?? ([], [])
             foundRemotePeers = (
-                .single(([], [], true))
+                .single((currentRemotePeersValue.0, currentRemotePeersValue.1, true))
                 |> then(
                     searchPeers(account: context.account, query: query)
                     |> map { ($0.0, $0.1, false) }
@@ -716,6 +720,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 var entries: [ChatListSearchEntry] = []
                 let isSearching = foundRemotePeers.2 || foundRemoteMessages.1
                 var index = 0
+                
+                let _ = currentRemotePeers.swap((foundRemotePeers.0, foundRemotePeers.1))
                 
                 let filteredPeer:(Peer, Peer) -> Bool = { peer, accountPeer in
                     guard !filter.contains(.excludeSavedMessages) || peer.id != accountPeer.id else { return false }

@@ -83,10 +83,12 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
                 }
                 
                 let context = DrawingContext(size: size, scale: 1.0, clear: true)
-                player.renderFrame(with: 0, into: context.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height))
+                player.renderFrame(with: 0, into: context.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height), bytesPerRow: Int32(context.bytesPerRow))
                 
-                let yuvaLength = Int(size.width) * Int(size.height) * 2 + Int(size.width) * Int(size.height) / 2
-                assert(yuvaLength % 8 == 0)
+                let yuvaPixelsPerAlphaRow = (Int(size.width) + 1) & (~1)
+                assert(yuvaPixelsPerAlphaRow % 2 == 0)
+                
+                let yuvaLength = Int(size.width) * Int(size.height) * 2 + yuvaPixelsPerAlphaRow * Int(size.height) / 2
                 var yuvaFrameData = malloc(yuvaLength)!
                 memset(yuvaFrameData, 0, yuvaLength)
                 
@@ -94,8 +96,8 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
                     free(yuvaFrameData)
                 }
                 
-                encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height))
-                decodeYUVAToRGBA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height))
+                encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
+                decodeYUVAToRGBA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
                 
                 if let colorImage = context.generateImage() {
                     let colorData = NSMutableData()
@@ -189,23 +191,29 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 
                 let scale = size.width / 512.0
                 
+                let bytesPerRow = (4 * Int(size.width) + 15) & (~15)
+                
                 var currentFrame: Int32 = 0
                 
                 var fps: Int32 = player.frameRate
                 let _ = fileContext.write(&fps, count: 4)
                 var widthValue: Int32 = Int32(size.width)
                 var heightValue: Int32 = Int32(size.height)
+                var bytesPerRowValue: Int32 = Int32(bytesPerRow)
                 let _ = fileContext.write(&widthValue, count: 4)
                 let _ = fileContext.write(&heightValue, count: 4)
+                let _ = fileContext.write(&bytesPerRowValue, count: 4)
                 
-                let frameLength = Int(size.width) * Int(size.height) * 4
+                let frameLength = bytesPerRow * Int(size.height)
                 assert(frameLength % 16 == 0)
                 
                 let currentFrameData = malloc(frameLength)!
                 memset(currentFrameData, 0, frameLength)
                 
-                let yuvaLength = Int(size.width) * Int(size.height) * 2 + Int(size.width) * Int(size.height) / 2
-                assert(yuvaLength % 8 == 0)
+                let yuvaPixelsPerAlphaRow = (Int(size.width) + 1) & (~1)
+                assert(yuvaPixelsPerAlphaRow % 2 == 0)
+                
+                let yuvaLength = Int(size.width) * Int(size.height) * 2 + yuvaPixelsPerAlphaRow * Int(size.height) / 2
                 var yuvaFrameData = malloc(yuvaLength)!
                 memset(yuvaFrameData, 0, yuvaLength)
                 
@@ -234,12 +242,12 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                     
                     let drawStartTime = CACurrentMediaTime()
                     memset(currentFrameData, 0, frameLength)
-                    player.renderFrame(with: Int32(currentFrame), into: currentFrameData.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height))
+                    player.renderFrame(with: Int32(currentFrame), into: currentFrameData.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height), bytesPerRow: Int32(bytesPerRow))
                     drawingTime += CACurrentMediaTime() - drawStartTime
                     
                     let appendStartTime = CACurrentMediaTime()
                     
-                    encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), currentFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height))
+                    encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), currentFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(bytesPerRow))
                     
                     appendingTime += CACurrentMediaTime() - appendStartTime
                     
@@ -250,6 +258,9 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                         lhs.pointee = rhs.pointee ^ lhs.pointee
                         lhs = lhs.advanced(by: 1)
                         rhs = rhs.advanced(by: 1)
+                    }
+                    for i in (yuvaLength / 8) * 8 ..< yuvaLength {
+                        
                     }
                     deltaTime += CACurrentMediaTime() - deltaStartTime
                     

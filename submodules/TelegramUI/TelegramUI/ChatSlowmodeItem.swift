@@ -66,7 +66,7 @@ private func generateKnobImage() -> UIImage? {
     })
 }
 
-private let allowedValues: [Int32] = [0, 30, 60 * 1, 60 * 5, 60 * 15, 60 * 30, 60 * 60]
+private let allowedValues: [Int32] = [0, 10, 30, 60, 300, 900, 3600]
 
 class ChatSlowmodeItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode

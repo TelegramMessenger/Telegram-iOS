@@ -159,7 +159,9 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
                         self.animationNode = animationNode
                         self.addSubnode(animationNode)
                     }
-                    self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: 160, height: 160, mode: .cached)
+                    let dimensions = stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                    self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {

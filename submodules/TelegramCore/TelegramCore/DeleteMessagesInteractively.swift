@@ -20,8 +20,25 @@ public enum InteractiveMessagesDeletionType: Int32 {
     case forEveryone = 1
 }
 
-public func deleteMessagesInteractively(postbox: Postbox, messageIds: [MessageId], type: InteractiveMessagesDeletionType) -> Signal<Void, NoError> {
+public func deleteMessagesInteractively(postbox: Postbox, messageIds initialMessageIds: [MessageId], type: InteractiveMessagesDeletionType, deleteAllInGroup: Bool = false) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
+        var messageIds: [MessageId] = []
+        if deleteAllInGroup {
+            for id in initialMessageIds {
+                if let group = transaction.getMessageGroup(id) ?? transaction.getMessageForwardedGroup(id) {
+                    for message in group {
+                        if !messageIds.contains(message.id) {
+                            messageIds.append(message.id)
+                        }
+                    }
+                } else {
+                    messageIds.append(id)
+                }
+            }
+        } else {
+            messageIds = initialMessageIds
+        }
+        
         var messageIdsByPeerId: [PeerId: [MessageId]] = [:]
         for id in messageIds {
             if messageIdsByPeerId[id.peerId] == nil {

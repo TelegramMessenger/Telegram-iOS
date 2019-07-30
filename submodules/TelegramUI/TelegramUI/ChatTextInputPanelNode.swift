@@ -223,7 +223,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var displayAttachmentMenu: () -> Void = { }
     var sendMessage: () -> Void = { }
     var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
-    var updateHeight: () -> Void = { }
+    var updateHeight: (Bool) -> Void = { _ in }
     
     var updateActivity: () -> Void = { }
     
@@ -1199,7 +1199,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         self.updateActionButtons(hasText: inputHasText, hideMicButton: hideMicButton, animated: animated)
-        self.updateTextHeight()
+        self.updateTextHeight(animated: animated)
     }
     
     private func updateActionButtons(hasText: Bool, hideMicButton: Bool, animated: Bool) {
@@ -1345,12 +1345,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.actionButtons.updateAccessibility()
     }
     
-    private func updateTextHeight() {
+    private func updateTextHeight(animated: Bool) {
         if let (width, leftInset, rightInset, maxHeight, metrics) = self.validLayout {
             let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
             if !self.bounds.size.height.isEqual(to: panelHeight) {
-                self.updateHeight()
+                self.updateHeight(animated)
             }
         }
     }
