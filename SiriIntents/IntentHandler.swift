@@ -326,14 +326,12 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         |> introduceError(IntentHandlingError.self)
         |> mapToSignal { account -> Signal<[INMessage], IntentHandlingError> in
             account.shouldBeServiceTaskMaster.set(.single(.now))
-            let completedUpdating: Signal<Bool, IntentHandlingError> = (.single(true) |> then(account.stateManager.isUpdating))
-            |> introduceError(IntentHandlingError.self)
-            |> filter { !$0 }
-            |> take(1)
-            |> timeout(3.0, queue: Queue.mainQueue(), alternate: .fail(.generic))
+            account.resetStateManagement()
 
-            return completedUpdating
-            |> mapToSignal { value -> Signal<[INMessage], IntentHandlingError> in
+            return account.stateManager.pollStateUpdateCompletion()
+            |> introduceError(IntentHandlingError.self)
+            |> take(1)
+            |> mapToSignal { _ -> Signal<[INMessage], IntentHandlingError> in
                 return unreadMessages(account: account)
                 |> introduceError(IntentHandlingError.self)
             }
