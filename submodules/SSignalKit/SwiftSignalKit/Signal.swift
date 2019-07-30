@@ -38,7 +38,7 @@ private final class SubscriberDisposable<T, E> : Disposable {
     }
 }
 
-public struct Signal<T, E> {
+public final class Signal<T, E> {
     private let generator: (Subscriber<T, E>) -> Disposable
     
     public init(_ generator: @escaping(Subscriber<T, E>) -> Disposable) {
