@@ -184,9 +184,15 @@ private func chatMessageStickerThumbnailData(postbox: Postbox, file: TelegramMed
     }
 }
 
-private func chatMessageStickerPackThumbnailData(postbox: Postbox, representation: TelegramMediaImageRepresentation, synchronousLoad: Bool) -> Signal<Data?, NoError> {
-    let resource = representation.resource
-    let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedStickerAJpegRepresentation(size: CGSize(width: 160.0, height: 160.0)), complete: false, fetch: false, attemptSynchronously: synchronousLoad)
+private func chatMessageStickerPackThumbnailData(postbox: Postbox, resource: MediaResource, animated: Bool, synchronousLoad: Bool) -> Signal<Data?, NoError> {
+    let maybeFetched: Signal<MediaResourceData, NoError>
+    let representation: CachedMediaResourceRepresentation
+    if animated {
+        representation = CachedAnimatedStickerFirstFrameRepresentation(width: 160, height: 160)
+    } else {
+        representation = CachedStickerAJpegRepresentation(size: CGSize(width: 160.0, height: 160.0))
+    }
+    maybeFetched = postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false, fetch: false, attemptSynchronously: synchronousLoad)
     
     return maybeFetched
     |> take(1)
@@ -195,7 +201,7 @@ private func chatMessageStickerPackThumbnailData(postbox: Postbox, representatio
             let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
             return .single(loadedData)
         } else {
-            let fullSizeData = postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedStickerAJpegRepresentation(size: CGSize(width: 160.0, height: 160.0)), complete: false)
+            let fullSizeData = postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false)
             |> map { next in
                 return ((next.size == 0 || !next.complete) ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe), next.complete)
             }
@@ -325,8 +331,8 @@ public func chatMessageSticker(account: Account, file: TelegramMediaFile, small:
     return chatMessageSticker(postbox: account.postbox, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize, thumbnail: thumbnail, synchronousLoad: synchronousLoad)
 }
 
-public func chatMessageStickerPackThumbnail(postbox: Postbox, representation: TelegramMediaImageRepresentation, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMessageStickerPackThumbnailData(postbox: postbox, representation: representation, synchronousLoad: synchronousLoad)
+public func chatMessageStickerPackThumbnail(postbox: Postbox, resource: MediaResource, animated: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMessageStickerPackThumbnailData(postbox: postbox, resource: resource, animated: animated, synchronousLoad: synchronousLoad)
     
     return signal
     |> map { fullSizeData in
