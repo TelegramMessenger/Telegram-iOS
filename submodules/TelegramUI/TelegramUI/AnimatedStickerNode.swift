@@ -458,6 +458,12 @@ final class AnimatedStickerNode: ASDisplayNode {
         self.timer.swap(nil)?.invalidate()
     }
     
+    func playIfNeeded() {
+        if !self.isPlaying {
+            self.play()
+        }
+    }
+    
     func updateLayout(size: CGSize) {
         self.renderer?.frame = CGRect(origin: CGPoint(), size: size)
     }

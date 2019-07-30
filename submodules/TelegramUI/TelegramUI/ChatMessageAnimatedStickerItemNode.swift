@@ -654,26 +654,32 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             if let item = self.item, self.imageNode.frame.contains(location) {
                                 if self.telegramFile != nil {
                                     let _ = item.controllerInteraction.openMessage(item.message, .default)
-                                } else if let emoji = self.emojiResource, emoji.name == "heart" {
-                                    let hapticFeedback: HapticFeedback
-                                    if let currentHapticFeedback = self.hapticFeedback {
-                                        hapticFeedback = currentHapticFeedback
-                                    } else {
-                                        hapticFeedback = HapticFeedback()
-                                        self.hapticFeedback = hapticFeedback
+                                } else if let emoji = self.emojiResource {
+                                    if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
+                                        self.animationNode.playIfNeeded()
                                     }
-                                    hapticFeedback.prepareImpact()
-                                    hapticFeedback.impact(.heavy)
-                                    Queue.mainQueue().after(0.2) {
-                                        hapticFeedback.impact(.medium)
-                                        Queue.mainQueue().after(0.68) {
+                                    
+                                    if emoji.name == "heart" {
+                                        let hapticFeedback: HapticFeedback
+                                        if let currentHapticFeedback = self.hapticFeedback {
+                                            hapticFeedback = currentHapticFeedback
+                                        } else {
+                                            hapticFeedback = HapticFeedback()
+                                            self.hapticFeedback = hapticFeedback
+                                        }
+                                        hapticFeedback.prepareImpact()
+                                        hapticFeedback.impact(.heavy)
+                                        Queue.mainQueue().after(0.2) {
                                             hapticFeedback.impact(.medium)
-                                            Queue.mainQueue().after(0.2) {
+                                            Queue.mainQueue().after(0.74) {
                                                 hapticFeedback.impact(.medium)
-                                                Queue.mainQueue().after(0.68) {
+                                                Queue.mainQueue().after(0.2) {
                                                     hapticFeedback.impact(.medium)
-                                                    Queue.mainQueue().after(0.2) {
+                                                    Queue.mainQueue().after(0.74) {
                                                         hapticFeedback.impact(.medium)
+                                                        Queue.mainQueue().after(0.2) {
+                                                            hapticFeedback.impact(.medium)
+                                                        }
                                                     }
                                                 }
                                             }
