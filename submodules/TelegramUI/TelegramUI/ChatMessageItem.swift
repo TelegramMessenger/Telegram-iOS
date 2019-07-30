@@ -212,13 +212,15 @@ public final class ChatMessageItemAssociatedData: Equatable {
     let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     let isRecentActions: Bool
     let contactsPeerIds: Set<PeerId>
+    let animatedEmojiStickers: [String: StickerPackItem]
     let forcedResourceStatus: FileMediaResourceStatus?
     
-    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set(), forcedResourceStatus: FileMediaResourceStatus? = nil) {
+    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set(), animatedEmojiStickers: [String: StickerPackItem] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
         self.contactsPeerIds = contactsPeerIds
+        self.animatedEmojiStickers = animatedEmojiStickers
         self.forcedResourceStatus = forcedResourceStatus
     }
     
@@ -384,8 +386,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
         }
         
-        if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && self.message.elligibleForLargeEmoji && messageIsElligibleForLargeEmoji(self.message) {
-            if let _ = animatedEmojiResource(emoji: self.message.text) {
+        if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(self.message) {
+            if let _ = self.associatedData.animatedEmojiStickers[self.message.text.trimmedEmoji] {
                 viewClassName = ChatMessageAnimatedStickerItemNode.self
             } else {
                 viewClassName = ChatMessageStickerItemNode.self

@@ -27,7 +27,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var shareButtonNode: HighlightableButtonNode?
     
     var telegramFile: TelegramMediaFile?
-    var emojiResource: LocalBundleResource?
+    var emojiFile: TelegramMediaFile?
     private let disposable = MetaDisposable()
     
     private var viaBotNode: TextNode?
@@ -137,12 +137,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     
         if self.telegramFile == nil {
-            self.emojiResource = animatedEmojiResource(emoji: item.message.text)?.0
+            self.emojiFile = item.associatedData.animatedEmojiStickers[item.message.text.trimmedEmoji]?.file
             
-            if let emojiResource = self.emojiResource {
-                let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: emojiResource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: 0, attributes: [])
-                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: dummyFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
-                self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: dummyFile)).start())
+            if let emojiFile = self.emojiFile {
+                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
+                self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: emojiFile)).start())
             }
             
             self.updateVisibility()
@@ -160,28 +159,26 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             self.animationNode.visibility = isPlaying
             if self.isPlaying && !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
-                var telegramFile: TelegramMediaFile?
-                for media in item.message.media {
-                    if let file = media as? TelegramMediaFile {
-                        telegramFile = file
-                        break
-                    }
-                }
-
-                if let telegramFile = telegramFile {
-                    var playbackMode: AnimatedStickerPlaybackMode = .loop
+                
+                var file: TelegramMediaFile?
+                var playbackMode: AnimatedStickerPlaybackMode = .loop
+                
+                if let telegramFile = self.telegramFile {
+                    file = telegramFile
                     if !item.controllerInteraction.stickerSettings.loopAnimatedStickers {
                         playbackMode = .once
                     }
-                    let dimensions = telegramFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                    let fittedSize = dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
-                } else if let emojiResource = self.emojiResource {
-                    var playbackMode: AnimatedStickerPlaybackMode = .loop
+                } else if let emojiFile = self.emojiFile {
+                    file = emojiFile
                     if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
                         playbackMode = .once
                     }
-                    self.animationNode.setup(account: item.context.account, resource: emojiResource, width: 384, height: 384, playbackMode: playbackMode, mode: .cached)
+                }
+                
+                if let file = file {
+                    let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    let fittedSize = dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                    self.animationNode.setup(account: item.context.account, resource: file.resource, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 }
             }
         }
@@ -194,6 +191,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
         let displaySize = CGSize(width: 184.0, height: 184.0)
         let telegramFile = self.telegramFile
+        let emojiFile = self.emojiFile
         let layoutConstants = self.layoutConstants
         let imageLayout = self.imageNode.asyncLayout()
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
@@ -215,10 +213,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {
                     imageSize = thumbnailSize.aspectFitted(displaySize)
                 }
-            } else {
-                if let (_, size) = animatedEmojiResource(emoji: item.message.text) {
-                    imageSize = CGSize(width: floor(displaySize.width * size / 512.0), height: floor(displaySize.height * size / 512.0))
-                    isEmoji = true
+            } else if let emojiFile = emojiFile {
+                isEmoji = true
+                
+                let displaySize = CGSize(width: floor(displaySize.width * 350.0 / 512.0), height: floor(displaySize.height * 350.0 / 512.0))
+                if let dimensions = emojiFile.dimensions {
+                    imageSize = dimensions.aspectFitted(displaySize)
+                } else if let thumbnailSize = emojiFile.previewRepresentations.first?.dimensions {
+                    imageSize = thumbnailSize.aspectFitted(displaySize)
                 }
             }
             
@@ -657,12 +659,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             if let item = self.item, self.imageNode.frame.contains(location) {
                                 if self.telegramFile != nil {
                                     let _ = item.controllerInteraction.openMessage(item.message, .default)
-                                } else if let emoji = self.emojiResource {
+                                } else if let _ = self.emojiFile {
                                     if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
                                         self.animationNode.playIfNeeded()
                                     }
                                     
-                                    if emoji.name == "heart" {
+                                    if self.item?.message.text == "❤️" {
                                         let hapticFeedback: HapticFeedback
                                         if let currentHapticFeedback = self.hapticFeedback {
                                             hapticFeedback = currentHapticFeedback

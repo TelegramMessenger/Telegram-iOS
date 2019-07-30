@@ -65,7 +65,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     return .fail
                 }
                 
-                if let item = strongSelf.item, item.presentationData.largeEmoji && item.message.elligibleForLargeEmoji {
+                if let item = strongSelf.item, item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
                     if strongSelf.imageNode.frame.contains(point) {
                         return .waitForDoubleTap
                     }
@@ -104,7 +104,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
         }
         
-        if self.telegramFile == nil && item.presentationData.largeEmoji && item.message.elligibleForLargeEmoji {
+        if self.telegramFile == nil && item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
             self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text))
         }
     }
@@ -137,7 +137,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             var isEmoji = false
-            if item.presentationData.largeEmoji && item.message.elligibleForLargeEmoji {
+            if item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
                 let attributedText = NSAttributedString(string: item.message.text, font: item.presentationData.messageEmojiFont1, textColor: .black)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 180.0, height: 90.0), alignment: .natural))
                 
@@ -735,7 +735,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         
         let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
         var isEmoji = false
-        if let item = self.item, item.presentationData.largeEmoji && item.message.elligibleForLargeEmoji {
+        if let item = self.item, item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
             isEmoji = true
         }
         
