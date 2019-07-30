@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 import Display
 import Postbox
 import TelegramCore
@@ -44,7 +45,6 @@ private final class ActionSheetItemNode: ASDisplayNode {
         
         super.init()
         
-        self.addSubnode(self.separatorNode)
         self.addSubnode(self.highlightedBackgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.iconNode)
@@ -391,6 +391,15 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             completedEffect = true
             intermediateCompletion()
         })
+        
+        Queue.mainQueue().after(0.7) {
+            completedAlpha = true
+            completedButton = true
+            completedBubble = true
+            completedEffect = true
+            intermediateCompletion()
+        }
+        
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
         self.contentContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in })
         

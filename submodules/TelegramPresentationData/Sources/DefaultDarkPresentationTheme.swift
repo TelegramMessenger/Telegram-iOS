@@ -7,19 +7,22 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     let constructiveColor: UIColor = UIColor(rgb: 0x08a723)
     let secretColor: UIColor = UIColor(rgb: 0x00b12c)
     
+    let badgeFillColor: UIColor
     let badgeTextColor: UIColor
     let outgoingBubbleFillColor: UIColor
     let outgoingBubbleHighlightedFillColor: UIColor
     let outgoingScamColor: UIColor
     
     if accentColor.rgb == UIColor.white.rgb {
+        badgeFillColor = .white
         badgeTextColor = .black
         outgoingBubbleFillColor = UIColor(rgb: 0x313131)
         outgoingBubbleHighlightedFillColor = UIColor(rgb: 0x464646)
         outgoingScamColor = destructiveColor
     } else {
-        outgoingBubbleFillColor = accentColor
+        badgeFillColor = destructiveColor
         badgeTextColor = .white
+        outgoingBubbleFillColor = accentColor
         outgoingBubbleHighlightedFillColor = accentColor.withMultipliedBrightnessBy(1.421)
         outgoingScamColor = .white
     }
@@ -31,9 +34,9 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         selectedIconColor: accentColor,
         textColor: UIColor(rgb: 0x828282),
         selectedTextColor: accentColor,
-        badgeBackgroundColor: destructiveColor,
+        badgeBackgroundColor: badgeFillColor,
         badgeStrokeColor: UIColor(rgb: 0x1c1c1d),
-        badgeTextColor: UIColor(rgb: 0xffffff)
+        badgeTextColor: badgeTextColor
     )
 
     let rootNavigationBar = PresentationThemeRootNavigationBar(
@@ -45,9 +48,9 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         accentTextColor: accentColor,
         backgroundColor: UIColor(rgb: 0x1c1c1d),
         separatorColor: UIColor(rgb: 0x3d3d40),
-        badgeBackgroundColor: destructiveColor,
+        badgeBackgroundColor: badgeFillColor,
         badgeStrokeColor: UIColor(rgb: 0x1c1c1d),
-        badgeTextColor: UIColor(rgb: 0xffffff)
+        badgeTextColor: badgeTextColor
     )
 
     let navigationSearchBar = PresentationThemeNavigationSearchBar(
@@ -253,7 +256,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         foregroundColor: .white,
         badgeBackgroundColor: accentColor,
         badgeStrokeColor: accentColor,
-        badgeTextColor: .white
+        badgeTextColor: badgeTextColor
     )
 
     let chat = PresentationThemeChat(

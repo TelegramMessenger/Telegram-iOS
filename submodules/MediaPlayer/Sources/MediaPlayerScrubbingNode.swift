@@ -698,13 +698,13 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         switch self.contentNodes {
         case let .standard(node):
-            if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
+            if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled, handleNodeContainer.frame.insetBy(dx: 0.0, dy: -5.0).contains(point) {
                 return handleNodeContainer.view
             } else {
                 return nil
             }
         case let .custom(node):
-            if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
+            if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled, handleNodeContainer.frame.insetBy(dx: 0.0, dy: -5.0).contains(point) {
                 return handleNodeContainer.view
             } else {
                 return nil

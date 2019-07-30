@@ -191,7 +191,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
             
             
-            return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
+            return .update(StoreMessage(id: updatedId, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
         })
         for file in sentStickers {
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
