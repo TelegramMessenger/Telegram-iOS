@@ -217,7 +217,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         updateImageSignal = chatMessagePhotoThumbnail(account: context.account, photoReference: imageReference)
                     } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                         if fileReference.media.isAnimatedSticker {
-                            updateImageSignal = chatMessageAnimatedSticker(postbox: context.account.postbox, file: fileReference.media, small: false, size: CGSize(width: 160.0, height: 160.0))
+                            let dimensions = fileReference.media.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                            updateImageSignal = chatMessageAnimatedSticker(postbox: context.account.postbox, file: fileReference.media, small: false, size: dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0)))
                             updatedFetchMediaSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource))
                         } else if fileReference.media.isVideo {
                             updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)

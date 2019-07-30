@@ -279,8 +279,10 @@ public final class NotificationViewControllerImpl {
                                 }
                                 view?.addSubnode(animatedStickerNode)
                             }
-                            strongSelf.imageNode.setSignal(chatMessageAnimatedSticker(postbox: accountAndImage.0.postbox, file: fileReference.media, small: false, size: CGSize(width: 512.0, height: 512.0)))
-                            animatedStickerNode.setup(account: accountAndImage.0, resource: fileReference.media.resource, width: 512, height: 512, mode: .direct)
+                            let dimensions = fileReference.media.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                            let fittedDimensions = dimensions.aspectFitted(CGSize(width: 512.0, height: 512.0))
+                            strongSelf.imageNode.setSignal(chatMessageAnimatedSticker(postbox: accountAndImage.0.postbox, file: fileReference.media, small: false, size: fittedDimensions))
+                            animatedStickerNode.setup(account: accountAndImage.0, resource: fileReference.media.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct)
                             animatedStickerNode.visibility = true
                             
                             accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
