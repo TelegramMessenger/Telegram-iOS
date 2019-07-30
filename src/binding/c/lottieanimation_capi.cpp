@@ -17,11 +17,14 @@
  */
 
 #include "rlottie.h"
+#include "rlottie_capi.h"
 #include "vdebug.h"
 
 using namespace rlottie;
 
 extern "C" {
+#include <string.h>
+#include <stdarg.h>
 
 struct Lottie_Animation_S
 {
@@ -148,4 +151,58 @@ lottie_animation_render_flush(Lottie_Animation_S *animation)
     return animation->mBufferRef;
 }
 
+LOT_EXPORT void
+lottie_animation_property_override(Lottie_Animation_S *animation,
+                                   const Lottie_Animation_Property type,
+                                   const char *keypath,
+                                   ...)
+{
+    va_list prop;
+    va_start(prop, keypath);
+
+    switch(type) {
+    case LOTTIE_ANIMATION_PROPERTY_FILLCOLOR: {
+        double r = va_arg(prop, double);
+        double g = va_arg(prop, double);
+        double b = va_arg(prop, double);
+        if (r > 1 || r < 0 || g > 1 || g < 0 || b > 1 || b < 0) break;
+        animation->mAnimation->setValue<rlottie::Property::FillColor>(keypath, rlottie::Color(r, g, b));
+        break;
+    }
+    case LOTTIE_ANIMATION_PROPERTY_FILLOPACITY: {
+        double opacity = va_arg(prop, double);
+        if (opacity > 100 || opacity < 0) break;
+        animation->mAnimation->setValue<rlottie::Property::FillOpacity>(keypath, (float)opacity);
+        break;
+    }
+    case LOTTIE_ANIMATION_PROPERTY_STROKECOLOR: {
+        double r = va_arg(prop, double);
+        double g = va_arg(prop, double);
+        double b = va_arg(prop, double);
+        if (r > 1 || r < 0 || g > 1 || g < 0 || b > 1 || b < 0) break;
+        animation->mAnimation->setValue<rlottie::Property::StrokeColor>(keypath, rlottie::Color(r, g, b));
+        break;
+    }
+    case LOTTIE_ANIMATION_PROPERTY_STROKEOPACITY: {
+        double opacity = va_arg(prop, double);
+        if (opacity > 100 || opacity < 0) break;
+        animation->mAnimation->setValue<rlottie::Property::StrokeOpacity>(keypath, (float)opacity);
+        break;
+    }
+    case LOTTIE_ANIMATION_PROPERTY_STROKEWIDTH: {
+        double width = va_arg(prop, double);
+        if (width < 0) break;
+        animation->mAnimation->setValue<rlottie::Property::StrokeWidth>(keypath, (float)width);
+        break;
+    }
+    case LOTTIE_ANIMATION_PROPERTY_TR_ANCHOR:
+    case LOTTIE_ANIMATION_PROPERTY_TR_POSITION:
+    case LOTTIE_ANIMATION_PROPERTY_TR_SCALE:
+    case LOTTIE_ANIMATION_PROPERTY_TR_ROTATION:
+    case LOTTIE_ANIMATION_PROPERTY_TR_OPACITY:
+        //@TODO handle propery update.
+        break;
+    }
+    va_end(prop);
+}
 }

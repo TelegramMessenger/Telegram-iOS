@@ -27,6 +27,19 @@
 extern "C" {
 #endif
 
+typedef enum {
+    LOTTIE_ANIMATION_PROPERTY_FILLCOLOR,      /*!< Color property of Fill object , value type is float [0 ... 1] */
+    LOTTIE_ANIMATION_PROPERTY_FILLOPACITY,    /*!< Opacity property of Fill object , value type is float [ 0 .. 100] */
+    LOTTIE_ANIMATION_PROPERTY_STROKECOLOR,    /*!< Color property of Stroke object , value type is float [0 ... 1] */
+    LOTTIE_ANIMATION_PROPERTY_STROKEOPACITY,  /*!< Opacity property of Stroke object , value type is float [ 0 .. 100] */
+    LOTTIE_ANIMATION_PROPERTY_STROKEWIDTH,    /*!< stroke with property of Stroke object , value type is float */
+    LOTTIE_ANIMATION_PROPERTY_TR_ANCHOR,      /*!< Transform Anchor property of Layer and Group object , value type is int */
+    LOTTIE_ANIMATION_PROPERTY_TR_POSITION,    /*!< Transform Position property of Layer and Group object , value type is int */
+    LOTTIE_ANIMATION_PROPERTY_TR_SCALE,       /*!< Transform Scale property of Layer and Group object , value type is float range[0 ..100] */
+    LOTTIE_ANIMATION_PROPERTY_TR_ROTATION,    /*!< Transform Scale property of Layer and Group object , value type is float. range[0 .. 360] in degrees*/
+    LOTTIE_ANIMATION_PROPERTY_TR_OPACITY      /*!< Transform Opacity property of Layer and Group object , value type is float [ 0 .. 100] */
+}Lottie_Animation_Property;
+
 typedef struct Lottie_Animation_S Lottie_Animation;
 
 /**
@@ -232,6 +245,34 @@ lottie_animation_render_async(Lottie_Animation *animation,
  */
 LOT_EXPORT uint32_t *
 lottie_animation_render_flush(Lottie_Animation *animation);
+
+
+/**
+ *  @brief Request to change the properties of this animation object.
+ *  Keypath should conatin object names separated by (.) and can handle globe(**) or wildchar(*)
+ *
+ *  @usage
+ *  To change fillcolor property of fill1 object in the layer1->group1->fill1 hirarchy to RED color
+ *
+ *      lottie_animation_property_override(animation, LOTTIE_ANIMATION_PROPERTY_FILLCOLOR, "layer1.group1.fill1", 1.0, 0.0, 0.0);
+ *
+ *  if all the color property inside group1 needs to be changed to GREEN color
+ *
+ *      lottie_animation_property_override(animation, LOTTIE_ANIMATION_PROPERTY_FILLCOLOR, "**.group1.**", 1.0, 0.0, 0.0);
+ *
+ *  @param[in] animation Animation object.
+ *  @param[in] type Property type. (@p Lottie_Animation_Property)
+ *  @param[in] keypath Specific content of target.
+ *  @param[in] ... Property values.
+ *
+ *  @ingroup Lottie_Animation
+ *  @internal
+ * */
+LOT_EXPORT void
+lottie_animation_property_override(Lottie_Animation *animation,
+                                   const Lottie_Animation_Property type,
+                                   const char *keypath,
+                                   ...);
 
 #ifdef __cplusplus
 }
