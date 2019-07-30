@@ -77,7 +77,12 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         if self.theme !== theme {
             self.theme = theme
             
-            self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
+            switch type {
+                case .down:
+                    self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
+                case .mentions:
+                    self.imageNode.image = PresentationResourcesChat.chatHistoryMentionsButtonImage(theme)
+            }
             self.badgeBackgroundNode.image = PresentationResourcesChat.chatHistoryNavigationButtonBadgeImage(theme)
             
             if let string = self.badgeTextNode.attributedText?.string {
