@@ -892,7 +892,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             return current
                         }
                         
-                        if let updateRank = updateRank, updateRank.count > rankMaxLength {
+                        if let updateRank = updateRank, updateRank.count > rankMaxLength || updateRank.containsEmoji {
                             errorImpl?()
                             return
                         }
@@ -928,6 +928,10 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                         }
                         
                         let effectiveRank = updateRank ?? currentRank
+                        if effectiveRank?.containsEmoji ?? false {
+                            errorImpl?()
+                            return
+                        }
                         
                         if let updateFlags = updateFlags {
                             updateState { current in
@@ -961,7 +965,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             return current
                         }
                         
-                        if let updateRank = updateRank, updateRank.count > rankMaxLength {
+                        if let updateRank = updateRank, updateRank.count > rankMaxLength || updateRank.containsEmoji {
                             errorImpl?()
                             return
                         }
@@ -1014,7 +1018,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                         return current
                     }
                     
-                    if let updateRank = updateRank, updateRank.count > rankMaxLength {
+                    if let updateRank = updateRank, updateRank.count > rankMaxLength || updateRank.containsEmoji {
                         errorImpl?()
                         return
                     }

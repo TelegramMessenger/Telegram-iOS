@@ -82,12 +82,14 @@ private final class AnimatedStickerFrame {
     let type: AnimationRendererFrameType
     let width: Int
     let height: Int
+    let isLastFrame: Bool
     
-    init(data: Data, type: AnimationRendererFrameType, width: Int, height: Int) {
+    init(data: Data, type: AnimationRendererFrameType, width: Int, height: Int, isLastFrame: Bool) {
         self.data = data
         self.type = type
         self.width = width
         self.height = height
+        self.isLastFrame = isLastFrame
     }
 }
 
@@ -162,6 +164,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
     
     func takeFrame() -> AnimatedStickerFrame {
         var frameData: Data?
+        var isLastFrame = false
         
         let dataLength = self.data.count
         let decodeBufferLength = self.decodeBuffer.count
@@ -192,6 +195,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
             
             self.offset += Int(frameLength)
             if self.offset == dataLength {
+                isLastFrame = true
                 self.offset = self.initialOffset
                 self.frameBuffer.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                     memset(bytes, 0, frameBufferLength)
@@ -199,7 +203,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
             }
         }
         
-        return AnimatedStickerFrame(data: frameData!, type: .yuva, width: self.width, height: self.height)
+        return AnimatedStickerFrame(data: frameData!, type: .yuva, width: self.width, height: self.height, isLastFrame: isLastFrame)
     }
 }
 
@@ -243,7 +247,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
             memset(bytes, 0, self.width * self.height * 4)
             self.animation.renderFrame(with: Int32(frameIndex), into: bytes, width: Int32(self.width), height: Int32(self.height))
         }
-        return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height)
+        return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, isLastFrame: frameIndex == self.frameCount)
     }
 }
 
@@ -434,6 +438,10 @@ final class AnimatedStickerNode: ASDisplayNode {
                                 strongSelf.started()
                             }
                         })
+                        if case .once = strongSelf.playbackMode, frame.isLastFrame {
+                            strongSelf.stop()
+                            strongSelf.isPlaying = false
+                        }
                     }
                 }
                 frameQueue.with { frameQueue in
@@ -448,6 +456,12 @@ final class AnimatedStickerNode: ASDisplayNode {
     func stop() {
         self.reportedStarted = false
         self.timer.swap(nil)?.invalidate()
+    }
+    
+    func playIfNeeded() {
+        if !self.isPlaying {
+            self.play()
+        }
     }
     
     func updateLayout(size: CGSize) {
