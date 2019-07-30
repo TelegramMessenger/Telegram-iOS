@@ -203,13 +203,15 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         if let attributedText = textInputNode.attributedText, !attributedText.string.isEmpty {
             self.fromMessageTextNode.attributedText = attributedText
+            
+            if let toAttributedText = self.fromMessageTextNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
+                toAttributedText.addAttribute(NSAttributedStringKey.foregroundColor, value: self.presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (toAttributedText.string as NSString).length))
+                self.toMessageTextNode.attributedText = toAttributedText
+            }
         } else {
-            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedStringKey.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedStringKey.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
-        }
-
-        if let toAttributedText = self.fromMessageTextNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
-            toAttributedText.addAttribute(NSAttributedStringKey.foregroundColor, value: self.presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (toAttributedText.string as NSString).length))
-            self.toMessageTextNode.attributedText = toAttributedText
+            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedStringKey.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedStringKey.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
+        
+            self.toMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedStringKey.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedStringKey.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
         }
         self.messageBackgroundNode.contentMode = .scaleToFill
         
@@ -536,7 +538,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         
         if self.textInputNode.textView.numberOfLines == 1 || self.textInputNode.textView.attributedText.string.isEmpty {
-            let textWidth = min(self.fromMessageTextNode.textView.sizeThatFits(layout.size).width + 36.0, messageFrame.width)
+            let textWidth = min(self.toMessageTextNode.textView.sizeThatFits(layout.size).width + 36.0, messageFrame.width)
             messageFrame.origin.x += messageFrame.width - textWidth
             messageFrame.size.width = textWidth
         }

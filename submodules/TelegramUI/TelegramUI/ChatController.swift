@@ -240,6 +240,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     
     private weak var slowmodeTooltipController: ChatSlowmodeHintController?
     
+    private weak var sendMessageActionsController: ChatSendMessageActionSheetController?
+    
     private var screenCaptureEventsDisposable: Disposable?
     private let chatAdditionalDataDisposable = MetaDisposable()
     
@@ -3655,6 +3657,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
                     }
                 })
+                strongSelf.sendMessageActionsController = controller
                 strongSelf.presentInGlobalOverlay(controller, with: nil)
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
@@ -4026,6 +4029,8 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 controller.dismissWithCommitAction()
             }
         })
+        
+        self.sendMessageActionsController?.dismiss()
     }
     
     private func saveInterfaceState(includeScrollState: Bool = true) {
