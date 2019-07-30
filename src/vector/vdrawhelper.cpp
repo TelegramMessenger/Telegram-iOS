@@ -914,32 +914,32 @@ void vInitDrawhelperFunctions()
 
 #if defined(__ARM_NEON__)
     // update fast path for NEON
-    extern void comp_func_solid_SourceOver_neon(
+    extern void Vcomp_func_solid_SourceOver_neon(
         uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);
 
     COMP_functionForModeSolid_C[VPainter::CompModeSrcOver] =
-        comp_func_solid_SourceOver_neon;
+        Vcomp_func_solid_SourceOver_neon;
 #endif
 
 #if defined(__SSE2__)
     // update fast path for SSE2
-    extern void comp_func_solid_SourceOver_sse2(
+    extern void Vcomp_func_solid_SourceOver_sse2(
         uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);
-    extern void comp_func_solid_Source_sse2(
+    extern void Vcomp_func_solid_Source_sse2(
         uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);
-    extern void comp_func_Source_sse2(uint32_t * dest, const uint32_t *src,
+    extern void Vcomp_func_Source_sse2(uint32_t * dest, const uint32_t *src,
                                       int length, uint32_t const_alpha);
-    extern void comp_func_SourceOver_sse2(uint32_t * dest, const uint32_t *src,
+    extern void Vcomp_func_SourceOver_sse2(uint32_t * dest, const uint32_t *src,
                                           int length, uint32_t const_alpha);
 
     COMP_functionForModeSolid_C[VPainter::CompModeSrc] =
-        comp_func_solid_Source_sse2;
+        Vcomp_func_solid_Source_sse2;
     COMP_functionForModeSolid_C[VPainter::CompModeSrcOver] =
-        comp_func_solid_SourceOver_sse2;
+        Vcomp_func_solid_SourceOver_sse2;
 
-    COMP_functionForMode_C[VPainter::CompModeSrc] = comp_func_Source_sse2;
+    COMP_functionForMode_C[VPainter::CompModeSrc] = Vcomp_func_Source_sse2;
     // COMP_functionForMode_C[VPainter::CompModeSrcOver] =
-    // comp_func_SourceOver_sse2;
+    // Vcomp_func_SourceOver_sse2;
 #endif
 }
 
