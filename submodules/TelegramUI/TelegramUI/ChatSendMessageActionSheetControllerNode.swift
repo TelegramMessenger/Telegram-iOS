@@ -390,14 +390,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             intermediateCompletion()
         })
         
-        Queue.mainQueue().after(0.7) {
-            completedAlpha = true
-            completedButton = true
-            completedBubble = true
-            completedEffect = true
-            intermediateCompletion()
-        }
-        
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
         self.contentContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in })
         
@@ -453,10 +445,18 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 let textOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
                 self.fromMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: delta * 2.0 + textOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
                 self.toMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: delta * 2.0 + textOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            } else {
+                completedBubble = true
             }
             
             self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 160.0, y: 0.0), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
             self.contentContainerNode.layer.animateScale(from: 1.0, to: 0.4, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        }
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if let layout = self.validLayout {
+            self.containerLayoutUpdated(layout, transition: .immediate)
         }
     }
     
@@ -484,10 +484,13 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let insets = layout.insets(options: [.statusBar, .input])
         let inputHeight = layout.inputHeight ?? 0.0
         
+        let contentOffset = self.scrollNode.view.contentOffset.y
+        
         var contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width - layout.safeInsets.right, y: layout.size.height - 6.0 - insets.bottom - contentSize.height)
         if inputHeight > 0.0 {
             contentOrigin.y += 60.0
         }
+        contentOrigin.y = min(contentOrigin.y + contentOffset, layout.size.height - 6.0 - layout.intrinsicInsets.bottom - contentSize.height)
         
         transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: contentOrigin, size: contentSize))
         var nextY: CGFloat = 0.0
@@ -502,6 +505,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         if inputHeight.isZero {
             sendButtonFrame.origin.y -= 60.0
         }
+        sendButtonFrame.origin.y = min(sendButtonFrame.origin.y + contentOffset, layout.size.height - layout.intrinsicInsets.bottom - initialSendButtonFrame.height)
         transition.updateFrame(node: self.sendButtonNode, frame: sendButtonFrame)
         
         var messageFrame = self.textFieldFrame

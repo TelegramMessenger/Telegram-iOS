@@ -37,9 +37,11 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
     }
     
     private var theme: PresentationTheme
+    private let type: ChatHistoryNavigationButtonType
     
     init(theme: PresentationTheme, type: ChatHistoryNavigationButtonType) {
         self.theme = theme
+        self.type = type
         
         self.imageNode = ASImageNode()
         self.imageNode.displayWithoutProcessing = true
@@ -77,7 +79,7 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         if self.theme !== theme {
             self.theme = theme
             
-            switch type {
+            switch self.type {
                 case .down:
                     self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
                 case .mentions:
