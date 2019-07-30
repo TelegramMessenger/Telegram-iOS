@@ -17,6 +17,7 @@
  */
 
 #include "vraster.h"
+#include <climits>
 #include <cstring>
 #include <memory>
 #include "config.h"
@@ -167,6 +168,8 @@ void FTOutline::convert(CapStyle cap, JoinStyle join, float width,
 
 void FTOutline::moveTo(const VPointF &pt)
 {
+    assert(ft.n_points <= SHRT_MAX - 1);
+
     ft.points[ft.n_points].x = TO_FT_COORD(pt.x());
     ft.points[ft.n_points].y = TO_FT_COORD(pt.y());
     ft.tags[ft.n_points] = SW_FT_CURVE_TAG_ON;
@@ -183,6 +186,8 @@ void FTOutline::moveTo(const VPointF &pt)
 
 void FTOutline::lineTo(const VPointF &pt)
 {
+    assert(ft.n_points <= SHRT_MAX - 1);
+
     ft.points[ft.n_points].x = TO_FT_COORD(pt.x());
     ft.points[ft.n_points].y = TO_FT_COORD(pt.y());
     ft.tags[ft.n_points] = SW_FT_CURVE_TAG_ON;
@@ -192,6 +197,8 @@ void FTOutline::lineTo(const VPointF &pt)
 void FTOutline::cubicTo(const VPointF &cp1, const VPointF &cp2,
                         const VPointF ep)
 {
+    assert(ft.n_points <= SHRT_MAX - 3);
+
     ft.points[ft.n_points].x = TO_FT_COORD(cp1.x());
     ft.points[ft.n_points].y = TO_FT_COORD(cp1.y());
     ft.tags[ft.n_points] = SW_FT_CURVE_TAG_CUBIC;
@@ -209,6 +216,8 @@ void FTOutline::cubicTo(const VPointF &cp1, const VPointF &cp2,
 }
 void FTOutline::close()
 {
+    assert(ft.n_points <= SHRT_MAX - 1);
+
     // mark the contour as a close path.
     ft.contours_flag[ft.n_contours] = 0;
 
@@ -233,6 +242,8 @@ void FTOutline::close()
 
 void FTOutline::end()
 {
+    assert(ft.n_contours <= SHRT_MAX - 1);
+
     if (ft.n_points) {
         ft.contours[ft.n_contours] = ft.n_points - 1;
         ft.n_contours++;
@@ -348,6 +359,11 @@ struct VRleTask {
 
     void operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
     {
+        if (mPath.points().size() > SHRT_MAX ||
+            mPath.points().size() + mPath.segments() > SHRT_MAX) {
+            return;
+        }
+
         if (mGenerateStroke) {  // Stroke Task
             outRef.convert(mPath);
             outRef.convert(mCap, mJoin, mStrokeWidth, mMeterLimit);
