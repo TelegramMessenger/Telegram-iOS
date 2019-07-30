@@ -178,7 +178,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if let file = file {
                     let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                    let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 480.0, height: 480.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                    let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
                     self.animationNode.setup(account: item.context.account, resource: file.resource, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 }
             }
