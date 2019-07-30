@@ -89,7 +89,7 @@ final class ThemePreviewController: ViewController {
                             current = PresentationThemeSettings.defaultSettings
                         }
                         
-                        return PresentationThemeSettings(chatWallpaper: .color(0xffffff), theme: .builtin(.day), themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, themeTintColors: current.themeTintColors, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                        return PresentationThemeSettings(chatWallpaper: .color(0xffffff), theme: .builtin(.day), themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                     })
                 }).start(completed: { [weak self] in
                     if let strongSelf = self {

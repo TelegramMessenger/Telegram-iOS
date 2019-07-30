@@ -55,8 +55,11 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
     controller.recipientName = peer.displayTitle
-    if (peer is TelegramUser) && peer.id != context.account.peerId {
-        controller.hasTimer = true
+    if peer.id != context.account.peerId {
+        if peer is TelegramUser {
+            controller.hasTimer = true
+        }
+        controller.hasSilentPosting = true
     }
     
     let screenSize = parentController.view.bounds.size

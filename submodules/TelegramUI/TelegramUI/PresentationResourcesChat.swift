@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 
@@ -67,11 +68,11 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func principalGraphics(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeEssentialGraphics {
+    static func principalGraphics(context: AccountContext, theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeEssentialGraphics {
         let hasWallpaper = !wallpaper.isEmpty
         let key: PresentationResourceKey = !hasWallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
         return theme.object(key.rawValue, { theme in
-            return PrincipalThemeEssentialGraphics(theme.chat, wallpaper: wallpaper)
+            return PrincipalThemeEssentialGraphics(mediaBox: context.account.postbox.mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
         }) as! PrincipalThemeEssentialGraphics
     }
     

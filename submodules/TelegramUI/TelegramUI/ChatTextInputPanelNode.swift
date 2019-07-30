@@ -352,6 +352,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         self.addSubnode(self.actionButtons)
         
+        self.actionButtons.sendButtonLongPressed = { [weak self] in
+            self?.interfaceInteraction?.displaySendMessageOptions()
+        }
+        
         self.actionButtons.micButton.recordingDisabled = { [weak self] in
             self?.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .tooltip)
         }
@@ -728,6 +732,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                     self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize)
                 }
+                
+                self.actionButtons.sendButtonLongPressEnabled = peer.id != interfaceState.accountPeerId && peer.id.namespace != Namespaces.Peer.SecretChat
             }
             
             let sendButtonHasApplyIcon = interfaceState.interfaceState.editMessage != nil

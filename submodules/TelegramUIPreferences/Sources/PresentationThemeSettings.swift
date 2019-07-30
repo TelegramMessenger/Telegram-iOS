@@ -207,27 +207,54 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
         return UIColor(rgb: value)
     }
     
+    public var outgoingGradientColors: (UIColor, UIColor) {
+        switch self {
+        case .blue:
+            return (UIColor(rgb: 0x63BFFB), UIColor(rgb: 0x007AFF))
+        case .cyan:
+            return (UIColor(rgb: 0x5CE0E9), UIColor(rgb: 0x00C2ED))
+        case .green:
+            return (UIColor(rgb: 0x93D374), UIColor(rgb: 0x29B327))
+        case .pink:
+            return (UIColor(rgb: 0xE296C1), UIColor(rgb: 0xEB6CA4))
+        case .orange:
+            return (UIColor(rgb: 0xF2A451), UIColor(rgb: 0xF08200))
+        case .purple:
+            return (UIColor(rgb: 0xAC98E6), UIColor(rgb: 0x9472EE))
+        case .red:
+            return (UIColor(rgb: 0xE06D54), UIColor(rgb: 0xD33213))
+        case .yellow:
+            return (UIColor(rgb: 0xF7DA6B), UIColor(rgb: 0xEDB400))
+        case .gray:
+            return (UIColor(rgb: 0x7D8E9A), UIColor(rgb: 0x6D839E))
+        case .black:
+            return (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000))
+        case .white:
+            return (UIColor(rgb: 0xffffff), UIColor(rgb: 0xffffff))
+        }
+    }
+    
     public var edgeColors: (UIColor, UIColor) {
         let values: (UIColor, UIColor)
         switch self {
             case .blue:
-                values = (UIColor(rgb: 0x003d80), UIColor(rgb: 0x66afff))
+                values = (UIColor(rgb: 0x394cb5), UIColor(rgb: 0x7fd3fb))
             case .cyan:
-                values = (UIColor(rgb: 0x00c2ed), UIColor(rgb: 0x00c2ed))
+                values = (UIColor(rgb: 0x3472a8), UIColor(rgb: 0x76e8e8))
             case .green:
-                values = (UIColor(rgb: 0x29b327), UIColor(rgb: 0x29b327))
+                values = (UIColor(rgb: 0x608236), UIColor(rgb: 0xb1e786))
             case .pink:
-                values = (UIColor(rgb: 0xeb6ca4), UIColor(rgb: 0xeb6ca4))
+                values = (UIColor(rgb: 0xad4974), UIColor(rgb: 0xeca2d0))
             case .orange:
-                values = (UIColor(rgb: 0xf08200), UIColor(rgb: 0xf08200))
+                values = (UIColor(rgb: 0xbe5d29), UIColor(rgb: 0xf3ae68))
             case .purple:
-                values = (UIColor(rgb: 0x9472ee), UIColor(rgb: 0x9472ee))
+                values = (UIColor(rgb: 0x544292), UIColor(rgb: 0xb2a3e3))
             case .red:
-                values = (UIColor(rgb: 0xd33213), UIColor(rgb: 0xd33213))
+                values = (UIColor(rgb: 0x94211b), UIColor(rgb: 0xe47e66))
             case .yellow:
-                values = (UIColor(rgb: 0xedb400), UIColor(rgb: 0xedb400))
+                values = (UIColor(rgb: 0xdda23a), UIColor(rgb: 0xfbe589))
             case .gray:
-                values = (UIColor(rgb: 0x6d839e), UIColor(rgb: 0x6d839e))
+                values = (UIColor(rgb: 0x595b70), UIColor(rgb: 0x829199))
             case .black:
                 values = (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000))
             case .white:
@@ -274,7 +301,6 @@ public struct PresentationThemeSettings: PreferencesEntry {
     public var theme: PresentationThemeReference
     public var themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     public var themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
-    public var themeTintColors: Bool
     public var fontSize: PresentationFontSize
     public var automaticThemeSwitchSetting: AutomaticThemeSwitchSetting
     public var largeEmoji: Bool
@@ -304,15 +330,14 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(chatWallpaper: .builtin(WallpaperSettings()), theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], themeTintColors: false, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), largeEmoji: true, disableAnimations: true)
+        return PresentationThemeSettings(chatWallpaper: .builtin(WallpaperSettings()), theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), largeEmoji: true, disableAnimations: true)
     }
     
-    public init(chatWallpaper: TelegramWallpaper, theme: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], themeTintColors: Bool, fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, disableAnimations: Bool) {
+    public init(chatWallpaper: TelegramWallpaper, theme: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, disableAnimations: Bool) {
         self.chatWallpaper = chatWallpaper
         self.theme = theme
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.themeSpecificChatWallpapers = themeSpecificChatWallpapers
-        self.themeTintColors = themeTintColors
         self.fontSize = fontSize
         self.automaticThemeSwitchSetting = automaticThemeSwitchSetting
         self.largeEmoji = largeEmoji
@@ -360,8 +385,6 @@ public struct PresentationThemeSettings: PreferencesEntry {
             self.themeSpecificAccentColors[PresentationThemeReference.builtin(.day).index] = PresentationThemeAccentColor(baseColor: baseColor, value: 0.5)
         }
         
-        self.themeTintColors = decoder.decodeBoolForKey("themeTintColors", orElse: false)
-        
         self.fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular
         self.automaticThemeSwitchSetting = (decoder.decodeObjectForKey("automaticThemeSwitchSetting", decoder: { AutomaticThemeSwitchSetting(decoder: $0) }) as? AutomaticThemeSwitchSetting) ?? AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent)
         self.largeEmoji = decoder.decodeBoolForKey("largeEmoji", orElse: true)
@@ -377,7 +400,6 @@ public struct PresentationThemeSettings: PreferencesEntry {
         encoder.encodeObjectDictionary(self.themeSpecificChatWallpapers, forKey: "themeSpecificChatWallpapers", keyEncoder: { key, encoder in
             encoder.encodeInt64(key, forKey: "k")
         })
-        encoder.encodeBool(self.themeTintColors, forKey: "themeTintColors")
         encoder.encodeInt32(self.fontSize.rawValue, forKey: "f")
         encoder.encodeObject(self.automaticThemeSwitchSetting, forKey: "automaticThemeSwitchSetting")
         encoder.encodeBool(self.largeEmoji, forKey: "largeEmoji")
@@ -393,7 +415,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static func ==(lhs: PresentationThemeSettings, rhs: PresentationThemeSettings) -> Bool {
-        return lhs.chatWallpaper == rhs.chatWallpaper && lhs.theme == rhs.theme && lhs.themeSpecificAccentColors == rhs.themeSpecificAccentColors && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.themeTintColors == rhs.themeTintColors && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.largeEmoji == rhs.largeEmoji && lhs.disableAnimations == rhs.disableAnimations
+        return lhs.chatWallpaper == rhs.chatWallpaper && lhs.theme == rhs.theme && lhs.themeSpecificAccentColors == rhs.themeSpecificAccentColors && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.largeEmoji == rhs.largeEmoji && lhs.disableAnimations == rhs.disableAnimations
     }
 }
 

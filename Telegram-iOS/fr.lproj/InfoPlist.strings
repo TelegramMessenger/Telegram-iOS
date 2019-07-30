@@ -1,0 +1,12 @@
+/* Localized versions of Info.plist keys */
+
+"NSContactsUsageDescription" = "Telegram va synchroniser en continu vos contacts sur ses serveurs chiffrés pour vous permettre de joindre vos amis sur tous vos appareils.";
+"NSLocationWhenInUseUsageDescription" = "Quand vous envoyez votre position à vos amis, Telegram doit accéder à votre position pour leur montrer une carte.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Quand vous décidez de partager votre position en temps réel dans un échange, Telegram doit y accéder en arrière-plan pour l'actualiser pendant la durée du partage.";
+"NSLocationAlwaysUsageDescription" = "Quand vous décidez de partager votre position en temps réel dans un échange, Telegram doit y accéder en arrière-plan pour l'actualiser pendant la durée du partage. Cela sert aussi à envoyer une position depuis l'Apple Watch.";
+"NSCameraUsageDescription" = "Nous en avons besoin pour que vous puissiez prendre et partager des photos et des vidéos.";
+"NSPhotoLibraryUsageDescription" = "Nous en avons besoin pour que vous puissiez partager des photos et des vidéos de votre photothèque.";
+"NSPhotoLibraryAddUsageDescription" = "Nous en avons besoin pour que vous puissiez enregistrer des photos et des vidéos dans votre photothèque.";
+"NSMicrophoneUsageDescription" = "Nous en avons besoin pour que vous puissiez enregistrer et partager des messages vocaux et des vidéos avec du son.";
+"NSSiriUsageDescription" = "Vous pouvez utiliser Siri pour envoyer des messages.";
+"NSFaceIDUsageDescription" = "Vous pouvez déverrouiller Telegram avec Face ID.";

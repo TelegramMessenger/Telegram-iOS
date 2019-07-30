@@ -906,6 +906,7 @@ public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
     public let author: String?
     public let overallDarkAppearance: Bool
+    public let baseColor: PresentationThemeBaseColor?
     public let intro: PresentationThemeIntro
     public let passcode: PresentationThemePasscode
     public let rootController: PresentationThemeRootController
@@ -914,13 +915,15 @@ public final class PresentationTheme: Equatable {
     public let chat: PresentationThemeChat
     public let actionSheet: PresentationThemeActionSheet
     public let inAppNotification: PresentationThemeInAppNotification
+    public let preview: Bool
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, author: String?, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification) {
+    public init(name: PresentationThemeName, author: String?, overallDarkAppearance: Bool, baseColor: PresentationThemeBaseColor?, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
         self.name = name
         self.author = author
         self.overallDarkAppearance = overallDarkAppearance
+        self.baseColor = baseColor
         self.intro = intro
         self.passcode = passcode
         self.rootController = rootController
@@ -929,6 +932,7 @@ public final class PresentationTheme: Equatable {
         self.chat = chat
         self.actionSheet = actionSheet
         self.inAppNotification = inAppNotification
+        self.preview = preview
     }
     
     public func image(_ key: Int32, _ generate: (PresentationTheme) -> UIImage?) -> UIImage? {

@@ -340,6 +340,11 @@ public final class ShareController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = ShareControllerNode(sharedContext: self.sharedContext, defaultAction: self.defaultAction, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
+        }, presentError: { [weak self] title, text in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare)
         self.controllerNode.dismiss = { [weak self] shared in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -353,98 +358,141 @@ public final class ShareController: ViewController {
             })
         }
         self.controllerNode.share = { [weak self] text, peerIds in
-            if let strongSelf = self {
-                switch strongSelf.subject {
-                    case let .url(url):
-                        for peerId in peerIds {
-                            var messages: [EnqueueMessage] = []
-                            if !text.isEmpty {
-                                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            }
-                            messages.append(.message(text: url, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
-                        }
-                        return .complete()
-                    case let .text(string):
-                        for peerId in peerIds {
-                            var messages: [EnqueueMessage] = []
-                            if !text.isEmpty {
-                                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            }
-                            messages.append(.message(text: string, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
-                        }
-                        return .complete()
-                    case let .quote(string, url):
-                        for peerId in peerIds {
-                            var messages: [EnqueueMessage] = []
-                            if !text.isEmpty {
-                                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            }
-                            let attributedText = NSMutableAttributedString(string: string, attributes: [ChatTextInputAttributes.italic: true as NSNumber])
-                            attributedText.append(NSAttributedString(string: "\n\n\(url)"))
-                            let entities = generateChatInputTextEntities(attributedText)
-                            messages.append(.message(text: attributedText.string, attributes: [TextEntitiesMessageAttribute(entities: entities)], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
-                        }
-                        return .complete()
-                    case let .image(representations):
-                        for peerId in peerIds {
-                            var messages: [EnqueueMessage] = []
-                            if !text.isEmpty {
-                                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            }
-                            messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)), replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
-                        }
-                        return .complete()
-                    case let .media(mediaReference):
-                        for peerId in peerIds {
-                            var messages: [EnqueueMessage] = []
-                            if !text.isEmpty {
-                                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            }
-                            messages.append(.message(text: "", attributes: [], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
-                        }
-                        return .complete()
-                    case let .mapMedia(media):
-                        for peerId in peerIds {
-                            var messages: [EnqueueMessage] = []
-                            if !text.isEmpty {
-                                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            }
-                            messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
-                        }
-                        return .complete()
-                    case let .messages(messages):
-                        for peerId in peerIds {
-                            var messagesToEnqueue: [EnqueueMessage] = []
-                            if !text.isEmpty {
-                                messagesToEnqueue.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            }
-                            for message in messages {
-                                messagesToEnqueue.append(.forward(source: message.id, grouping: .auto))
-                            }
-                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messagesToEnqueue).start()
-                        }
-                        return .single(.done)
-                    case let .fromExternal(f):
-                        return f(peerIds, text, strongSelf.currentAccount)
-                        |> map { state -> ShareState in
-                            switch state {
-                                case .preparing:
-                                    return .preparing
-                                case let .progress(value):
-                                    return .progress(value)
-                                case .done:
-                                    return .done
-                            }
-                        }
+            guard let strongSelf = self else {
+                return .complete()
+            }
+            var shareSignals: [Signal<[MessageId?], NoError>] = []
+            switch strongSelf.subject {
+            case let .url(url):
+                for peerId in peerIds {
+                    var messages: [EnqueueMessage] = []
+                    if !text.isEmpty {
+                        messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    }
+                    messages.append(.message(text: url, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
+                }
+            case let .text(string):
+                for peerId in peerIds {
+                    var messages: [EnqueueMessage] = []
+                    if !text.isEmpty {
+                        messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    }
+                    messages.append(.message(text: string, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
+                }
+            case let .quote(string, url):
+                for peerId in peerIds {
+                    var messages: [EnqueueMessage] = []
+                    if !text.isEmpty {
+                        messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    }
+                    let attributedText = NSMutableAttributedString(string: string, attributes: [ChatTextInputAttributes.italic: true as NSNumber])
+                    attributedText.append(NSAttributedString(string: "\n\n\(url)"))
+                    let entities = generateChatInputTextEntities(attributedText)
+                    messages.append(.message(text: attributedText.string, attributes: [TextEntitiesMessageAttribute(entities: entities)], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
+                }
+            case let .image(representations):
+                for peerId in peerIds {
+                    var messages: [EnqueueMessage] = []
+                    if !text.isEmpty {
+                        messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    }
+                    messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)), replyToMessageId: nil, localGroupingKey: nil))
+                    shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
+                }
+            case let .media(mediaReference):
+                for peerId in peerIds {
+                    var messages: [EnqueueMessage] = []
+                    if !text.isEmpty {
+                        messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    }
+                    messages.append(.message(text: "", attributes: [], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil))
+                    shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
+                }
+            case let .mapMedia(media):
+                for peerId in peerIds {
+                    var messages: [EnqueueMessage] = []
+                    if !text.isEmpty {
+                        messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    }
+                    messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil))
+                    shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
+                }
+            case let .messages(messages):
+                for peerId in peerIds {
+                    var messagesToEnqueue: [EnqueueMessage] = []
+                    if !text.isEmpty {
+                        messagesToEnqueue.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+                    }
+                    for message in messages {
+                        messagesToEnqueue.append(.forward(source: message.id, grouping: .auto, attributes: []))
+                    }
+                    shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messagesToEnqueue))
+                }
+            case let .fromExternal(f):
+                return f(peerIds, text, strongSelf.currentAccount)
+                |> map { state -> ShareState in
+                    switch state {
+                        case .preparing:
+                            return .preparing
+                        case let .progress(value):
+                            return .progress(value)
+                        case .done:
+                            return .done
+                    }
                 }
             }
-            return .complete()
+            let account = strongSelf.currentAccount
+            let queue = Queue.mainQueue()
+            var displayedError = false
+            return combineLatest(queue: queue, shareSignals)
+            |> mapToSignal { messageIdSets -> Signal<ShareState, NoError> in
+                var statuses: [Signal<(MessageId, PendingMessageStatus?, PendingMessageFailureReason?), NoError>] = []
+                for messageIds in messageIdSets {
+                    for case let id? in messageIds {
+                        statuses.append(account.pendingMessageManager.pendingMessageStatus(id)
+                        |> map { status, error -> (MessageId, PendingMessageStatus?, PendingMessageFailureReason?) in
+                            return (id, status, error)
+                        })
+                    }
+                }
+                return combineLatest(queue: queue, statuses)
+                |> mapToSignal { statuses -> Signal<ShareState, NoError> in
+                    var hasStatuses = false
+                    for (id, status, error) in statuses {
+                        if let error = error {
+                            Queue.mainQueue().async {
+                                let _ = (account.postbox.transaction { transaction -> Peer? in
+                                    transaction.deleteMessages([id])
+                                    return transaction.getPeer(id.peerId)
+                                }
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    guard let strongSelf = self, let peer = peer else {
+                                        return
+                                    }
+                                    if !displayedError, case .slowmodeActive = error {
+                                        displayedError = true
+                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: peer.displayTitle, text: strongSelf.presentationData.strings.Chat_SlowmodeSendError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    }
+                                })
+                            }
+                        }
+                        let _ = account.postbox.transaction({ transaction in
+                            
+                        }).start()
+                        if status != nil {
+                            hasStatuses = true
+                        }
+                    }
+                    if !hasStatuses {
+                        return .single(.done)
+                    }
+                    return .complete()
+                }
+                |> take(1)
+            }
         }
         self.controllerNode.shareExternal = { [weak self] in
             if let strongSelf = self {

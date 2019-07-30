@@ -55,6 +55,7 @@ typedef enum
 @property (nonatomic, assign) bool hasTimer;
 @property (nonatomic, assign) bool onlyCrop;
 @property (nonatomic, assign) bool inhibitMute;
+@property (nonatomic, assign) bool hasSilentPosting;
 
 @property (nonatomic, assign) bool liveVideoUploadEnabled;
 @property (nonatomic, assign) bool shouldShowFileTipIfNeeded;
@@ -63,7 +64,7 @@ typedef enum
 
 @property (nonatomic, copy) NSDictionary *(^descriptionGenerator)(id, NSString *, NSArray *, NSString *);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
-@property (nonatomic, copy) void (^completionBlock)(NSArray *signals);
+@property (nonatomic, copy) void (^completionBlock)(NSArray *signals, bool silentPosting);
 @property (nonatomic, copy) void (^singleCompletionBlock)(id<TGMediaEditableItem> item, TGMediaEditingContext *editingContext);
 @property (nonatomic, copy) void (^dismissalBlock)(void);
 @property (nonatomic, copy) void (^selectionBlock)(TGMediaAsset *asset, UIImage *);
@@ -81,7 +82,7 @@ typedef enum
 - (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator;
 
 - (void)completeWithAvatarImage:(UIImage *)image;
-- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem;
+- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting;
 
 - (void)dismiss;
 

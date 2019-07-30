@@ -559,6 +559,10 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, text as NSString)
                 })
             }
+        }, sendCurrentMessage: { [weak self] silentPosting in
+            if let strongSelf = self {
+                strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting)
+            }
         }, sendMessage: { [weak self] text in
             guard let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) else {
                 return
@@ -2391,7 +2395,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
         }
         
-        self.chatDisplayNode.sendMessages = { [weak self] messages, isAnyMessageTextPartitioned in
+        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, isAnyMessageTextPartitioned in
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
                 strongSelf.commitPurposefulAction()
                 
@@ -2417,7 +2421,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     }
                 }
                 
-                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages(messages))
+                let transformedMessages: [EnqueueMessage]
+                if let silentPosting = silentPosting {
+                    transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting)
+                } else {
+                    transformedMessages = strongSelf.transformEnqueueMessages(messages)
+                }
+                
+                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
                 |> deliverOnMainQueue).start(next: { _ in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
@@ -3631,6 +3642,21 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             strongSelf.slowmodeTooltipController = slowmodeTooltipController
             
             strongSelf.window?.presentInGlobalOverlay(slowmodeTooltipController)
+        }, displaySendMessageOptions: { [weak self] in
+            if let strongSelf = self, let sendButtonFrame = strongSelf.chatDisplayNode.sendButtonFrame(), let textInputNode = strongSelf.chatDisplayNode.textInputNode(), let layout = strongSelf.validLayout {
+                if layout.size.width > layout.size.height {
+                    strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .landscape)
+                } else {
+                    strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+                }
+                
+                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, sendButtonFrame: sendButtonFrame, textInputNode: textInputNode, completion: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
+                    }
+                })
+                strongSelf.presentInGlobalOverlay(controller, with: nil)
+            }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
         switch self.chatLocation {
@@ -3733,20 +3759,21 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 self.failedMessageEventsDisposable.set((self.context.account.pendingMessageManager.failedMessageEvents(peerId: peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] reason in
                     if let strongSelf = self {
-                        let subjectFlags: TelegramChatBannedRightsFlags = .banSendMedia
-                        
                         let text: String
                         let moreInfo: Bool
                         switch reason {
-                            case .flood:
-                                text = strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood
-                                moreInfo = true
-                            case .publicBan:
-                                text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
-                                moreInfo = true
-                            case .mediaRestricted:
-                                strongSelf.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .alert)
-                                return
+                        case .flood:
+                            text = strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood
+                            moreInfo = true
+                        case .publicBan:
+                            text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
+                            moreInfo = true
+                        case .mediaRestricted:
+                            strongSelf.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .alert)
+                            return
+                        case .slowmodeActive:
+                            text = strongSelf.presentationData.strings.Chat_SlowmodeSendError
+                            moreInfo = false
                         }
                         let actions: [TextAlertAction]
                         if moreInfo {
@@ -4648,14 +4675,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
             let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, editMediaOptions: editMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText.string, openGallery: {
-                self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals in
+                self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals, silentPosting in
                     if !inputText.string.isEmpty {
                         //strongSelf.clearInputText()
                     }
                     if editMediaOptions != nil {
                         self?.editMessageMediaWithLegacySignals(signals)
                     } else {
-                        self?.enqueueMediaMessages(signals: signals)
+                        self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
                     }
                 })
             }, openCamera: { [weak self] cameraView, menuController in
@@ -4665,7 +4692,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                             if editMediaOptions != nil {
                                 strongSelf.editMessageMediaWithLegacySignals(signals!)
                             } else {
-                                strongSelf.enqueueMediaMessages(signals: signals)
+                                strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false)
                             }
                             if !inputText.string.isEmpty {
                                 //strongSelf.clearInputText()
@@ -4697,14 +4724,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     return
                 }
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentMultipleFilesDisabled, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-            }, sendMessagesWithSignals: { [weak self] signals in
+            }, sendMessagesWithSignals: { [weak self] signals, silentPosting in
                 if !inputText.string.isEmpty {
                     //strongSelf.clearInputText()
                 }
                 if editMediaOptions != nil {
                     self?.editMessageMediaWithLegacySignals(signals!)
                 } else {
-                    self?.enqueueMediaMessages(signals: signals)
+                    self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
                 }
             }, selectRecentlyUsedInlineBot: { [weak self] peer in
                 if let strongSelf = self, let addressName = peer.addressName {
@@ -4740,11 +4767,11 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             ActionSheetButtonItem(title: self.presentationData.strings.Conversation_FilePhotoOrVideo, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
-                    strongSelf.presentMediaPicker(fileMode: true, editingMedia: editingMessage, completion: { signals in
+                    strongSelf.presentMediaPicker(fileMode: true, editingMedia: editingMessage, completion: { signals, silentPosting in
                         if editingMessage {
                             self?.editMessageMediaWithLegacySignals(signals)
                         } else {
-                            self?.enqueueMediaMessages(signals: signals)
+                            self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
                         }
                     })
                 }
@@ -4808,7 +4835,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, completion: @escaping ([Any]) -> Void) {
+    private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, completion: @escaping ([Any], Bool) -> Void) {
         let postbox = self.context.account.postbox
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> Signal<(GeneratedMediaStoreSettings, SearchBotsConfiguration), NoError> in
             let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
@@ -4841,7 +4868,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     
                     configureLegacyAssetPicker(controller, context: strongSelf.context, peer: peer, initialCaption: inputText.string, presentWebSearch: { [weak self, weak legacyController] in
                         if let strongSelf = self {
-                            let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: searchBotsConfiguration, mode: .media(completion: { results, selectionState, editingState in
+                            let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: searchBotsConfiguration, mode: .media(completion: { results, selectionState, editingState, silentPosting in
                                 if let legacyController = legacyController {
                                     legacyController.dismiss()
                                 }
@@ -4851,7 +4878,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                     }
                                 }, enqueueMediaMessages: { signals in
                                     if let strongSelf = self {
-                                        strongSelf.enqueueMediaMessages(signals: signals)
+                                        strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
                                     }
                                 })
                             }))
@@ -4864,10 +4891,10 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentLimitExceeded, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     })
                     controller.descriptionGenerator = legacyAssetPickerItemGenerator()
-                    controller.completionBlock = { [weak legacyController, weak self] signals in
+                    controller.completionBlock = { [weak legacyController] signals, silentPosting in
                         if let legacyController = legacyController {
                             legacyController.dismiss()
-                            completion(signals!)
+                            completion(signals!, silentPosting)
                         }
                     }
                     controller.dismissalBlock = { [weak legacyController] in
@@ -4896,14 +4923,14 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
         |> deliverOnMainQueue).start(next: { [weak self] configuration in
             if let strongSelf = self {
-                let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: configuration, mode: .media(completion: { [weak self] results, selectionState, editingState in
+                let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: configuration, mode: .media(completion: { [weak self] results, selectionState, editingState, silentPosting in
                     legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self] result in
                         if let strongSelf = self {
                             strongSelf.enqueueChatContextResult(results, result, hideVia: true)
                         }
                     }, enqueueMediaMessages: { [weak self] signals in
                         if let strongSelf = self {
-                            strongSelf.enqueueMediaMessages(signals: signals)
+                            strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
                         }
                     })
                 }))
@@ -5081,8 +5108,12 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
     }
     
-    private func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
+    func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
         let silentPosting = self.presentationInterfaceState.interfaceState.silentPosting
+        return transformEnqueueMessages(messages, silentPosting: silentPosting)
+    }
+    
+    private func transformEnqueueMessages(_ messages: [EnqueueMessage], silentPosting: Bool) -> [EnqueueMessage] {
         return messages.map { message in
             if silentPosting {
                 return message.withUpdatedAttributes { attributes in
@@ -5115,11 +5146,12 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
     }
     
-    private func enqueueMediaMessages(signals: [Any]?) {
+    private func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool) {
         if case .peer = self.chatLocation {
             self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: self.context.account, signals: signals!)
             |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self {
+                    let messages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting)
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                         if let strongSelf = self {
@@ -5143,7 +5175,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                 strongSelf.chatDisplayNode.dismissInput()
                 let _ = presentLegacyPasteMenu(context: strongSelf.context, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, images: images, sendMessagesWithSignals: { signals in
-                    self?.enqueueMediaMessages(signals: signals)
+                    self?.enqueueMediaMessages(signals: signals, silentPosting: false)
                 }, present: { [weak self] controller, arguments in
                     if let strongSelf = self {
                         strongSelf.present(controller, in: .window(.root), with: arguments)
@@ -5797,7 +5829,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 strongController.dismiss()
             } else if peerId == strongSelf.context.account.peerId {
                 let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
-                    return .forward(source: id, grouping: .auto)
+                    return .forward(source: id, grouping: .auto, attributes: [])
                 })
                 |> deliverOnMainQueue).start(next: { messageIds in
                     if let strongSelf = self {
@@ -5806,7 +5838,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                 return nil
                             }
                             return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
-                            |> mapToSignal { status -> Signal<Bool, NoError> in
+                            |> mapToSignal { status, _ -> Signal<Bool, NoError> in
                                 if status != nil {
                                     return .never()
                                 } else {
@@ -6455,7 +6487,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                                     let sourceRect = rect.insetBy(dx: -2.0, dy: -2.0)
                                     gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                                     return (gallery, sourceRect)
-                                case let .instantPage(gallery, centralIndex, galleryMedia):
+                                case .instantPage:
                                     break
                             }
                         }

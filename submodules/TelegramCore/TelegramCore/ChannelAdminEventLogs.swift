@@ -172,7 +172,6 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                                 action = .updatePinned(rendered)
                                             }
                                         }
-                                    
                                     case let .channelAdminLogEventActionEditMessage(prev, new):
                                         if let prev = StoreMessage(apiMessage: prev), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
                                             action = .editMessage(prev: prevRendered, new: newRendered)

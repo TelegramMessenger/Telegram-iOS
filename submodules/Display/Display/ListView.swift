@@ -2509,9 +2509,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 if !updateSizeAndInsets.duration.isZero && !isExperimentalSnapToScrollToItem {
                     let animation: CABasicAnimation
+                    let animationCurve: ContainedViewLayoutTransitionCurve
+                    let animationDuration: Double
                     switch updateSizeAndInsets.curve {
                         case let .Spring(duration):
                             headerNodesTransition = (.animated(duration: duration, curve: .spring), false, -completeOffset)
+                            animationCurve = .spring
                             let springAnimation = makeSpringAnimation("sublayerTransform")
                             springAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -completeOffset, 0.0))
                             springAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
@@ -2525,11 +2528,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             if !duration.isZero {
                                 springAnimation.speed = speed * Float(springAnimation.duration / duration)
                             }
+                            animationDuration = duration
                             
                             springAnimation.isAdditive = true
                             animation = springAnimation
                         case let .Default(duration):
                             headerNodesTransition = (.animated(duration: max(duration ?? 0.3, updateSizeAndInsets.duration), curve: .easeInOut), false, -completeOffset)
+                            animationCurve = .easeInOut
+                            animationDuration = duration ?? 0.3
                             let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
                             basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
                             basicAnimation.duration = updateSizeAndInsets.duration * UIView.animationDurationFactor()
@@ -2545,6 +2551,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         self?.updateItemNodesVisibilities(onlyPositive: false)
                     }
                     self.layer.add(animation, forKey: nil)
+                    for itemNode in self.itemNodes {
+                        itemNode.applyAbsoluteOffset(value: -completeOffset, animationCurve: animationCurve, duration: animationDuration)
+                    }
                 }
             } else {
                 self.visibleSize = updateSizeAndInsets.size
@@ -2582,6 +2591,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 springAnimation.isAdditive = true
                 self.layer.add(springAnimation, forKey: nil)
+                for itemNode in self.itemNodes {
+                    itemNode.applyAbsoluteOffset(value: -completeOffset, animationCurve: .spring, duration: duration)
+                }
             } else {
                 if let snapshotView = snapshotView {
                     snapshotView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: snapshotView.frame.size)
@@ -2739,8 +2751,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     
                     let animation: CABasicAnimation
                     let reverseAnimation: CABasicAnimation
+                    let animationCurve: ContainedViewLayoutTransitionCurve
+                    let animationDuration: Double
                     switch scrollToItem.curve {
                         case let .Spring(duration):
+                            animationCurve = .spring
+                            animationDuration = duration
                             let springAnimation = makeSpringAnimation("sublayerTransform")
                             springAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -offset, 0.0))
                             springAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
@@ -2770,6 +2786,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             reverseAnimation = reverseSpringAnimation
                         case let .Default(duration):
                             if let duration = duration {
+                                animationCurve = .easeInOut
+                                animationDuration = duration
                                 let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
                                 basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
                                 basicAnimation.duration = duration * UIView.animationDurationFactor()
@@ -2789,6 +2807,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 animation = basicAnimation
                                 reverseAnimation = reverseBasicAnimation
                             } else {
+                                animationCurve = .slide
+                                animationDuration = duration ?? 0.3
+                                
                                 let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
                                 basicAnimation.timingFunction = ContainedViewLayoutTransitionCurve.slide.mediaTimingFunction
                                 basicAnimation.duration = (duration ?? 0.3) * UIView.animationDurationFactor()
@@ -2812,24 +2833,18 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     animation.completion = { _ in
                         for itemNode in temporaryPreviousNodes {
                             itemNode.removeFromSupernode()
-                            if useBackgroundDeallocation {
-                                assertionFailure()
-                                //ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemNode)
-                            } else {
-                                //ASPerformMainThreadDeallocation(itemNode)
-                            }
                         }
                         for headerNode in temporaryHeaderNodes {
                             headerNode.removeFromSupernode()
-                            if useBackgroundDeallocation {
-                                assertionFailure()
-                                //ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: headerNode)
-                            } else {
-                                //ASPerformMainThreadDeallocation(headerNode)
-                            }
                         }
                     }
                     self.layer.add(animation, forKey: nil)
+                    for itemNode in self.itemNodes {
+                        itemNode.applyAbsoluteOffset(value: -offset, animationCurve: animationCurve, duration: animationDuration)
+                    }
+                    for itemNode in temporaryPreviousNodes {
+                        itemNode.applyAbsoluteOffset(value: -offset, animationCurve: animationCurve, duration: animationDuration)
+                    }
                     if let verticalScrollIndicator = self.verticalScrollIndicator {
                         verticalScrollIndicator.layer.add(reverseAnimation, forKey: nil)
                     }

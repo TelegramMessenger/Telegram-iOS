@@ -365,11 +365,7 @@ public final class TelegramMediaFile: Media, Equatable {
     
     public var isAnimatedSticker: Bool {
         if let _ = self.fileName, self.mimeType == "application/x-tgsticker" {
-            for attribute in self.attributes {
-                if case .Sticker = attribute {
-                    return true
-                }
-            }
+            return true
         }
         return false
     }

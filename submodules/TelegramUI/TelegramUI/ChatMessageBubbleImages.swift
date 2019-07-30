@@ -26,13 +26,13 @@ func messageSingleBubbleLikeImage(fillColor: UIColor, strokeColor: UIColor) -> U
     })!.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
-func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper) -> UIImage {
+func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout: Bool) -> UIImage {
     let diameter: CGFloat = 36.0
     let corner: CGFloat = 7.0
     return generateImage(CGSize(width: 42.0, height: diameter), contextGenerator: { size, context in
         var drawWithClearColor = false
         
-        if case let .color(color) = wallpaper {
+        if knockout, case let .color(color) = wallpaper {
             drawWithClearColor = true
             context.setFillColor(UIColor(rgb: UInt32(color)).cgColor)
             context.fill(CGRect(origin: CGPoint(), size: size))

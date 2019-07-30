@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AudioToolbox
 
 public enum ImpactHapticFeedbackStyle: Hashable {
     case light
@@ -13,35 +14,77 @@ private final class HapticFeedbackImpl {
         [.light: UIImpactFeedbackGenerator(style: .light),
          .medium: UIImpactFeedbackGenerator(style: .medium),
          .heavy: UIImpactFeedbackGenerator(style: .heavy)] }()
-    private lazy var selectionGenerator = { UISelectionFeedbackGenerator() }()
-    private lazy var notificationGenerator = { UINotificationFeedbackGenerator() }()
+   
+    private lazy var selectionGenerator: UISelectionFeedbackGenerator? = {
+        let generator = UISelectionFeedbackGenerator()
+        generator.prepare()
+        var string = generator.debugDescription
+        string.removeLast()
+        let number = string.suffix(1)
+        if number == "1" {
+            return generator
+        } else {
+            return nil
+        }
+    }()
+    
+    private lazy var notificationGenerator: UINotificationFeedbackGenerator? = {
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        var string = generator.debugDescription
+        string.removeLast()
+        let number = string.suffix(1)
+        if number == "1" {
+            return generator
+        } else {
+            return nil
+        }
+    }()
     
     func prepareTap() {
-        self.selectionGenerator.prepare()
+        if let selectionGenerator = self.selectionGenerator {
+            selectionGenerator.prepare()
+        }
     }
     
     func tap() {
-        self.selectionGenerator.selectionChanged()
+        if let selectionGenerator = self.selectionGenerator {
+            selectionGenerator.selectionChanged()
+        }
     }
     
     func prepareImpact(_ style: ImpactHapticFeedbackStyle) {
-        self.impactGenerator[style]?.prepare()
+        if let impactGenerator = self.impactGenerator[style] {
+            impactGenerator.prepare()
+        }
     }
     
     func impact(_ style: ImpactHapticFeedbackStyle) {
-        self.impactGenerator[style]?.impactOccurred()
+        if let impactGenerator = self.impactGenerator[style] {
+            impactGenerator.impactOccurred()
+        }
     }
     
     func success() {
-        self.notificationGenerator.notificationOccurred(.success)
+        if let notificationGenerator = self.notificationGenerator {
+            notificationGenerator.notificationOccurred(.success)
+        } else {
+            AudioServicesPlaySystemSound(1520)
+        }
     }
     
     func prepareError() {
-        self.notificationGenerator.prepare()
+        if let notificationGenerator = self.notificationGenerator {
+            notificationGenerator.prepare()
+        }
     }
     
     func error() {
-        self.notificationGenerator.notificationOccurred(.error)
+        if let notificationGenerator = self.notificationGenerator {
+            notificationGenerator.notificationOccurred(.error)
+        } else {
+            AudioServicesPlaySystemSound(1521)
+        }
     }
     
     @objc dynamic func f() {

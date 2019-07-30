@@ -5,11 +5,26 @@ import TelegramCore
 import Display
 import SwiftSignalKit
 import Postbox
-
+import TelegramPresentationData
 
 private var backgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 
-func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: MediaBox, composed: Bool = true) -> UIImage? {
+func chatControllerBackgroundImage(theme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, mediaBox: MediaBox, composed: Bool = true, knockoutMode: Bool) -> UIImage? {
+    var wallpaper = initialWallpaper
+    if knockoutMode {
+        switch theme.name {
+        case let .builtin(name):
+            switch name {
+            case .day, .night, .nightAccent:
+                wallpaper = theme.chat.defaultWallpaper
+            case .dayClassic:
+                break
+            }
+        case .custom:
+            break
+        }
+    }
+    
     var backgroundImage: UIImage?
     if composed && wallpaper == backgroundImageForWallpaper?.0, (wallpaper.settings?.blur ?? false) == backgroundImageForWallpaper?.1 {
         backgroundImage = backgroundImageForWallpaper?.2

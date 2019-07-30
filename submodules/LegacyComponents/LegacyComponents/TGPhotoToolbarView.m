@@ -75,7 +75,6 @@
                     pallete = [[LegacyComponentsGlobals provider] mediaAssetsPallete];
                 
                 doneImage = pallete != nil ? pallete.sendIconImage : TGComponentsImageNamed(@"PhotoPickerSendIcon");
-                //buttonSize = CGSizeMake(52.0f, 52.0f);
             }
                 break;
         }
@@ -89,7 +88,7 @@
         [_backgroundView addSubview:_doneButton];
         
         _longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(doneButtonLongPressed:)];
-        _longPressGestureRecognizer.minimumPressDuration = 0.65;
+        _longPressGestureRecognizer.minimumPressDuration = 0.4;
         [_doneButton addGestureRecognizer:_longPressGestureRecognizer];
     }
     return self;

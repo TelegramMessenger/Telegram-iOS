@@ -196,6 +196,8 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         }
     }
     
+    var alwaysSynchronous = false
+    
     init(controller: ItemListController<Entry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(PresentationTheme, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
         self.navigationBar = navigationBar
         self.updateNavigationOffset = updateNavigationOffset
@@ -437,6 +439,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
             } else {
                 options.insert(.Synchronous)
                 options.insert(.PreferSynchronousDrawing)
+            }
+            if self.alwaysSynchronous {
+                options.insert(.Synchronous)
+                options.insert(.LowLatency)
             }
             let focusItemTag = transition.focusItemTag
             let ensureVisibleItemTag = transition.ensureVisibleItemTag

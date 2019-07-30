@@ -1428,17 +1428,20 @@ extension PresentationTheme: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(name: try values.decode(PresentationThemeName.self, forKey: .name),
-                  author: (try? values.decode(String.self, forKey: .author)) ?? nil,
-                  overallDarkAppearance: (try? values.decode(Bool.self, forKey: .dark)) ?? false,
-                  intro: try values.decode(PresentationThemeIntro.self, forKey: .intro),
-                  passcode: try values.decode(PresentationThemePasscode.self, forKey: .passcode),
-                  rootController: try values.decode(PresentationThemeRootController.self, forKey: .root),
-                  list: try values.decode(PresentationThemeList.self, forKey: .list),
-                  chatList: try values.decode(PresentationThemeChatList.self, forKey: .chatList),
-                  chat: try values.decode(PresentationThemeChat.self, forKey: .chat),
-                  actionSheet: try values.decode(PresentationThemeActionSheet.self, forKey: .actionSheet),
-                  inAppNotification: try values.decode(PresentationThemeInAppNotification.self, forKey: .notification))
+        self.init(
+            name: try values.decode(PresentationThemeName.self, forKey: .name),
+            author: (try? values.decode(String.self, forKey: .author)) ?? nil,
+            overallDarkAppearance: (try? values.decode(Bool.self, forKey: .dark)) ?? false,
+            baseColor: nil,
+            intro: try values.decode(PresentationThemeIntro.self, forKey: .intro),
+            passcode: try values.decode(PresentationThemePasscode.self, forKey: .passcode),
+            rootController: try values.decode(PresentationThemeRootController.self, forKey: .root),
+            list: try values.decode(PresentationThemeList.self, forKey: .list),
+            chatList: try values.decode(PresentationThemeChatList.self, forKey: .chatList),
+            chat: try values.decode(PresentationThemeChat.self, forKey: .chat),
+            actionSheet: try values.decode(PresentationThemeActionSheet.self, forKey: .actionSheet),
+            inAppNotification: try values.decode(PresentationThemeInAppNotification.self, forKey: .notification)
+        )
     }
     
     public func encode(to encoder: Encoder) throws {

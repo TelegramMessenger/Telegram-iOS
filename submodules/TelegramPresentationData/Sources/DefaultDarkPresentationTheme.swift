@@ -1,7 +1,8 @@
 import Foundation
 import UIKit
+import TelegramUIPreferences
 
-private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationTheme {
+private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: PresentationThemeBaseColor?, preview: Bool) -> PresentationTheme {
     let destructiveColor: UIColor = UIColor(rgb: 0xeb5545)
     let constructiveColor: UIColor = UIColor(rgb: 0x08a723)
     let secretColor: UIColor = UIColor(rgb: 0x00b12c)
@@ -215,7 +216,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
         inputTextColor: .white,
         inputControlColor: UIColor(rgb: 0x7b7b7b),
         actionControlFillColor: accentColor,
-        actionControlForegroundColor: .white,
+        actionControlForegroundColor: badgeTextColor,
         primaryTextColor: .white,
         secondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         mediaRecordingDotColor: destructiveColor,
@@ -306,6 +307,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
         name: .builtin(.night),
         author: "Telegram",
         overallDarkAppearance: true,
+        baseColor: baseColor,
         intro: intro,
         passcode: passcode,
         rootController: rootController,
@@ -313,13 +315,14 @@ private func makeDarkPresentationTheme(accentColor: UIColor) -> PresentationThem
         chatList: chatList,
         chat: chat,
         actionSheet: actionSheet,
-        inAppNotification: inAppNotification
+        inAppNotification: inAppNotification,
+        preview: preview
     )
 }
 
-public let defaultDarkPresentationTheme = makeDarkPresentationTheme(accentColor: UIColor(rgb: 0x2ea6ff))
+public let defaultDarkPresentationTheme = makeDarkPresentationTheme(accentColor: UIColor(rgb: 0x2ea6ff), baseColor: .blue, preview: false)
 
-public func makeDarkPresentationTheme(accentColor: UIColor?) -> PresentationTheme {
+public func makeDarkPresentationTheme(accentColor: UIColor?, baseColor: PresentationThemeBaseColor?, preview: Bool) -> PresentationTheme {
     let accentColor = accentColor ?? defaultDayAccentColor
-    return makeDarkPresentationTheme(accentColor: accentColor)
+    return makeDarkPresentationTheme(accentColor: accentColor, baseColor: baseColor, preview: preview)
 }

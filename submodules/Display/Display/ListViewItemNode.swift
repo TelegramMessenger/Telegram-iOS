@@ -550,11 +550,14 @@ open class ListViewItemNode: ASDisplayNode {
         (self.supernode as? ListView)?.ensureItemNodeVisible(self, animated: false, overflow: 22.0)
     }
     
-    func updateFrame(_ frame: CGRect, within containerSize: CGSize) {
+    public func updateFrame(_ frame: CGRect, within containerSize: CGSize) {
         self.frame = frame
         self.updateAbsoluteRect(frame, within: containerSize)
     }
     
     open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    }
+    
+    open func applyAbsoluteOffset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
     }
 }

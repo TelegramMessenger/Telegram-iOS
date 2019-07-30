@@ -72,6 +72,11 @@ enum AnimatedStickerMode {
     case direct
 }
 
+enum AnimatedStickerPlaybackMode {
+    case once
+    case loop
+}
+
 private final class AnimatedStickerFrame {
     let data: Data
     let type: AnimationRendererFrameType
@@ -214,7 +219,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         self.width = width
         self.height = height
         self.currentFrame = 0
-        guard let rawData = TGGUnzipData(data, 2 * 1024 * 1024) else {
+        guard let rawData = TGGUnzipData(data, 8 * 1024 * 1024) else {
             return nil
         }
         guard let animation = LottieInstance(data: rawData, cacheKey: "") else {
@@ -292,6 +297,7 @@ final class AnimatedStickerNode: ASDisplayNode {
     private var renderer: (AnimationRenderer & ASDisplayNode)?
     
     private var isPlaying: Bool = false
+    private var playbackMode: AnimatedStickerPlaybackMode = .loop
     
     var visibility = false {
         didSet {
@@ -342,8 +348,9 @@ final class AnimatedStickerNode: ASDisplayNode {
         self.renderer?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
         self.addSubnode(self.renderer!)
     }
-    
-    func setup(account: Account, resource: MediaResource, width: Int, height: Int, mode: AnimatedStickerMode) {
+        
+    func setup(account: Account, resource: MediaResource, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
+        self.playbackMode = playbackMode
         switch mode {
             case .direct:
                 self.disposable.set((account.postbox.mediaBox.resourceData(resource)
@@ -411,7 +418,7 @@ final class AnimatedStickerNode: ASDisplayNode {
             timerHolder.swap(nil)?.invalidate()
             
             let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(frameSource.frameRate), repeat: true, completion: {
-                let maybeFrame = frameQueue.syncWith { frameQueue  in
+                let maybeFrame = frameQueue.syncWith { frameQueue in
                     return frameQueue.take()
                 }
                 if let maybeFrame = maybeFrame, let frame = maybeFrame {

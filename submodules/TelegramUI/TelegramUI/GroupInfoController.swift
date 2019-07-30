@@ -531,9 +531,9 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 let label: String?
                 switch memberStatus {
                     case let .owner(rank):
-                        label = rank ?? strings.GroupInfo_LabelOwner
+                        label = rank?.trimmingEmojis ?? strings.GroupInfo_LabelOwner
                     case let .admin(rank):
-                        label = rank ?? strings.GroupInfo_LabelAdmin
+                        label = rank?.trimmingEmojis ?? strings.GroupInfo_LabelAdmin
                     case .member:
                         label = nil
                 }
@@ -1823,6 +1823,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                                     default:
                                         break
                                 }
+                            } else if case .tooMuchJoined = error  {
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             }
                             
                             contactsController?.dismiss()

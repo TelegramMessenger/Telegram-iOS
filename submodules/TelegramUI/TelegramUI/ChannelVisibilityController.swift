@@ -282,8 +282,10 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             case let .editablePublicLink(theme, placeholder, currentText):
                 return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), clearButton: true, tag: ChannelVisibilityEntryTag.publicLink, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
-                }, receivedFocus: {
-                    arguments.scrollToPublicLinkText()
+                }, updatedFocus: { focus in
+                    if focus {
+                        arguments.scrollToPublicLinkText()
+                    }
                 }, action: {
                 })
             case let .privateLinkInfo(theme, text):

@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import Display
+import TelegramCore
 import AVFoundation
 import Lottie
 import TelegramUIPrivateModule
@@ -10,6 +11,59 @@ import Compression
 import GZip
 import RLottie
 import MobileCoreServices
+
+public struct LocalBundleResourceId: MediaResourceId {
+    public let name: String
+    public let ext: String
+    
+    public var uniqueId: String {
+        return "local-bundle-\(self.name)-\(self.ext)"
+    }
+    
+    public var hashValue: Int {
+        return self.name.hashValue
+    }
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if let to = to as? LocalBundleResourceId {
+            return self.name == to.name && self.ext == to.ext
+        } else {
+            return false
+        }
+    }
+}
+
+public class LocalBundleResource: TelegramMediaResource {
+    public let name: String
+    public let ext: String
+    
+    public init(name: String, ext: String) {
+        self.name = name
+        self.ext = ext
+    }
+    
+    public required init(decoder: PostboxDecoder) {
+        self.name = decoder.decodeStringForKey("n", orElse: "")
+        self.ext = decoder.decodeStringForKey("e", orElse: "")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.name, forKey: "n")
+        encoder.encodeString(self.ext, forKey: "e")
+    }
+    
+    public var id: MediaResourceId {
+        return LocalBundleResourceId(name: self.name, ext: self.ext)
+    }
+    
+    public func isEqual(to: MediaResource) -> Bool {
+        if let to = to as? LocalBundleResource {
+            return self.name == to.name && self.ext == to.ext
+        } else {
+            return false
+        }
+    }
+}
 
 func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: String) -> Signal<TempBoxFile, NoError> {
     return Signal({ subscriber in
@@ -22,7 +76,7 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
                 return
             }
             
-            let decompressedData = TGGUnzipData(data, 2 * 1024 * 1024)
+            let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
                 if cancelled.with({ $0 }) {
                     return
@@ -117,7 +171,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
             var deltaTime: Double = 0
             var compressionTime: Double = 0
             
-            let decompressedData = TGGUnzipData(data, 2 * 1024 * 1024)
+            let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
                 let endFrame = Int(player.frameCount)
                 
@@ -230,4 +284,46 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
             let _ = cancelled.swap(true)
         }
     })
+}
+
+private final class LocalBundleResourceCopyFile : MediaResourceDataFetchCopyLocalItem {
+    let path: String
+    init(path: String) {
+        self.path = path
+    }
+    func copyTo(url: URL) -> Bool {
+        do {
+            try FileManager.default.copyItem(at: URL(fileURLWithPath: self.path), to: url)
+            return true
+        } catch {
+            return false
+        }
+    }
+}
+
+func fetchLocalBundleResource(postbox: Postbox, resource: LocalBundleResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    return Signal { subscriber in
+        if let path = frameworkBundle.path(forResource: resource.name, ofType: resource.ext), let _ = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+            subscriber.putNext(.copyLocalItem(LocalBundleResourceCopyFile(path: path)))
+            subscriber.putCompletion()
+        }
+        return EmptyDisposable
+    }
+}
+
+private let emojis: [String: String] = [
+    "👍": "thumbsup",
+    "😂": "lol",
+    "😒": "meh",
+    "❤️": "heart",
+    "🥳": "celeb",
+    "😳": "confused"
+]
+
+func animatedEmojiResource(emoji: String) -> LocalBundleResource? {
+    if let name = emojis[emoji] {
+        return LocalBundleResource(name: name, ext: "tgs")
+    } else {
+        return nil
+    }
 }
