@@ -170,11 +170,9 @@ protected:
 class LottieParserImpl : public LookaheadParserHandler {
 public:
     LottieParserImpl(char *str, const char *dir_path)
-        : LookaheadParserHandler(str), mDirPath(dir_path)
-    {
-        ParseNext();
-    }
-    void ParseNext();
+        : LookaheadParserHandler(str), mDirPath(dir_path) {}
+    bool VerifyType();
+    bool ParseNext();
 public:
     bool        EnterObject();
     bool        EnterArray();
@@ -280,17 +278,26 @@ LookaheadParserHandler::LookaheadParserHandler(char *str)
     r_.IterativeParseInit();
 }
 
-void LottieParserImpl::ParseNext()
+bool LottieParserImpl::VerifyType()
+{
+    /* Verify the media type is lottie json.
+       Could add more strict check. */
+    return ParseNext();
+}
+
+bool LottieParserImpl::ParseNext()
 {
     if (r_.HasParseError()) {
         st_ = kError;
-        return;
+        return false;
     }
 
     if (!r_.IterativeParseNext<parseFlags>(ss_, *this)) {
         vCritical << "Lottie file parsing error";
-        RAPIDJSON_ASSERT(0);
+        st_ = kError;
+        return false;
     }
+    return true;
 }
 
 bool LottieParserImpl::EnterObject()
@@ -2244,7 +2251,10 @@ LottieParser::~LottieParser() = default;
 LottieParser::LottieParser(char *str, const char *dir_path)
     : d(std::make_unique<LottieParserImpl>(str, dir_path))
 {
-    d->parseComposition();
+    if (d->VerifyType())
+        d->parseComposition();
+    else
+        vWarning << "Input data is not Lottie format!";
 }
 
 std::shared_ptr<LOTModel> LottieParser::model()
