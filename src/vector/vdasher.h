@@ -46,10 +46,12 @@ private:
     VPointF              mCurPt;
     size_t               mIndex{0}; /* index to the dash Array */
     float                mCurrentLength;
-    bool                 mDiscard;
     float                mDashOffset{0};
     VPath                mResult;
-    bool                 mStartNewSegment=true;
+    bool                 mDiscard{false};
+    bool                 mStartNewSegment{true};
+    bool                 mNoLength{true};
+    bool                 mNoGap{true};
 };
 
 V_END_NAMESPACE
