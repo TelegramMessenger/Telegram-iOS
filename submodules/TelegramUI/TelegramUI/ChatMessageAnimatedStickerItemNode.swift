@@ -162,6 +162,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 var file: TelegramMediaFile?
                 var playbackMode: AnimatedStickerPlaybackMode = .loop
+                var isEmoji = false
                 
                 if let telegramFile = self.telegramFile {
                     file = telegramFile
@@ -169,6 +170,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         playbackMode = .once
                     }
                 } else if let emojiFile = self.emojiFile {
+                    isEmoji = true
                     file = emojiFile
                     if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
                         playbackMode = .once
@@ -177,7 +179,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if let file = file {
                     let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                    let fittedSize = dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                    let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
                     self.animationNode.setup(account: item.context.account, resource: file.resource, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 }
             }
@@ -216,9 +218,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             } else if let emojiFile = emojiFile {
                 isEmoji = true
                 
-                let displaySize = CGSize(width: floor(displaySize.width * 350.0 / 512.0), height: floor(displaySize.height * 350.0 / 512.0))
+                let displaySize = CGSize(width: floor(displaySize.width * item.presentationData.animatedEmojiScale), height: floor(displaySize.height * item.presentationData.animatedEmojiScale))
                 if let dimensions = emojiFile.dimensions {
-                    imageSize = dimensions.aspectFitted(displaySize)
+                    imageSize = dimensions.aspectFilled(displaySize)
                 } else if let thumbnailSize = emojiFile.previewRepresentations.first?.dimensions {
                     imageSize = thumbnailSize.aspectFitted(displaySize)
                 }

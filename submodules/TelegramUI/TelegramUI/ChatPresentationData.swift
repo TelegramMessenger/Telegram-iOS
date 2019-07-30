@@ -86,7 +86,9 @@ public final class ChatPresentationData {
     let messageFixedFont: UIFont
     let messageBlockQuoteFont: UIFont
     
-    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool) {
+    let animatedEmojiScale: CGFloat
+    
+    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool, animatedEmojiScale: CGFloat = 1.0) {
         self.theme = theme
         self.fontSize = fontSize
         self.strings = strings
@@ -105,5 +107,7 @@ public final class ChatPresentationData {
         self.messageBoldItalicFont = Font.semiboldItalic(baseFontSize)
         self.messageFixedFont = UIFont(name: "Menlo-Regular", size: baseFontSize - 1.0) ?? UIFont.systemFont(ofSize: baseFontSize)
         self.messageBlockQuoteFont = UIFont.systemFont(ofSize: baseFontSize - 1.0)
+        
+        self.animatedEmojiScale = animatedEmojiScale
     }
 }
