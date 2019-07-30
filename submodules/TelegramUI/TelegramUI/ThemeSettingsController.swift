@@ -235,13 +235,17 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 if theme.overallDarkAppearance {
                     colors = colors.filter { $0 != .black }
                 }
+                
+                let defaultColor: PresentationThemeAccentColor
                 if case let .builtin(name) = theme.name, name == .night {
                     colors = colors.filter { $0 != .gray }
+                    defaultColor = PresentationThemeAccentColor(baseColor: .white, value: 0.5)
                 } else {
                     colors = colors.filter { $0 != .white }
+                    defaultColor = PresentationThemeAccentColor(baseColor: .blue, value: 0.5)
                 }
                 
-                return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, colors: colors, currentColor: color ?? PresentationThemeAccentColor(baseColor: .blue, value: 0.5), updated: { color in
+                return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, colors: colors, currentColor: color ?? defaultColor, updated: { color in
                     arguments.selectAccentColor(color)
                 }, toggleSlider: { baseColor in
                     arguments.toggleColorSlider(baseColor == .white || baseColor == .black)
@@ -374,7 +378,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[theme.index] {
                     chatWallpaper = themeSpecificWallpaper
                 } else {
-                    let accentColor = current.themeSpecificAccentColors[theme.index]?.color ?? defaultDayAccentColor
+                    let accentColor = current.themeSpecificAccentColors[theme.index]?.color
                     let theme = makePresentationTheme(themeReference: theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
                     chatWallpaper = theme.chat.defaultWallpaper
                 }
@@ -410,7 +414,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
         }).start()
     }, toggleColorSlider: { forceHidden in
-        updateState { $0.withDisplayColorSlider(forceHidden ? false : !$0.displayColorSlider) }
+        //updateState { $0.withDisplayColorSlider(forceHidden ? false : !$0.displayColorSlider) }
     }, openAutoNightTheme: {
         pushControllerImpl?(themeAutoNightSettingsController(context: context))
     }, toggleLargeEmoji: { largeEmoji in
@@ -436,7 +440,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let largeEmoji = settings.largeEmoji
         let disableAnimations = settings.disableAnimations
         
-        let accentColor = settings.themeSpecificAccentColors[settings.theme.index]?.color ?? defaultDayAccentColor
+        let accentColor = settings.themeSpecificAccentColors[settings.theme.index]?.color
         let theme = makePresentationTheme(themeReference: settings.theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, preview: true)
 
         let wallpaper: TelegramWallpaper

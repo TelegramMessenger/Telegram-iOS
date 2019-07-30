@@ -318,9 +318,9 @@ private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> P
     )
 }
 
-public let defaultDarkPresentationTheme = makeDarkPresentationTheme(accentColor: UIColor(rgb: 0x2ea6ff), preview: false)
+public let defaultDarkPresentationTheme = makeDarkPresentationTheme(accentColor: .white, preview: false)
 
 public func makeDarkPresentationTheme(accentColor: UIColor?, preview: Bool) -> PresentationTheme {
-    let accentColor = accentColor ?? defaultDayAccentColor
+    let accentColor = accentColor ?? .white
     return makeDarkPresentationTheme(accentColor: accentColor, preview: preview)
 }

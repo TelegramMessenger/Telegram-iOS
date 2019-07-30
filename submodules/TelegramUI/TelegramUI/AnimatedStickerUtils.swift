@@ -311,18 +311,23 @@ func fetchLocalBundleResource(postbox: Postbox, resource: LocalBundleResource) -
     }
 }
 
-private let emojis: [String: String] = [
-    "👍": "thumbsup",
-    "😂": "lol",
-    "😒": "meh",
-    "❤️": "heart",
-    "🥳": "celeb",
-    "😳": "confused"
+private let emojis: [String: (String, CGFloat)] = [
+    "👍": ("thumbs_up_1", 450.0),
+    "👍🏻": ("thumbs_up_2", 450.0),
+    "👍🏼": ("thumbs_up_3", 450.0),
+    "👍🏽": ("thumbs_up_4", 450.0),
+    "👍🏾": ("thumbs_up_5", 450.0),
+    "👍🏿": ("thumbs_up_6", 450.0),
+    "😂": ("lol", 350.0),
+    "😒": ("meh", 350.0),
+    "❤️": ("heart", 350.0),
+    "🥳": ("celeb", 430.0),
+    "😳": ("confused", 350.0)
 ]
 
-func animatedEmojiResource(emoji: String) -> LocalBundleResource? {
-    if let name = emojis[emoji] {
-        return LocalBundleResource(name: name, ext: "tgs")
+func animatedEmojiResource(emoji: String) -> (LocalBundleResource, CGFloat)? {
+    if let (name, size) = emojis[emoji] {
+        return (LocalBundleResource(name: name, ext: "tgs"), size)
     } else {
         return nil
     }

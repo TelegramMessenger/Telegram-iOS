@@ -75,7 +75,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
     
     func updateExpansionProgress(_ progress: CGFloat, animated: Bool = false) {
         let newProgress = max(0.0, min(10.0, progress))
-        if abs(newProgress - self.expansionProgress) > 0.0001 && (progress <= 1.0 || self.expansionProgress != 1.0) {
+        if abs(newProgress - self.expansionProgress) > 0.0001 {
             self.expansionProgress = newProgress
         
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: ContainedViewLayoutTransitionCurve.slide) : .immediate
