@@ -153,11 +153,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return
         }
         
-        let isPlaying = self.visibilityStatus && item.controllerInteraction.stickerSettings.loopAnimatedStickers
+        let isPlaying = self.visibilityStatus
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             self.animationNode.visibility = isPlaying
-            if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
+            if self.isPlaying && !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
                 var telegramFile: TelegramMediaFile?
                 for media in item.message.media {
@@ -166,11 +166,19 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         break
                     }
                 }
-                
+
                 if let telegramFile = telegramFile {
-                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, mode: .cached)
+                    var playbackMode: AnimatedStickerPlaybackMode = .loop
+                    if !item.controllerInteraction.stickerSettings.loopAnimatedStickers {
+                        playbackMode = .once
+                    }
+                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, playbackMode: playbackMode, mode: .cached)
                 } else if let emojiResource = self.emojiResource {
-                    self.animationNode.setup(account: item.context.account, resource: emojiResource, width: 384, height: 384, mode: .cached)
+                    var playbackMode: AnimatedStickerPlaybackMode = .loop
+                    if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
+                        playbackMode = .once
+                    }
+                    self.animationNode.setup(account: item.context.account, resource: emojiResource, width: 384, height: 384, playbackMode: playbackMode, mode: .cached)
                 }
             }
         }
