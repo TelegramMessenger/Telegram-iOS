@@ -470,10 +470,13 @@ final class AnimatedStickerNode: ASDisplayNode {
         self.timer.swap(nil)?.invalidate()
     }
     
-    func playIfNeeded() {
+    func playIfNeeded() -> Bool {
         if !self.isPlaying {
+            self.isPlaying = true
             self.play()
+            return true
         }
+        return false
     }
     
     func updateLayout(size: CGSize) {

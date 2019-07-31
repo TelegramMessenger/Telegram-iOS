@@ -306,11 +306,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let displayLeftInset = params.leftInset + layoutConstants.bubble.edgeInset + avatarInset
             
             let imageInset: CGFloat = 10.0
-            let innerImageSize = imageSize
+            var innerImageSize = imageSize
             imageSize = CGSize(width: imageSize.width + imageInset * 2.0, height: imageSize.height + imageInset * 2.0)
-            var imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
+            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
             if isEmoji {
-                imageFrame = imageFrame.offsetBy(dx: incoming ? -imageInset : imageInset, dy: 0.0)
+                innerImageSize = imageSize
             }
             
             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: innerImageSize, boundingSize: innerImageSize, intrinsicInsets: UIEdgeInsets(top: imageInset, left: imageInset, bottom: imageInset, right: imageInset))
@@ -455,10 +455,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
+                    var updatedContentFrame = updatedImageFrame
+                    if isEmoji {
+                        updatedContentFrame = updatedContentFrame.insetBy(dx: -imageInset, dy: -imageInset)
+                    }
                     
-                    strongSelf.imageNode.frame = updatedImageFrame
-                    strongSelf.animationNode.frame = updatedImageFrame.insetBy(dx: imageInset, dy: imageInset)
-                    strongSelf.animationNode.updateLayout(size: updatedImageFrame.insetBy(dx: imageInset, dy: imageInset).size)
+                    strongSelf.imageNode.frame = updatedContentFrame
+                    strongSelf.animationNode.frame = updatedContentFrame.insetBy(dx: imageInset, dy: imageInset)
+                    strongSelf.animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
                     imageApply()
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
@@ -662,29 +666,29 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                     let _ = item.controllerInteraction.openMessage(item.message, .default)
                                 } else if let _ = self.emojiFile {
                                     if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
-                                        self.animationNode.playIfNeeded()
-                                    }
-                                    
-                                    if self.item?.message.text == "❤️" {
-                                        let hapticFeedback: HapticFeedback
-                                        if let currentHapticFeedback = self.hapticFeedback {
-                                            hapticFeedback = currentHapticFeedback
-                                        } else {
-                                            hapticFeedback = HapticFeedback()
-                                            self.hapticFeedback = hapticFeedback
-                                        }
-                                        hapticFeedback.prepareImpact()
-                                        hapticFeedback.impact(.heavy)
-                                        Queue.mainQueue().after(0.2) {
-                                            hapticFeedback.impact(.medium)
-                                            Queue.mainQueue().after(0.74) {
-                                                hapticFeedback.impact(.medium)
+                                        if self.animationNode.playIfNeeded() {
+                                            if self.item?.message.text == "❤️" {
+                                                let hapticFeedback: HapticFeedback
+                                                if let currentHapticFeedback = self.hapticFeedback {
+                                                    hapticFeedback = currentHapticFeedback
+                                                } else {
+                                                    hapticFeedback = HapticFeedback()
+                                                    self.hapticFeedback = hapticFeedback
+                                                }
+                                                hapticFeedback.prepareImpact()
+                                                hapticFeedback.impact(.heavy)
                                                 Queue.mainQueue().after(0.2) {
                                                     hapticFeedback.impact(.medium)
                                                     Queue.mainQueue().after(0.74) {
                                                         hapticFeedback.impact(.medium)
                                                         Queue.mainQueue().after(0.2) {
                                                             hapticFeedback.impact(.medium)
+                                                            Queue.mainQueue().after(0.74) {
+                                                                hapticFeedback.impact(.medium)
+                                                                Queue.mainQueue().after(0.2) {
+                                                                    hapticFeedback.impact(.medium)
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
