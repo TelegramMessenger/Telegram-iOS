@@ -195,6 +195,13 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
                             lhs = lhs.advanced(by: 1)
                             rhs = rhs.advanced(by: 1)
                         }
+                        var lhsRest = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt8.self).advanced(by: (decodeBufferLength / 8) * 8)
+                        var rhsRest = UnsafeMutableRawPointer(decodeBytes).assumingMemoryBound(to: UInt8.self).advanced(by: (decodeBufferLength / 8) * 8)
+                        for _ in (decodeBufferLength / 8) * 8 ..< decodeBufferLength {
+                            lhsRest.pointee = rhsRest.pointee ^ lhsRest.pointee
+                            lhsRest = lhsRest.advanced(by: 1)
+                            rhsRest = rhsRest.advanced(by: 1)
+                        }
                         
                         frameData = Data(bytes: frameBytes, count: decodeBufferLength)
                     }

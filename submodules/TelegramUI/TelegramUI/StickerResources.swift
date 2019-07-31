@@ -551,9 +551,6 @@ public func chatMessageAnimatedSticker(postbox: Postbox, file: TelegramMediaFile
                 }
             }
             
-            let img = context.generateImage()
-            let cgImg = img?.cgImage
-            
             return context
         }
     }
