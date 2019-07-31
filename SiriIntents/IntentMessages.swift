@@ -13,6 +13,10 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
         var signals: [Signal<[INMessage], NoError>] = []
         for entry in view.0.entries {
             if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _) = entry {
+                if index.messageIndex.id.peerId.namespace != Namespaces.Peer.CloudUser {
+                    continue
+                }
+                
                 var hasUnread = false
                 var fixedCombinedReadStates: MessageHistoryViewReadState?
                 if let readState = readState {
@@ -133,7 +137,7 @@ private func callWithTelegramMessage(_ telegramMessage: Message, account: Accoun
 }
 
 private func messageWithTelegramMessage(_ telegramMessage: Message, account: Account) -> INMessage? {
-    guard let author = telegramMessage.author, let user = telegramMessage.peers[author.id] as? TelegramUser else {
+    guard let author = telegramMessage.author, let user = telegramMessage.peers[author.id] as? TelegramUser, user.id.id != 777000 else {
         return nil
     }
     
@@ -194,9 +198,16 @@ private func messageWithTelegramMessage(_ telegramMessage: Message, account: Acc
                 break loop
             }
         }
+        
+        if telegramMessage.text.isEmpty && messageType == .text {
+            return nil
+        }
     
         message = INMessage(identifier: identifier, conversationIdentifier: "\(telegramMessage.id.peerId.toInt64())", content: telegramMessage.text, dateSent: date, sender: sender, recipients: [], groupName: nil, messageType: messageType)
     } else {
+        if telegramMessage.text.isEmpty {
+            return nil
+        }
         message = INMessage(identifier: identifier, content: telegramMessage.text, dateSent: date, sender: sender, recipients: [])
     }
     

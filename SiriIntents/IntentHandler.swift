@@ -4,6 +4,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import BuildConfig
+import Contacts
 
 private var accountCache: Account?
 
@@ -47,7 +48,7 @@ enum IntentHandlingError {
 }
 
 class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling {
-    private let accountPromise = Promise<Account>()
+    private let accountPromise = Promise<Account?>()
     
     private let resolvePersonsDisposable = MetaDisposable()
     private let actionDisposable = MetaDisposable()
@@ -86,7 +87,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
-        let account: Signal<Account, NoError>
+        let account: Signal<Account?, NoError>
         if let accountCache = accountCache {
             account = .single(accountCache)
         } else {
@@ -97,7 +98,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
             
             account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, appData: .single(buildConfig.bundleData(withAppToken: nil))), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
-            |> mapToSignal { account -> Signal<Account, NoError> in
+            |> mapToSignal { account -> Signal<Account?, NoError> in
                 if let account = account {
                     switch account {
                         case .upgrading:
@@ -117,11 +118,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                             return .complete()
                     }
                 } else {
-                    return .complete()
+                    return .single(nil)
                 }
-            }
-            |> afterNext { account in
-                account.resetStateManagement()
             }
             |> take(1)
         }
@@ -138,6 +136,11 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     }
     
     private func resolve(persons: [INPerson]?, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
+        guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
+            completion([INPersonResolutionResult.notRequired()])
+            return
+        }
+        
         guard let initialPersons = persons, !initialPersons.isEmpty else {
             completion([INPersonResolutionResult.needsValue()])
             return
@@ -205,8 +208,14 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         |> take(1)
         |> mapToSignal { matchedContacts in
             return account
-            |> mapToSignal { account in
-                return matchingCloudContacts(postbox: account.postbox, contacts: matchedContacts)
+            |> introduceError(IntentContactsError.self)
+            |> mapToSignal { account -> Signal<[(String, TelegramUser)], IntentContactsError> in
+                if let account = account {
+                    return matchingCloudContacts(postbox: account.postbox, contacts: matchedContacts)
+                    |> introduceError(IntentContactsError.self)
+                } else {
+                    return .fail(.generic)
+                }
             }
         }
         self.resolvePersonsDisposable.set((signal
@@ -219,6 +228,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     return INPersonResolutionResult.success(with: person)
                 })
             }
+        }, error: { error in
+            completion([INPersonResolutionResult.unsupported()])
         }))
     }
     
@@ -230,14 +241,20 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                 let account = self.accountPromise.get()
                 
                 let signal = account
-                |> mapToSignal { account -> Signal<INPerson?, NoError> in
-                    return matchingCloudContact(postbox: account.postbox, peerId: PeerId(peerId))
-                    |> map { user -> INPerson? in
-                        if let user = user {
-                            return personWithUser(stableId: "tg\(peerId)", user: user)
-                        } else {
-                            return nil
+                |> introduceError(IntentHandlingError.self)
+                |> mapToSignal { account -> Signal<INPerson?, IntentHandlingError> in
+                    if let account = account {
+                        return matchingCloudContact(postbox: account.postbox, peerId: PeerId(peerId))
+                        |> introduceError(IntentHandlingError.self)
+                        |> map { user -> INPerson? in
+                            if let user = user {
+                                return personWithUser(stableId: "tg\(peerId)", user: user)
+                            } else {
+                                return nil
+                            }
                         }
+                    } else {
+                        return .fail(.generic)
                     }
                 }
                 
@@ -248,6 +265,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     } else {
                         completion([INPersonResolutionResult.needsValue()])
                     }
+                }, error: { error in
+                    completion([INPersonResolutionResult.notRequired()])
                 }))
             } else {
                 self.resolve(persons: intent.recipients, with: completion)
@@ -258,6 +277,10 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     }
     
     func resolveContent(for intent: INSendMessageIntent, with completion: @escaping (INStringResolutionResult) -> Void) {
+        guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
+            completion(INStringResolutionResult.notRequired())
+            return
+        }
         if let text = intent.content, !text.isEmpty {
             completion(INStringResolutionResult.success(with: text))
         } else {
@@ -267,6 +290,11 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     
     func confirm(intent: INSendMessageIntent, completion: @escaping (INSendMessageIntentResponse) -> Void) {
         let userActivity = NSUserActivity(activityType: NSStringFromClass(INSendMessageIntent.self))
+        guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
+            let response = INSendMessageIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
+            completion(response)
+            return
+        }
         let response = INSendMessageIntentResponse(code: .ready, userActivity: userActivity)
         completion(response)
     }
@@ -278,6 +306,9 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             return .generic
         }
         |> mapToSignal { account -> Signal<Void, IntentHandlingError> in
+            guard let account = account else {
+                return .fail(.generic)
+            }
             guard let recipient = intent.recipients?.first, let customIdentifier = recipient.customIdentifier, customIdentifier.hasPrefix("tg") else {
                 return .fail(.generic)
             }
@@ -305,7 +336,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         }
         |> deliverOnMainQueue).start(error: { _ in
             let userActivity = NSUserActivity(activityType: NSStringFromClass(INSendMessageIntent.self))
-            let response = INSendMessageIntentResponse(code: .failure, userActivity: userActivity)
+            let response = INSendMessageIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
             completion(response)
         }, completed: {
             let userActivity = NSUserActivity(activityType: NSStringFromClass(INSendMessageIntent.self))
@@ -325,18 +356,27 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         |> take(1)
         |> introduceError(IntentHandlingError.self)
         |> mapToSignal { account -> Signal<[INMessage], IntentHandlingError> in
+            guard let account = account else {
+                return .fail(.generic)
+            }
+            
             account.shouldBeServiceTaskMaster.set(.single(.now))
             account.resetStateManagement()
 
-            return account.stateManager.pollStateUpdateCompletion()
+            let completion: Signal<Void, NoError> = account.stateManager.pollStateUpdateCompletion()
+            |> map { _ in
+                return Void()
+            }
+            
+            return (completion |> timeout(4.0, queue: Queue.mainQueue(), alternate: .single(Void())))
             |> introduceError(IntentHandlingError.self)
             |> take(1)
             |> mapToSignal { _ -> Signal<[INMessage], IntentHandlingError> in
                 return unreadMessages(account: account)
                 |> introduceError(IntentHandlingError.self)
-            }
-            |> afterDisposed {
-                account.shouldBeServiceTaskMaster.set(.single(.never))
+                |> afterDisposed {
+                    account.shouldBeServiceTaskMaster.set(.single(.never))
+                }
             }
         }
         |> deliverOnMainQueue).start(next: { messages in
@@ -346,7 +386,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             completion(response)
         }, error: { _ in
             let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchForMessagesIntent.self))
-            let response = INSearchForMessagesIntentResponse(code: .failure, userActivity: userActivity)
+            let response = INSearchForMessagesIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
             completion(response)
         }))
     }
@@ -373,8 +413,11 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             return .generic
         }
         |> mapToSignal { account -> Signal<Void, IntentHandlingError> in
-            var signals: [Signal<Void, IntentHandlingError>] = []
+            guard let account = account else {
+                return .fail(.generic)
+            }
             
+            var signals: [Signal<Void, IntentHandlingError>] = []
             var maxMessageIdsToApply: [PeerId: MessageId] = [:]
             if let identifiers = intent.identifiers {
                 for identifier in identifiers {
@@ -478,6 +521,10 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         |> take(1)
         |> introduceError(IntentHandlingError.self)
         |> mapToSignal { account -> Signal<[CallRecord], IntentHandlingError> in
+            guard let account = account else {
+                return .fail(.generic)
+            }
+            
             account.shouldBeServiceTaskMaster.set(.single(.now))
             return missedCalls(account: account)
             |> introduceError(IntentHandlingError.self)
@@ -497,7 +544,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             completion(response)
         }, error: { _ in
             let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
-            let response = INSearchCallHistoryIntentResponse(code: .failure, userActivity: userActivity)
+            let response = INSearchCallHistoryIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
             completion(response)
         }))
     }
