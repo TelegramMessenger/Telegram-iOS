@@ -219,7 +219,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 let displaySize = CGSize(width: floor(displaySize.width * item.presentationData.animatedEmojiScale), height: floor(displaySize.height * item.presentationData.animatedEmojiScale))
                 if let dimensions = emojiFile.dimensions {
-                    imageSize = dimensions.aspectFilled(displaySize)
+                    imageSize = CGSize(width: displaySize.width * dimensions.width / 512.0, height: displaySize.height * dimensions.height / 512.0)
                 } else if let thumbnailSize = emojiFile.previewRepresentations.first?.dimensions {
                     imageSize = thumbnailSize.aspectFitted(displaySize)
                 }
