@@ -135,43 +135,27 @@ VMatrix TransformData::matrix(int frameNo, bool autoOrient) const
     return m;
 }
 
-int LOTStrokeData::getDashInfo(int frameNo, float *array) const
+void LOTDashProperty::getDashInfo(int frameNo, std::vector<float>& result) const
 {
-    if (!mDash.mDashCount) return 0;
-    // odd case
-    if (mDash.mDashCount % 2) {
-        for (int i = 0; i < mDash.mDashCount; i++) {
-            array[i] = mDash.mDashArray[i].value(frameNo);
-        }
-        return mDash.mDashCount;
-    } else {  // even case when last gap info is not provided.
-        int i;
-        for (i = 0; i < mDash.mDashCount - 1; i++) {
-            array[i] = mDash.mDashArray[i].value(frameNo);
-        }
-        array[i] = array[i - 1];
-        array[i + 1] = mDash.mDashArray[i].value(frameNo);
-        return mDash.mDashCount + 1;
-    }
-}
+    result.clear();
 
-int LOTGStrokeData::getDashInfo(int frameNo, float *array) const
-{
-    if (!mDash.mDashCount) return 0;
-    // odd case
-    if (mDash.mDashCount % 2) {
-        for (int i = 0; i < mDash.mDashCount; i++) {
-            array[i] = mDash.mDashArray[i].value(frameNo);
-        }
-        return mDash.mDashCount;
-    } else {  // even case when last gap info is not provided.
-        int i;
-        for (i = 0; i < mDash.mDashCount - 1; i++) {
-            array[i] = mDash.mDashArray[i].value(frameNo);
-        }
-        array[i] = array[i - 1];
-        array[i + 1] = mDash.mDashArray[i].value(frameNo);
-        return mDash.mDashCount + 1;
+    if (mData.empty()) return;
+
+    if (result.capacity() < mData.size()) result.reserve(mData.size() + 1);
+
+    for (const auto &elm : mData)
+        result.push_back(elm.value(frameNo));
+
+    // if the size is even then we are missing last
+    // gap information which is same as the last dash value
+    // copy it from the last dash value.
+    // NOTE: last value is the offset and last-1 is the last dash value.
+    auto size = result.size();
+    if ((size % 2) == 0) {
+        //copy offset value to end.
+        result.push_back(result.back());
+        // copy dash value to gap.
+        result[size-1] = result[size-2];
     }
 }
 

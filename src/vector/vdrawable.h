@@ -43,7 +43,7 @@ public:
     void setBrush(const VBrush &brush) { mBrush = brush; }
     void setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
                        float strokeWidth);
-    void setDashInfo(float *array, uint size);
+    void setDashInfo(std::vector<float> &dashInfo);
     void preprocess(const VRect &clip);
     VRle rle();
 

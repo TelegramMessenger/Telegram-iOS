@@ -454,8 +454,7 @@ private:
    LOTProxyModel<LOTStrokeData> mModel;
    VColor                       mColor;
    float                        mWidth{0};
-   float                        mDashArray[6];
-   int                          mDashArraySize{0};
+   std::vector<float>           mDashInfo;
 };
 
 class LOTGStrokeItem : public LOTPaintDataItem
@@ -474,8 +473,7 @@ private:
    VColor                        mColor;
    float                         mAlpha{1.0};
    float                         mWidth{0};
-   float                         mDashArray[6];
-   int                           mDashArraySize{0};
+   std::vector<float>            mDashInfo;
 };
 
 

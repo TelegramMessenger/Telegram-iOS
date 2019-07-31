@@ -1362,18 +1362,13 @@ void LOTGFillItem::updateRenderNode()
 }
 
 LOTStrokeItem::LOTStrokeItem(LOTStrokeData *data)
-    : LOTPaintDataItem(data->isStatic()), mModel(data)
-{
-    mDashArraySize = 0;
-}
+    : LOTPaintDataItem(data->isStatic()), mModel(data){}
 
 void LOTStrokeItem::updateContent(int frameNo)
 {
     mColor = mModel.color(frameNo).toColor(mModel.opacity(frameNo));
     mWidth = mModel.strokeWidth(frameNo);
-    if (mModel.hasDashInfo()) {
-        mDashArraySize = mModel.getDashInfo(frameNo, mDashArray);
-    }
+    if (mModel.hasDashInfo()) mModel.getDashInfo(frameNo, mDashInfo);
 }
 
 static float getScale(const VMatrix &matrix)
@@ -1399,21 +1394,15 @@ void LOTStrokeItem::updateRenderNode()
         getScale(static_cast<LOTContentGroupItem *>(parent())->matrix());
     mDrawable.setStrokeInfo(mModel.capStyle(), mModel.joinStyle(),
                             mModel.meterLimit(), mWidth * scale);
-    if (mDashArraySize) {
-        for (int i = 0; i < mDashArraySize; i++) mDashArray[i] *= scale;
 
-        /* AE draw the dash even if dash value is 0 */
-        if (vCompare(mDashArray[0], 0.0f)) mDashArray[0] = 0.1f;
-
-        mDrawable.setDashInfo(mDashArray, mDashArraySize);
+    if (!mDashInfo.empty()) {
+        for (auto &elm : mDashInfo) elm *= scale;
+        mDrawable.setDashInfo(mDashInfo);
     }
 }
 
 LOTGStrokeItem::LOTGStrokeItem(LOTGStrokeData *data)
-    : LOTPaintDataItem(data->isStatic()), mData(data)
-{
-    mDashArraySize = 0;
-}
+    : LOTPaintDataItem(data->isStatic()), mData(data){}
 
 void LOTGStrokeItem::updateContent(int frameNo)
 {
@@ -1424,9 +1413,8 @@ void LOTGStrokeItem::updateContent(int frameNo)
     mJoin = mData->joinStyle();
     mMiterLimit = mData->meterLimit();
     mWidth = mData->width(frameNo);
-    if (mData->hasDashInfo()) {
-        mDashArraySize = mData->getDashInfo(frameNo, mDashArray);
-    }
+
+    if (mData->hasDashInfo()) mData->getDashInfo(frameNo, mDashInfo);
 }
 
 void LOTGStrokeItem::updateRenderNode()
@@ -1435,9 +1423,10 @@ void LOTGStrokeItem::updateRenderNode()
     mGradient->setAlpha(mAlpha * parentAlpha());
     mDrawable.setBrush(VBrush(mGradient.get()));
     mDrawable.setStrokeInfo(mCap, mJoin, mMiterLimit, mWidth * scale);
-    if (mDashArraySize) {
-        for (int i = 0; i < mDashArraySize; i++) mDashArray[i] *= scale;
-        mDrawable.setDashInfo(mDashArray, mDashArraySize);
+
+    if (!mDashInfo.empty()) {
+        for (auto &elm : mDashInfo) elm *= scale;
+        mDrawable.setDashInfo(mDashInfo);
     }
 }
 
@@ -1628,7 +1617,7 @@ void LOTDrawable::sync()
     if (mFlag & DirtyState::None) return;
 
     if (mFlag & DirtyState::Path) {
-        if (mStroke.mDash.size()) {
+        if (!mStroke.mDash.empty()) {
             VDasher dasher(mStroke.mDash.data(), mStroke.mDash.size());
             mPath = dasher.dashed(mPath);
         }

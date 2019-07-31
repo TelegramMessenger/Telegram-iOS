@@ -1567,7 +1567,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseStrokeObject()
         }
     }
     obj->setStatic(obj->mColor.isStatic() && obj->mOpacity.isStatic() &&
-                   obj->mWidth.isStatic() && obj->mDash.mStatic);
+                   obj->mWidth.isStatic() && obj->mDash.isStatic());
     return sharedStroke;
 }
 
@@ -1634,8 +1634,6 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGFillObject()
 
 void LottieParserImpl::parseDashProperty(LOTDashProperty &dash)
 {
-    dash.mDashCount = 0;
-    dash.mStatic = true;
     RAPIDJSON_ASSERT(PeekType() == kArrayType);
     EnterArray();
     while (NextArrayValue()) {
@@ -1643,18 +1641,11 @@ void LottieParserImpl::parseDashProperty(LOTDashProperty &dash)
         EnterObject();
         while (const char *key = NextObjectKey()) {
             if (0 == strcmp(key, "v")) {
-                parseProperty(dash.mDashArray[dash.mDashCount++]);
+                dash.mData.emplace_back();
+                parseProperty(dash.mData.back());
             } else {
                 Skip(key);
             }
-        }
-    }
-
-    // update the staic proprty
-    for (int i = 0; i < dash.mDashCount; i++) {
-        if (!dash.mDashArray[i].isStatic()) {
-            dash.mStatic = false;
-            break;
         }
     }
 }
@@ -1688,7 +1679,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGStrokeObject()
     }
 
     obj->setStatic(obj->isStatic() && obj->mWidth.isStatic() &&
-                   obj->mDash.mStatic);
+                   obj->mDash.isStatic());
     return sharedGStroke;
 }
 

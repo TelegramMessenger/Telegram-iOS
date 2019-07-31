@@ -59,13 +59,13 @@ void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
     mFlag |= DirtyState::Path;
 }
 
-void VDrawable::setDashInfo(float *array, uint size)
+void VDrawable::setDashInfo(std::vector<float> &dashInfo)
 {
     bool hasChanged = false;
 
-    if (mStroke.mDash.size() == size) {
-        for (uint i = 0; i < size; i++) {
-            if (!vCompare(mStroke.mDash[i], array[i])) {
+    if (mStroke.mDash.size() == dashInfo.size()) {
+        for (uint i = 0; i < dashInfo.size(); i++) {
+            if (!vCompare(mStroke.mDash[i], dashInfo[i])) {
                 hasChanged = true;
                 break;
             }
@@ -76,11 +76,8 @@ void VDrawable::setDashInfo(float *array, uint size)
 
     if (!hasChanged) return;
 
-    mStroke.mDash.clear();
+    mStroke.mDash = dashInfo;
 
-    for (uint i = 0; i < size; i++) {
-        mStroke.mDash.push_back(array[i]);
-    }
     mFlag |= DirtyState::Path;
 }
 

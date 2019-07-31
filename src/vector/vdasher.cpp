@@ -187,7 +187,10 @@ void VDasher::cubicTo(const VPointF &cp1, const VPointF &cp2, const VPointF &e)
 
 VPath VDasher::dashed(const VPath &path)
 {
+    if (mNoLength && mNoGap) return path;
+
     if (path.empty() || mNoLength) return VPath();
+
     if (mNoGap) return path;
 
     mResult = {};

@@ -287,9 +287,17 @@ public:
         return impl.mValue;
     }
 
+    LOTAnimatable(LOTAnimatable &&other) noexcept {
+        if (!other.mStatic) {
+            construct(impl.mAnimInfo, std::move(other.impl.mAnimInfo));
+            mStatic = false;
+        } else {
+            construct(impl.mValue, std::move(other.impl.mValue));
+            mStatic = true;
+        }
+    }
     // delete special member functions
     LOTAnimatable(const LOTAnimatable &) = delete;
-    LOTAnimatable(LOTAnimatable &&) = delete;
     LOTAnimatable& operator=(const LOTAnimatable&) = delete;
     LOTAnimatable& operator=(LOTAnimatable&&) = delete;
 
@@ -642,9 +650,15 @@ public:
 
 struct LOTDashProperty
 {
-    LOTAnimatable<float>     mDashArray[5]; /* "d" "g" "o"*/
-    int                      mDashCount{0};
-    bool                     mStatic{true};
+    std::vector<LOTAnimatable<float>> mData;
+    bool empty() const {return mData.empty();}
+    size_t size() const {return mData.size();}
+    bool isStatic() const {
+        for(const auto &elm : mData)
+            if (!elm.isStatic()) return false;
+        return true;
+    }
+    void getDashInfo(int frameNo, std::vector<float>& result) const;
 };
 
 class LOTStrokeData : public LOTData
@@ -657,8 +671,11 @@ public:
     CapStyle capStyle() const {return mCapStyle;}
     JoinStyle joinStyle() const {return mJoinStyle;}
     float meterLimit() const{return mMeterLimit;}
-    bool hasDashInfo() const { return !(mDash.mDashCount == 0);}
-    int getDashInfo(int frameNo, float *array) const;
+    bool  hasDashInfo() const {return !mDash.empty();}
+    void getDashInfo(int frameNo, std::vector<float>& result) const
+    {
+        return mDash.getDashInfo(frameNo, result);
+    }
 public:
     LOTAnimatable<LottieColor>        mColor;      /* "c" */
     LOTAnimatable<float>              mOpacity{100};    /* "o" */
@@ -764,8 +781,11 @@ public:
     CapStyle capStyle() const {return mCapStyle;}
     JoinStyle joinStyle() const {return mJoinStyle;}
     float meterLimit() const{return mMeterLimit;}
-    bool hasDashInfo() const { return !(mDash.mDashCount == 0);}
-    int getDashInfo(int frameNo, float *array) const;
+    bool  hasDashInfo() const {return !mDash.empty();}
+    void getDashInfo(int frameNo, std::vector<float>& result) const
+    {
+        return mDash.getDashInfo(frameNo, result);
+    }
 public:
     LOTAnimatable<float>           mWidth;       /* "w" */
     CapStyle                       mCapStyle{CapStyle::Flat};    /* "lc" */
