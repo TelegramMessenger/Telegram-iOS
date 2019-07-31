@@ -93,7 +93,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
             if let dimensions = stickerItem.file.dimensions {
                 if stickerItem.file.isAnimatedSticker {
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: CGSize(width: 160.0, height: 160.0)))
+                    let dimensions = stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))))
                     
                     if self.animationNode == nil {
                         let animationNode = AnimatedStickerNode()
@@ -103,7 +104,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                             self?.imageNode.isHidden = true
                         }
                     }
-                    self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: 160, height: 160, mode: .cached)
+                    let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                    self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {

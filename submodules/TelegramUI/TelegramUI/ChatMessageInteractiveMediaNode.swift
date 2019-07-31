@@ -458,8 +458,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 }
                             } else {
                                 if file.isAnimatedSticker {
+                                    let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
                                     updateImageSignal = { synchronousLoad in
-                                        return chatMessageAnimatedSticker(postbox: context.account.postbox, file: file, small: false, size: CGSize(width: 400.0, height: 400.0))
+                                        return chatMessageAnimatedSticker(postbox: context.account.postbox, file: file, small: false, size: dimensions.aspectFitted(CGSize(width: 400.0, height: 400.0)))
                                     }
                                 } else if file.isSticker {
                                     updateImageSignal = { synchronousLoad in
@@ -685,7 +686,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         strongSelf.imageNode.isHidden = true
                                     }
                                     strongSelf.animatedStickerNode = animatedStickerNode
-                                    animatedStickerNode.setup(account: context.account, resource: updatedAnimatedStickerFile.resource, width: 384, height: 384, mode: .cached)
+                                    let dimensions = updatedAnimatedStickerFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                                    let fittedDimensions = dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                                    animatedStickerNode.setup(account: context.account, resource: updatedAnimatedStickerFile.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                                     strongSelf.insertSubnode(animatedStickerNode, aboveSubnode: strongSelf.imageNode)
                                     animatedStickerNode.visibility = strongSelf.visibility
                                 }

@@ -127,7 +127,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: CGSize(width: 384.0, height: 384.0), thumbnail: false))
+                    let dimensions = telegramFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false))
                     self.updateVisibility()
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                 }
@@ -172,7 +173,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if !item.controllerInteraction.stickerSettings.loopAnimatedStickers {
                         playbackMode = .once
                     }
-                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: 384, height: 384, playbackMode: playbackMode, mode: .cached)
+                    let dimensions = telegramFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    let fittedSize = dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                    self.animationNode.setup(account: item.context.account, resource: telegramFile.resource, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 } else if let emojiResource = self.emojiResource {
                     var playbackMode: AnimatedStickerPlaybackMode = .loop
                     if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {

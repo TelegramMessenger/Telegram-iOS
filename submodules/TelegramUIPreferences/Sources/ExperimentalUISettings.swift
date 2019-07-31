@@ -11,7 +11,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var knockoutWallpaper: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
-        return ExperimentalUISettings(keepChatNavigationStack: false, skipReadHistory: false, crashOnLongQueries: false, chatListPhotos: false, playAnimatedEmojiOnce: false, knockoutWallpaper: false)
+        return ExperimentalUISettings(keepChatNavigationStack: false, skipReadHistory: false, crashOnLongQueries: false, chatListPhotos: false, playAnimatedEmojiOnce: true, knockoutWallpaper: false)
     }
     
     public init(keepChatNavigationStack: Bool, skipReadHistory: Bool, crashOnLongQueries: Bool, chatListPhotos: Bool, playAnimatedEmojiOnce: Bool, knockoutWallpaper: Bool) {
@@ -28,7 +28,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.skipReadHistory = decoder.decodeInt32ForKey("skipReadHistory", orElse: 0) != 0
         self.crashOnLongQueries = decoder.decodeInt32ForKey("crashOnLongQueries", orElse: 0) != 0
         self.chatListPhotos = decoder.decodeInt32ForKey("chatListPhotos", orElse: 0) != 0
-        self.playAnimatedEmojiOnce = decoder.decodeInt32ForKey("playAnimatedEmojiOnce", orElse: 0) != 0
+        self.playAnimatedEmojiOnce = decoder.decodeInt32ForKey("playAnimatedEmojiOnce", orElse: 1) != 0
         self.knockoutWallpaper = decoder.decodeInt32ForKey("knockoutWallpaper", orElse: 0) != 0
     }
     

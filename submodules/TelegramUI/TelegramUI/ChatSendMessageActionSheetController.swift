@@ -32,7 +32,7 @@ final class ChatSendMessageActionSheetController: ViewController {
         self.sendButtonFrame = sendButtonFrame
         self.textInputNode = textInputNode
         self.completion = completion
-        
+                
         super.init(navigationBarPresentationData: nil)
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
@@ -55,12 +55,12 @@ final class ChatSendMessageActionSheetController: ViewController {
     }
     
     override func loadDisplayNode() {
-        var accessoryPanelNode: AccessoryPanelNode?
-        if let panel = accessoryPanelForChatPresentationIntefaceState(self.interfaceState, context: self.context, currentPanel: nil, interfaceInteraction: nil), panel is ReplyAccessoryPanelNode || panel is ForwardAccessoryPanelNode {
-            accessoryPanelNode = panel
+        var forwardedCount = 0
+        if let forwardMessageIds = self.interfaceState.interfaceState.forwardMessageIds {
+            forwardedCount = forwardMessageIds.count
         }
         
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, accessoryPanelNode: accessoryPanelNode, send: { [weak self] in
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
             self?.controllerInteraction?.sendCurrentMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in

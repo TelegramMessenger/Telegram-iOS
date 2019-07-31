@@ -329,6 +329,7 @@ final class ChatMediaInputNodeInteraction {
     let dismissPeerSpecificSettings: () -> Void
     let clearRecentlyUsedStickers: () -> Void
     
+    var stickerSettings: ChatInterfaceStickerSettings?
     var highlightedStickerItemCollectionId: ItemCollectionId?
     var highlightedItemCollectionId: ItemCollectionId?
     var previewedStickerPackItem: StickerPreviewPeekItem?
@@ -651,6 +652,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
             }
         }
+        self.inputNodeInteraction.stickerSettings = self.controllerInteraction.stickerSettings
         
         let previousEntries = Atomic<([ChatMediaInputPanelEntry], [ChatMediaInputGridEntry])>(value: ([], []))
         

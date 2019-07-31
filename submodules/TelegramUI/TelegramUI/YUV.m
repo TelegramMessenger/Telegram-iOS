@@ -1,7 +1,7 @@
 #import "YUV.h"
 #import <Accelerate/Accelerate.h>
 
-void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height) {
+void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height, int bytesPerRow) {
     static vImage_ARGBToYpCbCr info;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -15,7 +15,7 @@ void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height)
     src.data = (void *)argb;
     src.width = width;
     src.height = height;
-    src.rowBytes = width * 4;
+    src.rowBytes = bytesPerRow;
     
     uint8_t permuteMap[4] = {3, 2, 1, 0};
     error = vImagePermuteChannels_ARGB8888(&src, &src, permuteMap, kvImageDoNotTile);
@@ -48,7 +48,7 @@ void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height)
     }
 }
 
-void decodeYUVAToRGBA(uint8_t const *yuva, uint8_t *argb, int width, int height) {
+void decodeYUVAToRGBA(uint8_t const *yuva, uint8_t *argb, int width, int height, int bytesPerRow) {
     static vImage_YpCbCrToARGB info;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -74,7 +74,7 @@ void decodeYUVAToRGBA(uint8_t const *yuva, uint8_t *argb, int width, int height)
     dest.data = (void *)argb;
     dest.width = width;
     dest.height = height;
-    dest.rowBytes = width * 4;
+    dest.rowBytes = bytesPerRow;
     
     error = vImageConvert_420Yp8_CbCr8ToARGB8888(&srcYp, &srcCbCr, &dest, &info, NULL, 0xff, kvImageDoNotTile);
     

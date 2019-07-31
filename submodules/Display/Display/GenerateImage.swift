@@ -15,7 +15,7 @@ public let deviceColorSpace: CGColorSpace = {
 
 let deviceScale = UIScreen.main.scale
 
-public func generateImagePixel(_ size: CGSize, scale: CGFloat, pixelGenerator: (CGSize, UnsafeMutablePointer<UInt8>) -> Void) -> UIImage? {
+public func generateImagePixel(_ size: CGSize, scale: CGFloat, pixelGenerator: (CGSize, UnsafeMutablePointer<UInt8>, Int) -> Void) -> UIImage? {
     let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
     let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
     let length = bytesPerRow * Int(scaledSize.height)
@@ -27,7 +27,7 @@ public func generateImagePixel(_ size: CGSize, scale: CGFloat, pixelGenerator: (
         return nil
     }
     
-    pixelGenerator(scaledSize, bytes)
+    pixelGenerator(scaledSize, bytes, bytesPerRow)
     
     let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
     

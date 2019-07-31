@@ -90,7 +90,7 @@ final class MessageHistoryMetadataTable: Table {
     
     private func chatListGroupInitializedKey(_ key: InitializedChatListKey) -> ValueBoxKey {
         self.sharedChatListGroupHistoryInitializedKey.setInt32(0, value: key.groupId.rawValue)
-        self.sharedChatListGroupHistoryInitializedKey.setInt8(8, value: MetadataPrefix.ChatListGroupInitialized.rawValue)
+        self.sharedChatListGroupHistoryInitializedKey.setInt8(4, value: MetadataPrefix.ChatListGroupInitialized.rawValue)
         return self.sharedChatListGroupHistoryInitializedKey
     }
     
