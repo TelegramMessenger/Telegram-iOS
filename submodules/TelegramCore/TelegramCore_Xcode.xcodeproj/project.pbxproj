@@ -178,6 +178,7 @@
 		D01C7F051EFC1C49008305F1 /* DeviceContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7F031EFC1C49008305F1 /* DeviceContact.swift */; };
 		D01D6BF91E42A713006151C6 /* SearchStickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D6BF81E42A713006151C6 /* SearchStickers.swift */; };
 		D01D6BFA1E42A718006151C6 /* SearchStickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D6BF81E42A713006151C6 /* SearchStickers.swift */; };
+		D020F00722F19C8F00BE699A /* ManagedAnimatedEmojiUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0925903622F0D02D003D6283 /* ManagedAnimatedEmojiUpdates.swift */; };
 		D021E0DF1DB539FC00C6B04F /* StickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DE1DB539FC00C6B04F /* StickerPack.swift */; };
 		D021E0E21DB5401A00C6B04F /* StickerManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E11DB5401A00C6B04F /* StickerManagement.swift */; };
 		D0223A981EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0223A971EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift */; };
@@ -2613,6 +2614,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D020F00722F19C8F00BE699A /* ManagedAnimatedEmojiUpdates.swift in Sources */,
 				D05FDC3922CA45070060BFE3 /* AppUpdate.swift in Sources */,
 				D014193922AE6B85008667CB /* ChannelOwnershipTransfer.swift in Sources */,
 				D014193A22AE6B85008667CB /* PeersNearby.swift in Sources */,
