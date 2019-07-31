@@ -679,12 +679,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                 hapticFeedback.impact(.heavy)
                                                 Queue.mainQueue().after(0.2) {
                                                     hapticFeedback.impact(.medium)
-                                                    Queue.mainQueue().after(0.74) {
-                                                        hapticFeedback.impact(.medium)
+                                                    Queue.mainQueue().after(0.78) {
+                                                        hapticFeedback.impact(.heavy)
                                                         Queue.mainQueue().after(0.2) {
                                                             hapticFeedback.impact(.medium)
-                                                            Queue.mainQueue().after(0.74) {
-                                                                hapticFeedback.impact(.medium)
+                                                            Queue.mainQueue().after(0.78) {
+                                                                hapticFeedback.impact(.heavy)
                                                                 Queue.mainQueue().after(0.2) {
                                                                     hapticFeedback.impact(.medium)
                                                                 }
