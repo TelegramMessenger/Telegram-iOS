@@ -3,15 +3,16 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ActivityIndicator
 
-final class ProgressNavigationButtonNode: ASDisplayNode {
+public final class ProgressNavigationButtonNode: ASDisplayNode {
     private var indicatorNode: ActivityIndicator
     
-    convenience init(theme: PresentationTheme) {
+    convenience public init(theme: PresentationTheme) {
         self.init(color: theme.rootController.navigationBar.accentTextColor)
     }
     
-    init(color: UIColor) {
+    public init(color: UIColor) {
         self.indicatorNode = ActivityIndicator(type: .custom(color, 22.0, 1.0, false))
         
         super.init()
@@ -19,11 +20,11 @@ final class ProgressNavigationButtonNode: ASDisplayNode {
         self.addSubnode(self.indicatorNode)
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: 26.0, height: 22.0)
     }
     
-    override func layout() {
+    override public func layout() {
         super.layout()
         
         let size = self.bounds.size
