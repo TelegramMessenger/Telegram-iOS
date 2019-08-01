@@ -51,7 +51,26 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         super.init(layerBacked: false)
         
         self.animationNode.started = { [weak self] in
-            self?.imageNode.alpha = 0.0
+            if let strongSelf = self {
+                strongSelf.imageNode.alpha = 0.0
+                
+                if let item = strongSelf.item {
+                    if let _ = strongSelf.emojiFile {
+                        item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+                    }
+                }
+            }
+        }
+        
+        self.animationNode.shouldAutoPlay = { [weak self] in
+            if let strongSelf = self {
+                if let item = strongSelf.item {
+                    if let _ = strongSelf.emojiFile {
+                        return !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id)
+                    }
+                }
+            }
+            return true
         }
         
         self.imageNode.displaysAsynchronously = false
@@ -171,9 +190,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if let emojiFile = self.emojiFile {
                     isEmoji = true
                     file = emojiFile
-                    if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
-                        playbackMode = .once
-                    }
+                    playbackMode = .once
                 }
                 
                 if let file = file {
@@ -665,29 +682,27 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 if self.telegramFile != nil {
                                     let _ = item.controllerInteraction.openMessage(item.message, .default)
                                 } else if let _ = self.emojiFile {
-                                    if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
-                                        if self.animationNode.playIfNeeded() {
-                                            if self.item?.message.text == "❤️" {
-                                                let hapticFeedback: HapticFeedback
-                                                if let currentHapticFeedback = self.hapticFeedback {
-                                                    hapticFeedback = currentHapticFeedback
-                                                } else {
-                                                    hapticFeedback = HapticFeedback()
-                                                    self.hapticFeedback = hapticFeedback
-                                                }
-                                                hapticFeedback.prepareImpact()
-                                                hapticFeedback.impact(.medium)
-                                                Queue.mainQueue().after(0.2) {
-                                                    hapticFeedback.impact(.light)
-                                                    Queue.mainQueue().after(0.78) {
-                                                        hapticFeedback.impact(.medium)
-                                                        Queue.mainQueue().after(0.2) {
-                                                            hapticFeedback.impact(.light)
-                                                            Queue.mainQueue().after(0.78) {
-                                                                hapticFeedback.impact(.medium)
-                                                                Queue.mainQueue().after(0.2) {
-                                                                    hapticFeedback.impact(.light)
-                                                                }
+                                    if self.animationNode.playIfNeeded() {
+                                        if self.item?.message.text == "❤️" {
+                                            let hapticFeedback: HapticFeedback
+                                            if let currentHapticFeedback = self.hapticFeedback {
+                                                hapticFeedback = currentHapticFeedback
+                                            } else {
+                                                hapticFeedback = HapticFeedback()
+                                                self.hapticFeedback = hapticFeedback
+                                            }
+                                            hapticFeedback.prepareImpact()
+                                            hapticFeedback.impact(.medium)
+                                            Queue.mainQueue().after(0.2) {
+                                                hapticFeedback.impact(.light)
+                                                Queue.mainQueue().after(0.78) {
+                                                    hapticFeedback.impact(.medium)
+                                                    Queue.mainQueue().after(0.2) {
+                                                        hapticFeedback.impact(.light)
+                                                        Queue.mainQueue().after(0.78) {
+                                                            hapticFeedback.impact(.medium)
+                                                            Queue.mainQueue().after(0.2) {
+                                                                hapticFeedback.impact(.light)
                                                             }
                                                         }
                                                     }

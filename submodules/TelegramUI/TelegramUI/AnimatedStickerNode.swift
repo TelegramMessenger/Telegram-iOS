@@ -306,6 +306,9 @@ final class AnimatedStickerNode: ASDisplayNode {
     private let fetchDisposable = MetaDisposable()
     private let eventsNode: AnimatedStickerNodeDisplayEvents
     
+    var shouldAutoPlay: () -> Bool = {
+        return true
+    }
     var started: () -> Void = {}
     var reportedStarted = false
     
@@ -407,7 +410,7 @@ final class AnimatedStickerNode: ASDisplayNode {
     }
     
     private func updateIsPlaying() {
-        let isPlaying = self.visibility && self.isDisplaying
+        let isPlaying = self.visibility && self.isDisplaying && self.shouldAutoPlay()
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             if isPlaying {
@@ -454,6 +457,7 @@ final class AnimatedStickerNode: ASDisplayNode {
                                 return
                             }
                             if !strongSelf.reportedStarted {
+                                strongSelf.reportedStarted = true
                                 strongSelf.started()
                             }
                         })

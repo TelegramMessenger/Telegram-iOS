@@ -7,18 +7,16 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var skipReadHistory: Bool
     public var crashOnLongQueries: Bool
     public var chatListPhotos: Bool
-    public var playAnimatedEmojiOnce: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
-        return ExperimentalUISettings(keepChatNavigationStack: false, skipReadHistory: false, crashOnLongQueries: false, chatListPhotos: false, playAnimatedEmojiOnce: true)
+        return ExperimentalUISettings(keepChatNavigationStack: false, skipReadHistory: false, crashOnLongQueries: false, chatListPhotos: false)
     }
     
-    public init(keepChatNavigationStack: Bool, skipReadHistory: Bool, crashOnLongQueries: Bool, chatListPhotos: Bool, playAnimatedEmojiOnce: Bool) {
+    public init(keepChatNavigationStack: Bool, skipReadHistory: Bool, crashOnLongQueries: Bool, chatListPhotos: Bool) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
         self.crashOnLongQueries = crashOnLongQueries
         self.chatListPhotos = chatListPhotos
-        self.playAnimatedEmojiOnce = playAnimatedEmojiOnce
     }
     
     public init(decoder: PostboxDecoder) {
@@ -26,7 +24,6 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.skipReadHistory = decoder.decodeInt32ForKey("skipReadHistory", orElse: 0) != 0
         self.crashOnLongQueries = decoder.decodeInt32ForKey("crashOnLongQueries", orElse: 0) != 0
         self.chatListPhotos = decoder.decodeInt32ForKey("chatListPhotos", orElse: 0) != 0
-        self.playAnimatedEmojiOnce = decoder.decodeInt32ForKey("playAnimatedEmojiOnce", orElse: 1) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -34,7 +31,6 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         encoder.encodeInt32(self.skipReadHistory ? 1 : 0, forKey: "skipReadHistory")
         encoder.encodeInt32(self.crashOnLongQueries ? 1 : 0, forKey: "crashOnLongQueries")
         encoder.encodeInt32(self.chatListPhotos ? 1 : 0, forKey: "chatListPhotos")
-        encoder.encodeInt32(self.playAnimatedEmojiOnce ? 1 : 0, forKey: "playAnimatedEmojiOnce")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
