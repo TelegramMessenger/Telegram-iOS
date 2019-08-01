@@ -437,8 +437,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         
         let fontSize = settings.fontSize
         let dateTimeFormat = presentationData.dateTimeFormat
-        let largeEmoji = settings.largeEmoji
-        let disableAnimations = settings.disableAnimations
+        let largeEmoji = presentationData.largeEmoji
+        let disableAnimations = presentationData.disableAnimations
         
         let accentColor = settings.themeSpecificAccentColors[settings.theme.index]?.color
         let theme = makePresentationTheme(themeReference: settings.theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, preview: true)
