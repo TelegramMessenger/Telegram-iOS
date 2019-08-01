@@ -1,4 +1,5 @@
 import Foundation
+import Display
 import UIKit
 import AsyncDisplayKit
 
@@ -15,7 +16,7 @@ private final class IconSwitchNodeView: TGIconSwitchView {
     }
 }
 
-class IconSwitchNode: ASDisplayNode {
+open class IconSwitchNode: ASDisplayNode {
     public var valueUpdated: ((Bool) -> Void)?
     
     public var frameColor = UIColor(rgb: 0xe0e0e0) {
