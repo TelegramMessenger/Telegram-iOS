@@ -3,9 +3,9 @@ import UIKit
 import AsyncDisplayKit
 import Lottie
 
-final class AnimationNode : ASDisplayNode {
+public final class AnimationNode : ASDisplayNode {
     private let scale: CGFloat
-    var speed: CGFloat = 1.0 {
+    public var speed: CGFloat = 1.0 {
         didSet {
             if let animationView = animationView() {
                 animationView.animationSpeed = speed
@@ -15,10 +15,10 @@ final class AnimationNode : ASDisplayNode {
     
     private var colorCallbacks: [LOTColorValueCallback] = []
     
-    var played = false
-    var completion: (() -> Void)?
+    public var played = false
+    public var completion: (() -> Void)?
     
-    init(animation: String? = nil, colors: [String: UIColor]? = nil, scale: CGFloat = 1.0) {
+    public init(animation: String? = nil, colors: [String: UIColor]? = nil, scale: CGFloat = 1.0) {
         self.scale = scale
         
         super.init()
@@ -47,21 +47,21 @@ final class AnimationNode : ASDisplayNode {
         })
     }
     
-    func setAnimation(name: String) {
+    public func setAnimation(name: String) {
         if let url = frameworkBundle.url(forResource: name, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
             self.animationView()?.sceneModel = composition
         }
     }
     
-    func setAnimation(json: [AnyHashable: Any]) {
+    public func setAnimation(json: [AnyHashable: Any]) {
         self.animationView()?.setAnimation(json: json)
     }
     
-    func animationView() -> LOTAnimationView? {
+    public func animationView() -> LOTAnimationView? {
         return self.view as? LOTAnimationView
     }
     
-    func play() {
+    public func play() {
         if let animationView = animationView(), !animationView.isAnimationPlaying, !self.played {
             self.played = true
             animationView.play { [weak self] _ in
@@ -70,21 +70,21 @@ final class AnimationNode : ASDisplayNode {
         }
     }
     
-    func loop() {
+    public func loop() {
         if let animationView = animationView() {
             animationView.loopAnimation = true
             animationView.play()
         }
     }
     
-    func reset() {
+    public func reset() {
         if self.played, let animationView = animationView() {
             self.played = false
             animationView.stop()
         }
     }
     
-    func preferredSize() -> CGSize? {
+    public func preferredSize() -> CGSize? {
         if let animationView = animationView(), let sceneModel = animationView.sceneModel {
             return CGSize(width: sceneModel.compBounds.width * self.scale, height: sceneModel.compBounds.height * self.scale)
         } else {
