@@ -4,13 +4,13 @@ import AsyncDisplayKit
 
 import LegacyComponents
 
-enum CheckNodeStyle {
+public enum CheckNodeStyle {
     case plain
     case overlay
     case navigation
 }
 
-final class CheckNode: ASDisplayNode {
+public final class CheckNode: ASDisplayNode {
     private var strokeColor: UIColor
     private var fillColor: UIColor
     private var foregroundColor: UIColor
@@ -18,12 +18,12 @@ final class CheckNode: ASDisplayNode {
     
     private var checkView: TGCheckButtonView?
     
-    private(set) var isChecked: Bool = false
+    public private(set) var isChecked: Bool = false
     
     private weak var target: AnyObject?
     private var action: Selector?
     
-    init(strokeColor: UIColor, fillColor: UIColor, foregroundColor: UIColor, style: CheckNodeStyle) {
+    public init(strokeColor: UIColor, fillColor: UIColor, foregroundColor: UIColor, style: CheckNodeStyle) {
         self.strokeColor = strokeColor
         self.fillColor = fillColor
         self.foregroundColor = foregroundColor
@@ -32,21 +32,21 @@ final class CheckNode: ASDisplayNode {
         super.init()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let style: TGCheckButtonStyle
         let checkSize: CGSize
         switch self.checkStyle {
-            case .plain:
-                style = TGCheckButtonStyleDefault
-                checkSize = CGSize(width: 32.0, height: 32.0)
-            case .overlay:
-                style = TGCheckButtonStyleMedia
-                checkSize = CGSize(width: 32.0, height: 32.0)
-            case .navigation:
-                style = TGCheckButtonStyleGallery
-                checkSize = CGSize(width: 39.0, height: 39.0)
+        case .plain:
+            style = TGCheckButtonStyleDefault
+            checkSize = CGSize(width: 32.0, height: 32.0)
+        case .overlay:
+            style = TGCheckButtonStyleMedia
+            checkSize = CGSize(width: 32.0, height: 32.0)
+        case .navigation:
+            style = TGCheckButtonStyleGallery
+            checkSize = CGSize(width: 39.0, height: 39.0)
         }
         let checkView = TGCheckButtonView(style: style, pallete: TGCheckButtonPallete(defaultBackgroundColor: self.fillColor, accentBackgroundColor: self.fillColor, defaultBorderColor: self.strokeColor, mediaBorderColor: self.strokeColor, chatBorderColor: self.strokeColor, check: self.foregroundColor, blueColor: self.fillColor, barBackgroundColor: self.fillColor))!
         checkView.setSelected(true, animated: false)
@@ -61,14 +61,14 @@ final class CheckNode: ASDisplayNode {
         checkView.frame = CGRect(origin: CGPoint(), size: checkSize)
     }
     
-    func setIsChecked(_ isChecked: Bool, animated: Bool) {
+    public func setIsChecked(_ isChecked: Bool, animated: Bool) {
         if isChecked != self.isChecked {
             self.isChecked = isChecked
             self.checkView?.setSelected(isChecked, animated: animated)
         }
     }
     
-    func addTarget(target: AnyObject?, action: Selector) {
+    public func addTarget(target: AnyObject?, action: Selector) {
         self.target = target
         self.action = action
         if self.isNodeLoaded {
