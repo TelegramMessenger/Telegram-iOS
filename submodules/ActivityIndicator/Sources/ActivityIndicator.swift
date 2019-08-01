@@ -15,55 +15,55 @@ private func convertIndicatorColor(_ color: UIColor) -> UIColor {
     }
 }
 
-enum ActivityIndicatorType: Equatable {
+public enum ActivityIndicatorType: Equatable {
     case navigationAccent(PresentationTheme)
     case custom(UIColor, CGFloat, CGFloat, Bool)
     
-    static func ==(lhs: ActivityIndicatorType, rhs: ActivityIndicatorType) -> Bool {
+    public static func ==(lhs: ActivityIndicatorType, rhs: ActivityIndicatorType) -> Bool {
         switch lhs {
-            case let .navigationAccent(lhsTheme):
-                if case let .navigationAccent(rhsTheme) = rhs, lhsTheme === rhsTheme {
-                    return true
-                } else {
-                    return false
-                }
-            case let .custom(lhsColor, lhsDiameter, lhsWidth, lhsForceCustom):
-                if case let .custom(rhsColor, rhsDiameter, rhsWidth, rhsForceCustom) = rhs, lhsColor.isEqual(rhsColor), lhsDiameter == rhsDiameter, lhsWidth == rhsWidth, lhsForceCustom == rhsForceCustom {
-                    return true
-                } else {
-                    return false
-                }
+        case let .navigationAccent(lhsTheme):
+            if case let .navigationAccent(rhsTheme) = rhs, lhsTheme === rhsTheme {
+                return true
+            } else {
+                return false
+            }
+        case let .custom(lhsColor, lhsDiameter, lhsWidth, lhsForceCustom):
+            if case let .custom(rhsColor, rhsDiameter, rhsWidth, rhsForceCustom) = rhs, lhsColor.isEqual(rhsColor), lhsDiameter == rhsDiameter, lhsWidth == rhsWidth, lhsForceCustom == rhsForceCustom {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
 
-enum ActivityIndicatorSpeed {
+public enum ActivityIndicatorSpeed {
     case regular
     case slow
 }
 
-final class ActivityIndicator: ASDisplayNode {
-    var type: ActivityIndicatorType {
+public final class ActivityIndicator: ASDisplayNode {
+    public var type: ActivityIndicatorType {
         didSet {
             switch self.type {
-                case let .navigationAccent(theme):
-                    self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
-                case let .custom(color, diameter, lineWidth, _):
-                    self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
+            case let .navigationAccent(theme):
+                self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
+            case let .custom(color, diameter, lineWidth, _):
+                self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
             }
             
             switch self.type {
-                case let .navigationAccent(theme):
-                    self.indicatorView?.color = theme.rootController.navigationBar.controlColor
-                case let .custom(color, diameter, lineWidth, _):
-                    self.indicatorView?.color = convertIndicatorColor(color)
+            case let .navigationAccent(theme):
+                self.indicatorView?.color = theme.rootController.navigationBar.controlColor
+            case let .custom(color, _, _, _):
+                self.indicatorView?.color = convertIndicatorColor(color)
             }
         }
     }
     
     private var currentInHierarchy = false
     
-    override var isHidden: Bool {
+    override public var isHidden: Bool {
         didSet {
             self.updateAnimation()
         }
@@ -74,7 +74,7 @@ final class ActivityIndicator: ASDisplayNode {
     private let indicatorNode: ASImageNode
     private var indicatorView: UIActivityIndicatorView?
     
-    init(type: ActivityIndicatorType, speed: ActivityIndicatorSpeed = .regular) {
+    public init(type: ActivityIndicatorType, speed: ActivityIndicatorSpeed = .regular) {
         self.type = type
         self.speed = speed
         
@@ -86,28 +86,28 @@ final class ActivityIndicator: ASDisplayNode {
         super.init()
         
         switch type {
-            case let .navigationAccent(theme):
-                self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
-            case let .custom(color, diameter, lineWidth, forceCustom):
-                self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
-                if forceCustom {
-                    self.addSubnode(self.indicatorNode)
-                }
+        case let .navigationAccent(theme):
+            self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
+        case let .custom(color, diameter, lineWidth, forceCustom):
+            self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
+            if forceCustom {
+                self.addSubnode(self.indicatorNode)
+            }
         }
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
-        let indicatorView = UIActivityIndicatorView(activityIndicatorStyle: .whiteLarge)
+        let indicatorView = UIActivityIndicatorView(style: .whiteLarge)
         switch self.type {
-            case let .navigationAccent(theme):
-                indicatorView.color = theme.rootController.navigationBar.controlColor
-            case let .custom(color, _, _, forceCustom):
-                indicatorView.color = convertIndicatorColor(color)
-                if !forceCustom {
-                    self.view.addSubview(indicatorView)
-                }
+        case let .navigationAccent(theme):
+            indicatorView.color = theme.rootController.navigationBar.controlColor
+        case let .custom(color, _, _, forceCustom):
+            indicatorView.color = convertIndicatorColor(color)
+            if !forceCustom {
+                self.view.addSubview(indicatorView)
+            }
         }
         self.indicatorView = indicatorView
         let size = self.bounds.size
@@ -122,17 +122,17 @@ final class ActivityIndicator: ASDisplayNode {
                 if self.isAnimating {
                     self.indicatorView?.startAnimating()
                     let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-                    basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+                    basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
                     switch self.speed {
-                        case .regular:
-                            basicAnimation.duration = 0.5
-                        case .slow:
-                            basicAnimation.duration = 0.7
+                    case .regular:
+                        basicAnimation.duration = 0.5
+                    case .slow:
+                        basicAnimation.duration = 0.7
                     }
                     basicAnimation.fromValue = NSNumber(value: Float(0.0))
                     basicAnimation.toValue = NSNumber(value: Float.pi * 2.0)
                     basicAnimation.repeatCount = Float.infinity
-                    basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+                    basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
                     basicAnimation.beginTime = 1.0
                     
                     self.indicatorNode.layer.add(basicAnimation, forKey: "progressRotation")
@@ -148,30 +148,30 @@ final class ActivityIndicator: ASDisplayNode {
         self.isAnimating = !self.isHidden && self.currentInHierarchy
     }
     
-    override func willEnterHierarchy() {
+    override public func willEnterHierarchy() {
         super.willEnterHierarchy()
         
         self.currentInHierarchy = true
         self.updateAnimation()
     }
     
-    override func didExitHierarchy() {
+    override public func didExitHierarchy() {
         super.didExitHierarchy()
         
         self.currentInHierarchy = false
         self.updateAnimation()
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         switch self.type {
-            case .navigationAccent:
-                return CGSize(width: 22.0, height: 22.0)
-            case let .custom(_, diameter, _, _):
-                return CGSize(width: diameter, height: diameter)
+        case .navigationAccent:
+            return CGSize(width: 22.0, height: 22.0)
+        case let .custom(_, diameter, _, _):
+            return CGSize(width: diameter, height: diameter)
         }
     }
     
-    override func layout() {
+    override public func layout() {
         super.layout()
         
         let size = self.bounds.size
@@ -183,12 +183,12 @@ final class ActivityIndicator: ASDisplayNode {
         let indicatorSize: CGSize
         let shouldScale: Bool
         switch self.type {
-            case .navigationAccent:
-                indicatorSize = CGSize(width: 22.0, height: 22.0)
-                shouldScale = false
-            case let .custom(_, diameter, _, forceDefault):
-                indicatorSize = CGSize(width: diameter, height: diameter)
-                shouldScale = !forceDefault
+        case .navigationAccent:
+            indicatorSize = CGSize(width: 22.0, height: 22.0)
+            shouldScale = false
+        case let .custom(_, diameter, _, forceDefault):
+            indicatorSize = CGSize(width: diameter, height: diameter)
+            shouldScale = !forceDefault
         }
         self.indicatorNode.frame = CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
         if shouldScale, let indicatorView = self.indicatorView {
