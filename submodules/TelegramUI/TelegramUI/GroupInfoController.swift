@@ -9,9 +9,12 @@ import LegacyComponents
 import TelegramPresentationData
 import SafariServices
 import TelegramUIPreferences
+import ItemListUI
+import TextFormat
+import AccountContext
 
 private final class GroupInfoArguments {
-    let context: AccountContext
+    let context: AccountContextImpl
     
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     let tapAvatarAction: () -> Void
@@ -42,7 +45,7 @@ private final class GroupInfoArguments {
     let changeLocation: () -> Void
     let displayLocationContextMenu: (String) -> Void
     
-    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void, openLinkedChannelSetup: @escaping () -> Void, openLocation: @escaping (PeerGeoLocation) -> Void, changeLocation: @escaping () -> Void, displayLocationContextMenu: @escaping (String) -> Void) {
+    init(context: AccountContextImpl, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void, openLinkedChannelSetup: @escaping () -> Void, openLocation: @escaping (PeerGeoLocation) -> Void, changeLocation: @escaping () -> Void, displayLocationContextMenu: @escaping (String) -> Void) {
         self.context = context
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
@@ -1258,7 +1261,7 @@ private func valuesRequiringUpdate(state: GroupInfoState, view: PeerView) -> (ti
     }
 }
 
-public func groupInfoController(context: AccountContext, peerId originalPeerId: PeerId, membersLoaded: @escaping () -> Void = {}) -> ViewController {
+public func groupInfoController(context: AccountContextImpl, peerId originalPeerId: PeerId, membersLoaded: @escaping () -> Void = {}) -> ViewController {
     let statePromise = ValuePromise(GroupInfoState(updatingAvatar: nil, editingState: nil, updatingName: nil, peerIdWithRevealedOptions: nil, temporaryParticipants: [], successfullyAddedParticipantIds: Set(), removingParticipantIds: Set(), savingData: false, searchingMembers: false), ignoreRepeated: true)
     let stateValue = Atomic(value: GroupInfoState(updatingAvatar: nil, editingState: nil, updatingName: nil, peerIdWithRevealedOptions: nil, temporaryParticipants: [], successfullyAddedParticipantIds: Set(), removingParticipantIds: Set(), savingData: false, searchingMembers: false))
     let updateState: ((GroupInfoState) -> GroupInfoState) -> Void = { f in
@@ -1382,7 +1385,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     }
                     
                     let completedImpl: (UIImage) -> Void = { image in
-                        if let data = UIImageJPEGRepresentation(image, 0.6) {
+                        if let data = image.jpegData(compressionQuality: 0.6) {
                             let resource = LocalFileMediaResource(fileId: arc4random64())
                             context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                             let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
@@ -2359,12 +2362,12 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
         }
     }
     
-    aboutLinkActionImpl = { [weak controller] action, itemLink in
+    aboutLinkActionImpl = { [weak context, weak controller] action, itemLink in
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerView in
-            if let controller = controller {
-                handleTextLinkAction(context: context, peerId: peerView.peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+            if let controller = controller, let context = context {
+                context.sharedContext.handleTextLinkAction(context: context, peerId: peerView.peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
             }
         })
     }

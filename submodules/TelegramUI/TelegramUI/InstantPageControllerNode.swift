@@ -10,7 +10,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var settings: InstantPagePresentationSettings?
     private var themeSettings: PresentationThemeSettings?
     private var presentationTheme: PresentationTheme
@@ -78,7 +78,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return InstantPageStoredState(contentOffset: Double(self.scrollNode.view.contentOffset.y), details: details)
     }
     
-    init(context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType,  getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(context: AccountContextImpl, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType,  getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
         self.context = context
         self.presentationTheme = presentationTheme
         self.dateTimeFormat = dateTimeFormat
@@ -338,7 +338,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if self.scrollNode.bounds.size != layout.size || !self.scrollNode.view.contentInset.top.isEqual(to: scrollInsetTop) {
             self.scrollNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
             self.scrollNodeHeader.frame = CGRect(origin: CGPoint(x: 0.0, y: -2000.0), size: CGSize(width: layout.size.width, height: 2000.0))
-            self.scrollNode.view.contentInset = UIEdgeInsetsMake(scrollInsetTop, 0.0, layout.intrinsicInsets.bottom, 0.0)
+            self.scrollNode.view.contentInset = UIEdgeInsets(top: scrollInsetTop, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
             if widthUpdated {
                 self.updateLayout()
             }

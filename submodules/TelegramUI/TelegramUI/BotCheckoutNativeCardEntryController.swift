@@ -6,6 +6,7 @@ import Display
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import ProgressNavigationButtonNode
 
 enum BotCheckoutNativeCardEntryStatus {
     case notReady
@@ -30,7 +31,7 @@ final class BotCheckoutNativeCardEntryController: ViewController {
         return super.displayNode as! BotCheckoutNativeCardEntryControllerNode
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let additionalFields: BotCheckoutNativeCardEntryAdditionalFields
     private let publishableKey: String
     private let completion: (BotCheckoutPaymentMethod) -> Void
@@ -42,7 +43,7 @@ final class BotCheckoutNativeCardEntryController: ViewController {
     private var doneItem: UIBarButtonItem?
     private var activityItem: UIBarButtonItem?
     
-    public init(context: AccountContext, additionalFields: BotCheckoutNativeCardEntryAdditionalFields, publishableKey: String, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
+    public init(context: AccountContextImpl, additionalFields: BotCheckoutNativeCardEntryAdditionalFields, publishableKey: String, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
         self.context = context
         self.additionalFields = additionalFields
         self.publishableKey = publishableKey

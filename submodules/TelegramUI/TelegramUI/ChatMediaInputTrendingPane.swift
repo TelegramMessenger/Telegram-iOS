@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
 
 final class TrendingPaneInteraction {
     let installPack: (ItemCollectionInfo) -> Void
@@ -106,7 +107,7 @@ private func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], ins
 }
 
 final class ChatMediaInputTrendingPane: ChatMediaInputPane {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let controllerInteraction: ChatControllerInteraction
     private let getItemIsPreviewed: (StickerPackItem) -> Bool
     
@@ -126,7 +127,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     
     var scrollingInitiated: (() -> Void)?
     
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(context: AccountContextImpl, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.getItemIsPreviewed = getItemIsPreviewed

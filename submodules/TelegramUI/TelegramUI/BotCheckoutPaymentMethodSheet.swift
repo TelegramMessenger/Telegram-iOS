@@ -34,7 +34,7 @@ enum BotCheckoutPaymentMethod: Equatable {
 final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
     
-    init(context: AccountContext, currentMethod: BotCheckoutPaymentMethod?, methods: [BotCheckoutPaymentMethod], applyValue: @escaping (BotCheckoutPaymentMethod) -> Void, newCard: @escaping () -> Void) {
+    init(context: AccountContextImpl, currentMethod: BotCheckoutPaymentMethod?, methods: [BotCheckoutPaymentMethod], applyValue: @escaping (BotCheckoutPaymentMethod) -> Void, newCard: @escaping () -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings

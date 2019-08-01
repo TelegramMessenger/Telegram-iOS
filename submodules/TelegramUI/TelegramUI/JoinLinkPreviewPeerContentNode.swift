@@ -34,7 +34,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     private let peerNodes: [SelectablePeerNode]
     private let moreNode: MoreNode?
     
-    init(context: AccountContext, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], isGroup: Bool, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContextImpl, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], isGroup: Bool, theme: PresentationTheme, strings: PresentationStrings) {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.titleNode = ASTextNode()
         self.countNode = ASTextNode()

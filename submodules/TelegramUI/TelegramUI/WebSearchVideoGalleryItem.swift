@@ -8,13 +8,13 @@ import Postbox
 import TelegramPresentationData
 
 class WebSearchVideoGalleryItem: GalleryItem {
-    let context: AccountContext
+    let context: AccountContextImpl
     let presentationData: PresentationData
     let result: ChatContextResult
     let content: UniversalVideoContent
     let controllerInteraction: WebSearchGalleryControllerInteraction?
     
-    init(context: AccountContext, presentationData: PresentationData, result: ChatContextResult, content: UniversalVideoContent, controllerInteraction: WebSearchGalleryControllerInteraction?) {
+    init(context: AccountContextImpl, presentationData: PresentationData, result: ChatContextResult, content: UniversalVideoContent, controllerInteraction: WebSearchGalleryControllerInteraction?) {
         self.context = context
         self.presentationData = presentationData
         self.result = result
@@ -45,7 +45,7 @@ private struct FetchControls {
 }
 
 final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let strings: PresentationStrings
     private let controllerInteraction: WebSearchGalleryControllerInteraction?
     
@@ -74,7 +74,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     var playbackCompleted: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) {
+    init(context: AccountContextImpl, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) {
         self.context = context
         self.strings = presentationData.strings
         self.controllerInteraction = controllerInteraction

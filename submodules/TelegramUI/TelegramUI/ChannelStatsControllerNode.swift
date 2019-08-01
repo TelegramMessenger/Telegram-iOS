@@ -11,7 +11,7 @@ import TelegramPresentationData
 final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationDelegate {
     private var webView: WKWebView?
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peerId: PeerId
     var presentationData: PresentationData
     private let present: (ViewController, Any?) -> Void
@@ -19,7 +19,7 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
     
     private let refreshDisposable = MetaDisposable()
     
-    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, url: String, present: @escaping (ViewController, Any?) -> Void, updateActivity: @escaping (Bool) -> Void) {
+    init(context: AccountContextImpl, presentationData: PresentationData, peerId: PeerId, url: String, present: @escaping (ViewController, Any?) -> Void, updateActivity: @escaping (Bool) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.peerId = peerId
@@ -69,7 +69,7 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

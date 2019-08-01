@@ -30,7 +30,7 @@ private let textFont = Font.regular(14.0)
 private let buttonFont = Font.regular(17.0)
 
 final class PrivacyIntroControllerNode: ViewControllerTracingNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let mode: PrivacyIntroControllerMode
     private var presentationData: PresentationData?
     private let proceedAction: () -> Void
@@ -46,7 +46,7 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    init(context: AccountContext, mode: PrivacyIntroControllerMode, proceedAction: @escaping () -> Void) {
+    init(context: AccountContextImpl, mode: PrivacyIntroControllerMode, proceedAction: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.proceedAction = proceedAction
@@ -164,7 +164,7 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

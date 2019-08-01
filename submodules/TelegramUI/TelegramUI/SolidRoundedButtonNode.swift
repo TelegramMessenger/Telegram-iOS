@@ -148,7 +148,7 @@ final class SolidRoundedButtonGlossNode : ASDisplayNode {
         
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         self.displayLink?.isPaused = true
-        self.displayLink?.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+        self.displayLink?.add(to: RunLoop.main, forMode: .common)
         
         self.updateGradientColors()
     }

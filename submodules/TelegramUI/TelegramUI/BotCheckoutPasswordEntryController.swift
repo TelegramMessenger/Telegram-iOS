@@ -68,7 +68,7 @@ private final class BotCheckoutPasswordAlertActionNode: HighlightableButtonNode 
 }
 
 private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let period: Int32
     private let requiresBiometrics: Bool
     private let completion: (TemporaryTwoStepPasswordToken) -> Void
@@ -92,7 +92,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, cardTitle: String, period: Int32, requiresBiometrics: Bool, cancel: @escaping () -> Void, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) {
+    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, cardTitle: String, period: Int32, requiresBiometrics: Bool, cancel: @escaping () -> Void, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) {
         self.context = context
         self.period = period
         self.requiresBiometrics = requiresBiometrics
@@ -150,7 +150,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.textFieldNode = TextFieldNode()
         self.textFieldNode.textField.textColor = theme.actionSheet.primaryTextColor
         self.textFieldNode.textField.font = Font.regular(12.0)
-        self.textFieldNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(12.0)]
+        self.textFieldNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(12.0)]
         self.textFieldNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
         self.textFieldNode.textField.isSecureTextEntry = true
         
@@ -297,7 +297,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
     }
 }
 
-func botCheckoutPasswordEntryController(context: AccountContext, strings: PresentationStrings, cartTitle: String, period: Int32, requiresBiometrics: Bool, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) -> AlertController {
+func botCheckoutPasswordEntryController(context: AccountContextImpl, strings: PresentationStrings, cartTitle: String, period: Int32, requiresBiometrics: Bool, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) -> AlertController {
     var dismissImpl: (() -> Void)?
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = AlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), contentNode: BotCheckoutPasswordAlertContentNode(context: context, theme: presentationData.theme, strings: strings, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {

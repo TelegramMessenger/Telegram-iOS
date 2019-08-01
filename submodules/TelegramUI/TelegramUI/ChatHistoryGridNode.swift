@@ -71,7 +71,7 @@ struct ChatHistoryGridViewTransition {
     let stationaryItems: GridNodeStationaryItems
 }
 
-private func mappedInsertEntries(context: AccountContext, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionInsertEntry], theme: PresentationTheme, strings: PresentationStrings) -> [GridNodeInsertItem] {
+private func mappedInsertEntries(context: AccountContextImpl, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionInsertEntry], theme: PresentationTheme, strings: PresentationStrings) -> [GridNodeInsertItem] {
     return entries.map { entry -> GridNodeInsertItem in
         switch entry.entry {
             case let .MessageEntry(message, _, _, _, _, _):
@@ -88,7 +88,7 @@ private func mappedInsertEntries(context: AccountContext, peerId: PeerId, contro
     }
 }
 
-private func mappedUpdateEntries(context: AccountContext, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionUpdateEntry], theme: PresentationTheme, strings: PresentationStrings) -> [GridNodeUpdateItem] {
+private func mappedUpdateEntries(context: AccountContextImpl, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionUpdateEntry], theme: PresentationTheme, strings: PresentationStrings) -> [GridNodeUpdateItem] {
     return entries.map { entry -> GridNodeUpdateItem in
         switch entry.entry {
             case let .MessageEntry(message, _, _, _, _, _):
@@ -105,7 +105,7 @@ private func mappedUpdateEntries(context: AccountContext, peerId: PeerId, contro
     }
 }
 
-private func mappedChatHistoryViewListTransition(context: AccountContext, peerId: PeerId, controllerInteraction: ChatControllerInteraction, transition: ChatHistoryViewTransition, from: ChatHistoryView?, presentationData: ChatPresentationData) -> ChatHistoryGridViewTransition {
+private func mappedChatHistoryViewListTransition(context: AccountContextImpl, peerId: PeerId, controllerInteraction: ChatControllerInteraction, transition: ChatHistoryViewTransition, from: ChatHistoryView?, presentationData: ChatPresentationData) -> ChatHistoryGridViewTransition {
     var mappedScrollToItem: GridNodeScrollToItem?
     if let scrollToItem = transition.scrollToItem {
         let mappedPosition: GridNodeScrollToItemPosition
@@ -196,7 +196,7 @@ private func gridNodeLayoutForContainerLayout(size: CGSize) -> GridNodeLayoutTyp
 }
 
 public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peerId: PeerId
     private let messageId: MessageId?
     private let tagMask: MessageTags?
@@ -236,7 +236,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     private var loadStateUpdated: ((ChatHistoryNodeLoadState, Bool) -> Void)?
     private let controllerInteraction: ChatControllerInteraction
     
-    public init(context: AccountContext, peerId: PeerId, messageId: MessageId?, tagMask: MessageTags?, controllerInteraction: ChatControllerInteraction) {
+    public init(context: AccountContextImpl, peerId: PeerId, messageId: MessageId?, tagMask: MessageTags?, controllerInteraction: ChatControllerInteraction) {
         self.context = context
         self.peerId = peerId
         self.messageId = messageId

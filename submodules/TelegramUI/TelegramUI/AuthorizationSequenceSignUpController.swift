@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
+import ProgressNavigationButtonNode
 
 final class AuthorizationSequenceSignUpController: ViewController {
     private var controllerNode: AuthorizationSequenceSignUpControllerNode {

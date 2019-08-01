@@ -6,7 +6,7 @@ import Postbox
 import TelegramCore
 
 class ChatInputPanelNode: ASDisplayNode {
-    var context: AccountContext?
+    var context: AccountContextImpl?
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     
     func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {

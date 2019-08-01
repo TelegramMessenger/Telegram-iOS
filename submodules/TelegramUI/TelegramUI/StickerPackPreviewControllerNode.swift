@@ -7,6 +7,9 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import MergeLists
+import ActivityIndicator
+import TextFormat
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -40,7 +43,7 @@ private struct StickerPackPreviewGridTransaction {
 }
 
 final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let openShare: (() -> Void)?
     private var presentationData: PresentationData
     
@@ -82,7 +85,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private var hapticFeedback: HapticFeedback?
     
-    init(context: AccountContext, openShare: (() -> Void)?, openMention: @escaping (String) -> Void) {
+    init(context: AccountContextImpl, openShare: (() -> Void)?, openMention: @escaping (String) -> Void) {
         self.context = context
         self.openShare = openShare
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -168,15 +171,15 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         }
         
         self.contentTitleNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)
             } else {
                 return nil
             }
         }
         
         self.contentTitleNode.tapAttributeAction = { attributes in
-            if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String, mention.count > 1 {
+            if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String, mention.count > 1 {
                 openMention(String(mention[mention.index(after:  mention.startIndex)...]))
             }
         }

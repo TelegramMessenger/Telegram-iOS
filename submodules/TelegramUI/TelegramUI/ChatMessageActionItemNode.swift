@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import TextFormat
 
 private let titleFont = Font.regular(13.0)
 private let titleBoldFont = Font.bold(13.0)
@@ -628,7 +629,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         TelegramTextAttributes.Hashtag
                     ]
                     for name in possibleNames {
-                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
+                        if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
                             rects = self.labelNode.lineAndAttributeRects(name: name, at: index)
                             break
                         }
@@ -669,19 +670,19 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.labelNode.frame
         if let (index, attributes) = self.labelNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY - 10.0)), gesture == .tap {
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
                 if let attributeText = self.labelNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText)
                 }
                 return .url(url: url, concealed: concealed)
-            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+            } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return .peerMention(peerMention.peerId, peerMention.mention)
-            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+            } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 return .textMention(peerName)
-            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+            } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 return .botCommand(botCommand)
-            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
             }
         }

@@ -58,7 +58,7 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
 public class ChatListController: TelegramController, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
-    let context: AccountContext
+    let context: AccountContextImpl
     private let controlsHistoryPreload: Bool
     private let hideNetworkActivityStatus: Bool
     
@@ -102,7 +102,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         }
     }
     
-    public init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false) {
+    public init(context: AccountContextImpl, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false) {
         self.context = context
         self.controlsHistoryPreload = controlsHistoryPreload
         self.hideNetworkActivityStatus = hideNetworkActivityStatus
@@ -1290,22 +1290,22 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         }
         
         let inputShortcuts: [KeyShortcut] = [
-            KeyShortcut(title: strings.KeyCommand_JumpToPreviousChat, input: UIKeyInputUpArrow, modifiers: [.alternate], action: { [weak self] in
+            KeyShortcut(title: strings.KeyCommand_JumpToPreviousChat, input: UIKeyCommand.inputUpArrow, modifiers: [.alternate], action: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.chatListDisplayNode.chatListNode.selectChat(.previous(unread: false))
                 }
             }),
-            KeyShortcut(title: strings.KeyCommand_JumpToNextChat, input: UIKeyInputDownArrow, modifiers: [.alternate], action: { [weak self] in
+            KeyShortcut(title: strings.KeyCommand_JumpToNextChat, input: UIKeyCommand.inputDownArrow, modifiers: [.alternate], action: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.chatListDisplayNode.chatListNode.selectChat(.next(unread: false))
                 }
             }),
-            KeyShortcut(title: strings.KeyCommand_JumpToPreviousUnreadChat, input: UIKeyInputUpArrow, modifiers: [.alternate, .shift], action: { [weak self] in
+            KeyShortcut(title: strings.KeyCommand_JumpToPreviousUnreadChat, input: UIKeyCommand.inputUpArrow, modifiers: [.alternate, .shift], action: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.chatListDisplayNode.chatListNode.selectChat(.previous(unread: true))
                 }
             }),
-            KeyShortcut(title: strings.KeyCommand_JumpToNextUnreadChat, input: UIKeyInputDownArrow, modifiers: [.alternate, .shift], action: { [weak self] in
+            KeyShortcut(title: strings.KeyCommand_JumpToNextUnreadChat, input: UIKeyCommand.inputDownArrow, modifiers: [.alternate, .shift], action: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.chatListDisplayNode.chatListNode.selectChat(.next(unread: true))
                 }
@@ -1316,7 +1316,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 }
             }),
             KeyShortcut(title: strings.KeyCommand_Find, input: "\t", modifiers: [], action: toggleSearch),
-            KeyShortcut(input: UIKeyInputEscape, modifiers: [], action: toggleSearch)
+            KeyShortcut(input: UIKeyCommand.inputEscape, modifiers: [], action: toggleSearch)
         ]
         
         let openChat: (Int) -> Void = { [weak self] index in

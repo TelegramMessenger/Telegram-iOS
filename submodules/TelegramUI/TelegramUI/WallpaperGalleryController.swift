@@ -118,7 +118,7 @@ class WallpaperGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let source: WallpaperListSource
     var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, CGRect?) -> Void)?
     
@@ -156,7 +156,7 @@ class WallpaperGalleryController: ViewController {
     private var colorPanelEnabled = false
     private var patternPanelEnabled = false
     
-    init(context: AccountContext, source: WallpaperListSource) {
+    init(context: AccountContextImpl, source: WallpaperListSource) {
         self.context = context
         self.source = source
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -797,7 +797,7 @@ private extension GalleryControllerNode {
     }
     
     func modalAnimateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

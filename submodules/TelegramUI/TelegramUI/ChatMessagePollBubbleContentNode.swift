@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import Postbox
+import TextFormat
 
 struct PercentCounterItem: Comparable  {
     var index: Int = 0
@@ -176,7 +177,7 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
                 let displayLink = CADisplayLink(target: DisplayLinkProxy({ [weak self] in
                     self?.setNeedsDisplay()
                 }), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-                displayLink.add(to: .main, forMode: .commonModes)
+                displayLink.add(to: .main, forMode: .common)
                 self.displayLink = displayLink
             }
             self.setNeedsDisplay()
@@ -459,7 +460,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                                 let animation = CAKeyframeAnimation(keyPath: "contents")
                                 animation.values = images.map { $0.cgImage! }
                                 animation.duration = percentageDuration * UIView.animationDurationFactor()
-                                animation.calculationMode = kCAAnimationDiscrete
+                                animation.calculationMode = .discrete
                                 node.percentageNode.layer.add(animation, forKey: "image")
                             }
                         }
@@ -908,19 +909,19 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
                 if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText)
                 }
                 return .url(url: url, concealed: concealed)
-            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+            } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return .peerMention(peerMention.peerId, peerMention.mention)
-            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+            } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 return .textMention(peerName)
-            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+            } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 return .botCommand(botCommand)
-            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
             } else {
                 return .none

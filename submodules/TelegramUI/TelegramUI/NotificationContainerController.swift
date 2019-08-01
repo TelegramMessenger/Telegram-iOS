@@ -14,7 +14,7 @@ public final class NotificationContainerController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    public init(context: AccountContext) {
+    public init(context: AccountContextImpl) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)

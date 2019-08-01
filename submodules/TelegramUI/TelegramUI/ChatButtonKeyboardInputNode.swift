@@ -29,7 +29,7 @@ private final class ChatButtonKeyboardInputButtonNode: ASButtonNode {
 }
 
 final class ChatButtonKeyboardInputNode: ChatInputNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let controllerInteraction: ChatControllerInteraction
     
     private let separatorNode: ASDisplayNode
@@ -40,7 +40,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
     
     private var theme: PresentationTheme?
     
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction) {
+    init(context: AccountContextImpl, controllerInteraction: ChatControllerInteraction) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         

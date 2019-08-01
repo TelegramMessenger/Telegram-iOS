@@ -246,7 +246,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
 
 public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let presentationData: ChatPresentationData
-    let context: AccountContext
+    let context: AccountContextImpl
     let chatLocation: ChatLocation
     let associatedData: ChatMessageItemAssociatedData
     let controllerInteraction: ChatControllerInteraction
@@ -276,7 +276,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil) {
+    public init(presentationData: ChatPresentationData, context: AccountContextImpl, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil) {
         self.presentationData = presentationData
         self.context = context
         self.chatLocation = chatLocation

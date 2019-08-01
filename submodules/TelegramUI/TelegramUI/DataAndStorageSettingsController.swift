@@ -7,6 +7,7 @@ import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class DataAndStorageControllerArguments {
     let openStorageUsage: () -> Void
@@ -454,7 +455,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     return entries
 }
 
-func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndStorageEntryTag? = nil) -> ViewController {
+func dataAndStorageController(context: AccountContextImpl, focusOnItemTag: DataAndStorageEntryTag? = nil) -> ViewController {
     let initialState = DataAndStorageControllerState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     

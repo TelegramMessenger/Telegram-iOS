@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 struct ItemListWebsiteItemEditing: Equatable {
     let editing: Bool

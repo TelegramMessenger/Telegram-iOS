@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import ProgressNavigationButtonNode
 
 final class AuthorizationSequencePasswordRecoveryController: ViewController {
     private var controllerNode: AuthorizationSequencePasswordRecoveryControllerNode {

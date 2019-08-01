@@ -77,7 +77,7 @@ final public class PrivacyIntroControllerPresentationArguments {
 }
 
 final class PrivacyIntroController: ViewController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let mode: PrivacyIntroControllerMode
     private let arguments: PrivacyIntroControllerPresentationArguments
     private let proceedAction: () -> Void
@@ -91,7 +91,7 @@ final class PrivacyIntroController: ViewController {
     
     private var isDismissed: Bool = false
     
-    init(context: AccountContext, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), proceedAction: @escaping () -> Void) {
+    init(context: AccountContextImpl, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), proceedAction: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.arguments = arguments

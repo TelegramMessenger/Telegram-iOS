@@ -25,7 +25,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
         super.init()
         
         self.backgroundColor = UIColor.clear.cgColor
-        self.contentsGravity = "resizeAspectFill"
+        self.contentsGravity = .resizeAspectFill
         self.masksToBounds = true
         
         if let dimensions = fileReference.media.dimensions {

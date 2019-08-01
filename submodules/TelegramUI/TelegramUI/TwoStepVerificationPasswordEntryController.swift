@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 private final class TwoStepVerificationPasswordEntryControllerArguments {
     let updateEntryText: (String) -> Void
@@ -255,7 +256,7 @@ struct TwoStepVerificationPasswordEntryResult {
     let pendingEmail: TwoStepVerificationPendingEmail?
 }
 
-func twoStepVerificationPasswordEntryController(context: AccountContext, mode: TwoStepVerificationPasswordEntryMode, result: Promise<TwoStepVerificationPasswordEntryResult?>) -> ViewController {
+func twoStepVerificationPasswordEntryController(context: AccountContextImpl, mode: TwoStepVerificationPasswordEntryMode, result: Promise<TwoStepVerificationPasswordEntryResult?>) -> ViewController {
     let initialStage: PasswordEntryStage
     switch mode {
         case .setup, .change:

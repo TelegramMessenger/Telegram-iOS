@@ -9,7 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 
 final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let tapButton: HighlightTrackingButtonNode
     private let closeButton: HighlightableButtonNode
     private let lineNode: ASImageNode
@@ -27,13 +27,13 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
 
     private let queue = Queue()
     
-    init(context: AccountContext) {
+    init(context: AccountContextImpl) {
         self.context = context
         
         self.tapButton = HighlightTrackingButtonNode()
         
         self.closeButton = HighlightableButtonNode()
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
         self.separatorNode = ASDisplayNode()

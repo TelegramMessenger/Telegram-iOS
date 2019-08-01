@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import ActivityIndicator
 
 private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHostView {
     var previewingDelegate: PreviewingHostViewDelegate? {
@@ -36,7 +38,7 @@ private struct TestItem: Comparable, Identifiable {
 }
 
 final class ChatListControllerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let groupId: PeerGroupId
     private var presentationData: PresentationData
     
@@ -63,7 +65,7 @@ final class ChatListControllerNode: ASDisplayNode {
     
     let debugListView = ListView()
     
-    init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
+    init(context: AccountContextImpl, groupId: PeerGroupId, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
         self.context = context
         self.groupId = groupId
         self.presentationData = presentationData

@@ -44,7 +44,7 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         let keyboardAppearance: UIKeyboardAppearance = UIKeyboardAppearance.default
         textInputNode.textField.font = Font.regular(16.0)
         textInputNode.textField.textColor = textColor
-        textInputNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(16.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
+        textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(16.0), NSAttributedString.Key.foregroundColor: textColor]
         textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
         textInputNode.textField.keyboardAppearance = keyboardAppearance
         textInputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(16.0), textColor: theme.actionSheet.inputPlaceholderColor)

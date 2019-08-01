@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import CheckNode
 
 final class WebSearchItem: GridItem {
     var section: GridSection?

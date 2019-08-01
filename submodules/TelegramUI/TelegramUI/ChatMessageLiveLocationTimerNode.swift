@@ -60,7 +60,7 @@ final class ChatMessageLiveLocationTimerNode: ASDisplayNode {
                 self?.setNeedsDisplay()
             }), selector: #selector(RadialTimeoutNodeTimer.event), userInfo: nil, repeats: true)
             self.animationTimer = animationTimer
-            RunLoop.main.add(animationTimer, forMode: RunLoopMode.commonModes)
+            RunLoop.main.add(animationTimer, forMode: .common)
         }
     }
     
@@ -119,7 +119,7 @@ final class ChatMessageLiveLocationTimerNode: ASDisplayNode {
             path.lineCapStyle = .round
             path.stroke()
             
-            let attributes: [NSAttributedStringKey: Any] = [.font: textFont, .foregroundColor: parameters.foregroundColor]
+            let attributes: [NSAttributedString.Key: Any] = [.font: textFont, .foregroundColor: parameters.foregroundColor]
             let nsString = parameters.string as NSString
             let size = nsString.size(withAttributes: attributes)
             nsString.draw(at: CGPoint(x: floor((bounds.size.width - size.width) / 2.0), y: floor((bounds.size.height - size.height) / 2.0)), withAttributes: attributes)

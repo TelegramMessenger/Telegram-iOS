@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ItemListUI
 
 final class RecentSessionsEmptyStateItem: ItemListControllerEmptyStateItem {
     let theme: PresentationTheme

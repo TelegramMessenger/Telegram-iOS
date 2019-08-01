@@ -157,14 +157,14 @@ final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, UIGestu
                         self.timer?.invalidate()
                         let timer = Timer(timeInterval: 0.3, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.longTapEvent), userInfo: nil, repeats: false)
                         self.timer = timer
-                        RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+                        RunLoop.main.add(timer, forMode: .common)
                     case let .waitForHold(timeout, _):
                         //self.lastRecognizedGestureAndLocation = (.hold, touchLocationAndTimestamp.0)
                         self.hapticFeedback = HapticFeedback()
                         self.hapticFeedback?.prepareTap()
                         let timer = Timer(timeInterval: timeout, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.holdEvent), userInfo: nil, repeats: false)
                         self.timer = timer
-                        RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+                        RunLoop.main.add(timer, forMode: .common)
                     case .fail:
                         self.state = .failed
                 }
@@ -229,7 +229,7 @@ final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, UIGestu
                     self.state = .began
                     let timer = Timer(timeInterval: 0.2, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.tapEvent), userInfo: nil, repeats: false)
                     self.timer = timer
-                    RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+                    RunLoop.main.add(timer, forMode: .common)
                 case let .waitForHold(_, acceptTap):
                     if let (touchLocation, _) = self.touchLocationAndTimestamp, acceptTap {
                         if self.state != .began {

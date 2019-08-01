@@ -23,7 +23,7 @@ private func extractAnchor(string: String) -> (String, String?) {
 
 private let refreshTimeout: Int32 = 60 * 60 * 12
 
-func cachedFaqInstantPage(context: AccountContext) -> Signal<ResolvedUrl, NoError> {
+func cachedFaqInstantPage(context: AccountContextImpl) -> Signal<ResolvedUrl, NoError> {
     var faqUrl = context.sharedContext.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
     if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
         faqUrl = "https://telegram.org/faq#general-questions"
@@ -66,7 +66,7 @@ func cachedFaqInstantPage(context: AccountContext) -> Signal<ResolvedUrl, NoErro
     }
 }
 
-func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableItem], NoError> {
+func faqSearchableItems(context: AccountContextImpl) -> Signal<[SettingsSearchableItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     return cachedFaqInstantPage(context: context)
     |> map { resolvedUrl -> [SettingsSearchableItem] in

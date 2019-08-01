@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 private final class ChangePhoneNumberCodeControllerArguments {
     let updateEntryText: (String) -> Void
@@ -170,7 +171,7 @@ protocol ChangePhoneNumberCodeController: class {
 private final class ChangePhoneNumberCodeControllerImpl: ItemListController<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeController {
     private let applyCodeImpl: (Int) -> Void
     
-    init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
+    init(context: AccountContextImpl, state: Signal<(ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
         self.applyCodeImpl = applyCodeImpl
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -186,7 +187,7 @@ private final class ChangePhoneNumberCodeControllerImpl: ItemListController<Chan
     }
 }
 
-func changePhoneNumberCodeController(context: AccountContext, phoneNumber: String, codeData: ChangeAccountPhoneNumberData) -> ViewController {
+func changePhoneNumberCodeController(context: AccountContextImpl, phoneNumber: String, codeData: ChangeAccountPhoneNumberData) -> ViewController {
     let initialState = ChangePhoneNumberCodeControllerState(codeText: "", checking: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)

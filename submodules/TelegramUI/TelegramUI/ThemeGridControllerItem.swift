@@ -7,7 +7,7 @@ import AsyncDisplayKit
 import Postbox
 
 final class ThemeGridControllerItem: GridItem {
-    let context: AccountContext
+    let context: AccountContextImpl
     let wallpaper: TelegramWallpaper
     let index: Int
     let selected: Bool
@@ -15,7 +15,7 @@ final class ThemeGridControllerItem: GridItem {
     
     let section: GridSection? = nil
     
-    init(context: AccountContext, wallpaper: TelegramWallpaper, index: Int, selected: Bool, interaction: ThemeGridControllerInteraction) {
+    init(context: AccountContextImpl, wallpaper: TelegramWallpaper, index: Int, selected: Bool, interaction: ThemeGridControllerInteraction) {
         self.context = context
         self.wallpaper = wallpaper
         self.index = index
@@ -42,7 +42,7 @@ final class ThemeGridControllerItemNode: GridItemNode {
     private let wallpaperNode: SettingsThemeWallpaperNode
     private var selectionNode: GridMessageSelectionNode?
     
-    private var currentState: (AccountContext, TelegramWallpaper, Bool, Bool)?
+    private var currentState: (AccountContextImpl, TelegramWallpaper, Bool, Bool)?
     private var interaction: ThemeGridControllerInteraction?
     
     override init() {
@@ -59,7 +59,7 @@ final class ThemeGridControllerItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func setup(context: AccountContext, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeGridControllerInteraction, synchronousLoad: Bool) {
+    func setup(context: AccountContextImpl, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeGridControllerInteraction, synchronousLoad: Bool) {
         self.interaction = interaction
         
         if self.currentState == nil || self.currentState!.0 !== context || wallpaper != self.currentState!.1 || selected != self.currentState!.2 || synchronousLoad != self.currentState!.3 {

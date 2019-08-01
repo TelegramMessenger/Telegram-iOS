@@ -16,7 +16,7 @@ private let nameFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
 
 final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
     
@@ -36,7 +36,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     var share: ((GalleryControllerInteraction) -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData) {
+    init(context: AccountContextImpl, presentationData: PresentationData) {
         self.context = context
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat

@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
 
 enum ProxySettingsActionIcon {
     case none

@@ -38,7 +38,7 @@ final class BotPaymentActionItemNode: BotPaymentItemNode {
             if let strongSelf = self {
                 if highlighted {
                     if let supernode = strongSelf.supernode {
-                        supernode.view.bringSubview(toFront: strongSelf.view)
+                        supernode.view.bringSubviewToFront(strongSelf.view)
                     }
                     
                     strongSelf.highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")

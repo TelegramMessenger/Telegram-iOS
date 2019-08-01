@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TextFormat
 
 private let infoFont = Font.regular(14.0)
 private let passwordFont = Font.regular(16.0)
@@ -52,7 +53,7 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
         let text: NSAttributedString
         if let privacyPolicyUrl = privacyPolicyUrl {
             let privacyPolicyAttributes = MarkdownAttributeSet(font: infoFont, textColor: theme.list.freeTextColor)
-            let privacyPolicyLinkAttributes = MarkdownAttributeSet(font: infoFont, textColor: theme.list.itemAccentColor, additionalAttributes: [NSAttributedStringKey.underlineStyle.rawValue: NSUnderlineStyle.styleSingle.rawValue as NSNumber, TelegramTextAttributes.URL: privacyPolicyUrl])
+            let privacyPolicyLinkAttributes = MarkdownAttributeSet(font: infoFont, textColor: theme.list.itemAccentColor, additionalAttributes: [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber, TelegramTextAttributes.URL: privacyPolicyUrl])
             
             text = parseMarkdownIntoAttributedString(strings.Passport_PrivacyPolicy(peer.displayTitle, (peer.addressName ?? "")).0.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: privacyPolicyAttributes, bold: privacyPolicyAttributes, link: privacyPolicyLinkAttributes, linkAttribute: { _ in
                 return nil
@@ -68,18 +69,18 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
         
         self.textNode.linkHighlightColor = theme.list.itemAccentColor.withAlphaComponent(0.5)
         self.textNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
-            } else if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+            } else if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)
             } else {
                 return nil
             }
         }
         self.textNode.tapAttributeAction = { attributes in
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 openURL(url)
-            } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 openMention(mention)
             }
         }

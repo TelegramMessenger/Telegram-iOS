@@ -7,6 +7,7 @@ import TelegramCore
 import MapKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private struct PeerNearbyEntry {
     let peer: (Peer, CachedPeerData?)
@@ -35,11 +36,11 @@ private func arePeerNearbyArraysEqual(_ lhs: [PeerNearbyEntry], _ rhs: [PeerNear
 }
 
 private final class PeersNearbyControllerArguments {
-    let context: AccountContext
+    let context: AccountContextImpl
     let openChat: (Peer) -> Void
     let openCreateGroup: (Double, Double, String?) -> Void
     
-    init(context: AccountContext, openChat: @escaping (Peer) -> Void, openCreateGroup: @escaping (Double, Double, String?) -> Void) {
+    init(context: AccountContextImpl, openChat: @escaping (Peer) -> Void, openCreateGroup: @escaping (Double, Double, String?) -> Void) {
         self.context = context
         self.openChat = openChat
         self.openCreateGroup = openCreateGroup
@@ -281,7 +282,7 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationDa
     return entries
 }
 
-public func peersNearbyController(context: AccountContext) -> ViewController {
+public func peersNearbyController(context: AccountContextImpl) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var replaceAllButRootControllerImpl: ((ViewController, Bool) -> Void)?
     var replaceTopControllerImpl: ((ViewController) -> Void)?

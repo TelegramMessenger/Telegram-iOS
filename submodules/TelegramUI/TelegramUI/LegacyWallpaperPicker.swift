@@ -6,7 +6,7 @@ import LegacyComponents
 import TelegramPresentationData
 import DeviceAccess
 
-func legacyWallpaperPicker(context: AccountContext, presentationData: PresentationData) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
+func legacyWallpaperPicker(context: AccountContextImpl, presentationData: PresentationData) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
     return Signal { subscriber in
         let intent = TGMediaAssetsControllerSetCustomWallpaperIntent
         

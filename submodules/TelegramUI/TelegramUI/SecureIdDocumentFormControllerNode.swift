@@ -2126,7 +2126,7 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
 }
 
 struct SecureIdDocumentFormControllerNodeInitParams {
-    let context: AccountContext
+    let context: AccountContextImpl
     let secureIdContext: SecureIdAccessContext
 }
 
@@ -2139,7 +2139,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let secureIdContext: SecureIdAccessContext
     
     private let uploadContext: SecureIdVerificationDocumentsContext

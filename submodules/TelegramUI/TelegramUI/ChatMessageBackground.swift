@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 enum ChatMessageBackgroundMergeType: Equatable {
     case None, Side, Top(side: Bool), Bottom, Both

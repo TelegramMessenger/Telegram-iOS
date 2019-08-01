@@ -6,6 +6,7 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AnimationUI
 
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
 private let savedMessagesIcon = UIImage(bundleImageName: "Avatar/SavedMessagesIcon")?.precomposed()
@@ -491,7 +492,7 @@ public final class AvatarNode: ASDisplayNode {
             } else {
                 let letters = parameters.letters
                 let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
-                let attributedString = NSAttributedString(string: string, attributes: [NSAttributedStringKey.font: parameters.font, NSAttributedStringKey.foregroundColor: UIColor.white])
+                let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: parameters.font, NSAttributedString.Key.foregroundColor: UIColor.white])
                 
                 let line = CTLineCreateWithAttributedString(attributedString)
                 let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
@@ -569,7 +570,7 @@ func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont, lette
     context.setBlendMode(.normal)
     
     let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
-    let attributedString = NSAttributedString(string: string, attributes: [NSAttributedStringKey.font: font, NSAttributedStringKey.foregroundColor: UIColor.white])
+    let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: font, NSAttributedString.Key.foregroundColor: UIColor.white])
     
     let line = CTLineCreateWithAttributedString(attributedString)
     let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)

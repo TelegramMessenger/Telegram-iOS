@@ -7,7 +7,7 @@ import SwiftSignalKit
 import TelegramUIPreferences
 
 final class OverlayPlayerController: ViewController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     let peerId: PeerId
     let type: MediaManagerPlayerType
     let initialMessageId: MessageId
@@ -23,7 +23,7 @@ final class OverlayPlayerController: ViewController {
     
     private var accountInUseDisposable: Disposable?
     
-    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) {
+    init(context: AccountContextImpl, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) {
         self.context = context
         self.peerId = peerId
         self.type = type

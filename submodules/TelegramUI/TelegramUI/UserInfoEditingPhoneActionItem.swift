@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
 
 class UserInfoEditingPhoneActionItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

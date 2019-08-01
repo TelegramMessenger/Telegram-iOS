@@ -9,7 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 
 class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let previewTheme: PresentationTheme
     private var presentationData: PresentationData
     
@@ -29,7 +29,7 @@ class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var colorDisposable: Disposable?
     
-    init(context: AccountContext, previewTheme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
+    init(context: AccountContextImpl, previewTheme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
         self.context = context
         self.previewTheme = previewTheme
         
@@ -116,7 +116,7 @@ class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

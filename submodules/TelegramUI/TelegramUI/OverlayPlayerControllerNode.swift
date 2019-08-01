@@ -11,7 +11,7 @@ import TelegramUIPreferences
 final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRecognizerDelegate {
     let ready = Promise<Bool>()
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peerId: PeerId
     private var presentationData: PresentationData
     private let type: MediaManagerPlayerType
@@ -37,7 +37,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
     private var presentationDataDisposable: Disposable?
     private let replacementHistoryNodeReadyDisposable = MetaDisposable()
     
-    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType,  initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
+    init(context: AccountContextImpl, peerId: PeerId, type: MediaManagerPlayerType,  initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
         self.context = context
         self.peerId = peerId
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -381,14 +381,14 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
                     var bounds = self.bounds
                     bounds.origin.y = 0.0
                     self.contentNode.bounds = bounds
-                    self.contentNode.layer.animateBounds(from: previousBounds, to: self.contentNode.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
+                    self.contentNode.layer.animateBounds(from: previousBounds, to: self.contentNode.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                 }
             case .cancelled:
                 let previousBounds = self.contentNode.bounds
                 var bounds = self.contentNode.bounds
                 bounds.origin.y = 0.0
                 self.contentNode.bounds = bounds
-                self.contentNode.layer.animateBounds(from: previousBounds, to: self.contentNode.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
+                self.contentNode.layer.animateBounds(from: previousBounds, to: self.contentNode.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
             default:
                 break
         }

@@ -20,7 +20,7 @@ final class StickerPackPreviewController: ViewController {
     private var animatedIn = false
     private var dismissed = false
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let mode: StickerPackPreviewControllerMode
     private weak var parentNavigationController: NavigationController?
     
@@ -57,7 +57,7 @@ final class StickerPackPreviewController: ViewController {
         }
     }
     
-    init(context: AccountContext, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?) {
+    init(context: AccountContextImpl, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?) {
         self.context = context
         self.mode = mode
         self.parentNavigationController = parentNavigationController

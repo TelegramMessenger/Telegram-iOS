@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class GroupsInCommonControllerArguments {
     let account: Account
@@ -132,7 +133,7 @@ private func groupsInCommonControllerEntries(presentationData: PresentationData,
     return entries
 }
 
-public func groupsInCommonController(context: AccountContext, peerId: PeerId) -> ViewController {
+public func groupsInCommonController(context: AccountContextImpl, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(GroupsInCommonControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: GroupsInCommonControllerState())
     let updateState: ((GroupsInCommonControllerState) -> GroupsInCommonControllerState) -> Void = { f in

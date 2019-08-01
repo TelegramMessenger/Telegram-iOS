@@ -171,7 +171,7 @@ func wallpaperImage(account: Account, accountManager: AccountManager, fileRefere
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()

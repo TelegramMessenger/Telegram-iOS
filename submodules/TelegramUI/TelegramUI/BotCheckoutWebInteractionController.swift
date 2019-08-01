@@ -17,7 +17,7 @@ final class BotCheckoutWebInteractionController: ViewController {
         return self.displayNode as! BotCheckoutWebInteractionControllerNode
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let url: String
     private let intent: BotCheckoutWebInteractionControllerIntent
     
@@ -25,7 +25,7 @@ final class BotCheckoutWebInteractionController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    init(context: AccountContext, url: String, intent: BotCheckoutWebInteractionControllerIntent) {
+    init(context: AccountContextImpl, url: String, intent: BotCheckoutWebInteractionControllerIntent) {
         self.context = context
         self.url = url
         self.intent = intent

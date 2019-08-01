@@ -460,7 +460,7 @@ public final class SharedNotificationManager {
                     content.title = title
                 }
                 content.body = body
-                content.sound = UNNotificationSound(named: "0.m4a")
+                content.sound = UNNotificationSound(named: UNNotificationSoundName(rawValue: "0.m4a"))
                 content.categoryIdentifier = "incomingCall"
                 content.userInfo = [:]
                 

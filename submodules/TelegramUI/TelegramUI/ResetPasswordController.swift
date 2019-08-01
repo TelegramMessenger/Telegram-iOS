@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 private final class ResetPasswordControllerArguments {
     let updateCodeText: (String) -> Void
@@ -108,7 +109,7 @@ enum ResetPasswordState: Equatable {
     case pendingVerification(emailPattern: String)
 }
 
-func resetPasswordController(context: AccountContext, emailPattern: String, completion: @escaping () -> Void) -> ViewController {
+func resetPasswordController(context: AccountContextImpl, emailPattern: String, completion: @escaping () -> Void) -> ViewController {
     let statePromise = ValuePromise(ResetPasswordControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ResetPasswordControllerState())
     let updateState: ((ResetPasswordControllerState) -> ResetPasswordControllerState) -> Void = { f in

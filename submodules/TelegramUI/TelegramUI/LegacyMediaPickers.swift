@@ -14,7 +14,7 @@ func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void) {
+func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContextImpl, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void) {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     controller.captionsEnabled = captionsEnabled
@@ -39,7 +39,7 @@ func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: 
     controller.editingContext.setInitialCaption(initialCaption, entities: [])
 }
 
-func legacyAssetPicker(context: AccountContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool, selectionLimit: Int) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
+func legacyAssetPicker(context: AccountContextImpl, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool, selectionLimit: Int) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
     let isSecretChat = (peer?.id.namespace ?? 0) == Namespaces.Peer.SecretChat
     
     return Signal { subscriber in
@@ -225,7 +225,7 @@ func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<EnqueueMess
             
             let thumbnailSize = dimensions.aspectFitted(CGSize(width: 320.0, height: 320.0))
             let thumbnailImage = TGScaleImageToPixelSize(previewImage, thumbnailSize)!
-            if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
+            if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                 let resource = LocalFileMediaResource(fileId: arc4random64())
                 account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
@@ -273,7 +273,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                 let resource = LocalFileMediaResource(fileId: arc4random64())
                                 let thumbnailSize = thumbnail.size.aspectFitted(CGSize(width: 320.0, height: 320.0))
                                 let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
-                                if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
+                                if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
                                     representations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
                                 }
@@ -373,7 +373,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                 let resource = LocalFileMediaResource(fileId: arc4random64())
                                 let thumbnailSize = finalDimensions.aspectFitted(CGSize(width: 320.0, height: 320.0))
                                 let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
-                                if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
+                                if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
                                     previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
                                 }

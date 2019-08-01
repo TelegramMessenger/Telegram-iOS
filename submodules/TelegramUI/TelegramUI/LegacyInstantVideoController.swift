@@ -91,7 +91,7 @@ func legacyInputMicPalette(from theme: PresentationTheme) -> TGModernConversatio
     return TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelSeparatorColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
 }
 
-func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContext, peerId: PeerId, slowmodeState: ChatSlowmodeState?, send: @escaping (EnqueueMessage) -> Void, displaySlowmodeTooltip: @escaping (ASDisplayNode, CGRect) -> Void) -> InstantVideoController {
+func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContextImpl, peerId: PeerId, slowmodeState: ChatSlowmodeState?, send: @escaping (EnqueueMessage) -> Void, displaySlowmodeTooltip: @escaping (ASDisplayNode, CGRect) -> Void) -> InstantVideoController {
     let legacyController = InstantVideoController(presentation: .custom, theme: theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
     legacyController.lockOrientation = true
@@ -133,7 +133,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                     let resource = LocalFileMediaResource(fileId: arc4random64())
                     let thumbnailSize = finalDimensions.aspectFitted(CGSize(width: 320.0, height: 320.0))
                     let thumbnailImage = TGScaleImageToPixelSize(previewImage, thumbnailSize)!
-                    if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
+                    if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
                         previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
                     }

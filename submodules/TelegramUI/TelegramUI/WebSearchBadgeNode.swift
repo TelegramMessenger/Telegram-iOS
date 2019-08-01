@@ -79,7 +79,7 @@ final class WebSearchBadgeNode: ASDisplayNode {
     }
     
     func animateOut() {
-        let timingFunction = kCAMediaTimingFunctionEaseInEaseOut
+        let timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
         self.backgroundNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, delay: 0.0, timingFunction: timingFunction, removeOnCompletion: true, completion: nil)
         self.textNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, delay: 0.0, timingFunction: timingFunction, removeOnCompletion: true, completion: nil)
     }

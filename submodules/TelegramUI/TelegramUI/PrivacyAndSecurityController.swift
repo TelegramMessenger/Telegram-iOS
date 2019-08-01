@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramCallsUI
+import ItemListUI
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account
@@ -50,7 +51,7 @@ private enum PrivacyAndSecuritySection: Int32 {
 public enum PrivacyAndSecurityEntryTag: ItemListItemTag {
     case accountTimeout
     
-    func isEqual(to other: ItemListItemTag) -> Bool {
+    public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? PrivacyAndSecurityEntryTag, self == other {
             return true
         } else {
@@ -418,7 +419,7 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     return entries
 }
 
-public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil) -> ViewController {
+public func privacyAndSecurityController(context: AccountContextImpl, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil) -> ViewController {
     let statePromise = ValuePromise(PrivacyAndSecurityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PrivacyAndSecurityControllerState())
     let updateState: ((PrivacyAndSecurityControllerState) -> PrivacyAndSecurityControllerState) -> Void = { f in

@@ -85,7 +85,7 @@ final class ListMessagePlaybackOverlayNode: ASDisplayNode {
             animation.autoreverses = true
             animation.duration = 0.25 + 0.25 * randDurationMul
             animation.repeatCount = Float.greatestFiniteMagnitude;
-            animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseIn)
+            animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
             
             barNode.layer.removeAnimation(forKey: "transform.scale.y")
             barNode.layer.add(animation, forKey: "transform.scale.y")

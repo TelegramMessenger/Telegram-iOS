@@ -104,7 +104,7 @@ class AvatarGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peer: Peer
     
     private var presentationData: PresentationData
@@ -135,7 +135,7 @@ class AvatarGalleryController: ViewController {
     
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     
-    init(context: AccountContext, peer: Peer, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, synchronousLoad: Bool = false) {
+    init(context: AccountContextImpl, peer: Peer, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.context = context
         self.peer = peer
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

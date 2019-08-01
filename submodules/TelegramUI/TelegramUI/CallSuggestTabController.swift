@@ -200,7 +200,7 @@ private final class CallSuggestTabAlertContentNode: AlertContentNode {
     }
 }
 
-func callSuggestTabController(sharedContext: SharedAccountContext) -> AlertController {
+func callSuggestTabController(sharedContext: SharedAccountContextImpl) -> AlertController {
     let presentationData = sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings

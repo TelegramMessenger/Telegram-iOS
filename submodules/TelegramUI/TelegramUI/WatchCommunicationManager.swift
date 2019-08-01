@@ -16,7 +16,7 @@ final class WatchCommunicationManager {
     private let contextDisposable = MetaDisposable()
     private let presetsDisposable = MetaDisposable()
     
-    let accountContext = Promise<AccountContext?>(nil)
+    let accountContext = Promise<AccountContextImpl?>(nil)
     private let presets = Promise<WatchPresetSettings?>(nil)
     private let navigateToMessagePipe = ValuePipe<MessageId>()
     

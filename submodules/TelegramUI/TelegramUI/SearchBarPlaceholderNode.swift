@@ -77,10 +77,10 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                 return
             }
             if let _ = point {
-                strongSelf.backgroundNode.layer.animate(from: (strongSelf.backgroundNode.backgroundColor ?? strongSelf.foregroundColor).cgColor, to: strongSelf.foregroundColor.withMultipliedBrightnessBy(0.9).cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.2)
+                strongSelf.backgroundNode.layer.animate(from: (strongSelf.backgroundNode.backgroundColor ?? strongSelf.foregroundColor).cgColor, to: strongSelf.foregroundColor.withMultipliedBrightnessBy(0.9).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
                 strongSelf.backgroundNode.backgroundColor = strongSelf.foregroundColor.withMultipliedBrightnessBy(0.9)
             } else {
-                strongSelf.backgroundNode.layer.animate(from: (strongSelf.backgroundNode.backgroundColor ?? strongSelf.foregroundColor).cgColor, to: strongSelf.foregroundColor.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.4)
+                strongSelf.backgroundNode.layer.animate(from: (strongSelf.backgroundNode.backgroundColor ?? strongSelf.foregroundColor).cgColor, to: strongSelf.foregroundColor.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.4)
                 strongSelf.backgroundNode.backgroundColor = strongSelf.foregroundColor
             }
         }

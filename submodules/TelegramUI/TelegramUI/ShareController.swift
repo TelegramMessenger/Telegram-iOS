@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import TextFormat
 
 public struct ShareControllerAction {
     let title: String
@@ -191,8 +192,8 @@ public final class ShareController: ViewController {
     
     private var animatedIn = false
     
-    private let sharedContext: SharedAccountContext
-    private let currentContext: AccountContext
+    private let sharedContext: SharedAccountContextImpl
+    private let currentContext: AccountContextImpl
     private var currentAccount: Account
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -211,11 +212,11 @@ public final class ShareController: ViewController {
     
     public var dismissed: ((Bool) -> Void)?
     
-    public convenience init(context: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = []) {
+    public convenience init(context: AccountContextImpl, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = []) {
         self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, preferredAction: preferredAction, showInChat: showInChat, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts)
     }
     
-    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = []) {
+    public init(sharedContext: SharedAccountContextImpl, currentContext: AccountContextImpl, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = []) {
         self.sharedContext = sharedContext
         self.currentContext = currentContext
         self.currentAccount = currentContext.account
@@ -655,11 +656,11 @@ public final class ShareController: ViewController {
         let postbox = self.currentAccount.postbox
         let signals: [Signal<Float, NoError>] = messages.compactMap { message -> Signal<Float, NoError>? in
             if let media = message.media.first {
-                let context: AccountContext
+                let context: AccountContextImpl
                 if self.currentContext.account.id == self.currentAccount.id {
                     context = self.currentContext
                 } else {
-                    context = AccountContext(sharedContext: self.sharedContext, account: self.currentAccount, limitsConfiguration: .defaultValue)
+                    context = AccountContextImpl(sharedContext: self.sharedContext, account: self.currentAccount, limitsConfiguration: .defaultValue)
                 }
                 return TelegramUI.saveToCameraRoll(context: context, postbox: postbox, mediaReference: .message(message: MessageReference(message), media: media))
             } else {
@@ -682,21 +683,21 @@ public final class ShareController: ViewController {
     
     private func saveToCameraRoll(representations: [ImageRepresentationWithReference]) {
         let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)
-        let context: AccountContext
+        let context: AccountContextImpl
         if self.currentContext.account.id == self.currentAccount.id {
             context = self.currentContext
         } else {
-            context = AccountContext(sharedContext: self.sharedContext, account: self.currentAccount, limitsConfiguration: .defaultValue)
+            context = AccountContextImpl(sharedContext: self.sharedContext, account: self.currentAccount, limitsConfiguration: .defaultValue)
         }
         self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: .standalone(media: media)) |> map(Optional.init))
     }
     
     private func saveToCameraRoll(mediaReference: AnyMediaReference) {
-        let context: AccountContext
+        let context: AccountContextImpl
         if self.currentContext.account.id == self.currentAccount.id {
             context = self.currentContext
         } else {
-            context = AccountContext(sharedContext: self.sharedContext, account: self.currentAccount, limitsConfiguration: .defaultValue)
+            context = AccountContextImpl(sharedContext: self.sharedContext, account: self.currentAccount, limitsConfiguration: .defaultValue)
         }
         self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference) |> map(Optional.init))
     }

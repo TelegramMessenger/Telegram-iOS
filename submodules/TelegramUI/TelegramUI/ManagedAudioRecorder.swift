@@ -241,7 +241,7 @@ final class ManagedAudioRecorderContext {
                     toneData.withUnsafeBytes { (dataBytes: UnsafePointer<UInt8>) -> Void in
                         memcpy(bytes, dataBytes.advanced(by: takeRange.lowerBound), takeRange.count)
                     }
-                    let status = CMBlockBufferCreateWithMemoryBlock(nil, bytes, takeRange.count, nil, nil, 0, takeRange.count, 0, &blockBuffer)
+                    let status = CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: bytes, blockLength: takeRange.count, blockAllocator: nil, customBlockSource: nil, offsetToData: 0, dataLength: takeRange.count, flags: 0, blockBufferOut: &blockBuffer)
                     if status != noErr {
                         return .finished
                     }
@@ -252,7 +252,7 @@ final class ManagedAudioRecorderContext {
                     var timingInfo = CMSampleTimingInfo(duration: CMTime(value: Int64(sampleCount), timescale: 44100), presentationTimeStamp: pts, decodeTimeStamp: pts)
                     var sampleBuffer: CMSampleBuffer?
                     var sampleSize = takeRange.count
-                    guard CMSampleBufferCreate(nil, blockBuffer, true, nil, nil, nil, 1, 1, &timingInfo, 1, &sampleSize, &sampleBuffer) == noErr else {
+                    guard CMSampleBufferCreate(allocator: nil, dataBuffer: blockBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: nil, sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleSizeEntryCount: 1, sampleSizeArray: &sampleSize, sampleBufferOut: &sampleBuffer) == noErr else {
                         return .finished
                     }
                     

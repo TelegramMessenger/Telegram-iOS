@@ -350,7 +350,7 @@ func fetchEmojiSpriteResource(postbox: Postbox, network: Network, resource: Emoj
                             let image = buffer.with { buffer -> UIImage? in
                                 return WebP.convert(fromWebP: buffer.data)
                             }
-                            if let image = image, let data = UIImagePNGRepresentation(image) {
+                            if let image = image, let data = image.pngData() {
                                 subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
                                 subscriber.putCompletion()
                             }

@@ -223,7 +223,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(sharedContext: SharedAccountContext, accounts: (primary: (Account, Peer), other: [(Account, Peer, Int32)]), presentationData: PresentationData, canAddAccounts: Bool, switchToAccount: @escaping (AccountRecordId) -> Void, addAccount: @escaping () -> Void, cancel: @escaping () -> Void, sourceNodes: [ASDisplayNode]) {
+    init(sharedContext: SharedAccountContextImpl, accounts: (primary: (Account, Peer), other: [(Account, Peer, Int32)]), presentationData: PresentationData, canAddAccounts: Bool, switchToAccount: @escaping (AccountRecordId) -> Void, addAccount: @escaping () -> Void, cancel: @escaping () -> Void, sourceNodes: [ASDisplayNode]) {
         self.presentationData = presentationData
         self.cancel = cancel
         self.sourceNodes = sourceNodes
@@ -372,7 +372,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         })
         if let _ = self.validLayout, let sourceNode = self.sourceNodes.first {
             let sourceFrame = sourceNode.view.convert(sourceNode.bounds, to: self.view)
-            self.contentContainerNode.layer.animateFrame(from: self.contentContainerNode.frame, to: sourceFrame, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
+            self.contentContainerNode.layer.animateFrame(from: self.contentContainerNode.frame, to: sourceFrame, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false)
         }
         
         if changedAccount {
@@ -433,7 +433,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
                                 }
                                 imageView.image = updatedImage
                                 if let previousContents = previousImage?.cgImage, let updatedContents = updatedImage?.cgImage {
-                                    imageView.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.15)
+                                    imageView.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.15)
                                 }
                                 imageView.layer.animateSpring(from: 0.6 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, completion: { _ in
                                     completedSourceNodes = true
@@ -450,7 +450,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
             }
             
             previousSnapshotViews.forEach { view in
-                self.view.bringSubview(toFront: view)
+                self.view.bringSubviewToFront(view)
             }
             
             if !hadBounce {

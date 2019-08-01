@@ -148,7 +148,7 @@ final class ChatMessageAccessibilityData {
         var label: String = ""
         let value: String
         var hint: String?
-        var traits: UIAccessibilityTraits = 0
+        var traits: UIAccessibilityTraits = []
         var singleUrl: String?
         
         var customActions: [ChatMessageAccessibilityCustomAction] = []
@@ -194,7 +194,7 @@ final class ChatMessageAccessibilityData {
                                 if isSelected == nil {
                                     hint = "Double tap to play"
                                 }
-                                traits |= UIAccessibilityTraitStartsMediaSession
+                                traits.insert(.startsMediaSession)
                                 if audio.isVoice {
                                     let durationString = voiceMessageDurationFormatter.string(from: Double(audio.duration)) ?? ""
                                     if isIncoming {
@@ -227,7 +227,7 @@ final class ChatMessageAccessibilityData {
                                 if isSelected == nil {
                                     hint = "Double tap to play"
                                 }
-                                traits |= UIAccessibilityTraitStartsMediaSession
+                                traits.insert(.startsMediaSession)
                                 let durationString = voiceMessageDurationFormatter.string(from: Double(video.duration)) ?? ""
                                 if video.flags.contains(.instantRoundVideo) {
                                     if isIncoming {
@@ -458,7 +458,7 @@ final class ChatMessageAccessibilityData {
                 if isSelected {
                     result += "Selected.\n"
                 }
-                traits |= UIAccessibilityTraitStartsMediaSession
+                traits.insert(.startsMediaSession)
             }
             
             result += "\(text)"

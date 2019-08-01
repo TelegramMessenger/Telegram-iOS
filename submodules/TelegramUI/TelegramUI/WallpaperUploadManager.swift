@@ -57,7 +57,7 @@ enum WallpaperUploadManagerStatus {
 }
 
 final class WallpaperUploadManager {
-    private let sharedContext: SharedAccountContext
+    private let sharedContext: SharedAccountContextImpl
     private let account: Account
     private var context: WallpaperUploadContext?
     
@@ -66,7 +66,7 @@ final class WallpaperUploadManager {
     
     private let statePromise = Promise<WallpaperUploadManagerStatus>(.none)
     
-    init(sharedContext: SharedAccountContext, account: Account, presentationData: Signal<PresentationData, NoError>) {
+    init(sharedContext: SharedAccountContextImpl, account: Account, presentationData: Signal<PresentationData, NoError>) {
         self.sharedContext = sharedContext
         self.account = account
         self.presentationDataDisposable.set(presentationData.start(next: { [weak self] presentationData in

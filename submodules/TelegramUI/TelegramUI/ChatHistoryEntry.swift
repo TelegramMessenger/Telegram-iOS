@@ -1,6 +1,7 @@
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import MergeLists
 
 public enum ChatHistoryMessageSelection: Equatable {
     case none

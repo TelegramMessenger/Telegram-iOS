@@ -8,7 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 
 final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let presentationData: PresentationData
     
     private let dimNode: ASDisplayNode
@@ -22,7 +22,7 @@ final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext) {
+    init(context: AccountContextImpl) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

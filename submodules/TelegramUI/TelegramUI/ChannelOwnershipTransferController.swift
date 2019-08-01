@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ActivityIndicator
+import TextFormat
 
 private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
@@ -70,7 +72,7 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
     override func didLoad() {
         super.didLoad()
         
-        self.textInputNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(14.0), NSAttributedStringKey.foregroundColor.rawValue: self.theme.actionSheet.inputTextColor]
+        self.textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(14.0), NSAttributedString.Key.foregroundColor: self.theme.actionSheet.inputTextColor]
         self.textInputNode.textField.font = Font.regular(14.0)
         self.textInputNode.textField.textColor = self.theme.list.itemPrimaryTextColor
         self.textInputNode.textField.isSecureTextEntry = true
@@ -88,7 +90,7 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
         self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 16.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: UIScreenPixel)
         self.textInputNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
         self.textInputNode.textField.textColor = theme.list.itemPrimaryTextColor
-        self.textInputNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(14.0), NSAttributedStringKey.foregroundColor.rawValue: theme.actionSheet.inputTextColor]
+        self.textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(14.0), NSAttributedString.Key.foregroundColor: theme.actionSheet.inputTextColor]
         self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(14.0), textColor: theme.actionSheet.inputPlaceholderColor)
     }
     
@@ -397,7 +399,7 @@ private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     }
 }
 
-private func commitChannelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
+private func commitChannelOwnershipTransferController(context: AccountContextImpl, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: (() -> Void)?
@@ -495,7 +497,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
     return controller
 }
 
-private func confirmChannelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
+private func confirmChannelOwnershipTransferController(context: AccountContextImpl, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationTheme: presentationData.theme)
     
@@ -526,7 +528,7 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
     return controller
 }
 
-func channelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
+func channelOwnershipTransferController(context: AccountContextImpl, peer: Peer, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationTheme: presentationData.theme)
     

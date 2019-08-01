@@ -68,7 +68,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     override init() {
         self.button = HighlightableButtonNode()
         self.discussButton = HighlightableButtonNode()
-        self.activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .gray)
+        self.activityIndicator = UIActivityIndicatorView(style: .gray)
         self.activityIndicator.isHidden = true
         
         self.discussButtonText = ImmediateTextNode()

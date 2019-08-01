@@ -6,9 +6,10 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ActivityIndicator
 
 final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -45,7 +46,7 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
     
     private let disposable = MetaDisposable()
     
-    init(context: AccountContext, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, openUrl: @escaping (String) -> Void) {
+    init(context: AccountContextImpl, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, openUrl: @escaping (String) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -194,8 +195,8 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
                     self.contentContainerNode.insertSubnode(contentNode, at: 0)
                     
                     contentNode.alpha = 1.0
-                    let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.35)
-                    animation.fillMode = kCAFillModeBoth
+                    let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.35)
+                    animation.fillMode = .both
                     if !fastOut {
                         animation.beginTime = CACurrentMediaTime() + 0.1
                     }

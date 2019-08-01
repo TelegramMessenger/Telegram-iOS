@@ -26,7 +26,7 @@ protocol PaneSearchContentNode {
 }
 
 final class PaneSearchContainerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let mode: ChatMediaInputSearchMode
     public private(set) var contentNode: PaneSearchContentNode & ASDisplayNode
     private let controllerInteraction: ChatControllerInteraction
@@ -41,7 +41,7 @@ final class PaneSearchContainerNode: ASDisplayNode {
         return self.contentNode.ready
     }
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<[FileMediaReference]?>, cancel: @escaping () -> Void) {
+    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<[FileMediaReference]?>, cancel: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.controllerInteraction = controllerInteraction

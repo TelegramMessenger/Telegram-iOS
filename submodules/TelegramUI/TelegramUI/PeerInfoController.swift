@@ -5,7 +5,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 
-func peerInfoController(context: AccountContext, peer: Peer) -> ViewController? {
+func peerInfoController(context: AccountContextImpl, peer: Peer) -> ViewController? {
     if let _ = peer as? TelegramGroup  {
         return groupInfoController(context: context, peerId: peer.id)
     } else if let channel = peer as? TelegramChannel {

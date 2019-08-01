@@ -12,7 +12,7 @@ import TelegramUIPreferences
 public class PeerMediaCollectionController: TelegramController {
     private var validLayout: ContainerViewLayout?
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peerId: PeerId
     private let messageId: MessageId?
     
@@ -42,7 +42,7 @@ public class PeerMediaCollectionController: TelegramController {
     
     private var resolveUrlDisposable: MetaDisposable?
     
-    public init(context: AccountContext, peerId: PeerId, messageId: MessageId? = nil) {
+    public init(context: AccountContextImpl, peerId: PeerId, messageId: MessageId? = nil) {
         self.context = context
         self.peerId = peerId
         self.messageId = messageId

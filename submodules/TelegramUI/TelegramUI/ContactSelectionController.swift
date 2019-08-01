@@ -6,9 +6,10 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ProgressNavigationButtonNode
 
 class ContactSelectionController: ViewController, PresentableController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let autoDismiss: Bool
     
     private var contactsNode: ContactSelectionControllerNode {
@@ -63,7 +64,7 @@ class ContactSelectionController: ViewController, PresentableController {
         }
     }
     
-    init(context: AccountContext, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+    init(context: AccountContextImpl, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
         self.context = context
         self.autoDismiss = autoDismiss
         self.titleProducer = title

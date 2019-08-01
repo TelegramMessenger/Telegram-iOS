@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramUIPrivateModule
+import ItemListUI
 
 private enum TriggerMode {
     case none
@@ -327,7 +328,7 @@ private func areSettingsValid(_ settings: AutomaticThemeSwitchSetting) -> Bool {
     }
 }
 
-public func themeAutoNightSettingsController(context: AccountContext) -> ViewController {
+public func themeAutoNightSettingsController(context: AccountContextImpl) -> ViewController {
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()

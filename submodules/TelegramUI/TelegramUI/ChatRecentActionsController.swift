@@ -11,7 +11,7 @@ final class ChatRecentActionsController: TelegramController {
         return self.displayNode as! ChatRecentActionsControllerNode
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peer: Peer
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -21,7 +21,7 @@ final class ChatRecentActionsController: TelegramController {
     
     private let titleView: ChatRecentActionsTitleView
     
-    init(context: AccountContext, peer: Peer) {
+    init(context: AccountContextImpl, peer: Peer) {
         self.context = context
         self.peer = peer
         

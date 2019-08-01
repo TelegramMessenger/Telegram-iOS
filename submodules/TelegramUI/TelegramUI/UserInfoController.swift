@@ -7,6 +7,9 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
+import TextFormat
 
 private final class UserInfoControllerArguments {
     let account: Account
@@ -757,7 +760,7 @@ public enum UserInfoControllerMode {
     case calls(messages: [Message])
 }
 
-public func userInfoController(context: AccountContext, peerId: PeerId, mode: UserInfoControllerMode = .generic) -> ViewController {
+public func userInfoController(context: AccountContextImpl, peerId: PeerId, mode: UserInfoControllerMode = .generic) -> ViewController {
     let statePromise = ValuePromise(UserInfoState(), ignoreRepeated: true)
     let stateValue = Atomic(value: UserInfoState())
     let updateState: ((UserInfoState) -> UserInfoState) -> Void = { f in
@@ -1448,9 +1451,9 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
             }
         }
     }
-    aboutLinkActionImpl = { [weak controller] action, itemLink in
-        if let controller = controller {
-            handleTextLinkAction(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+    aboutLinkActionImpl = { [weak context, weak controller] action, itemLink in
+        if let controller = controller, let context = context {
+            context.sharedContext.handleTextLinkAction(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
         }
     }
     displayAboutContextMenuImpl = { [weak controller] text in

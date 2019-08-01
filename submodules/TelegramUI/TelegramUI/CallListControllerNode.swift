@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private struct CallListNodeListViewTransition {
     let callListView: CallListNodeView
@@ -155,7 +156,7 @@ private final class CallListOpaqueTransactionState {
 }
 
 final class CallListControllerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let mode: CallListControllerMode
     private var presentationData: PresentationData
     
@@ -194,7 +195,7 @@ final class CallListControllerNode: ASDisplayNode {
     private let emptyStatePromise = Promise<Bool>()
     private let emptyStateDisposable = MetaDisposable()
     
-    init(context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
+    init(context: AccountContextImpl, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
         self.context = context
         self.mode = mode
         self.presentationData = presentationData

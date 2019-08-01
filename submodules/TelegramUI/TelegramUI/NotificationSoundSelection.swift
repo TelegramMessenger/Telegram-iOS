@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import AVFoundation
 import TelegramPresentationData
+import ItemListUI
 
 private struct NotificationSoundSelectionArguments {
     let account: Account
@@ -211,7 +212,7 @@ public func fileNameForNotificationSound(_ sound: PeerMessageSound, defaultSound
     }
 }
 
-func playSound(context: AccountContext, sound: PeerMessageSound, defaultSound: PeerMessageSound?) -> Signal<Void, NoError> {
+func playSound(context: AccountContextImpl, sound: PeerMessageSound, defaultSound: PeerMessageSound?) -> Signal<Void, NoError> {
     if case .none = sound {
         return .complete()
     } else {
@@ -252,7 +253,7 @@ func playSound(context: AccountContext, sound: PeerMessageSound, defaultSound: P
     }
 }
 
-public func notificationSoundSelectionController(context: AccountContext, isModal: Bool, currentSound: PeerMessageSound, defaultSound: PeerMessageSound?, completion: @escaping (PeerMessageSound) -> Void) -> ViewController {
+public func notificationSoundSelectionController(context: AccountContextImpl, isModal: Bool, currentSound: PeerMessageSound, defaultSound: PeerMessageSound?, completion: @escaping (PeerMessageSound) -> Void) -> ViewController {
     let statePromise = ValuePromise(NotificationSoundSelectionState(selectedSound: currentSound), ignoreRepeated: true)
     let stateValue = Atomic(value: NotificationSoundSelectionState(selectedSound: currentSound))
     let updateState: ((NotificationSoundSelectionState) -> NotificationSoundSelectionState) -> Void = { f in

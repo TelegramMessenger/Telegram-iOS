@@ -9,7 +9,7 @@ import TelegramPresentationData
 final class ComposeControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var searchDisplayController: SearchDisplayController?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -26,7 +26,7 @@ final class ComposeControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext) {
+    init(context: AccountContextImpl) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

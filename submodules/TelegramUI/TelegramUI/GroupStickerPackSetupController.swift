@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class GroupStickerPackSetupControllerArguments {
     let account: Account
@@ -302,7 +303,7 @@ private func groupStickerPackSetupControllerEntries(presentationData: Presentati
     return entries
 }
 
-public func groupStickerPackSetupController(context: AccountContext, peerId: PeerId, currentPackInfo: StickerPackCollectionInfo?) -> ViewController {
+public func groupStickerPackSetupController(context: AccountContextImpl, peerId: PeerId, currentPackInfo: StickerPackCollectionInfo?) -> ViewController {
     let initialState = GroupStickerPackSetupControllerState(isSaving: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)

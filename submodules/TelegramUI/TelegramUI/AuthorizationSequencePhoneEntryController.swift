@@ -6,13 +6,14 @@ import SwiftSignalKit
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import ProgressNavigationButtonNode
 
 final class AuthorizationSequencePhoneEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePhoneEntryControllerNode {
         return self.displayNode as! AuthorizationSequencePhoneEntryControllerNode
     }
     
-    private let sharedContext: SharedAccountContext
+    private let sharedContext: SharedAccountContextImpl
     private let isTestingEnvironment: Bool
     private let otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])
     private let network: Network
@@ -41,7 +42,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(sharedContext: SharedAccountContext, isTestingEnvironment: Bool, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), network: Network, strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContextImpl, isTestingEnvironment: Bool, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), network: Network, strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.isTestingEnvironment = isTestingEnvironment
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers

@@ -23,7 +23,7 @@ func openExternalShare(state: () -> Signal<ShareExternalState, NoError>) {
 }
 
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let sharedContext: SharedAccountContext
+    private let sharedContext: SharedAccountContextImpl
     private var presentationData: PresentationData
     private let externalShare: Bool
     private let immediateExternalShare: Bool
@@ -71,7 +71,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private var hapticFeedback: HapticFeedback?
     
-    init(sharedContext: SharedAccountContext, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
+    init(sharedContext: SharedAccountContextImpl, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.externalShare = externalShare
@@ -339,8 +339,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     
                     contentNode.alpha = 1.0
                     if animated {
-                        let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.35)
-                        animation.fillMode = kCAFillModeBoth
+                        let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.35)
+                        animation.fillMode = .both
                         if !fastOut {
                             animation.beginTime = CACurrentMediaTime() + 0.1
                         }

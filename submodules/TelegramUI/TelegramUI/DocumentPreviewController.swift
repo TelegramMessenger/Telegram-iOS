@@ -47,7 +47,7 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
             context.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: UIScreenPixel)))
         })
         self.navigationBar.isTranslucent = false
-        self.navigationBar.titleTextAttributes = [NSAttributedStringKey.font: Font.semibold(17.0), NSAttributedStringKey.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
+        self.navigationBar.titleTextAttributes = [NSAttributedString.Key.font: Font.semibold(17.0), NSAttributedString.Key.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
         
         let controller = QLPreviewController(nibName: nil, bundle: nil)
         controller.navigation_setDismiss({ [weak self] in
@@ -134,7 +134,7 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
             context.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: UIScreenPixel)))
         })
         self.navigationBar.isTranslucent = false
-        self.navigationBar.titleTextAttributes = [NSAttributedStringKey.font: Font.semibold(17.0), NSAttributedStringKey.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
+        self.navigationBar.titleTextAttributes = [NSAttributedString.Key.font: Font.semibold(17.0), NSAttributedString.Key.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
         controller.navigationItem.setLeftBarButton(UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         self.setViewControllers([controller], animated: false)*/
         
@@ -212,7 +212,7 @@ func presentDocumentPreviewController(rootController: UIViewController, theme: P
             context.setFillColor(theme.rootController.navigationBar.separatorColor.cgColor)
             context.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: UIScreenPixel)))
         })
-        navigationBar.titleTextAttributes = [NSAttributedStringKey.font: Font.semibold(17.0), NSAttributedStringKey.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
+        navigationBar.titleTextAttributes = [NSAttributedString.Key.font: Font.semibold(17.0), NSAttributedString.Key.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
     }
     
     rootController.present(CompactDocumentPreviewController(theme: theme, strings: strings, postbox: postbox, file: file), animated: true, completion: nil)

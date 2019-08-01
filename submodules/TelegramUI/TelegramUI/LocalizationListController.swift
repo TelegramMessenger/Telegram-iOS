@@ -8,7 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 
 public class LocalizationListController: ViewController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     
     private var controllerNode: LocalizationListControllerNode {
         return self.displayNode as! LocalizationListControllerNode
@@ -27,7 +27,7 @@ public class LocalizationListController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContext) {
+    public init(context: AccountContextImpl) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

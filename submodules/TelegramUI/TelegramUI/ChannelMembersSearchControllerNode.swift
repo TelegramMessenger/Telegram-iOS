@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import MergeLists
 
 private final class ChannelMembersSearchInteraction {
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void
@@ -86,7 +87,7 @@ private func preparedTransition(from fromEntries: [ChannelMembersSearchEntry]?, 
 }
 
 class ChannelMembersSearchControllerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peerId: PeerId
     private let mode: ChannelMembersSearchControllerMode
     private let filters: [ChannelMembersSearchFilter]
@@ -109,7 +110,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     private var disposable: Disposable?
     private var listControl: PeerChannelMemberCategoryControl?
     
-    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
+    init(context: AccountContextImpl, presentationData: PresentationData, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
         self.context = context
         self.listNode = ListView()
         self.peerId = peerId
@@ -388,7 +389,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

@@ -6,6 +6,7 @@ import Display
 import TelegramPresentationData
 import TelegramCallsUI
 import TelegramUIPreferences
+import AccountContext
 
 private enum CallStatusText: Equatable {
     case none
@@ -73,7 +74,7 @@ private enum AddedAccountsResult {
 
 private var testHasInstance = false
 
-public final class SharedAccountContext {
+public final class SharedAccountContextImpl: SharedAccountContext {
     let mainWindow: Window1?
     public let applicationBindings: TelegramApplicationBindings
     public let basePath: String
@@ -127,7 +128,10 @@ public final class SharedAccountContext {
     
     var switchingData: (settingsController: (SettingsController & ViewController)?, chatListController: ChatListController?, chatListBadge: String?) = (nil, nil, nil)
     
-    public let currentPresentationData: Atomic<PresentationData>
+    private let _currentPresentationData: Atomic<PresentationData>
+    public var currentPresentationData: Atomic<PresentationData> {
+        return self._currentPresentationData
+    }
     private let _presentationData = Promise<PresentationData>()
     public var presentationData: Signal<PresentationData, NoError> {
         return self._presentationData.get()
@@ -189,7 +193,7 @@ public final class SharedAccountContext {
             self.contactDataManager = nil
         }
         
-        self.currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
+        self._currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
@@ -283,7 +287,7 @@ public final class SharedAccountContext {
         let differenceDisposable = MetaDisposable()
         let _ = (accountManager.accountRecords()
         |> map { view -> (AccountRecordId?, [AccountRecordId: AccountAttributes], (AccountRecordId, Bool)?) in
-            print("SharedAccountContext: records appeared in \(CFAbsoluteTimeGetCurrent() - startTime)")
+            print("SharedAccountContextImpl: records appeared in \(CFAbsoluteTimeGetCurrent() - startTime)")
             
             var result: [AccountRecordId: AccountAttributes] = [:]
             for record in view.records {
@@ -401,7 +405,7 @@ public final class SharedAccountContext {
             
             differenceDisposable.set((combineLatest(queue: .mainQueue(), mappedAddedAccounts, addedAuthSignal)
             |> deliverOnMainQueue).start(next: { mappedAddedAccounts, authAccount in
-                print("SharedAccountContext: accounts processed in \(CFAbsoluteTimeGetCurrent() - startTime)")
+                print("SharedAccountContextImpl: accounts processed in \(CFAbsoluteTimeGetCurrent() - startTime)")
                 
                 var addedAccounts: [(AccountRecordId, Account?, Int32)] = []
                 switch mappedAddedAccounts {
@@ -632,7 +636,7 @@ public final class SharedAccountContext {
     }
     
     deinit {
-        assertionFailure("SharedAccountContext is not supposed to be deallocated")
+        assertionFailure("SharedAccountContextImpl is not supposed to be deallocated")
         self.registeredNotificationTokensDisposable.dispose()
         self.presentationDataDisposable.dispose()
         self.automaticMediaDownloadSettingsDisposable.dispose()
@@ -911,5 +915,9 @@ public final class SharedAccountContext {
                 }
             }
         }
+    }
+    
+    public func handleTextLinkAction(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
+        handleTextLinkActionImpl(context: context as! AccountContextImpl, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
     }
 }

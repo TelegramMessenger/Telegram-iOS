@@ -8,6 +8,7 @@ import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
+import ActivityIndicator
 
 enum ChatTitleContent {
     case peer(peerView: PeerView, onlineMemberCount: Int32?)
@@ -466,7 +467,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         super.init(frame: CGRect())
         
         self.isAccessibilityElement = true
-        self.accessibilityTraits = UIAccessibilityTraitHeader
+        self.accessibilityTraits = .header
         
         self.addSubnode(self.contentContainer)
         self.contentContainer.addSubnode(self.titleNode)

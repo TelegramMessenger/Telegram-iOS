@@ -128,7 +128,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private var validLayout: ContainerViewLayout?
     
-    init(context: AccountContext, sendButtonFrame: CGRect, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, cancel: (() -> Void)?) {
+    init(context: AccountContextImpl, sendButtonFrame: CGRect, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, cancel: (() -> Void)?) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.sendButtonFrame = sendButtonFrame
         self.textFieldFrame = textInputNode.convert(textInputNode.bounds, to: nil)
@@ -205,13 +205,13 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             self.fromMessageTextNode.attributedText = attributedText
             
             if let toAttributedText = self.fromMessageTextNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
-                toAttributedText.addAttribute(NSAttributedStringKey.foregroundColor, value: self.presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (toAttributedText.string as NSString).length))
+                toAttributedText.addAttribute(NSAttributedString.Key.foregroundColor, value: self.presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (toAttributedText.string as NSString).length))
                 self.toMessageTextNode.attributedText = toAttributedText
             }
         } else {
-            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedStringKey.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedStringKey.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
+            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedString.Key.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
         
-            self.toMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedStringKey.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedStringKey.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
+            self.toMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedString.Key.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
         }
         self.messageBackgroundNode.contentMode = .scaleToFill
         
@@ -281,7 +281,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.sendButtonNode.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(self.presentationData.theme), for: [])
         
         if let toAttributedText = self.textInputNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
-            toAttributedText.addAttribute(NSAttributedStringKey.foregroundColor, value: self.presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (toAttributedText.string as NSString).length))
+            toAttributedText.addAttribute(NSAttributedString.Key.foregroundColor, value: self.presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (toAttributedText.string as NSString).length))
             self.toMessageTextNode.attributedText = toAttributedText
         }
         
@@ -338,7 +338,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         if let layout = self.validLayout {
             let duration = 0.4
             
-            self.sendButtonNode.layer.animateScale(from: 0.75, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionLinear)
+            self.sendButtonNode.layer.animateScale(from: 0.75, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
             self.sendButtonNode.layer.animatePosition(from: self.sendButtonFrame.center, to: self.sendButtonNode.position, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
             
             var initialWidth = self.textFieldFrame.width + 32.0
@@ -431,8 +431,8 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             
             if !cancel {
                 self.buttonCoverNode.isHidden = true
-                self.sendButtonNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false)
-                self.sendButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false)
+                self.sendButtonNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
+                self.sendButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
             }
             
             var initialWidth = self.textFieldFrame.width + 32.0

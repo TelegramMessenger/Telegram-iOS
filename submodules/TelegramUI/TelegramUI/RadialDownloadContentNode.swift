@@ -6,11 +6,11 @@ import LegacyComponents
 import SwiftSignalKit
 
 private extension CAShapeLayer {
-    func animateStrokeStart(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
+    func animateStrokeStart(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "strokeStart", timingFunction: timingFunction, duration: duration, delay: delay, removeOnCompletion: removeOnCompletion, completion: completion)
     }
     
-    func animateStrokeEnd(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
+    func animateStrokeEnd(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "strokeEnd", timingFunction: timingFunction, duration: duration, delay: delay, removeOnCompletion: removeOnCompletion, completion: completion)
     }
 }
@@ -45,16 +45,16 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
         
         self.leftLine.fillColor = UIColor.clear.cgColor
         self.leftLine.strokeColor = self.color.cgColor
-        self.leftLine.lineCap = kCALineCapRound
-        self.leftLine.lineJoin = kCALineCapRound
+        self.leftLine.lineCap = .round
+        self.leftLine.lineJoin = .round
         self.rightLine.fillColor = UIColor.clear.cgColor
         self.rightLine.strokeColor = self.color.cgColor
-        self.rightLine.lineCap = kCALineCapRound
-        self.rightLine.lineJoin = kCALineCapRound
+        self.rightLine.lineCap = .round
+        self.rightLine.lineJoin = .round
         self.arrowBody.fillColor = UIColor.clear.cgColor
         self.arrowBody.strokeColor = self.color.cgColor
-        self.arrowBody.lineCap = kCALineCapRound
-        self.arrowBody.lineJoin = kCALineCapRound
+        self.arrowBody.lineCap = .round
+        self.arrowBody.lineJoin = .round
         
         self.isLayerBacked = true
         self.isOpaque = false

@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import TextFormat
 
 final class TermsOfServiceControllerNode: ViewControllerTracingNode {
     private let theme: TermsOfServiceControllerTheme
@@ -119,12 +120,12 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         
         self.contentTextNode.linkHighlightColor = self.theme.accent.withAlphaComponent(0.5)
         self.contentTextNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
-            } else if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
-            } else if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+            } else if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+            } else if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
             } else {
                 return nil
             }
@@ -153,11 +154,11 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 strongSelf.openUrl(url)
-            } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 showMentionActionSheet(mention.mention)
-            } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 showMentionActionSheet(mention)
             }
         }
@@ -165,7 +166,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 let theme: PresentationTheme = strongSelf.theme.presentationTheme
                 let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -184,9 +185,9 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                     })
                 ])])
                 strongSelf.present(actionSheet, nil)
-            } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 showMentionActionSheet(mention.mention)
-            } else if let mention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 showMentionActionSheet(mention)
             }
         }
@@ -241,7 +242,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

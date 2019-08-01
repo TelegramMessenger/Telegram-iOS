@@ -8,7 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 
 final class PeerSelectionControllerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let present: (ViewController, Any?) -> Void
     private let dismiss: () -> Void
     private let filter: ChatListNodePeersFilter
@@ -51,7 +51,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return self.readyValue.get()
     }
     
-    init(context: AccountContext, filter: ChatListNodePeersFilter, hasContactSelector: Bool, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContextImpl, filter: ChatListNodePeersFilter, hasContactSelector: Bool, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
         self.dismiss = dismiss
@@ -305,7 +305,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     func animateOut(completion: (() -> Void)? = nil) {
         self.clipsToBounds = true
-        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
+        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }

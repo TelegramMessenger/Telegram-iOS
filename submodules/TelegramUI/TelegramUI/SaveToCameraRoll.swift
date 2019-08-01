@@ -13,7 +13,7 @@ private enum SaveToCameraRollState {
     case data(MediaResourceData)
 }
 
-private func fetchMediaData(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<(SaveToCameraRollState, Bool), NoError> {
+private func fetchMediaData(context: AccountContextImpl, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<(SaveToCameraRollState, Bool), NoError> {
     var resource: MediaResource?
     var isImage = true
     var fileExtension: String?
@@ -76,7 +76,7 @@ private func fetchMediaData(context: AccountContext, postbox: Postbox, mediaRefe
     }
 }
 
-func saveToCameraRoll(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Float, NoError> {
+func saveToCameraRoll(context: AccountContextImpl, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Float, NoError> {
     return fetchMediaData(context: context, postbox: postbox, mediaReference: mediaReference)
     |> mapToSignal { state, isImage -> Signal<Float, NoError> in
         switch state {
@@ -130,7 +130,7 @@ func saveToCameraRoll(context: AccountContext, postbox: Postbox, mediaReference:
     }
 }
 
-func copyToPasteboard(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Void, NoError> {
+func copyToPasteboard(context: AccountContextImpl, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Void, NoError> {
     return fetchMediaData(context: context, postbox: postbox, mediaReference: mediaReference)
     |> mapToSignal { state, isImage -> Signal<Void, NoError> in
         if case let .data(data) = state, data.complete {

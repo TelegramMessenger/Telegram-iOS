@@ -8,7 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 
 final class InstantPageContentNode : ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let strings: PresentationStrings
     private let theme: InstantPageTheme
     
@@ -36,7 +36,7 @@ final class InstantPageContentNode : ASDisplayNode {
     
     private var previousVisibleBounds: CGRect?
     
-    init(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContextImpl, strings: PresentationStrings, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.context = context
         self.strings = strings
         self.theme = theme

@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
 
 enum ItemListSingleLineInputItemType: Equatable {
     case regular(capitalization: Bool, autocorrection: Bool)
@@ -148,7 +149,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     override func didLoad() {
         super.didLoad()
         
-        self.textNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0)]
+        self.textNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(17.0)]
         self.textNode.textField.font = Font.regular(17.0)
         if let item = self.item {
             self.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
@@ -183,8 +184,8 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
             }
             
             let titleString = NSMutableAttributedString(attributedString: item.title)
-            titleString.removeAttribute(NSAttributedStringKey.font, range: NSMakeRange(0, titleString.length))
-            titleString.addAttributes([NSAttributedStringKey.font: Font.regular(17.0)], range: NSMakeRange(0, titleString.length))
+            titleString.removeAttribute(NSAttributedString.Key.font, range: NSMakeRange(0, titleString.length))
+            titleString.addAttributes([NSAttributedString.Key.font: Font.regular(17.0)], range: NSMakeRange(0, titleString.length))
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

@@ -14,7 +14,7 @@ func mapResourceToAvatarSizes(postbox: Postbox, resource: MediaResource, represe
         }
         var result: [Int: Data] = [:]
         for i in 0 ..< representations.count {
-            if let scaledImage = generateScaledImage(image: image, size: representations[i].dimensions, scale: 1.0), let scaledData = UIImageJPEGRepresentation(scaledImage, 0.8) {
+            if let scaledImage = generateScaledImage(image: image, size: representations[i].dimensions, scale: 1.0), let scaledData = scaledImage.jpegData(compressionQuality: 0.8) {
                 result[i] = scaledData
             }
         }

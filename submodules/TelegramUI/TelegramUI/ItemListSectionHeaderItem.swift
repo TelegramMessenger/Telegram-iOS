@@ -4,6 +4,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
+import ActivityIndicator
 
 enum ItemListSectionHeaderAccessoryTextColor {
     case generic
@@ -94,7 +96,7 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         self.accessoryTextNode.contentsScale = UIScreen.main.scale
         
         self.activateArea = AccessibilityAreaNode()
-        self.activateArea.accessibilityTraits = UIAccessibilityTraitStaticText | UIAccessibilityTraitHeader
+        self.activateArea.accessibilityTraits = [.staticText, .header]
         
         super.init(layerBacked: false, dynamicBounce: false)
         

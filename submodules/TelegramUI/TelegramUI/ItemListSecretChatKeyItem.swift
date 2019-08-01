@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 class ItemListSecretChatKeyItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 private struct PhoneLabelArguments {
     let selectLabel: (String) -> Void
@@ -81,7 +82,7 @@ private func phoneLabelEntries(presentationData: PresentationData, state: PhoneL
     return entries
 }
 
-public func phoneLabelController(context: AccountContext, currentLabel: String, completion: @escaping (String) -> Void) -> ViewController {
+public func phoneLabelController(context: AccountContextImpl, currentLabel: String, completion: @escaping (String) -> Void) -> ViewController {
     let statePromise = ValuePromise(PhoneLabelState(currentLabel: currentLabel))
     let stateValue = Atomic(value: PhoneLabelState(currentLabel: currentLabel))
     let updateState: ((PhoneLabelState) -> PhoneLabelState) -> Void = { f in

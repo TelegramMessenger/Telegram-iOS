@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
+import ItemListUI
 
 private struct CreateChannelArguments {
     let account: Account
@@ -186,7 +187,7 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     return entries
 }
 
-public func createChannelController(context: AccountContext) -> ViewController {
+public func createChannelController(context: AccountContextImpl) -> ViewController {
     let initialState = CreateChannelState(creating: false, editingName: ItemListAvatarAndNameInfoItemName.title(title: "", type: .channel), editingDescriptionText: "", avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -300,7 +301,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
             presentControllerImpl?(legacyController, nil)
             
             let completedImpl: (UIImage) -> Void = { image in
-                if let data = UIImageJPEGRepresentation(image, 0.6) {
+                if let data = image.jpegData(compressionQuality: 0.6) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)

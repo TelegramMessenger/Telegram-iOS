@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class SelectivePrivacyPeersControllerArguments {
     let account: Account
@@ -222,7 +223,7 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
     return entries
 }
 
-public func selectivePrivacyPeersController(context: AccountContext, title: String, initialPeers: [PeerId: SelectivePrivacyPeer], updated: @escaping ([PeerId: SelectivePrivacyPeer]) -> Void) -> ViewController {
+public func selectivePrivacyPeersController(context: AccountContextImpl, title: String, initialPeers: [PeerId: SelectivePrivacyPeer], updated: @escaping ([PeerId: SelectivePrivacyPeer]) -> Void) -> ViewController {
     let statePromise = ValuePromise(SelectivePrivacyPeersControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: SelectivePrivacyPeersControllerState())
     let updateState: ((SelectivePrivacyPeersControllerState) -> SelectivePrivacyPeersControllerState) -> Void = { f in

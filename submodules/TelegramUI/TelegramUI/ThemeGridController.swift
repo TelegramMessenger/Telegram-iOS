@@ -19,7 +19,7 @@ final class ThemeGridController: ViewController {
         return self._ready
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     
     private var presentationData: PresentationData
     private let presentationDataPromise = Promise<PresentationData>()
@@ -36,7 +36,7 @@ final class ThemeGridController: ViewController {
         return false
     }
     
-    init(context: AccountContext) {
+    init(context: AccountContextImpl) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise.set(.single(self.presentationData))

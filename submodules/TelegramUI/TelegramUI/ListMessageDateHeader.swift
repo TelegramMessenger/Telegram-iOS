@@ -80,7 +80,7 @@ final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         if let attributedString = self.titleNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
-            attributedString.addAttribute(NSAttributedStringKey.foregroundColor, value: theme.list.itemPrimaryTextColor, range: NSMakeRange(0, attributedString.length))
+            attributedString.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.list.itemPrimaryTextColor, range: NSMakeRange(0, attributedString.length))
             self.titleNode.attributedText = attributedString
         }
         

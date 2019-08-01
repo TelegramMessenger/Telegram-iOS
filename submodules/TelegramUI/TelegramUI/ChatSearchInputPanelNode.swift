@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import ActivityIndicator
 
 private let labelFont = Font.regular(15.0)
 

@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class WatchSettingsControllerArguments {
     let updatePreset: (String, String) -> Void
@@ -108,7 +109,7 @@ private func watchSettingsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func watchSettingsController(context: AccountContext) -> ViewController {
+public func watchSettingsController(context: AccountContextImpl) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     

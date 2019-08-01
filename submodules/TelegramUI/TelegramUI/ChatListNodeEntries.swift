@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import MergeLists
 
 enum ChatListNodeEntryId: Hashable {
     case Hole(Int64)

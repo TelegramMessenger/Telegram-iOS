@@ -72,7 +72,7 @@ final class ListMessageHoleItemNode: ListViewItemNode {
     override func didLoad() {
         super.didLoad()
         
-        let activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .gray)
+        let activityIndicator = UIActivityIndicatorView(style: .gray)
         self.activityIndicator = activityIndicator
         self.view.addSubview(activityIndicator)
         let size = activityIndicator.bounds.size

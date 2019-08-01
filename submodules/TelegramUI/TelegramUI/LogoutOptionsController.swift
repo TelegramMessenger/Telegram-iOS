@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
+import ItemListUI
 
 private struct LogoutOptionsItemArguments {
     let addAccount: () -> Void
@@ -116,7 +117,7 @@ private func logoutOptionsEntries(presentationData: PresentationData, canAddAcco
     return entries
 }
 
-func logoutOptionsController(context: AccountContext, navigationController: NavigationController, canAddAccounts: Bool, phoneNumber: String) -> ViewController {
+func logoutOptionsController(context: AccountContextImpl, navigationController: NavigationController, canAddAccounts: Bool, phoneNumber: String) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var replaceTopControllerImpl: ((ViewController) -> Void)?

@@ -63,7 +63,7 @@ final class RadialCheckContentNode: RadialStatusContentNode {
         }) as! POPAnimatableProperty)
         animation.fromValue = 0.0 as NSNumber
         animation.toValue = 1.0 as NSNumber
-        animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         animation.duration = 0.25
         animation.beginTime = delay
         animation.completionBlock = { [weak self] _, _ in

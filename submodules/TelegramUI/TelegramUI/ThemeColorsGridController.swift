@@ -61,14 +61,14 @@ final class ThemeColorsGridController: ViewController {
         return self._ready
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
     private var validLayout: ContainerViewLayout?
     
-    init(context: AccountContext) {
+    init(context: AccountContextImpl) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

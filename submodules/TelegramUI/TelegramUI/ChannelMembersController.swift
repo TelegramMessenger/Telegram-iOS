@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class ChannelMembersControllerArguments {
     let account: Account
@@ -254,7 +255,7 @@ private struct ChannelMembersControllerState: Equatable {
     }
 }
 
-private func ChannelMembersControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelMembersEntry] {
+private func ChannelMembersControllerEntries(context: AccountContextImpl, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelMembersEntry] {
     if participants == nil || participants?.count == nil {
         return []
     }
@@ -322,7 +323,7 @@ private func ChannelMembersControllerEntries(context: AccountContext, presentati
     return entries
 }
 
-public func channelMembersController(context: AccountContext, peerId: PeerId) -> ViewController {
+public func channelMembersController(context: AccountContextImpl, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(ChannelMembersControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelMembersControllerState())
     let updateState: ((ChannelMembersControllerState) -> ChannelMembersControllerState) -> Void = { f in

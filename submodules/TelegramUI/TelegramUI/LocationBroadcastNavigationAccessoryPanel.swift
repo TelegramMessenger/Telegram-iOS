@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import TextFormat
 
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
@@ -61,7 +62,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         
         self.closeButton = HighlightableButtonNode()
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
         self.separatorNode = ASDisplayNode()

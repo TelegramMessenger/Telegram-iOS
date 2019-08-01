@@ -4,6 +4,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ActivityIndicator
 
 private func generateLoupeIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: color)
@@ -463,7 +464,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         let initialBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.bounds.size.width, height: max(0.0, initialTextBackgroundFrame.maxY + 8.0)))
         if let fromBackgroundColor = node.backgroundColor, let toBackgroundColor = self.backgroundNode.backgroundColor {
-            self.backgroundNode.layer.animate(from: fromBackgroundColor.cgColor, to: toBackgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration * 0.7)
+            self.backgroundNode.layer.animate(from: fromBackgroundColor.cgColor, to: toBackgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration * 0.7)
         } else {
             self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
@@ -525,7 +526,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         let targetBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.bounds.size.width, height: max(0.0, targetTextBackgroundFrame.maxY + 8.0)))
         if let toBackgroundColor = node.backgroundColor, let fromBackgroundColor = self.backgroundNode.backgroundColor {
-            self.backgroundNode.layer.animate(from: fromBackgroundColor.cgColor, to: toBackgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration * 0.5, removeOnCompletion: false)
+            self.backgroundNode.layer.animate(from: fromBackgroundColor.cgColor, to: toBackgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration * 0.5, removeOnCompletion: false)
         } else {
             self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration / 2.0, removeOnCompletion: false)
         }
@@ -562,8 +563,8 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             if let snapshot = node.labelNode.layer.snapshotContentTree() {
                 snapshot.frame = CGRect(origin: self.textField.placeholderLabel.frame.origin.offsetBy(dx: 0.0, dy: UIScreenPixel), size: node.labelNode.frame.size)
                 self.textField.layer.addSublayer(snapshot)
-                snapshot.animateAlpha(from: 0.0, to: 1.0, duration: duration * 2.0 / 3.0, timingFunction: kCAMediaTimingFunctionLinear)
-                self.textField.placeholderLabel.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false)
+                snapshot.animateAlpha(from: 0.0, to: 1.0, duration: duration * 2.0 / 3.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
+                self.textField.placeholderLabel.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
             }
         } else if let cachedLayout = node.labelNode.cachedLayout {
             let labelNode = TextNode()
@@ -574,9 +575,9 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             let _ = labelApply()
             
             self.textField.addSubnode(labelNode)
-            labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 2.0 / 3.0, timingFunction: kCAMediaTimingFunctionLinear)
+            labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 2.0 / 3.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
             labelNode.frame = CGRect(origin: self.textField.placeholderLabel.frame.origin.offsetBy(dx: 0.0, dy: UIScreenPixel), size: labelLayoutResult.size)
-            self.textField.placeholderLabel.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false, completion: { _ in
+            self.textField.placeholderLabel.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { _ in
                 labelNode.removeFromSupernode()
             })
         }

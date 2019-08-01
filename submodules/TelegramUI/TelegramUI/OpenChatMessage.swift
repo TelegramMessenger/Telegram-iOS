@@ -24,7 +24,7 @@ private enum ChatMessageGalleryControllerData {
     case other(Media)
 }
 
-private func chatMessageGalleryControllerData(context: AccountContext, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
+private func chatMessageGalleryControllerData(context: AccountContextImpl, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
     var galleryMedia: Media?
     var otherMedia: Media?
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
@@ -179,7 +179,7 @@ enum ChatMessagePreviewControllerData {
     case gallery(GalleryController)
 }
 
-func chatMessagePreviewControllerData(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
+func chatMessagePreviewControllerData(context: AccountContextImpl, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
     if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, synchronousLoad: true, actionInteraction: nil) {
         switch mediaData {
             case let .gallery(gallery):
@@ -193,7 +193,7 @@ func chatMessagePreviewControllerData(context: AccountContext, message: Message,
     return nil
 }
 
-func openChatMessage(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode = .default, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> (UIView?, UIView?))?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
+func openChatMessage(context: AccountContextImpl, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode = .default, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> (UIView?, UIView?))?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
     if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: mode, synchronousLoad: false, actionInteraction: actionInteraction) {
         switch mediaData {
             case let .url(url):
@@ -207,10 +207,7 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
                         return
                     }
                     if data.complete, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                        var error: NSError?
-                        let pass = PKPass(data: content, error: &error)
-                        if error == nil {
-                            let controller = PKAddPassesViewController(pass: pass)
+                        if let pass = try? PKPass(data: content), let controller = PKAddPassesViewController(pass: pass) {
                             if let window = navigationController.view.window {
                                 controller.popoverPresentationController?.sourceView = window
                                 controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
@@ -360,7 +357,7 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
     return false
 }
 
-func openChatInstantPage(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) {
+func openChatInstantPage(context: AccountContextImpl, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             if let _ = content.instantPage {
@@ -410,7 +407,7 @@ func openChatInstantPage(context: AccountContext, message: Message, sourcePeerTy
     }
 }
 
-func openChatWallpaper(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
+func openChatWallpaper(context: AccountContextImpl, message: Message, present: @escaping (ViewController, Any?) -> Void) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             let _ = (resolveUrl(account: context.account, url: content.url)

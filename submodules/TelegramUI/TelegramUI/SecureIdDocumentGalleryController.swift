@@ -27,7 +27,7 @@ struct SecureIdDocumentGalleryEntry: Equatable {
         return lhs.index == rhs.index && lhs.resource.isEqual(to: rhs.resource) && lhs.location == rhs.location && lhs.error == rhs.error
     }
     
-    func item(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, delete: @escaping (TelegramMediaResource) -> Void) -> GalleryItem {
+    func item(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, delete: @escaping (TelegramMediaResource) -> Void) -> GalleryItem {
         return SecureIdDocumentGalleryItem(context: context, theme: theme, strings: strings, secureIdContext: secureIdContext, resource: self.resource, caption: self.error, location: self.location, delete: {
             delete(self.resource)
         })
@@ -47,7 +47,7 @@ class SecureIdDocumentGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let secureIdContext: SecureIdAccessContext
     private var presentationData: PresentationData
     
@@ -77,7 +77,7 @@ class SecureIdDocumentGalleryController: ViewController {
     
     var deleteResource: ((TelegramMediaResource) -> Void)?
     
-    init(context: AccountContext, secureIdContext: SecureIdAccessContext, entries: [SecureIdDocumentGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
+    init(context: AccountContextImpl, secureIdContext: SecureIdAccessContext, entries: [SecureIdDocumentGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
         self.context = context
         self.secureIdContext = secureIdContext
         self.replaceRootController = replaceRootController

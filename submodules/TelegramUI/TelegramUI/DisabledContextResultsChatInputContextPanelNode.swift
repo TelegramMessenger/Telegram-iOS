@@ -12,7 +12,7 @@ final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPan
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
         self.containerNode = ASDisplayNode()
         self.separatorNode = ASDisplayNode()
         self.textNode = ImmediateTextNode()

@@ -62,7 +62,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
                 }) as! POPAnimatableProperty)
                 animation.fromValue = CGFloat(effectiveProgress) as NSNumber
                 animation.toValue = CGFloat(progress) as NSNumber
-                animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+                animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
                 animation.duration = 0.2
                 animation.completionBlock = { [weak self] _, _ in
                     self?.progressAnimationCompleted?()
@@ -131,12 +131,12 @@ private class RadialProgressOverlayNode: ASDisplayNode {
         super.willEnterHierarchy()
         
         let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
         basicAnimation.duration = 2.0
         basicAnimation.fromValue = NSNumber(value: Float(0.0))
         basicAnimation.toValue = NSNumber(value: Float.pi * 2.0)
         basicAnimation.repeatCount = Float.infinity
-        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         
         self.layer.add(basicAnimation, forKey: "progressRotation")
     }

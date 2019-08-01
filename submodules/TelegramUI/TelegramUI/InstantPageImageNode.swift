@@ -13,7 +13,7 @@ private struct FetchControls {
 }
 
 final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let webPage: TelegramMediaWebpage
     private var theme: InstantPageTheme
     let media: InstantPageMedia
@@ -39,7 +39,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var themeUpdated: Bool = false
     
-    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void) {
+    init(context: AccountContextImpl, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void) {
         self.context = context
         self.theme = theme
         self.webPage = webPage

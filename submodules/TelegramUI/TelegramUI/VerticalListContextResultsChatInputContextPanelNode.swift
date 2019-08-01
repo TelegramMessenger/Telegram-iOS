@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import Display
 import TelegramPresentationData
+import MergeLists
 
 private enum VerticalChatContextResultsEntryStableId: Hashable {
     case action
@@ -125,7 +126,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true

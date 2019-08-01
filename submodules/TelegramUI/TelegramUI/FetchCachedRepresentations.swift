@@ -722,7 +722,7 @@ private func fetchEmojiThumbnailRepresentation(account: Account, resource: Media
         
         let nsString = (resource.emoji as NSString)
         let font = Font.regular(52.0)
-        let stringAttributes = [NSAttributedStringKey.font: font]
+        let stringAttributes = [NSAttributedString.Key.font: font]
         var textSize = nsString.size(withAttributes: stringAttributes)
         textSize = CGSize(width: ceil(textSize.width) + 1.0, height: ceil(textSize.height) + 1.0)
         

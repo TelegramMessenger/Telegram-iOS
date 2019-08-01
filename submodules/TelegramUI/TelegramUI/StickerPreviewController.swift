@@ -21,10 +21,10 @@ final class StickerPreviewController: ViewController {
     
     private var animatedIn = false
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var item: StickerPackItem
     
-    init(context: AccountContext, item: StickerPackItem) {
+    init(context: AccountContextImpl, item: StickerPackItem) {
         self.context = context
         self.item = item
         

@@ -47,7 +47,7 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.layoutParams = size
         
-        let insets = UIEdgeInsetsMake(10.0, 10.0, 10.0, 10.0)
+        let insets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0)
         
         let maxTextWidth = size.width - insets.left - insets.right - 18.0 * 2.0
         
