@@ -1387,7 +1387,10 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(
         std::make_shared<LOTTransformData>();
 
     auto obj = std::make_unique<TransformData>();
-    if (ddd) obj->m3D = std::make_unique<LOT3DData>();
+    if (ddd) {
+        obj->createExtraData();
+        obj->mExtra->m3DData = true;
+    }
 
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "nm")) {
@@ -1396,15 +1399,18 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(
             parseProperty(obj->mAnchor);
         } else if (0 == strcmp(key, "p")) {
             EnterObject();
+            bool separate = false;
             while (const char *key = NextObjectKey()) {
                 if (0 == strcmp(key, "k")) {
                     parsePropertyHelper(obj->mPosition);
                 } else if (0 == strcmp(key, "s")) {
-                    obj->mSeparate = GetBool();
-                } else if (obj->mSeparate && (0 == strcmp(key, "x"))) {
-                    parseProperty(obj->mX);
-                } else if (obj->mSeparate && (0 == strcmp(key, "y"))) {
-                    parseProperty(obj->mY);
+                    obj->createExtraData();
+                    obj->mExtra->mSeparate = GetBool();
+                    separate = true;
+                } else if (separate && (0 == strcmp(key, "x"))) {
+                    parseProperty(obj->mExtra->mSeparateX);
+                } else if (separate && (0 == strcmp(key, "y"))) {
+                    parseProperty(obj->mExtra->mSeparateY);
                 } else {
                     Skip(key);
                 }
@@ -1418,25 +1424,28 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(
         } else if (0 == strcmp(key, "hd")) {
             sharedTransform->mHidden = GetBool();
         } else if (0 == strcmp(key, "rx")) {
-            parseProperty(obj->m3D->mRx);
+            parseProperty(obj->mExtra->m3DRx);
         } else if (0 == strcmp(key, "ry")) {
-            parseProperty(obj->m3D->mRy);
+            parseProperty(obj->mExtra->m3DRy);
         } else if (0 == strcmp(key, "rz")) {
-            parseProperty(obj->m3D->mRz);
+            parseProperty(obj->mExtra->m3DRz);
         } else {
             Skip(key);
         }
     }
-    obj->mStatic = obj->mAnchor.isStatic() && obj->mPosition.isStatic() &&
-                   obj->mRotation.isStatic() && obj->mScale.isStatic() &&
-                   obj->mX.isStatic() && obj->mY.isStatic() &&
-                   obj->mOpacity.isStatic();
-    if (obj->m3D) {
-        obj->mStatic = obj->mStatic && obj->m3D->mRx.isStatic() &&
-                       obj->m3D->mRy.isStatic() && obj->m3D->mRz.isStatic();
+    bool isStatic = obj->mAnchor.isStatic() && obj->mPosition.isStatic() &&
+                    obj->mRotation.isStatic() && obj->mScale.isStatic() &&
+                    obj->mOpacity.isStatic();
+    if (obj->mExtra) {
+        isStatic = isStatic &&
+                   obj->mExtra->m3DRx.isStatic() &&
+                   obj->mExtra->m3DRy.isStatic() &&
+                   obj->mExtra->m3DRz.isStatic() &&
+                   obj->mExtra->mSeparateX.isStatic() &&
+                   obj->mExtra->mSeparateY.isStatic();
     }
 
-    sharedTransform->set(std::move(obj));
+    sharedTransform->set(std::move(obj), isStatic);
 
     return sharedTransform;
 }

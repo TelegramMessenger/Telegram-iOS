@@ -111,19 +111,19 @@ VMatrix TransformData::matrix(int frameNo, bool autoOrient) const
 {
     VMatrix m;
     VPointF position;
-    if (mSeparate) {
-        position.setX(mX.value(frameNo));
-        position.setY(mY.value(frameNo));
+    if (mExtra && mExtra->mSeparate) {
+        position.setX(mExtra->mSeparateX.value(frameNo));
+        position.setY(mExtra->mSeparateY.value(frameNo));
     } else {
         position = mPosition.value(frameNo);
     }
 
     float angle = autoOrient ? mPosition.angle(frameNo) : 0;
-    if (m3D) {
+    if (mExtra && mExtra->m3DData) {
         m.translate(position)
-            .rotate(m3D->mRz.value(frameNo) + angle)
-            .rotate(m3D->mRy.value(frameNo), VMatrix::Axis::Y)
-            .rotate(m3D->mRx.value(frameNo), VMatrix::Axis::X)
+            .rotate(mExtra->m3DRz.value(frameNo) + angle)
+            .rotate(mExtra->m3DRy.value(frameNo), VMatrix::Axis::Y)
+            .rotate(mExtra->m3DRx.value(frameNo), VMatrix::Axis::X)
             .scale(mScale.value(frameNo) / 100.f)
             .translate(-mAnchor.value(frameNo));
     } else {

@@ -423,37 +423,40 @@ struct LOTAsset
     VBitmap                                   mBitmap;
 };
 
-struct LOT3DData
+struct TransformDataExtra
 {
-    LOTAnimatable<float>     mRx{0};
-    LOTAnimatable<float>     mRy{0};
-    LOTAnimatable<float>     mRz{0};
+    LOTAnimatable<float>     m3DRx{0};
+    LOTAnimatable<float>     m3DRy{0};
+    LOTAnimatable<float>     m3DRz{0};
+    LOTAnimatable<float>     mSeparateX{0};
+    LOTAnimatable<float>     mSeparateY{0};
+    bool                     mSeparate{false};
+    bool                     m3DData{false};
 };
 
 struct TransformData
 {
     VMatrix matrix(int frameNo, bool autoOrient = false) const;
     float opacity(int frameNo) const { return mOpacity.value(frameNo)/100.0f; }
-    bool isStatic() const { return mStatic;}
-    std::unique_ptr<LOT3DData>    m3D;
-    LOTAnimatable<float>          mRotation{0};  /* "r" */
-    LOTAnimatable<VPointF>        mScale{{100, 100}};     /* "s" */
-    LOTAnimatable<VPointF>        mPosition;  /* "p" */
-    LOTAnimatable<float>          mX{0};
-    LOTAnimatable<float>          mY{0};
-    LOTAnimatable<VPointF>        mAnchor;    /* "a" */
-    LOTAnimatable<float>          mOpacity{100};   /* "o" */
-    bool                          mSeparate{false};
-    bool                          mStatic{false};
+    void createExtraData()
+    {
+        if (!mExtra) mExtra = std::make_unique<TransformDataExtra>();
+    }
+    LOTAnimatable<float>                   mRotation{0};  /* "r" */
+    LOTAnimatable<VPointF>                 mScale{{100, 100}};     /* "s" */
+    LOTAnimatable<VPointF>                 mPosition;  /* "p" */
+    LOTAnimatable<VPointF>                 mAnchor;    /* "a" */
+    LOTAnimatable<float>                   mOpacity{100};   /* "o" */
+    std::unique_ptr<TransformDataExtra>    mExtra;
 };
 
 class LOTTransformData : public LOTData
 {
 public:
     LOTTransformData():LOTData(LOTData::Type::Transform){}
-    void set(std::unique_ptr<TransformData> data)
+    void set(std::unique_ptr<TransformData> data, bool staticFlag)
     {
-        setStatic(data->isStatic());
+        setStatic(staticFlag);
         if (isStatic()) {
             new (&impl.mStaticData) static_data(data->matrix(0), data->opacity(0));
         } else {
