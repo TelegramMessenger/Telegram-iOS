@@ -76,7 +76,7 @@ final class PeekControllerMenuItemNode: HighlightTrackingButtonNode {
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.view.superview?.bringSubview(toFront: strongSelf.view)
+                    strongSelf.view.superview?.bringSubviewToFront(strongSelf.view)
                     strongSelf.highlightedBackgroundNode.alpha = 1.0
                 } else {
                     strongSelf.highlightedBackgroundNode.alpha = 0.0

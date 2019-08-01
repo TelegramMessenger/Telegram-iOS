@@ -307,7 +307,7 @@ public final class PresentationContext {
     }
     
     private func notifyAccessibilityScreenChanged() {
-        UIAccessibilityPostNotification(UIAccessibilityScreenChangedNotification, nil)
+        UIAccessibility.post(notification: UIAccessibility.Notification.screenChanged, argument: nil)
     }
     
     func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

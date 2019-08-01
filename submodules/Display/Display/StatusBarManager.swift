@@ -61,7 +61,7 @@ private func displayHiddenAnimation() -> CAAnimation {
     let animation = CABasicAnimation(keyPath: "transform.translation.y")
     animation.fromValue = NSNumber(value: Float(-40.0))
     animation.toValue = NSNumber(value: Float(-40.0))
-    animation.fillMode = kCAFillModeBoth
+    animation.fillMode = .both
     animation.duration = 1.0
     animation.speed = 0.0
     animation.isAdditive = true

@@ -334,7 +334,7 @@ open class NavigationBar: ASDisplayNode {
                 accessibilityElements.append(self.titleNode)
             }
             if let titleView = self.titleView, titleView.superview != nil {
-                titleView.accessibilityFrame = UIAccessibilityConvertFrameToScreenCoordinates(titleView.bounds, titleView)
+                titleView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(titleView.bounds, in: titleView)
                 accessibilityElements.append(titleView)
             }
             if self.rightButtonNode.supernode != nil {
@@ -672,7 +672,7 @@ open class NavigationBar: ASDisplayNode {
         
         self.titleNode = ASTextNode()
         self.titleNode.isAccessibilityElement = true
-        self.titleNode.accessibilityTraits = UIAccessibilityTraitHeader
+        self.titleNode.accessibilityTraits = .header
         
         self.backButtonNode = NavigationButtonNode()
         self.badgeNode = NavigationBarBadgeNode(fillColor: self.presentationData.theme.badgeBackgroundColor, strokeColor: self.presentationData.theme.badgeStrokeColor, textColor: self.presentationData.theme.badgeTextColor)
@@ -831,7 +831,7 @@ open class NavigationBar: ASDisplayNode {
             leftTitleInset += backButtonSize.width + backButtonInset + 1.0
             
             let topHitTestSlop = (nominalHeight - backButtonSize.height) * 0.5
-            self.backButtonNode.hitTestSlop = UIEdgeInsetsMake(-topHitTestSlop, -27.0, -topHitTestSlop, -8.0)
+            self.backButtonNode.hitTestSlop = UIEdgeInsets(top: -topHitTestSlop, left: -27.0, bottom: -topHitTestSlop, right: -8.0)
             
             if let transitionState = self.transitionState {
                 let progress = transitionState.progress

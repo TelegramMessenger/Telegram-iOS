@@ -6,8 +6,6 @@ import SwiftSignalKit
 import DisplayPrivate
 #endif
 
-private let useBackgroundDeallocation = false
-
 private let infiniteScrollSize: CGFloat = 10000.0
 private let insertionAnimationDuration: Double = 0.4
 
@@ -359,7 +357,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }))
         
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-        self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+        self.displayLink.add(to: RunLoop.main, forMode: RunLoop.Mode.common)
         
         if #available(iOS 10.0, *) {
             self.displayLink.preferredFramesPerSecond = 60
@@ -372,25 +370,15 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.pauseAnimations()
         self.displayLink.invalidate()
         
-        if useBackgroundDeallocation {
-            assertionFailure()
-            /*for itemNode in self.itemNodes {
-                ASDeallocQueue.sharedDeallocation.releaseObject(inBackground: UnsafeMutablePointer(itemNode))
-            }
-            for itemHeaderNode in self.itemHeaderNodes {
-                ASDeallocQueue.sharedDeallocatio.releaseObject(inBackground: itemHeaderNode)
-            }*/
-        } else {
-            for i in (0 ..< self.itemNodes.count).reversed() {
-                var itemNode: AnyObject? = self.itemNodes[i]
-                self.itemNodes.remove(at: i)
-                ASPerformMainThreadDeallocation(&itemNode)
-            }
-            for key in self.itemHeaderNodes.keys {
-                var itemHeaderNode: AnyObject? = self.itemHeaderNodes[key]
-                self.itemHeaderNodes.removeValue(forKey: key)
-                ASPerformMainThreadDeallocation(&itemHeaderNode)
-            }
+        for i in (0 ..< self.itemNodes.count).reversed() {
+            var itemNode: AnyObject? = self.itemNodes[i]
+            self.itemNodes.remove(at: i)
+            ASPerformMainThreadDeallocation(&itemNode)
+        }
+        for key in self.itemHeaderNodes.keys {
+            var itemHeaderNode: AnyObject? = self.itemHeaderNodes[key]
+            self.itemHeaderNodes.removeValue(forKey: key)
+            ASPerformMainThreadDeallocation(&itemHeaderNode)
         }
         
         self.waitingForNodesDisposable.dispose()
@@ -446,8 +434,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.reorderNode = nil
             if let itemNode = reorderNode.itemNode, itemNode.supernode == self {
                 self.reorderItemNodeToFront(itemNode)
-                reorderNode.animateCompletion(completion: { [weak itemNode, weak reorderNode] in
-                    //itemNode?.isHidden = false
+                reorderNode.animateCompletion(completion: { [weak reorderNode] in
                     reorderNode?.removeFromSupernode()
                 })
                 self.setNeedsAnimations()
@@ -545,7 +532,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
             self.flashNodesDelayTimer = timer
-            RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+            RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
             self.updateHeaderItemsFlashing(animated: true)
         }
     }
@@ -568,7 +555,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
             self.flashScrollIndicatorTimer = timer
-            RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+            RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
         } else {
             self.verticalScrollIndicator?.layer.removeAnimation(forKey: "opacity")
             self.verticalScrollIndicator?.alpha = 1.0
@@ -1132,9 +1119,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         for itemNode in self.itemNodes {
             if itemNode.isHighlightedInOverlay {
                 lowestOverlayNode = itemNode
-                itemNode.view.superview?.bringSubview(toFront: itemNode.view)
+                itemNode.view.superview?.bringSubviewToFront(itemNode.view)
                 if let verticalScrollIndicator = self.verticalScrollIndicator {
-                    verticalScrollIndicator.view.superview?.bringSubview(toFront: verticalScrollIndicator.view)
+                    verticalScrollIndicator.view.superview?.bringSubviewToFront(verticalScrollIndicator.view)
                 }
             }
         }
@@ -1154,18 +1141,18 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         } else if let itemHighlightOverlayBackground = self.itemHighlightOverlayBackground {
             self.itemHighlightOverlayBackground = nil
-            for (_, headerNode) in self.itemHeaderNodes {
+            for (_, _) in self.itemHeaderNodes {
                 //self.view.bringSubview(toFront: headerNode.view)
             }
             //self.view.bringSubview(toFront: itemHighlightOverlayBackground.view)
-            for itemNode in self.itemNodes {
+            for _ in self.itemNodes {
                 //self.view.bringSubview(toFront: itemNode.view)
             }
             transition.updateAlpha(node: itemHighlightOverlayBackground, alpha: 0.0, completion: { [weak itemHighlightOverlayBackground] _ in
                 itemHighlightOverlayBackground?.removeFromSupernode()
             })
             if let verticalScrollIndicator = self.verticalScrollIndicator {
-                verticalScrollIndicator.view.superview?.bringSubview(toFront: verticalScrollIndicator.view)
+                verticalScrollIndicator.view.superview?.bringSubviewToFront(verticalScrollIndicator.view)
             }
         }
     }
@@ -1650,12 +1637,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 if let strongSelf = self {
                                     strongSelf.replayOperations(animated: animated, animateAlpha: options.contains(.AnimateAlpha), animateCrossfade: options.contains(.AnimateCrossfade), synchronous: options.contains(.Synchronous), animateTopItemVerticalOrigin: options.contains(.AnimateTopItemPosition), operations: updatedOperations, requestItemInsertionAnimationsIndices: options.contains(.RequestItemInsertionAnimations) ? insertedIndexSet : Set(), scrollToItem: scrollToItem, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemIndex: stationaryItemIndex, updateOpaqueState: updateOpaqueState, completion: {
                                         if options.contains(.PreferSynchronousDrawing) {
-                                            let startTime = CACurrentMediaTime()
                                             self?.recursivelyEnsureDisplaySynchronously(true)
-                                            let deltaTime = CACurrentMediaTime() - startTime
-                                            if false {
-                                                print("ListView: waited \(deltaTime * 1000.0) ms for nodes to display")
-                                            }
                                         }
                                         completion()
                                     })
@@ -1666,12 +1648,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 let readyWithTimeout = combineLatest(readySignals)
                                     |> deliverOnMainQueue
                                     |> timeout(0.2, queue: Queue.mainQueue(), alternate: .single([]))
-                                let startTime = CACurrentMediaTime()
                                 self.waitingForNodesDisposable.set(readyWithTimeout.start(completed: {
-                                    let deltaTime = CACurrentMediaTime() - startTime
-                                    if false {
-                                        print("ListView: waited \(deltaTime * 1000.0) ms for nodes to load")
-                                    }
                                     beginReplay()
                                 }))
                             } else {
@@ -1905,7 +1882,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if nextNode.index == nil && nextNode.subnodes == nil || nextNode.subnodes!.isEmpty {
                 let nextHeight = nextNode.apparentHeight
                 if abs(nextHeight - previousApparentHeight) < CGFloat.ulpOfOne {
-                    if let animation = nextNode.animationForKey("apparentHeight") {
+                    if let _ = nextNode.animationForKey("apparentHeight") {
                         node.apparentHeight = previousApparentHeight
                         
                         offsetHeight = 0.0
@@ -2363,9 +2340,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         if hadInserts, let reorderNode = self.reorderNode, reorderNode.supernode != nil {
-            self.view.bringSubview(toFront: reorderNode.view)
+            self.view.bringSubviewToFront(reorderNode.view)
             if let verticalScrollIndicator = self.verticalScrollIndicator {
-                verticalScrollIndicator.view.superview?.bringSubview(toFront: verticalScrollIndicator.view)
+                verticalScrollIndicator.view.superview?.bringSubviewToFront(verticalScrollIndicator.view)
             }
         }
         
@@ -2535,7 +2512,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         case let .Default(duration):
                             headerNodesTransition = (.animated(duration: max(duration ?? 0.3, updateSizeAndInsets.duration), curve: .easeInOut), false, -completeOffset)
                             let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
-                            basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+                            basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
                             basicAnimation.duration = updateSizeAndInsets.duration * UIView.animationDurationFactor()
                             basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -completeOffset, 0.0))
                             basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
@@ -2751,7 +2728,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             springAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                             springAnimation.isRemovedOnCompletion = true
                             springAnimation.isAdditive = true
-                            springAnimation.fillMode = kCAFillModeForwards
+                            springAnimation.fillMode = CAMediaTimingFillMode.forwards
                             
                             let k = Float(UIView.animationDurationFactor())
                             var speed: Float = 1.0
@@ -2767,7 +2744,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             reverseSpringAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                             reverseSpringAnimation.isRemovedOnCompletion = true
                             reverseSpringAnimation.isAdditive = true
-                            reverseSpringAnimation.fillMode = kCAFillModeForwards
+                            reverseSpringAnimation.fillMode = CAMediaTimingFillMode.forwards
                             
                             reverseSpringAnimation.speed = speed * Float(reverseSpringAnimation.duration / duration)
                             
@@ -2776,7 +2753,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         case let .Default(duration):
                             if let duration = duration {
                                 let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
-                                basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+                                basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
                                 basicAnimation.duration = duration * UIView.animationDurationFactor()
                                 basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -offset, 0.0))
                                 basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
@@ -2784,7 +2761,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 basicAnimation.isAdditive = true
                                 
                                 let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
-                                reverseBasicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+                                reverseBasicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
                                 reverseBasicAnimation.duration = duration * UIView.animationDurationFactor()
                                 reverseBasicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))
                                 reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
@@ -2817,37 +2794,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     animation.completion = { _ in
                         for itemNode in temporaryPreviousNodes {
                             itemNode.removeFromSupernode()
-                            if useBackgroundDeallocation {
-                                assertionFailure()
-                                //ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemNode)
-                            } else {
-                                //ASPerformMainThreadDeallocation(itemNode)
-                            }
                         }
                         for headerNode in temporaryHeaderNodes {
                             headerNode.removeFromSupernode()
-                            if useBackgroundDeallocation {
-                                assertionFailure()
-                                //ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: headerNode)
-                            } else {
-                                //ASPerformMainThreadDeallocation(headerNode)
-                            }
                         }
                     }
                     self.layer.add(animation, forKey: nil)
                     if let verticalScrollIndicator = self.verticalScrollIndicator {
                         verticalScrollIndicator.layer.add(reverseAnimation, forKey: nil)
-                    }
-                } else {
-                    if useBackgroundDeallocation {
-                        assertionFailure()
-                        /*for itemNode in temporaryPreviousNodes {
-                            ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: itemNode)
-                        }*/
-                    } else {
-                        for itemNode in temporaryPreviousNodes {
-                            //ASPerformMainThreadDeallocation(itemNode)
-                        }
                     }
                 }
             }
@@ -2889,17 +2843,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if self.debugInfo {
                 //let delta = CACurrentMediaTime() - timestamp
                 //print("replayOperations \(delta * 1000.0) ms")
-            }
-            
-            for (previousNode, _) in previousApparentFrames {
-                if previousNode.supernode == nil {
-                    if useBackgroundDeallocation {
-                        assertionFailure()
-                        //ASDeallocQueue.sharedDeallocatio.releaseObject(inBackground: previousNode)
-                    } else {
-                        //ASPerformMainThreadDeallocation(previousNode)
-                    }
-                }
             }
             
             completion()
@@ -2974,7 +2917,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 if transition.1 {
                                     headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: ContainedViewLayoutTransitionCurve.slide.mediaTimingFunction)
                                 } else {
-                                    headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut))
+                                    headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut))
                                 }
                         }
                 }
@@ -3122,10 +3065,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                             updatedAccessoryItemNodeOrigin.x += updatedParentOrigin.x
                                             updatedAccessoryItemNodeOrigin.y += updatedParentOrigin.y
                                             updatedAccessoryItemNodeOrigin.y -= itemNode.bounds.origin.y
-                                            //updatedAccessoryItemNodeOrigin.y += itemNode.transitionOffset
                                             
-                                            var deltaHeight = itemNode.frame.size.height - nextItemNode.frame.size.height
-                                            //deltaHeight = 0.0
+                                            let deltaHeight = itemNode.frame.size.height - nextItemNode.frame.size.height
                                             nextAccessoryItemNode.animateTransitionOffset(CGPoint(x: 0.0, y: updatedAccessoryItemNodeOrigin.y - previousAccessoryItemNodeOrigin.y - deltaHeight), beginAt: currentTimestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: listViewAnimationCurveSystem)
                                             
                                         }
@@ -3343,12 +3284,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             let node = self.itemNodes[i]
             if node.index == nil && node.apparentHeight <= CGFloat.ulpOfOne {
                 self.removeItemNodeAtIndex(i)
-                if useBackgroundDeallocation {
-                    assertionFailure()
-                    //ASDeallocQueue.sharedDeallocation().releaseObject(inBackground: node)
-                } else {
-                    //ASPerformMainThreadDeallocation(node)
-                }
             } else {
                 i += 1
             }
@@ -3645,7 +3580,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                             }
                                         }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
                                         strongSelf.selectionLongTapDelayTimer = timer
-                                        RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+                                        RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
                                     }
                                 }
                                 break
@@ -3656,7 +3591,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
         self.selectionTouchDelayTimer = timer
-        RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+        RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
         
         super.touchesBegan(touches, with: event)
         
@@ -3901,22 +3836,22 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private func reorderItemNodeToFront(_ itemNode: ListViewItemNode) {
-        itemNode.view.superview?.bringSubview(toFront: itemNode.view)
+        itemNode.view.superview?.bringSubviewToFront(itemNode.view)
         if let itemHighlightOverlayBackground = self.itemHighlightOverlayBackground {
-            itemHighlightOverlayBackground.view.superview?.bringSubview(toFront: itemHighlightOverlayBackground.view)
+            itemHighlightOverlayBackground.view.superview?.bringSubviewToFront(itemHighlightOverlayBackground.view)
         }
         if let verticalScrollIndicator = self.verticalScrollIndicator {
-            verticalScrollIndicator.view.superview?.bringSubview(toFront: verticalScrollIndicator.view)
+            verticalScrollIndicator.view.superview?.bringSubviewToFront(verticalScrollIndicator.view)
         }
     }
     
     private func reorderHeaderNodeToFront(_ headerNode: ListViewItemHeaderNode) {
-        headerNode.view.superview?.bringSubview(toFront: headerNode.view)
+        headerNode.view.superview?.bringSubviewToFront(headerNode.view)
         if let itemHighlightOverlayBackground = self.itemHighlightOverlayBackground {
-            itemHighlightOverlayBackground.view.superview?.bringSubview(toFront: itemHighlightOverlayBackground.view)
+            itemHighlightOverlayBackground.view.superview?.bringSubviewToFront(itemHighlightOverlayBackground.view)
         }
         if let verticalScrollIndicator = self.verticalScrollIndicator {
-            verticalScrollIndicator.view.superview?.bringSubview(toFront: verticalScrollIndicator.view)
+            verticalScrollIndicator.view.superview?.bringSubviewToFront(verticalScrollIndicator.view)
         }
     }
     
@@ -3958,10 +3893,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         if let (_, frame) = accessibilityFocusedNode {
             for itemNode in self.itemNodes {
                 if frame.intersects(itemNode.frame) {
-                    UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, itemNode.view)
+                    UIAccessibility.post(notification: UIAccessibility.Notification.layoutChanged, argument: itemNode.view)
                     if let index = itemNode.index {
                         let scrollStatus = "Row \(index + 1) of \(self.items.count)"
-                        UIAccessibilityPostNotification(UIAccessibilityPageScrolledNotification, scrollStatus)
+                        UIAccessibility.post(notification: UIAccessibility.Notification.pageScrolled, argument: scrollStatus)
                     }
                     break
                 }

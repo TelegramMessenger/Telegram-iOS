@@ -102,6 +102,7 @@
 		D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */; };
 		D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */; };
 		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
+		D060185F22F35E7400796784 /* ShakeAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D060185E22F35E7400796784 /* ShakeAnimation.swift */; };
 		D06B76DB20592A97006E9EEA /* LayoutSizes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06B76DA20592A97006E9EEA /* LayoutSizes.swift */; };
 		D06D37A220779C82009219B6 /* VolumeControlStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06D37A120779C82009219B6 /* VolumeControlStatusBar.swift */; };
 		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
@@ -281,6 +282,7 @@
 		D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NavigationBarProxy.m; sourceTree = "<group>"; };
 		D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationBackArrowLight@2x.png"; sourceTree = "<group>"; };
 		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
+		D060185E22F35E7400796784 /* ShakeAnimation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShakeAnimation.swift; sourceTree = "<group>"; };
 		D06B76DA20592A97006E9EEA /* LayoutSizes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutSizes.swift; sourceTree = "<group>"; };
 		D06D37A120779C82009219B6 /* VolumeControlStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeControlStatusBar.swift; sourceTree = "<group>"; };
 		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
@@ -586,6 +588,7 @@
 		D05CC3001B6955D500E235A3 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				D060185E22F35E7400796784 /* ShakeAnimation.swift */,
 				D0750C7522B2934800BE5F6E /* ImageNode.swift */,
 				D0750C7222B2931900BE5F6E /* TransformImageArguments.swift */,
 				D0750C7122B2931900BE5F6E /* TransformImageNode.swift */,
@@ -985,6 +988,7 @@
 				D03AA4DD202DB1840056C405 /* PeekControllerGestureRecognizer.swift in Sources */,
 				D007019A2029CAE2006B9E34 /* TooltipControllerNode.swift in Sources */,
 				D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */,
+				D060185F22F35E7400796784 /* ShakeAnimation.swift in Sources */,
 				D077B8E91F4637040046D27A /* NavigationBarBadge.swift in Sources */,
 				D0CE67921F7DA11700FFB557 /* ActionSheetTheme.swift in Sources */,
 				D0A134642034DE580059716A /* TabBarTapRecognizer.swift in Sources */,
@@ -1108,7 +1112,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = DebugFork;
 		};
@@ -1240,7 +1244,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = DebugHockeyapp;
 		};
@@ -1269,7 +1273,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = ReleaseHockeyapp;
 		};
@@ -1370,7 +1374,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = DebugAppStore;
 		};
@@ -1452,7 +1456,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = ReleaseAppStore;
 		};
@@ -1534,7 +1538,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = ReleaseHockeyappInternal;
 		};
@@ -1624,7 +1628,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = DebugAppStoreLLC;
 		};
@@ -1706,7 +1710,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = ReleaseAppStoreLLC;
 		};

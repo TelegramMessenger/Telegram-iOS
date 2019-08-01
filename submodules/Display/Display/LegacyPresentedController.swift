@@ -43,7 +43,7 @@ open class LegacyPresentedController: ViewController {
             self?.dismiss()
         }*/
         if !asPresentable {
-            self.addChildViewController(legacyController)
+            self.addChild(legacyController)
         }
     }
     
@@ -67,7 +67,7 @@ open class LegacyPresentedController: ViewController {
 
             self.controllerNode.controllerView = self.legacyController.view
             self.controllerNode.view.addSubview(self.legacyController.view)
-            self.legacyController.didMove(toParentViewController: self)
+            self.legacyController.didMove(toParent: self)
             
             if let controllerLoaded = self.controllerLoaded {
                 controllerLoaded()

@@ -296,7 +296,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.controllerView.addSubview(self.controllerView.separatorView)
                 }
                 
-               let navigationBackgroundFrame = CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: CGSize(width: lastControllerFrameAndLayout.0.width, height: (layout.statusBarHeight ?? 0.0) + 44.0))
+               //let navigationBackgroundFrame = CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: CGSize(width: lastControllerFrameAndLayout.0.width, height: (layout.statusBarHeight ?? 0.0) + 44.0))
                 
                 if let backgroundDetailsMode = self.backgroundDetailsMode {
                     
@@ -363,7 +363,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
                 
-                if let emptyDetailView = self.controllerView.emptyDetailView {
+                if let _ = self.controllerView.emptyDetailView {
 //                    transition.updateFrame(view: navigationBackgroundView, frame: navigationBackgroundFrame)
 //                    transition.updateFrame(view: navigationSeparatorView, frame: CGRect(origin: CGPoint(x: navigationBackgroundFrame.minX, y: navigationBackgroundFrame.maxY), size: CGSize(width: navigationBackgroundFrame.width, height: UIScreenPixel)))
 //                    if let image = emptyDetailView.image {
@@ -796,7 +796,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
-            case UIGestureRecognizerState.began:
+            case .began:
                 guard let layout = self.validLayout else {
                     return
                 }
@@ -857,14 +857,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
                 }
-            case UIGestureRecognizerState.changed:
+            case .changed:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {
                     let translation = recognizer.translation(in: self.view).x
                     let progress = max(0.0, min(1.0, translation / self.view.frame.width))
                     navigationTransitionCoordinator.progress = progress
 
                 }
-            case UIGestureRecognizerState.ended:
+            case .ended:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {
                     let velocity = recognizer.velocity(in: self.view).x
                     
@@ -1205,7 +1205,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     if flag {
                         controller.view.frame = strongSelf.view.bounds.offsetBy(dx: 0.0, dy: strongSelf.view.bounds.height)
                         strongSelf.view.addSubview(controller.view)
-                        UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                        UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
                             controller.view.frame = strongSelf.view.bounds
                         }, completion: { _ in
                             if let completion = completion {
@@ -1230,7 +1230,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let controller = self.presentedViewController {
             if flag {
-                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
                     controller.view.frame = self.view.bounds.offsetBy(dx: 0.0, dy: self.view.bounds.height)
                 }, completion: { _ in
                     controller.view.removeFromSuperview()
