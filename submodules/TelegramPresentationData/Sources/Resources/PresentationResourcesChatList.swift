@@ -55,21 +55,21 @@ private func generateClockMinImage(color: UIColor) -> UIImage? {
     })
 }
 
-enum RecentStatusOnlineIconState {
+public enum RecentStatusOnlineIconState {
     case regular
     case highlighted
     case pinned
     case panel
 }
 
-enum ScamIconType {
+public enum ScamIconType {
     case regular
     case outgoing
     case service
 }
 
-struct PresentationResourcesChatList {
-    static func pendingImage(_ theme: PresentationTheme) -> UIImage? {
+public struct PresentationResourcesChatList {
+    public static func pendingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListPending.rawValue, { theme in
             return generateImage(CGSize(width: 12.0, height: 14.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
@@ -84,31 +84,31 @@ struct PresentationResourcesChatList {
         })
     }
     
-    static func singleCheckImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func singleCheckImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListSingleCheck.rawValue, { theme in
             return generateStatusCheckImage(theme: theme, single: true)
         })
     }
     
-    static func doubleCheckImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func doubleCheckImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListDoubleCheck.rawValue, { theme in
             return generateStatusCheckImage(theme: theme, single: false)
         })
     }
     
-    static func clockFrameImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func clockFrameImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListClockFrame.rawValue, { theme in
             return generateClockFrameImage(color: theme.chatList.pendingIndicatorColor)
         })
     }
     
-    static func clockMinImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func clockMinImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListClockMin.rawValue, { theme in
             return generateClockMinImage(color: theme.chatList.pendingIndicatorColor)
         })
     }
     
-    static func lockTopUnlockedImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func lockTopUnlockedImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListLockTopUnlockedImage.rawValue, { theme in
             return generateImage(CGSize(width: 7.0, height: 6.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
@@ -124,7 +124,7 @@ struct PresentationResourcesChatList {
         })
     }
     
-    static func lockBottomUnlockedImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func lockBottomUnlockedImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListLockBottomUnlockedImage.rawValue, { theme in
             return generateImage(CGSize(width: 10.0, height: 8.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
@@ -135,7 +135,7 @@ struct PresentationResourcesChatList {
         })
     }
     
-    static func recentStatusOnlineIcon(_ theme: PresentationTheme, state: RecentStatusOnlineIconState) -> UIImage? {
+    public static func recentStatusOnlineIcon(_ theme: PresentationTheme, state: RecentStatusOnlineIconState) -> UIImage? {
         let key: PresentationResourceKey
         switch state {
             case .regular:
@@ -169,49 +169,49 @@ struct PresentationResourcesChatList {
         })
     }
     
-    static func badgeBackgroundActive(_ theme: PresentationTheme) -> UIImage? {
+    public static func badgeBackgroundActive(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListBadgeBackgroundActive.rawValue, { theme in
             return generateBadgeBackgroundImage(theme: theme, active: true)
         })
     }
     
-    static func badgeBackgroundInactive(_ theme: PresentationTheme) -> UIImage? {
+    public static func badgeBackgroundInactive(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListBadgeBackgroundInactive.rawValue, { theme in
             return generateBadgeBackgroundImage(theme: theme, active: false)
         })
     }
     
-    static func badgeBackgroundMention(_ theme: PresentationTheme) -> UIImage? {
+    public static func badgeBackgroundMention(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListBadgeBackgroundMention.rawValue, { theme in
             return generateBadgeBackgroundImage(theme: theme, active: true, icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/MentionBadgeIcon"), color: theme.chatList.unreadBadgeActiveTextColor))
         })
     }
     
-    static func badgeBackgroundInactiveMention(_ theme: PresentationTheme) -> UIImage? {
+    public static func badgeBackgroundInactiveMention(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListBadgeBackgroundInactiveMention.rawValue, { theme in
             return generateBadgeBackgroundImage(theme: theme, active: false, icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/MentionBadgeIcon"), color: theme.chatList.unreadBadgeInactiveTextColor))
         })
     }
     
-    static func badgeBackgroundPinned(_ theme: PresentationTheme) -> UIImage? {
+    public static func badgeBackgroundPinned(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListBadgeBackgroundPinned.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPinnedIcon"), color: theme.chatList.pinnedBadgeColor)
         })
     }
     
-    static func mutedIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func mutedIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListMutedIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerMutedIcon"), color: theme.chatList.muteIconColor)
         })
     }
     
-    static func verifiedIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func verifiedIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListVerifiedIcon.rawValue, { theme in
             return UIImage(bundleImageName: "Chat List/PeerVerifiedIcon")?.precomposed()
         })
     }
 
-    static func scamIcon(_ theme: PresentationTheme, type: ScamIconType) -> UIImage? {
+    public static func scamIcon(_ theme: PresentationTheme, type: ScamIconType) -> UIImage? {
         let key: PresentationResourceKey
         let color: UIColor
         switch type {
@@ -247,7 +247,7 @@ struct PresentationResourcesChatList {
         })
     }
     
-    static func secretIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func secretIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListSecretIcon.rawValue, { theme in
             return generateImage(CGSize(width: 9.0, height: 12.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))

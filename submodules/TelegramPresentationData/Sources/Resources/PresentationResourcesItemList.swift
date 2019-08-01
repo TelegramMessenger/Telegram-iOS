@@ -16,7 +16,7 @@ private func generateArrowImage(_ theme: PresentationTheme) -> UIImage? {
     })
 }
 
-func generateItemListCheckIcon(color: UIColor) -> UIImage? {
+public func generateItemListCheckIcon(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 12.0, height: 10.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setStrokeColor(color.cgColor)
@@ -29,7 +29,7 @@ func generateItemListCheckIcon(color: UIColor) -> UIImage? {
     })
 }
 
-func generateItemListPlusIcon(_ color: UIColor) -> UIImage? {
+public func generateItemListPlusIcon(_ color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 18.0, height: 18.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(color.cgColor)
@@ -40,42 +40,42 @@ func generateItemListPlusIcon(_ color: UIColor) -> UIImage? {
     })
 }
 
-struct PresentationResourcesItemList {
-    static func disclosureArrowImage(_ theme: PresentationTheme) -> UIImage? {
+public struct PresentationResourcesItemList {
+    public static func disclosureArrowImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListDisclosureArrow.rawValue, generateArrowImage)
     }
     
-    static func checkIconImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func checkIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListCheckIcon.rawValue, { theme in
             return generateItemListCheckIcon(color: theme.list.itemAccentColor)
         })
     }
     
-    static func secondaryCheckIconImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func secondaryCheckIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListSecondaryCheckIcon.rawValue, { theme in
             return generateItemListCheckIcon(color: theme.list.itemSecondaryTextColor)
         })
     }
     
-    static func plusIconImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func plusIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListPlusIcon.rawValue, { theme in
             return generateItemListPlusIcon(theme.list.itemAccentColor)
         })
     }
     
-    static func stickerUnreadDotImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func stickerUnreadDotImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListStickerItemUnreadDot.rawValue, { theme in
             return generateFilledCircleImage(diameter: 6.0, color: theme.list.itemAccentColor)
         })
     }
     
-    static func verifiedPeerIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func verifiedPeerIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListVerifiedPeerIcon.rawValue, { theme in
             return UIImage(bundleImageName: "Item List/PeerVerifiedIcon")?.precomposed()
         })
     }
     
-    static func itemListDeleteIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func itemListDeleteIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListDeleteIndicatorIcon.rawValue, { theme in
             guard let image = generateTintedImage(image: UIImage(bundleImageName: "Item List/RemoveItemIcon"), color: theme.list.itemDestructiveColor) else {
                 return nil
@@ -89,7 +89,7 @@ struct PresentationResourcesItemList {
         })
     }
     
-    static func itemListReorderIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func itemListReorderIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListReorderIndicatorIcon.rawValue, { theme in
             generateImage(CGSize(width: 16.0, height: 9.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
@@ -102,25 +102,25 @@ struct PresentationResourcesItemList {
         })
     }
     
-    static func addPersonIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func addPersonIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddPersonIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Contact List/AddMemberIcon"), color: theme.list.itemAccentColor)
         })
     }
     
-    static func createGroupIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func createGroupIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListCreateGroupIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Location/CreateGroupIcon"), color: theme.list.itemAccentColor)
         })
     }
     
-    static func addExceptionIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func addExceptionIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddExceptionIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Item List/AddExceptionIcon"), color: theme.list.itemAccentColor)
         })
     }
     
-    static func addPhoneIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func addPhoneIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddPhoneIcon.rawValue, { theme in
             guard let image = generateTintedImage(image: UIImage(bundleImageName: "Item List/AddItemIcon"), color: theme.list.itemAccentColor) else {
                 return nil
@@ -134,19 +134,19 @@ struct PresentationResourcesItemList {
         })
     }
     
-    static func itemListClearInputIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func itemListClearInputIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListClearInputIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.list.inputClearButtonColor)
         })
     }
     
-    static func cloudFetchIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func cloudFetchIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListCloudFetchIcon.rawValue, { theme in
             generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: theme.list.itemAccentColor)
         })
     }
     
-    static func itemListCloseIconImage(_ theme: PresentationTheme) -> UIImage? {
+    public static func itemListCloseIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListCloseIconImage.rawValue, { theme in
             return generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))

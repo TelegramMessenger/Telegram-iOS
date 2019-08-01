@@ -1,9 +1,9 @@
 import Foundation
 
-struct PresentationResources {
+public struct PresentationResources {
 }
 
-enum PresentationResourceKey: Int32 {
+public enum PresentationResourceKey: Int32 {
     case rootNavigationIndefiniteActivity
     
     case rootTabContactsIcon
