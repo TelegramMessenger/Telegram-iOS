@@ -119,10 +119,15 @@ bool LottieLoader::load(const std::string &path, bool cachePolicy)
         vCritical << "failed to open file = " << path.c_str();
         return false;
     } else {
-        std::stringstream buf;
-        buf << f.rdbuf();
+        std::string content;
 
-        LottieParser parser(const_cast<char *>(buf.str().data()),
+        std::getline(f, content, '\0') ;
+        f.close();
+
+        if (content.empty()) return false;
+
+        const char *str = content.c_str();
+        LottieParser parser(const_cast<char *>(str),
                             dirname(path).c_str());
         mModel = parser.model();
 
@@ -130,8 +135,6 @@ bool LottieLoader::load(const std::string &path, bool cachePolicy)
 
         if (cachePolicy)
             LottieModelCache::instance().add(path, mModel);
-
-        f.close();
     }
 
     return true;
