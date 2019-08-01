@@ -1,34 +1,29 @@
 import Foundation
 
-public protocol Identifiable {
-    associatedtype T: Hashable
-    var stableId: T { get }
-}
-
 public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], allUpdated: Bool = false) -> ([Int], [(Int, T, Int?)], [(Int, T, Int)]) where T: Comparable, T: Identifiable {
     var removeIndices: [Int] = []
     var insertItems: [(Int, T, Int?)] = []
     var updatedIndices: [(Int, T, Int)] = []
     
-    if !GlobalExperimentalSettings.isAppStoreBuild {
-        var existingStableIds: [T.T: T] = [:]
-        for item in leftList {
-            if let _ = existingStableIds[item.stableId] {
-                assertionFailure()
-            } else {
-                existingStableIds[item.stableId] = item
-            }
-        }
-        existingStableIds.removeAll()
-        for item in rightList {
-            if let other = existingStableIds[item.stableId] {
-                print("\(other) has the same stableId as \(item): \(item.stableId)")
-                assertionFailure()
-            } else {
-                existingStableIds[item.stableId] = item
-            }
+    #if DEBUG
+    var existingStableIds: [T.T: T] = [:]
+    for item in leftList {
+        if let _ = existingStableIds[item.stableId] {
+            assertionFailure()
+        } else {
+            existingStableIds[item.stableId] = item
         }
     }
+    existingStableIds.removeAll()
+    for item in rightList {
+        if let other = existingStableIds[item.stableId] {
+            print("\(other) has the same stableId as \(item): \(item.stableId)")
+            assertionFailure()
+        } else {
+            existingStableIds[item.stableId] = item
+        }
+    }
+    #endif
     
     var currentList = leftList
     
@@ -176,11 +171,11 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], allUpd
         currentList[index] = item
     }
     
-    if GlobalExperimentalSettings.isAppStoreBuild {
-        assert(currentList == rightList, "currentList == rightList")
-    } else {
-        precondition(currentList == rightList, "currentList == rightList")
-    }
+    #if DEBUG
+    precondition(currentList == rightList, "currentList == rightList")
+    #else
+    assert(currentList == rightList, "currentList == rightList")
+    #endif
     
     return (removeIndices, insertItems, updatedIndices)
 }
