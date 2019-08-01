@@ -5,23 +5,28 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
-struct ItemListMultilineInputItemTextLimit {
-    let value: Int
-    let display: Bool
+public struct ItemListMultilineInputItemTextLimit {
+    public let value: Int
+    public let display: Bool
+    
+    public init(value: Int, display: Bool) {
+        self.value = value
+        self.display = display
+    }
 }
 
-class ItemListMultilineInputItem: ListViewItem, ItemListItem {
+public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
     let placeholder: String
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let action: () -> Void
     let textUpdated: (String) -> Void
-    let tag: ItemListItemTag?
+    public let tag: ItemListItemTag?
     let maxLength: ItemListMultilineInputItemTextLimit?
     
-    init(theme: PresentationTheme, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, textUpdated: @escaping (String) -> Void, tag: ItemListItemTag? = nil, action: @escaping () -> Void) {
+    public init(theme: PresentationTheme, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, textUpdated: @escaping (String) -> Void, tag: ItemListItemTag? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.text = text
         self.placeholder = placeholder
@@ -33,7 +38,7 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
         self.action = action
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListMultilineInputItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -49,7 +54,7 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListMultilineInputItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -69,7 +74,7 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelegate, ItemListItemNode, ItemListItemFocusableNode {
+public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelegate, ItemListItemNode, ItemListItemFocusableNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -83,11 +88,11 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
     private var item: ItemListMultilineInputItem?
     private var layoutParams: ListViewItemLayoutParams?
     
-    var tag: ItemListItemTag? {
+    public var tag: ItemListItemTag? {
         return self.item?.tag
     }
     
-    init() {
+    public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         
@@ -112,20 +117,20 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         var textColor: UIColor = .black
         if let item = self.item {
             textColor = item.theme.list.itemPrimaryTextColor
         }
-        self.textNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
+        self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: textColor]
         self.textNode.clipsToBounds = true
         self.textNode.delegate = self
         self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
     }
     
-    func asyncLayout() -> (_ item: ItemListMultilineInputItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListMultilineInputItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.measureTextNode)
         let makeLimitTextLayout = TextNode.asyncLayout(self.limitTextNode)
         
@@ -202,7 +207,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         
                         if strongSelf.isNodeLoaded {
-                            strongSelf.textNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: item.theme.list.itemPrimaryTextColor]
+                            strongSelf.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: item.theme.list.itemPrimaryTextColor]
                         }
                     }
                     
@@ -264,15 +269,15 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
+    override public func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
         super.animateFrameTransition(progress, currentValue)
         
         guard let params = self.layoutParams else {
@@ -293,7 +298,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         self.textClippingNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textTopInset), size: CGSize(width: max(0.0, params.width - leftInset - params.rightInset), height: max(0.0, contentSize.height - textTopInset - textBottomInset)))
     }
     
-    func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
+    public func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         if let item = self.item {
             if let text = self.textNode.attributedText {
                 let updatedText = text.string
@@ -308,7 +313,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         }
     }
     
-    func editableTextNodeShouldPaste(_ editableTextNode: ASEditableTextNode) -> Bool {
+    public func editableTextNodeShouldPaste(_ editableTextNode: ASEditableTextNode) -> Bool {
         if let _ = self.item {
             let text: String? = UIPasteboard.general.string
             if let _ = text {
@@ -318,13 +323,13 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         return false
     }
     
-    func focus() {
+    public func focus() {
         if !self.textNode.textView.isFirstResponder {
             self.textNode.textView.becomeFirstResponder()
         }
     }
     
-    func animateError() {
+    public func animateError() {
         self.textNode.layer.addShakeAnimation()
     }
 }

@@ -1,8 +1,8 @@
 import Foundation
 import UIKit
 
-final class ItemListControllerSegmentedTitleView: UIView {
-    var segments: [String] {
+public final class ItemListControllerSegmentedTitleView: UIView {
+    public var segments: [String] {
         didSet {
             if self.segments != oldValue {
                 self.control.removeAllSegments()
@@ -16,7 +16,7 @@ final class ItemListControllerSegmentedTitleView: UIView {
         }
     }
     
-    var index: Int {
+    public var index: Int {
         didSet {
             self.control.selectedSegmentIndex = self.index
         }
@@ -24,15 +24,15 @@ final class ItemListControllerSegmentedTitleView: UIView {
     
     private let control: UISegmentedControl
     
-    var indexUpdated: ((Int) -> Void)?
+    public var indexUpdated: ((Int) -> Void)?
     
-    var color: UIColor {
+    public var color: UIColor {
         didSet {
             self.control.tintColor = self.color
         }
     }
     
-    init(segments: [String], index: Int, color: UIColor) {
+    public init(segments: [String], index: Int, color: UIColor) {
         self.segments = segments
         self.index = index
         self.color = color
@@ -47,11 +47,11 @@ final class ItemListControllerSegmentedTitleView: UIView {
         self.control.addTarget(self, action: #selector(indexChanged), for: .valueChanged)
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func layoutSubviews() {
+    override public func layoutSubviews() {
         super.layoutSubviews()
         
         let size = self.bounds.size
@@ -61,7 +61,7 @@ final class ItemListControllerSegmentedTitleView: UIView {
         self.control.frame = CGRect(origin: CGPoint(x: floor((size.width - controlSize.width) / 2.0), y: floor((size.height - controlSize.height) / 2.0)), size: controlSize)
     }
     
-    @objc func indexChanged() {
+    @objc private func indexChanged() {
         self.indexUpdated?(self.control.selectedSegmentIndex)
     }
 }

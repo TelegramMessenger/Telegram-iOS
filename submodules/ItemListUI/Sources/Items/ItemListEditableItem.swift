@@ -3,37 +3,37 @@ import UIKit
 import Display
 import AsyncDisplayKit
 
-final class ItemListRevealOptionsGestureRecognizer: UIPanGestureRecognizer {
-    var validatedGesture = false
-    var firstLocation: CGPoint = CGPoint()
+public final class ItemListRevealOptionsGestureRecognizer: UIPanGestureRecognizer {
+    public var validatedGesture = false
+    public var firstLocation: CGPoint = CGPoint()
     
-    var allowAnyDirection = false
-    var lastVelocity: CGPoint = CGPoint()
+    public var allowAnyDirection = false
+    public var lastVelocity: CGPoint = CGPoint()
     
-    override init(target: Any?, action: Selector?) {
+    override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
         self.maximumNumberOfTouches = 1
     }
     
-    override func reset() {
+    override public func reset() {
         super.reset()
         
         self.validatedGesture = false
     }
     
-    func becomeCancelled() {
+    public func becomeCancelled() {
         self.state = .cancelled
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
         let touch = touches.first!
         self.firstLocation = touch.location(in: self.view)
     }
     
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         let location = touches.first!.location(in: self.view)
         let translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
         
@@ -54,7 +54,7 @@ final class ItemListRevealOptionsGestureRecognizer: UIPanGestureRecognizer {
     }
 }
 
-class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelegate {
+open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelegate {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     private var leftRevealNode: ItemListRevealOptionsNode?
@@ -62,7 +62,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
     private var revealOptions: (left: [ItemListRevealOption], right: [ItemListRevealOption]) = ([], [])
     
     private var initialRevealOffset: CGFloat = 0.0
-    private(set) var revealOffset: CGFloat = 0.0
+    public private(set) var revealOffset: CGFloat = 0.0
     
     private var recognizer: ItemListRevealOptionsGestureRecognizer?
     private var tapRecognizer: UITapGestureRecognizer?
@@ -70,19 +70,19 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
     
     private var allowAnyDirection = false
     
-    var isDisplayingRevealedOptions: Bool {
+    public var isDisplayingRevealedOptions: Bool {
         return !self.revealOffset.isZero
     }
     
-    override var canBeSelected: Bool {
+    override open var canBeSelected: Bool {
         return !self.isDisplayingRevealedOptions
     }
     
-    override init(layerBacked: Bool, dynamicBounce: Bool, rotated: Bool, seeThrough: Bool) {
+    override public init(layerBacked: Bool, dynamicBounce: Bool, rotated: Bool, seeThrough: Bool) {
         super.init(layerBacked: layerBacked, dynamicBounce: dynamicBounce, rotated: rotated, seeThrough: seeThrough)
     }
     
-    override func didLoad() {
+    override open func didLoad() {
         super.didLoad()
         
         let recognizer = ItemListRevealOptionsGestureRecognizer(target: self, action: #selector(self.revealGesture(_:)))
@@ -98,7 +98,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         self.view.disablesInteractiveTransitionGestureRecognizer = self.allowAnyDirection
     }
     
-    func setRevealOptions(_ options: (left: [ItemListRevealOption], right: [ItemListRevealOption])) {
+    open func setRevealOptions(_ options: (left: [ItemListRevealOption], right: [ItemListRevealOption])) {
         if self.revealOptions == options {
             return
         }
@@ -143,7 +143,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         }
     }
     
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+    override open func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if let recognizer = self.recognizer, gestureRecognizer == self.tapRecognizer {
             return abs(self.revealOffset) > 0.0 && !recognizer.validatedGesture
         } else {
@@ -151,7 +151,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         }
     }
     
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    open func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         if let recognizer = self.recognizer, otherGestureRecognizer == recognizer {
             return true
         } else {
@@ -159,14 +159,14 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         }
     }
     
-    @objc func revealTapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc private func revealTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.updateRevealOffsetInternal(offset: 0.0, transition: .animated(duration: 0.3, curve: .spring))
             self.revealOptionsInteractivelyClosed()
         }
     }
 
-    @objc func revealGesture(_ recognizer: ItemListRevealOptionsGestureRecognizer) {
+    @objc private func revealGesture(_ recognizer: ItemListRevealOptionsGestureRecognizer) {
         guard let (size, _, _) = self.validLayout else {
             return
         }
@@ -336,7 +336,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         }
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         self.validLayout = (size, leftInset, rightInset)
         
         if let leftRevealNode = self.leftRevealNode {
@@ -352,7 +352,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         }
     }
     
-    func updateRevealOffsetInternal(offset: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
+    open func updateRevealOffsetInternal(offset: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
         self.revealOffset = offset
         guard let (size, leftInset, rightInset) = self.validLayout else {
             return
@@ -425,19 +425,19 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         self.updateRevealOffset(offset: offset, transition: transition)
     }
     
-    func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+    open func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         
     }
     
-    func revealOptionsInteractivelyOpened() {
+    open func revealOptionsInteractivelyOpened() {
         
     }
     
-    func revealOptionsInteractivelyClosed() {
+    open func revealOptionsInteractivelyClosed() {
         
     }
     
-    func setRevealOptionsOpened(_ value: Bool, animated: Bool) {
+    open func setRevealOptionsOpened(_ value: Bool, animated: Bool) {
         if value != !self.revealOffset.isZero {
             if !self.revealOffset.isZero {
                 self.recognizer?.becomeCancelled()
@@ -463,7 +463,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         }
     }
     
-    func animateRevealOptionsFill(completion: (() -> Void)? = nil) {
+    open func animateRevealOptionsFill(completion: (() -> Void)? = nil) {
         if let validLayout = self.validLayout {
             self.layer.allowsGroupOpacity = true
             self.updateRevealOffsetInternal(offset: -validLayout.0.width - 74.0, transition: .animated(duration: 0.2, curve: .spring), completion: {
@@ -473,14 +473,14 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         }
     }
     
-    func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+    open func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
     }
     
-    override var preventsTouchesToOtherItems: Bool {
+    override open var preventsTouchesToOtherItems: Bool {
         return self.isDisplayingRevealedOptions
     }
     
-    override func touchesToOtherItemsPrevented() {
+    override open func touchesToOtherItemsPrevented() {
         if self.isDisplayingRevealedOptions {
             self.setRevealOptionsOpened(false, animated: true)
         }

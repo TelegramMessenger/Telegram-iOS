@@ -4,11 +4,11 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
-final class ItemListEditableControlNode: ASDisplayNode {
-    var tapped: (() -> Void)?
+public final class ItemListEditableControlNode: ASDisplayNode {
+    public var tapped: (() -> Void)?
     private let iconNode: ASImageNode
     
-    override init() {
+    override public init() {
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
         
@@ -17,13 +17,13 @@ final class ItemListEditableControlNode: ASDisplayNode {
         self.addSubnode(self.iconNode)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    static func asyncLayout(_ node: ItemListEditableControlNode?) -> (_ height: CGFloat, _ theme: PresentationTheme, _ hidden: Bool) -> (CGSize, () -> ItemListEditableControlNode) {
+    public static func asyncLayout(_ node: ItemListEditableControlNode?) -> (_ height: CGFloat, _ theme: PresentationTheme, _ hidden: Bool) -> (CGSize, () -> ItemListEditableControlNode) {
         return { height, theme, hidden in
             let image = PresentationResourcesItemList.itemListDeleteIndicatorIcon(theme)
             
@@ -45,7 +45,7 @@ final class ItemListEditableControlNode: ASDisplayNode {
         }
     }
     
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.tapped?()
         }

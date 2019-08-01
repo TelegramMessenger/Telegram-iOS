@@ -3,19 +3,20 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ActivityIndicator
 
-final class ItemListLoadingIndicatorEmptyStateItem: ItemListControllerEmptyStateItem {
+public final class ItemListLoadingIndicatorEmptyStateItem: ItemListControllerEmptyStateItem {
     let theme: PresentationTheme
     
-    init(theme: PresentationTheme) {
+    public init(theme: PresentationTheme) {
         self.theme = theme
     }
     
-    func isEqual(to: ItemListControllerEmptyStateItem) -> Bool {
+    public func isEqual(to: ItemListControllerEmptyStateItem) -> Bool {
         return to is ItemListLoadingIndicatorEmptyStateItem
     }
     
-    func node(current: ItemListControllerEmptyStateItemNode?) -> ItemListControllerEmptyStateItemNode {
+    public func node(current: ItemListControllerEmptyStateItemNode?) -> ItemListControllerEmptyStateItemNode {
         if let current = current as? ItemListLoadingIndicatorEmptyStateItemNode {
             current.theme = self.theme
             return current
@@ -25,8 +26,8 @@ final class ItemListLoadingIndicatorEmptyStateItem: ItemListControllerEmptyState
     }
 }
 
-final class ItemListLoadingIndicatorEmptyStateItemNode: ItemListControllerEmptyStateItemNode {
-    var theme: PresentationTheme {
+public final class ItemListLoadingIndicatorEmptyStateItemNode: ItemListControllerEmptyStateItemNode {
+    public var theme: PresentationTheme {
         didSet {
             self.indicator.type = .custom(self.theme.list.itemAccentColor, 40.0, 2.0, false)
         }
@@ -35,7 +36,7 @@ final class ItemListLoadingIndicatorEmptyStateItemNode: ItemListControllerEmptyS
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    init(theme: PresentationTheme) {
+    public init(theme: PresentationTheme) {
         self.theme = theme
         self.indicator = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 22.0, 2.0, false))
         
@@ -44,7 +45,7 @@ final class ItemListLoadingIndicatorEmptyStateItemNode: ItemListControllerEmptyS
         self.addSubnode(self.indicator)
     }
     
-    override func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.statusBar])

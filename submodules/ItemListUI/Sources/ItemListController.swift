@@ -4,101 +4,70 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
+import ProgressNavigationButtonNode
 
-enum ItemListNavigationButtonStyle {
+public enum ItemListNavigationButtonStyle {
     case regular
     case bold
     case activity
     
-    var barButtonItemStyle: UIBarButtonItemStyle {
+    public var barButtonItemStyle: UIBarButtonItem.Style {
         switch self {
-            case .regular, .activity:
-                return .plain
-            case .bold:
-                return .done
+        case .regular, .activity:
+            return .plain
+        case .bold:
+            return .done
         }
     }
 }
 
-enum ItemListNavigationButtonContentIcon {
+public enum ItemListNavigationButtonContentIcon {
     case search
     case add
 }
 
-enum ItemListNavigationButtonContent: Equatable {
+public enum ItemListNavigationButtonContent: Equatable {
     case none
     case text(String)
     case icon(ItemListNavigationButtonContentIcon)
+}
+
+public struct ItemListNavigationButton {
+    public let content: ItemListNavigationButtonContent
+    public let style: ItemListNavigationButtonStyle
+    public let enabled: Bool
+    public let action: () -> Void
     
-    static func ==(lhs: ItemListNavigationButtonContent, rhs: ItemListNavigationButtonContent) -> Bool {
-        switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .text(value):
-                if case .text(value) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .icon(value):
-                if case .icon(value) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
+    public init(content: ItemListNavigationButtonContent, style: ItemListNavigationButtonStyle, enabled: Bool, action: @escaping () -> Void) {
+        self.content = content
+        self.style = style
+        self.enabled = enabled
+        self.action = action
     }
 }
 
-struct ItemListNavigationButton {
-    let content: ItemListNavigationButtonContent
-    let style: ItemListNavigationButtonStyle
-    let enabled: Bool
-    let action: () -> Void
-}
-
-struct ItemListBackButton: Equatable {
-    let title: String
+public struct ItemListBackButton: Equatable {
+    public let title: String
     
-    static func ==(lhs: ItemListBackButton, rhs: ItemListBackButton) -> Bool {
-        return lhs.title == rhs.title
+    public init(title: String) {
+        self.title = title
     }
 }
 
-enum ItemListControllerTitle: Equatable {
+public enum ItemListControllerTitle: Equatable {
     case text(String)
     case sectionControl([String], Int)
-    
-    static func ==(lhs: ItemListControllerTitle, rhs: ItemListControllerTitle) -> Bool {
-        switch lhs {
-            case let .text(text):
-                if case .text(text) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .sectionControl(lhsSection, lhsIndex):
-                if case let .sectionControl(rhsSection, rhsIndex) = rhs, lhsSection == rhsSection, lhsIndex == rhsIndex {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
-final class ItemListControllerTabBarItem: Equatable {
+public final class ItemListControllerTabBarItem: Equatable {
     let title: String
     let image: UIImage?
     let selectedImage: UIImage?
     let tintImages: Bool
     let badgeValue: String?
     
-    init(title: String, image: UIImage?, selectedImage: UIImage?, tintImages: Bool = true, badgeValue: String? = nil) {
+    public init(title: String, image: UIImage?, selectedImage: UIImage?, tintImages: Bool = true, badgeValue: String? = nil) {
         self.title = title
         self.image = image
         self.selectedImage = selectedImage
@@ -106,12 +75,12 @@ final class ItemListControllerTabBarItem: Equatable {
         self.badgeValue = badgeValue
     }
     
-    static func ==(lhs: ItemListControllerTabBarItem, rhs: ItemListControllerTabBarItem) -> Bool {
+    public static func ==(lhs: ItemListControllerTabBarItem, rhs: ItemListControllerTabBarItem) -> Bool {
         return lhs.title == rhs.title && lhs.image === rhs.image && lhs.selectedImage === rhs.selectedImage && lhs.tintImages == rhs.tintImages && lhs.badgeValue == rhs.badgeValue
     }
 }
 
-struct ItemListControllerState {
+public struct ItemListControllerState {
     let theme: PresentationTheme
     let title: ItemListControllerTitle
     let leftNavigationButton: ItemListNavigationButton?
@@ -121,7 +90,7 @@ struct ItemListControllerState {
     let tabBarItem: ItemListControllerTabBarItem?
     let animateChanges: Bool
     
-    init(theme: PresentationTheme, title: ItemListControllerTitle, leftNavigationButton: ItemListNavigationButton?, rightNavigationButton: ItemListNavigationButton?, secondaryRightNavigationButton: ItemListNavigationButton? = nil, backNavigationButton: ItemListBackButton?, tabBarItem: ItemListControllerTabBarItem? = nil, animateChanges: Bool = true) {
+    public init(theme: PresentationTheme, title: ItemListControllerTitle, leftNavigationButton: ItemListNavigationButton?, rightNavigationButton: ItemListNavigationButton?, secondaryRightNavigationButton: ItemListNavigationButton? = nil, backNavigationButton: ItemListBackButton?, tabBarItem: ItemListControllerTabBarItem? = nil, animateChanges: Bool = true) {
         self.theme = theme
         self.title = title
         self.leftNavigationButton = leftNavigationButton
@@ -133,7 +102,7 @@ struct ItemListControllerState {
     }
 }
 
-class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutResponder, PresentableController {
+open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutResponder, PresentableController {
     private let state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>
     
     private var leftNavigationButtonTitleAndStyle: (ItemListNavigationButtonContent, ItemListNavigationButtonStyle)?
@@ -149,20 +118,20 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
     private var validLayout: ContainerViewLayout?
     
     private var didPlayPresentationAnimation = false
-    private(set) var didAppearOnce = false
-    var didAppear: ((Bool) -> Void)?
+    public private(set) var didAppearOnce = false
+    public var didAppear: ((Bool) -> Void)?
     private var isDismissed = false
     
-    var titleControlValueChanged: ((Int) -> Void)?
+    public var titleControlValueChanged: ((Int) -> Void)?
     
     private var tabBarItemDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
-    override var ready: Promise<Bool> {
+    override open var ready: Promise<Bool> {
         return self._ready
     }
     
-    var experimentalSnapScrollToItem: Bool = false {
+    public var experimentalSnapScrollToItem: Bool = false {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode<Entry>).listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
@@ -170,7 +139,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
-    var enableInteractiveDismiss = false {
+    public var enableInteractiveDismiss = false {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode<Entry>).enableInteractiveDismiss = self.enableInteractiveDismiss
@@ -178,7 +147,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
-    var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)? {
+    public var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)? {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode<Entry>).visibleEntriesUpdated = self.visibleEntriesUpdated
@@ -186,7 +155,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
-    var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)? {
+    public var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)? {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode<Entry>).visibleBottomContentOffsetChanged = self.visibleBottomContentOffsetChanged
@@ -194,14 +163,15 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
-    var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)? {
+    public var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)? {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode<Entry>).contentOffsetChanged = self.contentOffsetChanged
             }
         }
     }
-    var contentScrollingEnded: ((ListView) -> Bool)? {
+    
+    public var contentScrollingEnded: ((ListView) -> Bool)? {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode<Entry>).contentScrollingEnded = self.contentScrollingEnded
@@ -209,7 +179,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
-    var searchActivated: ((Bool) -> Void)? {
+    public var searchActivated: ((Bool) -> Void)? {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode<Entry>).searchActivated = self.searchActivated
@@ -217,9 +187,9 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
-    var willScrollToTop: (() -> Void)?
+    public var willScrollToTop: (() -> Void)?
     
-    var reorderEntry: ((Int, Int, [Entry]) -> Void)? {
+    public var reorderEntry: ((Int, Int, [Entry]) -> Void)? {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode<Entry>).reorderEntry = self.reorderEntry
@@ -227,22 +197,22 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
-    var previewItemWithTag: ((ItemListItemTag) -> UIViewController?)?
-    var commitPreview: ((UIViewController) -> Void)?
+    public var previewItemWithTag: ((ItemListItemTag) -> UIViewController?)?
+    public var commitPreview: ((UIViewController) -> Void)?
     
-    var willDisappear: ((Bool) -> Void)?
-    var didDisappear: ((Bool) -> Void)?
+    public var willDisappear: ((Bool) -> Void)?
+    public var didDisappear: ((Bool) -> Void)?
     
-    convenience init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
-        self.init(sharedContext: context.sharedContext, state: state, tabBarItem: tabBarItem)
+    convenience public init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
+        self.init(sharedContext: context.genericSharedContext, state: state, tabBarItem: tabBarItem)
     }
     
-    convenience init(sharedContext: SharedAccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
+    convenience public init(sharedContext: SharedAccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
         let presentationData = sharedContext.currentPresentationData.with { $0 }
         self.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: sharedContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: tabBarItem)
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
         self.state = state
         
         self.theme = theme
@@ -276,7 +246,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -284,7 +254,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         self.tabBarItemDisposable?.dispose()
     }
     
-    override func loadDisplayNode() {
+    override open func loadDisplayNode() {
         let previousControllerState = Atomic<ItemListControllerState?>(value: nil)
         let nodeState = self.state
         |> deliverOnMainQueue
@@ -458,7 +428,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         self._ready.set((self.displayNode as! ItemListControllerNode<Entry>).ready)
     }
     
-    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
@@ -478,13 +448,13 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         self.navigationButtonActions.secondaryRight?()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override open func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.viewDidAppear(completion: {})
     }
     
-    func viewDidAppear(completion: @escaping () -> Void) {
+    public func viewDidAppear(completion: @escaping () -> Void) {
         (self.displayNode as! ItemListControllerNode<Entry>).listNode.preloadPages = true
         
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
@@ -506,26 +476,26 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         self.didAppear?(firstTime)
     }
     
-    override func viewWillDisappear(_ animated: Bool) {
+    override open func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
         self.willDisappear?(animated)
     }
     
-    override func viewDidDisappear(_ animated: Bool) {
+    override open func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
         self.didDisappear?(animated)
     }
     
-    override func dismiss(completion: (() -> Void)? = nil) {
+    override open func dismiss(completion: (() -> Void)? = nil) {
         if !self.isDismissed {
             self.isDismissed = true
             (self.displayNode as! ItemListControllerNode<Entry>).animateOut(completion: completion)
         }
     }
     
-    func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {
+    public func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {
         var result: CGRect?
         (self.displayNode as! ItemListControllerNode<Entry>).listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ListViewItemNode {
@@ -537,7 +507,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         return result
     }
     
-    func forEachItemNode(_ f: (ListViewItemNode) -> Void) {
+    public func forEachItemNode(_ f: (ListViewItemNode) -> Void) {
         (self.displayNode as! ItemListControllerNode<Entry>).listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ListViewItemNode {
                 f(itemNode)
@@ -545,15 +515,15 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
-    func ensureItemNodeVisible(_ itemNode: ListViewItemNode) {
+    public func ensureItemNodeVisible(_ itemNode: ListViewItemNode) {
         (self.displayNode as! ItemListControllerNode<Entry>).listNode.ensureItemNodeVisible(itemNode)
     }
     
-    func afterLayout(_ f: @escaping () -> Void) {
+    public func afterLayout(_ f: @escaping () -> Void) {
         (self.displayNode as! ItemListControllerNode<Entry>).afterLayout(f)
     }
     
-    func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
+    public func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
         guard let layout = self.validLayout else {
             return nil
         }
@@ -590,16 +560,16 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutR
         }
     }
     
-    func clearItemNodesHighlight(animated: Bool = false) {
+    public func clearItemNodesHighlight(animated: Bool = false) {
         (self.displayNode as! ItemListControllerNode<Entry>).listNode.clearHighlightAnimated(animated)
     }
     
-    func previewingCommit(_ viewControllerToCommit: UIViewController) {
+    public func previewingCommit(_ viewControllerToCommit: UIViewController) {
         self.commitPreview?(viewControllerToCommit)
     }
     
     public var keyShortcuts: [KeyShortcut] {
-        return [KeyShortcut(input: UIKeyInputEscape, action: { [weak self] in
+        return [KeyShortcut(input: UIKeyCommand.inputEscape, action: { [weak self] in
             if !(self?.navigationController?.topViewController is TabBarController) {
                 _ = self?.navigationBar?.executeBack()
             }

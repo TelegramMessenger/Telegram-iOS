@@ -5,31 +5,31 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
-enum ItemListActionKind {
+public enum ItemListActionKind {
     case generic
     case destructive
     case neutral
     case disabled
 }
 
-enum ItemListActionAlignment {
+public enum ItemListActionAlignment {
     case natural
     case center
 }
 
-class ItemListActionItem: ListViewItem, ItemListItem {
+public class ItemListActionItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
     let kind: ItemListActionKind
     let alignment: ItemListActionAlignment
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let style: ItemListStyle
-    let action: () -> Void
+    public let action: () -> Void
     let longTapAction: (() -> Void)?
     let clearHighlightAutomatically: Bool
-    let tag: Any?
+    public let tag: Any?
     
-    init(theme: PresentationTheme, title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, longTapAction: (() -> Void)? = nil, clearHighlightAutomatically: Bool = true, tag: Any? = nil) {
+    public init(theme: PresentationTheme, title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, longTapAction: (() -> Void)? = nil, clearHighlightAutomatically: Bool = true, tag: Any? = nil) {
         self.theme = theme
         self.title = title
         self.kind = kind
@@ -42,7 +42,7 @@ class ItemListActionItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListActionItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -58,7 +58,7 @@ class ItemListActionItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListActionItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -75,9 +75,9 @@ class ItemListActionItem: ListViewItem, ItemListItem {
         }
     }
     
-    var selectable: Bool = true
+    public var selectable: Bool = true
     
-    func selected(listView: ListView){
+    public func selected(listView: ListView){
         if self.clearHighlightAutomatically {
             listView.clearHighlightAnimated(true)
         }
@@ -87,7 +87,7 @@ class ItemListActionItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
+public class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -99,11 +99,11 @@ class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
     
     private var item: ItemListActionItem?
     
-    var tag: ItemListItemTag? {
+    public var tag: ItemListItemTag? {
         return self.item?.tag as? ItemListItemTag
     }
     
-    init() {
+    public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
@@ -131,7 +131,7 @@ class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
         self.addSubnode(self.activateArea)
     }
     
-    func asyncLayout() -> (_ item: ItemListActionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListActionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         let currentItem = self.item
@@ -185,10 +185,10 @@ class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     strongSelf.activateArea.accessibilityLabel = item.title
                     
-                    var accessibilityTraits: UIAccessibilityTraits = UIAccessibilityTraitButton
+                    var accessibilityTraits: UIAccessibilityTraits = .button
                     switch item.kind {
                         case .disabled:
-                            accessibilityTraits |= UIAccessibilityTraitNotEnabled
+                            accessibilityTraits.insert(.notEnabled)
                         default:
                             break
                     }
@@ -262,7 +262,7 @@ class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted && self.item?.kind != ItemListActionKind.disabled {
@@ -300,19 +300,19 @@ class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    override func longTapped() {
+    override public func longTapped() {
         self.item?.longTapAction?()
     }
     
-    override var canBeLongTapped: Bool {
+    override public var canBeLongTapped: Bool {
         return self.item?.longTapAction != nil
     }
 }

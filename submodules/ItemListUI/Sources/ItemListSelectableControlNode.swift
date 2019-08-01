@@ -2,11 +2,12 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import CheckNode
 
-final class ItemListSelectableControlNode: ASDisplayNode {
+public final class ItemListSelectableControlNode: ASDisplayNode {
     private let checkNode: CheckNode
     
-    init(strokeColor: UIColor, fillColor: UIColor, foregroundColor: UIColor) {
+    public init(strokeColor: UIColor, fillColor: UIColor, foregroundColor: UIColor) {
         self.checkNode = CheckNode(strokeColor: strokeColor, fillColor: fillColor, foregroundColor: foregroundColor, style: .plain)
         self.checkNode.isUserInteractionEnabled = false
         
@@ -15,7 +16,7 @@ final class ItemListSelectableControlNode: ASDisplayNode {
         self.addSubnode(self.checkNode)
     }
     
-    static func asyncLayout(_ node: ItemListSelectableControlNode?) -> (_ strokeColor: UIColor, _ fillColor: UIColor, _ foregroundColor: UIColor, _ selected: Bool, _ compact: Bool) -> (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode) {
+    public static func asyncLayout(_ node: ItemListSelectableControlNode?) -> (_ strokeColor: UIColor, _ fillColor: UIColor, _ foregroundColor: UIColor, _ selected: Bool, _ compact: Bool) -> (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode) {
         return { strokeColor, fillColor, foregroundColor, selected, compact in
             let resultNode: ItemListSelectableControlNode
             if let node = node {

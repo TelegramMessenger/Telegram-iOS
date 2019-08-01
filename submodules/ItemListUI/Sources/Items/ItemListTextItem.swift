@@ -4,25 +4,26 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import TextFormat
 
-enum ItemListTextItemText {
+public enum ItemListTextItemText {
     case plain(String)
     case markdown(String)
 }
 
-enum ItemListTextItemLinkAction {
+public enum ItemListTextItemLinkAction {
     case tap(String)
 }
 
-class ItemListTextItem: ListViewItem, ItemListItem {
+public class ItemListTextItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: ItemListTextItemText
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     let style: ItemListStyle
-    let isAlwaysPlain: Bool = true
+    public let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks) {
+    public init(theme: PresentationTheme, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks) {
         self.theme = theme
         self.text = text
         self.sectionId = sectionId
@@ -30,7 +31,7 @@ class ItemListTextItem: ListViewItem, ItemListItem {
         self.style = style
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListTextItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -46,7 +47,7 @@ class ItemListTextItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             guard let nodeValue = node() as? ItemListTextItemNode else {
                 assertionFailure()
@@ -70,20 +71,20 @@ class ItemListTextItem: ListViewItem, ItemListItem {
 private let titleFont = Font.regular(14.0)
 private let titleBoldFont = Font.semibold(14.0)
 
-class ItemListTextItemNode: ListViewItemNode {
+public class ItemListTextItemNode: ListViewItemNode {
     private let titleNode: TextNode
     private let activateArea: AccessibilityAreaNode
     
     private var item: ItemListTextItem?
     
-    init() {
+    public init() {
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.activateArea = AccessibilityAreaNode()
-        self.activateArea.accessibilityTraits = UIAccessibilityTraitStaticText
+        self.activateArea.accessibilityTraits = .staticText
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -91,7 +92,7 @@ class ItemListTextItemNode: ListViewItemNode {
         self.addSubnode(self.activateArea)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
@@ -101,7 +102,7 @@ class ItemListTextItemNode: ListViewItemNode {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    func asyncLayout() -> (_ item: ItemListTextItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListTextItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, params, neighbors in
@@ -143,15 +144,15 @@ class ItemListTextItemNode: ListViewItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
             case .ended:
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
@@ -160,7 +161,7 @@ class ItemListTextItemNode: ListViewItemNode {
                             let titleFrame = self.titleNode.frame
                             if let item = self.item, titleFrame.contains(location) {
                                 if let (_, attributes) = self.titleNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
-                                    if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+                                    if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                                         item.linkAction?(.tap(url))
                                     }
                                 }

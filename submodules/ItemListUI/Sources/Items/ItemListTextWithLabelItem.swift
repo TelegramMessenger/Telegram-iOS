@@ -4,31 +4,33 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import TextFormat
+import AccountContext
 
-enum ItemListTextWithLabelItemTextColor {
+public enum ItemListTextWithLabelItemTextColor {
     case primary
     case accent
     case highlighted
 }
 
-final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
+public final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
-    let label: String
-    let text: String
+    public let label: String
+    public let text: String
     let style: ItemListStyle
     let labelColor: ItemListTextWithLabelItemTextColor
     let textColor: ItemListTextWithLabelItemTextColor
     let enabledEntityTypes: EnabledEntityTypes
     let multiline: Bool
     let selected: Bool?
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     let longTapAction: (() -> Void)?
     let linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
-    let tag: Any?
+    public let tag: Any?
     
-    init(theme: PresentationTheme, label: String, text: String, style: ItemListStyle = .plain, labelColor: ItemListTextWithLabelItemTextColor = .primary, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntityTypes: EnabledEntityTypes, multiline: Bool, selected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+    public init(theme: PresentationTheme, label: String, text: String, style: ItemListStyle = .plain, labelColor: ItemListTextWithLabelItemTextColor = .primary, textColor: ItemListTextWithLabelItemTextColor = .primary, enabledEntityTypes: EnabledEntityTypes, multiline: Bool, selected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.label = label
         self.text = text
@@ -45,7 +47,7 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListTextWithLabelItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -61,7 +63,7 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListTextWithLabelItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -78,11 +80,11 @@ final class ItemListTextWithLabelItem: ListViewItem, ItemListItem {
         }
     }
     
-    var selectable: Bool {
+    public var selectable: Bool {
         return self.action != nil
     }
     
-    func selected(listView: ListView) {
+    public func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
         self.action?()
     }
@@ -95,7 +97,7 @@ private let textItalicFont = Font.italic(17.0)
 private let textBoldItalicFont = Font.semiboldItalic(17.0)
 private let textFixedFont = Font.regular(17.0)
 
-class ItemListTextWithLabelItemNode: ListViewItemNode {
+public class ItemListTextWithLabelItemNode: ListViewItemNode {
     let labelNode: TextNode
     let textNode: TextNode
     
@@ -106,13 +108,13 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
     private var linkHighlightingNode: LinkHighlightingNode?
     private var selectionNode: ItemListSelectableControlNode?
     
-    var item: ItemListTextWithLabelItem?
+    public var item: ItemListTextWithLabelItem?
     
-    override var canBeLongTapped: Bool {
+    override public var canBeLongTapped: Bool {
         return true
     }
     
-    init() {
+    public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         
@@ -143,7 +145,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
         self.addSubnode(self.textNode)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
@@ -161,7 +163,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    func asyncLayout() -> (_ item: ItemListTextWithLabelItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    public func asyncLayout() -> (_ item: ItemListTextWithLabelItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
@@ -323,7 +325,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted && self.linkItemAtPoint(point) == nil && self.selectionNode == nil {
@@ -361,7 +363,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
         }
     }
     
-    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
@@ -382,11 +384,11 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
     private func linkItemAtPoint(_ point: CGPoint) -> TextLinkItem? {
         let textNodeFrame = self.textNode.frame
         if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 return .url(url)
-            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+            } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 return .mention(peerName)
-            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
             } else {
                 return nil
@@ -395,15 +397,15 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
         return nil
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    override func longTapped() {
+    override public func longTapped() {
         self.item?.longTapAction?()
     }
     
@@ -421,7 +423,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
                         TelegramTextAttributes.Hashtag
                     ]
                     for name in possibleNames {
-                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
+                        if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
                             rects = self.textNode.attributeRects(name: name, at: index)
                             break
                         }
@@ -449,7 +451,7 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
         }
     }
     
-    var tag: Any? {
+    public var tag: Any? {
         return self.item?.tag
     }
 }

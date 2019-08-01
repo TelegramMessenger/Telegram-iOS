@@ -5,17 +5,17 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
-enum ItemListDisclosureItemTitleColor {
+public enum ItemListDisclosureItemTitleColor {
     case primary
     case accent
 }
 
-enum ItemListDisclosureStyle {
+public enum ItemListDisclosureStyle {
     case arrow
     case none
 }
 
-enum ItemListDisclosureLabelStyle {
+public enum ItemListDisclosureLabelStyle {
     case text
     case detailText
     case multilineDetailText
@@ -23,7 +23,7 @@ enum ItemListDisclosureLabelStyle {
     case color(UIColor)
 }
 
-class ItemListDisclosureItem: ListViewItem, ItemListItem {
+public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let icon: UIImage?
     let title: String
@@ -31,14 +31,14 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let enabled: Bool
     let label: String
     let labelStyle: ItemListDisclosureLabelStyle
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let disclosureStyle: ItemListDisclosureStyle
     let action: (() -> Void)?
     let clearHighlightAutomatically: Bool
-    let tag: ItemListItemTag?
+    public let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil) {
+    public init(theme: PresentationTheme, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.icon = icon
         self.title = title
@@ -54,7 +54,7 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListDisclosureItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -70,7 +70,7 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListDisclosureItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -87,9 +87,9 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
         }
     }
     
-    var selectable: Bool = true
+    public var selectable: Bool = true
     
-    func selected(listView: ListView){
+    public func selected(listView: ListView){
         if self.clearHighlightAutomatically {
             listView.clearHighlightAnimated(true)
         }
@@ -103,7 +103,7 @@ private let titleFont = Font.regular(17.0)
 private let badgeFont = Font.regular(15.0)
 private let detailFont = Font.regular(13.0)
 
-class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
+public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -120,7 +120,7 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     
     private var item: ItemListDisclosureItem?
     
-    override var canBeSelected: Bool {
+    override public var canBeSelected: Bool {
         if let item = self.item, let _ = item.action {
             return true
         } else {
@@ -128,11 +128,11 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    var tag: ItemListItemTag? {
+    public var tag: ItemListItemTag? {
         return self.item?.tag
     }
     
-    init() {
+    public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
@@ -178,7 +178,7 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         self.addSubnode(self.activateArea)
     }
     
-    func asyncLayout() -> (_ item: ItemListDisclosureItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListDisclosureItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
@@ -308,9 +308,9 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.activateArea.accessibilityLabel = item.title
                     strongSelf.activateArea.accessibilityValue = item.label
                     if item.enabled {
-                        strongSelf.activateArea.accessibilityTraits = 0
+                        strongSelf.activateArea.accessibilityTraits = []
                     } else {
-                        strongSelf.activateArea.accessibilityTraits = UIAccessibilityTraitNotEnabled
+                        strongSelf.activateArea.accessibilityTraits = .notEnabled
                     }
                     
                     if let icon = item.icon {
@@ -447,7 +447,7 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted && (self.item?.enabled ?? false) {
@@ -485,15 +485,15 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }

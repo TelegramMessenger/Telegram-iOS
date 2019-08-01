@@ -2,44 +2,53 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import AnimationUI
 
-enum ItemListRevealOptionIcon: Equatable {
+public enum ItemListRevealOptionIcon: Equatable {
     case none
     case image(image: UIImage)
     case animation(animation: String, scale: CGFloat, offset: CGFloat, keysToColor: [String]?, flip: Bool)
     
     public static func ==(lhs: ItemListRevealOptionIcon, rhs: ItemListRevealOptionIcon) -> Bool {
         switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .image(lhsImage):
-                if case let .image(rhsImage) = rhs, lhsImage == rhsImage {
-                    return true
-                } else {
-                    return false
-                }
-            case let .animation(lhsAnimation, lhsScale, lhsOffset, lhsKeysToColor, lhsFlip):
-                if case let .animation(rhsAnimation, rhsScale, rhsOffset, rhsKeysToColor, rhsFlip) = rhs, lhsAnimation == rhsAnimation, lhsScale == rhsScale, lhsOffset == rhsOffset, lhsKeysToColor == rhsKeysToColor, lhsFlip == rhsFlip {
-                    return true
-                } else {
-                    return false
-                }
+        case .none:
+            if case .none = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .image(lhsImage):
+            if case let .image(rhsImage) = rhs, lhsImage == rhsImage {
+                return true
+            } else {
+                return false
+            }
+        case let .animation(lhsAnimation, lhsScale, lhsOffset, lhsKeysToColor, lhsFlip):
+            if case let .animation(rhsAnimation, rhsScale, rhsOffset, rhsKeysToColor, rhsFlip) = rhs, lhsAnimation == rhsAnimation, lhsScale == rhsScale, lhsOffset == rhsOffset, lhsKeysToColor == rhsKeysToColor, lhsFlip == rhsFlip {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
 
-struct ItemListRevealOption: Equatable {
-    let key: Int32
-    let title: String
-    let icon: ItemListRevealOptionIcon
-    let color: UIColor
-    let textColor: UIColor
+public struct ItemListRevealOption: Equatable {
+    public let key: Int32
+    public let title: String
+    public let icon: ItemListRevealOptionIcon
+    public let color: UIColor
+    public let textColor: UIColor
     
-    static func ==(lhs: ItemListRevealOption, rhs: ItemListRevealOption) -> Bool {
+    public init(key: Int32, title: String, icon: ItemListRevealOptionIcon, color: UIColor, textColor: UIColor) {
+        self.key = key
+        self.title = title
+        self.icon = icon
+        self.color = color
+        self.textColor = textColor
+    }
+    
+    public static func ==(lhs: ItemListRevealOption, rhs: ItemListRevealOption) -> Bool {
         if lhs.key != rhs.key {
             return false
         }
@@ -86,33 +95,33 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: title, font: icon == .none ? titleFontWithoutIcon : titleFontWithIcon, textColor: textColor)
         
         switch icon {
-            case let .image(image):
-                let iconNode = ASImageNode()
-                iconNode.image = generateTintedImage(image: image, color: textColor)
-                self.iconNode = iconNode
-                self.animationNode = nil
+        case let .image(image):
+            let iconNode = ASImageNode()
+            iconNode.image = generateTintedImage(image: image, color: textColor)
+            self.iconNode = iconNode
+            self.animationNode = nil
             
-            case let .animation(animation, scale, offset, keysToColor, flip):
-                self.iconNode = nil
-                var colors: [String: UIColor] = [:]
-                if let keysToColor = keysToColor {
-                    for key in keysToColor {
-                        colors[key] = color
-                    }
+        case let .animation(animation, scale, offset, keysToColor, flip):
+            self.iconNode = nil
+            var colors: [String: UIColor] = [:]
+            if let keysToColor = keysToColor {
+                for key in keysToColor {
+                    colors[key] = color
                 }
-                self.animationNode = AnimationNode(animation: animation, colors: colors, scale: scale)
-                if flip {
-                    self.animationNode!.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
-                }
-                self.animationNodeOffset = offset
-                self.animationNodeFlip = flip
-                break
+            }
+            self.animationNode = AnimationNode(animation: animation, colors: colors, scale: scale)
+            if flip {
+                self.animationNode!.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
+            }
+            self.animationNodeOffset = offset
+            self.animationNodeFlip = flip
+            break
             
-            case .none:
-                self.iconNode = nil
-                self.animationNode = nil
+        case .none:
+            self.iconNode = nil
+            self.animationNode = nil
         }
-
+        
         super.init()
         
         self.addSubnode(self.backgroundNode)
@@ -129,7 +138,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
     func setHighlighted(_ highlighted: Bool) {
         if highlighted {
             self.insertSubnode(self.highlightNode, aboveSubnode: self.backgroundNode)
-            self.highlightNode.layer.animate(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.3)
+            self.highlightNode.layer.animate(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.3)
             self.highlightNode.alpha = 1.0
         } else {
             self.highlightNode.removeFromSupernode()
@@ -177,10 +186,10 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
         let titleSize = self.titleNode.calculatedSize
         var contentRect = CGRect(origin: CGPoint(), size: baseSize)
         switch alignment {
-            case .left:
-                contentRect.origin.x = 0.0
-            case .right:
-                contentRect.origin.x = extendedWidth - contentRect.width
+        case .left:
+            contentRect.origin.x = 0.0
+        case .right:
+            contentRect.origin.x = extendedWidth - contentRect.width
         }
         
         if let animationNode = self.animationNode, let imageSize = animationNode.preferredSize() {
@@ -251,7 +260,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
     }
 }
 
-final class ItemListRevealOptionsNode: ASDisplayNode {
+public final class ItemListRevealOptionsNode: ASDisplayNode {
     private let optionSelected: (ItemListRevealOption) -> Void
     private let tapticAction: () -> Void
     
@@ -262,14 +271,14 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
     private var revealOffset: CGFloat = 0.0
     private var sideInset: CGFloat = 0.0
     
-    init(optionSelected: @escaping (ItemListRevealOption) -> Void, tapticAction: @escaping () -> Void) {
+    public init(optionSelected: @escaping (ItemListRevealOption) -> Void, tapticAction: @escaping () -> Void) {
         self.optionSelected = optionSelected
         self.tapticAction = tapticAction
         
         super.init()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let gestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
@@ -290,7 +299,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         self.view.addGestureRecognizer(gestureRecognizer)
     }
     
-    func setOptions(_ options: [ItemListRevealOption], isLeft: Bool) {
+    public func setOptions(_ options: [ItemListRevealOption], isLeft: Bool) {
         if self.options != options || self.isLeft != isLeft {
             self.options = options
             self.isLeft = isLeft
@@ -313,7 +322,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         }
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         var maxWidth: CGFloat = 0.0
         for node in self.optionNodes {
             let nodeSize = node.measure(constrainedSize)
@@ -322,7 +331,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         return CGSize(width: maxWidth * CGFloat(self.optionNodes.count), height: constrainedSize.height)
     }
     
-    func updateRevealOffset(offset: CGFloat, sideInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func updateRevealOffset(offset: CGFloat, sideInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.revealOffset = offset
         self.sideInset = sideInset
         self.updateNodesLayout(transition: transition)
@@ -363,7 +372,6 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         while i >= 0 && i < self.optionNodes.count {
             let node = self.optionNodes[i]
             let nodeWidth = i == (self.optionNodes.count - 1) ? lastNodeWidth : basicNodeWidth
-            let defaultAlignment: ItemListRevealOptionAlignment = self.isLeft ? .right : .left
             var nodeTransition = transition
             var isExpanded = false
             if (self.isLeft && i == 0) || (!self.isLeft && i == self.optionNodes.count - 1) {
@@ -401,7 +409,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
             transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: nodeLeftOffset, y: 0.0), size: CGSize(width: extendedWidth, height: size.height)), completion: { _ in
                 completionCount -= 1
                 intermediateCompletion()
-
+                
             })
             
             var nodeAlignment: ItemListRevealOptionAlignment
@@ -425,7 +433,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         }
     }
     
-    @objc func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+    @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if case .ended = recognizer.state, let gesture = recognizer.lastRecognizedGestureAndLocation?.0, case .tap = gesture {
             let location = recognizer.location(in: self.view)
             var selectedOption: Int?
@@ -449,7 +457,7 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         }
     }
     
-    func isDisplayingExtendedAction() -> Bool {
+    public func isDisplayingExtendedAction() -> Bool {
         return self.optionNodes.contains(where: { $0.isExpanded })
     }
 }

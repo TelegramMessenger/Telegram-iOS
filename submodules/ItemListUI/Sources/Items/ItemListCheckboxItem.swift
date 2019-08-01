@@ -5,27 +5,27 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
-enum ItemListCheckboxItemStyle {
+public enum ItemListCheckboxItemStyle {
     case left
     case right
 }
 
-enum ItemListCheckboxItemColor {
+public enum ItemListCheckboxItemColor {
     case accent
     case secondary
 }
 
-class ItemListCheckboxItem: ListViewItem, ItemListItem {
+public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
     let style: ItemListCheckboxItemStyle
     let color: ItemListCheckboxItemColor
     let checked: Bool
     let zeroSeparatorInsets: Bool
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(theme: PresentationTheme, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    public init(theme: PresentationTheme, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.style = style
@@ -36,7 +36,7 @@ class ItemListCheckboxItem: ListViewItem, ItemListItem {
         self.action = action
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListCheckboxItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -52,7 +52,7 @@ class ItemListCheckboxItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListCheckboxItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -69,9 +69,9 @@ class ItemListCheckboxItem: ListViewItem, ItemListItem {
         }
     }
     
-    var selectable: Bool = true
+    public var selectable: Bool = true
     
-    func selected(listView: ListView){
+    public func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
         self.action()
     }
@@ -79,7 +79,7 @@ class ItemListCheckboxItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class ItemListCheckboxItemNode: ListViewItemNode {
+public class ItemListCheckboxItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -92,7 +92,7 @@ class ItemListCheckboxItemNode: ListViewItemNode {
     
     private var item: ItemListCheckboxItem?
     
-    init() {
+    public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         
@@ -129,7 +129,7 @@ class ItemListCheckboxItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ItemListCheckboxItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListCheckboxItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         let currentItem = self.item
@@ -243,7 +243,7 @@ class ItemListCheckboxItemNode: ListViewItemNode {
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
@@ -281,11 +281,11 @@ class ItemListCheckboxItemNode: ListViewItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }

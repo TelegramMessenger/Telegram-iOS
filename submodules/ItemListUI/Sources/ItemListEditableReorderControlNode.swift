@@ -4,11 +4,11 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
-final class ItemListEditableReorderControlNode: ASDisplayNode {
-    var tapped: (() -> Void)?
+public final class ItemListEditableReorderControlNode: ASDisplayNode {
+    public var tapped: (() -> Void)?
     private let iconNode: ASImageNode
     
-    override init() {
+    override public init() {
         self.iconNode = ASImageNode()
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.displaysAsynchronously = false
@@ -19,7 +19,7 @@ final class ItemListEditableReorderControlNode: ASDisplayNode {
         self.addSubnode(self.iconNode)
     }
     
-    static func asyncLayout(_ node: ItemListEditableReorderControlNode?) -> (_ height: CGFloat, _ theme: PresentationTheme) -> (CGSize, (Bool) -> ItemListEditableReorderControlNode) {
+    public static func asyncLayout(_ node: ItemListEditableReorderControlNode?) -> (_ height: CGFloat, _ theme: PresentationTheme) -> (CGSize, (Bool) -> ItemListEditableReorderControlNode) {
         return { height, theme in
             let image = PresentationResourcesItemList.itemListReorderIndicatorIcon(theme)
             

@@ -4,23 +4,24 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ActivityIndicator
 
-class ItemListActivityTextItem: ListViewItem, ItemListItem {
+public class ItemListActivityTextItem: ListViewItem, ItemListItem {
     let displayActivity: Bool
     let theme: PresentationTheme
     let text: NSAttributedString
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     
-    let isAlwaysPlain: Bool = true
+    public let isAlwaysPlain: Bool = true
     
-    init(displayActivity: Bool, theme: PresentationTheme, text: NSAttributedString, sectionId: ItemListSectionId) {
+    public init(displayActivity: Bool, theme: PresentationTheme, text: NSAttributedString, sectionId: ItemListSectionId) {
         self.displayActivity = displayActivity
         self.theme = theme
         self.text = text
         self.sectionId = sectionId
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListActivityTextItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -36,7 +37,7 @@ class ItemListActivityTextItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             guard let nodeValue = node() as? ItemListActivityTextItemNode else {
                 assertionFailure()
@@ -59,13 +60,13 @@ class ItemListActivityTextItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(14.0)
 
-class ItemListActivityTextItemNode: ListViewItemNode {
+public class ItemListActivityTextItemNode: ListViewItemNode {
     private let titleNode: TextNode
     private let activityIndicator: ActivityIndicator
     
     private var item: ItemListActivityTextItem?
     
-    init() {
+    public init() {
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
@@ -79,7 +80,7 @@ class ItemListActivityTextItemNode: ListViewItemNode {
         self.addSubnode(self.activityIndicator)
     }
     
-    func asyncLayout() -> (_ item: ItemListActivityTextItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListActivityTextItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, params, neighbors in
@@ -94,8 +95,8 @@ class ItemListActivityTextItemNode: ListViewItemNode {
             let titleString = NSMutableAttributedString(attributedString: item.text)
             let hasFont = titleString.attribute(.font, at: 0, effectiveRange: nil) != nil
             if !hasFont {
-                titleString.removeAttribute(NSAttributedStringKey.font, range: NSMakeRange(0, titleString.length))
-                titleString.addAttributes([NSAttributedStringKey.font: titleFont], range: NSMakeRange(0, titleString.length))
+                titleString.removeAttribute(NSAttributedString.Key.font, range: NSMakeRange(0, titleString.length))
+                titleString.addAttributes([NSAttributedString.Key.font: titleFont], range: NSMakeRange(0, titleString.length))
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - 22.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: TextNodeCutout(topLeft: CGSize(width: activityWidth, height: 4.0)), insets: UIEdgeInsets()))
@@ -129,11 +130,11 @@ class ItemListActivityTextItemNode: ListViewItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }

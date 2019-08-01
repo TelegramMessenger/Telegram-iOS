@@ -4,13 +4,14 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import SwitchNode
 
-enum ItemListSwitchItemNodeType {
+public enum ItemListSwitchItemNodeType {
     case regular
     case icon
 }
 
-class ItemListSwitchItem: ListViewItem, ItemListItem {
+public class ItemListSwitchItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
     let value: Bool
@@ -18,12 +19,12 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
     let enableInteractiveChanges: Bool
     let enabled: Bool
     let maximumNumberOfLines: Int
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let updated: (Bool) -> Void
-    let tag: ItemListItemTag?
+    public let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, maximumNumberOfLines: Int = 1, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, tag: ItemListItemTag? = nil) {
+    public init(theme: PresentationTheme, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, maximumNumberOfLines: Int = 1, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.title = title
         self.value = value
@@ -37,7 +38,7 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListSwitchItemNode(type: self.type)
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -53,7 +54,7 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListSwitchItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -108,7 +109,7 @@ extension SwitchNode: ItemListSwitchNodeImpl {
 extension IconSwitchNode: ItemListSwitchNodeImpl {
 }
 
-class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
+public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -123,7 +124,7 @@ class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     
     private var item: ItemListSwitchItem?
     
-    var tag: ItemListItemTag? {
+    public var tag: ItemListItemTag? {
         return self.item?.tag
     }
     
@@ -174,7 +175,7 @@ class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         (self.switchNode.view as? UISwitch)?.addTarget(self, action: #selector(self.switchValueChanged(_:)), for: .valueChanged)
@@ -241,7 +242,7 @@ class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                     var accessibilityTraits = UIAccessibilityTraits()
                     if item.enabled {
                     } else {
-                        accessibilityTraits |= UIAccessibilityTraitNotEnabled
+                        accessibilityTraits.insert(.notEnabled)
                     }
                     strongSelf.activateArea.accessibilityTraits = accessibilityTraits
                     
@@ -351,7 +352,7 @@ class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override func accessibilityActivate() -> Bool {
+    override public func accessibilityActivate() -> Bool {
         guard let item = self.item else {
             return false
         }
@@ -368,7 +369,7 @@ class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
         return true
     }
     
-    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
@@ -406,22 +407,22 @@ class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    @objc func switchValueChanged(_ switchView: UISwitch) {
+    @objc private func switchValueChanged(_ switchView: UISwitch) {
         if let item = self.item {
             let value = switchView.isOn
             item.updated(value)
         }
     }
     
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if let item = self.item, let switchView = self.switchNode.view as? UISwitch, case .ended = recognizer.state {
             let value = switchView.isOn
             item.updated(!value)
