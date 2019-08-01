@@ -37,9 +37,9 @@ VDasher::VDasher(const float *dashArray, size_t size)
     // segments or ZERO lengths gaps we could
     // optimize those usecase.
     for (size_t i = 0; i < mArraySize; i++) {
-        if (!vCompare(mDashArray->length, 0.0f))
+        if (!vCompare(mDashArray[i].length, 0.0f))
             mNoLength = false;
-        if (!vCompare(mDashArray->gap, 0.0f))
+        if (!vCompare(mDashArray[i].gap, 0.0f))
             mNoGap = false;
     }
 }
