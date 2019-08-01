@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
+import ItemListUI
 
 private final class UpdateInfoControllerArguments {
     let openAppStorePage: () -> Void
@@ -97,17 +99,17 @@ public func updateInfoController(context: AccountContext, appUpdateInfo: AppUpda
     actionsDisposable.add(navigateDisposable)
     
     let arguments = UpdateInfoControllerArguments(openAppStorePage: {
-        context.sharedContext.applicationBindings.openAppStorePage()
+        context.genericSharedContext.applicationBindings.openAppStorePage()
     }, linkAction: { action, itemLink in
         linkActionImpl?(action, itemLink)
     })
     
-    let signal = context.sharedContext.presentationData
+    let signal = context.genericSharedContext.presentationData
     |> deliverOnMainQueue
     |> map { presentationData -> (ItemListControllerState, (ItemListNodeState<UpdateInfoControllerEntry>, UpdateInfoControllerEntry.ItemGenerationArguments)) in
         let appIcon: PresentationAppIcon?
-        let appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons()
-        if let alternateIconName = context.sharedContext.applicationBindings.getAlternateIconName() {
+        let appIcons = context.genericSharedContext.applicationBindings.getAvailableAlternateIcons()
+        if let alternateIconName = context.genericSharedContext.applicationBindings.getAlternateIconName() {
             appIcon = appIcons.filter { $0.name == alternateIconName }.first
         } else {
             appIcon = appIcons.filter { $0.isDefault }.first
@@ -125,10 +127,10 @@ public func updateInfoController(context: AccountContext, appUpdateInfo: AppUpda
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(sharedContext: context.sharedContext, state: signal)
-    linkActionImpl = { [weak controller] action, itemLink in
-        if let strongController = controller {
-            handleTextLinkAction(context: context, peerId: nil, navigateDisposable: navigateDisposable, controller: strongController, action: action, itemLink: itemLink)
+    let controller = ItemListController(sharedContext: context.genericSharedContext, state: signal)
+    linkActionImpl = { [weak controller, weak context] action, itemLink in
+        if let strongController = controller, let context = context {
+            context.genericSharedContext.handleTextLinkAction(context: context, peerId: nil, navigateDisposable: navigateDisposable, controller: strongController, action: action, itemLink: itemLink)
         }
     }
     dismissImpl = { [weak controller] in
