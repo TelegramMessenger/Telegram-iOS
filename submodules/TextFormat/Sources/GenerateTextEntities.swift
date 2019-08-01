@@ -40,7 +40,7 @@ private let validTimecodeSet: CharacterSet = {
     return set
 }()
 
-struct ApplicationSpecificEntityType {
+public struct ApplicationSpecificEntityType {
     public static let Timecode: Int32 = 1
 }
 
@@ -53,16 +53,16 @@ private enum CurrentEntityType {
     
     var type: EnabledEntityTypes {
         switch self {
-            case .command:
-                return .command
-            case .mention:
-                return .mention
-            case .hashtag:
-                return .hashtag
-            case .phoneNumber:
-                return .phoneNumber
-            case .timecode:
-                return .timecode
+        case .command:
+            return .command
+        case .mention:
+            return .mention
+        case .hashtag:
+            return .hashtag
+        case .phoneNumber:
+            return .phoneNumber
+        case .timecode:
+            return .timecode
         }
     }
 }
@@ -99,17 +99,17 @@ private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, 
     }
     if !overlaps {
         let entityType: MessageTextEntityType
-            switch type {
-                case .command:
-                    entityType = .BotCommand
-                case .mention:
-                    entityType = .Mention
-                case .hashtag:
-                    entityType = .Hashtag
-                case .phoneNumber:
-                    entityType = .PhoneNumber
-                case .timecode:
-                    entityType = .Custom(type: ApplicationSpecificEntityType.Timecode)
+        switch type {
+        case .command:
+            entityType = .BotCommand
+        case .mention:
+            entityType = .Mention
+        case .hashtag:
+            entityType = .Hashtag
+        case .phoneNumber:
+            entityType = .PhoneNumber
+        case .timecode:
+            entityType = .Custom(type: ApplicationSpecificEntityType.Timecode)
         }
         
         if case .timecode = type {
@@ -122,7 +122,7 @@ private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, 
     }
 }
 
-func generateChatInputTextEntities(_ text: NSAttributedString) -> [MessageTextEntity] {
+public func generateChatInputTextEntities(_ text: NSAttributedString) -> [MessageTextEntity] {
     var entities: [MessageTextEntity] = []
     text.enumerateAttributes(in: NSRange(location: 0, length: text.length), options: [], using: { attributes, range, _ in
         for (key, value) in attributes {
@@ -220,30 +220,30 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                 }
                 currentEntity = (.hashtag, index ..< index)
             }
-        
+            
             if notFound {
                 if let (type, range) = currentEntity {
                     switch type {
-                        case .command, .mention:
-                            if validIdentifierSet.contains(scalar) {
-                                currentEntity = (type, range.lowerBound ..< utf16.index(after: index))
-                            } else if delimiterSet.contains(scalar) {
-                                if let (type, range) = currentEntity {
-                                    commitEntity(utf16, type, range, enabledTypes, &entities)
-                                }
-                                currentEntity = nil
+                    case .command, .mention:
+                        if validIdentifierSet.contains(scalar) {
+                            currentEntity = (type, range.lowerBound ..< utf16.index(after: index))
+                        } else if delimiterSet.contains(scalar) {
+                            if let (type, range) = currentEntity {
+                                commitEntity(utf16, type, range, enabledTypes, &entities)
                             }
-                        case .hashtag:
-                            if validHashtagSet.contains(scalar) {
-                                currentEntity = (type, range.lowerBound ..< utf16.index(after: index))
-                            } else if delimiterSet.contains(scalar) {
-                                if let (type, range) = currentEntity {
-                                    commitEntity(utf16, type, range, enabledTypes, &entities)
-                                }
-                                currentEntity = nil
+                            currentEntity = nil
+                        }
+                    case .hashtag:
+                        if validHashtagSet.contains(scalar) {
+                            currentEntity = (type, range.lowerBound ..< utf16.index(after: index))
+                        } else if delimiterSet.contains(scalar) {
+                            if let (type, range) = currentEntity {
+                                commitEntity(utf16, type, range, enabledTypes, &entities)
                             }
-                        default:
-                            break
+                            currentEntity = nil
+                        }
+                    default:
+                        break
                     }
                 }
             }
@@ -258,7 +258,7 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
     return entities
 }
 
-func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEntityTypes, entities: [MessageTextEntity], mediaDuration: Double? = nil) -> [MessageTextEntity]? {
+public func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEntityTypes, entities: [MessageTextEntity], mediaDuration: Double? = nil) -> [MessageTextEntity]? {
     var resultEntities = entities
     
     var hasDigits = false
@@ -324,13 +324,13 @@ func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEntityType
                     if notFound {
                         if let (type, range) = currentEntity {
                             switch type {
-                                case .timecode:
-                                    if delimiterSet.contains(scalar) {
-                                        commitEntity(utf16, type, range, enabledTypes, &resultEntities, mediaDuration: mediaDuration)
-                                        currentEntity = nil
-                                    }
-                                default:
-                                    break
+                            case .timecode:
+                                if delimiterSet.contains(scalar) {
+                                    commitEntity(utf16, type, range, enabledTypes, &resultEntities, mediaDuration: mediaDuration)
+                                    currentEntity = nil
+                                }
+                            default:
+                                break
                             }
                         }
                     }
@@ -351,7 +351,7 @@ func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEntityType
     }
 }
 
-func parseTimecodeString(_ string: String?) -> Double? {
+public func parseTimecodeString(_ string: String?) -> Double? {
     if let string = string, string.rangeOfCharacter(from: validTimecodeSet.inverted) == nil {
         let components = string.components(separatedBy: ":")
         if components.count > 1 && components.count <= 3 {

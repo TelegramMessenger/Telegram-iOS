@@ -5,25 +5,25 @@ import Display
 private let controlStartCharactersSet = CharacterSet(charactersIn: "[*")
 private let controlCharactersSet = CharacterSet(charactersIn: "[]()*_-\\")
 
-final class MarkdownAttributeSet {
-    let font: UIFont
-    let textColor: UIColor
-    let additionalAttributes: [String: Any]
+public final class MarkdownAttributeSet {
+    public let font: UIFont
+    public let textColor: UIColor
+    public let additionalAttributes: [String: Any]
     
-    init(font: UIFont, textColor: UIColor, additionalAttributes: [String: Any] = [:]) {
+    public init(font: UIFont, textColor: UIColor, additionalAttributes: [String: Any] = [:]) {
         self.font = font
         self.textColor = textColor
         self.additionalAttributes = additionalAttributes
     }
 }
 
-final class MarkdownAttributes {
-    let body: MarkdownAttributeSet
-    let bold: MarkdownAttributeSet
-    let link: MarkdownAttributeSet
-    let linkAttribute: (String) -> (String, Any)?
+public final class MarkdownAttributes {
+    public let body: MarkdownAttributeSet
+    public let bold: MarkdownAttributeSet
+    public let link: MarkdownAttributeSet
+    public let linkAttribute: (String) -> (String, Any)?
     
-    init(body: MarkdownAttributeSet, bold: MarkdownAttributeSet, link: MarkdownAttributeSet, linkAttribute: @escaping (String) -> (String, Any)?) {
+    public init(body: MarkdownAttributeSet, bold: MarkdownAttributeSet, link: MarkdownAttributeSet, linkAttribute: @escaping (String) -> (String, Any)?) {
         self.body = body
         self.link = link
         self.bold = bold
@@ -31,7 +31,7 @@ final class MarkdownAttributes {
     }
 }
 
-func escapedPlaintextForMarkdown(_ string: String) -> String {
+public func escapedPlaintextForMarkdown(_ string: String) -> String {
     let nsString = string as NSString
     var remainingRange = NSMakeRange(0, nsString.length)
     let result = NSMutableString()
@@ -52,21 +52,21 @@ func escapedPlaintextForMarkdown(_ string: String) -> String {
     return result as String
 }
 
-func paragraphStyleWithAlignment(_ alignment: NSTextAlignment) -> NSParagraphStyle {
+public func paragraphStyleWithAlignment(_ alignment: NSTextAlignment) -> NSParagraphStyle {
     let paragraphStyle = NSMutableParagraphStyle()
     paragraphStyle.alignment = alignment
     return paragraphStyle
 }
 
-func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAttributes, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
+public func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAttributes, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
     let nsString = string as NSString
     let result = NSMutableAttributedString()
     var remainingRange = NSMakeRange(0, nsString.length)
     
-    var bodyAttributes: [NSAttributedStringKey: Any] = [NSAttributedStringKey.font: attributes.body.font, NSAttributedStringKey.foregroundColor: attributes.body.textColor, NSAttributedStringKey.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
+    var bodyAttributes: [NSAttributedString.Key: Any] = [NSAttributedString.Key.font: attributes.body.font, NSAttributedString.Key.foregroundColor: attributes.body.textColor, NSAttributedString.Key.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
     if !attributes.body.additionalAttributes.isEmpty {
         for (key, value) in attributes.body.additionalAttributes {
-            bodyAttributes[NSAttributedStringKey(rawValue: key)] = value
+            bodyAttributes[NSAttributedString.Key(rawValue: key)] = value
         }
     }
     
@@ -82,14 +82,14 @@ func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAtt
             if character == UInt16(("[" as UnicodeScalar).value) {
                 remainingRange = NSMakeRange(range.location + range.length, remainingRange.location + remainingRange.length - (range.location + range.length))
                 if let (parsedLinkText, parsedLinkContents) = parseLink(string: nsString, remainingRange: &remainingRange) {
-                    var linkAttributes: [NSAttributedStringKey: Any] = [NSAttributedStringKey.font: attributes.link.font, NSAttributedStringKey.foregroundColor: attributes.link.textColor, NSAttributedStringKey.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
+                    var linkAttributes: [NSAttributedString.Key: Any] = [NSAttributedString.Key.font: attributes.link.font, NSAttributedString.Key.foregroundColor: attributes.link.textColor, NSAttributedString.Key.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
                     if !attributes.link.additionalAttributes.isEmpty {
                         for (key, value) in attributes.link.additionalAttributes {
-                            linkAttributes[NSAttributedStringKey(rawValue: key)] = value
+                            linkAttributes[NSAttributedString.Key(rawValue: key)] = value
                         }
                     }
                     if let (attributeName, attributeValue) = attributes.linkAttribute(parsedLinkContents) {
-                        linkAttributes[NSAttributedStringKey(rawValue: attributeName)] = attributeValue
+                        linkAttributes[NSAttributedString.Key(rawValue: attributeName)] = attributeValue
                     }
                     result.append(NSAttributedString(string: parsedLinkText, attributes: linkAttributes))
                 }
@@ -100,10 +100,10 @@ func parseMarkdownIntoAttributedString(_ string: String, attributes: MarkdownAtt
                         remainingRange = NSMakeRange(range.location + range.length + 1, remainingRange.location + remainingRange.length - (range.location + range.length + 1))
                         
                         if let bold = parseBold(string: nsString, remainingRange: &remainingRange) {
-                            var boldAttributes: [NSAttributedStringKey: Any] = [NSAttributedStringKey.font: attributes.bold.font, NSAttributedStringKey.foregroundColor: attributes.bold.textColor, NSAttributedStringKey.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
+                            var boldAttributes: [NSAttributedString.Key: Any] = [NSAttributedString.Key.font: attributes.bold.font, NSAttributedString.Key.foregroundColor: attributes.bold.textColor, NSAttributedString.Key.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
                             if !attributes.body.additionalAttributes.isEmpty {
                                 for (key, value) in attributes.bold.additionalAttributes {
-                                    boldAttributes[NSAttributedStringKey(rawValue: key)] = value
+                                    boldAttributes[NSAttributedString.Key(rawValue: key)] = value
                                 }
                             }
                             result.append(NSAttributedString(string: bold, attributes: boldAttributes))
@@ -163,6 +163,6 @@ private func parseBold(string: NSString, remainingRange: inout NSRange) -> Strin
     return nil
 }
 
-func foldMultipleLineBreaks(_ string: String) -> String {
+public func foldMultipleLineBreaks(_ string: String) -> String {
     return string.replacingOccurrences(of: "(([\n\r]\\s*){2,})+", with: "\n\n", options: .regularExpression, range: nil)
 }
