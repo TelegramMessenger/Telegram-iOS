@@ -62,17 +62,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
         
-        self.animationNode.shouldAutoPlay = { [weak self] in
-            if let strongSelf = self {
-                if let item = strongSelf.item {
-                    if let _ = strongSelf.emojiFile {
-                        return !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id)
-                    }
-                }
-            }
-            return true
-        }
-        
         self.imageNode.displaysAsynchronously = false
         self.addSubnode(self.imageNode)
         self.addSubnode(self.animationNode)
@@ -174,7 +163,19 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let isPlaying = self.visibilityStatus
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
-            self.animationNode.visibility = isPlaying
+            
+            var alreadySeen = false
+            if isPlaying, let _ = self.emojiFile {
+                if item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                    alreadySeen = true
+                }
+            }
+            
+            self.animationNode.visibility = isPlaying && !alreadySeen
+            if self.didSetUpAnimationNode && alreadySeen {
+                self.animationNode.seekToStart()
+            }
+            
             if self.isPlaying && !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
                 
