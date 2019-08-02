@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import Accelerate
 
-private let deviceColorSpace: CGColorSpace = {
+public let deviceColorSpace: CGColorSpace = {
     if #available(iOSApplicationExtension 9.3, *) {
         if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
             return colorSpace

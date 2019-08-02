@@ -134,7 +134,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
         return { item, params, neighbors in
             var updatedBackgroundImage: UIImage?
             if currentItem?.wallpaper != item.wallpaper {
-                updatedBackgroundImage = chatControllerBackgroundImage(wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox)
+                updatedBackgroundImage = chatControllerBackgroundImage(theme: item.theme, wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox, knockoutMode: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
             }
             
             let insets: UIEdgeInsets
@@ -217,7 +217,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                         if node.supernode == nil {
                             strongSelf.containerNode.addSubnode(node)
                         }
-                        node.frame = CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: node.frame.size)
+                        node.updateFrame(CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: node.frame.size), within: layout.contentSize)
                         topOffset += node.frame.size.height
                     }
                     

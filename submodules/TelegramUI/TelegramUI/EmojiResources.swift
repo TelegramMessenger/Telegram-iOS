@@ -9,6 +9,7 @@ import WebPImage
 #else
 import WebP
 #endif
+import MediaResources
 
 public struct EmojiThumbnailResourceId: MediaResourceId {
     public let emoji: String

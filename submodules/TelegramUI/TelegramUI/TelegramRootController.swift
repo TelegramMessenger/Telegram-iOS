@@ -32,7 +32,7 @@ public final class TelegramRootController: NavigationController {
             let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationData.theme.chatList.messageTextColor.withAlphaComponent(0.2))
             navigationDetailsBackgroundMode = image != nil ? .image(image!) : nil
         default:
-            let image = chatControllerBackgroundImage(wallpaper: presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox)
+            let image = chatControllerBackgroundImage(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
             navigationDetailsBackgroundMode = image != nil ? .wallpaper(image!) : nil
         }
         
@@ -49,7 +49,7 @@ public final class TelegramRootController: NavigationController {
                         let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationData.theme.chatList.messageTextColor.withAlphaComponent(0.2))
                         navigationDetailsBackgroundMode = image != nil ? .image(image!) : nil
                     default:
-                        let image = chatControllerBackgroundImage(wallpaper: presentationData.chatWallpaper, mediaBox: strongSelf.context.account.postbox.mediaBox)
+                        let image = chatControllerBackgroundImage(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, mediaBox: strongSelf.context.account.postbox.mediaBox, knockoutMode: strongSelf.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
                         navigationDetailsBackgroundMode = image != nil ? .wallpaper(image!) : nil
                     }
                     strongSelf.updateBackgroundDetailsMode(navigationDetailsBackgroundMode, transition: .immediate)

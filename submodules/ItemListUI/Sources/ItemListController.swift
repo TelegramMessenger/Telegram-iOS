@@ -147,6 +147,14 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         }
     }
     
+    public var alwaysSynchronous = false {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode<Entry>).alwaysSynchronous = self.alwaysSynchronous
+            }
+        }
+    }
+    
     public var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)? {
         didSet {
             if self.isNodeLoaded {
@@ -413,6 +421,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
         }
         displayNode.enableInteractiveDismiss = self.enableInteractiveDismiss
+        displayNode.alwaysSynchronous = self.alwaysSynchronous
         displayNode.visibleEntriesUpdated = self.visibleEntriesUpdated
         displayNode.visibleBottomContentOffsetChanged = self.visibleBottomContentOffsetChanged
         displayNode.contentOffsetChanged = self.contentOffsetChanged

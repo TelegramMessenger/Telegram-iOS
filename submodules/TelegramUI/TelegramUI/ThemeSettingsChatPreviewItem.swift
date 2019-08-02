@@ -113,7 +113,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         return { item, params, neighbors in
             var updatedBackgroundImage: UIImage?
             if currentItem?.wallpaper != item.wallpaper {
-                updatedBackgroundImage = chatControllerBackgroundImage(wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox)
+                updatedBackgroundImage = chatControllerBackgroundImage(theme: item.theme, wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox, knockoutMode: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
             }
             
             let insets: UIEdgeInsets
@@ -146,7 +146,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     apply(ListViewItemApply(isOnScreen: true))
                 })
             } else {
-                item1.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+                item1.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: true, previousItem: nil, nextItem: nil, completion: { node, apply in
                     node1 = node
                     apply().1(ListViewItemApply(isOnScreen: true))
                 })
@@ -165,7 +165,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     apply(ListViewItemApply(isOnScreen: true))
                 })
             } else {
-                item2.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+                item2.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: true, previousItem: nil, nextItem: nil, completion: { node, apply in
                     node2 = node
                     apply().1(ListViewItemApply(isOnScreen: true))
                 })
@@ -195,7 +195,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         if node1.supernode == nil {
                             strongSelf.containerNode.addSubnode(node1)
                         }
-                        node1.frame = CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: node1.frame.size)
+                        node1.updateFrame(CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: node1.frame.size), within: layoutSize)
                         topOffset += node1.frame.size.height
                     }
                     
@@ -204,7 +204,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         if node2.supernode == nil {
                             strongSelf.containerNode.addSubnode(node2)
                         }
-                        node2.frame = CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: node2.frame.size)
+                        node2.updateFrame(CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: node2.frame.size), within: layoutSize)
                         topOffset += node2.frame.size.height
                     }
                     

@@ -9,6 +9,7 @@ import TelegramCore
 import Photos
 import TelegramPresentationData
 import TelegramUIPreferences
+import MediaResources
 
 enum WallpaperListType {
     case wallpapers(WallpaperPresentationOptions?)
@@ -655,6 +656,7 @@ class WallpaperGalleryController: ViewController {
             for itemNode in messageNodes {
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset - itemNode.frame.height), size: itemNode.frame.size))
                 bottomOffset -= itemNode.frame.height
+                itemNode.updateFrame(itemNode.frame, within: layout.size)
             }
         }
     }

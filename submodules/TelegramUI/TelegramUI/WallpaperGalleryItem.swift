@@ -9,6 +9,7 @@ import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
 import ProgressNavigationButtonNode
+import MediaResources
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool

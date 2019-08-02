@@ -3,6 +3,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import DeviceAccess
+import AccountContext
 
 public enum PermissionKind: Int32 {
     case contacts

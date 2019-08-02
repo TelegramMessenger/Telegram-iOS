@@ -107,7 +107,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         super.init()
         
-        self.backgroundNode.contents = chatControllerBackgroundImage(wallpaper: self.state.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox)?.cgImage
+        self.backgroundNode.contents = chatControllerBackgroundImage(theme: self.state.theme, wallpaper: self.state.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)?.cgImage
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.listNode)

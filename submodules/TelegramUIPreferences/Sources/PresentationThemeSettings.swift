@@ -207,6 +207,33 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
         return UIColor(rgb: value)
     }
     
+    public var outgoingGradientColors: (UIColor, UIColor) {
+        switch self {
+        case .blue:
+            return (UIColor(rgb: 0x63BFFB), UIColor(rgb: 0x007AFF))
+        case .cyan:
+            return (UIColor(rgb: 0x5CE0E9), UIColor(rgb: 0x00C2ED))
+        case .green:
+            return (UIColor(rgb: 0x93D374), UIColor(rgb: 0x29B327))
+        case .pink:
+            return (UIColor(rgb: 0xE296C1), UIColor(rgb: 0xEB6CA4))
+        case .orange:
+            return (UIColor(rgb: 0xF2A451), UIColor(rgb: 0xF08200))
+        case .purple:
+            return (UIColor(rgb: 0xAC98E6), UIColor(rgb: 0x9472EE))
+        case .red:
+            return (UIColor(rgb: 0xE06D54), UIColor(rgb: 0xD33213))
+        case .yellow:
+            return (UIColor(rgb: 0xF7DA6B), UIColor(rgb: 0xEDB400))
+        case .gray:
+            return (UIColor(rgb: 0x7D8E9A), UIColor(rgb: 0x6D839E))
+        case .black:
+            return (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000))
+        case .white:
+            return (UIColor(rgb: 0xffffff), UIColor(rgb: 0xffffff))
+        }
+    }
+    
     public var edgeColors: (UIColor, UIColor) {
         let values: (UIColor, UIColor)
         switch self {

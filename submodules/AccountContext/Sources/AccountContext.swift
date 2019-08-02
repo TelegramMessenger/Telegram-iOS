@@ -5,7 +5,6 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import SwiftSignalKit
 import Display
-import DeviceAccess
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -13,6 +12,14 @@ public final class TelegramApplicationOpenUrlCompletion {
     public init(completion: @escaping (Bool) -> Void) {
         self.completion = completion
     }
+}
+
+public enum AccessType {
+    case notDetermined
+    case allowed
+    case denied
+    case restricted
+    case unreachable
 }
 
 public final class TelegramApplicationBindings {

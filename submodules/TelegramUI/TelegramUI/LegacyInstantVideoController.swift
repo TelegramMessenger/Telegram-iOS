@@ -5,7 +5,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
-
+import MediaResources
 import LegacyComponents
 
 final class InstantVideoControllerRecordingStatus {

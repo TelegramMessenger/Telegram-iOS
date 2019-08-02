@@ -10,6 +10,8 @@ import TelegramUIPreferences
 import DeviceAccess
 import MergeLists
 import ItemListUI
+import MediaResources
+import AccountContext
 
 private let dropDownIcon = { () -> UIImage in
     UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)

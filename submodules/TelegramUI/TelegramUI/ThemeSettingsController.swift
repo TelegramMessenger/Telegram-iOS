@@ -380,7 +380,7 @@ public func themeSettingsController(context: AccountContextImpl, focusOnItemTag:
                     chatWallpaper = themeSpecificWallpaper
                 } else {
                     let accentColor = current.themeSpecificAccentColors[theme.index]?.color
-                    let theme = makePresentationTheme(themeReference: theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
+                    let theme = makePresentationTheme(themeReference: theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: current.themeSpecificAccentColors[theme.index]?.baseColor ?? .blue)
                     chatWallpaper = theme.chat.defaultWallpaper
                 }
                 
@@ -400,7 +400,7 @@ public func themeSettingsController(context: AccountContextImpl, focusOnItemTag:
             
             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
             
-            let theme = makePresentationTheme(themeReference: current.theme, accentColor: color.color, serviceBackgroundColor: defaultServiceBackgroundColor)
+            let theme = makePresentationTheme(themeReference: current.theme, accentColor: color.color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor)
             var chatWallpaper = current.chatWallpaper
             if let wallpaper = current.themeSpecificChatWallpapers[current.theme.index], wallpaper.hasWallpaper {
             } else {
@@ -432,7 +432,7 @@ public func themeSettingsController(context: AccountContextImpl, focusOnItemTag:
         })
     })
         
-    let signal = combineLatest(context.sharedContext.presentationData |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]) |> deliverOnMainQueue, availableAppIcons, currentAppIconName.get() |> deliverOnMainQueue, statePromise.get() |> deliverOnMainQueue)
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), availableAppIcons, currentAppIconName.get(), statePromise.get())
     |> map { presentationData, sharedData, availableAppIcons, currentAppIconName, state -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
@@ -442,7 +442,7 @@ public func themeSettingsController(context: AccountContextImpl, focusOnItemTag:
         let disableAnimations = presentationData.disableAnimations
         
         let accentColor = settings.themeSpecificAccentColors[settings.theme.index]?.color
-        let theme = makePresentationTheme(themeReference: settings.theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, preview: true)
+        let theme = makePresentationTheme(themeReference: settings.theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: settings.themeSpecificAccentColors[settings.theme.index]?.baseColor ?? .blue, preview: true)
 
         let wallpaper: TelegramWallpaper
         if let themeSpecificWallpaper = settings.themeSpecificChatWallpapers[settings.theme.index] {
@@ -458,6 +458,7 @@ public func themeSettingsController(context: AccountContextImpl, focusOnItemTag:
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.alwaysSynchronous = true
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

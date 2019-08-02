@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Display
 import TelegramUIPrivateModule
 import TelegramCore
+import MediaResources
 
 private func imageFromAJpeg(data: Data) -> (UIImage, UIImage)? {
     if let (colorData, alphaData) = data.withUnsafeBytes({ (bytes: UnsafePointer<UInt8>) -> (Data, Data)? in

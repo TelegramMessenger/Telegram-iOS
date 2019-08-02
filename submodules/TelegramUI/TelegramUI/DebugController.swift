@@ -58,6 +58,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetBiometricsData(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
+    case knockoutWallpaper(PresentationTheme, Bool)
     case exportTheme(PresentationTheme)
     case versionInfo(PresentationTheme)
     
@@ -71,7 +72,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .exportTheme:
+            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .exportTheme:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -120,10 +121,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 18
             case .photoPreview:
                 return 19
-            case .exportTheme:
-                return 20
-            case .versionInfo:
+            case .knockoutWallpaper:
                 return 21
+            case .exportTheme:
+                return 22
+            case .versionInfo:
+                return 23
         }
     }
     
@@ -470,6 +473,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         })
                     }).start()
                 })
+            case let .knockoutWallpaper(theme, value):
+                return ItemListSwitchItem(theme: theme, title: "Knockout Wallpaper", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                            var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                            settings.knockoutWallpaper = value
+                            return settings
+                        })
+                    }).start()
+                })
             case let .exportTheme(theme):
                 return ItemListActionItem(theme: theme, title: "Export Theme", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     guard let context = arguments.context else {
@@ -537,6 +550,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetHoles(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
+    entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
 
     entries.append(.versionInfo(presentationData.theme))
     

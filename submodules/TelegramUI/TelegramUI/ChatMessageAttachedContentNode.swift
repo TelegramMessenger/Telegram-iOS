@@ -537,7 +537,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 }
                             }
                         
-                            statusSizeAndApply = statusLayout(presentationData, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                            statusSizeAndApply = statusLayout(context, presentationData, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
                         }
                     default:
                         break

@@ -1,8 +1,8 @@
 import Foundation
 import UIKit
 import Display
+import Postbox
 import TelegramCore
-import TelegramPresentationData
 
 private func generateLineImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 2.0, height: 3.0), contextGenerator: { size, context in
@@ -67,11 +67,11 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func principalGraphics(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeEssentialGraphics {
+    public static func principalGraphics(mediaBox: MediaBox, knockoutWallpaper: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeEssentialGraphics {
         let hasWallpaper = !wallpaper.isEmpty
         let key: PresentationResourceKey = !hasWallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
         return theme.object(key.rawValue, { theme in
-            return PrincipalThemeEssentialGraphics(theme.chat, wallpaper: wallpaper, preview: theme.preview)
+            return PrincipalThemeEssentialGraphics(mediaBox: mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: knockoutWallpaper)
         }) as! PrincipalThemeEssentialGraphics
     }
     

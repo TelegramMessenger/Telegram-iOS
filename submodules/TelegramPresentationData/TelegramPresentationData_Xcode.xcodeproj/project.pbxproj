@@ -22,6 +22,8 @@
 		D06017F522F35A4000796784 /* PresentationThemeEssentialGraphics.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06017F422F35A4000796784 /* PresentationThemeEssentialGraphics.swift */; };
 		D06017F722F35A9200796784 /* ChatMessageBubbleImages.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06017F622F35A9200796784 /* ChatMessageBubbleImages.swift */; };
 		D06017F922F35ACF00796784 /* WallpaperUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06017F822F35ACF00796784 /* WallpaperUtils.swift */; };
+		D068EE9022F4A9B60064E921 /* MediaResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D068EE8F22F4A9B60064E921 /* MediaResources.framework */; };
+		D084F9F022F3AEFD004874CE /* ChatControllerBackgroundNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D084F9EF22F3AEFD004874CE /* ChatControllerBackgroundNode.swift */; };
 		D0AE31AB22B273F20058D3BC /* TelegramPresentationData.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE31A922B273F20058D3BC /* TelegramPresentationData.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0AE31B422B2746B0058D3BC /* PresentationStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE31B122B2746B0058D3BC /* PresentationStrings.swift */; };
 		D0AE31B522B2746B0058D3BC /* PresentationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE31B222B2746B0058D3BC /* PresentationData.swift */; };
@@ -61,6 +63,9 @@
 		D06017F422F35A4000796784 /* PresentationThemeEssentialGraphics.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationThemeEssentialGraphics.swift; sourceTree = "<group>"; };
 		D06017F622F35A9200796784 /* ChatMessageBubbleImages.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageBubbleImages.swift; sourceTree = "<group>"; };
 		D06017F822F35ACF00796784 /* WallpaperUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperUtils.swift; sourceTree = "<group>"; };
+		D068EE8F22F4A9B60064E921 /* MediaResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MediaResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D084F9EF22F3AEFD004874CE /* ChatControllerBackgroundNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatControllerBackgroundNode.swift; sourceTree = "<group>"; };
+		D084F9F122F3AFEA004874CE /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE31A622B273F20058D3BC /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE31A922B273F20058D3BC /* TelegramPresentationData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramPresentationData.h; sourceTree = "<group>"; };
 		D0AE31AA22B273F20058D3BC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -91,6 +96,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D068EE9022F4A9B60064E921 /* MediaResources.framework in Frameworks */,
 				D0AE31C322B274E90058D3BC /* TelegramUIPreferences.framework in Frameworks */,
 				D0AE31BF22B274950058D3BC /* Display.framework in Frameworks */,
 				D0AE31BD22B274830058D3BC /* TelegramCore.framework in Frameworks */,
@@ -160,6 +166,7 @@
 				D06017F422F35A4000796784 /* PresentationThemeEssentialGraphics.swift */,
 				D06017F622F35A9200796784 /* ChatMessageBubbleImages.swift */,
 				D06017F822F35ACF00796784 /* WallpaperUtils.swift */,
+				D084F9EF22F3AEFD004874CE /* ChatControllerBackgroundNode.swift */,
 				D06017F222F3583200796784 /* FrameworkSpecific.swift */,
 				D0AE31A922B273F20058D3BC /* TelegramPresentationData.h */,
 			);
@@ -169,6 +176,8 @@
 		D0AE31B722B2747A0058D3BC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D068EE8F22F4A9B60064E921 /* MediaResources.framework */,
+				D084F9F122F3AFEA004874CE /* AccountContext.framework */,
 				D0AE31C222B274E90058D3BC /* TelegramUIPreferences.framework */,
 				D0AE31BE22B274950058D3BC /* Display.framework */,
 				D0AE31BC22B274830058D3BC /* TelegramCore.framework */,
@@ -274,6 +283,7 @@
 				0957DE1922D95E0F001B4D57 /* PresentationThemeDecoder.swift in Sources */,
 				D0AE31B422B2746B0058D3BC /* PresentationStrings.swift in Sources */,
 				D0AE321422B2826A0058D3BC /* ComponentsThemes.swift in Sources */,
+				D084F9F022F3AEFD004874CE /* ChatControllerBackgroundNode.swift in Sources */,
 				D0AE31C522B279720058D3BC /* StringPluralization.swift in Sources */,
 				D0AE31CD22B279FD0058D3BC /* PresentationsResourceCache.swift in Sources */,
 				D0AE31C922B2799B0058D3BC /* NumberPluralizationForm.m in Sources */,

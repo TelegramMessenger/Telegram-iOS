@@ -100,6 +100,7 @@ private final class ActionSheetItemNode: ASDisplayNode {
 }
 
 final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private let sendButtonFrame: CGRect
     private let textFieldFrame: CGRect
@@ -129,6 +130,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     private var validLayout: ContainerViewLayout?
     
     init(context: AccountContextImpl, sendButtonFrame: CGRect, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, cancel: (() -> Void)?) {
+        self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.sendButtonFrame = sendButtonFrame
         self.textFieldFrame = textInputNode.convert(textInputNode.bounds, to: nil)
@@ -215,7 +217,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         self.messageBackgroundNode.contentMode = .scaleToFill
         
-        let graphics = PresentationResourcesChat.principalGraphics(self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper)
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: self.context.account.postbox.mediaBox, knockoutWallpaper: self.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper)
         self.messageBackgroundNode.image = graphics.chatMessageBackgroundOutgoingImage
         
         self.view.addSubview(self.effectView)
@@ -285,7 +287,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             self.toMessageTextNode.attributedText = toAttributedText
         }
         
-        let graphics = PresentationResourcesChat.principalGraphics(self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper)
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: self.context.account.postbox.mediaBox, knockoutWallpaper: self.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper)
         self.messageBackgroundNode.image = graphics.chatMessageBackgroundOutgoingImage
         
         for node in self.contentNodes {

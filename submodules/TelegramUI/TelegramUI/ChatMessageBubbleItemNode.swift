@@ -129,6 +129,7 @@ private enum ContentNodeOperation {
 }
 
 class ChatMessageBubbleItemNode: ChatMessageItemView {
+    private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
     private var transitionClippingNode: ASDisplayNode?
     
@@ -172,11 +173,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     }
     
     required init() {
+        self.backgroundWallpaperNode = ChatMessageBubbleBackdrop()
+        
         self.backgroundNode = ChatMessageBackground()
         self.messageAccessibilityArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false)
         
+        self.addSubnode(self.backgroundWallpaperNode)
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.messageAccessibilityArea)
         
@@ -214,23 +218,21 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         super.animateRemoved(currentTimestamp, duration: duration)
         
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.allowsGroupOpacity = true
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.allowsGroupOpacity = false
+        })
+        self.layer.animateScale(from: 1.0, to: 0.1, duration: 0.15, removeOnCompletion: false)
+        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.bounds.width / 2.0 - self.backgroundNode.frame.midX, y: self.backgroundNode.frame.midY), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
     }
     
     override func animateAdded(_ currentTimestamp: Double, duration: Double) {
         super.animateAdded(currentTimestamp, duration: duration)
         
-        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        
-        self.nameNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        self.adminBadgeNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        self.credibilityIconNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        self.forwardInfoNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        self.replyInfoNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        
-        for contentNode in self.contentNodes {
-            contentNode.animateAdded(currentTimestamp, duration: duration)
-        }
+        self.allowsGroupOpacity = true
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
+            self?.allowsGroupOpacity = false
+        })
     }
     
     override func didLoad() {
@@ -372,7 +374,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContextImpl, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContextImpl, ChatPresentationThemeData, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
-        mosaicStatusLayout: (ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
+        mosaicStatusLayout: (AccountContextImpl, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
         currentShareButtonNode: HighlightableButtonNode?,
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
@@ -837,7 +839,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     }
                 }
                 
-                mosaicStatusSizeAndApply = mosaicStatusLayout(item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
+                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
             }
         }
         
@@ -1257,7 +1259,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         
         let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
         
-        let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
         
         var updatedMergedTop = mergedBottom
         var updatedMergedBottom = mergedTop
@@ -1375,6 +1377,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             backgroundType = .incoming(mergeType)
         }
         strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, transition: transition)
+        strongSelf.backgroundWallpaperNode.setType(type: backgroundType, theme: item.presentationData.theme, mediaBox: item.context.account.postbox.mediaBox, essentialGraphics: graphics)
         
         strongSelf.backgroundType = backgroundType
         
@@ -1633,6 +1636,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 strongSelf.backgroundFrameTransition = nil
             }
             strongSelf.backgroundNode.frame = backgroundFrame
+            strongSelf.backgroundWallpaperNode.frame = backgroundFrame
+            if let (rect, size) = strongSelf.absoluteRect {
+                strongSelf.updateAbsoluteRect(rect, within: size)
+            }
             strongSelf.messageAccessibilityArea.frame = backgroundFrame
             if let shareButtonNode = strongSelf.shareButtonNode {
                 shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
@@ -1779,6 +1786,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if let backgroundFrameTransition = self.backgroundFrameTransition {
             let backgroundFrame = CGRect.interpolator()(backgroundFrameTransition.0, backgroundFrameTransition.1, progress) as! CGRect
             self.backgroundNode.frame = backgroundFrame
+            self.backgroundWallpaperNode.frame = backgroundFrame
+            if let (rect, size) = self.absoluteRect {
+                self.updateAbsoluteRect(rect, within: size)
+            }
             self.messageAccessibilityArea.frame = backgroundFrame
             
             if let shareButtonNode = self.shareButtonNode {
@@ -2120,7 +2131,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         
         if !self.backgroundNode.frame.contains(point) {
             if self.actionButtonsNode == nil || !self.actionButtonsNode!.frame.contains(point) {
-                //return nil
             }
         }
         
@@ -2194,6 +2204,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
         
         self.backgroundNode.isHidden = hasHiddenBackground
+        self.backgroundWallpaperNode.isHidden = hasHiddenBackground
     }
     
     override func updateAutomaticMediaDownloadSettings() {
@@ -2346,7 +2357,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if self.highlightedState != highlighted {
             self.highlightedState = highlighted
             if let backgroundType = self.backgroundType {
-                let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 
                 if highlighted {
                     self.backgroundNode.setType(type: backgroundType, highlighted: true, graphics: graphics, transition: .immediate)
@@ -2441,5 +2452,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             default:
                 break
         }
+    }
+    
+    private var absoluteRect: (CGRect, CGSize)?
+    
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteRect = (rect, containerSize)
+        let mappedRect = CGRect(origin: CGPoint(x: rect.minX + self.backgroundWallpaperNode.frame.minX, y: containerSize.height - rect.maxY + self.backgroundWallpaperNode.frame.minY), size: rect.size)
+        self.backgroundWallpaperNode.update(rect: mappedRect, within: containerSize)
+    }
+    
+    override func applyAbsoluteOffset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        self.backgroundWallpaperNode.offset(value: -value, animationCurve: animationCurve, duration: duration)
     }
 }

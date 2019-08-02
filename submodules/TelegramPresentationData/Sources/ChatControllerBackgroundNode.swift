@@ -5,11 +5,26 @@ import TelegramCore
 import Display
 import SwiftSignalKit
 import Postbox
-
+import MediaResources
 
 private var backgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 
-func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: MediaBox, composed: Bool = true) -> UIImage? {
+public func chatControllerBackgroundImage(theme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, mediaBox: MediaBox, composed: Bool = true, knockoutMode: Bool) -> UIImage? {
+    var wallpaper = initialWallpaper
+    if knockoutMode {
+        switch theme.name {
+        case let .builtin(name):
+            switch name {
+            case .day, .night, .nightAccent:
+                wallpaper = theme.chat.defaultWallpaper
+            case .dayClassic:
+                break
+            }
+        case .custom:
+            break
+        }
+    }
+    
     var backgroundImage: UIImage?
     if composed && wallpaper == backgroundImageForWallpaper?.0, (wallpaper.settings?.blur ?? false) == backgroundImageForWallpaper?.1 {
         backgroundImage = backgroundImageForWallpaper?.2
@@ -53,12 +68,14 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: Media
                         var image: UIImage?
                         let _ = mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                             if data.complete {
+                                print("background image: \(data.path)")
                                 image = UIImage(contentsOfFile: data.path)?.precomposed()
                             }
                         })
                         backgroundImage = image
                     }
                     if backgroundImage == nil, let path = mediaBox.completedResourcePath(file.file.resource) {
+                        print("background image: \(path)")
                         backgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                     }
                 }

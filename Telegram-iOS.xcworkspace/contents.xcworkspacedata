@@ -76,6 +76,9 @@
       location = "container:"
       name = "UI Components">
       <FileRef
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/MediaResources/MediaResources_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
          location = "group:submodules/CheckNode/CheckNode_Xcode.xcodeproj">
       </FileRef>
       <FileRef

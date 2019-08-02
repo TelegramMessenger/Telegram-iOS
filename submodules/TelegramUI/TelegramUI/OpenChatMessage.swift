@@ -350,7 +350,7 @@ func openChatMessage(context: AccountContextImpl, message: Message, standalone: 
                     return nil
                 }))
             case let .theme(media):
-                let controller = ThemePreviewController(context: context, previewTheme: makeDefaultDayPresentationTheme(accentColor: nil, serviceBackgroundColor: .black, day: true, preview: false), media: .message(message: MessageReference(message), media: media))
+                let controller = ThemePreviewController(context: context, previewTheme: makeDefaultDayPresentationTheme(accentColor: nil, serviceBackgroundColor: .black, baseColor: nil, day: true, preview: false), media: .message(message: MessageReference(message), media: media))
                 present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
