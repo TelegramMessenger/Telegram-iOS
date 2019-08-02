@@ -178,7 +178,7 @@ static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 100
             if (_assetReader.status == AVAssetReaderStatusCompleted)
             {
                 NSLog(@"finished");
-                if (_oggWriter != nil && [_oggWriter writeFrame:NULL frameByteCount:0])
+                if (_oggWriter != nil)
                 {
                     dataItemResult = _tempFileItem;
                     durationResult = [_oggWriter encodedDuration];
