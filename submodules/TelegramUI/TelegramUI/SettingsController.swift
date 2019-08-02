@@ -14,6 +14,7 @@ import MtProtoKitDynamic
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
+import ItemListUI
 
 private let maximumNumberOfAccounts = 3
 
@@ -530,12 +531,12 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
 }
 
 public protocol SettingsController: class {
-    func updateContext(context: AccountContext)
+    func updateContext(context: AccountContextImpl)
 }
 
 private final class SettingsControllerImpl: ItemListController<SettingsEntry>, SettingsController, TabBarContainedController {
-    let sharedContext: SharedAccountContext
-    let contextValue: Promise<AccountContext>
+    let sharedContext: SharedAccountContextImpl
+    let contextValue: Promise<AccountContextImpl>
     var accountsAndPeersValue: ((Account, Peer)?, [(Account, Peer, Int32)])?
     var accountsAndPeersDisposable: Disposable?
     
@@ -548,7 +549,7 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
         return false
     }
 
-    init(currentContext: AccountContext, contextValue: Promise<AccountContext>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?, accountsAndPeers: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError>) {
+    init(currentContext: AccountContextImpl, contextValue: Promise<AccountContextImpl>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?, accountsAndPeers: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError>) {
         self.sharedContext = currentContext.sharedContext
         self.contextValue = contextValue
         let presentationData = currentContext.sharedContext.currentPresentationData.with { $0 }
@@ -577,7 +578,7 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
         self.accountsAndPeersDisposable?.dispose()
     }
     
-    func updateContext(context: AccountContext) {
+    func updateContext(context: AccountContextImpl) {
         //self.contextValue.set(.single(context))
     }
     
@@ -598,7 +599,7 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
     }
 }
 
-public func settingsController(context: AccountContext, accountManager: AccountManager) -> SettingsController & ViewController {
+public func settingsController(context: AccountContextImpl, accountManager: AccountManager) -> SettingsController & ViewController {
     let initialState = SettingsState(updatingAvatar: nil, accountIdWithRevealedOptions: nil, isSearching: false)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -640,7 +641,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
     
-    let contextValue = Promise<AccountContext>()
+    let contextValue = Promise<AccountContextImpl>()
     let accountsAndPeers = Promise<((Account, Peer)?, [(Account, Peer, Int32)])>()
     accountsAndPeers.set(activeAccountsAndPeers(context: context))
     
@@ -920,7 +921,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 }
                 
                 let completedImpl: (UIImage) -> Void = { image in
-                    if let data = UIImageJPEGRepresentation(image, 0.6) {
+                    if let data = image.jpegData(compressionQuality: 0.6) {
                         let resource = LocalFileMediaResource(fileId: arc4random64())
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                         let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
@@ -1368,14 +1369,14 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     }
                 }
             })
-            var sharedContext: SharedAccountContext?
+            var sharedContext: SharedAccountContextImpl?
             let _ = (contextValue.get()
             |> deliverOnMainQueue
             |> take(1)).start(next: { context in
                 sharedContext = context.sharedContext
             })
             if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
-                let accountContext = AccountContext(sharedContext: sharedContext, account: selectedAccount, limitsConfiguration: LimitsConfiguration.defaultValue)
+                let accountContext = AccountContextImpl(sharedContext: sharedContext, account: selectedAccount, limitsConfiguration: LimitsConfiguration.defaultValue)
                 let chatListController = ChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true)
                 return chatListController
             }

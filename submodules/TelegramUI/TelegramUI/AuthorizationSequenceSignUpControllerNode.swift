@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import TextFormat
 
 private func roundCorners(diameter: CGFloat) -> UIImage {
     UIGraphicsBeginImageContextWithOptions(CGSize(width: diameter, height: diameter), false, 0.0)
@@ -157,14 +158,14 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         
         self.termsNode.linkHighlightColor = self.theme.list.itemAccentColor.withAlphaComponent(0.5)
         self.termsNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
             } else {
                 return nil
             }
         }
         self.termsNode.tapAttributeAction = { [weak self] attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                 self?.openTermsOfService?()
             }
         }

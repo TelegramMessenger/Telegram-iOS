@@ -54,7 +54,7 @@ private func titleString(media: InstantPageMedia, theme: InstantPageTheme) -> NS
 }
 
 final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     let media: InstantPageMedia
     private let openMedia: (InstantPageMedia) -> Void
     private var strings: PresentationStrings
@@ -75,7 +75,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
     private var isPlaying: Bool = false
     private var playbackState: SharedMediaPlayerItemPlaybackState?
     
-    init(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, openMedia: @escaping (InstantPageMedia) -> Void) {
+    init(context: AccountContextImpl, strings: PresentationStrings, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, openMedia: @escaping (InstantPageMedia) -> Void) {
         self.context = context
         self.strings = strings
         self.theme = theme

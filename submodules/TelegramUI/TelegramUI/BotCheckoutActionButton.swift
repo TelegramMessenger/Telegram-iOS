@@ -127,12 +127,12 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
                         self.progressBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                     
                         let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-                        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+                        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
                         basicAnimation.duration = 0.8
                         basicAnimation.fromValue = NSNumber(value: Float(0.0))
                         basicAnimation.toValue = NSNumber(value: Float.pi * 2.0)
                         basicAnimation.repeatCount = Float.infinity
-                        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+                        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
                         
                         self.progressBackgroundNode.layer.add(basicAnimation, forKey: "progressRotation")
                     case let .active(title):
@@ -192,12 +192,12 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
                         self.activeBackgroundNode.alpha = 0.0
                     
                         let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-                        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+                        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
                         basicAnimation.duration = 0.8
                         basicAnimation.fromValue = NSNumber(value: Float(0.0))
                         basicAnimation.toValue = NSNumber(value: Float.pi * 2.0)
                         basicAnimation.repeatCount = Float.infinity
-                        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+                        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
                         
                         self.progressBackgroundNode.layer.add(basicAnimation, forKey: "progressRotation")
                     case .active:

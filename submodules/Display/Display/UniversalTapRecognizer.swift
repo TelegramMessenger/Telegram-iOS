@@ -39,6 +39,6 @@ class UniversalTapRecognizer: UITapGestureRecognizer {
             }
         }), selector: #selector(TimerTargetWrapper.timerEvent), userInfo: nil, repeats: false)
         self.timer = timer
-        RunLoop.main.add(timer, forMode: .commonModes)
+        RunLoop.main.add(timer, forMode: .common)
     }
 }

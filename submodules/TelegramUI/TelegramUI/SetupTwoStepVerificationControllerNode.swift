@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import ActivityIndicator
 
 enum SetupTwoStepVerificationInitialState {
     case automatic
@@ -136,7 +137,7 @@ enum SetupTwoStepVerificationStateUpdate {
 }
 
 final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private let updateBackAction: (Bool) -> Void
     private let updateNextAction: (SetupTwoStepVerificationNextAction) -> Void
@@ -149,7 +150,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
     private var contentNode: SetupTwoStepVerificationContentNode?
     private let actionDisposable = MetaDisposable()
     
-    init(context: AccountContext, updateBackAction: @escaping (Bool) -> Void, updateNextAction: @escaping (SetupTwoStepVerificationNextAction) -> Void, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, initialState: SetupTwoStepVerificationInitialState) {
+    init(context: AccountContextImpl, updateBackAction: @escaping (Bool) -> Void, updateNextAction: @escaping (SetupTwoStepVerificationNextAction) -> Void, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, initialState: SetupTwoStepVerificationInitialState) {
         self.context = context
         self.updateBackAction = updateBackAction
         self.updateNextAction = updateNextAction
@@ -205,7 +206,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

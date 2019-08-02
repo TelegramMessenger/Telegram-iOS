@@ -226,19 +226,19 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         self.closeButton = HighlightableButtonNode()
         self.closeButton.accessibilityLabel = "Stop playback"
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 2.0)
         self.closeButton.displaysAsynchronously = false
         
         self.rateButton = HighlightableButtonNode()
         
-        self.rateButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -4.0, -8.0, -4.0)
+        self.rateButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -4.0, bottom: -8.0, right: -4.0)
         self.rateButton.displaysAsynchronously = false
         
         self.accessibilityAreaNode = AccessibilityAreaNode()
         
         self.actionButton = HighlightTrackingButtonNode()
-        self.actionButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.actionButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.actionButton.displaysAsynchronously = false
         
         self.actionPauseNode = ASImageNode()

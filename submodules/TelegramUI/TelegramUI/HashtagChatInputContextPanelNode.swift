@@ -5,17 +5,10 @@ import Postbox
 import TelegramCore
 import Display
 import TelegramPresentationData
+import MergeLists
 
 private struct HashtagChatInputContextPanelEntryStableId: Hashable {
     let text: String
-    
-    var hashValue: Int {
-        return self.text.hashValue
-    }
-    
-    static func ==(lhs: HashtagChatInputContextPanelEntryStableId, rhs: HashtagChatInputContextPanelEntryStableId) -> Bool {
-        return lhs.text == rhs.text
-    }
 }
 
 private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
@@ -67,7 +60,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     private var enqueuedTransitions: [(HashtagChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true

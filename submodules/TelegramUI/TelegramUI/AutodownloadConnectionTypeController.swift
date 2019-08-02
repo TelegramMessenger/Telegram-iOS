@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 enum AutomaticDownloadConnectionType {
     case cellular
@@ -272,7 +273,7 @@ private func autodownloadMediaConnectionTypeControllerEntries(presentationData: 
     return entries
 }
 
-func autodownloadMediaConnectionTypeController(context: AccountContext, connectionType: AutomaticDownloadConnectionType) -> ViewController {
+func autodownloadMediaConnectionTypeController(context: AccountContextImpl, connectionType: AutomaticDownloadConnectionType) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     

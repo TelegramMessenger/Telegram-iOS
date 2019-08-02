@@ -17,7 +17,7 @@ final class BotCheckoutController: ViewController {
         return self._ready
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let invoice: TelegramMediaInvoice
     private let messageId: MessageId
     
@@ -25,7 +25,7 @@ final class BotCheckoutController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId) {
+    init(context: AccountContextImpl, invoice: TelegramMediaInvoice, messageId: MessageId) {
         self.context = context
         self.invoice = invoice
         self.messageId = messageId

@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import TextFormat
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
@@ -367,9 +368,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode),
-        replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
-        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
-        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
+        replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContextImpl, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
+        actionButtonsLayout: (AccountContextImpl, ChatPresentationThemeData, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
+        mosaicStatusLayout: (AccountContextImpl, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
         currentShareButtonNode: HighlightableButtonNode?,
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
@@ -878,7 +879,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Channel_Status)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                 }
                 if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
-                    let mutableString = NSMutableAttributedString(string: "\(authorNameString) ", attributes: [NSAttributedStringKey.font: nameFont, NSAttributedStringKey.foregroundColor: authorNameColor])
+                    let mutableString = NSMutableAttributedString(string: "\(authorNameString) ", attributes: [NSAttributedString.Key.font: nameFont, NSAttributedString.Key.foregroundColor: authorNameColor])
                     let bodyAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
                     let boldAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
                     let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)"), body: bodyAttributes, argumentAttributes: [0: boldAttributes])
@@ -1254,7 +1255,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         
         let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
         
-        let graphics = PresentationResourcesChat.principalGraphics(context: item.context, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
         
         var updatedMergedTop = mergedBottom
         var updatedMergedBottom = mergedTop
@@ -2352,7 +2353,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if self.highlightedState != highlighted {
             self.highlightedState = highlighted
             if let backgroundType = self.backgroundType {
-                let graphics = PresentationResourcesChat.principalGraphics(context: item.context, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                let graphics = PresentationResourcesChat.principalGraphics(context: mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 
                 if highlighted {
                     self.backgroundNode.setType(type: backgroundType, highlighted: true, graphics: graphics, transition: .immediate)
@@ -2361,7 +2362,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics, transition: .immediate)
                         
                         if let updatedContents = self.backgroundNode.layer.contents {
-                            self.backgroundNode.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.42)
+                            self.backgroundNode.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
                         }
                     } else {
                         self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics, transition: .immediate)

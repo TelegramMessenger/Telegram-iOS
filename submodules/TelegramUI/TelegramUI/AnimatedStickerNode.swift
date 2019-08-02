@@ -195,6 +195,13 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
                             lhs = lhs.advanced(by: 1)
                             rhs = rhs.advanced(by: 1)
                         }
+                        var lhsRest = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt8.self).advanced(by: (decodeBufferLength / 8) * 8)
+                        var rhsRest = UnsafeMutableRawPointer(decodeBytes).assumingMemoryBound(to: UInt8.self).advanced(by: (decodeBufferLength / 8) * 8)
+                        for _ in (decodeBufferLength / 8) * 8 ..< decodeBufferLength {
+                            lhsRest.pointee = rhsRest.pointee ^ lhsRest.pointee
+                            lhsRest = lhsRest.advanced(by: 1)
+                            rhsRest = rhsRest.advanced(by: 1)
+                        }
                         
                         frameData = Data(bytes: frameBytes, count: decodeBufferLength)
                     }
@@ -447,6 +454,7 @@ final class AnimatedStickerNode: ASDisplayNode {
                                 return
                             }
                             if !strongSelf.reportedStarted {
+                                strongSelf.reportedStarted = true
                                 strongSelf.started()
                             }
                         })
@@ -470,10 +478,66 @@ final class AnimatedStickerNode: ASDisplayNode {
         self.timer.swap(nil)?.invalidate()
     }
     
-    func playIfNeeded() {
-        if !self.isPlaying {
-            self.play()
+    func seekToStart() {
+        self.isPlaying = false
+        
+        let directData = self.directData
+        let cachedData = self.cachedData
+        let queue = self.queue
+        let timerHolder = self.timer
+        self.queue.async { [weak self] in
+            var maybeFrameSource: AnimatedStickerFrameSource?
+            if let directData = directData {
+                maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData._0, width: directData._2, height: directData._3)
+            } else if let cachedData = cachedData {
+                if #available(iOS 9.0, *) {
+                    maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData)
+                }
+            }
+            guard let frameSource = maybeFrameSource else {
+                return
+            }
+            let frameQueue = QueueLocalObject<AnimatedStickerFrameQueue>(queue: queue, generate: {
+                return AnimatedStickerFrameQueue(queue: queue, length: 1, source: frameSource)
+            })
+            timerHolder.swap(nil)?.invalidate()
+            
+            let maybeFrame = frameQueue.syncWith { frameQueue in
+                return frameQueue.take()
+            }
+            if let maybeFrame = maybeFrame, let frame = maybeFrame {
+                Queue.mainQueue().async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, completion: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if !strongSelf.reportedStarted {
+                            strongSelf.reportedStarted = true
+                            strongSelf.started()
+                        }
+                    })
+                    if case .once = strongSelf.playbackMode, frame.isLastFrame {
+                        strongSelf.stop()
+                        strongSelf.isPlaying = false
+                    }
+                }
+            }
+            frameQueue.with { frameQueue in
+                frameQueue.generateFramesIfNeeded()
+            }
         }
+    }
+    
+    func playIfNeeded() -> Bool {
+        if !self.isPlaying {
+            self.isPlaying = true
+            self.play()
+            return true
+        }
+        return false
     }
     
     func updateLayout(size: CGSize) {

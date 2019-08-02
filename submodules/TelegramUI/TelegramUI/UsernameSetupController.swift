@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 private final class UsernameSetupControllerArguments {
     let account: Account
@@ -26,7 +27,7 @@ private enum UsernameSetupSection: Int32 {
 public enum UsernameEntryTag: ItemListItemTag {
     case username
     
-    func isEqual(to other: ItemListItemTag) -> Bool {
+    public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? UsernameEntryTag, self == other {
             return true
         } else {
@@ -218,7 +219,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func usernameSetupController(context: AccountContext) -> ViewController {
+public func usernameSetupController(context: AccountContextImpl) -> ViewController {
     let statePromise = ValuePromise(UsernameSetupControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: UsernameSetupControllerState())
     let updateState: ((UsernameSetupControllerState) -> UsernameSetupControllerState) -> Void = { f in

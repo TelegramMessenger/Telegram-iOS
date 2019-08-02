@@ -8,7 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 
 final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let webPage: TelegramMediaWebpage
     private let openUrl: (InstantPageUrlItem) -> Void
     
@@ -18,7 +18,7 @@ final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
     
     private let resolveDisposable = MetaDisposable()
     
-    init(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, webPage: TelegramMediaWebpage, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContextImpl, strings: PresentationStrings, theme: InstantPageTheme, webPage: TelegramMediaWebpage, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.context = context
         self.webPage = webPage
         self.openUrl = openUrl

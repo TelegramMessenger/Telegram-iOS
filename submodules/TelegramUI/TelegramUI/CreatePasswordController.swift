@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 private enum CreatePasswordField {
     case password
@@ -220,7 +221,7 @@ enum CreatePasswordState: Equatable {
     case pendingVerification(emailPattern: String)
 }
 
-func createPasswordController(context: AccountContext, createPasswordContext: CreatePasswordContext, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping ((String, String)?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
+func createPasswordController(context: AccountContextImpl, createPasswordContext: CreatePasswordContext, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping ((String, String)?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
     let statePromise = ValuePromise(CreatePasswordControllerState(state: state), ignoreRepeated: true)
     let stateValue = Atomic(value: CreatePasswordControllerState(state: state))
     let updateState: ((CreatePasswordControllerState) -> CreatePasswordControllerState) -> Void = { f in

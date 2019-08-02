@@ -51,7 +51,7 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
                             let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
                             UIGraphicsEndImageContext()
                             
-                            if let scaledImage = scaledImage, let data = UIImageJPEGRepresentation(scaledImage, 0.8) {
+                            if let scaledImage = scaledImage, let data = scaledImage.jpegData(compressionQuality: 0.8) {
                                 if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                                     #if DEBUG
                                     if false, let heicData = compressImage(scaledImage, quality: 0.8) {

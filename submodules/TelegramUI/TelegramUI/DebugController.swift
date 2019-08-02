@@ -12,15 +12,16 @@ import MtProtoKitDynamic
 import MessageUI
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class DebugControllerArguments {
-    let sharedContext: SharedAccountContext
-    let context: AccountContext?
+    let sharedContext: SharedAccountContextImpl
+    let context: AccountContextImpl?
     let presentController: (ViewController, ViewControllerPresentationArguments?) -> Void
     let pushController: (ViewController) -> Void
     let getRootController: () -> UIViewController?
     
-    init(sharedContext: SharedAccountContext, context: AccountContext?, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void, getRootController: @escaping () -> UIViewController?) {
+    init(sharedContext: SharedAccountContextImpl, context: AccountContextImpl?, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void, getRootController: @escaping () -> UIViewController?) {
         self.sharedContext = sharedContext
         self.context = context
         self.presentController = presentController
@@ -57,7 +58,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetBiometricsData(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
-    case playAnimatedEmojiOnce(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
     case exportTheme(PresentationTheme)
     case versionInfo(PresentationTheme)
@@ -72,7 +72,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .playAnimatedEmojiOnce, .knockoutWallpaper, .exportTheme:
+            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .exportTheme:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -121,8 +121,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 18
             case .photoPreview:
                 return 19
-            case .playAnimatedEmojiOnce:
-                return 20
             case .knockoutWallpaper:
                 return 21
             case .exportTheme:
@@ -475,16 +473,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         })
                     }).start()
                 })
-            case let .playAnimatedEmojiOnce(theme, value):
-                return ItemListSwitchItem(theme: theme, title: "Play Emoji Once", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                            var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
-                            settings.playAnimatedEmojiOnce = value
-                            return settings
-                        })
-                    }).start()
-                })
             case let .knockoutWallpaper(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Knockout Wallpaper", value: value, sectionId: self.section, style: .blocks, updated: { value in
                     let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -562,7 +550,6 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetHoles(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
-    entries.append(.playAnimatedEmojiOnce(presentationData.theme, experimentalSettings.playAnimatedEmojiOnce))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
 
     entries.append(.versionInfo(presentationData.theme))
@@ -570,7 +557,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     return entries
 }
 
-public func debugController(sharedContext: SharedAccountContext, context: AccountContext?, modal: Bool = false) -> ViewController {
+public func debugController(sharedContext: SharedAccountContextImpl, context: AccountContextImpl?, modal: Bool = false) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?

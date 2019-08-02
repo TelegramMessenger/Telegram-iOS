@@ -6,6 +6,8 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import CheckNode
+import TextFormat
 
 private let textFont = Font.regular(13.0)
 private let boldTextFont = Font.semibold(13.0)
@@ -294,7 +296,7 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
     }
 }
 
-func chatMessageActionUrlAuthController(context: AccountContext, defaultUrl: String, domain: String, bot: Peer, requestWriteAccess: Bool, displayName: String, open: @escaping (Bool, Bool) -> Void) -> AlertController {
+func chatMessageActionUrlAuthController(context: AccountContextImpl, defaultUrl: String, domain: String, bot: Peer, requestWriteAccess: Bool, displayName: String, open: @escaping (Bool, Bool) -> Void) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings

@@ -13,7 +13,7 @@ final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecog
     
     private var presentationData: PresentationData
     
-    init(context: AccountContext) {
+    init(context: AccountContextImpl) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.backgroundNode = ASDisplayNode()

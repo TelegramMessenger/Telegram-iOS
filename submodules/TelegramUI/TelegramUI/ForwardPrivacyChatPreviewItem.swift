@@ -7,9 +7,10 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 class ForwardPrivacyChatPreviewItem: ListViewItem, ItemListItem {
-    let context: AccountContext
+    let context: AccountContextImpl
     let theme: PresentationTheme
     let strings: PresentationStrings
     let sectionId: ItemListSectionId
@@ -21,7 +22,7 @@ class ForwardPrivacyChatPreviewItem: ListViewItem, ItemListItem {
     let linkEnabled: Bool
     let tooltipText: String
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peerName: String, linkEnabled: Bool, tooltipText: String) {
+    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peerName: String, linkEnabled: Bool, tooltipText: String) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -150,7 +151,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
             
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: item.theme, wallpaper: item.wallpaper), fontSize: item.fontSize, strings: item.strings, dateTimeFormat: item.dateTimeFormat, nameDisplayOrder: item.nameDisplayOrder, disableAnimations: false, largeEmoji: false)
             
-            let messageItem = ChatMessageItem(presentationData: chatPresentationData, context: item.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: forwardInfo, author: nil, text: item.strings.Privacy_Forwards_PreviewMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes(rank: nil, isContact: false)), disableDate: true)
+            let messageItem = ChatMessageItem(presentationData: chatPresentationData, context: item.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: forwardInfo, author: nil, text: item.strings.Privacy_Forwards_PreviewMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: true)
             
             var node: ListViewItemNode?
             if let current = currentNode {

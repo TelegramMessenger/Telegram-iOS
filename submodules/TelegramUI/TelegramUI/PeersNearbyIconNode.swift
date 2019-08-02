@@ -60,7 +60,7 @@ final class PeersNearbyIconWavesNode: ASDisplayNode {
         }) as! POPAnimatableProperty)
         animation.fromValue = CGFloat(0.0) as NSNumber
         animation.toValue = CGFloat(1.0) as NSNumber
-        animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         animation.duration = 3.5
         animation.repeatForever = true
         self.pop_add(animation, forKey: "indefiniteProgress")

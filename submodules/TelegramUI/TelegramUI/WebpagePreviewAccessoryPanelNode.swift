@@ -24,7 +24,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     var theme: PresentationTheme
     var strings: PresentationStrings
     
-    init(context: AccountContext, url: String, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContextImpl, url: String, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
         self.url = url
         self.webpage = webpage
         self.theme = theme
@@ -32,7 +32,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         
         self.closeButton = ASButtonNode()
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
         self.lineNode = ASImageNode()

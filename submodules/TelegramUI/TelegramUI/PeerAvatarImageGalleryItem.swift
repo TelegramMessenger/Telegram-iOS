@@ -36,13 +36,13 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class PeerAvatarImageGalleryItem: GalleryItem {
-    let context: AccountContext
+    let context: AccountContextImpl
     let peer: Peer
     let presentationData: PresentationData
     let entry: AvatarGalleryEntry
     let delete: (() -> Void)?
     
-    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
+    init(context: AccountContextImpl, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
         self.context = context
         self.peer = peer
         self.presentationData = presentationData
@@ -88,7 +88,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
 }
 
 final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peer: Peer
     
     private var entry: AvatarGalleryEntry?
@@ -104,7 +104,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContext, presentationData: PresentationData, peer: Peer) {
+    init(context: AccountContextImpl, presentationData: PresentationData, peer: Peer) {
         self.context = context
         self.peer = peer
         
@@ -252,7 +252,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.imageNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.imageNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
         
         self.imageNode.clipsToBounds = true
-        self.imageNode.layer.animate(from: (self.imageNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionDefault, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
+        self.imageNode.layer.animate(from: (self.imageNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
             if value {
                 self?.imageNode.clipsToBounds = false
             }
@@ -312,10 +312,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         })
         
         self.imageNode.clipsToBounds = true
-        self.imageNode.layer.animate(from: 0.0 as NSNumber, to: (self.imageNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionDefault, duration: 0.18 * durationFactor, removeOnCompletion: false)
+        self.imageNode.layer.animate(from: 0.0 as NSNumber, to: (self.imageNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
+        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false)
     }
     
     override func visibilityUpdated(isVisible: Bool) {

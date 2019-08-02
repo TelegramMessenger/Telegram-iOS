@@ -5,6 +5,8 @@ import Postbox
 import TelegramCore
 import Display
 import TelegramPresentationData
+import MergeLists
+import TextFormat
 
 private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
@@ -57,7 +59,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, mode: MentionChatInputContextPanelMode) {
+    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, mode: MentionChatInputContextPanelMode) {
         self.mode = mode
         
         self.listView = ListView()

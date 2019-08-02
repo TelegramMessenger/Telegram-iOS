@@ -152,7 +152,7 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
             self.backgroundNode.layer.removeAnimation(forKey: "contents")
             if let currentContents = currentContents, let image = image {
                 self.backgroundNode.image = image
-                self.backgroundNode.layer.animate(from: currentContents as AnyObject, to: image.cgImage!, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseOut, duration: image === self.regularImage ? 0.45 : 0.05)
+                self.backgroundNode.layer.animate(from: currentContents as AnyObject, to: image.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: image === self.regularImage ? 0.45 : 0.05)
             } else {
                 self.backgroundNode.image = image
             }
@@ -230,7 +230,7 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
                 else if i / 3 == 3 {
                     delay = 0.15
                 }
-                subnode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: delay, timingFunction: kCAMediaTimingFunctionEaseOut)
+                subnode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: delay, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
             }
         }
     }

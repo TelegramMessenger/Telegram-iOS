@@ -6,6 +6,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramUIPreferences
+import TextFormat
 
 enum WebsiteType {
     case generic

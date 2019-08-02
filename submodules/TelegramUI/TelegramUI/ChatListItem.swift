@@ -6,6 +6,7 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
@@ -23,7 +24,7 @@ enum ChatListItemContent {
 
 class ChatListItem: ListViewItem {
     let presentationData: ChatListPresentationData
-    let context: AccountContext
+    let context: AccountContextImpl
     let peerGroupId: PeerGroupId
     let index: ChatListIndex
     let content: ChatListItemContent
@@ -42,7 +43,7 @@ class ChatListItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(presentationData: ChatListPresentationData, context: AccountContext, peerGroupId: PeerGroupId, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
+    init(presentationData: ChatListPresentationData, context: AccountContextImpl, peerGroupId: PeerGroupId, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.peerGroupId = peerGroupId
         self.context = context
@@ -1679,7 +1680,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             self.highlightedBackgroundNode.alpha = 0.0
         }
         self.highlightedBackgroundNode.layer.removeAllAnimations()
-        self.highlightedBackgroundNode.layer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseOut, duration: 0.3, delay: 0.7, completion: { [weak self] _ in
+        self.highlightedBackgroundNode.layer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.3, delay: 0.7, completion: { [weak self] _ in
             self?.updateIsHighlighted(transition: .immediate)
         })
     }

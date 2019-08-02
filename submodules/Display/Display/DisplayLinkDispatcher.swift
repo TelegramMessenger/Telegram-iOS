@@ -16,7 +16,7 @@ public class DisplayLinkDispatcher: NSObject {
         } else {
             self.displayLink = CADisplayLink(target: self, selector: #selector(self.run))
             self.displayLink.isPaused = true
-            self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+            self.displayLink.add(to: RunLoop.main, forMode: .common)
         }
     }
     

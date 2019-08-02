@@ -3,6 +3,7 @@ import UIKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import MergeLists
 
 enum CallListNodeEntryId: Hashable {
     case setting(Int32)

@@ -21,7 +21,7 @@ enum LocationBroadcastPanelSource {
     case peer(PeerId)
 }
 
-private func presentLiveLocationController(context: AccountContext, peerId: PeerId, controller: ViewController) {
+private func presentLiveLocationController(context: AccountContextImpl, peerId: PeerId, controller: ViewController) {
     let presentImpl: (Message?) -> Void = { [weak controller] message in
         if let message = message, let strongController = controller {
             let _ = openChatMessage(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
@@ -52,7 +52,7 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
 }
 
 public class TelegramController: ViewController, KeyShortcutResponder {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     
     let mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility
     let locationBroadcastPanelSource: LocationBroadcastPanelSource
@@ -105,7 +105,7 @@ public class TelegramController: ViewController, KeyShortcutResponder {
         return super.navigationHeight
     }
     
-    init(context: AccountContext, navigationBarPresentationData: NavigationBarPresentationData?, mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
+    init(context: AccountContextImpl, navigationBarPresentationData: NavigationBarPresentationData?, mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.mediaAccessoryPanelVisibility = mediaAccessoryPanelVisibility
@@ -598,7 +598,7 @@ public class TelegramController: ViewController, KeyShortcutResponder {
                                     return
                                 }
                                 if let _ = index.0 {
-                                    let controller = OverlayPlayerController(context: account.id == strongSelf.context.account.id ? strongSelf.context : AccountContext(sharedContext: strongSelf.context.sharedContext, account: account, limitsConfiguration: .defaultValue), peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.navigationController as? NavigationController)
+                                    let controller = OverlayPlayerController(context: account.id == strongSelf.context.account.id ? strongSelf.context : AccountContextImpl(sharedContext: strongSelf.context.sharedContext, account: account, limitsConfiguration: .defaultValue), peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.navigationController as? NavigationController)
                                     strongSelf.displayNode.view.window?.endEditing(true)
                                     strongSelf.present(controller, in: .window(.root))
                                 } else if index.1 {
@@ -658,7 +658,7 @@ public class TelegramController: ViewController, KeyShortcutResponder {
     }
     
     public var keyShortcuts: [KeyShortcut] {
-        return [KeyShortcut(input: UIKeyInputEscape, action: { [weak self] in
+        return [KeyShortcut(input: UIKeyCommand.inputEscape, action: { [weak self] in
             if !(self?.navigationController?.topViewController is TabBarController) {
                 _ = self?.navigationBar?.executeBack()
             }

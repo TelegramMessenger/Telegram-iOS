@@ -8,6 +8,7 @@ import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
+import MergeLists
 
 private struct WebSearchContextResultStableId: Hashable {
     let result: ChatContextResult
@@ -119,7 +120,7 @@ private func preparedWebSearchRecentTransition(from fromEntries: [WebSearchRecen
 }
 
 class WebSearchControllerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peer: Peer?
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -171,7 +172,7 @@ class WebSearchControllerNode: ASDisplayNode {
     var cancel: (() -> Void)?
     var dismissInput: (() -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
+    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -343,7 +344,7 @@ class WebSearchControllerNode: ASDisplayNode {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

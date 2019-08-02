@@ -8,6 +8,7 @@ import SwiftSignalKit
 import PassKit
 import TelegramPresentationData
 import TelegramUIPrivateModule
+import ItemListUI
 
 final class BotCheckoutControllerArguments {
     fileprivate let account: Account
@@ -360,7 +361,7 @@ private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutP
 }
 
 final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>, PKPaymentAuthorizationViewControllerDelegate {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let messageId: MessageId
     private let present: (ViewController, Any?) -> Void
     private let dismissAnimated: () -> Void
@@ -387,7 +388,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
     private var applePayAuthrorizationCompletion: ((PKPaymentAuthorizationStatus) -> Void)?
     private var applePayController: PKPaymentAuthorizationViewController?
     
-    init(controller: ItemListController<BotCheckoutEntry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
+    init(controller: ItemListController<BotCheckoutEntry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContextImpl, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
         self.context = context
         self.messageId = messageId
         self.present = present

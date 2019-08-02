@@ -105,7 +105,7 @@ private func selectionChangedSignal(selectionState: TGMediaSelectionContext) -> 
 final class WebSearchController: ViewController {
     private var validLayout: ContainerViewLayout?
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let mode: WebSearchControllerMode
     private let peer: Peer?
     private let configuration: SearchBotsConfiguration
@@ -131,7 +131,7 @@ final class WebSearchController: ViewController {
     
     private var navigationContentNode: WebSearchNavigationContentNode?
     
-    init(context: AccountContext, peer: Peer?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
+    init(context: AccountContextImpl, peer: Peer?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode
         self.peer = peer

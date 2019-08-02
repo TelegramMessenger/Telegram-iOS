@@ -124,7 +124,7 @@ public final class TextAlertContentNode: AlertContentNode {
     
     private var validLayout: CGSize?
     
-    public var textAttributeAction: (NSAttributedStringKey, (Any) -> Void)? {
+    public var textAttributeAction: (NSAttributedString.Key, (Any) -> Void)? {
         didSet {
             if let (attribute, textAttributeAction) = self.textAttributeAction {
                 self.textNode.highlightAttributeAction = { attributes in
@@ -218,12 +218,12 @@ public final class TextAlertContentNode: AlertContentNode {
         
         if let titleNode = self.titleNode, let attributedText = titleNode.attributedText {
             let updatedText = NSMutableAttributedString(attributedString: attributedText)
-            updatedText.addAttribute(NSAttributedStringKey.foregroundColor, value: theme.primaryColor, range: NSRange(location: 0, length: updatedText.length))
+            updatedText.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.primaryColor, range: NSRange(location: 0, length: updatedText.length))
             titleNode.attributedText = updatedText
         }
         if let attributedText = self.textNode.attributedText {
             let updatedText = NSMutableAttributedString(attributedString: attributedText)
-            updatedText.addAttribute(NSAttributedStringKey.foregroundColor, value: theme.primaryColor, range: NSRange(location: 0, length: updatedText.length))
+            updatedText.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.primaryColor, range: NSRange(location: 0, length: updatedText.length))
             self.textNode.attributedText = updatedText
         }
 

@@ -112,7 +112,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
         self.extendedLayoutIncludesOpaqueBars = true
         
         if #available(iOSApplicationExtension 11.0, *) {
-            self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIAccessibilityVoiceOverStatusDidChange, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
+            self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.updatePreviewingRegistration()
                 }
@@ -130,11 +130,11 @@ private final class WindowRootViewController: UIViewController, UIViewController
         }
     }
     
-    override func preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
+    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
         return self.gestureEdges
     }
     
-    override func prefersHomeIndicatorAutoHidden() -> Bool {
+    override var prefersHomeIndicatorAutoHidden: Bool {
         return self.preferNavigationUIHidden
     }
     

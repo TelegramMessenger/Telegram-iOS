@@ -7,7 +7,7 @@ import Postbox
 import TelegramPresentationData
 
 public class LocationBroadcastActionSheetItem: ActionSheetItem {
-    public let context: AccountContext
+    public let context: AccountContextImpl
     public let peer: Peer
     public let title: String
     public let beginTimestamp: Double
@@ -15,7 +15,7 @@ public class LocationBroadcastActionSheetItem: ActionSheetItem {
     public let strings: PresentationStrings
     public let action: () -> Void
     
-    public init(context: AccountContext, peer: Peer, title: String, beginTimestamp: Double, timeout: Double, strings: PresentationStrings, action: @escaping () -> Void) {
+    public init(context: AccountContextImpl, peer: Peer, title: String, beginTimestamp: Double, timeout: Double, strings: PresentationStrings, action: @escaping () -> Void) {
         self.context = context
         self.peer = peer
         self.title = title

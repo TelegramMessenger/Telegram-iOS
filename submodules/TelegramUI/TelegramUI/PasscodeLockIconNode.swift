@@ -62,7 +62,7 @@ final class PasscodeLockIconNode: ASDisplayNode {
         }) as! POPAnimatableProperty)
         animation.fromValue = 0.0 as NSNumber
         animation.toValue = 1.0 as NSNumber
-        animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         animation.duration = 0.55
         self.pop_add(animation, forKey: "progress")
     }
@@ -84,7 +84,7 @@ final class PasscodeLockIconNode: ASDisplayNode {
         }) as! POPAnimatableProperty)
         animation.fromValue = 1.0 as NSNumber
         animation.toValue = 0.0 as NSNumber
-        animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         animation.duration = 0.75
         self.pop_add(animation, forKey: "progress")
     }

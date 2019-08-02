@@ -62,7 +62,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.pauseButton.isUserInteractionEnabled = false
         
         self.waveformButton = ASButtonNode()
-        self.waveformButton.accessibilityTraits |= UIAccessibilityTraitStartsMediaSession
+        self.waveformButton.accessibilityTraits.insert(.startsMediaSession)
         
         self.waveformNode = AudioWaveformNode()
         self.waveformNode.isLayerBacked = true

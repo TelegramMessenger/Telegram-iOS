@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
+import MergeLists
 
 struct CallListNodeView {
     let originalView: CallListView

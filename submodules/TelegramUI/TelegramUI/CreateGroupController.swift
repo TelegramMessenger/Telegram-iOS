@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import LegacyComponents
+import ItemListUI
 
 public enum CreateGroupMode {
     case generic
@@ -287,7 +288,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     return entries
 }
 
-public func createGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String? = nil, mode: CreateGroupMode = .generic, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
+public func createGroupController(context: AccountContextImpl, peerIds: [PeerId], initialTitle: String? = nil, mode: CreateGroupMode = .generic, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
     var location: PeerGeoLocation?
     if case let .locatedGroup(latitude, longitude, address) = mode {
         location = PeerGeoLocation(latitude: latitude, longitude: longitude, address: address ?? "")
@@ -492,7 +493,7 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
             presentControllerImpl?(legacyController, nil)
             
             let completedImpl: (UIImage) -> Void = { image in
-                if let data = UIImageJPEGRepresentation(image, 0.6) {
+                if let data = image.jpegData(compressionQuality: 0.6) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)

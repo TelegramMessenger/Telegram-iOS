@@ -90,7 +90,7 @@ enum BotCheckoutInfoControllerStatus {
 }
 
 final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let invoice: BotPaymentInvoice
     private let messageId: MessageId
     private var focus: BotCheckoutInfoControllerFocus?
@@ -120,7 +120,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     private let verifyDisposable = MetaDisposable()
     private var isVerifying = false
     
-    init(context: AccountContext, invoice: BotPaymentInvoice, messageId: MessageId, formInfo: BotPaymentRequestedInfo, focus: BotCheckoutInfoControllerFocus, theme: PresentationTheme, strings: PresentationStrings, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutInfoControllerStatus) -> Void, formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContextImpl, invoice: BotPaymentInvoice, messageId: MessageId, formInfo: BotPaymentRequestedInfo, focus: BotCheckoutInfoControllerFocus, theme: PresentationTheme, strings: PresentationStrings, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutInfoControllerStatus) -> Void, formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.invoice = invoice
         self.messageId = messageId
@@ -501,7 +501,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak self] _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }

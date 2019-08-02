@@ -25,12 +25,12 @@ private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
 final class GameControllerNode: ViewControllerTracingNode {
     private var webView: WKWebView?
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     var presentationData: PresentationData
     private let present: (ViewController, Any?) -> Void
     private let message: Message
     
-    init(context: AccountContext, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: Message) {
+    init(context: AccountContextImpl, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: Message) {
         self.context = context
         self.presentationData = presentationData
         self.present = present
@@ -89,7 +89,7 @@ final class GameControllerNode: ViewControllerTracingNode {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

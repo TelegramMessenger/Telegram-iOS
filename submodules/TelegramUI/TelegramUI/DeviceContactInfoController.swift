@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import MessageUI
 import TelegramPresentationData
+import ItemListUI
 
 private enum DeviceContactInfoAction {
     case sendMessage
@@ -797,7 +798,7 @@ private final class DeviceContactInfoController: ItemListController<DeviceContac
     }
 }
 
-public func deviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)? = nil, cancelled: (() -> Void)? = nil) -> ViewController {
+public func deviceContactInfoController(context: AccountContextImpl, subject: DeviceContactInfoSubject, completed: (() -> Void)? = nil, cancelled: (() -> Void)? = nil) -> ViewController {
     var initialState = DeviceContactInfoState()
     if case let .create(peer, contactData, _, _, _) = subject {
         var peerPhoneNumber: String?
@@ -1310,7 +1311,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
     return controller
 }
 
-private func addContactToExisting(context: AccountContext, parentController: ViewController, contactData: DeviceContactExtendedData, completion: @escaping (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void) {
+private func addContactToExisting(context: AccountContextImpl, parentController: ViewController, contactData: DeviceContactExtendedData, completion: @escaping (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void) {
     let contactsController = ContactSelectionController(context: context, title: { $0.Contacts_Title }, displayDeviceContacts: true)
     parentController.present(contactsController, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     let _ = (contactsController.result
@@ -1379,7 +1380,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
     })
 }
 
-func addContactOptionsController(context: AccountContext, peer: Peer?, contactData: DeviceContactExtendedData) -> ActionSheetController {
+func addContactOptionsController(context: AccountContextImpl, peer: Peer?, contactData: DeviceContactExtendedData) -> ActionSheetController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = ActionSheetController(presentationTheme: presentationData.theme)
     let dismissAction: () -> Void = { [weak controller] in

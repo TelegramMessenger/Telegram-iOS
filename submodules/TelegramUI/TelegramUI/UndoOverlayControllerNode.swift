@@ -4,6 +4,8 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import AnimationUI
+import TextFormat
 
 final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let elevatedLayout: Bool
@@ -329,8 +331,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     func animateOut(completion: @escaping () -> Void) {
-        self.panelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: kCAMediaTimingFunctionEaseOut, removeOnCompletion: false, completion: { _ in })
-        self.panelWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: kCAMediaTimingFunctionEaseOut, removeOnCompletion: false) { _ in
+        self.panelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { _ in })
+        self.panelWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false) { _ in
             completion()
         }
     }

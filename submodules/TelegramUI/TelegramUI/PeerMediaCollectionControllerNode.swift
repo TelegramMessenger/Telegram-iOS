@@ -12,7 +12,7 @@ struct PeerMediaCollectionMessageForGallery {
     let fromSearchResults: Bool
 }
 
-private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: AccountContext, theme: PresentationTheme, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>) -> ChatHistoryNode & ASDisplayNode {
+private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: AccountContextImpl, theme: PresentationTheme, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>) -> ChatHistoryNode & ASDisplayNode {
     switch mode {
         case .photoOrVideo:
             let node = ChatHistoryGridNode(context: context, peerId: peerId, messageId: messageId, tagMask: .photoOrVideo, controllerInteraction: controllerInteraction)
@@ -92,7 +92,7 @@ private func tagMaskForMode(_ mode: PeerMediaCollectionMode) -> MessageTags {
 }
 
 class PeerMediaCollectionControllerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peerId: PeerId
     private let controllerInteraction: ChatControllerInteraction
     private let interfaceInteraction: ChatPanelInterfaceInteraction
@@ -132,7 +132,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     
     private var presentationData: PresentationData
     
-    init(context: AccountContext, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction, navigationBar: NavigationBar?, requestDeactivateSearch: @escaping () -> Void) {
+    init(context: AccountContextImpl, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction, navigationBar: NavigationBar?, requestDeactivateSearch: @escaping () -> Void) {
         self.context = context
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction

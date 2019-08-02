@@ -6,6 +6,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ProgressNavigationButtonNode
 
 enum ContactMultiselectionControllerMode {
     case groupCreation
@@ -14,7 +15,7 @@ enum ContactMultiselectionControllerMode {
 }
 
 class ContactMultiselectionController: ViewController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let mode: ContactMultiselectionControllerMode
     
     private let titleView: CounterContollerTitleView
@@ -64,7 +65,7 @@ class ContactMultiselectionController: ViewController {
     private let options: [ContactListAdditionalOption]
     private let filters: [ContactListFilter]
     
-    init(context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf]) {
+    init(context: AccountContextImpl, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf]) {
         self.context = context
         self.mode = mode
         self.options = options

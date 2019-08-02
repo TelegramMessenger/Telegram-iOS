@@ -8,6 +8,7 @@ import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
+import ProgressNavigationButtonNode
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool
@@ -22,11 +23,11 @@ struct WallpaperGalleryItemArguments {
 }
 
 class WallpaperGalleryItem: GalleryItem {
-    let context: AccountContext
+    let context: AccountContextImpl
     let entry: WallpaperGalleryEntry
     let arguments: WallpaperGalleryItemArguments
     
-    init(context: AccountContext, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) {
+    init(context: AccountContextImpl, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) {
         self.context = context
         self.entry = entry
         self.arguments = arguments
@@ -60,7 +61,7 @@ private func reference(for resource: MediaResource, media: Media, message: Messa
 }
 
 final class WallpaperGalleryItemNode: GalleryItemNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     var entry: WallpaperGalleryEntry?
     private var colorPreview: Bool = false
     private var contentSize: CGSize?
@@ -90,7 +91,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private var validLayout: ContainerViewLayout?
     private var validOffset: CGFloat?
     
-    init(context: AccountContext) {
+    init(context: AccountContextImpl) {
         self.context = context
         
         self.wrapperNode = ASDisplayNode()
@@ -555,7 +556,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             
             if animated {
                 self.blurredNode.blurView.blurRadius = 0.0
-                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
                     self.blurredNode.blurView.blurRadius = blurRadius
                 }, completion: nil)
             } else {
@@ -564,7 +565,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         } else {
             if self.blurredNode.supernode != nil {
                 if animated {
-                    UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                    UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
                         self.blurredNode.blurView.blurRadius = 0.0
                     }, completion: { finished in
                         if finished {

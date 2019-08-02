@@ -32,7 +32,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         super.init()
         
         self.isAccessibilityElement = true
-        self.accessibilityTraits = UIAccessibilityTraitButton | UIAccessibilityTraitNotEnabled
+        self.accessibilityTraits = [.button, .notEnabled]
         
         self.sendButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -123,7 +123,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     
     func updateAccessibility() {
         if !self.micButton.alpha.isZero {
-            self.accessibilityTraits = UIAccessibilityTraitButton
+            self.accessibilityTraits = .button
             switch self.micButton.mode {
                 case .audio:
                     self.accessibilityLabel = "Voice Message"
@@ -133,7 +133,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
                     self.accessibilityHint = "Double tap and hold to record voice message. Slide up to pin recording, slide left to cancel. Double tap to switch to audio."
             }
         } else {
-            self.accessibilityTraits = UIAccessibilityTraitButton
+            self.accessibilityTraits = .button
             self.accessibilityLabel = "Send"
             self.accessibilityHint = nil
         }

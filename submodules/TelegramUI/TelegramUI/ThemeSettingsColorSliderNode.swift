@@ -161,7 +161,7 @@ final class ThemeSettingsColorSliderNode: ASDisplayNode {
     
     override init() {
         self.brightnessNode = ThemeSettingsColorBrightnessNode()
-        self.brightnessNode.hitTestSlop = UIEdgeInsetsMake(-16.0, -16.0, -16.0, -16.0)
+        self.brightnessNode.hitTestSlop = UIEdgeInsets(top: -16.0, left: -16.0, bottom: -16.0, right: -16.0)
         self.brightnessKnobNode = ThemeSettingsColorKnobNode()
        
         super.init()

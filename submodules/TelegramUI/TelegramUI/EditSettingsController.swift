@@ -7,9 +7,10 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
+import ItemListUI
 
 private struct EditSettingsItemArguments {
-    let context: AccountContext
+    let context: AccountContextImpl
     let accountManager: AccountManager
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     
@@ -35,7 +36,7 @@ private enum SettingsSection: Int32 {
 public enum EditSettingsEntryTag: ItemListItemTag {
     case bio
     
-    func isEqual(to other: ItemListItemTag) -> Bool {
+    public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? EditSettingsEntryTag, self == other {
             return true
         } else {
@@ -297,7 +298,7 @@ private func editSettingsEntries(presentationData: PresentationData, state: Edit
     return entries
 }
 
-func editSettingsController(context: AccountContext, currentName: ItemListAvatarAndNameInfoItemName, currentBioText: String, accountManager: AccountManager, canAddAccounts: Bool, focusOnItemTag: EditSettingsEntryTag? = nil) -> ViewController {
+func editSettingsController(context: AccountContextImpl, currentName: ItemListAvatarAndNameInfoItemName, currentBioText: String, accountManager: AccountManager, canAddAccounts: Bool, focusOnItemTag: EditSettingsEntryTag? = nil) -> ViewController {
     let initialState = EditSettingsState(editingName: currentName, editingBioText: currentBioText)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -495,7 +496,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
             }
             
             let completedImpl: (UIImage) -> Void = { image in
-                if let data = UIImageJPEGRepresentation(image, 0.6) {
+                if let data = image.jpegData(compressionQuality: 0.6) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)

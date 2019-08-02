@@ -176,12 +176,12 @@ private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     }
     
     let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-    basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+    basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
     basicAnimation.duration = duration
     basicAnimation.fromValue = NSNumber(value: Float(0.0))
     basicAnimation.toValue = NSNumber(value: Float(Double.pi * 2.0))
     basicAnimation.repeatCount = Float.infinity
-    basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+    basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
     basicAnimation.beginTime = 1.0
     layer.add(basicAnimation, forKey: "clockFrameAnimation")
 }
@@ -234,7 +234,7 @@ private class ChatListStatusChecksNode: ChatListStatusContentNode {
         }) as! POPAnimatableProperty)
         animation.fromValue = from as NSNumber
         animation.toValue = to as NSNumber
-        animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         animation.duration = 0.2
         self.pop_add(animation, forKey: "progress")
     }

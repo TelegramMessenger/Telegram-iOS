@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import ActivityIndicator
 
 struct LanguageSuggestionControllerStrings {
     let ChooseLanguage: String
@@ -323,7 +324,7 @@ private final class LanguageSuggestionAlertContentNode: AlertContentNode {
     }
 }
 
-func languageSuggestionController(context: AccountContext, suggestedLocalization: SuggestedLocalizationInfo, currentLanguageCode: String, openSelection: @escaping () -> Void) -> AlertController? {
+func languageSuggestionController(context: AccountContextImpl, suggestedLocalization: SuggestedLocalizationInfo, currentLanguageCode: String, openSelection: @escaping () -> Void) -> AlertController? {
     guard let localization = suggestedLocalization.availableLocalizations.filter({ $0.languageCode == suggestedLocalization.languageCode }).first else {
         return nil
     }

@@ -8,7 +8,7 @@ import TelegramPresentationData
 import TelegramUIPrivateModule
 
 public final class TelegramRootController: NavigationController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     
     public var rootTabController: TabBarController?
     
@@ -21,7 +21,7 @@ public final class TelegramRootController: NavigationController {
     private var presentationDataDisposable: Disposable?
     private var presentationData: PresentationData
     
-    public init(context: AccountContext) {
+    public init(context: AccountContextImpl) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

@@ -154,7 +154,7 @@ final class ChatListBadgeNode: ASDisplayNode {
                                 snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                                     snapshotView?.removeFromSuperview()
                                 })
-                                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: (badgeWidth - previousBadgeWidth) / 2.0, y: -8.0), duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true)
+                                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: (badgeWidth - previousBadgeWidth) / 2.0, y: -8.0), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
                             }
                             animateTextNode = true
                         } else if !currentIsEmpty && nextIsEmpty && !strongSelf.isHiddenInternal {
@@ -189,14 +189,14 @@ final class ChatListBadgeNode: ASDisplayNode {
                         strongSelf.textNode.frame = badgeTextFrame
                         if animateTextNode {
                             strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                            strongSelf.textNode.layer.animatePosition(from: CGPoint(x: (previousBadgeWidth - badgeWidth) / 2.0, y: 8.0), to: CGPoint(), duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true)
+                            strongSelf.textNode.layer.animatePosition(from: CGPoint(x: (previousBadgeWidth - badgeWidth) / 2.0, y: 8.0), to: CGPoint(), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
                         }
                     }
                     strongSelf.backgroundNode.frame = backgroundFrame
                     
                     if animated && badgeWidth != previousBadgeWidth {
                         let previousBackgroundFrame = CGRect(x: 0.0, y: 0.0, width: previousBadgeWidth, height: backgroundFrame.height)
-                        strongSelf.backgroundNode.layer.animateFrame(from: previousBackgroundFrame, to: backgroundFrame, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
+                        strongSelf.backgroundNode.layer.animateFrame(from: previousBackgroundFrame, to: backgroundFrame, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                     }
                 }
             })

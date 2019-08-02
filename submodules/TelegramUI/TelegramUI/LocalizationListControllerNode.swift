@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import ItemListUI
 
 private enum LanguageListSection: ItemListSectionId {
     case official
@@ -85,7 +87,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(context: AccountContext, listState: LocalizationListState, selectLocalization: @escaping (LocalizationInfo) -> Void, applyingCode: Signal<String?, NoError>) {
+    init(context: AccountContextImpl, listState: LocalizationListState, selectLocalization: @escaping (LocalizationInfo) -> Void, applyingCode: Signal<String?, NoError>) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
@@ -273,7 +275,7 @@ private func preparedLanguageListNodeTransition(theme: PresentationTheme, string
 }
 
 final class LocalizationListControllerNode: ViewControllerTracingNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private let navigationBar: NavigationBar
     private let requestActivateSearch: () -> Void
@@ -303,7 +305,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         }
     }
     
-    init(context: AccountContext, presentationData: PresentationData, navigationBar: NavigationBar, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping () -> Void, updateCanStartEditing: @escaping (Bool?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContextImpl, presentationData: PresentationData, navigationBar: NavigationBar, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping () -> Void, updateCanStartEditing: @escaping (Bool?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.presentationDataValue.set(.single((presentationData.theme, presentationData.strings)))

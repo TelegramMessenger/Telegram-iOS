@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import CheckNode
 
 final class GalleryNavigationCheckNode: ASDisplayNode, NavigationButtonCustomDisplayNode {
     private var checkNode: CheckNode

@@ -54,7 +54,7 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
 }
 
 public class ContactsController: ViewController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     
     private var contactsNode: ContactsControllerNode {
         return self.displayNode as! ContactsControllerNode
@@ -83,7 +83,7 @@ public class ContactsController: ViewController {
         }
     }
     
-    public init(context: AccountContext) {
+    public init(context: AccountContextImpl) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

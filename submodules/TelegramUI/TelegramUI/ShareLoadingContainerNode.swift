@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramPresentationData
+import ActivityIndicator
 
 enum ShareLoadingState {
     case preparing

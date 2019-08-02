@@ -7,6 +7,7 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import ProgressNavigationButtonNode
 
 public class TermsOfServiceControllerTheme {
     public let statusBarStyle: StatusBarStyle

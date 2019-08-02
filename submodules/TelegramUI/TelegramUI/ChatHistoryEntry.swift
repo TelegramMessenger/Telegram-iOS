@@ -1,6 +1,7 @@
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import MergeLists
 
 public enum ChatHistoryMessageSelection: Equatable {
     case none
@@ -24,9 +25,28 @@ public enum ChatHistoryMessageSelection: Equatable {
     }
 }
 
+public enum ChatMessageEntryContentType {
+    case generic
+    case largeEmoji
+    case animatedEmoji
+}
+
 public struct ChatMessageEntryAttributes: Equatable {
     let rank: CachedChannelAdminRank?
     let isContact: Bool
+    let contentTypeHint: ChatMessageEntryContentType
+    
+    init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType) {
+        self.rank = rank
+        self.isContact = isContact
+        self.contentTypeHint = contentTypeHint
+    }
+    
+    public init() {
+        self.rank = nil
+        self.isContact = false
+        self.contentTypeHint = .generic
+    }
 }
 
 enum ChatHistoryEntry: Identifiable, Comparable {
@@ -38,16 +58,17 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     
     var stableId: UInt64 {
         switch self {
-            case let .MessageEntry(message, presentationData, _, _, _, _):
-                var type = 2
-                if presentationData.largeEmoji && message.elligibleForLargeEmoji && messageIsElligibleForLargeEmoji(message) {
-                    if animatedEmojiResource(emoji: message.text) != nil {
+            case let .MessageEntry(message, _, _, _, _, attributes):
+                let type: UInt64
+                switch attributes.contentTypeHint {
+                    case .generic:
+                        type = 2
+                    case .largeEmoji:
                         type = 3
-                    } else {
+                    case .animatedEmoji:
                         type = 4
-                    }
                 }
-                return UInt64(message.stableId) | ((UInt64(type) << 40))
+                return UInt64(message.stableId) | ((type << 40))
             case let .MessageGroupEntry(groupInfo, _, _):
                 return UInt64(groupInfo.stableId) | ((UInt64(2) << 40))
             case .UnreadEntry:

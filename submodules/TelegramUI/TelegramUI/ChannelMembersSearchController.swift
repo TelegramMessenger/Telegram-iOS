@@ -19,7 +19,7 @@ enum ChannelMembersSearchFilter {
 final class ChannelMembersSearchController: ViewController {
     private let queue = Queue()
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peerId: PeerId
     private let mode: ChannelMembersSearchControllerMode
     private let filters: [ChannelMembersSearchFilter]
@@ -35,7 +35,7 @@ final class ChannelMembersSearchController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    init(context: AccountContextImpl, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode

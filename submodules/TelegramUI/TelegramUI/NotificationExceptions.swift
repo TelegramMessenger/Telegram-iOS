@@ -7,7 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 
 public class NotificationExceptionsController: ViewController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     
     private var controllerNode: NotificationExceptionsControllerNode {
         return self.displayNode as! NotificationExceptionsControllerNode
@@ -30,7 +30,7 @@ public class NotificationExceptionsController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContext, mode: NotificationExceptionMode, updatedMode: @escaping(NotificationExceptionMode) -> Void) {
+    public init(context: AccountContextImpl, mode: NotificationExceptionMode, updatedMode: @escaping(NotificationExceptionMode) -> Void) {
         self.context = context
         self.mode = mode
         self.updatedMode = updatedMode

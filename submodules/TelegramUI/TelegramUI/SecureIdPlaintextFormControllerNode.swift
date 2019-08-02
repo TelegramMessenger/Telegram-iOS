@@ -625,7 +625,7 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
 }
 
 struct SecureIdPlaintextFormControllerNodeInitParams {
-    let context: AccountContext
+    let context: AccountContextImpl
     let secureIdContext: SecureIdAccessContext
 }
 
@@ -643,7 +643,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let secureIdContext: SecureIdAccessContext
     
     var actionInputStateUpdated: ((SecureIdPlaintextFormInputState) -> Void)?

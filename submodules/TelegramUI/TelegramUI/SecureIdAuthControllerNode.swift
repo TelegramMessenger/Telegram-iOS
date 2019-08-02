@@ -6,9 +6,10 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ActivityIndicator
 
 final class SecureIdAuthControllerNode: ViewControllerTracingNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
     private let interaction: SecureIdAuthControllerInteraction
@@ -31,7 +32,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     
     private let deleteValueDisposable = MetaDisposable()
     
-    init(context: AccountContext, presentationData: PresentationData, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, interaction: SecureIdAuthControllerInteraction) {
+    init(context: AccountContextImpl, presentationData: PresentationData, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, interaction: SecureIdAuthControllerInteraction) {
         self.context = context
         self.presentationData = presentationData
         self.requestLayout = requestLayout
@@ -89,7 +90,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     func animateOut(completion: (() -> Void)? = nil) {
         self.isDisappearing = true
         self.view.endEditing(true)
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

@@ -14,14 +14,14 @@ public final class LanguageLinkPreviewController: ViewController {
     
     private var animatedIn = false
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let identifier: String
     private var localizationInfo: LocalizationInfo?
     private var presentationData: PresentationData
     
     private let disposable = MetaDisposable()
     
-    public init(context: AccountContext, identifier: String) {
+    public init(context: AccountContextImpl, identifier: String) {
         self.context = context
         self.identifier = identifier
         

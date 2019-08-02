@@ -3,7 +3,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-func searchPeerMembers(context: AccountContext, peerId: PeerId, query: String) -> Signal<[Peer], NoError> {
+func searchPeerMembers(context: AccountContextImpl, peerId: PeerId, query: String) -> Signal<[Peer], NoError> {
     if peerId.namespace == Namespaces.Peer.CloudChannel {
         return context.account.postbox.transaction { transaction -> CachedChannelData? in
             return transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData

@@ -8,7 +8,7 @@ import SSignalKit
 import Display
 import TelegramPresentationData
 
-func presentLegacyWebSearchEditor(context: AccountContext, theme: PresentationTheme, result: ChatContextResult, initialLayout: ContainerViewLayout?, updateHiddenMedia: @escaping (String?) -> Void, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (UIImage) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+func presentLegacyWebSearchEditor(context: AccountContextImpl, theme: PresentationTheme, result: ChatContextResult, initialLayout: ContainerViewLayout?, updateHiddenMedia: @escaping (String?) -> Void, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (UIImage) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     guard let item = legacyWebSearchItem(account: context.account, result: result) else {
         return
     }

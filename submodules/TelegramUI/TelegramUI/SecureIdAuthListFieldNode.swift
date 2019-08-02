@@ -190,7 +190,7 @@ final class SecureIdAuthListFieldNode: ASDisplayNode {
                 if highlighted {
                     strongSelf.highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.highlightedBackgroundNode.alpha = 1.0
-                    strongSelf.view.superview?.bringSubview(toFront: strongSelf.view)
+                    strongSelf.view.superview?.bringSubviewToFront(strongSelf.view)
                 } else {
                     strongSelf.highlightedBackgroundNode.alpha = 0.0
                     strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)

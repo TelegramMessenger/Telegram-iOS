@@ -55,7 +55,7 @@ final class ChatMessageLiveLocationTextNode: ASDisplayNode {
                 self?.setNeedsDisplay()
             }), selector: #selector(RadialTimeoutNodeTimer.event), userInfo: nil, repeats: true)
             self.updateTimer = updateTimer
-            RunLoop.main.add(updateTimer, forMode: RunLoopMode.commonModes)
+            RunLoop.main.add(updateTimer, forMode: .common)
         }
     }
     
@@ -81,7 +81,7 @@ final class ChatMessageLiveLocationTextNode: ASDisplayNode {
         }
         
         if let parameters = parameters as? ChatMessageLiveLocationTextNodeParams {
-            let attributes: [NSAttributedStringKey: Any] = [.font: textFont, .foregroundColor: parameters.color]
+            let attributes: [NSAttributedString.Key: Any] = [.font: textFont, .foregroundColor: parameters.color]
             let nsString = parameters.string as NSString
             nsString.draw(at: CGPoint(x: 0.0, y: 0.0), withAttributes: attributes)
         }

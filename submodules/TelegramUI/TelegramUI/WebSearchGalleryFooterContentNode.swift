@@ -9,7 +9,7 @@ import LegacyComponents
 import TelegramPresentationData
 
 final class WebSearchGalleryFooterContentNode: GalleryFooterContentNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
@@ -19,7 +19,7 @@ final class WebSearchGalleryFooterContentNode: GalleryFooterContentNode {
     var cancel: (() -> Void)?
     var send: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData) {
+    init(context: AccountContextImpl, presentationData: PresentationData) {
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings

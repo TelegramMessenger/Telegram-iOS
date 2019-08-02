@@ -71,14 +71,14 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class ChatImageGalleryItem: GalleryItem {
-    let context: AccountContext
+    let context: AccountContextImpl
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContextImpl, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
@@ -146,7 +146,7 @@ class ChatImageGalleryItem: GalleryItem {
 }
 
 final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var message: Message?
     
     private let imageNode: TransformImageNode
@@ -156,13 +156,13 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
     
-    private var contextAndMedia: (AccountContext, AnyMediaReference)?
+    private var contextAndMedia: (AccountContextImpl, AnyMediaReference)?
     
     private var fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContextImpl, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         
         self.imageNode = TransformImageNode()
@@ -230,7 +230,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.contextAndMedia = (self.context, imageReference.abstract)
     }
     
-    func setFile(context: AccountContext, fileReference: FileMediaReference) {
+    func setFile(context: AccountContextImpl, fileReference: FileMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
             if var largestSize = fileReference.media.dimensions {
                 var displaySize = largestSize.dividedByScreenScale()
@@ -425,7 +425,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         })
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
+        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false)
     }
     
     override func visibilityUpdated(isVisible: Bool) {

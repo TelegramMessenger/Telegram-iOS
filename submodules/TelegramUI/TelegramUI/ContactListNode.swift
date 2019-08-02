@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
+import MergeLists
+import ItemListUI
 
 private let dropDownIcon = { () -> UIImage in
     UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)
@@ -762,7 +764,7 @@ enum ContactListFilter {
 }
 
 final class ContactListNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentation: ContactListPresentation?
     private let filters: [ContactListFilter]
     
@@ -829,7 +831,7 @@ final class ContactListNode: ASDisplayNode {
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
     
-    init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false) {
+    init(context: AccountContextImpl, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder

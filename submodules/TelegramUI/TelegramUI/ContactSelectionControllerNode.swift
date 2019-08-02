@@ -21,7 +21,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode
     private let dimNode: ASDisplayNode
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var searchDisplayController: SearchDisplayController?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -35,7 +35,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var presentationData: PresentationData
     var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, options: [ContactListAdditionalOption], displayDeviceContacts: Bool) {
+    init(context: AccountContextImpl, options: [ContactListAdditionalOption], displayDeviceContacts: Bool) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.displayDeviceContacts = displayDeviceContacts
@@ -154,7 +154,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak self] _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.dismiss?()
             }

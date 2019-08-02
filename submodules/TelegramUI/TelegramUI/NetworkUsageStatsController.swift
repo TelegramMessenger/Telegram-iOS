@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 private enum NetworkUsageControllerSection {
     case cellular
@@ -375,7 +376,7 @@ private func networkUsageStatsControllerEntries(presentationData: PresentationDa
     return entries
 }
 
-func networkUsageStatsController(context: AccountContext) -> ViewController {
+func networkUsageStatsController(context: AccountContextImpl) -> ViewController {
     let section = ValuePromise<NetworkUsageControllerSection>(.cellular)
     let stats = Promise<NetworkUsageStats>()
     stats.set(accountNetworkUsageStats(account: context.account, reset: []))

@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TextFormat
+import ProgressNavigationButtonNode
 
 public enum SecureIdRequestResult: String {
     case success = "success"
@@ -65,7 +67,7 @@ final class SecureIdAuthController: ViewController {
         return self.displayNode as! SecureIdAuthControllerNode
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private let mode: SecureIdAuthControllerMode
     
@@ -81,7 +83,7 @@ final class SecureIdAuthController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(context: AccountContext, mode: SecureIdAuthControllerMode) {
+    init(context: AccountContextImpl, mode: SecureIdAuthControllerMode) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

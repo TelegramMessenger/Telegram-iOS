@@ -66,7 +66,7 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
                 
                 animation.fromValue = CGFloat(self.effectiveProgress) as NSNumber
                 animation.toValue = CGFloat(progress) as NSNumber
-                animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+                animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
                 animation.duration = duration
                 animation.completionBlock = { [weak self] _, _ in
                     self?.progressAnimationCompleted?()
@@ -85,7 +85,7 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
                 }) as! POPAnimatableProperty)
                 animation.fromValue = CGFloat(0.0) as NSNumber
                 animation.toValue = CGFloat(2.0) as NSNumber
-                animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+                animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
                 animation.duration = 2.5
                 animation.repeatForever = true
                 self.pop_add(animation, forKey: "indefiniteProgress")
@@ -168,7 +168,7 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
         basicAnimation.fromValue = NSNumber(value: fromValue)
         basicAnimation.toValue = NSNumber(value: fromValue + Float.pi * 2.0)
         basicAnimation.repeatCount = Float.infinity
-        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         basicAnimation.beginTime = 0.0
         
         self.layer.add(basicAnimation, forKey: "progressRotation")

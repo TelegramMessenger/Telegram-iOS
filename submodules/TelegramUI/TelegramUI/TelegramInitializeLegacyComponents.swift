@@ -28,16 +28,16 @@ func updateLegacyTheme() {
 private var legacyDocumentsStorePath: String?
 private var legacyCanOpenUrl: (URL) -> Bool = { _ in return false }
 private var legacyOpenUrl: (URL) -> Void = { _ in }
-private weak var legacyContext: AccountContext?
+private weak var legacyContext: AccountContextImpl?
 
-func legacyContextGet() -> AccountContext? {
+func legacyContextGet() -> AccountContextImpl? {
     return legacyContext
 }
 
 private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponentsAccessChecker {
-    private weak var context: AccountContext?
+    private weak var context: AccountContextImpl?
     
-    init(context: AccountContext?) {
+    init(context: AccountContextImpl?) {
         self.context = context
     }
     
@@ -357,7 +357,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
 }
 
-public func setupLegacyComponents(context: AccountContext) {
+public func setupLegacyComponents(context: AccountContextImpl) {
     legacyContext = context
 }
 

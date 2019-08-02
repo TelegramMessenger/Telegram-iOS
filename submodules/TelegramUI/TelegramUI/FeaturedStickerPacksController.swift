@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class FeaturedStickerPacksControllerArguments {
     let account: Account
@@ -158,7 +159,7 @@ private func featuredStickerPacksControllerEntries(presentationData: Presentatio
     return entries
 }
 
-public func featuredStickerPacksController(context: AccountContext) -> ViewController {
+public func featuredStickerPacksController(context: AccountContextImpl) -> ViewController {
     let statePromise = ValuePromise(FeaturedStickerPacksControllerState(), ignoreRepeated: true)
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     

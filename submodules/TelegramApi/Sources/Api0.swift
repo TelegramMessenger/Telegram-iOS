@@ -538,6 +538,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-4838507] = { return Api.InputStickerSet.parse_inputStickerSetEmpty($0) }
     dict[-1645763991] = { return Api.InputStickerSet.parse_inputStickerSetID($0) }
     dict[-2044933984] = { return Api.InputStickerSet.parse_inputStickerSetShortName($0) }
+    dict[42402760] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmoji($0) }
     dict[-1729618630] = { return Api.BotInfo.parse_botInfo($0) }
     dict[-1519637954] = { return Api.updates.State.parse_state($0) }
     dict[372165663] = { return Api.FoundGif.parse_foundGif($0) }

@@ -12,13 +12,13 @@ final class GameController: ViewController {
         return self.displayNode as! GameControllerNode
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let url: String
     private let message: Message
     
     private var presentationData: PresentationData
     
-    init(context: AccountContext, url: String, message: Message) {
+    init(context: AccountContextImpl, url: String, message: Message) {
         self.context = context
         self.url = url
         self.message = message

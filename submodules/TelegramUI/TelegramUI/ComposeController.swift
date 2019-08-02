@@ -8,7 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 
 public class ComposeController: ViewController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     
     private var contactsNode: ComposeControllerNode {
         return self.displayNode as! ComposeControllerNode
@@ -28,7 +28,7 @@ public class ComposeController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContext) {
+    public init(context: AccountContextImpl) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

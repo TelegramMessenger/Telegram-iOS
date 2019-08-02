@@ -21,7 +21,7 @@ final class OpenInActionSheetController: ActionSheetController {
         return self._ready
     }
     
-    init(context: AccountContext, item: OpenInItem, additionalAction: OpenInControllerAction? = nil, openUrl: @escaping (String) -> Void) {
+    init(context: AccountContextImpl, item: OpenInItem, additionalAction: OpenInControllerAction? = nil, openUrl: @escaping (String) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings
@@ -86,12 +86,12 @@ final class OpenInActionSheetController: ActionSheetController {
 
 private final class OpenInActionSheetItem: ActionSheetItem {
     let postbox: Postbox
-    let context: AccountContext
+    let context: AccountContextImpl
     let strings: PresentationStrings
     let options: [OpenInOption]
     let invokeAction: (OpenInAction) -> Void
     
-    init(postbox: Postbox, context: AccountContext, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
+    init(postbox: Postbox, context: AccountContextImpl, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
         self.postbox = postbox
         self.context = context
         self.strings = strings
@@ -119,7 +119,7 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
     
     let openInNodes: [OpenInAppNode]
     
-    init(postbox: Postbox, context: AccountContext, theme: ActionSheetControllerTheme, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
+    init(postbox: Postbox, context: AccountContextImpl, theme: ActionSheetControllerTheme, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
         self.theme = theme
         self.strings = strings
         
@@ -206,7 +206,7 @@ private final class OpenInAppNode : ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func setup(postbox: Postbox, context: AccountContext, theme: ActionSheetControllerTheme, option: OpenInOption, invokeAction: @escaping (OpenInAction) -> Void) {
+    func setup(postbox: Postbox, context: AccountContextImpl, theme: ActionSheetControllerTheme, option: OpenInOption, invokeAction: @escaping (OpenInAction) -> Void) {
         self.textNode.attributedText = NSAttributedString(string: option.title, font: textFont, textColor: theme.primaryTextColor, paragraphAlignment: .center)
         
         let iconSize = CGSize(width: 60.0, height: 60.0)

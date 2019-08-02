@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ActivityIndicator
 
 struct NetworkStatusTitle: Equatable {
     let text: String
@@ -90,13 +91,13 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         
         self.buttonView = HighlightTrackingButton()
         self.buttonView.isAccessibilityElement = true
-        self.buttonView.accessibilityTraits = UIAccessibilityTraitHeader
+        self.buttonView.accessibilityTraits = .header
         
         self.proxyButton = HighlightTrackingButton()
         self.proxyButton.isHidden = true
         self.proxyButton.isAccessibilityElement = true
         self.proxyButton.accessibilityLabel = "Proxy Settings"
-        self.proxyButton.accessibilityTraits = UIAccessibilityTraitButton
+        self.proxyButton.accessibilityTraits = .button
         
         super.init(frame: CGRect())
         

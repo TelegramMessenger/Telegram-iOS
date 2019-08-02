@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class VoiceCallDataSavingControllerArguments {
     let updateSelection: (VoiceCallDataSaving) -> Void
@@ -117,7 +118,7 @@ private func voiceCallDataSavingControllerEntries(presentationData: Presentation
     return entries
 }
 
-func voiceCallDataSavingController(context: AccountContext) -> ViewController {
+func voiceCallDataSavingController(context: AccountContextImpl) -> ViewController {
     let sharedSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
     |> map { sharedData -> (VoiceCallSettings, AutodownloadSettings) in
         let voiceCallSettings: VoiceCallSettings

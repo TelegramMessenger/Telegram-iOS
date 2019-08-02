@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ItemListUI
 
 class FormEditableBlockItemNode<Item: FormControllerItem>: ASDisplayNode, FormControllerItemNode, FormBlockItemNodeProto, UIGestureRecognizerDelegate {
     private let topSeparatorInset: FormBlockItemInset
@@ -18,7 +19,7 @@ class FormEditableBlockItemNode<Item: FormControllerItem>: ASDisplayNode, FormCo
     private var revealOptions: (left: [ItemListRevealOption], right: [ItemListRevealOption]) = ([], [])
     
     private var initialRevealOffset: CGFloat = 0.0
-    private(set) var revealOffset: CGFloat = 0.0
+    public private(set) var revealOffset: CGFloat = 0.0
     
     private var recognizer: ItemListRevealOptionsGestureRecognizer?
     private var hapticFeedback: HapticFeedback?

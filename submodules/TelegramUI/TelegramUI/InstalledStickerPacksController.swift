@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import TextFormat
 
 private final class InstalledStickerPacksControllerArguments {
     let account: Account
@@ -42,7 +44,7 @@ private enum InstalledStickerPacksSection: Int32 {
 public enum InstalledStickerPacksEntryTag: ItemListItemTag {
     case suggestOptions
     
-    func isEqual(to other: ItemListItemTag) -> Bool {
+    public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? InstalledStickerPacksEntryTag, self == other {
             return true
         } else {
@@ -442,7 +444,7 @@ public enum InstalledStickerPacksControllerMode {
     case masks
 }
 
-public func installedStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil) -> ViewController {
+public func installedStickerPacksController(context: AccountContextImpl, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil) -> ViewController {
     let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)

@@ -7,13 +7,14 @@ import TelegramCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
+import TextFormat
 
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
 
 private let textFont = Font.regular(16.0)
 
 final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var shareMedia: AnyMediaReference?
@@ -26,7 +27,7 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
     var openUrl: ((InstantPageUrlItem) -> Void)?
     var openUrlOptions: ((InstantPageUrlItem) -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData) {
+    init(context: AccountContextImpl, presentationData: PresentationData) {
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings
@@ -43,19 +44,19 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
         super.init()
         
         self.textNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
             } else {
                 return nil
             }
         }
         self.textNode.tapAttributeAction = { [weak self] attributes in
-            if let strongSelf = self, let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
+            if let strongSelf = self, let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
                 strongSelf.openUrl?(url)
             }
         }
         self.textNode.longTapAttributeAction = { [weak self] attributes in
-            if let strongSelf = self, let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
+            if let strongSelf = self, let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
                 strongSelf.openUrlOptions?(url)
             }
         }

@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import ActivityIndicator
 
 enum GroupStickerPackCurrentItemContent: Equatable {
     case notFound

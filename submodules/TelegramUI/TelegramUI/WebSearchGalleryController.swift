@@ -30,7 +30,7 @@ struct WebSearchGalleryEntry: Equatable {
         return lhs.result == rhs.result
     }
     
-    func item(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) -> GalleryItem {
+    func item(context: AccountContextImpl, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) -> GalleryItem {
         switch self.result {
             case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
                 if let content = content, type == "gif", let thumbnailResource = thumbnail?.resource, let dimensions = content.dimensions {
@@ -63,7 +63,7 @@ class WebSearchGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private var controllerInteraction: WebSearchGalleryControllerInteraction?
     
@@ -95,7 +95,7 @@ class WebSearchGalleryController: ViewController {
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     private let baseNavigationController: NavigationController?
     
-    init(context: AccountContext, peer: Peer?, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, sendCurrent: @escaping (ChatContextResult) -> Void) {
+    init(context: AccountContextImpl, peer: Peer?, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, sendCurrent: @escaping (ChatContextResult) -> Void) {
         self.context = context
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController

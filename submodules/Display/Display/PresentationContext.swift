@@ -7,6 +7,8 @@ public struct PresentationSurfaceLevel: RawRepresentable {
     public init(rawValue: Int32) {
         self.rawValue = rawValue
     }
+    
+    public static let root = PresentationSurfaceLevel(rawValue: 0)
 }
 
 public enum PresentationContextType {
@@ -305,7 +307,7 @@ public final class PresentationContext {
     }
     
     private func notifyAccessibilityScreenChanged() {
-        UIAccessibilityPostNotification(UIAccessibilityScreenChangedNotification, nil)
+        UIAccessibility.post(notification: UIAccessibility.Notification.screenChanged, argument: nil)
     }
     
     func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 
@@ -169,7 +170,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     private let progressNode: RadialProgressNode
     private var playbackOverlayNode: ListMessagePlaybackOverlayNode?
     
-    private var context: AccountContext?
+    private var context: AccountContextImpl?
     private (set) var message: Message?
     
     private var appliedItem: ListMessageItem?

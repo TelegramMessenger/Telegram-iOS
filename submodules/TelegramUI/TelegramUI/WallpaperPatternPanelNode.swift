@@ -27,7 +27,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     
     var patternChanged: ((TelegramWallpaper, Int32?, Bool) -> Void)?
 
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         
         self.backgroundNode = ASDisplayNode()

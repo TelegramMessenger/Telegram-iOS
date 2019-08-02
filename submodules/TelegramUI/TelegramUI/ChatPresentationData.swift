@@ -26,33 +26,6 @@ extension PresentationFontSize {
     }
 }
 
-extension TelegramWallpaper {
-    var isEmpty: Bool {
-        switch self {
-            case .image:
-                return false
-            case let .file(file):
-                if file.isPattern, file.settings.color == 0xffffff {
-                    return true
-                } else {
-                    return false
-                }
-            case let .color(color):
-                return color == 0xffffff
-            default:
-                return false
-        }
-    }
-    var isBuiltin: Bool {
-        switch self {
-            case .builtin:
-                return true
-            default:
-                return false
-        }
-    }
-}
-
 public final class ChatPresentationThemeData: Equatable {
     public let theme: PresentationTheme
     public let wallpaper: TelegramWallpaper
@@ -86,7 +59,9 @@ public final class ChatPresentationData {
     let messageFixedFont: UIFont
     let messageBlockQuoteFont: UIFont
     
-    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool) {
+    let animatedEmojiScale: CGFloat
+    
+    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool, animatedEmojiScale: CGFloat = 1.0) {
         self.theme = theme
         self.fontSize = fontSize
         self.strings = strings
@@ -105,5 +80,7 @@ public final class ChatPresentationData {
         self.messageBoldItalicFont = Font.semiboldItalic(baseFontSize)
         self.messageFixedFont = UIFont(name: "Menlo-Regular", size: baseFontSize - 1.0) ?? UIFont.systemFont(ofSize: baseFontSize)
         self.messageBlockQuoteFont = UIFont.systemFont(ofSize: baseFontSize - 1.0)
+        
+        self.animatedEmojiScale = animatedEmojiScale
     }
 }

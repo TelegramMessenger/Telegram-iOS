@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
+import TextFormat
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
@@ -136,7 +137,7 @@ class CaptionScrollWrapperNode: ASDisplayNode {
 }
 
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScrollViewDelegate {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
@@ -253,7 +254,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
-    init(context: AccountContext, presentationData: PresentationData) {
+    init(context: AccountContextImpl, presentationData: PresentationData) {
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings
@@ -312,8 +313,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                          TelegramTextAttributes.Timecode]
             
             for attribute in highlightedAttributes {
-                if let _ = attributes[NSAttributedStringKey(rawValue: attribute)] {
-                    return NSAttributedStringKey(rawValue: attribute)
+                if let _ = attributes[NSAttributedString.Key(rawValue: attribute)] {
+                    return NSAttributedString.Key(rawValue: attribute)
                 }
             }
             return nil
@@ -376,18 +377,18 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.scrollNode.view.showsVerticalScrollIndicator = false
     }
     
-    private func actionForAttributes(_ attributes: [NSAttributedStringKey: Any]) -> GalleryControllerInteractionTapAction? {
-        if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+    private func actionForAttributes(_ attributes: [NSAttributedString.Key: Any]) -> GalleryControllerInteractionTapAction? {
+        if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
             return .url(url: url, concealed: false)
-        } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+        } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
             return .peerMention(peerMention.peerId, peerMention.mention)
-        } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+        } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
             return .textMention(peerName)
-        } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+        } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
             return .botCommand(botCommand)
-        } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+        } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
             return .hashtag(hashtag.peerName, hashtag.hashtag)
-        } else if let timecode = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Timecode)] as? TelegramTimecode {
+        } else if let timecode = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Timecode)] as? TelegramTimecode {
             return .timecode(timecode.time, timecode.text)
         } else {
             return nil

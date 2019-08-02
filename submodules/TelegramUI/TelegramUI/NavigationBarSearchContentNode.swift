@@ -29,7 +29,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         
         self.placeholderNode.isAccessibilityElement = true
         self.placeholderNode.accessibilityLabel = placeholder
-        self.placeholderNode.accessibilityTraits = UIAccessibilityTraitSearchField
+        self.placeholderNode.accessibilityTraits = .searchField
         
         self.addSubnode(self.placeholderNode)
         self.placeholderNode.activate = activate

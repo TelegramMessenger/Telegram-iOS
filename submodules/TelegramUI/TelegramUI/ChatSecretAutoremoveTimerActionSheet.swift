@@ -16,7 +16,7 @@ final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetControlle
         return self._ready
     }
     
-    init(context: AccountContext, currentValue: Int32, applyValue: @escaping (Int32) -> Void) {
+    init(context: AccountContextImpl, currentValue: Int32, applyValue: @escaping (Int32) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings

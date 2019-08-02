@@ -5,9 +5,10 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import ItemListUI
 
 final class ChannelMembersSearchItem: ItemListControllerSearch {
-    let context: AccountContext
+    let context: AccountContextImpl
     let peerId: PeerId
     let searchContext: GroupMembersSearchContext?
     let cancel: () -> Void
@@ -19,7 +20,7 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, peerId: PeerId, searchContext: GroupMembersSearchContext?, searchMode: ChannelMembersSearchMode = .searchMembers, cancel: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContextImpl, peerId: PeerId, searchContext: GroupMembersSearchContext?, searchMode: ChannelMembersSearchMode = .searchMembers, cancel: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.peerId = peerId
         self.searchContext = searchContext
@@ -80,7 +81,7 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
 private final class ChannelMembersSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: ChannelMembersSearchContainerNode
     
-    init(context: AccountContext, peerId: PeerId, searchMode: ChannelMembersSearchMode, searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContextImpl, peerId: PeerId, searchMode: ChannelMembersSearchMode, searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.containerNode = ChannelMembersSearchContainerNode(context: context, peerId: peerId, mode: searchMode, filters: [], searchContext: searchContext, openPeer: { peer, participant in
             openPeer(peer, participant)
         }, updateActivity: updateActivity, present: present)

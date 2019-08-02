@@ -16,7 +16,7 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder {
     }
     
     public var keyShortcuts: [KeyShortcut] {
-        return [KeyShortcut(input: UIKeyInputEscape, action: { [weak self] in
+        return [KeyShortcut(input: UIKeyCommand.inputEscape, action: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }

@@ -20,7 +20,7 @@ private final class ChatRecentActionsListOpaqueState {
 }
 
 final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peer: Peer
     private var presentationData: PresentationData
     
@@ -71,7 +71,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var adminsState: ChannelMemberListState?
     private let banDisposables = DisposableDict<PeerId>()
     
-    init(context: AccountContext, peer: Peer, presentationData: PresentationData, interaction: ChatRecentActionsInteraction, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
+    init(context: AccountContextImpl, peer: Peer, presentationData: PresentationData, interaction: ChatRecentActionsInteraction, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
         self.context = context
         self.peer = peer
         self.presentationData = presentationData

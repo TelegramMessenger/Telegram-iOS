@@ -46,7 +46,7 @@ final class CounterContollerTitleView: UIView {
         super.init(frame: CGRect())
         
         self.isAccessibilityElement = true
-        self.accessibilityTraits = UIAccessibilityTraitHeader
+        self.accessibilityTraits = .header
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)

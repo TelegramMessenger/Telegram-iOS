@@ -93,7 +93,7 @@ private struct InstantPageTableCellItem {
     }
 }
 
-private let tableCellInsets = UIEdgeInsetsMake(14.0, 12.0, 14.0, 12.0)
+private let tableCellInsets = UIEdgeInsets(top: 14.0, left: 12.0, bottom: 14.0, right: 12.0)
 private let tableBorderWidth: CGFloat = 1.0
 private let tableCornerRadius: CGFloat = 5.0
 
@@ -197,7 +197,7 @@ final class InstantPageTableItem: InstantPageScrollableItem {
         return false
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
+    func node(context: AccountContextImpl, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         var additionalNodes: [InstantPageNode] = []
         for cell in self.cells {
             for item in cell.additionalItems {

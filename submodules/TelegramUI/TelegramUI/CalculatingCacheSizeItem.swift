@@ -4,6 +4,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
+import ActivityIndicator
 
 class CalculatingCacheSizeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

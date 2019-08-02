@@ -81,14 +81,14 @@ enum ChatMessageBubbleContentTapAction {
 }
 
 final class ChatMessageBubbleContentItem {
-    let context: AccountContext
+    let context: AccountContextImpl
     let controllerInteraction: ChatControllerInteraction
     let message: Message
     let read: Bool
     let presentationData: ChatPresentationData
     let associatedData: ChatMessageItemAssociatedData
     
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData) {
+    init(context: AccountContextImpl, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.message = message

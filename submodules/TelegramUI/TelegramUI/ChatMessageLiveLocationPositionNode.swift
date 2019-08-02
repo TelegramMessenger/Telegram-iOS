@@ -15,7 +15,7 @@ private func addPulseAnimations(layer: CALayer) {
     scaleAnimation.keyTimes = [0.0 as NSNumber, 0.49 as NSNumber, 0.88 as NSNumber, 1.0 as NSNumber]
     scaleAnimation.duration = 3.0
     scaleAnimation.repeatCount = Float.infinity
-    scaleAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseOut)
+    scaleAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeOut)
     scaleAnimation.beginTime = 1.0
     layer.add(scaleAnimation, forKey: "pulse-scale")
     

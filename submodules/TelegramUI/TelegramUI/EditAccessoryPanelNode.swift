@@ -7,6 +7,7 @@ import SwiftSignalKit
 import Display
 import TelegramPresentationData
 import TelegramUIPreferences
+import ActivityIndicator
 
 final class EditAccessoryPanelNode: AccessoryPanelNode {
     let messageId: MessageId
@@ -53,12 +54,12 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     var theme: PresentationTheme
     var strings: PresentationStrings
     var nameDisplayOrder: PresentationPersonNameOrder
     
-    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContextImpl, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
         self.context = context
         self.messageId = messageId
         self.theme = theme
@@ -68,7 +69,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.closeButton = ASButtonNode()
         self.closeButton.accessibilityLabel = "Discard"
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
         self.lineNode = ASImageNode()

@@ -14,7 +14,7 @@ public enum UndoOverlayContent {
 }
 
 public final class UndoOverlayController: ViewController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let presentationData: PresentationData
     let content: UndoOverlayContent
     private let elevatedLayout: Bool
@@ -23,7 +23,7 @@ public final class UndoOverlayController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    public init(context: AccountContext, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (Bool) -> Void) {
+    public init(context: AccountContextImpl, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (Bool) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.content = content

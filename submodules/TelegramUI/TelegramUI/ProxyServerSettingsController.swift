@@ -10,6 +10,7 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 import TelegramPresentationData
+import ItemListUI
 
 private func shareLink(for server: ProxyServerSettings) -> String {
     var link: String
@@ -261,7 +262,7 @@ private func proxyServerSettings(with state: ProxyServerSettingsControllerState)
     return nil
 }
 
-public func proxyServerSettingsController(context: AccountContext, currentSettings: ProxyServerSettings? = nil) -> ViewController {
+public func proxyServerSettingsController(context: AccountContextImpl, currentSettings: ProxyServerSettings? = nil) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     return proxyServerSettingsController(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) }, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, currentSettings: currentSettings)
 }

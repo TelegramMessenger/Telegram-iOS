@@ -17,7 +17,7 @@ public final class TabBarAccountSwitchController: ViewController {
         return self._ready
     }
     
-    private let sharedContext: SharedAccountContext
+    private let sharedContext: SharedAccountContextImpl
     private let accounts: (primary: (Account, Peer), other: [(Account, Peer, Int32)])
     private let canAddAccounts: Bool
     private let switchToAccount: (AccountRecordId) -> Void
@@ -30,7 +30,7 @@ public final class TabBarAccountSwitchController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    public init(sharedContext: SharedAccountContext, accounts: (primary: (Account, Peer), other: [(Account, Peer, Int32)]), canAddAccounts: Bool, switchToAccount: @escaping (AccountRecordId) -> Void, addAccount: @escaping () -> Void, sourceNodes: [ASDisplayNode]) {
+    public init(sharedContext: SharedAccountContextImpl, accounts: (primary: (Account, Peer), other: [(Account, Peer, Int32)]), canAddAccounts: Bool, switchToAccount: @escaping (AccountRecordId) -> Void, addAccount: @escaping () -> Void, sourceNodes: [ASDisplayNode]) {
         self.sharedContext = sharedContext
         self.accounts = accounts
         self.canAddAccounts = canAddAccounts

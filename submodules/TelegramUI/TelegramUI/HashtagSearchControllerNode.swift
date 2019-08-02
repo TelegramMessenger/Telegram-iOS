@@ -13,7 +13,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     
     var chatController: ChatController?
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let query: String
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -22,7 +22,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     
     var navigationBar: NavigationBar?
     
-    init(context: AccountContext, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContextImpl, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.query = query
         self.listNode = ListView()

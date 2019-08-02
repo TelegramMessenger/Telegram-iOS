@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import TextFormat
 
 private func processHexString(_ string: String) -> String {
     var result = ""
@@ -23,7 +24,7 @@ private func processHexString(_ string: String) -> String {
 }
 
 final class SecretChatKeyControllerNode: ViewControllerTracingNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private let fingerprint: SecretChatKeyFingerprint
     private let peer: Peer
@@ -36,7 +37,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
     
     private var validImageSize: CGSize?
     
-    init(context: AccountContext, presentationData: PresentationData, fingerprint: SecretChatKeyFingerprint, peer: Peer, getNavigationController: @escaping () -> NavigationController?) {
+    init(context: AccountContextImpl, presentationData: PresentationData, fingerprint: SecretChatKeyFingerprint, peer: Peer, getNavigationController: @escaping () -> NavigationController?) {
         self.context = context
         self.presentationData = presentationData
         self.fingerprint = fingerprint
@@ -123,7 +124,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         
         let linkRange = (infoRaw as NSString).range(of: "telegram.org")
         if linkRange.location != NSNotFound {
-            infoText.addAttributes([.foregroundColor: self.presentationData.theme.list.itemAccentColor, NSAttributedStringKey(rawValue: TelegramTextAttributes.URL): "https://telegram.org/faq#secret-chats"], range: linkRange)
+            infoText.addAttributes([.foregroundColor: self.presentationData.theme.list.itemAccentColor, NSAttributedString.Key(rawValue: TelegramTextAttributes.URL): "https://telegram.org/faq#secret-chats"], range: linkRange)
         }
         
         let (infoLayout, infoApply) = makeInfoLayout(TextNodeLayoutArguments(attributedString: infoText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: layout.size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
@@ -153,7 +154,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: recognizer.view)
             if let attributes = self.infoNode.attributesAtPoint(point)?.1 {
-                if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+                if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                     openExternalUrl(context: self.context, url: url, presentationData: self.presentationData, navigationController: self.getNavigationController(), dismissInput: { [weak self] in
                         self?.view.endEditing(true)
                     })

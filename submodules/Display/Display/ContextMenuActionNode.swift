@@ -24,7 +24,7 @@ final class ContextMenuActionNode: ASDisplayNode {
     
     init(action: ContextMenuAction) {
         self.actionArea = AccessibilityAreaNode()
-        self.actionArea.accessibilityTraits = UIAccessibilityTraitButton
+        self.actionArea.accessibilityTraits = .button
         
         switch action.content {
             case let .text(title, accessibilityLabel):

@@ -6,15 +6,16 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
 
 final class ChannelDiscussionGroupSetupSearchItem: ItemListControllerSearch {
-    let context: AccountContext
+    let context: AccountContextImpl
     let peers: [Peer]
     let cancel: () -> Void
     let dismissInput: () -> Void
     let openPeer: (Peer) -> Void
     
-    init(context: AccountContext, peers: [Peer], cancel: @escaping () -> Void, dismissInput: @escaping () -> Void, openPeer: @escaping (Peer) -> Void) {
+    init(context: AccountContextImpl, peers: [Peer], cancel: @escaping () -> Void, dismissInput: @escaping () -> Void, openPeer: @escaping (Peer) -> Void) {
         self.context = context
         self.peers = peers
         self.cancel = cancel
@@ -56,7 +57,7 @@ final class ChannelDiscussionGroupSetupSearchItem: ItemListControllerSearch {
 private final class ChannelDiscussionGroupSetupSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: ChannelDiscussionGroupSearchContainerNode
     
-    init(context: AccountContext, peers: [Peer], openPeer: @escaping (Peer) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping (Bool) -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContextImpl, peers: [Peer], openPeer: @escaping (Peer) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping (Bool) -> Void, dismissInput: @escaping () -> Void) {
         self.containerNode = ChannelDiscussionGroupSearchContainerNode(context: context, peers: peers, openPeer: { peer in
             openPeer(peer)
         })

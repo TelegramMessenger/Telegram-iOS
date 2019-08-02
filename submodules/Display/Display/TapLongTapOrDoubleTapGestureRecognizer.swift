@@ -24,14 +24,14 @@ private class TapLongTapOrDoubleTapGestureRecognizerTimerTarget: NSObject {
     }
 }
 
-enum TapLongTapOrDoubleTapGesture {
+public enum TapLongTapOrDoubleTapGesture {
     case tap
     case doubleTap
     case longTap
     case hold
 }
 
-enum TapLongTapOrDoubleTapGestureRecognizerAction {
+public enum TapLongTapOrDoubleTapGestureRecognizerAction {
     case waitForDoubleTap
     case waitForSingleTap
     case waitForHold(timeout: Double, acceptTap: Bool)
@@ -44,12 +44,12 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
     private var tapCount: Int = 0
     
     private var timer: Foundation.Timer?
-    private(set) var lastRecognizedGestureAndLocation: (TapLongTapOrDoubleTapGesture, CGPoint)?
+    public private(set) var lastRecognizedGestureAndLocation: (TapLongTapOrDoubleTapGesture, CGPoint)?
     
-    var tapActionAtPoint: ((CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction)?
-    var highlight: ((CGPoint?) -> Void)?
+    public var tapActionAtPoint: ((CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction)?
+    public var highlight: ((CGPoint?) -> Void)?
     
-    var hapticFeedback: HapticFeedback?
+    public var hapticFeedback: HapticFeedback?
     
     private var highlightPoint: CGPoint?
     
@@ -156,13 +156,13 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
                         self.timer?.invalidate()
                         let timer = Timer(timeInterval: 0.3, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.longTapEvent), userInfo: nil, repeats: false)
                         self.timer = timer
-                        RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+                        RunLoop.main.add(timer, forMode: .common)
                     case let .waitForHold(timeout, _):
                         self.hapticFeedback = HapticFeedback()
                         self.hapticFeedback?.prepareTap()
                         let timer = Timer(timeInterval: timeout, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.holdEvent), userInfo: nil, repeats: false)
                         self.timer = timer
-                        RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+                        RunLoop.main.add(timer, forMode: .common)
                     case .fail:
                         self.state = .failed
                 }
@@ -227,7 +227,7 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
                     self.state = .began
                     let timer = Timer(timeInterval: 0.2, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.tapEvent), userInfo: nil, repeats: false)
                     self.timer = timer
-                    RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+                    RunLoop.main.add(timer, forMode: .common)
                 case let .waitForHold(_, acceptTap):
                     if let (touchLocation, _) = self.touchLocationAndTimestamp, acceptTap {
                         if self.state != .began {

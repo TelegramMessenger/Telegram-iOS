@@ -7,14 +7,15 @@ import Postbox
 import TelegramCore
 import Lottie
 import TelegramPresentationData
+import AnimationUI
 
 class ChatAnimationGalleryItem: GalleryItem {
-    let context: AccountContext
+    let context: AccountContextImpl
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
     
-    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
+    init(context: AccountContextImpl, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
@@ -65,7 +66,7 @@ private var backgroundButtonIcon: UIImage = {
 }()
 
 final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private var message: Message?
     
@@ -79,14 +80,14 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
     
-    private var contextAndMedia: (AccountContext, AnyMediaReference)?
+    private var contextAndMedia: (AccountContextImpl, AnyMediaReference)?
     
     private var disposable = MetaDisposable()
     private var fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContext, presentationData: PresentationData) {
+    init(context: AccountContextImpl, presentationData: PresentationData) {
         self.context = context
         self.presentationData = presentationData
         
@@ -131,7 +132,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setMessage(message)
     }
     
-    func setFile(context: AccountContext, fileReference: FileMediaReference) {
+    func setFile(context: AccountContextImpl, fileReference: FileMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
             let signal = chatMessageAnimatedStrickerBackingData(postbox: context.account.postbox, fileReference: fileReference, synchronousLoad: false)
             |> mapToSignal { value -> Signal<Data, NoError> in
@@ -297,7 +298,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
         })
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
+        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false)
     }
     
     override func visibilityUpdated(isVisible: Bool) {

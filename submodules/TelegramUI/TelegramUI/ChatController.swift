@@ -12,6 +12,7 @@ import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
+import TextFormat
 
 public enum ChatControllerPeekActions {
     case standard
@@ -108,7 +109,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     public var peekActions: ChatControllerPeekActions = .standard
     private var didSetup3dTouch: Bool = false
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     public let chatLocation: ChatLocation
     private let messageId: MessageId?
     private let botStart: ChatControllerInitialBotStart?
@@ -263,7 +264,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     
     var purposefulAction: (() -> Void)?
     
-    public init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
+    public init(context: AccountContextImpl, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
@@ -558,7 +559,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     text = "\(count) messages selected"
                 }
                 DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
-                    UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, text as NSString)
+                    UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: text as NSString)
                 })
             }
         }, sendCurrentMessage: { [weak self] silentPosting in
@@ -2631,7 +2632,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                     } else {
                         text = "\(count) messages selected"
                     }
-                    UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, text)
+                        UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: text)
                 }
             }
         }, deleteSelectedMessages: { [weak self] in
@@ -7033,7 +7034,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         })
         
         if canEdit, let message = self.chatDisplayNode.historyNode.firstMessageForEditInCurrentHistoryView() {
-            inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
+            inputShortcuts.append(KeyShortcut(input: UIKeyCommand.inputUpArrow, action: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.interfaceInteraction?.setupEditMessage(message.id)
                 }
@@ -7041,12 +7042,12 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
         
         let otherShortcuts: [KeyShortcut] = [
-            KeyShortcut(title: strings.KeyCommand_ScrollUp, input: UIKeyInputUpArrow, modifiers: [.shift], action: { [weak self] in
+            KeyShortcut(title: strings.KeyCommand_ScrollUp, input: UIKeyCommand.inputUpArrow, modifiers: [.shift], action: { [weak self] in
                 if let strongSelf = self {
                     _ = strongSelf.chatDisplayNode.historyNode.scrollWithDirection(.down, distance: 75.0)
                 }
             }),
-            KeyShortcut(title: strings.KeyCommand_ScrollDown, input: UIKeyInputDownArrow, modifiers: [.shift], action: { [weak self] in
+            KeyShortcut(title: strings.KeyCommand_ScrollDown, input: UIKeyCommand.inputDownArrow, modifiers: [.shift], action: { [weak self] in
                 if let strongSelf = self {
                     _ = strongSelf.chatDisplayNode.historyNode.scrollWithDirection(.up, distance: 75.0)
                 }

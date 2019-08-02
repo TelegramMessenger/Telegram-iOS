@@ -8,7 +8,7 @@ import TelegramPresentationData
 import DeviceAccess
 
 public final class PermissionController : ViewController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let splitTest: PermissionUISplitTest?
     private var state: PermissionControllerContent?
     private var splashScreen = false
@@ -26,7 +26,7 @@ public final class PermissionController : ViewController {
     private var skip: (() -> Void)?
     public var proceed: ((Bool) -> Void)?
     
-    public init(context: AccountContext, splashScreen: Bool = true, splitTest: PermissionUISplitTest? = nil) {
+    public init(context: AccountContextImpl, splashScreen: Bool = true, splitTest: PermissionUISplitTest? = nil) {
         self.context = context
         self.splitTest = splitTest
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

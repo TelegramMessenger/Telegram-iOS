@@ -5,15 +5,16 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 private final class DebugAccountsControllerArguments {
-    let context: AccountContext
+    let context: AccountContextImpl
     let presentController: (ViewController, ViewControllerPresentationArguments) -> Void
     
     let switchAccount: (AccountRecordId) -> Void
     let loginNewAccount: () -> Void
     
-    init(context: AccountContext, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, switchAccount: @escaping (AccountRecordId) -> Void, loginNewAccount: @escaping () -> Void) {
+    init(context: AccountContextImpl, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, switchAccount: @escaping (AccountRecordId) -> Void, loginNewAccount: @escaping () -> Void) {
         self.context = context
         self.presentController = presentController
         self.switchAccount = switchAccount
@@ -97,7 +98,7 @@ private func debugAccountsControllerEntries(view: AccountRecordsView, presentati
     return entries
 }
 
-public func debugAccountsController(context: AccountContext, accountManager: AccountManager) -> ViewController {
+public func debugAccountsController(context: AccountContextImpl, accountManager: AccountManager) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     
     let arguments = DebugAccountsControllerArguments(context: context, presentController: { controller, arguments in

@@ -7,6 +7,8 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import MergeLists
 
 private final class NotificationExceptionState : Equatable {
     let mode:NotificationExceptionMode
@@ -633,7 +635,7 @@ private extension PeerMuteState {
 }
 
 final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private let navigationBar: NavigationBar
     private let requestActivateSearch: () -> Void
@@ -662,7 +664,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         self.arguments?.selectPeer()
     }
     
-    init(context: AccountContext, presentationData: PresentationData, navigationBar: NavigationBar, mode: NotificationExceptionMode, updatedMode:@escaping(NotificationExceptionMode)->Void, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping (Bool) -> Void, updateCanStartEditing: @escaping (Bool?) -> Void, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void) {
+    init(context: AccountContextImpl, presentationData: PresentationData, navigationBar: NavigationBar, mode: NotificationExceptionMode, updatedMode:@escaping(NotificationExceptionMode)->Void, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping (Bool) -> Void, updateCanStartEditing: @escaping (Bool?) -> Void, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.presentationDataValue.set(.single((presentationData.theme, presentationData.strings)))
@@ -1136,7 +1138,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
     private let updateNotificationsDisposable = MetaDisposable()
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(context: AccountContext, mode: NotificationExceptionMode, arguments: NotificationExceptionArguments) {
+    init(context: AccountContextImpl, mode: NotificationExceptionMode, arguments: NotificationExceptionArguments) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))

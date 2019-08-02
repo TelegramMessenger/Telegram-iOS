@@ -4,6 +4,7 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
+import MergeLists
 
 enum ChatMediaInputPanelAuxiliaryNamespace: Int32 {
     case savedStickers = 2

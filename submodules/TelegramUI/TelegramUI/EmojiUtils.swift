@@ -147,7 +147,7 @@ extension String {
     }
     
     var trimmedEmoji: String {
-        if self.unicodeScalars.count > 1, self.unicodeScalars.first?.value == 0x2764 {
+        if self.unicodeScalars.count > 1, self.unicodeScalars.first?.value == 0x2764, self.emojis.count == 1 {
             return String(self.unicodeScalars.prefix(self.unicodeScalars.count - 1))
         } else {
             return self

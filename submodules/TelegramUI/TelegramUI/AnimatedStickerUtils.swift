@@ -99,19 +99,21 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
                 encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
                 decodeYUVAToRGBA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
                 
-                if let colorImage = context.generateImage() {
+                if let colorSourceImage = context.generateImage(), let alphaImage = generateGrayscaleAlphaMaskImage(image: colorSourceImage) {
+                    let colorContext = DrawingContext(size: size, scale: 1.0, clear: false)
+                    colorContext.withFlippedContext { c in
+                        c.setFillColor(UIColor.black.cgColor)
+                        c.fill(CGRect(origin: CGPoint(), size: size))
+                        c.draw(colorSourceImage.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                    }
+                    guard let colorImage = colorContext.generateImage() else {
+                        return
+                    }
+                    
                     let colorData = NSMutableData()
                     let alphaData = NSMutableData()
                     
-                    let alphaImage = generateImage(size, contextGenerator: { size, context in
-                        context.setFillColor(UIColor.white.cgColor)
-                        context.fill(CGRect(origin: CGPoint(), size: size))
-                        context.clip(to: CGRect(origin: CGPoint(), size: size), mask: colorImage.cgImage!)
-                        context.setFillColor(UIColor.black.cgColor)
-                        context.fill(CGRect(origin: CGPoint(), size: size))
-                    }, scale: 1.0)
-                    
-                    if let alphaImage = alphaImage, let colorDestination = CGImageDestinationCreateWithData(colorData as CFMutableData, kUTTypeJPEG, 1, nil), let alphaDestination = CGImageDestinationCreateWithData(alphaData as CFMutableData, kUTTypeJPEG, 1, nil) {
+                    if let colorDestination = CGImageDestinationCreateWithData(colorData as CFMutableData, kUTTypeJPEG, 1, nil), let alphaDestination = CGImageDestinationCreateWithData(alphaData as CFMutableData, kUTTypeJPEG, 1, nil) {
                         CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
                         CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
                         
@@ -189,8 +191,6 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                     return
                 }
                 
-                let scale = size.width / 512.0
-                
                 let bytesPerRow = (4 * Int(size.width) + 15) & (~15)
                 
                 var currentFrame: Int32 = 0
@@ -259,8 +259,12 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                         lhs = lhs.advanced(by: 1)
                         rhs = rhs.advanced(by: 1)
                     }
-                    for i in (yuvaLength / 8) * 8 ..< yuvaLength {
-                        
+                    var lhsRest = previousYuvaFrameData.assumingMemoryBound(to: UInt8.self).advanced(by: (yuvaLength / 8) * 8)
+                    var rhsRest = yuvaFrameData.assumingMemoryBound(to: UInt8.self).advanced(by: (yuvaLength / 8) * 8)
+                    for _ in (yuvaLength / 8) * 8 ..< yuvaLength {
+                        lhsRest.pointee = rhsRest.pointee ^ lhsRest.pointee
+                        lhsRest = lhsRest.advanced(by: 1)
+                        rhsRest = rhsRest.advanced(by: 1)
                     }
                     deltaTime += CACurrentMediaTime() - deltaStartTime
                     
@@ -319,27 +323,5 @@ func fetchLocalBundleResource(postbox: Postbox, resource: LocalBundleResource) -
             subscriber.putCompletion()
         }
         return EmptyDisposable
-    }
-}
-
-private let emojis: [String: (String, CGFloat)] = [
-    "👍": ("thumbs_up_1", 450.0),
-    "👍🏻": ("thumbs_up_2", 450.0),
-    "👍🏼": ("thumbs_up_3", 450.0),
-    "👍🏽": ("thumbs_up_4", 450.0),
-    "👍🏾": ("thumbs_up_5", 450.0),
-    "👍🏿": ("thumbs_up_6", 450.0),
-    "😂": ("lol", 350.0),
-    "😒": ("meh", 350.0),
-    "❤️": ("heart", 350.0),
-    "🥳": ("celeb", 430.0),
-    "😳": ("confused", 350.0)
-]
-
-func animatedEmojiResource(emoji: String) -> (LocalBundleResource, CGFloat)? {
-    if let (name, size) = emojis[emoji] {
-        return (LocalBundleResource(name: name, ext: "tgs"), size)
-    } else {
-        return nil
     }
 }

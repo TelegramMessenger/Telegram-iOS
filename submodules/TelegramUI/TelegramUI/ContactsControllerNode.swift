@@ -24,7 +24,7 @@ private final class ContactsControllerNodeView: UITracingLayerView, PreviewingHo
 final class ContactsControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private(set) var searchDisplayController: SearchDisplayController?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -41,7 +41,7 @@ final class ContactsControllerNode: ASDisplayNode {
     
     weak var controller: ContactsController?
     
-    init(context: AccountContext, sortOrder: Signal<ContactsSortOrder, NoError>, present: @escaping (ViewController, Any?) -> Void, controller: ContactsController) {
+    init(context: AccountContextImpl, sortOrder: Signal<ContactsSortOrder, NoError>, present: @escaping (ViewController, Any?) -> Void, controller: ContactsController) {
         self.context = context
         self.controller = controller
         

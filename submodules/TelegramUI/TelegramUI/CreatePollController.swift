@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
 
 private let maxTextLength = 255
 private let maxOptionLength = 100
@@ -194,7 +195,7 @@ private func createPollControllerEntries(presentationData: PresentationData, sta
     return entries
 }
 
-public func createPollController(context: AccountContext, peerId: PeerId, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
+public func createPollController(context: AccountContextImpl, peerId: PeerId, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
     let statePromise = ValuePromise(CreatePollControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: CreatePollControllerState())
     let updateState: ((CreatePollControllerState) -> CreatePollControllerState) -> Void = { f in

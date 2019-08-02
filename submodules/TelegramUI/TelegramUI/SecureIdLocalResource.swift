@@ -132,7 +132,7 @@ func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureIdLocalIm
                 if let scaledImage = generateImage(image.size.fitted(CGSize(width: 2048.0, height: 2048.0)), contextGenerator: { size, context in
                     context.setBlendMode(.copy)
                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                }, scale: 1.0), let scaledData = UIImageJPEGRepresentation(scaledImage, 0.6) {
+                }, scale: 1.0), let scaledData = scaledImage.jpegData(compressionQuality: 0.6) {
                     subscriber.putNext(.dataPart(resourceOffset: 0, data: scaledData, range: 0 ..< scaledData.count, complete: true))
                     subscriber.putCompletion()
                 }

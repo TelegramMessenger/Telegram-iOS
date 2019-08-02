@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import TextFormat
 
 private final class TwoStepVerificationResetControllerArguments {
     let updateEntryText: (String) -> Void
@@ -131,7 +133,7 @@ private func twoStepVerificationResetControllerEntries(presentationData: Present
     return entries
 }
 
-func twoStepVerificationResetController(context: AccountContext, emailPattern: String, result: Promise<Bool>) -> ViewController {
+func twoStepVerificationResetController(context: AccountContextImpl, emailPattern: String, result: Promise<Bool>) -> ViewController {
     let initialState = TwoStepVerificationResetControllerState(codeText: "", checking: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)

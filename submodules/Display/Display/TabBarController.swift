@@ -233,10 +233,10 @@ open class TabBarController: ViewController {
         self.tabBarControllerNode.tabBarNode.selectedIndex = self.selectedIndex
         
         if let currentController = self.currentController {
-            currentController.willMove(toParentViewController: nil)
+            currentController.willMove(toParent: nil)
             self.tabBarControllerNode.currentControllerNode = nil
-            currentController.removeFromParentViewController()
-            currentController.didMove(toParentViewController: nil)
+            currentController.removeFromParent()
+            currentController.didMove(toParent: nil)
             
             self.currentController = nil
         }
@@ -247,11 +247,11 @@ open class TabBarController: ViewController {
         
         var displayNavigationBar = false
         if let currentController = self.currentController {
-            currentController.willMove(toParentViewController: self)
+            currentController.willMove(toParent: self)
             self.tabBarControllerNode.currentControllerNode = currentController.displayNode
             currentController.navigationBar?.isHidden = true
-            self.addChildViewController(currentController)
-            currentController.didMove(toParentViewController: self)
+            self.addChild(currentController)
+            currentController.didMove(toParent: self)
             
             currentController.navigationBar?.layoutSuspended = true
             currentController.navigationItem.setTarget(self.navigationItem)

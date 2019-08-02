@@ -9,12 +9,12 @@ import TelegramCore
 import TelegramPresentationData
 
 class ChatExternalFileGalleryItem: GalleryItem {
-    let context: AccountContext
+    let context: AccountContextImpl
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
     
-    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
+    init(context: AccountContextImpl, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
@@ -67,7 +67,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
     private let actionTitleNode: ImmediateTextNode
     private let actionButtonNode: HighlightableButtonNode
     
-    private var contextAndFile: (AccountContext, FileMediaReference)?
+    private var contextAndFile: (AccountContextImpl, FileMediaReference)?
     private let dataDisposable = MetaDisposable()
     
     private var itemIsVisible = false
@@ -80,7 +80,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContext, presentationData: PresentationData) {
+    init(context: AccountContextImpl, presentationData: PresentationData) {
         self.containerNode = ASDisplayNode()
         self.containerNode.backgroundColor = .white
         
@@ -167,7 +167,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         return .single(.dark)
     }
     
-    func setFile(context: AccountContext, fileReference: FileMediaReference) {
+    func setFile(context: AccountContextImpl, fileReference: FileMediaReference) {
         let updateFile = self.contextAndFile?.1.media != fileReference.media
         self.contextAndFile = (context, fileReference)
         if updateFile {
@@ -176,7 +176,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         }
     }
     
-    private func setupStatus(context: AccountContext, resource: MediaResource) {
+    private func setupStatus(context: AccountContextImpl, resource: MediaResource) {
         self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(resource)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let strongSelf = self {
@@ -303,7 +303,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         })
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
+        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false)
     }
     
     override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {

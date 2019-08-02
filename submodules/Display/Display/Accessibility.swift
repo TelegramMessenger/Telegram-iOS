@@ -5,7 +5,7 @@ import AsyncDisplayKit
 public func addAccessibilityChildren(of node: ASDisplayNode, container: Any, to list: inout [Any]) {
     if node.isAccessibilityElement {
         let element = UIAccessibilityElement(accessibilityContainer: container)
-        element.accessibilityFrame = UIAccessibilityConvertFrameToScreenCoordinates(node.bounds, node.view)
+        element.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(node.bounds, in: node.view)
         element.accessibilityLabel = node.accessibilityLabel
         element.accessibilityValue = node.accessibilityValue
         element.accessibilityTraits = node.accessibilityTraits

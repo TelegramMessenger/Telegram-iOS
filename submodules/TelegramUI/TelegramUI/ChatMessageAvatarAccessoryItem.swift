@@ -8,7 +8,7 @@ import TelegramPresentationData
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 
 final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let peerId: PeerId
     private let peer: Peer?
     private let messageReference: MessageReference?
@@ -17,7 +17,7 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
     
     private let day: Int32
     
-    init(context: AccountContext, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, messageTimestamp: Int32, emptyColor: UIColor) {
+    init(context: AccountContextImpl, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, messageTimestamp: Int32, emptyColor: UIColor) {
         self.context = context
         self.peerId = peerId
         self.peer = peer

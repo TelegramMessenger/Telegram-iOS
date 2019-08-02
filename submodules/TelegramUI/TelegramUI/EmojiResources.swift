@@ -198,25 +198,29 @@ private func matchingEmojiEntry(_ emoji: String) -> (UInt8, UInt8, UInt8)? {
 }
 
 func messageIsElligibleForLargeEmoji(_ message: Message) -> Bool {
-    var messageEntities: [MessageTextEntity]?
-    for attribute in message.attributes {
-        if let attribute = attribute as? TextEntitiesMessageAttribute {
-            messageEntities = attribute.entities
-            break
+    if message.media.isEmpty && !message.text.isEmpty && message.text.containsOnlyEmoji && message.text.emojis.count < 4 {
+        var messageEntities: [MessageTextEntity]?
+        for attribute in message.attributes {
+            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                messageEntities = attribute.entities
+                break
+            }
         }
-    }
-
-    if !(messageEntities?.isEmpty ?? true) {
-        return false
-    }
-    
-    for emoji in message.text.emojis {
-        if let _ = matchingEmojiEntry(emoji) {
-        } else {
+        
+        if !(messageEntities?.isEmpty ?? true) {
             return false
         }
+        
+        for emoji in message.text.emojis {
+            if let _ = matchingEmojiEntry(emoji) {
+            } else {
+                return false
+            }
+        }
+        return true
+    } else {
+        return false
     }
-    return true
 }
 
 func largeEmoji(postbox: Postbox, emoji: String, outline: Bool = true) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
@@ -346,7 +350,7 @@ func fetchEmojiSpriteResource(postbox: Postbox, network: Network, resource: Emoj
                             let image = buffer.with { buffer -> UIImage? in
                                 return WebP.convert(fromWebP: buffer.data)
                             }
-                            if let image = image, let data = UIImagePNGRepresentation(image) {
+                            if let image = image, let data = image.pngData() {
                                 subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
                                 subscriber.putCompletion()
                             }

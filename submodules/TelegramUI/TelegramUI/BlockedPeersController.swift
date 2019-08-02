@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class BlockedPeersControllerArguments {
     let account: Account
@@ -193,7 +194,7 @@ private func blockedPeersControllerEntries(presentationData: PresentationData, s
     return entries
 }
 
-public func blockedPeersController(context: AccountContext, blockedPeersContext: BlockedPeersContext) -> ViewController {
+public func blockedPeersController(context: AccountContextImpl, blockedPeersContext: BlockedPeersContext) -> ViewController {
     let statePromise = ValuePromise(BlockedPeersControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: BlockedPeersControllerState())
     let updateState: ((BlockedPeersControllerState) -> BlockedPeersControllerState) -> Void = { f in

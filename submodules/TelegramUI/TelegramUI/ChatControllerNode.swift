@@ -7,6 +7,7 @@ import Display
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import TextFormat
 
 private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider, PreviewingHostView {
     var inputAccessoryHeight: (() -> CGFloat)?
@@ -52,7 +53,7 @@ private struct ChatControllerNodeDerivedLayoutState {
 }
 
 class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    let context: AccountContext
+    let context: AccountContextImpl
     let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
     private weak var controller: ChatController?
@@ -186,7 +187,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }*/
     
-    init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
+    init(context: AccountContextImpl, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
         self.context = context
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
@@ -847,7 +848,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.loadingNode.updateLayout(size: contentBounds.size, insets: UIEdgeInsetsMake(containerInsets.top, 0.0, containerInsets.bottom + contentBottomInset, 0.0), transition: transition)
+        self.loadingNode.updateLayout(size: contentBounds.size, insets: UIEdgeInsets(top: containerInsets.top, left: 0.0, bottom: containerInsets.bottom + contentBottomInset, right: 0.0), transition: transition)
         
         if let containerNode = self.containerNode {
             contentBottomInset += 8.0

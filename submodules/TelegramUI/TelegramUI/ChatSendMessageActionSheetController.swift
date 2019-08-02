@@ -10,7 +10,7 @@ final class ChatSendMessageActionSheetController: ViewController {
         return self.displayNode as! ChatSendMessageActionSheetControllerNode
     }
     
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let controllerInteraction: ChatControllerInteraction?
     private let interfaceState: ChatPresentationInterfaceState
     private let sendButtonFrame: CGRect
@@ -25,7 +25,7 @@ final class ChatSendMessageActionSheetController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
 
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, sendButtonFrame: CGRect, textInputNode: EditableTextNode, completion: @escaping () -> Void) {
+    init(context: AccountContextImpl, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, sendButtonFrame: CGRect, textInputNode: EditableTextNode, completion: @escaping () -> Void) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.interfaceState = interfaceState

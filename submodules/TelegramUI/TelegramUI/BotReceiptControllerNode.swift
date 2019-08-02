@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
 
 final class BotReceiptControllerArguments {
     fileprivate let account: Account
@@ -251,7 +252,7 @@ private func availablePaymentMethods(current: BotCheckoutPaymentMethod?) -> [Bot
 }
 
 final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let dismissAnimated: () -> Void
     
     private var presentationData: PresentationData
@@ -261,7 +262,7 @@ final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
     
     private let actionButton: BotCheckoutActionButton
     
-    init(controller: ItemListController<BotReceiptEntry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
+    init(controller: ItemListController<BotReceiptEntry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContextImpl, invoice: TelegramMediaInvoice, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
         self.context = context
         self.dismissAnimated = dismissAnimated
         

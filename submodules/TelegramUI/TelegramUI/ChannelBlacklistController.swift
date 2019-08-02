@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
 
 private final class ChannelBlacklistControllerArguments {
     let account: Account
@@ -259,7 +260,7 @@ private func channelBlacklistControllerEntries(presentationData: PresentationDat
     return entries
 }
 
-public func channelBlacklistController(context: AccountContext, peerId: PeerId) -> ViewController {
+public func channelBlacklistController(context: AccountContextImpl, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(ChannelBlacklistControllerState(referenceTimestamp: Int32(Date().timeIntervalSince1970)), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelBlacklistControllerState(referenceTimestamp: Int32(Date().timeIntervalSince1970)))
     let updateState: ((ChannelBlacklistControllerState) -> ChannelBlacklistControllerState) -> Void = { f in

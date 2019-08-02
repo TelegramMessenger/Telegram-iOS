@@ -36,7 +36,7 @@ func legacyImagePicker(theme: PresentationTheme, completion: @escaping (UIImage?
     })
     
     let imagePickerController = TGLegacyCameraController(context: legacyController.context)!
-    imagePickerController.sourceType = UIImagePickerControllerSourceType.photoLibrary
+    imagePickerController.sourceType = UIImagePickerController.SourceType.photoLibrary
     imagePickerController.completionDelegate = legacyController
     
     legacyController.bind(controller: imagePickerController)

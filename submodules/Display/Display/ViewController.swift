@@ -109,7 +109,7 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    override open func prefersHomeIndicatorAutoHidden() -> Bool {
+    override open var prefersHomeIndicatorAutoHidden: Bool {
         return self.preferNavigationUIHidden
     }
     

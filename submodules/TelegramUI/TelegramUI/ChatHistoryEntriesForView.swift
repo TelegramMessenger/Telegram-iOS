@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 
-func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData, historyAppearsCleared: Bool) -> [ChatHistoryEntry] {
+func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData, historyAppearsCleared: Bool, associatedData: ChatMessageItemAssociatedData) -> [ChatHistoryEntry] {
     if historyAppearsCleared {
         return []
     }
@@ -36,6 +36,15 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         if let author = entry.message.author {
             adminRank = adminRanks[author.id]
         }
+        
+        var contentTypeHint: ChatMessageEntryContentType = .generic
+        if presentationData.largeEmoji {
+            if let _ = associatedData.animatedEmojiStickers[entry.message.text.trimmedEmoji] {
+                contentTypeHint = .animatedEmoji
+            } else if messageIsElligibleForLargeEmoji(entry.message) {
+                contentTypeHint = .largeEmoji
+            }
+        }
     
         if groupMessages {
             if !groupBucket.isEmpty && entry.message.groupInfo != groupBucket[0].0.groupInfo {
@@ -49,7 +58,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 } else {
                     selection = .none
                 }
-                groupBucket.append((entry.message, entry.isRead, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact)))
+                groupBucket.append((entry.message, entry.isRead, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint)))
             } else {
                 let selection: ChatHistoryMessageSelection
                 if let selectedMessages = selectedMessages {
@@ -57,7 +66,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 } else {
                     selection = .none
                 }
-                entries.append(.MessageEntry(entry.message, presentationData, entry.isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact)))
+                entries.append(.MessageEntry(entry.message, presentationData, entry.isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint)))
             }
         } else {
             let selection: ChatHistoryMessageSelection
@@ -66,7 +75,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
             } else {
                 selection = .none
             }
-            entries.append(.MessageEntry(entry.message, presentationData, entry.isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact)))
+            entries.append(.MessageEntry(entry.message, presentationData, entry.isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint)))
         }
     }
     

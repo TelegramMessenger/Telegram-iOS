@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import MobileCoreServices
 import TelegramPresentationData
+import TextFormat
 
 private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
@@ -260,7 +261,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
-    override var context: AccountContext? {
+    override var context: AccountContextImpl? {
         didSet {
             self.actionButtons.micButton.account = self.context?.account
         }
@@ -469,7 +470,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         paragraphStyle.maximumLineHeight = 20.0
         paragraphStyle.minimumLineHeight = 20.0
         
-        textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(max(17.0, baseFontSize)), NSAttributedStringKey.foregroundColor.rawValue: textColor, NSAttributedStringKey.paragraphStyle.rawValue: paragraphStyle]
+        textInputNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(max(17.0, baseFontSize)), NSAttributedString.Key.foregroundColor.rawValue: textColor, NSAttributedString.Key.paragraphStyle.rawValue: paragraphStyle]
         textInputNode.clipsToBounds = false
         textInputNode.textView.clipsToBounds = false
         textInputNode.delegate = self
@@ -643,7 +644,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             textInputNode.attributedText = NSAttributedString(string: text, font: Font.regular(baseFontSize), textColor: textColor)
                             textInputNode.selectedRange = range
                         }
-                        textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(baseFontSize), NSAttributedStringKey.foregroundColor.rawValue: textColor]
+                        textInputNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(baseFontSize), NSAttributedString.Key.foregroundColor.rawValue: textColor]
                     }
                 }
                 
@@ -1006,7 +1007,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 added = true
                 mediaRecordingAccessibilityArea = AccessibilityAreaNode()
                 mediaRecordingAccessibilityArea.accessibilityLabel = text
-                mediaRecordingAccessibilityArea.accessibilityTraits = UIAccessibilityTraitButton | UIAccessibilityTraitStartsMediaSession
+                mediaRecordingAccessibilityArea.accessibilityTraits = [.button, .startsMediaSession]
                 self.mediaRecordingAccessibilityArea = mediaRecordingAccessibilityArea
                 mediaRecordingAccessibilityArea.activate = { [weak self] in
                     self?.interfaceInteraction?.finishMediaRecording(.send)
@@ -1020,7 +1021,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if added {
                 DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.4, execute: {
                     [weak mediaRecordingAccessibilityArea] in
-                    UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, mediaRecordingAccessibilityArea?.view)
+                    UIAccessibility.post(notification: UIAccessibility.Notification.layoutChanged, argument: mediaRecordingAccessibilityArea?.view)
                 })
             }
         } else {

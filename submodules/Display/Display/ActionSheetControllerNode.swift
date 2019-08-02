@@ -139,7 +139,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         self.itemGroupsContainerNode.animateDimViewsAlpha(from: 1.0, to: 0.0, duration: 0.3)
         
-        self.layer.animateBounds(from: self.bounds, to: self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height), duration: 0.35, timingFunction: kCAMediaTimingFunctionEaseOut, removeOnCompletion: false, completion: { [weak self, weak tempDimView] _ in
+        self.layer.animateBounds(from: self.bounds, to: self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height), duration: 0.35, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self, weak tempDimView] _ in
             tempDimView?.removeFromSuperview()
             
             self?.dismiss(cancelled)

@@ -20,6 +20,7 @@ private let typeHasLinkedStickers: Int32 = 6
 public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
     case id(id: Int64, accessHash: Int64)
     case name(String)
+    case animatedEmoji
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -27,6 +28,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 self = .id(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
             case 1:
                 self = .name(decoder.decodeStringForKey("n", orElse: ""))
+            case 2:
+                self = .animatedEmoji
             default:
                 self = .name("")
                 assertionFailure()
@@ -42,6 +45,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
             case let .name(name):
                 encoder.encodeInt32(1, forKey: "r")
                 encoder.encodeString(name, forKey: "n")
+            case .animatedEmoji:
+                encoder.encodeInt32(2, forKey: "r")
         }
     }
     
@@ -55,6 +60,12 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 }
             case let .name(name):
                 if case .name(name) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .animatedEmoji:
+                if case .animatedEmoji = rhs {
                     return true
                 } else {
                     return false
@@ -510,6 +521,8 @@ extension StickerPackReference {
                 self = .id(id: id, accessHash: accessHash)
             case let .inputStickerSetShortName(shortName):
                 self = .name(shortName)
+            case .inputStickerSetAnimatedEmoji:
+                self = .animatedEmoji
         }
     }
 }

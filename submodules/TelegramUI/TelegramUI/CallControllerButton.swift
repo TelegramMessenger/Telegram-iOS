@@ -172,7 +172,7 @@ final class CallControllerButtonNode: HighlightTrackingButtonNode {
             self.backgroundNode.layer.removeAnimation(forKey: "contents")
             if let currentContents = currentContents, let image = image {
                 self.backgroundNode.image = image
-                self.backgroundNode.layer.animate(from: currentContents as AnyObject, to: image.cgImage!, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: image === self.currentImage || image === self.filledImage ? 0.25 : 0.15)
+                self.backgroundNode.layer.animate(from: currentContents as AnyObject, to: image.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: image === self.currentImage || image === self.filledImage ? 0.25 : 0.15)
             } else {
                 self.backgroundNode.image = image
             }

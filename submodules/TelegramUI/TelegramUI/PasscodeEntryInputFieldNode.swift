@@ -115,7 +115,7 @@ private class PasscodeEntryDotNode: ASImageNode {
             let currentContents = self.layer.contents
             self.layer.removeAnimation(forKey: "contents")
             if let currentContents = currentContents, animated {
-                self.layer.animate(from: currentContents as AnyObject, to: image.cgImage!, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseOut, duration: image === self.regularImage ? 0.25 : 0.05, delay: delay, removeOnCompletion: false, completion: { finished in
+                self.layer.animate(from: currentContents as AnyObject, to: image.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: image === self.regularImage ? 0.25 : 0.05, delay: delay, removeOnCompletion: false, completion: { finished in
                     if finished {
                         self.image = image
                     }
@@ -221,11 +221,11 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         switch self.fieldType {
             case .digits6, .digits4:
                 for node in self.dotNodes {
-                    node.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseOut)
+                    node.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                 }
             case .alphanumeric:
-                self.textFieldNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseOut)
-                self.borderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseOut)
+                self.textFieldNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                self.borderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
         }
     }
     

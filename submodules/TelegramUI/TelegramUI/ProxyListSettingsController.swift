@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import MtProtoKitDynamic
+import ItemListUI
 
 private final class ProxySettingsControllerArguments {
     let toggleEnabled: (Bool) -> Void
@@ -299,7 +300,7 @@ public enum ProxySettingsControllerMode {
     case modal
 }
 
-public func proxySettingsController(context: AccountContext, mode: ProxySettingsControllerMode = .default) -> ViewController {
+public func proxySettingsController(context: AccountContextImpl, mode: ProxySettingsControllerMode = .default) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     return proxySettingsController(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) })
 }

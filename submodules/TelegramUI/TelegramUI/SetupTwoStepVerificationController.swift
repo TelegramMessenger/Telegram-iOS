@@ -6,9 +6,10 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ProgressNavigationButtonNode
 
 class SetupTwoStepVerificationController: ViewController {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let initialState: SetupTwoStepVerificationInitialState
     private let stateUpdated: (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void
     
@@ -29,7 +30,7 @@ class SetupTwoStepVerificationController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, initialState: SetupTwoStepVerificationInitialState, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void) {
+    init(context: AccountContextImpl, initialState: SetupTwoStepVerificationInitialState, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void) {
         self.context = context
         self.initialState = initialState
         self.stateUpdated = stateUpdated

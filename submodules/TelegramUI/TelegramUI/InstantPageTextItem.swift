@@ -5,6 +5,7 @@ import Display
 import Postbox
 import AsyncDisplayKit
 import TelegramPresentationData
+import TextFormat
 
 final class InstantPageUrlItem: Equatable {
     let url: String
@@ -167,7 +168,7 @@ final class InstantPageTextItem: InstantPageItem {
         context.restoreGState()
     }
     
-    private func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedStringKey: Any])? {
+    private func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedString.Key: Any])? {
         let transformedPoint = CGPoint(x: point.x, y: point.y)
         let boundsWidth = self.frame.width
         for i in 0 ..< self.lines.count {
@@ -194,7 +195,7 @@ final class InstantPageTextItem: InstantPageItem {
         return nil
     }
     
-    private func attributeRects(name: NSAttributedStringKey, at index: Int) -> [CGRect]? {
+    private func attributeRects(name: NSAttributedString.Key, at index: Int) -> [CGRect]? {
         var range = NSRange()
         let _ = self.attributedString.attribute(name, at: index, effectiveRange: &range)
         if range.length != 0 {
@@ -228,8 +229,8 @@ final class InstantPageTextItem: InstantPageItem {
     
     func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         if let (index, dict) = self.attributesAtPoint(point) {
-            if let _ = dict[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
-                if let rects = self.attributeRects(name: NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), at: index) {
+            if let _ = dict[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                if let rects = self.attributeRects(name: NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), at: index) {
                     return rects.compactMap { rect in
                         if rect.width > 5.0 {
                             return rect.insetBy(dx: 0.0, dy: -3.0)
@@ -245,7 +246,7 @@ final class InstantPageTextItem: InstantPageItem {
     
     func urlAttribute(at point: CGPoint) -> InstantPageUrlItem? {
         if let (_, dict) = self.attributesAtPoint(point) {
-            if let url = dict[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
+            if let url = dict[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
                 return url
             }
         }
@@ -329,7 +330,7 @@ final class InstantPageTextItem: InstantPageItem {
         return false
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
+    func node(context: AccountContextImpl, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         return nil
     }
     
@@ -378,7 +379,7 @@ final class InstantPageScrollableTextItem: InstantPageScrollableItem {
         context.restoreGState()
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (ASDisplayNode & InstantPageNode)? {
+    func node(context: AccountContextImpl, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (ASDisplayNode & InstantPageNode)? {
         var additionalNodes: [InstantPageNode] = []
         for item in additionalItems {
             if item.wantsNode {
@@ -430,7 +431,7 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
         case let .plain(string):
             var attributes = styleStack.textAttributes()
             if let url = url {
-                attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] = url
+                attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] = url
             }
             return NSAttributedString(string: string, attributes: attributes)
         case let .bold(text):
@@ -523,7 +524,7 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
                 return d.pointee.width
             })
             let delegate = CTRunDelegateCreate(&callbacks, extentBuffer)
-            let attrDictionaryDelegate = [(kCTRunDelegateAttributeName as NSAttributedStringKey): (delegate as Any), NSAttributedStringKey(rawValue: InstantPageMediaIdAttribute): id.id, NSAttributedStringKey(rawValue: InstantPageMediaDimensionsAttribute): dimensions]
+            let attrDictionaryDelegate = [(kCTRunDelegateAttributeName as NSAttributedString.Key): (delegate as Any), NSAttributedString.Key(rawValue: InstantPageMediaIdAttribute): id.id, NSAttributedString.Key(rawValue: InstantPageMediaDimensionsAttribute): dimensions]
             let mutableAttributedString = attributedStringForRichText(.plain(" "), styleStack: styleStack, url: url).mutableCopy() as! NSMutableAttributedString
             mutableAttributedString.addAttributes(attrDictionaryDelegate, range: NSMakeRange(0, mutableAttributedString.length))
             return mutableAttributedString
@@ -549,22 +550,22 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     
     var lines: [InstantPageTextLine] = []
     var imageItems: [InstantPageTextImageItem] = []
-    var font = string.attribute(NSAttributedStringKey.font, at: 0, effectiveRange: nil) as? UIFont
+    var font = string.attribute(NSAttributedString.Key.font, at: 0, effectiveRange: nil) as? UIFont
     if font == nil {
         let range = NSMakeRange(0, string.length)
         string.enumerateAttributes(in: range, options: []) { attributes, range, _ in
-            if font == nil, let furtherFont = attributes[NSAttributedStringKey.font] as? UIFont {
+            if font == nil, let furtherFont = attributes[NSAttributedString.Key.font] as? UIFont {
                 font = furtherFont
             }
         }
     }
-    let image = string.attribute(NSAttributedStringKey.init(rawValue: InstantPageMediaIdAttribute), at: 0, effectiveRange: nil)
+    let image = string.attribute(NSAttributedString.Key.init(rawValue: InstantPageMediaIdAttribute), at: 0, effectiveRange: nil)
     guard font != nil || image != nil else {
         return (nil, [], CGSize())
     }
     
     var lineSpacingFactor: CGFloat = 1.12
-    if let lineSpacingFactorAttribute = string.attribute(NSAttributedStringKey(rawValue: InstantPageLineSpacingFactorAttribute), at: 0, effectiveRange: nil) {
+    if let lineSpacingFactorAttribute = string.attribute(NSAttributedString.Key(rawValue: InstantPageLineSpacingFactorAttribute), at: 0, effectiveRange: nil) {
         lineSpacingFactor = CGFloat((lineSpacingFactorAttribute as! NSNumber).floatValue)
     }
     
@@ -646,7 +647,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                     let cfRunRange = CTRunGetStringRange(run)
                     let runRange = NSMakeRange(cfRunRange.location == kCFNotFound ? NSNotFound : cfRunRange.location, cfRunRange.length)
                     string.enumerateAttributes(in: runRange, options: []) { attributes, range, _ in
-                        if let id = attributes[NSAttributedStringKey.init(rawValue: InstantPageMediaIdAttribute)] as? Int64, let dimensions = attributes[NSAttributedStringKey.init(rawValue: InstantPageMediaDimensionsAttribute)] as? CGSize {
+                        if let id = attributes[NSAttributedString.Key.init(rawValue: InstantPageMediaIdAttribute)] as? Int64, let dimensions = attributes[NSAttributedString.Key.init(rawValue: InstantPageMediaDimensionsAttribute)] as? CGSize {
                             var imageFrame = CGRect(origin: CGPoint(), size: dimensions)
                             
                             let xOffset = CTLineGetOffsetForStringIndex(line, CTRunGetStringRange(run).location, nil)
@@ -684,17 +685,17 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             var anchorItems: [InstantPageTextAnchorItem] = []
             
             string.enumerateAttributes(in: lineRange, options: []) { attributes, range, _ in
-                if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
+                if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
                     let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
                     let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
                     let x = lowerX < upperX ? lowerX : upperX
                     strikethroughItems.append(InstantPageTextStrikethroughItem(frame: CGRect(x: workingLineOrigin.x + x, y: workingLineOrigin.y, width: abs(upperX - lowerX), height: fontLineHeight)))
                 }
-                if let color = attributes[NSAttributedStringKey.init(rawValue: InstantPageMarkerColorAttribute)] as? UIColor {
+                if let color = attributes[NSAttributedString.Key.init(rawValue: InstantPageMarkerColorAttribute)] as? UIColor {
                     var lineHeight = fontLineHeight
                     var delta: CGFloat = 0.0
                     
-                    if let offset = attributes[NSAttributedStringKey.baselineOffset] as? CGFloat {
+                    if let offset = attributes[NSAttributedString.Key.baselineOffset] as? CGFloat {
                         lineHeight = floorToScreenPixels(lineHeight * 0.85)
                         delta = offset * 0.6
                     }
@@ -703,7 +704,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                     let x = lowerX < upperX ? lowerX : upperX
                     markedItems.append(InstantPageTextMarkedItem(frame: CGRect(x: workingLineOrigin.x + x, y: workingLineOrigin.y + delta, width: abs(upperX - lowerX), height: lineHeight), color: color))
                 }
-                if let item = attributes[NSAttributedStringKey.init(rawValue: InstantPageAnchorAttribute)] as? Dictionary<String, Any>, let name = item["name"] as? String, let empty = item["empty"] as? Bool {
+                if let item = attributes[NSAttributedString.Key.init(rawValue: InstantPageAnchorAttribute)] as? Dictionary<String, Any>, let name = item["name"] as? String, let empty = item["empty"] as? Bool {
                     anchorItems.append(InstantPageTextAnchorItem(name: name, anchorText: item["text"] as? NSAttributedString, empty: empty))
                 }
             }

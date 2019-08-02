@@ -59,7 +59,7 @@ final class MultipleAvatarsNode: ASDisplayNode {
                         let distance = CGPoint(x: avatarNode.frame.midX - avatarFrame.midX, y: avatarNode.frame.midY - avatarFrame.midY)
                         avatarNode.frame = avatarFrame
                         if animated {
-                            avatarNode.layer.animatePosition(from: distance, to: CGPoint(), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, additive: true)
+                            avatarNode.layer.animatePosition(from: distance, to: CGPoint(), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, additive: true)
                         }
                     }
                     avatarNode.setPeer(account: account, theme: theme, peer: peer)

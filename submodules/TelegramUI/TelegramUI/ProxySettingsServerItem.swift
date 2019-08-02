@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import ActivityIndicator
 
 private let activitySize = CGSize(width: 24.0, height: 24.0)
 

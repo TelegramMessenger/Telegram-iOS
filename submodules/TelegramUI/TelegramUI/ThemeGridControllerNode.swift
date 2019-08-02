@@ -8,6 +8,8 @@ import SwiftSignalKit
 import UniversalMediaPlayer
 import TelegramPresentationData
 import TelegramUIPreferences
+import MergeLists
+import ItemListUI
 
 private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpaper) -> Bool {
     switch lhs {
@@ -109,7 +111,7 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
         }
     }
     
-    func item(context: AccountContext, interaction: ThemeGridControllerInteraction) -> ThemeGridControllerItem {
+    func item(context: AccountContextImpl, interaction: ThemeGridControllerInteraction) -> ThemeGridControllerItem {
         return ThemeGridControllerItem(context: context, wallpaper: self.wallpaper, index: self.index, selected: self.selected, interaction: interaction)
     }
 }
@@ -125,7 +127,7 @@ private struct ThemeGridEntryTransition {
     let synchronousLoad: Bool
 }
 
-private func preparedThemeGridEntryTransition(context: AccountContext, from fromEntries: [ThemeGridControllerEntry], to toEntries: [ThemeGridControllerEntry], interaction: ThemeGridControllerInteraction) -> ThemeGridEntryTransition {
+private func preparedThemeGridEntryTransition(context: AccountContextImpl, from fromEntries: [ThemeGridControllerEntry], to toEntries: [ThemeGridControllerEntry], interaction: ThemeGridControllerInteraction) -> ThemeGridEntryTransition {
     let stationaryItems: GridNodeStationaryItems = .none
     let scrollToItem: GridNodeScrollToItem? = nil
     
@@ -176,7 +178,7 @@ private func selectedWallpapers(entries: [ThemeGridControllerEntry]?, state: The
 }
 
 final class ThemeGridControllerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private var controllerInteraction: ThemeGridControllerInteraction?
     
@@ -227,7 +229,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(context: AccountContext, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, resetWallpapers: @escaping () -> Void, popViewController: @escaping () -> Void) {
+    init(context: AccountContextImpl, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, resetWallpapers: @escaping () -> Void, popViewController: @escaping () -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.presentPreviewController = presentPreviewController

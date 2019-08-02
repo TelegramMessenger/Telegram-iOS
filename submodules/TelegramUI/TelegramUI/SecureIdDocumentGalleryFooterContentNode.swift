@@ -15,7 +15,7 @@ private let titleFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
 
 final class SecureIdDocumentGalleryFooterContentNode: GalleryFooterContentNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
@@ -30,7 +30,7 @@ final class SecureIdDocumentGalleryFooterContentNode: GalleryFooterContentNode {
     
     var delete: (() -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.theme = theme
         self.strings = strings

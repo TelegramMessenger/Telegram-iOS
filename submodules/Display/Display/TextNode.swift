@@ -206,7 +206,7 @@ public final class TextNodeLayout: NSObject {
         }
     }
     
-    public func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedStringKey: Any])? {
+    public func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedString.Key: Any])? {
         if let attributedString = self.attributedString {
             let transformedPoint = CGPoint(x: point.x - self.insets.left, y: point.y - self.insets.top)
             var lineIndex = -1
@@ -336,7 +336,7 @@ public final class TextNodeLayout: NSObject {
     public func attributeSubstring(name: String, index: Int) -> String? {
         if let attributedString = self.attributedString {
             var range = NSRange()
-            let _ = attributedString.attribute(NSAttributedStringKey(rawValue: name), at: index, effectiveRange: &range)
+            let _ = attributedString.attribute(NSAttributedString.Key(rawValue: name), at: index, effectiveRange: &range)
             if range.length != 0 {
                 return (attributedString.string as NSString).substring(with: range)
             }
@@ -349,7 +349,7 @@ public final class TextNodeLayout: NSObject {
             return []
         }
         var result: [(Any, CGRect)] = []
-        attributedString.enumerateAttribute(NSAttributedStringKey(rawValue: name), in: NSRange(location: 0, length: attributedString.length), options: []) { (value, range, _) in
+        attributedString.enumerateAttribute(NSAttributedString.Key(rawValue: name), in: NSRange(location: 0, length: attributedString.length), options: []) { (value, range, _) in
             if let value = value, range.length != 0 {
                 var coveringRect = CGRect()
                 for line in self.lines {
@@ -390,7 +390,7 @@ public final class TextNodeLayout: NSObject {
     public func lineAndAttributeRects(name: String, at index: Int) -> [(CGRect, CGRect)]? {
         if let attributedString = self.attributedString {
             var range = NSRange()
-            let _ = attributedString.attribute(NSAttributedStringKey(rawValue: name), at: index, effectiveRange: &range)
+            let _ = attributedString.attribute(NSAttributedString.Key(rawValue: name), at: index, effectiveRange: &range)
             if range.length != 0 {
                 var rects: [(CGRect, CGRect)] = []
                 for line in self.lines {
@@ -468,7 +468,7 @@ private final class TextAccessibilityOverlayNodeView: UIView {
                 let element = AccessibilityAreaNode()
                 element.accessibilityLabel = value as? String ?? ""
                 element.frame = rect
-                element.accessibilityTraits = UIAccessibilityTraitLink
+                element.accessibilityTraits = .link
                 element.activate = { [weak self] in
                     self?.openUrl(value as? String ?? "")
                     return true
@@ -543,7 +543,7 @@ public class TextNode: ASDisplayNode {
         self.clipsToBounds = false
     }
     
-    public func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedStringKey: Any])? {
+    public func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedString.Key: Any])? {
         if let cachedLayout = self.cachedLayout {
             return cachedLayout.attributesAtPoint(point)
         } else {
@@ -581,7 +581,7 @@ public class TextNode: ASDisplayNode {
             
             let font: CTFont
             if stringLength != 0 {
-                if let stringFont = attributedString.attribute(NSAttributedStringKey.font, at: 0, effectiveRange: nil) {
+                if let stringFont = attributedString.attribute(NSAttributedString.Key.font, at: 0, effectiveRange: nil) {
                     font = stringFont as! CTFont
                 } else {
                     font = defaultFont
@@ -686,9 +686,9 @@ public class TextNode: ASDisplayNode {
                     if CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) < Double(constrainedSize.width) {
                         coreTextLine = originalLine
                     } else {
-                        var truncationTokenAttributes: [NSAttributedStringKey : AnyObject] = [:]
-                        truncationTokenAttributes[NSAttributedStringKey.font] = font
-                        truncationTokenAttributes[NSAttributedStringKey(rawValue:  kCTForegroundColorFromContextAttributeName as String)] = true as NSNumber
+                        var truncationTokenAttributes: [NSAttributedString.Key : AnyObject] = [:]
+                        truncationTokenAttributes[NSAttributedString.Key.font] = font
+                        truncationTokenAttributes[NSAttributedString.Key(rawValue:  kCTForegroundColorFromContextAttributeName as String)] = true as NSNumber
                         let tokenString = "\u{2026}"
                         let truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
                         let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
@@ -699,12 +699,12 @@ public class TextNode: ASDisplayNode {
                     
                     var headIndent: CGFloat = 0.0
                     attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
-                        if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
+                        if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
                             let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
                             let x = lowerX < upperX ? lowerX : upperX
                             strikethroughs.append(TextNodeStrikethrough(frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
-                        } else if let paragraphStyle = attributes[NSAttributedStringKey.paragraphStyle] as? NSParagraphStyle {
+                        } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
                             headIndent = paragraphStyle.headIndent
                             
                         }
@@ -744,12 +744,12 @@ public class TextNode: ASDisplayNode {
                         
                         var headIndent: CGFloat = 0.0
                         attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
-                            if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
+                            if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
                                 let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
                                 let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
                                 let x = lowerX < upperX ? lowerX : upperX
                                 strikethroughs.append(TextNodeStrikethrough(frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
-                            } else if let paragraphStyle = attributes[NSAttributedStringKey.paragraphStyle] as? NSParagraphStyle {
+                            } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
                                 headIndent = paragraphStyle.headIndent
                             }
                         }

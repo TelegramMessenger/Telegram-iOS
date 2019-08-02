@@ -6,6 +6,7 @@ import TelegramCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
 
 final class HorizontalStickersChatContextPanelInteraction {
     var previewedStickerItem: StickerPackItem?
@@ -105,7 +106,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     
     private var stickerPreviewController: StickerPreviewController?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
         self.strings = strings
         
         self.backgroundNode = ASImageNode()

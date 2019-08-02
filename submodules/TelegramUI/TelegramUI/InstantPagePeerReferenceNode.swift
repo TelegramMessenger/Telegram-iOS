@@ -6,6 +6,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ActivityIndicator
 
 private enum JoinState: Equatable {
     case none
@@ -44,7 +45,7 @@ private enum JoinState: Equatable {
 }
 
 final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     let safeInset: CGFloat
     private let transparent: Bool
     private let rtl: Bool
@@ -65,7 +66,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private let joinDisposable = MetaDisposable()
     private var joinState: JoinState = .none
     
-    init(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
+    init(context: AccountContextImpl, strings: PresentationStrings, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
         self.context = context
         self.strings = strings
         self.theme = theme

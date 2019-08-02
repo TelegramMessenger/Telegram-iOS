@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import ItemListUI
 
 final class ThemeColorsGridControllerInteraction {
     let openWallpaper: (TelegramWallpaper) -> Void
@@ -32,7 +34,7 @@ private struct ThemeColorsGridControllerEntry: Comparable, Identifiable {
         return self.index
     }
     
-    func item(context: AccountContext, interaction: ThemeColorsGridControllerInteraction) -> ThemeColorsGridControllerItem {
+    func item(context: AccountContextImpl, interaction: ThemeColorsGridControllerInteraction) -> ThemeColorsGridControllerItem {
         return ThemeColorsGridControllerItem(context: context, wallpaper: self.wallpaper, selected: self.selected, interaction: interaction)
     }
 }
@@ -46,7 +48,7 @@ private struct ThemeColorsGridEntryTransition {
     let scrollToItem: GridNodeScrollToItem?
 }
 
-private func preparedThemeColorsGridEntryTransition(context: AccountContext, from fromEntries: [ThemeColorsGridControllerEntry], to toEntries: [ThemeColorsGridControllerEntry], interaction: ThemeColorsGridControllerInteraction) -> ThemeColorsGridEntryTransition {
+private func preparedThemeColorsGridEntryTransition(context: AccountContextImpl, from fromEntries: [ThemeColorsGridControllerEntry], to toEntries: [ThemeColorsGridControllerEntry], interaction: ThemeColorsGridControllerInteraction) -> ThemeColorsGridEntryTransition {
     let stationaryItems: GridNodeStationaryItems = .none
     let scrollToItem: GridNodeScrollToItem? = nil
     
@@ -60,7 +62,7 @@ private func preparedThemeColorsGridEntryTransition(context: AccountContext, fro
 }
 
 final class ThemeColorsGridControllerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private var controllerInteraction: ThemeColorsGridControllerInteraction?
     private let present: (ViewController, Any?) -> Void
@@ -81,7 +83,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(context: AccountContext, presentationData: PresentationData, colors: [Int32], present: @escaping (ViewController, Any?) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
+    init(context: AccountContextImpl, presentationData: PresentationData, colors: [Int32], present: @escaping (ViewController, Any?) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.present = present

@@ -18,7 +18,7 @@ class GridHoleItemNode: GridItemNode {
     private let activityIndicatorView: UIActivityIndicatorView
     
     override init() {
-        self.activityIndicatorView = UIActivityIndicatorView(activityIndicatorStyle: .gray)
+        self.activityIndicatorView = UIActivityIndicatorView(style: .gray)
         
         super.init()
         

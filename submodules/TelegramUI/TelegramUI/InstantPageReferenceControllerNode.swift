@@ -8,7 +8,7 @@ import SafariServices
 import TelegramPresentationData
 
 class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private let theme: InstantPageTheme
     private var presentationData: PresentationData
     private let webPage: TelegramMediaWebpage
@@ -34,7 +34,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
     var dismiss: (() -> Void)?
     var close: (() -> Void)?
     
-    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, anchorText: NSAttributedString, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContextImpl, theme: InstantPageTheme, webPage: TelegramMediaWebpage, anchorText: NSAttributedString, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.theme = theme

@@ -9,12 +9,12 @@ import TelegramCore
 import TelegramPresentationData
 
 class ChatDocumentGalleryItem: GalleryItem {
-    let context: AccountContext
+    let context: AccountContextImpl
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
     
-    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
+    init(context: AccountContextImpl, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
@@ -93,7 +93,7 @@ class ChatDocumentGalleryItemNode: ZoomableContentGalleryItemNode, WKNavigationD
     
     private let webView: UIView
     
-    private var contextAndFile: (AccountContext, FileMediaReference)?
+    private var contextAndFile: (AccountContextImpl, FileMediaReference)?
     private let dataDisposable = MetaDisposable()
     
     private var itemIsVisible = false
@@ -106,7 +106,7 @@ class ChatDocumentGalleryItemNode: ZoomableContentGalleryItemNode, WKNavigationD
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContext, presentationData: PresentationData) {
+    init(context: AccountContextImpl, presentationData: PresentationData) {
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             let preferences = WKPreferences()
             preferences.javaScriptEnabled = false
@@ -165,7 +165,7 @@ class ChatDocumentGalleryItemNode: ZoomableContentGalleryItemNode, WKNavigationD
         return .single(.dark)
     }
     
-    func setFile(context: AccountContext, fileReference: FileMediaReference) {
+    func setFile(context: AccountContextImpl, fileReference: FileMediaReference) {
         let updateFile = self.contextAndFile?.1.media != fileReference.media
         self.contextAndFile = (context, fileReference)
         if updateFile {
@@ -179,7 +179,7 @@ class ChatDocumentGalleryItemNode: ZoomableContentGalleryItemNode, WKNavigationD
         }
     }
     
-    private func setupStatus(context: AccountContext, resource: MediaResource) {
+    private func setupStatus(context: AccountContextImpl, resource: MediaResource) {
         self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(resource)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let strongSelf = self {
@@ -369,7 +369,7 @@ class ChatDocumentGalleryItemNode: ZoomableContentGalleryItemNode, WKNavigationD
         })
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
+        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false)
     }
     
     override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {

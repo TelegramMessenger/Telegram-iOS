@@ -60,7 +60,7 @@ private func localizedString(for key: String, strings: PresentationStrings, fall
 }
 
 final class PermissionControllerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private let splitTest: PermissionUISplitTest?
     
@@ -72,7 +72,7 @@ final class PermissionControllerNode: ASDisplayNode {
     var openPrivacyPolicy: (() -> Void)?
     var dismiss: (() -> Void)?
     
-    init(context: AccountContext, splitTest: PermissionUISplitTest?) {
+    init(context: AccountContextImpl, splitTest: PermissionUISplitTest?) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.splitTest = splitTest
@@ -99,7 +99,7 @@ final class PermissionControllerNode: ASDisplayNode {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }
