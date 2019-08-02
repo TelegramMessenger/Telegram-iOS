@@ -557,7 +557,7 @@ final class ManagedAudioRecorderContext {
             self.currentPeak = max(Int64(sample), self.currentPeak)
             self.currentPeakCount += 1
             if self.currentPeakCount == self.peakCompressionFactor {
-                var compressedPeak = self.currentPeak//Int16(Float(self.currentPeak) / Float(self.peakCompressionFactor))
+                var compressedPeak = self.currentPeak
                 withUnsafeBytes(of: &compressedPeak, { buffer in
                     self.compressedWaveformSamples.append(buffer.bindMemory(to: UInt8.self))
                 })
@@ -592,57 +592,53 @@ final class ManagedAudioRecorderContext {
     }
     
     func takeData() -> RecordedAudioData? {
-        if self.oggWriter.writeFrame(nil, frameByteCount: 0) {
-            var scaledSamplesMemory = malloc(100 * 2)!
-            var scaledSamples: UnsafeMutablePointer<Int16> = scaledSamplesMemory.assumingMemoryBound(to: Int16.self)
-            defer {
-                free(scaledSamplesMemory)
-            }
-            memset(scaledSamples, 0, 100 * 2);
-            var waveform: Data?
-            
-            let count = self.compressedWaveformSamples.count / 2
-            self.compressedWaveformSamples.withUnsafeMutableBytes { (samples: UnsafeMutablePointer<Int16>) -> Void in
-                for i in 0 ..< count {
-                    let sample = samples[i]
-                    let index = i * 100 / count
-                    if (scaledSamples[index] < sample) {
-                        scaledSamples[index] = sample;
-                    }
-                }
-                
-                var peak: Int16 = 0
-                var sumSamples: Int64 = 0
-                for i in 0 ..< 100 {
-                    let sample = scaledSamples[i]
-                    if peak < sample {
-                        peak = sample
-                    }
-                    sumSamples += Int64(sample)
-                }
-                var calculatedPeak: UInt16 = 0
-                calculatedPeak = UInt16((Double(sumSamples) * 1.8 / 100.0))
-                
-                if calculatedPeak < 2500 {
-                    calculatedPeak = 2500
-                }
-                
-                for i in 0 ..< 100 {
-                    let sample: UInt16 = UInt16(Int64(scaledSamples[i]))
-                    let minPeak = min(Int64(sample), Int64(calculatedPeak))
-                    let resultPeak = minPeak * 31 / Int64(calculatedPeak)
-                    scaledSamples[i] = Int16(clamping: min(31, resultPeak))
-                }
-                
-                let resultWaveform = AudioWaveform(samples: Data(bytes: scaledSamplesMemory, count: 100 * 2), peak: 31)
-                let bitstream = resultWaveform.makeBitstream()
-                waveform = AudioWaveform(bitstream: bitstream, bitsPerSample: 5).makeBitstream()
-            }
-            
-            return RecordedAudioData(compressedData: self.dataItem.data(), duration: self.oggWriter.encodedDuration(), waveform: waveform)
-        } else {
-            return nil
+        var scaledSamplesMemory = malloc(100 * 2)!
+        var scaledSamples: UnsafeMutablePointer<Int16> = scaledSamplesMemory.assumingMemoryBound(to: Int16.self)
+        defer {
+            free(scaledSamplesMemory)
         }
+        memset(scaledSamples, 0, 100 * 2);
+        var waveform: Data?
+        
+        let count = self.compressedWaveformSamples.count / 2
+        self.compressedWaveformSamples.withUnsafeMutableBytes { (samples: UnsafeMutablePointer<Int16>) -> Void in
+            for i in 0 ..< count {
+                let sample = samples[i]
+                let index = i * 100 / count
+                if (scaledSamples[index] < sample) {
+                    scaledSamples[index] = sample;
+                }
+            }
+            
+            var peak: Int16 = 0
+            var sumSamples: Int64 = 0
+            for i in 0 ..< 100 {
+                let sample = scaledSamples[i]
+                if peak < sample {
+                    peak = sample
+                }
+                sumSamples += Int64(sample)
+            }
+            var calculatedPeak: UInt16 = 0
+            calculatedPeak = UInt16((Double(sumSamples) * 1.8 / 100.0))
+            
+            if calculatedPeak < 2500 {
+                calculatedPeak = 2500
+            }
+            
+            for i in 0 ..< 100 {
+                let sample: UInt16 = UInt16(Int64(scaledSamples[i]))
+                let minPeak = min(Int64(sample), Int64(calculatedPeak))
+                let resultPeak = minPeak * 31 / Int64(calculatedPeak)
+                scaledSamples[i] = Int16(clamping: min(31, resultPeak))
+            }
+            
+            let resultWaveform = AudioWaveform(samples: Data(bytes: scaledSamplesMemory, count: 100 * 2), peak: 31)
+            let bitstream = resultWaveform.makeBitstream()
+            waveform = AudioWaveform(bitstream: bitstream, bitsPerSample: 5).makeBitstream()
+        }
+        
+        return RecordedAudioData(compressedData: self.dataItem.data(), duration: self.oggWriter.encodedDuration(), waveform: waveform)
     }
 }
 
