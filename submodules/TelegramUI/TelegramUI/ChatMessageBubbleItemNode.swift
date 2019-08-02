@@ -193,6 +193,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             }
             return false
         }
+        
+        self.messageAccessibilityArea.focused = { [weak self] in
+            self?.accessibilityElementDidBecomeFocused()
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {

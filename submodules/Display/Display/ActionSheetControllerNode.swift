@@ -3,12 +3,6 @@ import AsyncDisplayKit
 
 private let containerInsets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0)
 
-private class ActionSheetControllerNodeScrollView: UIScrollView {
-    override func touchesShouldCancel(in view: UIView) -> Bool {
-        return true
-    }
-}
-
 final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var theme: ActionSheetControllerTheme {
         didSet {
@@ -26,6 +20,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let itemGroupsContainerNode: ActionSheetItemGroupsContainerNode
     
+    private let scrollNode: ASScrollNode
     private let scrollView: UIScrollView
     
     var dismiss: (Bool) -> Void = { _ in }
@@ -35,7 +30,9 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
-        self.scrollView = ActionSheetControllerNodeScrollView()
+        self.scrollNode = ASScrollNode()
+        self.scrollNode.canCancelAllTouchesInViews = true
+        self.scrollView = self.scrollNode.view
         
         if #available(iOSApplicationExtension 11.0, *) {
             self.scrollView.contentInsetAdjustmentBehavior = .never
@@ -64,7 +61,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.scrollView.delegate = self
         
-        self.view.addSubview(self.scrollView)
+        self.addSubnode(self.scrollNode)
         
         self.scrollView.addSubview(self.dismissTapView)
         
@@ -75,7 +72,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.dismissTapView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimNodeTap(_:))))
         
-        self.scrollView.addSubnode(self.itemGroupsContainerNode)
+        self.scrollNode.addSubnode(self.itemGroupsContainerNode)
         
         self.updateTheme()
     }

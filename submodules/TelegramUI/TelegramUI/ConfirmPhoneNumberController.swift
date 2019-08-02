@@ -41,7 +41,7 @@ private enum ConfirmPhoneNumberCodeTag: ItemListItemTag {
 }
 
 private enum ConfirmPhoneNumberCodeEntry: ItemListNodeEntry {
-    case codeEntry(PresentationTheme, String, String)
+    case codeEntry(PresentationTheme, PresentationStrings, String, String)
     case codeInfo(PresentationTheme, PresentationStrings, String, String)
     
     var section: ItemListSectionId {
@@ -59,8 +59,8 @@ private enum ConfirmPhoneNumberCodeEntry: ItemListNodeEntry {
     
     static func ==(lhs: ConfirmPhoneNumberCodeEntry, rhs: ConfirmPhoneNumberCodeEntry) -> Bool {
         switch lhs {
-            case let .codeEntry(lhsTheme, lhsTitle, lhsText):
-                if case let .codeEntry(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
+            case let .codeEntry(lhsTheme, lhsStrings, lhsTitle, lhsText):
+                if case let .codeEntry(rhsTheme, rhsStrings, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsTitle == rhsTitle, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -80,8 +80,8 @@ private enum ConfirmPhoneNumberCodeEntry: ItemListNodeEntry {
     
     func item(_ arguments: ConfirmPhoneNumberCodeControllerArguments) -> ListViewItem {
         switch self {
-            case let .codeEntry(theme, title, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ConfirmPhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .codeEntry(theme, strings, title, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ConfirmPhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
@@ -118,7 +118,7 @@ private struct ConfirmPhoneNumberCodeControllerState: Equatable {
 private func confirmPhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ConfirmPhoneNumberCodeControllerState, phoneNumber: String, codeData: CancelAccountResetData, timeout: Int32?, strings: PresentationStrings, theme: PresentationTheme) -> [ConfirmPhoneNumberCodeEntry] {
     var entries: [ConfirmPhoneNumberCodeEntry] = []
     
-    entries.append(.codeEntry(presentationData.theme, presentationData.strings.ChangePhoneNumberCode_CodePlaceholder, state.codeText))
+    entries.append(.codeEntry(presentationData.theme, presentationData.strings, presentationData.strings.ChangePhoneNumberCode_CodePlaceholder, state.codeText))
     var text = ""
     if let nextType = codeData.nextType {
         text += authorizationNextOptionText(currentType: codeData.type, nextType: nextType, timeout: timeout, strings: presentationData.strings, primaryColor: .black, accentColor: .black).0.string

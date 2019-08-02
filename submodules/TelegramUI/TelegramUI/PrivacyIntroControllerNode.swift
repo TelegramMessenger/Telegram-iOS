@@ -100,6 +100,8 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         self.textNode.attributedText = NSAttributedString(string: self.mode.text(strings: presentationData.strings), font: textFont, textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
         self.noticeNode.attributedText = NSAttributedString(string: self.mode.notice(strings: presentationData.strings), font: textFont, textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
         self.buttonTextNode.attributedText = NSAttributedString(string: self.mode.buttonTitle(strings: presentationData.strings), font: buttonFont, textColor: presentationData.theme.list.itemAccentColor, paragraphAlignment: .center)
+        self.buttonTextNode.isAccessibilityElement = false
+        self.buttonNode.accessibilityLabel = self.buttonTextNode.attributedText?.string
         self.buttonBackgroundNode.image = generateButtonImage(backgroundColor: presentationData.theme.list.itemBlocksBackgroundColor, borderColor: presentationData.theme.list.itemBlocksSeparatorColor, highlightColor: nil)
         self.buttonHighlightedBackgroundNode.image = generateButtonImage(backgroundColor: presentationData.theme.list.itemBlocksBackgroundColor, borderColor: presentationData.theme.list.itemBlocksSeparatorColor, highlightColor: presentationData.theme.list.itemHighlightedBackgroundColor)
         

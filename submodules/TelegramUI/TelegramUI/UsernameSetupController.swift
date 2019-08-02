@@ -38,7 +38,7 @@ public enum UsernameEntryTag: ItemListItemTag {
 
 
 private enum UsernameSetupEntry: ItemListNodeEntry {
-    case editablePublicLink(PresentationTheme, String, String?, String)
+    case editablePublicLink(PresentationTheme, PresentationStrings, String, String?, String)
     case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus, String)
     case publicLinkInfo(PresentationTheme, String)
     
@@ -62,8 +62,8 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
     
     static func ==(lhs: UsernameSetupEntry, rhs: UsernameSetupEntry) -> Bool {
         switch lhs {
-            case let .editablePublicLink(lhsTheme, lhsPrefix, lhsCurrentText, lhsText):
-                if case let .editablePublicLink(rhsTheme, rhsPrefix, rhsCurrentText, rhsText) = rhs, lhsTheme === rhsTheme, lhsPrefix == rhsPrefix, lhsCurrentText == rhsCurrentText, lhsText == rhsText {
+            case let .editablePublicLink(lhsTheme, lhsStrings, lhsPrefix, lhsCurrentText, lhsText):
+                if case let .editablePublicLink(rhsTheme, rhsStrings, rhsPrefix, rhsCurrentText, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPrefix == rhsPrefix, lhsCurrentText == rhsCurrentText, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -89,8 +89,8 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
     
     func item(_ arguments: UsernameSetupControllerArguments) -> ListViewItem {
         switch self {
-            case let .editablePublicLink(theme, prefix, currentText, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearButton: true, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
+            case let .editablePublicLink(theme, strings, prefix, currentText, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearButton: true, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
                 }, action: {
                 })
@@ -181,7 +181,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
             }
         }
         
-        entries.append(.editablePublicLink(presentationData.theme, presentationData.strings.Username_Title, peer.addressName, currentAddressName))
+        entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, presentationData.strings.Username_Title, peer.addressName, currentAddressName))
         if let status = state.addressNameValidationStatus {
             let statusText: String
             switch status {

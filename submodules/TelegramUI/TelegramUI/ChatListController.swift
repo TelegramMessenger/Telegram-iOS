@@ -112,7 +112,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.presentationData = (context.sharedContext.currentPresentationData.with { $0 })
         self.presentationDataValue.set(.single(self.presentationData))
         
-        self.titleView = ChatListTitleView(theme: self.presentationData.theme)
+        self.titleView = ChatListTitleView(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
         
@@ -147,7 +147,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             self.navigationItem.leftBarButtonItem = leftBarButtonItem
             
             let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
-            rightBarButtonItem.accessibilityLabel = "Compose"
+            rightBarButtonItem.accessibilityLabel = self.presentationData.strings.VoiceOver_Navigation_Compose
             self.navigationItem.rightBarButtonItem = rightBarButtonItem
             let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
             backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
@@ -236,7 +236,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                         if case .root = strongSelf.groupId {
                             isRoot = true
                             let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
-                            rightBarButtonItem.accessibilityLabel = "Compose"
+                            rightBarButtonItem.accessibilityLabel = strongSelf.presentationData.strings.VoiceOver_Navigation_Compose
                             strongSelf.navigationItem.rightBarButtonItem = rightBarButtonItem
                         }
                         
@@ -393,7 +393,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         if case .root = self.groupId {
             self.navigationItem.leftBarButtonItem = editItem
             let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
-            rightBarButtonItem.accessibilityLabel = "Compose"
+            rightBarButtonItem.accessibilityLabel = self.presentationData.strings.VoiceOver_Navigation_Compose
             self.navigationItem.rightBarButtonItem = rightBarButtonItem
         } else {
             self.navigationItem.rightBarButtonItem = editItem

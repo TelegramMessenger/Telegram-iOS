@@ -68,8 +68,11 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         }
     }
     
-    init(theme: PresentationTheme) {
+    var strings: PresentationStrings
+    
+    init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
+        self.strings = strings
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
@@ -96,7 +99,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         self.proxyButton = HighlightTrackingButton()
         self.proxyButton.isHidden = true
         self.proxyButton.isAccessibilityElement = true
-        self.proxyButton.accessibilityLabel = "Proxy Settings"
+        self.proxyButton.accessibilityLabel = self.strings.VoiceOver_Navigation_ProxySettings
         self.proxyButton.accessibilityTraits = .button
         
         super.init(frame: CGRect())
@@ -213,7 +216,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
     }
     
     func makeTransitionMirrorNode() -> ASDisplayNode {
-        let view = ChatListTitleView(theme: self.theme)
+        let view = ChatListTitleView(theme: self.theme, strings: self.strings)
         view.title = self.title
         
         return ASDisplayNode(viewBlock: {

@@ -83,7 +83,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.theme = theme
         
         self.closeButton = ASButtonNode()
-        self.closeButton.accessibilityLabel = "Discard"
+        self.closeButton.accessibilityLabel = strings.VoiceOver_DiscardPreparedContent
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false

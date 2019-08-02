@@ -177,14 +177,14 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
             switch voiceBaseRate {
                 case .x1:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
-                    self.rateButton.accessibilityLabel = "Playback rate"
-                    self.rateButton.accessibilityValue = "Normal"
-                    self.rateButton.accessibilityHint = "Double tap to change"
+                    self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
+                    self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateNormal
+                    self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
                 case .x2:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
-                    self.rateButton.accessibilityLabel = "Playback rate"
-                    self.rateButton.accessibilityValue = "Fast"
-                    self.rateButton.accessibilityHint = "Double tap to change"
+                    self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
+                    self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateFast
+                    self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
             }
         }
     }
@@ -224,7 +224,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         self.rightMaskNode.image = maskImage
         
         self.closeButton = HighlightableButtonNode()
-        self.closeButton.accessibilityLabel = "Stop playback"
+        self.closeButton.accessibilityLabel = presentationData.strings.VoiceOver_Media_PlaybackStop
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 2.0)
@@ -336,7 +336,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
                 }
                 strongSelf.actionPlayNode.isHidden = !paused
                 strongSelf.actionPauseNode.isHidden = paused
-                strongSelf.actionButton.accessibilityLabel = paused ? "Play" : "Pause"
+                strongSelf.actionButton.accessibilityLabel = paused ? strongSelf.strings.VoiceOver_Media_PlaybackPlay : strongSelf.strings.VoiceOver_Media_PlaybackPause
             }
         }
     }

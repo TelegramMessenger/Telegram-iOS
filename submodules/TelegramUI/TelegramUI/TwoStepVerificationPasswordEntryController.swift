@@ -42,10 +42,10 @@ private enum TwoStepVerificationPasswordEntryTag: ItemListItemTag {
 
 private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
     case passwordEntryTitle(PresentationTheme, String)
-    case passwordEntry(PresentationTheme, String)
+    case passwordEntry(PresentationTheme, PresentationStrings, String)
     
     case hintTitle(PresentationTheme, String)
-    case hintEntry(PresentationTheme, String)
+    case hintEntry(PresentationTheme, PresentationStrings, String)
     
     case emailEntry(PresentationTheme, PresentationStrings, String)
     case emailInfo(PresentationTheme, String)
@@ -79,8 +79,8 @@ private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .passwordEntry(lhsTheme, lhsText):
-                if case let .passwordEntry(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .passwordEntry(lhsTheme, lhsStrings, lhsText):
+                if case let .passwordEntry(rhsTheme, rhsStrings, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -91,8 +91,8 @@ private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .hintEntry(lhsTheme, lhsText):
-                if case let .hintEntry(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .hintEntry(lhsTheme, lhsStrings, lhsText):
+                if case let .hintEntry(rhsTheme, rhsStrings, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -120,22 +120,22 @@ private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
         switch self {
             case let .passwordEntryTitle(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .passwordEntry(theme, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: "", type: .password, spacing: 0.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .passwordEntry(theme, strings, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: "", type: .password, spacing: 0.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
             case let .hintTitle(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .hintEntry(theme, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: "", type: .password, spacing: 0.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .hintEntry(theme, strings, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: "", textColor: .black), text: text, placeholder: "", type: .password, spacing: 0.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
             case let .emailEntry(theme, strings, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: strings.TwoStepAuth_Email, textColor: .black), text: text, placeholder: "", type: .email, spacing: 10.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: strings.TwoStepAuth_Email, textColor: .black), text: text, placeholder: "", type: .email, spacing: 10.0, tag: TwoStepVerificationPasswordEntryTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
@@ -230,13 +230,13 @@ private func twoStepVerificationPasswordEntryControllerEntries(presentationData:
     switch state.stage {
         case let .entry(text):
             entries.append(.passwordEntryTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPasswordEnterPasswordNew))
-            entries.append(.passwordEntry(presentationData.theme, text))
+            entries.append(.passwordEntry(presentationData.theme, presentationData.strings, text))
         case let .reentry(_, text):
             entries.append(.passwordEntryTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPasswordConfirmPassword))
-            entries.append(.passwordEntry(presentationData.theme, text))
+            entries.append(.passwordEntry(presentationData.theme, presentationData.strings, text))
         case let .hint(_, text):
             entries.append(.hintTitle(presentationData.theme, presentationData.strings.TwoStepAuth_SetupHint))
-            entries.append(.hintEntry(presentationData.theme, text))
+            entries.append(.hintEntry(presentationData.theme, presentationData.strings, text))
         case let .email(_, _, text):
             entries.append(.emailEntry(presentationData.theme, presentationData.strings, text))
             entries.append(.emailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailHelp))
