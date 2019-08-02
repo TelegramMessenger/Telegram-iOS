@@ -100,7 +100,7 @@ private final class ActionSheetItemNode: ASDisplayNode {
 }
 
 final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let context: AccountContext
+    private let context: AccountContextImpl
     private var presentationData: PresentationData
     private let sendButtonFrame: CGRect
     private let textFieldFrame: CGRect

@@ -9,6 +9,7 @@ import TelegramCore
 import Photos
 import TelegramPresentationData
 import TelegramUIPreferences
+import MediaResources
 
 enum WallpaperListType {
     case wallpapers(WallpaperPresentationOptions?)

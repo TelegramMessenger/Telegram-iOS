@@ -21,10 +21,10 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     
     let id: Int64
     let presentationData: ChatPresentationData
-    let context: AccountContext
+    let context: AccountContextImpl
     let action: ((Int32) -> Void)?
     
-    init(timestamp: Int32, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32) -> Void)? = nil) {
+    init(timestamp: Int32, presentationData: ChatPresentationData, context: AccountContextImpl, action: ((Int32) -> Void)? = nil) {
         self.timestamp = timestamp
         self.presentationData = presentationData
         self.context = context
@@ -86,13 +86,13 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     
     private let localTimestamp: Int32
     private var presentationData: ChatPresentationData
-    private let context: AccountContext
+    private let context: AccountContextImpl
     
     private var flashingOnScrolling = false
     private var stickDistanceFactor: CGFloat = 0.0
     private var action: ((Int32) -> Void)? = nil
     
-    init(localTimestamp: Int32, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32) -> Void)? = nil) {
+    init(localTimestamp: Int32, presentationData: ChatPresentationData, context: AccountContextImpl, action: ((Int32) -> Void)? = nil) {
         self.presentationData = presentationData
         self.context = context
         
@@ -161,7 +161,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.view.addGestureRecognizer(ListViewTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
+    func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContextImpl) {
         let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
         
         self.backgroundNode.image = graphics.dateStaticBackground

@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import MediaResources
 
 private let historyMessageCount: Int = 100
 

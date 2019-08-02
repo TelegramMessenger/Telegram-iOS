@@ -359,7 +359,6 @@
 		D04281F1200E4084009DDE36 /* GroupInfoSearchNavigationContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F0200E4084009DDE36 /* GroupInfoSearchNavigationContentNode.swift */; };
 		D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */; };
 		D04281F6200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F5200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift */; };
-		D04281F8200E5C17009DDE36 /* ChatControllerBackgroundNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F7200E5C17009DDE36 /* ChatControllerBackgroundNode.swift */; };
 		D04281FA200E5CDC009DDE36 /* ChatRecentActionsControllerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F9200E5CDC009DDE36 /* ChatRecentActionsControllerState.swift */; };
 		D04281FC200E61BC009DDE36 /* ChatRecentActionsInteraction.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FB200E61BC009DDE36 /* ChatRecentActionsInteraction.swift */; };
 		D04281FE200E639A009DDE36 /* ChatRecentActionsTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FD200E639A009DDE36 /* ChatRecentActionsTitleView.swift */; };
@@ -1642,7 +1641,6 @@
 		D04281F0200E4084009DDE36 /* GroupInfoSearchNavigationContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupInfoSearchNavigationContentNode.swift; sourceTree = "<group>"; };
 		D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsController.swift; sourceTree = "<group>"; };
 		D04281F5200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsControllerNode.swift; sourceTree = "<group>"; };
-		D04281F7200E5C17009DDE36 /* ChatControllerBackgroundNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatControllerBackgroundNode.swift; sourceTree = "<group>"; };
 		D04281F9200E5CDC009DDE36 /* ChatRecentActionsControllerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsControllerState.swift; sourceTree = "<group>"; };
 		D04281FB200E61BC009DDE36 /* ChatRecentActionsInteraction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsInteraction.swift; sourceTree = "<group>"; };
 		D04281FD200E639A009DDE36 /* ChatRecentActionsTitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsTitleView.swift; sourceTree = "<group>"; };
@@ -4569,7 +4567,6 @@
 				D0F69E0E1D6B8ACF0046BCD6 /* ChatController.swift */,
 				D0F69E0F1D6B8ACF0046BCD6 /* ChatControllerInteraction.swift */,
 				D0F69E101D6B8ACF0046BCD6 /* ChatControllerNode.swift */,
-				D04281F7200E5C17009DDE36 /* ChatControllerBackgroundNode.swift */,
 				D0F69E111D6B8ACF0046BCD6 /* ChatHistoryEntry.swift */,
 				D0F69E121D6B8ACF0046BCD6 /* ChatHistoryLocation.swift */,
 				D0D268681D78865300C422DA /* ChatAvatarNavigationNode.swift */,
@@ -6130,7 +6127,6 @@
 				D0EC6E5C1EB9F58900EBF1C3 /* CallControllerNode.swift in Sources */,
 				D0F4B0222110972300912B92 /* ContactInfoStrings.swift in Sources */,
 				D0EC6E5D1EB9F58900EBF1C3 /* PrivacyAndSecurityController.swift in Sources */,
-				D04281F8200E5C17009DDE36 /* ChatControllerBackgroundNode.swift in Sources */,
 				D0EC6E5E1EB9F58900EBF1C3 /* ItemListRecentSessionItem.swift in Sources */,
 				D00ADFDD1EBB73C200873D2E /* OverlayMediaManager.swift in Sources */,
 				D056CD7C1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift in Sources */,

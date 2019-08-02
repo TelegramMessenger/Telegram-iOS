@@ -5,6 +5,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import MediaResources
 
 private extension TelegramWallpaper {
     var mainResource: MediaResource? {

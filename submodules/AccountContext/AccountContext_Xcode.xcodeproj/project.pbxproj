@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D06018E522F36A3900796784 /* DeviceAccess.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018E422F36A3900796784 /* DeviceAccess.framework */; };
 		D06018E722F36A3F00796784 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018E622F36A3F00796784 /* TelegramPresentationData.framework */; };
 		D0D3285422F329A900D07EE2 /* AccountContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D3285222F329A900D07EE2 /* AccountContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D3285F22F335B000D07EE2 /* AccountContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D3285E22F335B000D07EE2 /* AccountContext.swift */; };
@@ -36,7 +35,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D06018E722F36A3F00796784 /* TelegramPresentationData.framework in Frameworks */,
-				D06018E522F36A3900796784 /* DeviceAccess.framework in Frameworks */,
 				D0D328A322F3462800D07EE2 /* SwiftSignalKit.framework in Frameworks */,
 				D0D328A122F3462400D07EE2 /* Postbox.framework in Frameworks */,
 				D0D3289F22F3462000D07EE2 /* TelegramCore.framework in Frameworks */,

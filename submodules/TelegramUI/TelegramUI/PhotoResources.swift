@@ -13,6 +13,7 @@ import WebPImage
 import WebP
 #endif
 import TelegramUIPreferences
+import MediaResources
 
 private enum ResourceFileData {
     case data(Data)

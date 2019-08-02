@@ -223,7 +223,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             self?.allowsGroupOpacity = false
         })
         self.layer.animateScale(from: 1.0, to: 0.1, duration: 0.15, removeOnCompletion: false)
-        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.bounds.width / 2.0 - self.backgroundNode.frame.midX, y: self.backgroundNode.frame.midY), duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true)
+        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.bounds.width / 2.0 - self.backgroundNode.frame.midX, y: self.backgroundNode.frame.midY), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
     }
     
     override func animateAdded(_ currentTimestamp: Double, duration: Double) {
@@ -2357,7 +2357,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if self.highlightedState != highlighted {
             self.highlightedState = highlighted
             if let backgroundType = self.backgroundType {
-                let graphics = PresentationResourcesChat.principalGraphics(context: mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 
                 if highlighted {
                     self.backgroundNode.setType(type: backgroundType, highlighted: true, graphics: graphics, transition: .immediate)

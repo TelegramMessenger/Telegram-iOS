@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import Postbox
+import TelegramPresentationData
 
 final class ChatMessageBubbleBackdrop: ASDisplayNode {
     private let backgroundContent: ASDisplayNode

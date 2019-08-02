@@ -5,6 +5,7 @@ import TelegramCore
 import Display
 import SwiftSignalKit
 import Postbox
+import MediaResources
 
 private var backgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 

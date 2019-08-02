@@ -13,7 +13,7 @@ class ChatUnreadItem: ListViewItem {
     let presentationData: ChatPresentationData
     let header: ChatMessageDateHeader
     
-    init(index: MessageIndex, presentationData: ChatPresentationData, context: AccountContext) {
+    init(index: MessageIndex, presentationData: ChatPresentationData, context: AccountContextImpl) {
         self.index = index
         self.presentationData = presentationData
         self.header = ChatMessageDateHeader(timestamp: index.timestamp, presentationData: presentationData, context: context)
