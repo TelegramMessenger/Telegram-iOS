@@ -36,7 +36,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             currentPanel.updateTheme(theme: chatPresentationInterfaceState.theme)
             return currentPanel
         } else {
-            let panel = ChatMessageSelectionInputPanelNode(theme: chatPresentationInterfaceState.theme)
+            let panel = ChatMessageSelectionInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             panel.context = context
             panel.selectedMessages = selectionState.selectedIds
             panel.interfaceInteraction = interfaceInteraction

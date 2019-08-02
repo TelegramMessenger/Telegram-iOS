@@ -267,13 +267,50 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
-    func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, extendedSearchLayout: Bool, animated: Bool) {
+    func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, extendedSearchLayout: Bool, accessoryItems: [ChatTextInputAccessoryItem], animated: Bool) {
         if state.inputText.length != 0 && self.textInputNode == nil {
             self.loadTextInputNode()
         }
         
-        if let textInputNode = self.textInputNode {
+        if let textInputNode = self.textInputNode, let currentState = self.presentationInterfaceState {
             self.updatingInputState = true
+            
+            var updateAccessoryButtons = false
+            if accessoryItems.count == self.accessoryItemButtons.count {
+                for i in 0 ..< accessoryItems.count {
+                    if accessoryItems[i] != self.accessoryItemButtons[i].0 {
+                        updateAccessoryButtons = true
+                        break
+                    }
+                }
+            } else {
+                updateAccessoryButtons = true
+            }
+            
+            if updateAccessoryButtons {
+                var updatedButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButton)] = []
+                for item in accessoryItems {
+                    var itemAndButton: (ChatTextInputAccessoryItem, AccessoryItemIconButton)?
+                    for i in 0 ..< self.accessoryItemButtons.count {
+                        if self.accessoryItemButtons[i].0 == item {
+                            itemAndButton = self.accessoryItemButtons[i]
+                            self.accessoryItemButtons.remove(at: i)
+                            break
+                        }
+                    }
+                    if itemAndButton == nil {
+                        let button = AccessoryItemIconButton(item: item, theme: currentState.theme, strings: currentState.strings)
+                        button.addTarget(self, action: #selector(self.accessoryItemButtonPressed(_:)), for: [.touchUpInside])
+                        itemAndButton = (item, button)
+                    }
+                    updatedButtons.append(itemAndButton!)
+                }
+                for (_, button) in self.accessoryItemButtons {
+                    button.removeFromSuperview()
+                }
+                self.accessoryItemButtons = updatedButtons
+            }
+            
             var textColor: UIColor = .black
             var accentTextColor: UIColor = .blue
             var baseFontSize: CGFloat = 17.0
@@ -335,14 +372,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textPlaceholderNode.maximumNumberOfLines = 1
         self.textPlaceholderNode.isUserInteractionEnabled = false
         self.attachmentButton = HighlightableButtonNode()
-        self.attachmentButton.accessibilityLabel = "Send media"
+        self.attachmentButton.accessibilityLabel = presentationInterfaceState.strings.VoiceOver_AttachMedia
         self.attachmentButton.isAccessibilityElement = true
         self.attachmentButtonDisabledNode = HighlightableButtonNode()
         self.searchLayoutClearButton = HighlightableButton()
         self.searchLayoutProgressView = UIImageView(image: searchLayoutProgressImage)
         self.searchLayoutProgressView.isHidden = true
         
-        self.actionButtons = ChatTextInputActionButtonsNode(theme: presentationInterfaceState.theme, presentController: presentController)
+        self.actionButtons = ChatTextInputActionButtonsNode(theme: presentationInterfaceState.theme, strings: presentationInterfaceState.strings, presentController: presentController)
         
         super.init()
         
@@ -551,7 +588,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         let textFieldHeight: CGFloat
         if let textInputNode = self.textInputNode {
-            let unboundTextFieldHeight = max(textFieldMinHeight, ceil(textInputNode.measure(CGSize(width: width - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude)).height))
+            let measuredHeight = textInputNode.measure(CGSize(width: width - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude))
+            let unboundTextFieldHeight = max(textFieldMinHeight, ceil(measuredHeight.height))
             
             let maxNumberOfLines = min(12, (Int(fieldMaxHeight - 11.0) - 33) / 22)
             

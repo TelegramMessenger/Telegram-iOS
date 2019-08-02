@@ -22,7 +22,7 @@ private enum WatchSettingsSection: Int32 {
 
 private enum WatchSettingsControllerEntry: ItemListNodeEntry {
     case replyPresetsHeader(PresentationTheme, String)
-    case replyPreset(PresentationTheme, String, String, String, Int32)
+    case replyPreset(PresentationTheme, PresentationStrings, String, String, String, Int32)
     case replyPresetsInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -36,7 +36,7 @@ private enum WatchSettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case .replyPresetsHeader:
                 return 0
-            case let .replyPreset(_, _, _, _, index):
+            case let .replyPreset(_, _, _, _, _, index):
                 return 1 + index
             case .replyPresetsInfo:
                 return 100
@@ -52,8 +52,8 @@ private enum WatchSettingsControllerEntry: ItemListNodeEntry {
                     return false
                 }
             
-            case let .replyPreset(lhsTheme, lhsIdentifier, lhsPlaceholder, lhsValue, lhsIndex):
-                if case let .replyPreset(rhsTheme, rhsIdentifier, rhsPlaceholder, rhsValue, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsIdentifier == rhsIdentifier, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue, lhsIndex == rhsIndex {
+            case let .replyPreset(lhsTheme, lhsStrings, lhsIdentifier, lhsPlaceholder, lhsValue, lhsIndex):
+                if case let .replyPreset(rhsTheme, rhsStrings, rhsIdentifier, rhsPlaceholder, rhsValue, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsIdentifier == rhsIdentifier, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue, lhsIndex == rhsIndex {
                     return true
                 } else {
                     return false
@@ -76,8 +76,8 @@ private enum WatchSettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case let .replyPresetsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .replyPreset(theme, identifier, placeholder, value, _):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: ""), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: true), spacing: 0.0, sectionId: self.section, textUpdated: { updatedText in
+            case let .replyPreset(theme, strings, identifier, placeholder, value, _):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: ""), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: true), spacing: 0.0, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePreset(identifier, updatedText.trimmingCharacters(in: .whitespacesAndNewlines))
                 }, action: {})
             case let .replyPresetsInfo(theme, text):
@@ -102,7 +102,7 @@ private func watchSettingsControllerEntries(presentationData: PresentationData, 
     
     entries.append(.replyPresetsHeader(presentationData.theme, presentationData.strings.AppleWatch_ReplyPresets))
     for (index, identifier, placeholder) in defaultSuggestions {
-        entries.append(.replyPreset(presentationData.theme, identifier, placeholder, customPresets[identifier] ?? "", index))
+        entries.append(.replyPreset(presentationData.theme, presentationData.strings, identifier, placeholder, customPresets[identifier] ?? "", index))
     }
     entries.append(.replyPresetsInfo(presentationData.theme, presentationData.strings.AppleWatch_ReplyPresetsHelp))
     

@@ -188,7 +188,6 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                 }
             }
         }
-        self.infoButtonNode.accessibilityLabel = "Info"
         self.infoButtonNode.addTarget(self, action: #selector(self.infoButtonPressed), forControlEvents: .touchUpInside)
         
         self.activateArea.activate = { [weak self] in
@@ -272,9 +271,10 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
+                    strongSelf.infoButtonNode.accessibilityLabel = item.strings.Conversation_Info
                     strongSelf.activateArea.accessibilityLabel = "\(titleAttributedString.string)\n\(statusAttributedString.string)"
                     if item.active {
-                        strongSelf.activateArea.accessibilityValue = "Active"
+                        strongSelf.activateArea.accessibilityValue = item.strings.ProxyServer_VoiceOver_Active
                     } else {
                         strongSelf.activateArea.accessibilityValue = ""
                     }

@@ -466,7 +466,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         }
                     }
                     
-                    node.buttonNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: contentHeight))
+                    node.buttonNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: CGSize(width: width - 2.0, height: contentHeight))
                     node.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: contentHeight + UIScreenPixel))
                     
                     node.separatorNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.separator : presentationData.theme.theme.chat.message.outgoing.polls.separator
@@ -494,6 +494,8 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                                 node.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
                         }
+                        
+                        node.buttonNode.isAccessibilityElement = shouldHaveRadioNode
                         
                         let previousResultBarWidth = minBarWidth + floor((width - leftInset - rightInset - minBarWidth) * (currentResult?.normalized ?? 0.0))
                         let previousFrame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - 6.0 - 1.0), size: CGSize(width: previousResultBarWidth, height: 6.0))

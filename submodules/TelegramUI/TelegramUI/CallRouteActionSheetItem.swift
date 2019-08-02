@@ -44,21 +44,26 @@ public class CallRouteActionSheetItemNode: ActionSheetItemNode {
     private let iconNode: ASImageNode
     private let checkNode: ASImageNode
     
+    private let accessibilityArea: AccessibilityAreaNode
+    
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
         self.button = HighlightTrackingButton()
+        self.button.isAccessibilityElement = false
         
         self.label = ASTextNode()
         self.label.isUserInteractionEnabled = false
         self.label.maximumNumberOfLines = 1
         self.label.displaysAsynchronously = false
         self.label.truncationMode = .byTruncatingTail
+        self.label.isAccessibilityElement = false
         
         self.iconNode = ASImageNode()
         self.iconNode.isUserInteractionEnabled = false
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.displaysAsynchronously = false
+        self.iconNode.isAccessibilityElement = false
         
         self.checkNode = ASImageNode()
         self.checkNode.isUserInteractionEnabled = false
@@ -73,6 +78,9 @@ public class CallRouteActionSheetItemNode: ActionSheetItemNode {
             context.addLine(to: CGPoint(x: 1.0, y: 5.81145833))
             context.strokePath()
         })
+        self.checkNode.isAccessibilityElement = false
+        
+        self.accessibilityArea = AccessibilityAreaNode()
         
         super.init(theme: theme)
         
@@ -82,6 +90,7 @@ public class CallRouteActionSheetItemNode: ActionSheetItemNode {
         self.addSubnode(self.label)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.checkNode)
+        self.addSubnode(self.accessibilityArea)
 
         self.button.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -96,6 +105,11 @@ public class CallRouteActionSheetItemNode: ActionSheetItemNode {
         }
         
         self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
+        
+        self.accessibilityArea.activate = { [weak self] in
+            self?.buttonPressed()
+            return true
+        }
     }
     
     func setItem(_ item: CallRouteActionSheetItem) {
@@ -108,6 +122,13 @@ public class CallRouteActionSheetItemNode: ActionSheetItemNode {
             self.iconNode.isHidden = true
         }
         self.checkNode.isHidden = !item.selected
+        
+        var accessibilityTraits: UIAccessibilityTraits = [.button]
+        if item.selected {
+            accessibilityTraits.insert(.selected)
+        }
+        self.accessibilityArea.accessibilityTraits = accessibilityTraits
+        self.accessibilityArea.accessibilityLabel = item.title
         
         self.setNeedsLayout()
     }

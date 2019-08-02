@@ -57,7 +57,7 @@ private enum TwoStepVerificationUnlockSettingsEntryTag: ItemListItemTag {
 }
 
 private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
-    case passwordEntry(PresentationTheme, String, String)
+    case passwordEntry(PresentationTheme, PresentationStrings, String, String)
     case passwordEntryInfo(PresentationTheme, String)
     
     case passwordSetup(PresentationTheme, String)
@@ -69,7 +69,7 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
     case passwordInfo(PresentationTheme, String)
     
     case pendingEmailConfirmInfo(PresentationTheme, String)
-    case pendingEmailConfirmCode(PresentationTheme, String, String)
+    case pendingEmailConfirmCode(PresentationTheme, PresentationStrings, String, String)
     case pendingEmailInfo(PresentationTheme, String)
     case pendingEmailOpenConfirm(PresentationTheme, String)
     
@@ -117,8 +117,8 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
     
     func item(_ arguments: TwoStepVerificationUnlockSettingsControllerArguments) -> ListViewItem {
         switch self {
-            case let .passwordEntry(theme, text, value):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: text, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationUnlockSettingsEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
+            case let .passwordEntry(theme, strings, text, value):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: text, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationUnlockSettingsEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePasswordText(updatedText)
                 }, action: {
                     arguments.checkPassword()
@@ -152,8 +152,8 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .pendingEmailConfirmInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-            case let .pendingEmailConfirmCode(theme, title, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: ""), text: text, placeholder: title, type: .number, sectionId: self.section, textUpdated: { value in
+            case let .pendingEmailConfirmCode(theme, strings, title, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: ""), text: text, placeholder: title, type: .number, sectionId: self.section, textUpdated: { value in
                     arguments.updateEmailCode(value)
                 }, action: {})
             case let .pendingEmailInfo(theme, text):
@@ -187,7 +187,7 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                     case let .notSet(pendingEmail):
                         if let pendingEmail = pendingEmail {
                             entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPendingEmail(pendingEmail.email.pattern).0))
-                            entries.append(.pendingEmailConfirmCode(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCode, state.emailCode))
+                            entries.append(.pendingEmailConfirmCode(presentationData.theme, presentationData.strings, presentationData.strings.TwoStepAuth_RecoveryCode, state.emailCode))
                              entries.append(.pendingEmailInfo(presentationData.theme, "[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
                             
                             /*entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\n\(pendingEmailAndValue.pendingEmail.pattern)\n\n[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))*/
@@ -196,7 +196,7 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                             entries.append(.passwordSetupInfo(presentationData.theme, presentationData.strings.TwoStepAuth_SetPasswordHelp))
                         }
                     case let .set(hint, _, _):
-                        entries.append(.passwordEntry(presentationData.theme, presentationData.strings.TwoStepAuth_EnterPasswordPassword, state.passwordText))
+                        entries.append(.passwordEntry(presentationData.theme, presentationData.strings, presentationData.strings.TwoStepAuth_EnterPasswordPassword, state.passwordText))
                         if hint.isEmpty {
                             entries.append(.passwordEntryInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EnterPasswordHelp + "\n\n[" + presentationData.strings.TwoStepAuth_EnterPasswordForgot + "](forgot)"))
                         } else {

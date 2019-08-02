@@ -50,6 +50,8 @@ public final class CallController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
+        self.isOpaqueWhenInOverlay = true
+        
         self.statusBar.statusBarStyle = .White
         self.statusBar.ignoreInCall = true
         

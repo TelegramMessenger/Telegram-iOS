@@ -1468,7 +1468,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         }
         chatInfoButtonItem.target = self
         chatInfoButtonItem.action = #selector(self.rightNavigationButtonAction)
-        chatInfoButtonItem.accessibilityLabel = "Info"
+        chatInfoButtonItem.accessibilityLabel = self.presentationData.strings.Conversation_Info
         self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo, buttonItem: chatInfoButtonItem)
         
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in

@@ -55,23 +55,31 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
     private let label: ImmediateTextNode
     private let checkNode: ASImageNode
     
+    private let accessibilityArea: AccessibilityAreaNode
+    
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
         self.button = HighlightTrackingButton()
+        self.button.isAccessibilityElement = false
         
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
+        self.avatarNode.isAccessibilityElement = false
         
         self.label = ImmediateTextNode()
         self.label.isUserInteractionEnabled = false
         self.label.displaysAsynchronously = false
         self.label.maximumNumberOfLines = 1
+        self.label.isAccessibilityElement = false
         
         self.checkNode = ASImageNode()
         self.checkNode.displaysAsynchronously = false
         self.checkNode.displayWithoutProcessing = true
         self.checkNode.image = generateItemListCheckIcon(color: theme.primaryTextColor)
+        self.checkNode.isAccessibilityElement = false
+        
+        self.accessibilityArea = AccessibilityAreaNode()
         
         super.init(theme: theme)
         
@@ -79,6 +87,7 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.label)
         self.addSubnode(self.checkNode)
+        self.addSubnode(self.accessibilityArea)
         
         self.button.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -93,6 +102,11 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         }
         
         self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
+        
+        self.accessibilityArea.activate = { [weak self] in
+            self?.buttonPressed()
+            return true
+        }
     }
     
     func setItem(_ item: ActionSheetPeerItem) {
@@ -104,6 +118,13 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         self.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer)
         
         self.checkNode.isHidden = !item.isSelected
+        
+        var accessibilityTraits: UIAccessibilityTraits = [.button]
+        if item.isSelected {
+            accessibilityTraits.insert(.selected)
+        }
+        self.accessibilityArea.accessibilityTraits = accessibilityTraits
+        self.accessibilityArea.accessibilityLabel = item.title
         
         self.setNeedsLayout()
     }
@@ -130,6 +151,8 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         if let image = self.checkNode.image {
             self.checkNode.frame = CGRect(origin: CGPoint(x: size.width - image.size.width - 16.0, y: floor((size.height - image.size.height) / 2.0)), size: image.size)
         }
+        
+        self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     @objc func buttonPressed() {

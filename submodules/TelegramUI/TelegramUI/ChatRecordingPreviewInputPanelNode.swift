@@ -108,9 +108,9 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                 updateWaveform = true
             }
             if self.presentationInterfaceState?.strings !== interfaceState.strings {
-                self.deleteButton.accessibilityLabel = "Delete"
-                self.sendButton.accessibilityLabel = "Send"
-                self.waveformButton.accessibilityLabel = "Preview voice message"
+                self.deleteButton.accessibilityLabel = interfaceState.strings.VoiceOver_MessageContextDelete
+                self.sendButton.accessibilityLabel = interfaceState.strings.VoiceOver_MessageContextSend
+                self.waveformButton.accessibilityLabel = interfaceState.strings.VoiceOver_Chat_RecordPreviewVoiceMessage
             }
             self.presentationInterfaceState = interfaceState
             

@@ -16,6 +16,7 @@ enum ItemListSingleLineInputItemType: Equatable {
 
 class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let title: NSAttributedString
     let text: String
     let placeholder: String
@@ -32,8 +33,9 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let updatedFocus: ((Bool) -> Void)?
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
         self.theme = theme
+        self.strings = strings
         self.title = title
         self.text = text
         self.placeholder = placeholder
@@ -123,7 +125,6 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         self.clearIconNode.displaysAsynchronously = false
         
         self.clearButtonNode = HighlightableButtonNode()
-        self.clearButtonNode.accessibilityLabel = "Clear Text"
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -321,6 +322,8 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                     
                     strongSelf.textNode.isUserInteractionEnabled = item.enabled
                     strongSelf.textNode.alpha = item.enabled ? 1.0 : 0.4
+                    
+                    strongSelf.clearButtonNode.accessibilityLabel = item.strings.VoiceOver_Editing_ClearText
                 }
             })
         }

@@ -54,6 +54,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var currentExpandedDetails: [Int : Bool]?
     var currentDetailsItems: [InstantPageDetailsItem] = []
     
+    var currentAccessibilityAreas: [AccessibilityAreaNode] = []
+    
     private var previousContentOffset: CGPoint?
     private var isDeceleratingBecauseOfDragging = false
     
@@ -428,11 +430,21 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.currentExpandedDetails = expandedDetails
         }
         
+        let accessibilityAreas = instantPageAccessibilityAreasFromLayout(currentLayout, boundingWidth: containerLayout.size.width)
+        
         self.currentLayout = currentLayout
         self.currentLayoutTiles = currentLayoutTiles
         self.currentLayoutItemsWithNodes = currentLayoutItemsWithNodes
         self.currentDetailsItems = currentDetailsItems
         self.distanceThresholdGroupCount = distanceThresholdGroupCount
+        
+        for areaNode in self.currentAccessibilityAreas {
+            areaNode.removeFromSupernode()
+        }
+        for areaNode in accessibilityAreas {
+            self.scrollNode.addSubnode(areaNode)
+        }
+        self.currentAccessibilityAreas = accessibilityAreas
         
         self.scrollNode.view.contentSize = currentLayout.contentSize
         self.scrollNodeFooter.frame = CGRect(origin: CGPoint(x: 0.0, y: currentLayout.contentSize.height), size: CGSize(width: containerLayout.size.width, height: 2000.0))
