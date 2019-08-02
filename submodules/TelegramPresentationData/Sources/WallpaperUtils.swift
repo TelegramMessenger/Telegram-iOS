@@ -2,7 +2,7 @@ import Foundation
 import TelegramCore
 
 public extension TelegramWallpaper {
-    public var isEmpty: Bool {
+    var isEmpty: Bool {
         switch self {
         case .image:
             return false
@@ -19,7 +19,7 @@ public extension TelegramWallpaper {
         }
     }
     
-    public var isBuiltin: Bool {
+    var isBuiltin: Bool {
         switch self {
         case .builtin:
             return true
