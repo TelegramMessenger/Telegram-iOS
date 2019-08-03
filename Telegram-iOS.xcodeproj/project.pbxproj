@@ -5264,7 +5264,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.Telegram-iOS";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = DebugHockeyapp;
@@ -5307,7 +5307,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match AppStore org.telegram.TelegramHD";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = ReleaseAppStore;
@@ -5402,7 +5402,7 @@
 				PROVISIONING_PROFILE = "1e62fceb-1fb5-4804-ad0f-9b9b974393b8";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = DebugFork;
@@ -6419,7 +6419,7 @@
 				PROVISIONING_PROFILE = "954189c1-ae38-447b-a473-7c9b7198aa47";
 				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.TelegramHD";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = DebugAppStore;
@@ -6567,7 +6567,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = ReleaseHockeyappInternal;
@@ -6722,7 +6722,7 @@
 				PROVISIONING_PROFILE = "954189c1-ae38-447b-a473-7c9b7198aa47";
 				PROVISIONING_PROFILE_SPECIFIER = "match Development ph.telegra.Telegraph";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = DebugAppStoreLLC;
@@ -7288,7 +7288,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match AppStore ph.telegra.Telegraph";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = ReleaseAppStoreLLC;
