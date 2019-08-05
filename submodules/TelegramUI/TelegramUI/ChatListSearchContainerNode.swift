@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
+import AccountContext
+import UnreadSearchBadge
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
@@ -72,7 +74,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         }
     }
     
-    func item(context: AccountContextImpl, filter: ChatListNodePeersFilter, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, clearRecentlySearchedPeers: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, deletePeer: @escaping (PeerId) -> Void) -> ListViewItem {
+    func item(context: AccountContext, filter: ChatListNodePeersFilter, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, clearRecentlySearchedPeers: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, deletePeer: @escaping (PeerId) -> Void) -> ListViewItem {
         switch self {
             case let .topPeers(peers, theme, strings):
                 return ChatListRecentPeersListItem(theme: theme, strings: strings, account: context.account, peers: peers, peerSelected: { peer in
@@ -325,7 +327,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
         }
     }
     
-    func item(context: AccountContextImpl, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction) -> ListViewItem {
+    func item(context: AccountContext, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction) -> ListViewItem {
         switch self {
             case let .localPeer(peer, associatedPeer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder):
                 let primaryPeer: Peer
@@ -449,7 +451,7 @@ struct ChatListSearchContainerTransition {
     let displayingResults: Bool
 }
 
-private func chatListSearchContainerPreparedRecentTransition(from fromEntries: [ChatListRecentEntry], to toEntries: [ChatListRecentEntry], context: AccountContextImpl, filter: ChatListNodePeersFilter, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, clearRecentlySearchedPeers: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, deletePeer: @escaping (PeerId) -> Void) -> ChatListSearchContainerRecentTransition {
+private func chatListSearchContainerPreparedRecentTransition(from fromEntries: [ChatListRecentEntry], to toEntries: [ChatListRecentEntry], context: AccountContext, filter: ChatListNodePeersFilter, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, clearRecentlySearchedPeers: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, deletePeer: @escaping (PeerId) -> Void) -> ChatListSearchContainerRecentTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -459,7 +461,7 @@ private func chatListSearchContainerPreparedRecentTransition(from fromEntries: [
     return ChatListSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, context: AccountContextImpl, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction) -> ChatListSearchContainerTransition {
+func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, context: AccountContext, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction) -> ChatListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -520,7 +522,7 @@ private struct ChatListSearchMessagesContext {
 }
 
 final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private let recentListNode: ListView
     private let listNode: ListView
@@ -549,7 +551,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     
     private let filter: ChatListNodePeersFilter
     
-    init(context: AccountContextImpl, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?) {
+    init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?) {
         self.context = context
         self.filter = filter
         self.dimNode = ASDisplayNode()
@@ -1177,14 +1179,6 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private func clearRecentSearch() {
         let _ = (clearRecentlySearchedPeers(postbox: self.context.account.postbox)
         |> deliverOnMainQueue).start()
-    }
-    
-    func removePeerFromTopPeers(_ peerId: PeerId) {
-        self.recentListNode.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ChatListRecentPeersListItemNode {
-                itemNode.removePeer(peerId)
-            }
-        }
     }
     
     override func scrollToTop() {

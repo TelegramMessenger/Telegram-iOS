@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import TelegramStringFormatting
 
 class ItemListCallListItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

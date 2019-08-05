@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 import TelegramPresentationData
+import AccountContext
 
 final class InstantPageFeedbackItem: InstantPageItem {
     var frame: CGRect
@@ -18,7 +19,7 @@ final class InstantPageFeedbackItem: InstantPageItem {
         self.webPage = webPage
     }
     
-    func node(context: AccountContextImpl, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
+    func node(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageFeedbackNode(context: context, strings: strings, theme: theme, webPage: self.webPage, openUrl: openUrl)
     }
     

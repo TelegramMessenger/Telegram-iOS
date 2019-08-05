@@ -16,6 +16,7 @@ import TelegramVoip
 import BuildConfig
 import DeviceCheck
 import AccountContext
+import OverlayStatusController
 
 private let handleVoipNotifications = false
 
@@ -114,7 +115,7 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     var handleVolumeControl: Signal<Bool, NoError> {
-        return MediaManager.globalAudioSession.isPlaybackActive()
+        return MediaManagerImpl.globalAudioSession.isPlaybackActive()
     }
 }
 
@@ -139,13 +140,13 @@ final class SharedApplicationContext {
     let sharedContext: SharedAccountContextImpl
     let notificationManager: SharedNotificationManager
     let wakeupManager: SharedWakeupManager
-    let overlayMediaController: OverlayMediaController
+    let overlayMediaController: ViewController & OverlayMediaController
     
     init(sharedContext: SharedAccountContextImpl, notificationManager: SharedNotificationManager, wakeupManager: SharedWakeupManager) {
         self.sharedContext = sharedContext
         self.notificationManager = notificationManager
         self.wakeupManager = wakeupManager
-        self.overlayMediaController = OverlayMediaController()
+        self.overlayMediaController = OverlayMediaControllerImpl()
     }
 }
 
@@ -348,7 +349,7 @@ final class SharedApplicationContext {
         let apiId: Int32 = buildConfig.apiId
         let languagesCategory = "ios"
         
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManager.voipMaxLayer, appData: self.deviceToken.get() |> map { token in
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, appData: self.deviceToken.get() |> map { token in
             return buildConfig.bundleData(withAppToken: token)
         })
         
@@ -435,7 +436,7 @@ final class SharedApplicationContext {
         
         self.window?.makeKeyAndVisible()
         
-        self.hasActiveAudioSession.set(MediaManager.globalAudioSession.isActive())
+        self.hasActiveAudioSession.set(MediaManagerImpl.globalAudioSession.isActive())
         
         initializeAccountManagement()
         

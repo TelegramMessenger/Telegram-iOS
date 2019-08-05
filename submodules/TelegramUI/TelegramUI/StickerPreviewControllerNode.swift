@@ -6,9 +6,11 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
+import StickerResources
 
 final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let presentationData: PresentationData
     
     private let dimNode: ASDisplayNode
@@ -22,7 +24,7 @@ final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContextImpl) {
+    init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

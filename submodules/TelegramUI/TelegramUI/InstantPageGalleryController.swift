@@ -8,6 +8,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SafariServices
 import TelegramPresentationData
+import AccountContext
 
 struct InstantPageGalleryEntryLocation: Equatable {
     let position: Int32
@@ -30,7 +31,7 @@ struct InstantPageGalleryEntry: Equatable {
         return lhs.index == rhs.index && lhs.pageId == rhs.pageId && lhs.media == rhs.media && lhs.caption == rhs.caption && lhs.credit == rhs.credit && lhs.location == rhs.location
     }
     
-    func item(context: AccountContextImpl, webPage: TelegramMediaWebpage, message: Message?, presentationData: PresentationData, fromPlayingVideo: Bool, landscape: Bool, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) -> GalleryItem {
+    func item(context: AccountContext, webPage: TelegramMediaWebpage, message: Message?, presentationData: PresentationData, fromPlayingVideo: Bool, landscape: Bool, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) -> GalleryItem {
         let caption: NSAttributedString
         let credit: NSAttributedString
         
@@ -129,7 +130,7 @@ class InstantPageGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let webPage: TelegramMediaWebpage
     private let message: Message?
     private var presentationData: PresentationData
@@ -166,7 +167,7 @@ class InstantPageGalleryController: ViewController {
     private var innerOpenUrl: (InstantPageUrlItem) -> Void
     private var openUrlOptions: (InstantPageUrlItem) -> Void
     
-    init(context: AccountContextImpl, webPage: TelegramMediaWebpage, message: Message? = nil, entries: [InstantPageGalleryEntry], centralIndex: Int, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
+    init(context: AccountContext, webPage: TelegramMediaWebpage, message: Message? = nil, entries: [InstantPageGalleryEntry], centralIndex: Int, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
         self.context = context
         self.webPage = webPage
         self.message = message

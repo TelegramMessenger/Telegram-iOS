@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramVoip
+import AccountContext
 
 private final class CallRatingAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
@@ -263,7 +264,7 @@ func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comm
     }
 }
 
-func callRatingController(sharedContext: SharedAccountContextImpl, account: Account, callId: CallId, userInitiated: Bool, present: @escaping (ViewController, Any) -> Void) -> AlertController {
+func callRatingController(sharedContext: SharedAccountContext, account: Account, callId: CallId, userInitiated: Bool, present: @escaping (ViewController, Any) -> Void) -> AlertController {
     let presentationData = sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings

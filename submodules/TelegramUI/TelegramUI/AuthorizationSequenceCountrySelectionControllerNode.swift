@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import TelegramStringFormatting
 
 private func loadCountryCodes() -> [(String, Int)] {
     guard let filePath = frameworkBundle.path(forResource: "PhoneCountries", ofType: "txt") else {

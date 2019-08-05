@@ -8,9 +8,10 @@ import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
+import AccountContext
 
 private struct EditSettingsItemArguments {
-    let context: AccountContextImpl
+    let context: AccountContext
     let accountManager: AccountManager
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     
@@ -298,7 +299,7 @@ private func editSettingsEntries(presentationData: PresentationData, state: Edit
     return entries
 }
 
-func editSettingsController(context: AccountContextImpl, currentName: ItemListAvatarAndNameInfoItemName, currentBioText: String, accountManager: AccountManager, canAddAccounts: Bool, focusOnItemTag: EditSettingsEntryTag? = nil) -> ViewController {
+func editSettingsController(context: AccountContext, currentName: ItemListAvatarAndNameInfoItemName, currentBioText: String, accountManager: AccountManager, canAddAccounts: Bool, focusOnItemTag: EditSettingsEntryTag? = nil) -> ViewController {
     let initialState = EditSettingsState(editingName: currentName, editingBioText: currentBioText)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)

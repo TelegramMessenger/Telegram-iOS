@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import MediaResources
+import AccountContext
 
 private extension TelegramWallpaper {
     var mainResource: MediaResource? {
@@ -42,23 +43,8 @@ private func areMediaResourcesEqual(_ lhs: MediaResource?, _ rhs: MediaResource?
     }
 }
 
-enum WallpaperUploadManagerStatus {
-    case none
-    case uploading(TelegramWallpaper, Float)
-    case uploaded(TelegramWallpaper, TelegramWallpaper)
-    
-    var wallpaper: TelegramWallpaper? {
-        switch self {
-            case let .uploading(wallpaper, _), let .uploaded(wallpaper, _):
-                return wallpaper
-            default:
-                return nil
-        }
-    }
-}
-
-final class WallpaperUploadManager {
-    private let sharedContext: SharedAccountContextImpl
+final class WallpaperUploadManagerImpl: WallpaperUploadManager {
+    private let sharedContext: SharedAccountContext
     private let account: Account
     private var context: WallpaperUploadContext?
     
@@ -67,7 +53,7 @@ final class WallpaperUploadManager {
     
     private let statePromise = Promise<WallpaperUploadManagerStatus>(.none)
     
-    init(sharedContext: SharedAccountContextImpl, account: Account, presentationData: Signal<PresentationData, NoError>) {
+    init(sharedContext: SharedAccountContext, account: Account, presentationData: Signal<PresentationData, NoError>) {
         self.sharedContext = sharedContext
         self.account = account
         self.presentationDataDisposable.set(presentationData.start(next: { [weak self] presentationData in

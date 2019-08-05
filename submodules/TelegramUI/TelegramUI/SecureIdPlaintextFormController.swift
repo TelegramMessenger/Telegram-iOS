@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ProgressNavigationButtonNode
+import AccountContext
 
 enum SecureIdPlaintextFormType {
     case phone
@@ -14,7 +15,7 @@ enum SecureIdPlaintextFormType {
 }
 
 final class SecureIdPlaintextFormController: FormController<SecureIdPlaintextFormInnerState, SecureIdPlaintextFormControllerNodeInitParams, SecureIdPlaintextFormControllerNode> {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let updatedValue: (SecureIdValueWithContext?) -> Void
     
@@ -25,7 +26,7 @@ final class SecureIdPlaintextFormController: FormController<SecureIdPlaintextFor
     private var nextItem: UIBarButtonItem?
     private var doneItem: UIBarButtonItem?
     
-    init(context: AccountContextImpl, secureIdContext: SecureIdAccessContext, type: SecureIdPlaintextFormType, immediatelyAvailableValue: SecureIdValue?, updatedValue: @escaping (SecureIdValueWithContext?) -> Void) {
+    init(context: AccountContext, secureIdContext: SecureIdAccessContext, type: SecureIdPlaintextFormType, immediatelyAvailableValue: SecureIdValue?, updatedValue: @escaping (SecureIdValueWithContext?) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.secureIdContext = secureIdContext

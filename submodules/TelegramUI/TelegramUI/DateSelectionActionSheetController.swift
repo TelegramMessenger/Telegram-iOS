@@ -7,6 +7,8 @@ import SwiftSignalKit
 import TelegramCore
 import Photos
 import TelegramPresentationData
+import TelegramStringFormatting
+import AccountContext
 
 final class DateSelectionActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
@@ -16,7 +18,7 @@ final class DateSelectionActionSheetController: ActionSheetController {
         return self._ready
     }
     
-    init(context: AccountContextImpl, title: String?, currentValue: Int32, minimumDate: Date? = nil, maximumDate: Date? = nil, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
+    init(context: AccountContext, title: String?, currentValue: Int32, minimumDate: Date? = nil, maximumDate: Date? = nil, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings

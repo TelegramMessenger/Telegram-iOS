@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 private func generateIconImage(theme: AlertControllerTheme) -> UIImage? {
     return UIImage(bundleImageName: "Call List/AlertIcon")
@@ -200,7 +201,7 @@ private final class CallSuggestTabAlertContentNode: AlertContentNode {
     }
 }
 
-func callSuggestTabController(sharedContext: SharedAccountContextImpl) -> AlertController {
+func callSuggestTabController(sharedContext: SharedAccountContext) -> AlertController {
     let presentationData = sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings

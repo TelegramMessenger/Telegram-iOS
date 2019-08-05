@@ -6,6 +6,7 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ListSectionHeaderNode
 
 private func nodeColor(for color: WallpaperSearchColor) -> UIColor {
     switch color {

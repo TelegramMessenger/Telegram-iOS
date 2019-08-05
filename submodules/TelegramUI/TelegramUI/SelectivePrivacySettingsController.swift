@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AccountContext
 
 enum SelectivePrivacySettingsKind {
     case presence
@@ -40,7 +41,7 @@ enum SelectivePrivacySettingsPeerTarget {
 }
 
 private final class SelectivePrivacySettingsControllerArguments {
-    let context: AccountContextImpl
+    let context: AccountContext
     
     let updateType: (SelectivePrivacySettingType) -> Void
     let openSelective: (SelectivePrivacySettingsPeerTarget, Bool) -> Void
@@ -48,7 +49,7 @@ private final class SelectivePrivacySettingsControllerArguments {
     let updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?
     let updateCallIntegrationEnabled: ((Bool) -> Void)?
     
-    init(context: AccountContextImpl, updateType: @escaping (SelectivePrivacySettingType) -> Void, openSelective: @escaping (SelectivePrivacySettingsPeerTarget, Bool) -> Void, updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?, updateCallIntegrationEnabled: ((Bool) -> Void)?) {
+    init(context: AccountContext, updateType: @escaping (SelectivePrivacySettingType) -> Void, openSelective: @escaping (SelectivePrivacySettingsPeerTarget, Bool) -> Void, updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?, updateCallIntegrationEnabled: ((Bool) -> Void)?) {
         self.context = context
         self.updateType = updateType
         self.openSelective = openSelective
@@ -579,7 +580,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     return entries
 }
 
-func selectivePrivacySettingsController(context: AccountContextImpl, kind: SelectivePrivacySettingsKind, current: SelectivePrivacySettings, callSettings: (SelectivePrivacySettings, VoiceCallSettings)? = nil, voipConfiguration: VoipConfiguration? = nil, callIntegrationAvailable: Bool? = nil, updated: @escaping (SelectivePrivacySettings, (SelectivePrivacySettings, VoiceCallSettings)?) -> Void) -> ViewController {
+func selectivePrivacySettingsController(context: AccountContext, kind: SelectivePrivacySettingsKind, current: SelectivePrivacySettings, callSettings: (SelectivePrivacySettings, VoiceCallSettings)? = nil, voipConfiguration: VoipConfiguration? = nil, callIntegrationAvailable: Bool? = nil, updated: @escaping (SelectivePrivacySettings, (SelectivePrivacySettings, VoiceCallSettings)?) -> Void) -> ViewController {
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
     var initialEnableFor: [PeerId: SelectivePrivacyPeer] = [:]

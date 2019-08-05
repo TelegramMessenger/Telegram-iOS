@@ -7,6 +7,8 @@ import UIKit
 import SwiftSignalKit
 import MobileCoreServices
 import TelegramVoip
+import OverlayStatusController
+import AccountContext
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -18,7 +20,7 @@ private struct MessageContextMenuData {
     let messageActions: ChatAvailableMessageActions
 }
 
-func canEditMessage(context: AccountContextImpl, limitsConfiguration: LimitsConfiguration, message: Message) -> Bool {
+func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfiguration, message: Message) -> Bool {
     var hasEditRights = false
     var unlimitedInterval = false
     
@@ -221,7 +223,7 @@ func updatedChatEditInterfaceMessagetState(state: ChatPresentationInterfaceState
     return updated
 }
 
-func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContextImpl, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ChatMessageContextMenuAction], NoError> {
+func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ChatMessageContextMenuAction], NoError> {
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single([])
     }

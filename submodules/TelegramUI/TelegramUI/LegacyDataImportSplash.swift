@@ -2,6 +2,7 @@ import Foundation
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import RadialStatusNode
 
 final class LegacyDataImportSplash: WindowCoveringView {
     private let theme: PresentationTheme?

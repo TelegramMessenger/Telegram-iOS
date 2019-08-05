@@ -7,6 +7,8 @@ import SwiftSignalKit
 import Display
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
+import LocalizedPeerData
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
@@ -24,7 +26,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     var theme: PresentationTheme
     
-    init(context: AccountContextImpl, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
         self.messageId = messageId
         
         self.theme = theme

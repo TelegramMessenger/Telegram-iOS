@@ -6,6 +6,8 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import AVFoundation
+import RadialStatusNode
+import StickerResources
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account

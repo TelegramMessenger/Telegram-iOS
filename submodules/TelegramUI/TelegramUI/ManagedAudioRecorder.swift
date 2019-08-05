@@ -6,6 +6,7 @@ import AVFoundation
 import TelegramCore
 import TelegramAudio
 import UniversalMediaPlayer
+import AccountContext
 
 private let kOutputBus: UInt32 = 0
 private let kInputBus: UInt32 = 1
@@ -131,12 +132,6 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
     })
     
     return noErr
-}
-
-struct RecordedAudioData {
-    let compressedData: Data
-    let duration: Double
-    let waveform: Data?
 }
 
 private let beginToneData: TonePlayerData? = {
@@ -642,13 +637,7 @@ final class ManagedAudioRecorderContext {
     }
 }
 
-enum AudioRecordingState: Equatable {
-    case paused(duration: Double)
-    case recording(duration: Double, durationMediaTimestamp: Double)
-    case stopped
-}
-
-final class ManagedAudioRecorder {
+final class ManagedAudioRecorderImpl: ManagedAudioRecorder {
     private let queue = Queue()
     private var contextRef: Unmanaged<ManagedAudioRecorderContext>?
     private let micLevelValue = ValuePromise<Float>(0.0)

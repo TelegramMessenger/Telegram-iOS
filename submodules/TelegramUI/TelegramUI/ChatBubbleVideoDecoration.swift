@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import UniversalMediaPlayer
+import AccountContext
 
 final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     private let nativeSize: CGSize

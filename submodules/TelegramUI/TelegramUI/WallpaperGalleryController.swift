@@ -10,6 +10,8 @@ import Photos
 import TelegramPresentationData
 import TelegramUIPreferences
 import MediaResources
+import AccountContext
+import ShareController
 
 enum WallpaperListType {
     case wallpapers(WallpaperPresentationOptions?)
@@ -119,7 +121,7 @@ class WallpaperGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let source: WallpaperListSource
     var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, CGRect?) -> Void)?
     
@@ -157,7 +159,7 @@ class WallpaperGalleryController: ViewController {
     private var colorPanelEnabled = false
     private var patternPanelEnabled = false
     
-    init(context: AccountContextImpl, source: WallpaperListSource) {
+    init(context: AccountContext, source: WallpaperListSource) {
         self.context = context
         self.source = source
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

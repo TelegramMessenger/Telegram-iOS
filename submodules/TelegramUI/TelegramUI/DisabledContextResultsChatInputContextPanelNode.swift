@@ -4,6 +4,8 @@ import TelegramCore
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import TelegramStringFormatting
+import AccountContext
 
 final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPanelNode {
     private let containerNode: ASDisplayNode
@@ -12,7 +14,7 @@ final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPan
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.containerNode = ASDisplayNode()
         self.separatorNode = ASDisplayNode()
         self.textNode = ImmediateTextNode()

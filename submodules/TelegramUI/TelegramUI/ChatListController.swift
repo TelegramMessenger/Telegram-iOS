@@ -6,6 +6,9 @@ import Display
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramBaseController
+import OverlayStatusController
+import AccountContext
 
 public func useSpecialTabBarIcons() -> Bool {
     return (Date(timeIntervalSince1970: 1545642000)...Date(timeIntervalSince1970: 1546387200)).contains(Date())
@@ -55,10 +58,10 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
     return false
 }
 
-public class ChatListController: TelegramController, UIViewControllerPreviewingDelegate {
+public class ChatListController: TelegramBaseController, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
-    let context: AccountContextImpl
+    let context: AccountContext
     private let controlsHistoryPreload: Bool
     private let hideNetworkActivityStatus: Bool
     
@@ -102,7 +105,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         }
     }
     
-    public init(context: AccountContextImpl, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false) {
+    public init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false) {
         self.context = context
         self.controlsHistoryPreload = controlsHistoryPreload
         self.hideNetworkActivityStatus = hideNetworkActivityStatus
@@ -792,8 +795,6 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                             
                             if let strongSelf = self {
                                 let _ = removeRecentPeer(account: strongSelf.context.account, peerId: peer.id).start()
-                                let searchContainer = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode
-                                searchContainer?.removePeerFromTopPeers(peer.id)
                             }
                         })
                     ]),

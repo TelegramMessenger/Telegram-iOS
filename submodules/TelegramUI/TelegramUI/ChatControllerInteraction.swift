@@ -5,23 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import Display
 import TelegramUIPreferences
-
-public enum ChatControllerInitialBotStartBehavior {
-    case interactive
-    case automatic(returnToPeerId: PeerId)
-}
-
-public struct ChatControllerInitialBotStart {
-    let payload: String
-    let behavior: ChatControllerInitialBotStartBehavior
-}
-
-public enum ChatControllerInteractionNavigateToPeer {
-    case `default`
-    case chat(textInputState: ChatTextInputState?, messageId: MessageId?)
-    case info
-    case withBotStartPayload(ChatControllerInitialBotStart)
-}
+import AccountContext
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
@@ -54,15 +38,6 @@ public enum ChatControllerInteractionLongTapAction {
     case command(String)
     case hashtag(String)
     case timecode(Double, String)
-}
-
-public enum ChatControllerInteractionOpenMessageMode {
-    case `default`
-    case stream
-    case automaticPlayback
-    case landscape
-    case timecode(Double)
-    case link
 }
 
 struct ChatInterfacePollActionState: Equatable {

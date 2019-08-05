@@ -5,6 +5,7 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 enum ChatRecentActionsEntryContentIndex: Int32 {
     case header = 0
@@ -104,7 +105,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
         return self.id
     }
     
-    func item(context: AccountContextImpl, peer: Peer, controllerInteraction: ChatControllerInteraction) -> ListViewItem {
+    func item(context: AccountContext, peer: Peer, controllerInteraction: ChatControllerInteraction) -> ListViewItem {
         switch self.entry.event.action {
             case let .changeTitle(_, new):
                 var peers = SimpleDictionary<PeerId, Peer>()
@@ -1059,7 +1060,7 @@ struct ChatRecentActionsHistoryTransition {
     let isEmpty: Bool
 }
 
-func chatRecentActionsHistoryPreparedTransition(from fromEntries: [ChatRecentActionsEntry], to toEntries: [ChatRecentActionsEntry], type: ChannelAdminEventLogUpdateType, canLoadEarlier: Bool, displayingResults: Bool, context: AccountContextImpl, peer: Peer, controllerInteraction: ChatControllerInteraction) -> ChatRecentActionsHistoryTransition {
+func chatRecentActionsHistoryPreparedTransition(from fromEntries: [ChatRecentActionsEntry], to toEntries: [ChatRecentActionsEntry], type: ChannelAdminEventLogUpdateType, canLoadEarlier: Bool, displayingResults: Bool, context: AccountContext, peer: Peer, controllerInteraction: ChatControllerInteraction) -> ChatRecentActionsHistoryTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }

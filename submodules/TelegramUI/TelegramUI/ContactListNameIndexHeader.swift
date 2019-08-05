@@ -2,6 +2,7 @@ import Foundation
 import Display
 import UIKit
 import TelegramPresentationData
+import ListSectionHeaderNode
 
 final class ContactListNameIndexHeader: Equatable, ListViewItemHeader {
     let id: Int64

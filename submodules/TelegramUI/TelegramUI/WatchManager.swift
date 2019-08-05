@@ -2,20 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-
-public struct WatchRunningTasks: Equatable {
-    public let running: Bool
-    public let version: Int32
-    
-    public init(running: Bool, version: Int32) {
-        self.running = running
-        self.version = version
-    }
-    
-    public static func ==(lhs: WatchRunningTasks, rhs: WatchRunningTasks) -> Bool {
-        return lhs.running == rhs.running && lhs.version == rhs.version
-    }
-}
+import AccountContext
 
 public final class WatchManagerArguments {
     public let appInstalled: Signal<Bool, NoError>
@@ -29,7 +16,7 @@ public final class WatchManagerArguments {
     }
 }
 
-public final class WatchManager {
+public final class WatchManagerImpl: WatchManager {
     private let arguments: WatchManagerArguments?
     
     public init(arguments: WatchManagerArguments?) {

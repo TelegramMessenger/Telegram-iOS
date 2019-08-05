@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
+import ShareController
 
 struct JoinLinkPreviewData {
     let isGroup: Bool
@@ -13,7 +15,7 @@ struct JoinLinkPreviewData {
 }
 
 final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -48,7 +50,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let disposable = MetaDisposable()
     
-    init(context: AccountContextImpl, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
+    init(context: AccountContext, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

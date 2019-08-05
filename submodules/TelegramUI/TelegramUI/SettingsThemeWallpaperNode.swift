@@ -6,6 +6,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
+import RadialStatusNode
 
 private func whiteColorImage(theme: PresentationTheme) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return .single({ arguments in
@@ -59,7 +61,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.statusNode.transitionToState(state, animated: animated, completion: {})
     }
     
-    func setWallpaper(context: AccountContextImpl, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0, synchronousLoad: Bool = false) {
+    func setWallpaper(context: AccountContext, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0, synchronousLoad: Bool = false) {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)

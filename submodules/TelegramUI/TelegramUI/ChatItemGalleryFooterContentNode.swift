@@ -8,6 +8,10 @@ import SwiftSignalKit
 import Photos
 import TelegramPresentationData
 import TextFormat
+import TelegramStringFormatting
+import AccountContext
+import RadialStatusNode
+import ShareController
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
@@ -137,7 +141,7 @@ class CaptionScrollWrapperNode: ASDisplayNode {
 }
 
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScrollViewDelegate {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
@@ -254,7 +258,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
-    init(context: AccountContextImpl, presentationData: PresentationData) {
+    init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings

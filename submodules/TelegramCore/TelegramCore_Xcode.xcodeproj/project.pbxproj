@@ -467,6 +467,8 @@
 		D081E10B217F5ADE003CD921 /* LocalizationPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081E109217F5ADE003CD921 /* LocalizationPreview.swift */; };
 		D08774FC1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */; };
 		D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */; };
+		D0879BC822F85A3E00C4D6B3 /* ImageRepresentationWithReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BC722F85A3E00C4D6B3 /* ImageRepresentationWithReference.swift */; };
+		D0879BC922F85A3E00C4D6B3 /* ImageRepresentationWithReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BC722F85A3E00C4D6B3 /* ImageRepresentationWithReference.swift */; };
 		D08984F22114B97400918162 /* ClearCloudDrafts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08984F12114B97400918162 /* ClearCloudDrafts.swift */; };
 		D08984F32114B97400918162 /* ClearCloudDrafts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08984F12114B97400918162 /* ClearCloudDrafts.swift */; };
 		D08984F521187ECA00918162 /* NetworkType.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08984F421187ECA00918162 /* NetworkType.swift */; };
@@ -1070,6 +1072,7 @@
 		D081E109217F5ADE003CD921 /* LocalizationPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationPreview.swift; sourceTree = "<group>"; };
 		D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedGlobalNotificationSettings.swift; sourceTree = "<group>"; };
 		D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalNotificationSettings.swift; sourceTree = "<group>"; };
+		D0879BC722F85A3E00C4D6B3 /* ImageRepresentationWithReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageRepresentationWithReference.swift; sourceTree = "<group>"; };
 		D08984F12114B97400918162 /* ClearCloudDrafts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearCloudDrafts.swift; sourceTree = "<group>"; };
 		D08984F421187ECA00918162 /* NetworkType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkType.swift; sourceTree = "<group>"; };
 		D08984F72118816900918162 /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
@@ -1594,6 +1597,7 @@
 			children = (
 				D03B0D121D62257600955575 /* Resources */,
 				D0DFD5DE1FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift */,
+				D0879BC722F85A3E00C4D6B3 /* ImageRepresentationWithReference.swift */,
 			);
 			name = Media;
 			sourceTree = "<group>";
@@ -2572,6 +2576,7 @@
 				D0528E601E65B94E00E2FEF5 /* SingleMessageView.swift in Sources */,
 				D08CAA841ED8164B0000FDA8 /* Localization.swift in Sources */,
 				D0528E5A1E658B3600E2FEF5 /* ManagedLocalInputActivities.swift in Sources */,
+				D0879BC822F85A3E00C4D6B3 /* ImageRepresentationWithReference.swift in Sources */,
 				D0FA8BA41E1FA341001E855B /* SecretChatKeychain.swift in Sources */,
 				D01749601E118FC30057C89A /* AccountIntermediateState.swift in Sources */,
 				D0E412EE206AF65500BEE4A2 /* GrantSecureIdAccess.swift in Sources */,
@@ -2744,6 +2749,7 @@
 				D0F3CC7B1DDE2859008148FA /* RequestEditMessage.swift in Sources */,
 				D049EAEC1E44B71B00A2CD3A /* RecentlySearchedPeerIds.swift in Sources */,
 				D0F19F6720E6621000EEC860 /* MultiplexedRequestManager.swift in Sources */,
+				D0879BC922F85A3E00C4D6B3 /* ImageRepresentationWithReference.swift in Sources */,
 				D02D60A8206BA5F900FEFE1E /* SecureIdValue.swift in Sources */,
 				D0FA8B991E1E955C001E855B /* SecretChatOutgoingOperation.swift in Sources */,
 				D001F3F01E128A1C007A8C60 /* AccountStateManagementUtils.swift in Sources */,
@@ -3081,7 +3087,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = ReleaseHockeyapp;
@@ -3210,7 +3216,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = DebugFork;
@@ -3345,7 +3351,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = HockeyappMacAlpha;
@@ -3473,7 +3479,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = ReleaseAppStore;
@@ -3567,7 +3573,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = ReleaseHockeyappInternal;
@@ -3744,7 +3750,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = DebugHockeyapp;
@@ -3784,7 +3790,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = DebugAppStore;
@@ -3893,7 +3899,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = DebugAppStoreLLC;
@@ -4110,7 +4116,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = ReleaseAppStoreLLC;

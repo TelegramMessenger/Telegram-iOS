@@ -4,6 +4,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import UniversalMediaPlayer
+import AccountContext
 
 enum FileMediaResourcePlaybackStatus: Equatable {
     case playing
@@ -20,7 +21,7 @@ enum FileMediaResourceMediaStatus: Equatable {
     case playbackStatus(FileMediaResourcePlaybackStatus)
 }
 
-private func internalMessageFileMediaPlaybackStatus(context: AccountContextImpl, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<MediaPlayerStatus?, NoError> {
+private func internalMessageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<MediaPlayerStatus?, NoError> {
     guard let playerType = peerMessageMediaPlayerType(message) else {
         return .single(nil)
     }
@@ -35,7 +36,7 @@ private func internalMessageFileMediaPlaybackStatus(context: AccountContextImpl,
     }
 }
 
-func messageFileMediaPlaybackStatus(context: AccountContextImpl, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<MediaPlayerStatus, NoError> {
+func messageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<MediaPlayerStatus, NoError> {
     var duration = 0.0
     if let value = file.duration {
         duration = Double(value)
@@ -46,7 +47,7 @@ func messageFileMediaPlaybackStatus(context: AccountContextImpl, file: TelegramM
     }
 }
 
-func messageFileMediaResourceStatus(context: AccountContextImpl, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<FileMediaResourceStatus, NoError> {
+func messageFileMediaResourceStatus(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<FileMediaResourceStatus, NoError> {
     let playbackStatus = internalMessageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions) |> map { status -> MediaPlayerPlaybackStatus? in
         return status?.status
     }

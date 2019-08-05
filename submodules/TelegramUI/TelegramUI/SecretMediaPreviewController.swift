@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
+import RadialStatusNode
 
 private func galleryMediaForMedia(media: Media) -> Media? {
     if let media = media as? TelegramMediaImage {
@@ -115,7 +117,7 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
 }
 
 public final class SecretMediaPreviewController: ViewController {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -142,7 +144,7 @@ public final class SecretMediaPreviewController: ViewController {
     
     private var screenCaptureEventsDisposable: Disposable?
     
-    public init(context: AccountContextImpl, messageId: MessageId) {
+    public init(context: AccountContext, messageId: MessageId) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

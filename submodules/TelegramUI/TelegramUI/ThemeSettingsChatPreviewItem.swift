@@ -8,9 +8,10 @@ import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AccountContext
 
 class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let theme: PresentationTheme
     let componentTheme: PresentationTheme
     let strings: PresentationStrings
@@ -20,7 +21,7 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     
-    init(context: AccountContextImpl, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
         self.context = context
         self.theme = theme
         self.componentTheme = componentTheme

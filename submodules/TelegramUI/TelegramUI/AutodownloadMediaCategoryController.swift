@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AccountContext
 
 public func autodownloadDataSizeString(_ size: Int64, decimalSeparator: String = ".") -> String {
     if size >= 1024 * 1024 * 1024 {
@@ -285,7 +286,7 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
     return entries
 }
 
-func autodownloadMediaCategoryController(context: AccountContextImpl, connectionType: AutomaticDownloadConnectionType, category: AutomaticDownloadCategory) -> ViewController {
+func autodownloadMediaCategoryController(context: AccountContext, connectionType: AutomaticDownloadConnectionType, category: AutomaticDownloadCategory) -> ViewController {
     let arguments = AutodownloadMediaCategoryControllerArguments(togglePeer: { type in
         let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings

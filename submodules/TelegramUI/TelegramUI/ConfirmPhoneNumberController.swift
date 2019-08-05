@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import AccountContext
 
 private final class ConfirmPhoneNumberCodeControllerArguments {
     let updateEntryText: (String) -> Void
@@ -157,7 +158,7 @@ protocol ConfirmPhoneNumberCodeController: class {
 private final class ConfirmPhoneNumberCodeControllerImpl: ItemListController<ConfirmPhoneNumberCodeEntry>, ConfirmPhoneNumberCodeController {
     private let applyCodeImpl: (Int) -> Void
     
-    init(context: AccountContextImpl, state: Signal<(ItemListControllerState, (ItemListNodeState<ConfirmPhoneNumberCodeEntry>, ConfirmPhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
+    init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<ConfirmPhoneNumberCodeEntry>, ConfirmPhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
         self.applyCodeImpl = applyCodeImpl
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -173,7 +174,7 @@ private final class ConfirmPhoneNumberCodeControllerImpl: ItemListController<Con
     }
 }
 
-func confirmPhoneNumberCodeController(context: AccountContextImpl, phoneNumber: String, codeData: CancelAccountResetData) -> ViewController {
+func confirmPhoneNumberCodeController(context: AccountContext, phoneNumber: String, codeData: CancelAccountResetData) -> ViewController {
     let initialState = ConfirmPhoneNumberCodeControllerState(codeText: "", checking: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)

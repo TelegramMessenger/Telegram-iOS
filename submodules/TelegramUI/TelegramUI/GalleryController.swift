@@ -9,6 +9,7 @@ import TelegramCore
 import SafariServices
 import TelegramPresentationData
 import TextFormat
+import AccountContext
 
 private func tagsForMessage(_ message: Message) -> MessageTags? {
     for media in message.media {
@@ -135,7 +136,7 @@ private func galleryMessageCaptionText(_ message: Message) -> String {
     return message.text
 }
 
-func galleryItemForEntry(context: AccountContextImpl, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
+func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
     let message = entry.message
     let location = entry.location
     if let (media, mediaImage) = mediaForMessage(message: message) {
@@ -268,26 +269,6 @@ public enum GalleryControllerItemNodeAction {
     case timecode(Double)
 }
 
-final class GalleryControllerActionInteraction {
-    let openUrl: (String, Bool) -> Void
-    let openUrlIn: (String) -> Void
-    let openPeerMention: (String) -> Void
-    let openPeer: (PeerId) -> Void
-    let openHashtag: (String?, String) -> Void
-    let openBotCommand: (String) -> Void
-    let addContact: (String) -> Void
-
-    init(openUrl: @escaping (String, Bool) -> Void, openUrlIn: @escaping (String) -> Void, openPeerMention: @escaping (String) -> Void, openPeer: @escaping (PeerId) -> Void, openHashtag: @escaping (String?, String) -> Void, openBotCommand: @escaping (String) -> Void, addContact: @escaping (String) -> Void) {
-        self.openUrl = openUrl
-        self.openUrlIn = openUrlIn
-        self.openPeerMention = openPeerMention
-        self.openPeer = openPeer
-        self.openHashtag = openHashtag
-        self.openBotCommand = openBotCommand
-        self.addContact = addContact
-    }
-}
-
 class GalleryController: ViewController {
     static let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), separatorColor: UIColor(white: 0.0, alpha: 0.8), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     static let lightNavigationTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007ee5), disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
@@ -296,7 +277,7 @@ class GalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let source: GalleryControllerItemSource
     
@@ -340,7 +321,7 @@ class GalleryController: ViewController {
     private var performAction: (GalleryControllerInteractionTapAction) -> Void
     private var openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(context: AccountContextImpl, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
+    init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.context = context
         self.source = source
         self.replaceRootController = replaceRootController
@@ -861,7 +842,7 @@ class GalleryController: ViewController {
             if entry.message.stableId == self.centralEntryStableId {
                 isCentral = true
             }
-            if let item = galleryItemForEntry(context: context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, performAction: self.performAction, openActionOptions: self.openActionOptions) {
+            if let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, performAction: self.performAction, openActionOptions: self.openActionOptions) {
                 if isCentral {
                     centralItemIndex = items.count
                 }

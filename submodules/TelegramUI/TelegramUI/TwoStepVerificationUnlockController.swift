@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import ItemListUI
 import TextFormat
+import OverlayStatusController
+import AccountContext
 
 private final class TwoStepVerificationUnlockSettingsControllerArguments {
     let updatePasswordText: (String) -> Void
@@ -248,7 +250,7 @@ enum TwoStepVerificationUnlockSettingsControllerData: Equatable {
     case manage(password: String, emailSet: Bool, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
-func twoStepVerificationUnlockSettingsController(context: AccountContextImpl, mode: TwoStepVerificationUnlockSettingsControllerMode, openSetupPasswordImmediately: Bool = false) -> ViewController {
+func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: TwoStepVerificationUnlockSettingsControllerMode, openSetupPasswordImmediately: Bool = false) -> ViewController {
     let initialState = TwoStepVerificationUnlockSettingsControllerState()
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)

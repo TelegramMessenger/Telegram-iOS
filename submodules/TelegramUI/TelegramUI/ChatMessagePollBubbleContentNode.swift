@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import Postbox
 import TextFormat
+import UrlEscaping
 
 struct PercentCounterItem: Comparable  {
     var index: Int = 0

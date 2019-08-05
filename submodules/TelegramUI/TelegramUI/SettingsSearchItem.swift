@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
 import ItemListUI
+import AccountContext
 
 extension NavigationBarSearchContentNode: ItemListControllerSearchNavigationContentNode {
     func activate() {
@@ -56,7 +57,7 @@ extension SettingsSearchableItemIcon {
 }
 
 final class SettingsSearchItem: ItemListControllerSearch {
-    let context: AccountContextImpl
+    let context: AccountContext
     let theme: PresentationTheme
     let placeholder: String
     let activated: Bool
@@ -72,7 +73,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContextImpl, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>) {
+    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>) {
         self.context = context
         self.theme = theme
         self.placeholder = placeholder
@@ -321,7 +322,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
     private var presentationDataDisposable: Disposable?
     private let presentationDataPromise: Promise<PresentationData>
     
-    init(context: AccountContextImpl, openResult: @escaping (SettingsSearchableItem) -> Void, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>) {
+    init(context: AccountContext, openResult: @escaping (SettingsSearchableItem) -> Void, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(self.presentationData)
         
@@ -617,7 +618,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
 }
 
 private final class SettingsSearchItemNode: ItemListControllerSearchNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     private var searchDisplayController: SearchDisplayController?
@@ -631,7 +632,7 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
     
     var cancel: () -> Void
     
-    init(context: AccountContextImpl, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>) {
+    init(context: AccountContext, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.cancel = cancel

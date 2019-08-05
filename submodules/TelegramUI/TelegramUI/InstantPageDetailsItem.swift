@@ -5,6 +5,7 @@ import TelegramCore
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import AccountContext
 
 final class InstantPageDetailsItem: InstantPageItem {
     var frame: CGRect
@@ -31,7 +32,7 @@ final class InstantPageDetailsItem: InstantPageItem {
         self.index = index
     }
     
-    func node(context: AccountContextImpl, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
+    func node(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         var expanded: Bool?
         if let expandedDetails = currentExpandedDetails, let currentlyExpanded = expandedDetails[self.index] {
             expanded = currentlyExpanded

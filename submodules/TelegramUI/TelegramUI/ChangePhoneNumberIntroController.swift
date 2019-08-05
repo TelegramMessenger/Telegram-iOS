@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
 import TextFormat
+import AccountContext
 
 private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
     var presentationData: PresentationData
@@ -79,12 +80,12 @@ private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
 }
 
 final class ChangePhoneNumberIntroController: ViewController {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
     
-    init(context: AccountContextImpl, phoneNumber: String) {
+    init(context: AccountContext, phoneNumber: String) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

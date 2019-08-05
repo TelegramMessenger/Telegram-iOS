@@ -7,16 +7,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
-
-public struct ImageRepresentationWithReference: Equatable {
-    public let representation: TelegramMediaImageRepresentation
-    public let reference: MediaResourceReference
-    
-    public init(representation: TelegramMediaImageRepresentation, reference: MediaResourceReference) {
-        self.representation = representation
-        self.reference = reference
-    }
-}
+import AccountContext
 
 enum AvatarGalleryEntry: Equatable {
     case topImage([ImageRepresentationWithReference], GalleryItemIndexData?)
@@ -104,7 +95,7 @@ class AvatarGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let peer: Peer
     
     private var presentationData: PresentationData
@@ -135,7 +126,7 @@ class AvatarGalleryController: ViewController {
     
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     
-    init(context: AccountContextImpl, peer: Peer, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, synchronousLoad: Bool = false) {
+    init(context: AccountContext, peer: Peer, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.context = context
         self.peer = peer
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

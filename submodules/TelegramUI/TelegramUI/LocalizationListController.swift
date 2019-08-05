@@ -6,9 +6,10 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 public class LocalizationListController: ViewController {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private var controllerNode: LocalizationListControllerNode {
         return self.displayNode as! LocalizationListControllerNode
@@ -27,7 +28,7 @@ public class LocalizationListController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContextImpl) {
+    public init(context: AccountContext) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

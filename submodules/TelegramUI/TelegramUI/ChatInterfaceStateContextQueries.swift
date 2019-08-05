@@ -7,6 +7,7 @@ import TelegramUIPreferences
 import TelegramUIPrivateModule
 import LegacyComponents
 import TextFormat
+import AccountContext
 
 enum ChatContextQueryError {
     case inlineBotLocationRequest(PeerId)
@@ -17,7 +18,7 @@ enum ChatContextQueryUpdate {
     case update(ChatPresentationInputQuery, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError>)
 }
 
-func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContextImpl, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
+func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
         return [:]
     }
@@ -60,7 +61,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     return updates
 }
 
-private func updatedContextQueryResultStateForQuery(context: AccountContextImpl, peer: Peer, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
+private func updatedContextQueryResultStateForQuery(context: AccountContext, peer: Peer, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
     switch inputQuery {
         case let .emoji(query):
             var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
@@ -310,7 +311,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContextImpl,
     }
 }
 
-func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContextImpl, currentQuery: ChatPresentationInputQuery?) -> (ChatPresentationInputQuery?, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>)? {
+func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentQuery: ChatPresentationInputQuery?) -> (ChatPresentationInputQuery?, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>)? {
     var inputQuery: ChatPresentationInputQuery?
     if let search = chatPresentationInterfaceState.search {
         switch search.domain {
@@ -364,7 +365,7 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
 
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
 
-func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContextImpl, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
+func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContext, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
     guard let text = inputText else {
         if currentQuery != nil {
             return (nil, .single({ _ in return nil }))

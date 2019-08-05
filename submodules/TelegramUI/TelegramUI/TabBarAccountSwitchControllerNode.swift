@@ -5,6 +5,9 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AvatarNode
+import AccountContext
+import LocalizedPeerData
 
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 
@@ -223,7 +226,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(sharedContext: SharedAccountContextImpl, accounts: (primary: (Account, Peer), other: [(Account, Peer, Int32)]), presentationData: PresentationData, canAddAccounts: Bool, switchToAccount: @escaping (AccountRecordId) -> Void, addAccount: @escaping () -> Void, cancel: @escaping () -> Void, sourceNodes: [ASDisplayNode]) {
+    init(sharedContext: SharedAccountContext, accounts: (primary: (Account, Peer), other: [(Account, Peer, Int32)]), presentationData: PresentationData, canAddAccounts: Bool, switchToAccount: @escaping (AccountRecordId) -> Void, addAccount: @escaping () -> Void, cancel: @escaping () -> Void, sourceNodes: [ASDisplayNode]) {
         self.presentationData = presentationData
         self.cancel = cancel
         self.sourceNodes = sourceNodes

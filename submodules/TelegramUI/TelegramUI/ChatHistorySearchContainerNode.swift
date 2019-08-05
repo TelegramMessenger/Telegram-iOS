@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 private enum ChatHistorySearchEntryStableId: Hashable {
     case messageId(MessageId)
@@ -78,7 +79,7 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
         }
     }
     
-    func item(context: AccountContextImpl, peerId: PeerId, interaction: ChatControllerInteraction) -> ListViewItem {
+    func item(context: AccountContext, peerId: PeerId, interaction: ChatControllerInteraction) -> ListViewItem {
         switch self {
             case let .message(message, theme, strings, dateTimeFormat):
                 return ListMessageItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, context: context, chatLocation: .peer(peerId), controllerInteraction: interaction, message: message, selection: .none, displayHeader: true)
@@ -94,7 +95,7 @@ private struct ChatHistorySearchContainerTransition {
     let displayingResults: Bool
 }
 
-private func chatHistorySearchContainerPreparedTransition(from fromEntries: [ChatHistorySearchEntry], to toEntries: [ChatHistorySearchEntry], query: String, displayingResults: Bool, context: AccountContextImpl, peerId: PeerId, interaction: ChatControllerInteraction) -> ChatHistorySearchContainerTransition {
+private func chatHistorySearchContainerPreparedTransition(from fromEntries: [ChatHistorySearchEntry], to toEntries: [ChatHistorySearchEntry], query: String, displayingResults: Bool, context: AccountContext, peerId: PeerId, interaction: ChatControllerInteraction) -> ChatHistorySearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -105,7 +106,7 @@ private func chatHistorySearchContainerPreparedTransition(from fromEntries: [Cha
 }
 
 final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private let dimNode: ASDisplayNode
     private let listNode: ListView
@@ -135,7 +136,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     
     private var enqueuedTransitions: [(ChatHistorySearchContainerTransition, Bool)] = []
     
-    init(context: AccountContextImpl, peerId: PeerId, tagMask: MessageTags, interfaceInteraction: ChatControllerInteraction) {
+    init(context: AccountContext, peerId: PeerId, tagMask: MessageTags, interfaceInteraction: ChatControllerInteraction) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

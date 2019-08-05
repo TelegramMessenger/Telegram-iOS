@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramStringFormatting
 
 private let textFont: UIFont = Font.regular(14.0)
 

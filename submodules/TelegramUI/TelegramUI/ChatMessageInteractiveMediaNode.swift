@@ -9,6 +9,9 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import UniversalMediaPlayer
 import TextFormat
+import AccountContext
+import RadialStatusNode
+import StickerResources
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -53,7 +56,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private var badgeNode: ChatMessageInteractiveMediaBadge?
     private var tapRecognizer: UITapGestureRecognizer?
     
-    private var context: AccountContextImpl?
+    private var context: AccountContext?
     private var message: Message?
     private var media: Media?
     private var themeAndStrings: (PresentationTheme, PresentationStrings, String)?
@@ -200,7 +203,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ context: AccountContextImpl, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
+    func asyncLayout() -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
         let currentMessage = self.message
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
@@ -1201,12 +1204,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContextImpl, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
         return { context, theme, strings, dateTimeFormat, message, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
             var imageNode: ChatMessageInteractiveMediaNode
-            var imageLayout: (_ context: AccountContextImpl, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
+            var imageLayout: (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 imageNode = node
@@ -1306,7 +1309,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         if let videoNode = self.videoNode, let context = self.context, (self.automaticPlayback ?? false) && !isAnimated {
             return ({ timecode in
                 if let timecode = timecode {
-                    context.sharedContext.mediaManager.playlistControl(.playback(.pause))
+                    context.sharedContext.mediaManager.playlistControl(.playback(.pause), type: nil)
                     videoNode.playOnceWithSound(playAndRecord: false, seek: .timecode(timecode), actionAtEnd: actionAtEnd)
                 } else {
                     let _ = (context.sharedContext.mediaManager.globalMediaPlayerState

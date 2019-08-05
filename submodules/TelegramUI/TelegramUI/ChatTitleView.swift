@@ -9,6 +9,8 @@ import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
 import ActivityIndicator
+import TelegramStringFormatting
+import PeerPresenceStatusManager
 
 enum ChatTitleContent {
     case peer(peerView: PeerView, onlineMemberCount: Int32?)

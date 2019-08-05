@@ -14,6 +14,9 @@ import WebP
 #endif
 import TelegramUIPreferences
 import MediaResources
+import AccountContext
+import Tuples
+import ImageBlur
 
 private enum ResourceFileData {
     case data(Data)
@@ -1754,7 +1757,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
     }
 }
 
-func chatMessagePhotoStatus(context: AccountContextImpl, messageId: MessageId, photoReference: ImageMediaReference) -> Signal<MediaResourceStatus, NoError> {
+func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId, photoReference: ImageMediaReference) -> Signal<MediaResourceStatus, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         return context.fetchManager.fetchStatus(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: largestRepresentation.resource)
     } else {
@@ -1773,7 +1776,7 @@ public func standaloneChatMessagePhotoInteractiveFetched(account: Account, photo
     }
 }
 
-public func chatMessagePhotoInteractiveFetched(context: AccountContextImpl, photoReference: ImageMediaReference, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
+public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         return fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in

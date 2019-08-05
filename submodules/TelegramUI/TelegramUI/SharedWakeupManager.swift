@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramCallsUI
+import AccountContext
 
 private struct AccountTasks {
     let stateSynchronization: Bool

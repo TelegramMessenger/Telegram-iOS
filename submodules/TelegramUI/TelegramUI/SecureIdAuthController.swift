@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import TextFormat
 import ProgressNavigationButtonNode
+import AccountContext
 
 public enum SecureIdRequestResult: String {
     case success = "success"
@@ -67,7 +68,7 @@ final class SecureIdAuthController: ViewController {
         return self.displayNode as! SecureIdAuthControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let mode: SecureIdAuthControllerMode
     
@@ -83,7 +84,7 @@ final class SecureIdAuthController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(context: AccountContextImpl, mode: SecureIdAuthControllerMode) {
+    init(context: AccountContext, mode: SecureIdAuthControllerMode) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

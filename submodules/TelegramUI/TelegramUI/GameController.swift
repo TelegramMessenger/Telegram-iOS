@@ -6,19 +6,20 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import AccountContext
 
 final class GameController: ViewController {
     private var controllerNode: GameControllerNode {
         return self.displayNode as! GameControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let url: String
     private let message: Message
     
     private var presentationData: PresentationData
     
-    init(context: AccountContextImpl, url: String, message: Message) {
+    init(context: AccountContext, url: String, message: Message) {
         self.context = context
         self.url = url
         self.message = message

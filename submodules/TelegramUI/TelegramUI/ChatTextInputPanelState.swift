@@ -1,4 +1,5 @@
 import Foundation
+import AccountContext
 
 struct ChatTextInputPanelState: Equatable {
     let accessoryItems: [ChatTextInputAccessoryItem]

@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 final class ContactSelectionControllerNode: ASDisplayNode {
     var displayProgress: Bool = false {
@@ -21,7 +22,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode
     private let dimNode: ASDisplayNode
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var searchDisplayController: SearchDisplayController?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -35,7 +36,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var presentationData: PresentationData
     var presentationDataDisposable: Disposable?
     
-    init(context: AccountContextImpl, options: [ContactListAdditionalOption], displayDeviceContacts: Bool) {
+    init(context: AccountContext, options: [ContactListAdditionalOption], displayDeviceContacts: Bool) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.displayDeviceContacts = displayDeviceContacts

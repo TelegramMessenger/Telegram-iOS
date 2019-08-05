@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
+import AccountContext
 
 private enum ChannelDiscussionGroupSearchContent: Equatable {
     case peer(Peer)
@@ -95,7 +96,7 @@ private struct ChannelDiscussionGroupSearchContainerState: Equatable {
 }
 
 final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let openPeer: (Peer) -> Void
     
     private let dimNode: ASDisplayNode
@@ -112,7 +113,7 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, PresentationDateTimeFormat)>
     
-    init(context: AccountContextImpl, peers: [Peer], openPeer: @escaping (Peer) -> Void) {
+    init(context: AccountContext, peers: [Peer], openPeer: @escaping (Peer) -> Void) {
         self.context = context
         self.openPeer = openPeer
         

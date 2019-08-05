@@ -7,6 +7,7 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 public struct ChatListNodePeersFilter: OptionSet {
     public var rawValue: Int32
@@ -142,7 +143,7 @@ struct ChatListNodeState: Equatable {
     }
 }
 
-private func mappedInsertEntries(context: AccountContextImpl, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionInsertEntry]) -> [ListViewInsertItem] {
+private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionInsertEntry]) -> [ListViewInsertItem] {
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
             case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, presence, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd):
@@ -223,7 +224,7 @@ private func mappedInsertEntries(context: AccountContextImpl, nodeInteraction: C
     }
 }
 
-private func mappedUpdateEntries(context: AccountContextImpl, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
+private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
             case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, presence, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd):
@@ -262,7 +263,7 @@ private func mappedUpdateEntries(context: AccountContextImpl, nodeInteraction: C
     }
 }
 
-private func mappedChatListNodeViewListTransition(context: AccountContextImpl, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, transition: ChatListNodeViewTransition) -> ChatListNodeListViewTransition {
+private func mappedChatListNodeViewListTransition(context: AccountContext, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId, mode: ChatListNodeMode, transition: ChatListNodeViewTransition) -> ChatListNodeListViewTransition {
     return ChatListNodeListViewTransition(chatListView: transition.chatListView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(context: context, nodeInteraction: nodeInteraction, peerGroupId: peerGroupId, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange)
 }
 
@@ -305,7 +306,7 @@ enum ChatListNodeEmptyState: Equatable {
 
 final class ChatListNode: ListView {
     private let controlsHistoryPreload: Bool
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let groupId: PeerGroupId
     private let mode: ChatListNodeMode
     
@@ -382,7 +383,7 @@ final class ChatListNode: ListView {
     
     private var hapticFeedback: HapticFeedback?
     
-    init(context: AccountContextImpl, groupId: PeerGroupId, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
         self.groupId = groupId
         self.controlsHistoryPreload = controlsHistoryPreload

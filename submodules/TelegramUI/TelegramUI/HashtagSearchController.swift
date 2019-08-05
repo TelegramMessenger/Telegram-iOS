@@ -5,11 +5,13 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramBaseController
+import AccountContext
 
-final class HashtagSearchController: TelegramController {
+final class HashtagSearchController: TelegramBaseController {
     private let queue = Queue()
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let peer: Peer?
     private let query: String
     private var transitionDisposable: Disposable?
@@ -21,7 +23,7 @@ final class HashtagSearchController: TelegramController {
         return self.displayNode as! HashtagSearchControllerNode
     }
     
-    init(context: AccountContextImpl, peer: Peer?, query: String) {
+    init(context: AccountContext, peer: Peer?, query: String) {
         self.context = context
         self.peer = peer
         self.query = query

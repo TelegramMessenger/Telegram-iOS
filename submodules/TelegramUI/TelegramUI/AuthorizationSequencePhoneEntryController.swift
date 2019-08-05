@@ -7,13 +7,14 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
+import AccountContext
 
 final class AuthorizationSequencePhoneEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePhoneEntryControllerNode {
         return self.displayNode as! AuthorizationSequencePhoneEntryControllerNode
     }
     
-    private let sharedContext: SharedAccountContextImpl
+    private let sharedContext: SharedAccountContext
     private let isTestingEnvironment: Bool
     private let otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])
     private let network: Network
@@ -42,7 +43,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(sharedContext: SharedAccountContextImpl, isTestingEnvironment: Bool, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), network: Network, strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, isTestingEnvironment: Bool, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), network: Network, strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.isTestingEnvironment = isTestingEnvironment
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
@@ -156,7 +157,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 var actions: [TextAlertAction] = []
                 if let (current, _, _) = self.otherAccountPhoneNumbers.0, logInNumber != formatPhoneNumber(current) {
                     actions.append(TextAlertAction(type: .genericAction, title: self.strings.Login_PhoneNumberAlreadyAuthorizedSwitch, action: { [weak self] in
-                        self?.sharedContext.switchToAccount(id: id)
+                        self?.sharedContext.switchToAccount(id: id, fromSettingsController: nil, withChatListController: nil)
                         self?.back()
                     }))
                 }

@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import AccountContext
 
 private final class ConvertToSupergroupArguments {
     let convert: () -> Void
@@ -115,7 +116,7 @@ private func convertToSupergroupEntries(presentationData: PresentationData) -> [
     return entries
 }
 
-public func convertToSupergroupController(context: AccountContextImpl, peerId: PeerId) -> ViewController {
+public func convertToSupergroupController(context: AccountContext, peerId: PeerId) -> ViewController {
     var replaceControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     

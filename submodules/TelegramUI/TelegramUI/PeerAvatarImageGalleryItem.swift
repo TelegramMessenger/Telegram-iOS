@@ -6,6 +6,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
+import RadialStatusNode
+import ShareController
 
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
@@ -36,13 +39,13 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class PeerAvatarImageGalleryItem: GalleryItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let peer: Peer
     let presentationData: PresentationData
     let entry: AvatarGalleryEntry
     let delete: (() -> Void)?
     
-    init(context: AccountContextImpl, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
+    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
         self.context = context
         self.peer = peer
         self.presentationData = presentationData
@@ -88,7 +91,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
 }
 
 final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let peer: Peer
     
     private var entry: AvatarGalleryEntry?
@@ -104,7 +107,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContextImpl, presentationData: PresentationData, peer: Peer) {
+    init(context: AccountContext, presentationData: PresentationData, peer: Peer) {
         self.context = context
         self.peer = peer
         

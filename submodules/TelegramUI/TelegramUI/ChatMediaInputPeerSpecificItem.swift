@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import AvatarNode
 
 final class ChatMediaInputPeerSpecificItem: ListViewItem {
     let account: Account

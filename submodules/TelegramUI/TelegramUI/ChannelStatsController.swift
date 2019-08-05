@@ -7,19 +7,20 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
+import AccountContext
 
 final class ChannelStatsController: ViewController {
     private var controllerNode: ChannelStatsControllerNode {
         return self.displayNode as! ChannelStatsControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let url: String
     private let peerId: PeerId
     
     private var presentationData: PresentationData
     
-    init(context: AccountContextImpl, url: String, peerId: PeerId) {
+    init(context: AccountContext, url: String, peerId: PeerId) {
         self.context = context
         self.url = url
         self.peerId = peerId

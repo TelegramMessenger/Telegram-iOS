@@ -9,12 +9,14 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramUIPrivateModule
 import AccountContext
+import Tuples
+import StickerResources
 
 private enum NotificationContentAuthorizationError {
     case unauthorized
 }
 
-private var sharedAccountContext: SharedAccountContextImpl?
+private var sharedAccountContext: SharedAccountContext?
 
 private var installedSharedLogger = false
 

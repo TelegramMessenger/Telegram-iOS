@@ -4,13 +4,14 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 final class ChatSendMessageActionSheetController: ViewController {
     var controllerNode: ChatSendMessageActionSheetControllerNode {
         return self.displayNode as! ChatSendMessageActionSheetControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction?
     private let interfaceState: ChatPresentationInterfaceState
     private let sendButtonFrame: CGRect
@@ -25,7 +26,7 @@ final class ChatSendMessageActionSheetController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
 
-    init(context: AccountContextImpl, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, sendButtonFrame: CGRect, textInputNode: EditableTextNode, completion: @escaping () -> Void) {
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, sendButtonFrame: CGRect, textInputNode: EditableTextNode, completion: @escaping () -> Void) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.interfaceState = interfaceState

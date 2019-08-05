@@ -7,9 +7,11 @@ import SwiftSignalKit
 import TelegramCore
 import MessageUI
 import TelegramPresentationData
+import AccountContext
+import ShareController
 
 public class InviteContactsController: ViewController, MFMessageComposeViewControllerDelegate, UINavigationControllerDelegate {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private var contactsNode: InviteContactsControllerNode {
         return self.displayNode as! InviteContactsControllerNode
@@ -27,7 +29,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContextImpl) {
+    public init(context: AccountContext) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

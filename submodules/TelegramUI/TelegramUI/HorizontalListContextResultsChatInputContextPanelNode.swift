@@ -7,6 +7,7 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult
@@ -83,7 +84,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     private var enqueuedTransitions: [(HorizontalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var hasValidLayout = false
     
-    override init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.strings = strings
         
         self.separatorNode = ASDisplayNode()

@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import AccountContext
 
 enum BotCheckoutWebInteractionControllerIntent {
     case addPaymentMethod((BotCheckoutPaymentWebToken) -> Void)
@@ -17,7 +18,7 @@ final class BotCheckoutWebInteractionController: ViewController {
         return self.displayNode as! BotCheckoutWebInteractionControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let url: String
     private let intent: BotCheckoutWebInteractionControllerIntent
     
@@ -25,7 +26,7 @@ final class BotCheckoutWebInteractionController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    init(context: AccountContextImpl, url: String, intent: BotCheckoutWebInteractionControllerIntent) {
+    init(context: AccountContext, url: String, intent: BotCheckoutWebInteractionControllerIntent) {
         self.context = context
         self.url = url
         self.intent = intent

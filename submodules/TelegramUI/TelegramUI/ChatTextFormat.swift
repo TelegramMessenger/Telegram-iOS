@@ -1,5 +1,6 @@
 import Foundation
 import TextFormat
+import AccountContext
 
 func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, attribute: NSAttributedString.Key) -> ChatTextInputState {
     if !state.selectionRange.isEmpty {

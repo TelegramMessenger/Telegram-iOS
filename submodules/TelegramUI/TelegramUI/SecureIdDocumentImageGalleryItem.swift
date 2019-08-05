@@ -6,9 +6,10 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 class SecureIdDocumentGalleryItem: GalleryItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let secureIdContext: SecureIdAccessContext
@@ -17,7 +18,7 @@ class SecureIdDocumentGalleryItem: GalleryItem {
     let location: SecureIdDocumentGalleryEntryLocation
     let delete: () -> Void
     
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, resource: TelegramMediaResource, caption: String, location: SecureIdDocumentGalleryEntryLocation, delete: @escaping () -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, resource: TelegramMediaResource, caption: String, location: SecureIdDocumentGalleryEntryLocation, delete: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -56,14 +57,14 @@ class SecureIdDocumentGalleryItem: GalleryItem {
 }
 
 final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
     private let footerContentNode: SecureIdDocumentGalleryFooterContentNode
     
-    private var contextAndMedia: (AccountContextImpl, SecureIdAccessContext, TelegramMediaResource)?
+    private var contextAndMedia: (AccountContext, SecureIdAccessContext, TelegramMediaResource)?
     
     private var fetchDisposable = MetaDisposable()
     
@@ -73,7 +74,7 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         
         self.imageNode = TransformImageNode()

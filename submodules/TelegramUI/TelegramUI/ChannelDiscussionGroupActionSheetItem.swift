@@ -6,14 +6,16 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AvatarNode
+import AccountContext
 
 final class ChannelDiscussionGroupActionSheetItem: ActionSheetItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let channelPeer: Peer
     let groupPeer: Peer
     let strings: PresentationStrings
     
-    init(context: AccountContextImpl, channelPeer: Peer, groupPeer: Peer, strings: PresentationStrings) {
+    init(context: AccountContext, channelPeer: Peer, groupPeer: Peer, strings: PresentationStrings) {
         self.context = context
         self.channelPeer = channelPeer
         self.groupPeer = groupPeer
@@ -38,7 +40,7 @@ private final class ChannelDiscussionGroupActionSheetItemNode: ActionSheetItemNo
     private let groupAvatarNode: AvatarNode
     private let textNode: ImmediateTextNode
     
-    init(theme: ActionSheetControllerTheme, context: AccountContextImpl, channelPeer: Peer, groupPeer: Peer, strings: PresentationStrings) {
+    init(theme: ActionSheetControllerTheme, context: AccountContext, channelPeer: Peer, groupPeer: Peer, strings: PresentationStrings) {
         self.theme = theme
         
         self.channelAvatarNode = AvatarNode(font: avatarFont)

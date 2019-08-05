@@ -6,6 +6,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 private let leftInset: CGFloat = 16.0
 private let rightInset: CGFloat = 46.0
@@ -100,7 +101,7 @@ private final class ActionSheetItemNode: ASDisplayNode {
 }
 
 final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let sendButtonFrame: CGRect
     private let textFieldFrame: CGRect
@@ -129,7 +130,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private var validLayout: ContainerViewLayout?
     
-    init(context: AccountContextImpl, sendButtonFrame: CGRect, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, cancel: (() -> Void)?) {
+    init(context: AccountContext, sendButtonFrame: CGRect, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, cancel: (() -> Void)?) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.sendButtonFrame = sendButtonFrame

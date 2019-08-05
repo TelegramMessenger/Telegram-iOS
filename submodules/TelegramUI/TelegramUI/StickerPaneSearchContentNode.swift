@@ -9,6 +9,7 @@ import TelegramPresentationData
 import LegacyComponents
 import TelegramUIPrivateModule
 import MergeLists
+import AccountContext
 
 final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void
@@ -136,7 +137,7 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, theme: 
 }
 
 final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
     private var interaction: StickerPaneSearchInteraction?
@@ -167,7 +168,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     var deactivateSearchBar: (() -> Void)?
     var updateActivity: ((Bool) -> Void)?
     
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.inputNodeInteraction = inputNodeInteraction

@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
+import AccountContext
 
 enum BotCheckoutInfoControllerAddressFocus {
     case street1
@@ -27,7 +28,7 @@ final class BotCheckoutInfoController: ViewController {
         return super.displayNode as! BotCheckoutInfoControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let invoice: BotPaymentInvoice
     private let messageId: MessageId
     private let initialFormInfo: BotPaymentRequestedInfo
@@ -42,7 +43,7 @@ final class BotCheckoutInfoController: ViewController {
     private var doneItem: UIBarButtonItem?
     private var activityItem: UIBarButtonItem?
     
-    public init(context: AccountContextImpl, invoice: BotPaymentInvoice, messageId: MessageId, initialFormInfo: BotPaymentRequestedInfo, focus: BotCheckoutInfoControllerFocus, formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void) {
+    public init(context: AccountContext, invoice: BotPaymentInvoice, messageId: MessageId, initialFormInfo: BotPaymentRequestedInfo, focus: BotCheckoutInfoControllerFocus, formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void) {
         self.context = context
         self.invoice = invoice
         self.messageId = messageId
@@ -152,7 +153,7 @@ final class BotCheckoutInfoController: ViewController {
         self.controllerNode.verify()
     }
     
-    override open func dismiss(completion: (() -> Void)? = nil) {
+    override public func dismiss(completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
         self.controllerNode.animateOut(completion: completion)
     }

@@ -11,6 +11,7 @@ import MtProtoKitDynamic
 #endif
 import TelegramPresentationData
 import AccountContext
+import UrlEscaping
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId
@@ -140,7 +141,7 @@ public enum OpenURLContext {
     case chat
 }
 
-public func openExternalUrl(context: AccountContextImpl, urlContext: OpenURLContext = .generic, url: String, forceExternal: Bool = false, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
+public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext = .generic, url: String, forceExternal: Bool = false, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
     if forceExternal || url.lowercased().hasPrefix("tel:") || url.lowercased().hasPrefix("calshow:") {
         context.sharedContext.applicationBindings.openUrl(url)
         return

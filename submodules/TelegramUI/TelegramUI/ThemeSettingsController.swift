@@ -7,9 +7,10 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AccountContext
 
 private final class ThemeSettingsControllerArguments {
-    let context: AccountContextImpl
+    let context: AccountContext
     let selectTheme: (PresentationThemeReference) -> Void
     let selectFontSize: (PresentationFontSize) -> Void
     let openWallpaperSettings: () -> Void
@@ -20,7 +21,7 @@ private final class ThemeSettingsControllerArguments {
     let disableAnimations: (Bool) -> Void
     let selectAppIcon: (String) -> Void
     
-    init(context: AccountContextImpl, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, toggleColorSlider: @escaping (Bool) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, toggleColorSlider: @escaping (Bool) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void) {
         self.context = context
         self.selectTheme = selectTheme
         self.selectFontSize = selectFontSize
@@ -341,7 +342,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func themeSettingsController(context: AccountContextImpl, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
+public func themeSettingsController(context: AccountContext, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
     let initialState = ThemeSettingsState(displayColorSlider: false)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)

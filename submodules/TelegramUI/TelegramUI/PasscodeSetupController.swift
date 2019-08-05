@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import AccountContext
 
 enum PasscodeSetupControllerMode {
     case setup(change: Bool, PasscodeEntryFieldType)
@@ -17,7 +18,7 @@ final class PasscodeSetupController: ViewController {
         return self.displayNode as! PasscodeSetupControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var mode: PasscodeSetupControllerMode
     
     var complete: ((String, Bool) -> Void)?
@@ -29,7 +30,7 @@ final class PasscodeSetupController: ViewController {
     
     private var nextAction: UIBarButtonItem?
     
-    init(context: AccountContextImpl, mode: PasscodeSetupControllerMode) {
+    init(context: AccountContext, mode: PasscodeSetupControllerMode) {
         self.context = context
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

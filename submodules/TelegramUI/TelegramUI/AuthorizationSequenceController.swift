@@ -14,6 +14,7 @@ import MessageUI
 import CoreTelephony
 import TelegramPresentationData
 import TextFormat
+import AccountContext
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)
@@ -25,7 +26,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         return NavigationBarTheme(buttonColor: theme.rootController.navigationBar.buttonColor, disabledButtonColor: theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: theme.rootController.navigationBar.badgeBackgroundColor, badgeStrokeColor: theme.rootController.navigationBar.badgeStrokeColor, badgeTextColor: theme.rootController.navigationBar.badgeTextColor)
     }
     
-    private let sharedContext: SharedAccountContextImpl
+    private let sharedContext: SharedAccountContext
     private var account: UnauthorizedAccount
     private let otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])
     private let apiId: Int32
@@ -45,7 +46,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     }
     private var didSetReady = false
     
-    public init(sharedContext: SharedAccountContextImpl, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
+    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
         self.sharedContext = sharedContext
         self.account = account
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers

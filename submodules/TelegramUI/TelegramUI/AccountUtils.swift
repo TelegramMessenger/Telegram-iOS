@@ -3,8 +3,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountContext
 
-func activeAccountsAndPeers(context: AccountContextImpl) -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> {
+func activeAccountsAndPeers(context: AccountContext) -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> {
     let sharedContext = context.sharedContext
     return context.sharedContext.activeAccounts
     |> mapToSignal { primary, activeAccounts, _ -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> in

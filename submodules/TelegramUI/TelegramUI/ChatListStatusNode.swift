@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import LegacyComponents
+import RadialStatusNode
 
 enum ChatListStatusNodeState: Equatable {
     case none

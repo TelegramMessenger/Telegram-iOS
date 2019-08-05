@@ -7,6 +7,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramUIPrivateModule
 import AccountContext
+import ShareController
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 
@@ -198,7 +199,7 @@ public class ShareRootControllerImpl {
             |> take(1)
             
             let applicationInterface = account
-            |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContextImpl, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
+            |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContext, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
                 let limitsConfiguration = account.postbox.transaction { transaction -> LimitsConfiguration in
                     return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
                 }
@@ -206,7 +207,7 @@ public class ShareRootControllerImpl {
                 |> take(1)
                 |> deliverOnMainQueue
                 |> introduceError(ShareAuthorizationError.self)
-                |> map { sharedData, limitsConfiguration, data -> (AccountContextImpl, PostboxAccessChallengeData, [AccountWithInfo]) in
+                |> map { sharedData, limitsConfiguration, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
                     updateLegacyLocalization(strings: sharedContext.currentPresentationData.with({ $0 }).strings)
                     let context = AccountContextImpl(sharedContext: sharedContext, account: account, limitsConfiguration: limitsConfiguration)
                     return (context, data.data, otherAccounts)

@@ -9,12 +9,13 @@ import Display
 import TelegramPresentationData
 import TelegramUIPrivateModule
 import DeviceAccess
+import AccountContext
 
 func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContextImpl, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void) {
+func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void) {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     controller.captionsEnabled = captionsEnabled
@@ -39,7 +40,7 @@ func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: 
     controller.editingContext.setInitialCaption(initialCaption, entities: [])
 }
 
-func legacyAssetPicker(context: AccountContextImpl, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool, selectionLimit: Int) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
+func legacyAssetPicker(context: AccountContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool, selectionLimit: Int) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
     let isSecretChat = (peer?.id.namespace ?? 0) == Namespaces.Peer.SecretChat
     
     return Signal { subscriber in

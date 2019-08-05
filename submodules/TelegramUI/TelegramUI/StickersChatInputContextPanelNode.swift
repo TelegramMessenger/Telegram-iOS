@@ -7,6 +7,7 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 private struct StickersChatInputContextPanelEntryStableId: Hashable {
     let ids: [MediaId]
@@ -77,7 +78,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private var stickerPreviewController: StickerPreviewController?
     
-    override init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.strings = strings
         
         self.listView = ListView()

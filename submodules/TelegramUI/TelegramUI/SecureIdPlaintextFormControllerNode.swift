@@ -7,6 +7,7 @@ import Postbox
 import SwiftSignalKit
 import CoreTelephony
 import TelegramPresentationData
+import AccountContext
 
 private func cleanPhoneNumber(_ text: String?) -> String {
     var cleanNumber = ""
@@ -625,7 +626,7 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
 }
 
 struct SecureIdPlaintextFormControllerNodeInitParams {
-    let context: AccountContextImpl
+    let context: AccountContext
     let secureIdContext: SecureIdAccessContext
 }
 
@@ -643,7 +644,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let secureIdContext: SecureIdAccessContext
     
     var actionInputStateUpdated: ((SecureIdPlaintextFormInputState) -> Void)?

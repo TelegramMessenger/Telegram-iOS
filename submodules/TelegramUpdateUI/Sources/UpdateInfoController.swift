@@ -99,17 +99,17 @@ public func updateInfoController(context: AccountContext, appUpdateInfo: AppUpda
     actionsDisposable.add(navigateDisposable)
     
     let arguments = UpdateInfoControllerArguments(openAppStorePage: {
-        context.genericSharedContext.applicationBindings.openAppStorePage()
+        context.sharedContext.applicationBindings.openAppStorePage()
     }, linkAction: { action, itemLink in
         linkActionImpl?(action, itemLink)
     })
     
-    let signal = context.genericSharedContext.presentationData
+    let signal = context.sharedContext.presentationData
     |> deliverOnMainQueue
     |> map { presentationData -> (ItemListControllerState, (ItemListNodeState<UpdateInfoControllerEntry>, UpdateInfoControllerEntry.ItemGenerationArguments)) in
         let appIcon: PresentationAppIcon?
-        let appIcons = context.genericSharedContext.applicationBindings.getAvailableAlternateIcons()
-        if let alternateIconName = context.genericSharedContext.applicationBindings.getAlternateIconName() {
+        let appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons()
+        if let alternateIconName = context.sharedContext.applicationBindings.getAlternateIconName() {
             appIcon = appIcons.filter { $0.name == alternateIconName }.first
         } else {
             appIcon = appIcons.filter { $0.isDefault }.first
@@ -127,10 +127,10 @@ public func updateInfoController(context: AccountContext, appUpdateInfo: AppUpda
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(sharedContext: context.genericSharedContext, state: signal)
+    let controller = ItemListController(sharedContext: context.sharedContext, state: signal)
     linkActionImpl = { [weak controller, weak context] action, itemLink in
         if let strongController = controller, let context = context {
-            context.genericSharedContext.handleTextLinkAction(context: context, peerId: nil, navigateDisposable: navigateDisposable, controller: strongController, action: action, itemLink: itemLink)
+            context.sharedContext.handleTextLinkAction(context: context, peerId: nil, navigateDisposable: navigateDisposable, controller: strongController, action: action, itemLink: itemLink)
         }
     }
     dismissImpl = { [weak controller] in

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 enum ChatInputContextPanelPlacement {
     case overPanels
@@ -11,12 +12,12 @@ enum ChatInputContextPanelPlacement {
 }
 
 class ChatInputContextPanelNode: ASDisplayNode {
-    let context: AccountContextImpl
+    let context: AccountContext
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     var placement: ChatInputContextPanelPlacement = .overPanels
     var theme: PresentationTheme
     
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.theme = theme
         

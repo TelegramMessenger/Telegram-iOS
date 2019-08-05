@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
@@ -13,7 +14,7 @@ class ChatUnreadItem: ListViewItem {
     let presentationData: ChatPresentationData
     let header: ChatMessageDateHeader
     
-    init(index: MessageIndex, presentationData: ChatPresentationData, context: AccountContextImpl) {
+    init(index: MessageIndex, presentationData: ChatPresentationData, context: AccountContext) {
         self.index = index
         self.presentationData = presentationData
         self.header = ChatMessageDateHeader(timestamp: index.timestamp, presentationData: presentationData, context: context)

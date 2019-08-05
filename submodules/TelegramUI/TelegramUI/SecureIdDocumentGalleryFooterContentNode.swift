@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
+import AccountContext
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: .white)
 
@@ -15,7 +16,7 @@ private let titleFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
 
 final class SecureIdDocumentGalleryFooterContentNode: GalleryFooterContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
@@ -30,7 +31,7 @@ final class SecureIdDocumentGalleryFooterContentNode: GalleryFooterContentNode {
     
     var delete: (() -> Void)?
     
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.theme = theme
         self.strings = strings

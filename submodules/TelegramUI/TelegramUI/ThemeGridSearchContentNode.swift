@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 enum WallpaperSearchColor: CaseIterable {
     case blue
@@ -309,7 +310,7 @@ private struct ThemeGridSearchContext {
 }
 
 final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private let recentListNode: ListView
     private let gridNode: GridNode
@@ -337,7 +338,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         return self._isSearching.get()
     }
     
-    init(context: AccountContextImpl, openResult: @escaping (ChatContextResult) -> Void) {
+    init(context: AccountContext, openResult: @escaping (ChatContextResult) -> Void) {
         self.context = context
         self.queryPromise = Promise<WallpaperSearchQuery>(self.queryValue)
         

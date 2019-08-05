@@ -5,6 +5,7 @@ import TelegramCore
 import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
+import StickerResources
 
 final class StickerPackPreviewInteraction {
     var previewedItem: StickerPreviewPeekItem?

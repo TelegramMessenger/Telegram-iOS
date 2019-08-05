@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 
 public func addAccessibilityChildren(of node: ASDisplayNode, container: Any, to list: inout [Any]) {
     if node.isAccessibilityElement {
@@ -19,3 +20,43 @@ public func addAccessibilityChildren(of node: ASDisplayNode, container: Any, to 
     }
 }
 
+public func smartInvertColorsEnabled() -> Bool {
+    if #available(iOSApplicationExtension 11.0, iOS 11.0, *), UIAccessibility.isInvertColorsEnabled {
+        return true
+    } else {
+        return false
+    }
+}
+
+public func reduceMotionEnabled() -> Signal<Bool, NoError> {
+    return Signal { subscriber in
+        subscriber.putNext(UIAccessibility.isReduceMotionEnabled)
+        
+        let observer = NotificationCenter.default.addObserver(forName: UIAccessibility.reduceMotionStatusDidChangeNotification, object: nil, queue: .main, using: { _ in
+            subscriber.putNext(UIAccessibility.isReduceMotionEnabled)
+        })
+        
+        return ActionDisposable {
+            Queue.mainQueue().async {
+                NotificationCenter.default.removeObserver(observer)
+            }
+        }
+        } |> runOn(Queue.mainQueue())
+}
+
+func boldTextEnabled() -> Signal<Bool, NoError> {
+    return Signal { subscriber in
+        subscriber.putNext(UIAccessibility.isBoldTextEnabled)
+        
+        let observer = NotificationCenter.default.addObserver(forName: UIAccessibility.boldTextStatusDidChangeNotification, object: nil, queue: .main, using: { _ in
+            subscriber.putNext(UIAccessibility.isBoldTextEnabled)
+        })
+        
+        return ActionDisposable {
+            Queue.mainQueue().async {
+                NotificationCenter.default.removeObserver(observer)
+            }
+        }
+    }
+    |> runOn(Queue.mainQueue())
+}

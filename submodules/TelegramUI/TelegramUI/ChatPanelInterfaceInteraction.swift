@@ -4,6 +4,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import Display
+import AccountContext
 
 public enum ChatFinishMediaRecordingAction {
     case dismiss

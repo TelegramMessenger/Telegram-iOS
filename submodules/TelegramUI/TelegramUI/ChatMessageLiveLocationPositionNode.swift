@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import AvatarNode
 
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 24.0)!
 private let avatarBackgroundImage = UIImage(bundleImageName: "Chat/Message/LocationPin")?.precomposed()

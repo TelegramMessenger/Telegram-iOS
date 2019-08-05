@@ -6,6 +6,9 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramStringFormatting
+import AccountContext
+import RadialStatusNode
 
 private func mediaForMessage(_ message: Message) -> Media? {
     for media in message.media {
@@ -105,12 +108,12 @@ final class GridMessageItemSectionNode: ASDisplayNode {
 final class GridMessageItem: GridItem {
     fileprivate let theme: PresentationTheme
     private let strings: PresentationStrings
-    private let context: AccountContextImpl
+    private let context: AccountContext
     fileprivate let message: Message
     private let controllerInteraction: ChatControllerInteraction
     let section: GridSection?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, context: AccountContextImpl, message: Message, controllerInteraction: ChatControllerInteraction) {
+    init(theme: PresentationTheme, strings: PresentationStrings, context: AccountContext, message: Message, controllerInteraction: ChatControllerInteraction) {
         self.theme = theme
         self.strings = strings
         self.context = context
@@ -139,7 +142,7 @@ final class GridMessageItem: GridItem {
 }
 
 final class GridMessageItemNode: GridItemNode {
-    private var currentState: (AccountContextImpl, Media, CGSize)?
+    private var currentState: (AccountContext, Media, CGSize)?
     private let imageNode: TransformImageNode
     private(set) var messageId: MessageId?
     private var item: GridMessageItem?
@@ -188,7 +191,7 @@ final class GridMessageItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(recognizer)
     }
     
-    func setup(context: AccountContextImpl, item: GridMessageItem, media: Media, messageId: MessageId, controllerInteraction: ChatControllerInteraction, synchronousLoad: Bool) {
+    func setup(context: AccountContext, item: GridMessageItem, media: Media, messageId: MessageId, controllerInteraction: ChatControllerInteraction, synchronousLoad: Bool) {
         self.item = item
         
         if self.currentState == nil || self.currentState!.0 !== context || !self.currentState!.1.isEqual(to: media) {

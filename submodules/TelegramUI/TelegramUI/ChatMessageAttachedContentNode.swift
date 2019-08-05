@@ -9,6 +9,8 @@ import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
+import AccountContext
+import UrlEscaping
 
 private let titleFont = Font.semibold(15.0)
 private let textFont = Font.regular(15.0)
@@ -229,7 +231,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var additionalImageBadgeNode: ChatMessageInteractiveMediaBadge?
     private var linkHighlightingNode: LinkHighlightingNode?
     
-    private var context: AccountContextImpl?
+    private var context: AccountContext?
     private var message: Message?
     private var media: Media?
     private var theme: ChatPresentationThemeData?
@@ -271,7 +273,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         self.addSubnode(self.statusNode)
     }
     
-    func asyncLayout() -> (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: MediaAutoDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ context: AccountContextImpl, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ title: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ mediaBadge: String?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ constrainedSize: CGSize) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
+    func asyncLayout() -> (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: MediaAutoDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ context: AccountContext, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ title: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ mediaBadge: String?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ constrainedSize: CGSize) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let textAsyncLayout = TextNode.asyncLayout(self.textNode)
         let currentImage = self.media as? TelegramMediaImage
         let imageLayout = self.inlineImageNode.asyncLayout()

@@ -6,6 +6,8 @@ import TelegramCore
 import Display
 import TelegramPresentationData
 import MergeLists
+import AccountContext
+import AccountContext
 
 private struct HashtagChatInputContextPanelEntryStableId: Hashable {
     let text: String
@@ -60,7 +62,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     private var enqueuedTransitions: [(HashtagChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true

@@ -7,6 +7,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
+import ShareController
 
 private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()
@@ -25,12 +27,12 @@ private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
 final class GameControllerNode: ViewControllerTracingNode {
     private var webView: WKWebView?
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     var presentationData: PresentationData
     private let present: (ViewController, Any?) -> Void
     private let message: Message
     
-    init(context: AccountContextImpl, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: Message) {
+    init(context: AccountContext, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: Message) {
         self.context = context
         self.presentationData = presentationData
         self.present = present

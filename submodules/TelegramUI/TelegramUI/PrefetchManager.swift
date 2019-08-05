@@ -3,6 +3,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountContext
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()
@@ -20,7 +21,7 @@ private final class PrefetchManagerImpl {
     
     private var contexts: [MediaId: PrefetchMediaContext] = [:]
     
-    init(queue: Queue, sharedContext: SharedAccountContextImpl, account: Account, fetchManager: FetchManager) {
+    init(queue: Queue, sharedContext: SharedAccountContext, account: Account, fetchManager: FetchManager) {
         self.queue = queue
         self.account = account
         self.fetchManager = fetchManager
@@ -142,7 +143,7 @@ final class PrefetchManager {
     
     private let impl: QueueLocalObject<PrefetchManagerImpl>
     
-    init(sharedContext: SharedAccountContextImpl, account: Account, fetchManager: FetchManager) {
+    init(sharedContext: SharedAccountContext, account: Account, fetchManager: FetchManager) {
         let queue = Queue.mainQueue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {

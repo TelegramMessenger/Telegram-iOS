@@ -4,11 +4,12 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import AccountContext
 
 final class BotCheckoutPaymentShippingOptionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
     
-    init(context: AccountContextImpl, currency: String, options: [BotPaymentShippingOption], currentId: String?, applyValue: @escaping (String) -> Void) {
+    init(context: AccountContext, currency: String, options: [BotPaymentShippingOption], currentId: String?, applyValue: @escaping (String) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings

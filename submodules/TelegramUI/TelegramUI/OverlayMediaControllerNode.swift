@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
+import AccountContext
 
 private final class OverlayMediaControllerNodeView: UITracingLayerView {
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?

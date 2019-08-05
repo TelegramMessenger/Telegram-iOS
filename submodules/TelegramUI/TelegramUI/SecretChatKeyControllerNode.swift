@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import TextFormat
+import AccountContext
 
 private func processHexString(_ string: String) -> String {
     var result = ""
@@ -24,7 +25,7 @@ private func processHexString(_ string: String) -> String {
 }
 
 final class SecretChatKeyControllerNode: ViewControllerTracingNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let fingerprint: SecretChatKeyFingerprint
     private let peer: Peer
@@ -37,7 +38,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
     
     private var validImageSize: CGSize?
     
-    init(context: AccountContextImpl, presentationData: PresentationData, fingerprint: SecretChatKeyFingerprint, peer: Peer, getNavigationController: @escaping () -> NavigationController?) {
+    init(context: AccountContext, presentationData: PresentationData, fingerprint: SecretChatKeyFingerprint, peer: Peer, getNavigationController: @escaping () -> NavigationController?) {
         self.context = context
         self.presentationData = presentationData
         self.fingerprint = fingerprint

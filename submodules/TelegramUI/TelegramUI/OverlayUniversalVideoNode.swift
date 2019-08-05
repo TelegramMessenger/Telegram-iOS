@@ -6,6 +6,7 @@ import Display
 import TelegramCore
 import Postbox
 import TelegramAudio
+import AccountContext
 
 final class OverlayUniversalVideoNode: OverlayMediaItemNode {
     private let content: UniversalVideoContent
@@ -28,7 +29,7 @@ final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         }
     }
     
-    init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoContentManager, content: UniversalVideoContent, expand: @escaping () -> Void, close: @escaping () -> Void) {
+    init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, expand: @escaping () -> Void, close: @escaping () -> Void) {
         self.content = content
         var unminimizeImpl: (() -> Void)?
         var togglePlayPauseImpl: (() -> Void)?

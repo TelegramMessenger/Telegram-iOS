@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import MediaResources
 import LegacyComponents
+import AccountContext
 
 final class InstantVideoControllerRecordingStatus {
     let micLevel: Signal<Float, NoError>
@@ -91,7 +92,7 @@ func legacyInputMicPalette(from theme: PresentationTheme) -> TGModernConversatio
     return TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelSeparatorColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
 }
 
-func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContextImpl, peerId: PeerId, slowmodeState: ChatSlowmodeState?, send: @escaping (EnqueueMessage) -> Void, displaySlowmodeTooltip: @escaping (ASDisplayNode, CGRect) -> Void) -> InstantVideoController {
+func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContext, peerId: PeerId, slowmodeState: ChatSlowmodeState?, send: @escaping (EnqueueMessage) -> Void, displaySlowmodeTooltip: @escaping (ASDisplayNode, CGRect) -> Void) -> InstantVideoController {
     let legacyController = InstantVideoController(presentation: .custom, theme: theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
     legacyController.lockOrientation = true

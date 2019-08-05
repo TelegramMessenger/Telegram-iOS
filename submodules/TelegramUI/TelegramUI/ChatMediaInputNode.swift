@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 private struct PeerSpecificPackData {
     let peer: Peer
@@ -390,7 +391,7 @@ private final class CollectionListContainerNode: ASDisplayNode {
 }
 
 final class ChatMediaInputNode: ChatInputNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let peerId: PeerId?
     private let controllerInteraction: ChatControllerInteraction
     private let gifPaneIsActiveUpdated: (Bool) -> Void
@@ -435,7 +436,7 @@ final class ChatMediaInputNode: ChatInputNode {
         return self._ready.get()
     }
     
-    init(context: AccountContextImpl, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
+    init(context: AccountContext, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
         self.context = context
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction

@@ -6,9 +6,10 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPrivateModule
+import AccountContext
 
 public final class TelegramRootController: NavigationController {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     public var rootTabController: TabBarController?
     
@@ -21,7 +22,7 @@ public final class TelegramRootController: NavigationController {
     private var presentationDataDisposable: Disposable?
     private var presentationData: PresentationData
     
-    public init(context: AccountContextImpl) {
+    public init(context: AccountContext) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -81,7 +82,9 @@ public final class TelegramRootController: NavigationController {
     public func addRootControllers(showCallsTab: Bool) {
         let tabBarController = TabBarController(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
         let chatListController = ChatListController(context: self.context, groupId: .root, controlsHistoryPreload: true)
-        chatListController.tabBarItem.badgeValue = self.context.sharedContext.switchingData.chatListBadge
+        if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
+            chatListController.tabBarItem.badgeValue = sharedContext.switchingData.chatListBadge
+        }
         let callListController = CallListController(context: self.context, mode: .tab)
         
         var controllers: [ViewController] = []
@@ -97,9 +100,14 @@ public final class TelegramRootController: NavigationController {
         }
         controllers.append(chatListController)
         
-        let restoreSettignsController = self.context.sharedContext.switchingData.settingsController
+        var restoreSettignsController: (ViewController & SettingsController)?
+        if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
+            restoreSettignsController = sharedContext.switchingData.settingsController
+        }
         restoreSettignsController?.updateContext(context: self.context)
-        self.context.sharedContext.switchingData = (nil, nil, nil)
+        if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
+            sharedContext.switchingData = (nil, nil, nil)
+        }
         
         let accountSettingsController = restoreSettignsController ?? settingsController(context: self.context, accountManager: context.sharedContext.accountManager)
         controllers.append(accountSettingsController)

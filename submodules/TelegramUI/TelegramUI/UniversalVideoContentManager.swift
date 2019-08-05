@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import UniversalMediaPlayer
+import AccountContext
 
 private final class UniversalVideoContentSubscriber {
     let id: Int32
@@ -137,7 +138,7 @@ private final class UniversalVideoContentHolderCallbacks {
     }
 }
 
-final class UniversalVideoContentManager {
+final class UniversalVideoManagerImpl: UniversalVideoManager {
     private var holders: [AnyHashable: UniversalVideoContentHolder] = [:]
     private var holderCallbacks: [AnyHashable: UniversalVideoContentHolderCallbacks] = [:]
     

@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
+import AccountContext
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
@@ -54,7 +55,7 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
 }
 
 public class ContactsController: ViewController {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private var contactsNode: ContactsControllerNode {
         return self.displayNode as! ContactsControllerNode
@@ -83,7 +84,7 @@ public class ContactsController: ViewController {
         }
     }
     
-    public init(context: AccountContextImpl) {
+    public init(context: AccountContext) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

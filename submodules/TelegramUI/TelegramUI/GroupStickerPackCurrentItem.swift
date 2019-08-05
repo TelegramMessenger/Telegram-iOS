@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import ItemListUI
 import ActivityIndicator
+import StickerResources
 
 enum GroupStickerPackCurrentItemContent: Equatable {
     case notFound

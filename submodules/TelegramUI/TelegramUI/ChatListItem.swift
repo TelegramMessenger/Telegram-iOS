@@ -7,6 +7,12 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import AvatarNode
+import TelegramStringFormatting
+import AccountContext
+import PeerOnlineMarkerNode
+import LocalizedPeerData
+import PeerPresenceStatusManager
 
 enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
@@ -24,7 +30,7 @@ enum ChatListItemContent {
 
 class ChatListItem: ListViewItem {
     let presentationData: ChatListPresentationData
-    let context: AccountContextImpl
+    let context: AccountContext
     let peerGroupId: PeerGroupId
     let index: ChatListIndex
     let content: ChatListItemContent
@@ -43,7 +49,7 @@ class ChatListItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(presentationData: ChatListPresentationData, context: AccountContextImpl, peerGroupId: PeerGroupId, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
+    init(presentationData: ChatListPresentationData, context: AccountContext, peerGroupId: PeerGroupId, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.peerGroupId = peerGroupId
         self.context = context
@@ -294,7 +300,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let statusNode: ChatListStatusNode
     let badgeNode: ChatListBadgeNode
     let mentionBadgeNode: ChatListBadgeNode
-    let onlineNode: ChatListOnlineNode
+    let onlineNode: PeerOnlineMarkerNode
     let pinnedIconNode: ASImageNode
     var secretIconNode: ASImageNode?
     var credibilityIconNode: ASImageNode?
@@ -425,7 +431,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.statusNode = ChatListStatusNode()
         self.badgeNode = ChatListBadgeNode()
         self.mentionBadgeNode = ChatListBadgeNode()
-        self.onlineNode = ChatListOnlineNode()
+        self.onlineNode = PeerOnlineMarkerNode()
         
         self.pinnedIconNode = ASImageNode()
         self.pinnedIconNode.isLayerBacked = true

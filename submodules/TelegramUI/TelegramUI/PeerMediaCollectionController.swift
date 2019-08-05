@@ -8,11 +8,15 @@ import TelegramCore
 import SafariServices
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramBaseController
+import OverlayStatusController
+import AccountContext
+import ShareController
 
-public class PeerMediaCollectionController: TelegramController {
+public class PeerMediaCollectionController: TelegramBaseController {
     private var validLayout: ContainerViewLayout?
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let peerId: PeerId
     private let messageId: MessageId?
     
@@ -42,7 +46,7 @@ public class PeerMediaCollectionController: TelegramController {
     
     private var resolveUrlDisposable: MetaDisposable?
     
-    public init(context: AccountContextImpl, peerId: PeerId, messageId: MessageId? = nil) {
+    public init(context: AccountContext, peerId: PeerId, messageId: MessageId? = nil) {
         self.context = context
         self.peerId = peerId
         self.messageId = messageId
@@ -87,7 +91,7 @@ public class PeerMediaCollectionController: TelegramController {
                     return false
                 }
                 strongSelf.mediaCollectionDisplayNode.view.endEditing(true)
-                return openChatMessage(context: context, message: galleryMessage.message, standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: {
+                return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, message: galleryMessage.message, standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: {
                     self?.mediaCollectionDisplayNode.view.endEditing(true)
                 }, present: { c, a in
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -107,7 +111,7 @@ public class PeerMediaCollectionController: TelegramController {
                 }, callPeer: { peerId in
                     self?.controllerInteraction?.callPeer(peerId)
                 }, enqueueMessage: { _ in
-                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
+                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }))
             }
             return false
             }, openPeer: { [weak self] id, navigation, _ in

@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 public final class JoinLinkPreviewController: ViewController {
     private var controllerNode: JoinLinkPreviewControllerNode {
@@ -14,14 +15,14 @@ public final class JoinLinkPreviewController: ViewController {
     
     private var animatedIn = false
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let link: String
     private let navigateToPeer: (PeerId) -> Void
     private var presentationData: PresentationData
     
     private let disposable = MetaDisposable()
     
-    public init(context: AccountContextImpl, link: String, navigateToPeer: @escaping (PeerId) -> Void) {
+    public init(context: AccountContext, link: String, navigateToPeer: @escaping (PeerId) -> Void) {
         self.context = context
         self.link = link
         self.navigateToPeer = navigateToPeer

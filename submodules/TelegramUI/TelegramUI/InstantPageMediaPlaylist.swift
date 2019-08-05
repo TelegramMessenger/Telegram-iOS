@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountContext
 
 struct InstantPageMediaPlaylistItemId: SharedMediaPlaylistItemId {
     let index: Int

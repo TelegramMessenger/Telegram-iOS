@@ -8,6 +8,8 @@ import Display
 import TelegramPresentationData
 import TelegramUIPreferences
 import SafariServices
+import AccountContext
+import TemporaryCachedPeerDataManager
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -20,7 +22,7 @@ private final class ChatRecentActionsListOpaqueState {
 }
 
 final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let peer: Peer
     private var presentationData: PresentationData
     
@@ -71,7 +73,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var adminsState: ChannelMemberListState?
     private let banDisposables = DisposableDict<PeerId>()
     
-    init(context: AccountContextImpl, peer: Peer, presentationData: PresentationData, interaction: ChatRecentActionsInteraction, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
+    init(context: AccountContext, peer: Peer, presentationData: PresentationData, interaction: ChatRecentActionsInteraction, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
         self.context = context
         self.peer = peer
         self.presentationData = presentationData
@@ -144,7 +146,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     }
                 }
-                return openChatMessage(context: context, message: message, standalone: true, reverseMessageGalleryOrder: false, navigationController: navigationController, dismissInput: {
+                return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, message: message, standalone: true, reverseMessageGalleryOrder: false, navigationController: navigationController, dismissInput: {
                     //self?.chatDisplayNode.dismissInput()
                 }, present: { c, a in
                     self?.presentController(c, a)
@@ -171,7 +173,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, callPeer: { peerId in
                     self?.controllerInteraction?.callPeer(peerId)
                 }, enqueueMessage: { _ in
-                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
+                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }))
             }
             return false
         }, openPeer: { [weak self] peerId, _, message in

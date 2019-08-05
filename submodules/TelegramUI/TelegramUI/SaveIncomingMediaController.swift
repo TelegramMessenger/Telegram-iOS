@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AccountContext
 
 private enum PeerType {
     case contact
@@ -93,7 +94,7 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
     return entries
 }
 
-func saveIncomingMediaController(context: AccountContextImpl) -> ViewController {
+func saveIncomingMediaController(context: AccountContext) -> ViewController {
     let arguments = SaveIncomingMediaControllerArguments(toggle: { type in
         let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings

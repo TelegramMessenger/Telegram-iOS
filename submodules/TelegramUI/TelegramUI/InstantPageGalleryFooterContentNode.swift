@@ -8,13 +8,15 @@ import SwiftSignalKit
 import Photos
 import TelegramPresentationData
 import TextFormat
+import AccountContext
+import ShareController
 
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
 
 private let textFont = Font.regular(16.0)
 
 final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var shareMedia: AnyMediaReference?
@@ -27,7 +29,7 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
     var openUrl: ((InstantPageUrlItem) -> Void)?
     var openUrlOptions: ((InstantPageUrlItem) -> Void)?
     
-    init(context: AccountContextImpl, presentationData: PresentationData) {
+    init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings

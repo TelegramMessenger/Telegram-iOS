@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 import Display
-
+import ImageBlur
 import TelegramUIPrivateModule
 
 protocol PasscodeBackground {

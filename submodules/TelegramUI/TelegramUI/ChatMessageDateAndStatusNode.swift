@@ -5,6 +5,7 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 private let dateFont = UIFont.italicSystemFont(ofSize: 11.0)
 
@@ -127,7 +128,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         self.addSubnode(self.dateNode)
     }
     
-    func asyncLayout() -> (_ context: AccountContextImpl, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
+    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -506,7 +507,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ context: AccountContextImpl, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
+    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
         let currentLayout = node?.asyncLayout()
         return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize in
             let resultNode: ChatMessageDateAndStatusNode

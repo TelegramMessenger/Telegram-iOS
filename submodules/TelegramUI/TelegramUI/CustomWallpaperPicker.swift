@@ -7,8 +7,9 @@ import TelegramCore
 import LegacyComponents
 import TelegramUIPreferences
 import MediaResources
+import AccountContext
 
-func presentCustomWallpaperPicker(context: AccountContextImpl, present: @escaping (ViewController) -> Void) {
+func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (ViewController) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let _ = legacyWallpaperPicker(context: context, presentationData: presentationData).start(next: { generator in
         let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: presentationData.theme)
@@ -42,7 +43,7 @@ func presentCustomWallpaperPicker(context: AccountContextImpl, present: @escapin
     })
 }
 
-func uploadCustomWallpaper(context: AccountContextImpl, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, completion: @escaping () -> Void) {
+func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, completion: @escaping () -> Void) {
     let imageSignal: Signal<UIImage, NoError>
     switch wallpaper {
         case let .wallpaper(wallpaper, _):

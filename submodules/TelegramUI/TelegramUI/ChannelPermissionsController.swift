@@ -7,6 +7,9 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import OverlayStatusController
+import AccountContext
+import TemporaryCachedPeerDataManager
 
 private final class ChannelPermissionsControllerArguments {
     let account: Account
@@ -446,7 +449,7 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
     return entries
 }
 
-public func channelPermissionsController(context: AccountContextImpl, peerId originalPeerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
+public func channelPermissionsController(context: AccountContext, peerId originalPeerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
     let statePromise = ValuePromise(ChannelPermissionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelPermissionsControllerState())
     let updateState: ((ChannelPermissionsControllerState) -> ChannelPermissionsControllerState) -> Void = { f in

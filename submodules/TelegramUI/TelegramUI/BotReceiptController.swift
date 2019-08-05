@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import AccountContext
 
 final class BotReceiptController: ViewController {
     private var controllerNode: BotReceiptControllerNode {
@@ -17,7 +18,7 @@ final class BotReceiptController: ViewController {
         return self._ready
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let invoice: TelegramMediaInvoice
     private let messageId: MessageId
     
@@ -25,7 +26,7 @@ final class BotReceiptController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    init(context: AccountContextImpl, invoice: TelegramMediaInvoice, messageId: MessageId) {
+    init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId) {
         self.context = context
         self.invoice = invoice
         self.messageId = messageId

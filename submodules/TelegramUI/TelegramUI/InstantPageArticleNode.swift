@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
     let item: InstantPageArticleItem
@@ -26,7 +27,7 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
     
     private var fetchedDisposable = MetaDisposable()
     
-    init(context: AccountContextImpl, item: InstantPageArticleItem, webPage: TelegramMediaWebpage, strings: PresentationStrings, theme: InstantPageTheme, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: MediaId, rtl: Bool, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, item: InstantPageArticleItem, webPage: TelegramMediaWebpage, strings: PresentationStrings, theme: InstantPageTheme, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: MediaId, rtl: Bool, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.item = item
         self.url = url
         self.webpageId = webpageId

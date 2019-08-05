@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
 import ActivityIndicator
+import AccountContext
 
 private enum InviteContactsEntryId: Hashable {
     case option(index: Int)
@@ -217,7 +218,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
     let listNode: ListView
     private var activityIndicator: ActivityIndicator?
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var searchDisplayController: SearchDisplayController?
     
     private var validLayout: (ContainerViewLayout, CGFloat, CGFloat)?
@@ -273,7 +274,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
     
     private let currentContactIds = Atomic<[String]>(value: [])
     
-    init(context: AccountContextImpl) {
+    init(context: AccountContext) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

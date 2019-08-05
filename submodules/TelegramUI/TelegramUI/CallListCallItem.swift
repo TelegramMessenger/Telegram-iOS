@@ -7,6 +7,8 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import AvatarNode
+import TelegramStringFormatting
 
 private let titleFont = Font.regular(17.0)
 private let statusFont = Font.regular(14.0)

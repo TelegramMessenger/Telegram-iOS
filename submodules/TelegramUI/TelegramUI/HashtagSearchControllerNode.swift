@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 final class HashtagSearchControllerNode: ASDisplayNode {
     private let toolbarBackgroundNode: ASDisplayNode
@@ -13,7 +14,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     
     var chatController: ChatController?
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let query: String
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -22,7 +23,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     
     var navigationBar: NavigationBar?
     
-    init(context: AccountContextImpl, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.query = query
         self.listNode = ListView()

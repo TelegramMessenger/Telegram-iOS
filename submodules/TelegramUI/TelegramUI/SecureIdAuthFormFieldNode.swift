@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import TelegramStringFormatting
 
 enum SecureIdRequestedIdentityDocument: Int32 {
     case passport

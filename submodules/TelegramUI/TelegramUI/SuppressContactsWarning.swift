@@ -4,8 +4,9 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 import DeviceAccess
+import AccountContext
 
-func presentContactsWarningSuppression(context: AccountContextImpl, present: (ViewController, Any?) -> Void) {
+func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     present(textAlertController(context: context, title: presentationData.strings.Contacts_PermissionsSuppressWarningTitle, text: presentationData.strings.Contacts_PermissionsSuppressWarningText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Contacts_PermissionsKeepDisabled, action: {
         ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .contacts, value: Int32(Date().timeIntervalSince1970))

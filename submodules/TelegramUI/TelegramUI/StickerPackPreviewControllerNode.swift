@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import MergeLists
 import ActivityIndicator
 import TextFormat
+import AccountContext
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -43,7 +44,7 @@ private struct StickerPackPreviewGridTransaction {
 }
 
 final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let openShare: (() -> Void)?
     private var presentationData: PresentationData
     
@@ -85,7 +86,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private var hapticFeedback: HapticFeedback?
     
-    init(context: AccountContextImpl, openShare: (() -> Void)?, openMention: @escaping (String) -> Void) {
+    init(context: AccountContext, openShare: (() -> Void)?, openMention: @escaping (String) -> Void) {
         self.context = context
         self.openShare = openShare
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

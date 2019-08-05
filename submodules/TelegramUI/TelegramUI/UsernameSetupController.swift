@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import AccountContext
+import ShareController
 
 private final class UsernameSetupControllerArguments {
     let account: Account
@@ -219,7 +221,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func usernameSetupController(context: AccountContextImpl) -> ViewController {
+public func usernameSetupController(context: AccountContext) -> ViewController {
     let statePromise = ValuePromise(UsernameSetupControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: UsernameSetupControllerState())
     let updateState: ((UsernameSetupControllerState) -> UsernameSetupControllerState) -> Void = { f in

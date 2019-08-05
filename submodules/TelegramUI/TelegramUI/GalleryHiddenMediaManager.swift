@@ -3,28 +3,7 @@ import UIKit
 import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
-
-enum GalleryHiddenMediaId: Hashable {
-    case chat(AccountRecordId, MessageId, Media)
-    
-    static func ==(lhs: GalleryHiddenMediaId, rhs: GalleryHiddenMediaId) -> Bool {
-        switch lhs {
-            case let .chat(lhsAccountId ,lhsMessageId, lhsMedia):
-                if case let .chat(rhsAccountId, rhsMessageId, rhsMedia) = rhs, lhsAccountId == rhsAccountId, lhsMessageId == rhsMessageId, lhsMedia.isEqual(to: rhsMedia) {
-                        return true
-                    } else {
-                        return false
-                    }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case let .chat(_, messageId, _):
-                return messageId.hashValue
-        }
-    }
-}
+import AccountContext
 
 private final class GalleryHiddenMediaContext {
     private var ids = Set<Int32>()
@@ -42,10 +21,6 @@ private final class GalleryHiddenMediaContext {
     }
 }
 
-protocol GalleryHiddenMediaTarget: class {
-    func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> (UIView?, UIView?))?
-}
-
 private final class GalleryHiddenMediaTargetHolder {
     weak var target: GalleryHiddenMediaTarget?
     
@@ -54,7 +29,7 @@ private final class GalleryHiddenMediaTargetHolder {
     }
 }
 
-final class GalleryHiddenMediaManager {
+final class GalleryHiddenMediaManagerImpl: GalleryHiddenMediaManager {
     private var nextId: Int32 = 0
     private var contexts: [GalleryHiddenMediaId: GalleryHiddenMediaContext] = [:]
     

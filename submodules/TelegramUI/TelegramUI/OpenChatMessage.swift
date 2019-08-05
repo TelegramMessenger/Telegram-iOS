@@ -8,6 +8,7 @@ import PassKit
 import Lottie
 import TelegramUIPreferences
 import TelegramPresentationData
+import AccountContext
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -24,7 +25,7 @@ private enum ChatMessageGalleryControllerData {
     case other(Media)
 }
 
-private func chatMessageGalleryControllerData(context: AccountContextImpl, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
+private func chatMessageGalleryControllerData(context: AccountContext, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
     var galleryMedia: Media?
     var otherMedia: Media?
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
@@ -179,7 +180,7 @@ enum ChatMessagePreviewControllerData {
     case gallery(GalleryController)
 }
 
-func chatMessagePreviewControllerData(context: AccountContextImpl, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
+func chatMessagePreviewControllerData(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
     if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, synchronousLoad: true, actionInteraction: nil) {
         switch mediaData {
             case let .gallery(gallery):
@@ -193,17 +194,17 @@ func chatMessagePreviewControllerData(context: AccountContextImpl, message: Mess
     return nil
 }
 
-func openChatMessage(context: AccountContextImpl, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode = .default, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> (UIView?, UIView?))?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
-    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: mode, synchronousLoad: false, actionInteraction: actionInteraction) {
+func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
+    if let mediaData = chatMessageGalleryControllerData(context: params.context, message: params.message, navigationController: params.navigationController, standalone: params.standalone, reverseMessageGalleryOrder: params.reverseMessageGalleryOrder, mode: params.mode, synchronousLoad: false, actionInteraction: params.actionInteraction) {
         switch mediaData {
             case let .url(url):
-                openUrl(url)
+                params.openUrl(url)
                 return true
             case let .pass(file):
-                let _ = (context.account.postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true))
+                let _ = (params.context.account.postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true))
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { data in
-                    guard let navigationController = navigationController else {
+                    guard let navigationController = params.navigationController else {
                         return
                     }
                     if data.complete, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
@@ -218,104 +219,104 @@ func openChatMessage(context: AccountContextImpl, message: Message, standalone: 
                 })
                 return true
             case let .instantPage(gallery, centralIndex, galleryMedia):
-                setupTemporaryHiddenMedia(gallery.hiddenMedia, centralIndex, galleryMedia)
+                params.setupTemporaryHiddenMedia(gallery.hiddenMedia |> map { a -> Any? in a }, centralIndex, galleryMedia)
                 
-                dismissInput()
-                present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry in
+                params.dismissInput()
+                params.present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry in
                     var selectedTransitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
                     if entry.index == centralIndex {
-                        selectedTransitionNode = transitionNode(message.id, galleryMedia)
+                        selectedTransitionNode = params.transitionNode(params.message.id, galleryMedia)
                     }
                     if let selectedTransitionNode = selectedTransitionNode {
-                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
+                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil
                 }))
                 return true
             case let .map(mapMedia):
-                dismissInput()
+                params.dismissInput()
                 
-                let controller = legacyLocationController(message: message, mapMedia: mapMedia, context: context, isModal: modal, openPeer: { peer in
-                    openPeer(peer, .info)
+                let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, isModal: params.modal, openPeer: { peer in
+                    params.openPeer(peer, .info)
                 }, sendLiveLocation: { coordinate, period in
                     let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
-                    enqueueMessage(outMessage)
+                    params.enqueueMessage(outMessage)
                 }, stopLiveLocation: {
-                    context.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
-                }, openUrl: openUrl)
+                    params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
+                }, openUrl: params.openUrl)
                 
-                if modal {
-                    present(controller, nil)
+                if params.modal {
+                    params.present(controller, nil)
                 } else {
-                    navigationController?.pushViewController(controller)
+                    params.navigationController?.pushViewController(controller)
                 }
                 return true
             case let .stickerPack(reference):
-                let controller = StickerPackPreviewController(context: context, stickerPack: reference, parentNavigationController: navigationController)
-                controller.sendSticker = sendSticker
-                dismissInput()
-                present(controller, nil)
+                let controller = StickerPackPreviewController(context: params.context, stickerPack: reference, parentNavigationController: params.navigationController)
+                controller.sendSticker = params.sendSticker
+                params.dismissInput()
+                params.present(controller, nil)
                 return true
             case let .document(file):
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                if let rootController = navigationController?.view.window?.rootViewController {
-                    presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: context.account.postbox, file: file)
+                let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
+                if let rootController = params.navigationController?.view.window?.rootViewController {
+                    presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
                 }
                 return true
             case let .audio(file):
                 let location: PeerMessagesPlaylistLocation
                 let playerType: MediaManagerPlayerType
                 var control = SharedMediaPlayerControlAction.playback(.play)
-                if case let .timecode(time) = mode {
+                if case let .timecode(time) = params.mode {
                     control = .seek(time)
                 }
-                if (file.isVoice || file.isInstantVideo) && message.tags.contains(.voiceOrInstantVideo) {
-                    if standalone {
-                        location = .recentActions(message)
+                if (file.isVoice || file.isInstantVideo) && params.message.tags.contains(.voiceOrInstantVideo) {
+                    if params.standalone {
+                        location = .recentActions(params.message)
                     } else {
-                        location = .messages(peerId: message.id.peerId, tagMask: .voiceOrInstantVideo, at: message.id)
+                        location = .messages(peerId: params.message.id.peerId, tagMask: .voiceOrInstantVideo, at: params.message.id)
                     }
                     playerType = .voice
-                } else if file.isMusic && message.tags.contains(.music) {
-                    if standalone {
-                            location = .recentActions(message)
+                } else if file.isMusic && params.message.tags.contains(.music) {
+                    if params.standalone {
+                            location = .recentActions(params.message)
                     } else {
-                        location = .messages(peerId: message.id.peerId, tagMask: .music, at: message.id)
+                        location = .messages(peerId: params.message.id.peerId, tagMask: .music, at: params.message.id)
                     }
                     playerType = .music
                 } else {
-                    if standalone {
-                        location = .recentActions(message)
+                    if params.standalone {
+                        location = .recentActions(params.message)
                     } else {
-                        location = .singleMessage(message.id)
+                        location = .singleMessage(params.message.id)
                     }
                     playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
                 }
-                context.sharedContext.mediaManager.setPlaylist((context.account, PeerMessagesMediaPlaylist(postbox: context.account.postbox, network: context.account.network, location: location)), type: playerType, control: control)
+                params.context.sharedContext.mediaManager.setPlaylist((params.context.account, PeerMessagesMediaPlaylist(postbox: params.context.account.postbox, network: params.context.account.network, location: location)), type: playerType, control: control)
                 return true
             case let .gallery(gallery):
-                dismissInput()
-                present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
-                    let selectedTransitionNode = transitionNode(messageId, media)
+                params.dismissInput()
+                params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
+                    let selectedTransitionNode = params.transitionNode(messageId, media)
                     if let selectedTransitionNode = selectedTransitionNode {
-                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
+                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil
                 }))
                 return true
             case let .secretGallery(gallery):
-                dismissInput()
-                present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
-                    let selectedTransitionNode = transitionNode(messageId, media)
+                params.dismissInput()
+                params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
+                    let selectedTransitionNode = params.transitionNode(messageId, media)
                     if let selectedTransitionNode = selectedTransitionNode {
-                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
+                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil
                 }))
                 return true
             case let .other(otherMedia):
                 if let contact = otherMedia as? TelegramMediaContact {
-                    let _ = (context.account.postbox.transaction { transaction -> (Peer?, Bool?) in
+                    let _ = (params.context.account.postbox.transaction { transaction -> (Peer?, Bool?) in
                         if let peerId = contact.peerId {
                             return (transaction.getPeer(peerId), transaction.isPeerContact(peerId: peerId))
                         } else {
@@ -328,36 +329,36 @@ func openChatMessage(context: AccountContextImpl, message: Message, standalone: 
                         } else {
                             contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName, lastName: contact.lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: contact.phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
                         }
-                        let controller = deviceContactInfoController(context: context, subject: .vcard(peer, nil, contactData))
-                        navigationController?.pushViewController(controller)
+                        let controller = deviceContactInfoController(context: params.context, subject: .vcard(peer, nil, contactData))
+                        params.navigationController?.pushViewController(controller)
                     })
                     return true
                 }
             case let .chatAvatars(controller, media):
-                dismissInput()
-                chatAvatarHiddenMedia(controller.hiddenMedia |> map { value -> MessageId? in
+                params.dismissInput()
+                params.chatAvatarHiddenMedia(controller.hiddenMedia |> map { value -> MessageId? in
                     if value != nil {
-                        return message.id
+                        return params.message.id
                     } else {
                         return nil
                     }
                 }, media)
                 
-                present(controller, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
-                    if let selectedTransitionNode = transitionNode(message.id, media) {
-                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: addToTransitionSurface)
+                params.present(controller, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
+                    if let selectedTransitionNode = params.transitionNode(params.message.id, media) {
+                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil
                 }))
             case let .theme(media):
-                let controller = ThemePreviewController(context: context, previewTheme: makeDefaultDayPresentationTheme(accentColor: nil, serviceBackgroundColor: .black, baseColor: nil, day: true, preview: false), media: .message(message: MessageReference(message), media: media))
-                present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                let controller = ThemePreviewController(context: params.context, previewTheme: makeDefaultDayPresentationTheme(accentColor: nil, serviceBackgroundColor: .black, baseColor: nil, day: true, preview: false), media: .message(message: MessageReference(params.message), media: media))
+                params.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
     return false
 }
 
-func openChatInstantPage(context: AccountContextImpl, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) {
+func openChatInstantPage(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             if let _ = content.instantPage {
@@ -407,7 +408,7 @@ func openChatInstantPage(context: AccountContextImpl, message: Message, sourcePe
     }
 }
 
-func openChatWallpaper(context: AccountContextImpl, message: Message, present: @escaping (ViewController, Any?) -> Void) {
+func openChatWallpaper(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             let _ = (resolveUrl(account: context.account, url: content.url)

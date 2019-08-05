@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
+import AccountContext
 
 final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
@@ -16,7 +17,7 @@ final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetControlle
         return self._ready
     }
     
-    init(context: AccountContextImpl, currentValue: Int32, applyValue: @escaping (Int32) -> Void) {
+    init(context: AccountContext, currentValue: Int32, applyValue: @escaping (Int32) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings
