@@ -178,7 +178,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
                                     
                                     let unreadCount = values.count(for: .peer(peerView.peerId))
                                     if let unreadCount = unreadCount, unreadCount > 0 {
-                                        unread[peerView.peerId] = isMuted ? .muted(unreadCount) : .unmuted(unreadCount)
+                                        unread[peerView.peerId] = UnreadSearchBadge(unreadCount: unreadCount, isMuted: isMuted)
                                     }
                                     
                                     if let presence = peerView.peerPresences[peer.id] {

@@ -144,16 +144,8 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
             let badgeAttributedString: NSAttributedString
             if let unreadBadge = item.unreadBadge {
                 let badgeTextColor: UIColor
-                let unreadCount: Int32
-                let isMuted: Bool
-                switch unreadBadge {
-                case let .muted(_count):
-                    unreadCount = _count
-                    isMuted = true
-                case let .unmuted(_count):
-                    unreadCount = _count
-                    isMuted = false
-                }
+                let unreadCount: Int32 = unreadBadge.unreadCount
+                let isMuted: Bool = unreadBadge.isMuted
                 if isMuted {
                     currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.theme)
                     badgeTextColor = item.theme.chatList.unreadBadgeInactiveTextColor

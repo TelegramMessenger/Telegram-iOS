@@ -209,21 +209,7 @@ enum ChatListSearchEntryStableId: Hashable {
                 }
         }
     }
-    
-    var hashValue: Int {
-        switch self {
-            case let .localPeerId(peerId):
-                return peerId.hashValue
-            case let .globalPeerId(peerId):
-                return peerId.hashValue
-            case let .messageId(messageId):
-                return messageId.hashValue
-            case .addContact:
-                return 0
-        }
-    }
 }
-
 
 enum ChatListSearchEntry: Comparable, Identifiable {
     case localPeer(Peer, Peer?, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
@@ -371,7 +357,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 
                 var badge: ContactsPeerItemBadge?
                 if let unreadBadge = unreadBadge {
-                    badge = ContactsPeerItemBadge(count: unreadBadge.count, type: unreadBadge.isMuted ? .inactive : .active)
+                    badge = ContactsPeerItemBadge(count: unreadBadge.unreadCount, type: unreadBadge.isMuted ? .inactive : .active)
                 }
                 
                 let header:ChatListSearchItemHeader?
@@ -415,7 +401,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 
                 var badge: ContactsPeerItemBadge?
                 if let unreadBadge = unreadBadge {
-                    badge = ContactsPeerItemBadge(count: unreadBadge.count, type: unreadBadge.isMuted ? .inactive : .active)
+                    badge = ContactsPeerItemBadge(count: unreadBadge.unreadCount, type: unreadBadge.isMuted ? .inactive : .active)
                 }
                 
                 let header:ChatListSearchItemHeader?
@@ -649,7 +635,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                         
                         let unreadCount = values.count(for: .peer(peerView.peerId))
                         if let unreadCount = unreadCount, unreadCount > 0 {
-                            unread[peerView.peerId] = isMuted ? .muted(unreadCount) : .unmuted(unreadCount)
+                            unread[peerView.peerId] = UnreadSearchBadge(unreadCount: unreadCount, isMuted: isMuted)
                         }
                     }
                     return (peers: viewsAndPeers.1, unread: unread)
