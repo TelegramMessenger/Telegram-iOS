@@ -1119,7 +1119,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGroupObject()
         staticFlag &= child.get()->isStatic();
     }
 
-    group->setStatic(staticFlag && group->mTransform->isStatic());
+    if (group->mTransform) {
+        group->setStatic(staticFlag && group->mTransform->isStatic());
+    }
 
     return sharedGroup;
 }
