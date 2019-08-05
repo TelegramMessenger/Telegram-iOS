@@ -227,7 +227,7 @@ void LOTLayerItem::buildLayerNode()
         mLayerCNode->mClipPath.elmPtr = nullptr;
         mLayerCNode->mClipPath.ptCount = 0;
         mLayerCNode->mClipPath.elmCount = 0;
-        mLayerCNode->name = name().c_str();
+        mLayerCNode->keypath = name().c_str();
     }
     if (complexContent()) mLayerCNode->mAlpha = uchar(combinedAlpha() * 255.f);
     mLayerCNode->mVisible = visible();
