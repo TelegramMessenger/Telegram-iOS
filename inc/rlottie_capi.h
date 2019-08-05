@@ -164,9 +164,7 @@ LOT_EXPORT double lottie_animation_get_framerate(const Lottie_Animation *animati
  *  @ingroup Lottie_Animation
  *  @internal
  */
-LOT_EXPORT const LOTLayerNode * lottie_animation_render_tree(Lottie_Animation *animation,
-                                                             size_t frame_num,
-                                                             size_t width, size_t height);
+LOT_EXPORT const LOTLayerNode *lottie_animation_render_tree(Lottie_Animation *animation, size_t frame_num, size_t width, size_t height);
 
 /**
  *  @brief Maps position to frame number and returns it.
@@ -197,13 +195,7 @@ LOT_EXPORT size_t lottie_animation_get_frame_at_pos(const Lottie_Animation *anim
  *  @ingroup Lottie_Animation
  *  @internal
  */
-LOT_EXPORT void
-lottie_animation_render(Lottie_Animation *animation,
-                        size_t frame_num,
-                        uint32_t *buffer,
-                        size_t width,
-                        size_t height,
-                        size_t bytes_per_line);
+LOT_EXPORT void lottie_animation_render(Lottie_Animation *animation, size_t frame_num, uint32_t *buffer, size_t width, size_t height, size_t bytes_per_line);
 
 /**
  *  @brief Request to render the content of the frame @p frame_num to buffer @p buffer asynchronously.
@@ -220,13 +212,7 @@ lottie_animation_render(Lottie_Animation *animation,
  *  @ingroup Lottie_Animation
  *  @internal
  */
-LOT_EXPORT void
-lottie_animation_render_async(Lottie_Animation *animation,
-                              size_t frame_num,
-                              uint32_t *buffer,
-                              size_t width,
-                              size_t height,
-                              size_t bytes_per_line);
+LOT_EXPORT void lottie_animation_render_async(Lottie_Animation *animation, size_t frame_num, uint32_t *buffer, size_t width, size_t height, size_t bytes_per_line);
 
 /**
  *  @brief Request to finish the current async renderer job for this animation object.
@@ -243,8 +229,7 @@ lottie_animation_render_async(Lottie_Animation *animation,
  *  @ingroup Lottie_Animation
  *  @internal
  */
-LOT_EXPORT uint32_t *
-lottie_animation_render_flush(Lottie_Animation *animation);
+LOT_EXPORT uint32_t *lottie_animation_render_flush(Lottie_Animation *animation);
 
 
 /**
@@ -268,11 +253,7 @@ lottie_animation_render_flush(Lottie_Animation *animation);
  *  @ingroup Lottie_Animation
  *  @internal
  * */
-LOT_EXPORT void
-lottie_animation_property_override(Lottie_Animation *animation,
-                                   const Lottie_Animation_Property type,
-                                   const char *keypath,
-                                   ...);
+LOT_EXPORT void lottie_animation_property_override(Lottie_Animation *animation, const Lottie_Animation_Property type, const char *keypath, ...);
 
 #ifdef __cplusplus
 }
