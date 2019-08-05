@@ -9,7 +9,6 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
 import AccountContext
-import UnreadSearchBadge
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
