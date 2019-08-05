@@ -334,6 +334,7 @@
 		D0383EE4207D292800C45548 /* EmojisChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0383EE3207D292800C45548 /* EmojisChatInputContextPanelNode.swift */; };
 		D0383EE6207D299600C45548 /* EmojisChatInputPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0383EE5207D299600C45548 /* EmojisChatInputPanelItem.swift */; };
 		D038AC5322F88A3600320981 /* ImageBlur.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D038AC5222F88A3600320981 /* ImageBlur.framework */; };
+		D038ACD722F8BE9700320981 /* UnreadSearchBadge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D038ACD622F8BE9700320981 /* UnreadSearchBadge.framework */; };
 		D039FB1921711B5D00BD1BAD /* PlatformVideoContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D039FB1821711B5D00BD1BAD /* PlatformVideoContent.swift */; };
 		D03AA4DF202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4DE202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift */; };
 		D03AA4E5202DF8840056C405 /* StickerPreviewPeekContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4E4202DF8840056C405 /* StickerPreviewPeekContent.swift */; };
@@ -1556,6 +1557,7 @@
 		D0383EE3207D292800C45548 /* EmojisChatInputContextPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojisChatInputContextPanelNode.swift; sourceTree = "<group>"; };
 		D0383EE5207D299600C45548 /* EmojisChatInputPanelItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojisChatInputPanelItem.swift; sourceTree = "<group>"; };
 		D038AC5222F88A3600320981 /* ImageBlur.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ImageBlur.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D038ACD622F8BE9700320981 /* UnreadSearchBadge.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UnreadSearchBadge.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D039EB021DEAEFEE00886EBC /* ChatTextInputAudioRecordingOverlayButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputAudioRecordingOverlayButton.swift; sourceTree = "<group>"; };
 		D039EB071DEC725600886EBC /* ChatTextInputAudioRecordingTimeNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputAudioRecordingTimeNode.swift; sourceTree = "<group>"; };
 		D039EB091DEC7A8700886EBC /* ChatTextInputAudioRecordingCancelIndicator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputAudioRecordingCancelIndicator.swift; sourceTree = "<group>"; };
@@ -2344,6 +2346,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D038ACD722F8BE9700320981 /* UnreadSearchBadge.framework in Frameworks */,
 				D038AC5322F88A3600320981 /* ImageBlur.framework in Frameworks */,
 				D0879CCC22F876DD00C4D6B3 /* ChatListSearchRecentPeersNode.framework in Frameworks */,
 				D0879C9622F875C000C4D6B3 /* PeerPresenceStatusManager.framework in Frameworks */,
@@ -3427,6 +3430,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D038ACD622F8BE9700320981 /* UnreadSearchBadge.framework */,
 				D038AC5222F88A3600320981 /* ImageBlur.framework */,
 				D0879CCB22F876DD00C4D6B3 /* ChatListSearchRecentPeersNode.framework */,
 				D0879C9522F875C000C4D6B3 /* PeerPresenceStatusManager.framework */,
