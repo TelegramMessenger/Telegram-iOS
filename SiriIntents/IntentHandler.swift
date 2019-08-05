@@ -135,14 +135,48 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         return self
     }
     
-    private func resolve(persons: [INPerson]?, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
-        guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
-            completion([INPersonResolutionResult.notRequired()])
-            return
+    enum ResolveResult {
+        case success(INPerson)
+        case disambiguation([INPerson])
+        case needsValue
+        case noResult
+        case skip
+        
+        @available(iOSApplicationExtension 11.0, *)
+        var sendMessageRecipientResulutionResult: INSendMessageRecipientResolutionResult {
+            switch self {
+                case let .success(person):
+                    return .success(with: person)
+                case let .disambiguation(persons):
+                    return .disambiguation(with: persons)
+                case .needsValue:
+                    return .needsValue()
+                case .noResult:
+                    return .unsupported()
+                case .skip:
+                    return .notRequired()
+            }
         }
         
+        var personResolutionResult: INPersonResolutionResult {
+            switch self {
+                case let .success(person):
+                    return .success(with: person)
+                case let .disambiguation(persons):
+                    return .disambiguation(with: persons)
+                case .needsValue:
+                    return .needsValue()
+                case .noResult:
+                    return .unsupported()
+                case .skip:
+                    return .notRequired()
+            }
+        }
+    }
+    
+    private func resolve(persons: [INPerson]?, with completion: @escaping ([ResolveResult]) -> Void) {
         guard let initialPersons = persons, !initialPersons.isEmpty else {
-            completion([INPersonResolutionResult.needsValue()])
+            completion([.needsValue])
             return
         }
         
@@ -164,12 +198,12 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         }
         
         if filteredPersons.isEmpty {
-            completion([INPersonResolutionResult.needsValue()])
+            completion([.noResult])
             return
         }
         
         if filteredPersons.count > 1 {
-            completion([INPersonResolutionResult.disambiguation(with: filteredPersons)])
+            completion([.disambiguation(filteredPersons)])
             return
         }
         
@@ -182,7 +216,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         }
         
         if allPersonsAlreadyMatched {
-            completion([INPersonResolutionResult.success(with: filteredPersons[0])])
+            completion([.success(filteredPersons[0])])
             return
         }
         
@@ -221,30 +255,37 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         self.resolvePersonsDisposable.set((signal
         |> deliverOnMainQueue).start(next: { peers in
             if peers.isEmpty {
-                completion([INPersonResolutionResult.needsValue()])
+                completion([.needsValue])
             } else {
-                completion(peers.map { stableId, user in
-                    let person = personWithUser(stableId: stableId, user: user)
-                    return INPersonResolutionResult.success(with: person)
-                })
+                completion(peers.map { .success(personWithUser(stableId: $0, user: $1)) })
             }
         }, error: { error in
-            completion([INPersonResolutionResult.unsupported()])
+            completion([.skip])
         }))
     }
     
     // MARK: - INSendMessageIntentHandling
     
     func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
-        if #available(iOSApplicationExtension 11.0, *) {
-            if let peerId = intent.conversationIdentifier.flatMap(Int64.init) {
-                let account = self.accountPromise.get()
-                
-                let signal = account
-                |> introduceError(IntentHandlingError.self)
-                |> mapToSignal { account -> Signal<INPerson?, IntentHandlingError> in
-                    if let account = account {
-                        return matchingCloudContact(postbox: account.postbox, peerId: PeerId(peerId))
+        guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
+            completion([INPersonResolutionResult.notRequired()])
+            return
+        }
+        self.resolve(persons: intent.recipients, with: { result in
+            completion(result.map { $0.personResolutionResult })
+        })
+    }
+    
+    @available(iOSApplicationExtension 11.0, *)
+    func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INSendMessageRecipientResolutionResult]) -> Void) {
+        if let peerId = intent.conversationIdentifier.flatMap(Int64.init) {
+            let account = self.accountPromise.get()
+            
+            let signal = account
+            |> introduceError(IntentHandlingError.self)
+            |> mapToSignal { account -> Signal<INPerson?, IntentHandlingError> in
+                if let account = account {
+                    return matchingCloudContact(postbox: account.postbox, peerId: PeerId(peerId))
                         |> introduceError(IntentHandlingError.self)
                         |> map { user -> INPerson? in
                             if let user = user {
@@ -252,27 +293,30 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                             } else {
                                 return nil
                             }
-                        }
-                    } else {
-                        return .fail(.generic)
                     }
+                } else {
+                    return .fail(.generic)
                 }
-                
-                self.resolvePersonsDisposable.set((signal
-                |> deliverOnMainQueue).start(next: { person in
-                    if let person = person {
-                        completion([INPersonResolutionResult.success(with: person)])
-                    } else {
-                        completion([INPersonResolutionResult.needsValue()])
-                    }
-                }, error: { error in
-                    completion([INPersonResolutionResult.notRequired()])
-                }))
-            } else {
-                self.resolve(persons: intent.recipients, with: completion)
             }
+            
+            self.resolvePersonsDisposable.set((signal
+            |> deliverOnMainQueue).start(next: { person in
+                if let person = person {
+                    completion([INSendMessageRecipientResolutionResult.success(with: person)])
+                } else {
+                    completion([INSendMessageRecipientResolutionResult.needsValue()])
+                }
+            }, error: { error in
+                completion([INSendMessageRecipientResolutionResult.unsupported(forReason: .noAccount)])
+            }))
         } else {
-            self.resolve(persons: intent.recipients, with: completion)
+            guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
+                completion([INSendMessageRecipientResolutionResult.notRequired()])
+                return
+            }
+            self.resolve(persons: intent.recipients, with: { result in
+                completion(result.map { $0.sendMessageRecipientResulutionResult })
+            })
         }
     }
     
@@ -468,9 +512,15 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     // MARK: - INStartAudioCallIntentHandling
     
     func resolveContacts(for intent: INStartAudioCallIntent, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
-        self.resolve(persons: intent.contacts, with: completion)
+        guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
+            completion([INPersonResolutionResult.notRequired()])
+            return
+        }
+        self.resolve(persons: intent.contacts, with: { result in
+            completion(result.map { $0.personResolutionResult })
+        })
     }
-    
+        
     func handle(intent: INStartAudioCallIntent, completion: @escaping (INStartAudioCallIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
         |> take(1)
