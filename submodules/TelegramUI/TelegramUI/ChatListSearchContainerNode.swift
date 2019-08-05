@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
 import AccountContext
+import UnreadSearchBadge
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
@@ -1178,14 +1179,6 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private func clearRecentSearch() {
         let _ = (clearRecentlySearchedPeers(postbox: self.context.account.postbox)
         |> deliverOnMainQueue).start()
-    }
-    
-    func removePeerFromTopPeers(_ peerId: PeerId) {
-        self.recentListNode.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ChatListRecentPeersListItemNode {
-                itemNode.removePeer(peerId)
-            }
-        }
     }
     
     override func scrollToTop() {

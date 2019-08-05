@@ -22,6 +22,24 @@
       <FileRef
          location = "group:submodules/AccountContext/AccountContext_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/PeerPresenceStatusManager/PeerPresenceStatusManager_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LocalizedPeerData/LocalizedPeerData_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/UrlEscaping/UrlEscaping_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Tuples/Tuples_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ImageBlur/ImageBlur_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/SaveToCameraRoll/SaveToCameraRoll_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <Group
       location = "container:"
@@ -54,6 +72,17 @@
    </Group>
    <Group
       location = "container:"
+      name = "Media">
+      <Group
+         location = "container:"
+         name = "Resources">
+         <FileRef
+            location = "group:submodules/StickerResources/StickerResources_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+   </Group>
+   <Group
+      location = "container:"
       name = "Shared">
       <FileRef
          location = "group:submodules/LightweightAccountData/LightweightAccountData_Xcode.xcodeproj">
@@ -68,8 +97,54 @@
    <Group
       location = "container:"
       name = "UI Components">
+      <Group
+         location = "container:"
+         name = "Share">
+         <FileRef
+            location = "group:submodules/ShareController/ShareController_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Action Sheet">
+         <FileRef
+            location = "group:submodules/ActionSheetPeerItem/ActionSheetPeerItem_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "List">
+         <FileRef
+            location = "group:submodules/ItemListUI/ItemListUI_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/UnreadSearchBadge/UnreadSearchBadge_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ListSectionHeaderNode/ListSectionHeaderNode_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Peers">
+         <FileRef
+            location = "group:submodules/HorizontalPeerItem/HorizontalPeerItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ChatListSearchRecentPeersNode/ChatListSearchRecentPeersNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/PeerOnlineMarkerNode/PeerOnlineMarkerNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SelectablePeerNode/SelectablePeerNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/AvatarNode/AvatarNode_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
       <FileRef
-         location = "group:submodules/AvatarNode/AvatarNode_Xcode.xcodeproj">
+         location = "group:submodules/RadialStatusNode/RadialStatusNode_Xcode.xcodeproj">
       </FileRef>
       <FileRef
          location = "group:submodules/TelegramStringFormatting/TelegramStringFormatting_Xcode.xcodeproj">
@@ -126,19 +201,8 @@
          location = "group:submodules/RLottie/RLottie_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/ItemListUI/ItemListUI_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
          location = "group:submodules/TelegramBaseController/TelegramBaseController_Xcode.xcodeproj">
       </FileRef>
-   </Group>
-   <Group
-      location = "container:"
-      name = "UI">
-      <Group
-         location = "container:"
-         name = "Chat">
-      </Group>
    </Group>
    <FileRef
       location = "group:submodules/TelegramAudio/TelegramAudio_Xcode.xcodeproj">

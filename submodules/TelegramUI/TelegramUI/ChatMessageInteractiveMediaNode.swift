@@ -10,6 +10,8 @@ import TelegramUIPreferences
 import UniversalMediaPlayer
 import TextFormat
 import AccountContext
+import RadialStatusNode
+import StickerResources
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

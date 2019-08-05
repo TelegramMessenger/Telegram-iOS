@@ -11,6 +11,7 @@ import TelegramUIPreferences
 import ProgressNavigationButtonNode
 import MediaResources
 import AccountContext
+import RadialStatusNode
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool

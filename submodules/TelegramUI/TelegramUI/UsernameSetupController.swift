@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import ItemListUI
 import AccountContext
+import ShareController
 
 private final class UsernameSetupControllerArguments {
     let account: Account

@@ -8,6 +8,8 @@ import WebKit
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import RadialStatusNode
+import ShareController
 
 class ChatExternalFileGalleryItem: GalleryItem {
     let context: AccountContext

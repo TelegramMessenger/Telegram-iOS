@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import ActivityIndicator
 import AccountContext
+import ShareController
 
 final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext

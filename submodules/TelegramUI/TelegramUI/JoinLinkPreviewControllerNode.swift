@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import ShareController
 
 struct JoinLinkPreviewData {
     let isGroup: Bool

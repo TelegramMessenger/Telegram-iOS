@@ -9,6 +9,8 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramUIPrivateModule
 import AccountContext
+import Tuples
+import StickerResources
 
 private enum NotificationContentAuthorizationError {
     case unauthorized

@@ -12,6 +12,7 @@ import MtProtoKitDynamic
 import TelegramPresentationData
 import ItemListUI
 import AccountContext
+import UrlEscaping
 
 private func shareLink(for server: ProxyServerSettings) -> String {
     var link: String

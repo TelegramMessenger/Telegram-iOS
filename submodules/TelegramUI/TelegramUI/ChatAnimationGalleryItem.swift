@@ -9,6 +9,8 @@ import Lottie
 import TelegramPresentationData
 import AnimationUI
 import AccountContext
+import RadialStatusNode
+import StickerResources
 
 class ChatAnimationGalleryItem: GalleryItem {
     let context: AccountContext

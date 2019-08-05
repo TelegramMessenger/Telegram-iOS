@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import StickerResources
 
 final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let context: AccountContext

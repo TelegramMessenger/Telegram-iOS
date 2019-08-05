@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import AccountContext
+import LocalizedPeerData
 
 struct ChatMessageItemWidthFill {
     let compactInset: CGFloat

@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import AccountContext
+import ShareController
 
 func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, sendMessagesWithSignals: @escaping ([Any]?) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }

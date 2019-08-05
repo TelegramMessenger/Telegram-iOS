@@ -4,6 +4,7 @@ import TelegramCore
 import CoreLocation
 import MapKit
 import AccountContext
+import UrlEscaping
 
 enum OpenInItem {
     case url(url: String)

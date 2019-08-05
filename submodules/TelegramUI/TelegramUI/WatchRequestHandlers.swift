@@ -7,6 +7,7 @@ import LegacyComponents
 import WatchCommon
 import TelegramPresentationData
 import AvatarNode
+import StickerResources
 
 let allWatchRequestHandlers: [AnyClass] = [
     WatchChatListHandler.self,

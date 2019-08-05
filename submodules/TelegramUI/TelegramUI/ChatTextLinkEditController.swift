@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import UrlEscaping
 
 private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     private var theme: PresentationTheme

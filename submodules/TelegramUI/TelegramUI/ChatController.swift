@@ -18,6 +18,8 @@ import AccountContext
 import TelegramStringFormatting
 import OverlayStatusController
 import DeviceLocationManager
+import ShareController
+import UrlEscaping
 
 public enum ChatControllerPeekActions {
     case standard

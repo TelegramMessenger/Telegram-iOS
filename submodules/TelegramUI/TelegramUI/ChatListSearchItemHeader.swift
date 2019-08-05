@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import TelegramPresentationData
+import ListSectionHeaderNode
 
 enum ChatListSearchItemHeaderType: Int32 {
     case localPeers

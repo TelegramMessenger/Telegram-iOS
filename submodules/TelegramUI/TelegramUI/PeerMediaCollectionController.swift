@@ -11,6 +11,7 @@ import TelegramUIPreferences
 import TelegramBaseController
 import OverlayStatusController
 import AccountContext
+import ShareController
 
 public class PeerMediaCollectionController: TelegramBaseController {
     private var validLayout: ContainerViewLayout?

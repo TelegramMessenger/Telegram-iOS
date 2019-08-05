@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import ItemListUI
 import OverlayStatusController
 import AccountContext
+import ShareController
 
 private final class ChannelVisibilityControllerArguments {
     let account: Account

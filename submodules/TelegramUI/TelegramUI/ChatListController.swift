@@ -795,8 +795,6 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
                             
                             if let strongSelf = self {
                                 let _ = removeRecentPeer(account: strongSelf.context.account, peerId: peer.id).start()
-                                let searchContainer = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode
-                                searchContainer?.removePeerFromTopPeers(peer.id)
                             }
                         })
                     ]),

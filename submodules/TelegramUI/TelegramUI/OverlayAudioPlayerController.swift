@@ -6,6 +6,7 @@ import Display
 import SwiftSignalKit
 import TelegramUIPreferences
 import AccountContext
+import ShareController
 
 final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayerController {
     private let context: AccountContext

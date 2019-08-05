@@ -15,6 +15,8 @@ import WebP
 import TelegramUIPreferences
 import MediaResources
 import AccountContext
+import Tuples
+import ImageBlur
 
 private enum ResourceFileData {
     case data(Data)

@@ -8,6 +8,7 @@ import Display
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import LocalizedPeerData
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()

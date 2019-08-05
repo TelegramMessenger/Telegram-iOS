@@ -6,6 +6,7 @@ import SwiftSignalKit
 import UniversalMediaPlayer
 import LegacyComponents
 import AccountContext
+import RadialStatusNode
 
 private func setupArrowFrame(size: CGSize, edge: OverlayMediaItemMinimizationEdge, view: TGEmbedPIPPullArrowView) {
     let arrowX: CGFloat

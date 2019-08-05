@@ -11,6 +11,7 @@ import MtProtoKitDynamic
 #endif
 import TelegramPresentationData
 import AccountContext
+import UrlEscaping
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId

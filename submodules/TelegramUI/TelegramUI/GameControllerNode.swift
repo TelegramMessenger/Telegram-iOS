@@ -8,6 +8,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import ShareController
 
 private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()

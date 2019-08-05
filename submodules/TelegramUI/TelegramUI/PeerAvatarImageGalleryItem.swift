@@ -7,6 +7,8 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import RadialStatusNode
+import ShareController
 
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account

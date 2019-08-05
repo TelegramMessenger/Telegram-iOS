@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import AccountContext
+import LocalizedPeerData
 
 private enum NotificationPeerExceptionSection: Int32 {
     case remove

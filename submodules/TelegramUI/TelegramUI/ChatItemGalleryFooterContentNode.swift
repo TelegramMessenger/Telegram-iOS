@@ -10,6 +10,8 @@ import TelegramPresentationData
 import TextFormat
 import TelegramStringFormatting
 import AccountContext
+import RadialStatusNode
+import ShareController
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)

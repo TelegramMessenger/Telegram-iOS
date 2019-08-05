@@ -9,6 +9,8 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AvatarNode
 import AccountContext
+import LocalizedPeerData
+import StickerResources
 
 public final class ChatMessageNotificationItem: NotificationItem {
     let context: AccountContext

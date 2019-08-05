@@ -11,6 +11,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramAudio
 import AccountContext
+import LocalizedPeerData
 
 final class CallControllerNode: ASDisplayNode {
     private let sharedContext: SharedAccountContext

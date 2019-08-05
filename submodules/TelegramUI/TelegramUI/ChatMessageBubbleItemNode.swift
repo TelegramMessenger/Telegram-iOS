@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import TextFormat
 import AccountContext
 import TemporaryCachedPeerDataManager
+import LocalizedPeerData
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []

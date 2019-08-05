@@ -9,16 +9,6 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 
-public struct ImageRepresentationWithReference: Equatable {
-    public let representation: TelegramMediaImageRepresentation
-    public let reference: MediaResourceReference
-    
-    public init(representation: TelegramMediaImageRepresentation, reference: MediaResourceReference) {
-        self.representation = representation
-        self.reference = reference
-    }
-}
-
 enum AvatarGalleryEntry: Equatable {
     case topImage([ImageRepresentationWithReference], GalleryItemIndexData?)
     case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], Peer, Int32, GalleryItemIndexData?, MessageId?)

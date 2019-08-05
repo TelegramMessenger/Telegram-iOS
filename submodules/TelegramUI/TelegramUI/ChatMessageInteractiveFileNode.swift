@@ -8,6 +8,7 @@ import TelegramCore
 import UniversalMediaPlayer
 import TelegramPresentationData
 import AccountContext
+import RadialStatusNode
 
 private struct FetchControls {
     let fetch: () -> Void

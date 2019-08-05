@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import RadialStatusNode
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

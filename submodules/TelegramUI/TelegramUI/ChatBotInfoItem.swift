@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TextFormat
+import UrlEscaping
 
 private let messageFont = Font.regular(17.0)
 private let messageBoldFont = Font.semibold(17.0)

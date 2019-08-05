@@ -10,6 +10,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
 import AccountContext
+import UrlEscaping
 
 private let titleFont = Font.semibold(15.0)
 private let textFont = Font.regular(15.0)

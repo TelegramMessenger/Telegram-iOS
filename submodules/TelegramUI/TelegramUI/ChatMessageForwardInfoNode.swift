@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import LocalizedPeerData
 
 private let prefixFont = Font.regular(13.0)
 private let peerFont = Font.medium(13.0)

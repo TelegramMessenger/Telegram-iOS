@@ -9,6 +9,8 @@ import SafariServices
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import ShareController
+import SaveToCameraRoll
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext

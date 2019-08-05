@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import AccountContext
+import ShareController
 
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)

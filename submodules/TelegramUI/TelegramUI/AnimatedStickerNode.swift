@@ -7,6 +7,8 @@ import Display
 import AsyncDisplayKit
 import RLottie
 import GZip
+import Tuples
+import StickerResources
 
 private final class AnimationFrameCache {
     private var cache: [Int: NSPurgeableData] = [:]
