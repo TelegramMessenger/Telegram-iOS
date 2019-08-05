@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 private func stringForDocumentType(_ type: SecureIdRequestedIdentityDocument, strings: PresentationStrings) -> String {
     switch type {
@@ -80,7 +81,7 @@ final class SecureIdDocumentTypeSelectionController: ActionSheetController {
         return self._ready
     }
     
-    init(context: AccountContextImpl, field: SecureIdParsedRequestedFormField, currentValues: [SecureIdValueWithContext], completion: @escaping (SecureIdDocumentFormRequestedData) -> Void) {
+    init(context: AccountContext, field: SecureIdParsedRequestedFormField, currentValues: [SecureIdValueWithContext], completion: @escaping (SecureIdDocumentFormRequestedData) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings

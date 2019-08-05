@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 private let searchBarHeight: CGFloat = 52.0
 
@@ -26,7 +27,7 @@ protocol PaneSearchContentNode {
 }
 
 final class PaneSearchContainerNode: ASDisplayNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let mode: ChatMediaInputSearchMode
     public private(set) var contentNode: PaneSearchContentNode & ASDisplayNode
     private let controllerInteraction: ChatControllerInteraction
@@ -41,7 +42,7 @@ final class PaneSearchContainerNode: ASDisplayNode {
         return self.contentNode.ready
     }
     
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<[FileMediaReference]?>, cancel: @escaping () -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<[FileMediaReference]?>, cancel: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.controllerInteraction = controllerInteraction

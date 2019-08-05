@@ -5,6 +5,8 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AvatarNode
+import AccountContext
 
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
 
@@ -34,7 +36,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     private let peerNodes: [SelectablePeerNode]
     private let moreNode: MoreNode?
     
-    init(context: AccountContextImpl, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], isGroup: Bool, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], isGroup: Bool, theme: PresentationTheme, strings: PresentationStrings) {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.titleNode = ASTextNode()
         self.countNode = ASTextNode()

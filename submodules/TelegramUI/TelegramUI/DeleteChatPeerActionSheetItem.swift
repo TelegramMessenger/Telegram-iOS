@@ -4,6 +4,8 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AvatarNode
+import AccountContext
 
 enum DeleteChatPeerAction {
     case delete
@@ -11,13 +13,13 @@ enum DeleteChatPeerAction {
 }
 
 final class DeleteChatPeerActionSheetItem: ActionSheetItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let peer: Peer
     let chatPeer: Peer
     let action: DeleteChatPeerAction
     let strings: PresentationStrings
     
-    init(context: AccountContextImpl, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction, strings: PresentationStrings) {
+    init(context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction, strings: PresentationStrings) {
         self.context = context
         self.peer = peer
         self.chatPeer = chatPeer
@@ -44,7 +46,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
     
     private let accessibilityArea: AccessibilityAreaNode
     
-    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, context: AccountContextImpl, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction) {
+    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction) {
         self.theme = theme
         self.strings = strings
         

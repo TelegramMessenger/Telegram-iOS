@@ -7,6 +7,8 @@ import Display
 import DeviceAccess
 import TelegramPresentationData
 import AccountContext
+import LiveLocationManager
+import TemporaryCachedPeerDataManager
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -94,9 +96,9 @@ private final class DeviceSpecificContactImportContexts {
 }
 
 public final class AccountContextImpl: AccountContext {
-    public let sharedContext: SharedAccountContextImpl
-    public var genericSharedContext: SharedAccountContext {
-        return self.sharedContext
+    public let sharedContextImpl: SharedAccountContextImpl
+    public var sharedContext: SharedAccountContext {
+        return self.sharedContextImpl
     }
     public let account: Account
     
@@ -105,12 +107,12 @@ public final class AccountContextImpl: AccountContext {
     
     public var keyShortcutsController: KeyShortcutsController?
     
-    let downloadedMediaStoreManager: DownloadedMediaStoreManager
+    public let downloadedMediaStoreManager: DownloadedMediaStoreManager
     
     public let liveLocationManager: LiveLocationManager?
-    let wallpaperUploadManager: WallpaperUploadManager?
+    public let wallpaperUploadManager: WallpaperUploadManager?
     
-    let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
+    public let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
     
     public let currentLimitsConfiguration: Atomic<LimitsConfiguration>
     private let _limitsConfiguration = Promise<LimitsConfiguration>()
@@ -127,20 +129,20 @@ public final class AccountContextImpl: AccountContext {
     private var managedAppSpecificContactsDisposable: Disposable?
     
     public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration) {
-        self.sharedContext = sharedContext
+        self.sharedContextImpl = sharedContext
         self.account = account
         
-        self.downloadedMediaStoreManager = DownloadedMediaStoreManager(postbox: account.postbox, accountManager: sharedContext.accountManager)
+        self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
-        if let locationManager = self.sharedContext.locationManager {
-            self.liveLocationManager = LiveLocationManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, viewTracker: account.viewTracker, stateManager: account.stateManager, locationManager: locationManager, inForeground: self.sharedContext.applicationBindings.applicationInForeground)
+        if let locationManager = self.sharedContextImpl.locationManager {
+            self.liveLocationManager = LiveLocationManagerImpl(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, viewTracker: account.viewTracker, stateManager: account.stateManager, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
         } else {
             self.liveLocationManager = nil
         }
-        self.fetchManager = FetchManager(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
+        self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
         if sharedContext.applicationBindings.isMainApp {
-            self.prefetchManager = PrefetchManager(sharedContext: sharedContext, account: account, fetchManager: fetchManager)
-            self.wallpaperUploadManager = WallpaperUploadManager(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
+            self.prefetchManager = PrefetchManager(sharedContext: sharedContext, account: account, fetchManager: self.fetchManager)
+            self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
         } else {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil

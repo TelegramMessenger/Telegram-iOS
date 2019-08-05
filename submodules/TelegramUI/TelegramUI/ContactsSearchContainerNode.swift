@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
+import AccountContext
 
 private enum ContactListSearchGroup {
     case contacts
@@ -127,7 +128,7 @@ struct ContactsSearchCategories: OptionSet {
 }
 
 final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let openPeer: (ContactListPeer) -> Void
     
     private let dimNode: ASDisplayNode
@@ -142,7 +143,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     private var containerViewLayout: (ContainerViewLayout, CGFloat)?
     private var enqueuedTransitions: [ContactListSearchContainerTransition] = []
     
-    init(context: AccountContextImpl, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], openPeer: @escaping (ContactListPeer) -> Void) {
+    init(context: AccountContext, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], openPeer: @escaping (ContactListPeer) -> Void) {
         self.context = context
         self.openPeer = openPeer
         

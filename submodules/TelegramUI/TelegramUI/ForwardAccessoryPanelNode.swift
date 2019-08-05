@@ -6,6 +6,7 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
+import AccountContext
 
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
     for media in message.media {
@@ -78,7 +79,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     var theme: PresentationTheme
     
-    init(context: AccountContextImpl, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings) {
         self.messageIds = messageIds
         self.theme = theme
         

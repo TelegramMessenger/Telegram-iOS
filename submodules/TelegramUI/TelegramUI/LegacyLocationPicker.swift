@@ -6,12 +6,13 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
 
-func legacyLocationPickerController(context: AccountContextImpl, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?, String?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme, customLocationPicker: Bool = false, presentationCompleted: @escaping () -> Void = {}) -> ViewController {
+func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?, String?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme, customLocationPicker: Bool = false, presentationCompleted: @escaping () -> Void = {}) -> ViewController {
     let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: theme)
     legacyController.presentationCompleted = {
         presentationCompleted()

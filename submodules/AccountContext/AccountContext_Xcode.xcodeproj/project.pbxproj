@@ -8,6 +8,30 @@
 
 /* Begin PBXBuildFile section */
 		D06018E722F36A3F00796784 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018E622F36A3F00796784 /* TelegramPresentationData.framework */; };
+		D0879A4622F651D400C4D6B3 /* LiveLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879A4522F651D400C4D6B3 /* LiveLocationManager.swift */; };
+		D0879A4A22F6584B00C4D6B3 /* SharedMediaPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879A4922F6584B00C4D6B3 /* SharedMediaPlayer.swift */; };
+		D0879A4C22F65A7A00C4D6B3 /* UniversalMediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879A4B22F65A7A00C4D6B3 /* UniversalMediaPlayer.framework */; };
+		D0879A4E22F65B2A00C4D6B3 /* MediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879A4D22F65B2A00C4D6B3 /* MediaManager.swift */; };
+		D0879A5022F65D4D00C4D6B3 /* ChatHistroyLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879A4F22F65D4D00C4D6B3 /* ChatHistroyLocation.swift */; };
+		D0879AA222F6FEC800C4D6B3 /* OverlayAudioPlayerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879AA122F6FEC800C4D6B3 /* OverlayAudioPlayerController.swift */; };
+		D0879B1922F70C7400C4D6B3 /* OpenChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B1822F70C7400C4D6B3 /* OpenChatMessage.swift */; };
+		D0879B1B22F70CF400C4D6B3 /* ChatController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B1A22F70CF400C4D6B3 /* ChatController.swift */; };
+		D0879B1D22F7112E00C4D6B3 /* GalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B1C22F7112E00C4D6B3 /* GalleryController.swift */; };
+		D0879B2922F77C8300C4D6B3 /* FetchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B2822F77C8300C4D6B3 /* FetchManager.swift */; };
+		D0879B2B22F795CC00C4D6B3 /* DeviceLocationManager.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879B2A22F795CC00C4D6B3 /* DeviceLocationManager.framework */; };
+		D0879B5322F7974800C4D6B3 /* TemporaryCachedPeerDataManager.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879B5222F7974800C4D6B3 /* TemporaryCachedPeerDataManager.framework */; };
+		D0879B5D22F7A2BE00C4D6B3 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879B5C22F7A2BE00C4D6B3 /* AsyncDisplayKit.framework */; };
+		D0879B5F22F7A37100C4D6B3 /* TelegramAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879B5E22F7A37100C4D6B3 /* TelegramAudio.framework */; };
+		D0879B6122F7A7A600C4D6B3 /* UniversalVideoNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B6022F7A7A600C4D6B3 /* UniversalVideoNode.swift */; };
+		D0879B6322F7A97F00C4D6B3 /* OverlayMediaItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B6222F7A97F00C4D6B3 /* OverlayMediaItemNode.swift */; };
+		D0879B6522F7AC8700C4D6B3 /* OverlayMediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B6422F7AC8700C4D6B3 /* OverlayMediaManager.swift */; };
+		D0879B6722F7AE6400C4D6B3 /* PresentationCallManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B6622F7AE6400C4D6B3 /* PresentationCallManager.swift */; };
+		D0879B6922F7AF2A00C4D6B3 /* DeviceContactDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B6822F7AF2A00C4D6B3 /* DeviceContactDataManager.swift */; };
+		D0879B6B22F7B04400C4D6B3 /* DeviceContactData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B6A22F7B04400C4D6B3 /* DeviceContactData.swift */; };
+		D0879B6D22F7B05300C4D6B3 /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879B6C22F7B05200C4D6B3 /* Contacts.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		D0879B6F22F83F6600C4D6B3 /* DownloadedMediaStoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B6E22F83F6600C4D6B3 /* DownloadedMediaStoreManager.swift */; };
+		D0879B7122F8425B00C4D6B3 /* WallpaperUploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B7022F8425B00C4D6B3 /* WallpaperUploadManager.swift */; };
+		D0879B7322F842FF00C4D6B3 /* WatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B7222F842FF00C4D6B3 /* WatchManager.swift */; };
 		D0D3285422F329A900D07EE2 /* AccountContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D3285222F329A900D07EE2 /* AccountContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D3285F22F335B000D07EE2 /* AccountContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D3285E22F335B000D07EE2 /* AccountContext.swift */; };
 		D0D3289D22F3461700D07EE2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D3289C22F3461700D07EE2 /* Foundation.framework */; };
@@ -19,6 +43,30 @@
 /* Begin PBXFileReference section */
 		D06018E422F36A3900796784 /* DeviceAccess.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeviceAccess.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06018E622F36A3F00796784 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879A4522F651D400C4D6B3 /* LiveLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLocationManager.swift; sourceTree = "<group>"; };
+		D0879A4922F6584B00C4D6B3 /* SharedMediaPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMediaPlayer.swift; sourceTree = "<group>"; };
+		D0879A4B22F65A7A00C4D6B3 /* UniversalMediaPlayer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UniversalMediaPlayer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879A4D22F65B2A00C4D6B3 /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
+		D0879A4F22F65D4D00C4D6B3 /* ChatHistroyLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistroyLocation.swift; sourceTree = "<group>"; };
+		D0879AA122F6FEC800C4D6B3 /* OverlayAudioPlayerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayAudioPlayerController.swift; sourceTree = "<group>"; };
+		D0879B1822F70C7400C4D6B3 /* OpenChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenChatMessage.swift; sourceTree = "<group>"; };
+		D0879B1A22F70CF400C4D6B3 /* ChatController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatController.swift; sourceTree = "<group>"; };
+		D0879B1C22F7112E00C4D6B3 /* GalleryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryController.swift; sourceTree = "<group>"; };
+		D0879B2822F77C8300C4D6B3 /* FetchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchManager.swift; sourceTree = "<group>"; };
+		D0879B2A22F795CC00C4D6B3 /* DeviceLocationManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeviceLocationManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879B5222F7974800C4D6B3 /* TemporaryCachedPeerDataManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TemporaryCachedPeerDataManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879B5C22F7A2BE00C4D6B3 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879B5E22F7A37100C4D6B3 /* TelegramAudio.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramAudio.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879B6022F7A7A600C4D6B3 /* UniversalVideoNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UniversalVideoNode.swift; sourceTree = "<group>"; };
+		D0879B6222F7A97F00C4D6B3 /* OverlayMediaItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OverlayMediaItemNode.swift; sourceTree = "<group>"; };
+		D0879B6422F7AC8700C4D6B3 /* OverlayMediaManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OverlayMediaManager.swift; sourceTree = "<group>"; };
+		D0879B6622F7AE6400C4D6B3 /* PresentationCallManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationCallManager.swift; sourceTree = "<group>"; };
+		D0879B6822F7AF2A00C4D6B3 /* DeviceContactDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceContactDataManager.swift; sourceTree = "<group>"; };
+		D0879B6A22F7B04400C4D6B3 /* DeviceContactData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceContactData.swift; sourceTree = "<group>"; };
+		D0879B6C22F7B05200C4D6B3 /* Contacts.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Contacts.framework; path = System/Library/Frameworks/Contacts.framework; sourceTree = SDKROOT; };
+		D0879B6E22F83F6600C4D6B3 /* DownloadedMediaStoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadedMediaStoreManager.swift; sourceTree = "<group>"; };
+		D0879B7022F8425B00C4D6B3 /* WallpaperUploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperUploadManager.swift; sourceTree = "<group>"; };
+		D0879B7222F842FF00C4D6B3 /* WatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchManager.swift; sourceTree = "<group>"; };
 		D0D3284F22F329A900D07EE2 /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D3285222F329A900D07EE2 /* AccountContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AccountContext.h; sourceTree = "<group>"; };
 		D0D3285322F329A900D07EE2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -34,6 +82,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0879B6D22F7B05300C4D6B3 /* Contacts.framework in Frameworks */,
+				D0879B5F22F7A37100C4D6B3 /* TelegramAudio.framework in Frameworks */,
+				D0879B5D22F7A2BE00C4D6B3 /* AsyncDisplayKit.framework in Frameworks */,
+				D0879B5322F7974800C4D6B3 /* TemporaryCachedPeerDataManager.framework in Frameworks */,
+				D0879B2B22F795CC00C4D6B3 /* DeviceLocationManager.framework in Frameworks */,
+				D0879A4C22F65A7A00C4D6B3 /* UniversalMediaPlayer.framework in Frameworks */,
 				D06018E722F36A3F00796784 /* TelegramPresentationData.framework in Frameworks */,
 				D0D328A322F3462800D07EE2 /* SwiftSignalKit.framework in Frameworks */,
 				D0D328A122F3462400D07EE2 /* Postbox.framework in Frameworks */,
@@ -68,6 +122,24 @@
 			children = (
 				D0D3285222F329A900D07EE2 /* AccountContext.h */,
 				D0D3285E22F335B000D07EE2 /* AccountContext.swift */,
+				D0879A4522F651D400C4D6B3 /* LiveLocationManager.swift */,
+				D0879A4922F6584B00C4D6B3 /* SharedMediaPlayer.swift */,
+				D0879A4D22F65B2A00C4D6B3 /* MediaManager.swift */,
+				D0879B6422F7AC8700C4D6B3 /* OverlayMediaManager.swift */,
+				D0879B6022F7A7A600C4D6B3 /* UniversalVideoNode.swift */,
+				D0879B6222F7A97F00C4D6B3 /* OverlayMediaItemNode.swift */,
+				D0879A4F22F65D4D00C4D6B3 /* ChatHistroyLocation.swift */,
+				D0879AA122F6FEC800C4D6B3 /* OverlayAudioPlayerController.swift */,
+				D0879B1822F70C7400C4D6B3 /* OpenChatMessage.swift */,
+				D0879B1A22F70CF400C4D6B3 /* ChatController.swift */,
+				D0879B1C22F7112E00C4D6B3 /* GalleryController.swift */,
+				D0879B2822F77C8300C4D6B3 /* FetchManager.swift */,
+				D0879B6622F7AE6400C4D6B3 /* PresentationCallManager.swift */,
+				D0879B6822F7AF2A00C4D6B3 /* DeviceContactDataManager.swift */,
+				D0879B6A22F7B04400C4D6B3 /* DeviceContactData.swift */,
+				D0879B6E22F83F6600C4D6B3 /* DownloadedMediaStoreManager.swift */,
+				D0879B7022F8425B00C4D6B3 /* WallpaperUploadManager.swift */,
+				D0879B7222F842FF00C4D6B3 /* WatchManager.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -75,6 +147,12 @@
 		D0D3289B22F3461700D07EE2 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0879B6C22F7B05200C4D6B3 /* Contacts.framework */,
+				D0879B5E22F7A37100C4D6B3 /* TelegramAudio.framework */,
+				D0879B5C22F7A2BE00C4D6B3 /* AsyncDisplayKit.framework */,
+				D0879B5222F7974800C4D6B3 /* TemporaryCachedPeerDataManager.framework */,
+				D0879B2A22F795CC00C4D6B3 /* DeviceLocationManager.framework */,
+				D0879A4B22F65A7A00C4D6B3 /* UniversalMediaPlayer.framework */,
 				D06018E622F36A3F00796784 /* TelegramPresentationData.framework */,
 				D06018E422F36A3900796784 /* DeviceAccess.framework */,
 				D0D328A222F3462800D07EE2 /* SwiftSignalKit.framework */,
@@ -165,6 +243,24 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0879B6122F7A7A600C4D6B3 /* UniversalVideoNode.swift in Sources */,
+				D0879A4E22F65B2A00C4D6B3 /* MediaManager.swift in Sources */,
+				D0879A4A22F6584B00C4D6B3 /* SharedMediaPlayer.swift in Sources */,
+				D0879B7122F8425B00C4D6B3 /* WallpaperUploadManager.swift in Sources */,
+				D0879B6722F7AE6400C4D6B3 /* PresentationCallManager.swift in Sources */,
+				D0879B2922F77C8300C4D6B3 /* FetchManager.swift in Sources */,
+				D0879B6522F7AC8700C4D6B3 /* OverlayMediaManager.swift in Sources */,
+				D0879B7322F842FF00C4D6B3 /* WatchManager.swift in Sources */,
+				D0879B6F22F83F6600C4D6B3 /* DownloadedMediaStoreManager.swift in Sources */,
+				D0879B6922F7AF2A00C4D6B3 /* DeviceContactDataManager.swift in Sources */,
+				D0879B6322F7A97F00C4D6B3 /* OverlayMediaItemNode.swift in Sources */,
+				D0879B6B22F7B04400C4D6B3 /* DeviceContactData.swift in Sources */,
+				D0879B1922F70C7400C4D6B3 /* OpenChatMessage.swift in Sources */,
+				D0879B1D22F7112E00C4D6B3 /* GalleryController.swift in Sources */,
+				D0879B1B22F70CF400C4D6B3 /* ChatController.swift in Sources */,
+				D0879A5022F65D4D00C4D6B3 /* ChatHistroyLocation.swift in Sources */,
+				D0879A4622F651D400C4D6B3 /* LiveLocationManager.swift in Sources */,
+				D0879AA222F6FEC800C4D6B3 /* OverlayAudioPlayerController.swift in Sources */,
 				D0D3285F22F335B000D07EE2 /* AccountContext.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

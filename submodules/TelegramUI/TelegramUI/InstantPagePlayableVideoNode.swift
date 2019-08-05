@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -13,7 +14,7 @@ private struct FetchControls {
 }
 
 final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     let media: InstantPageMedia
     private let interactive: Bool
     private let openMedia: (InstantPageMedia) -> Void
@@ -30,7 +31,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     
     private var localIsVisible = false
     
-    init(context: AccountContextImpl, webPage: TelegramMediaWebpage, theme: InstantPageTheme, media: InstantPageMedia, interactive: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
+    init(context: AccountContext, webPage: TelegramMediaWebpage, theme: InstantPageTheme, media: InstantPageMedia, interactive: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
         self.context = context
         self.media = media
         self.interactive = interactive

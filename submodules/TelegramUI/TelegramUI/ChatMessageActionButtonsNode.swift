@@ -5,6 +5,7 @@ import TelegramCore
 import Postbox
 import Display
 import TelegramPresentationData
+import AccountContext
 
 private let titleFont = Font.medium(16.0)
 
@@ -82,7 +83,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ context: AccountContextImpl, _ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ message: Message, _ button: ReplyMarkupButton, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))) {
+    class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ message: Message, _ button: ReplyMarkupButton, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))) {
         let titleLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         
         return { context, theme, strings, message, button, constrainedWidth, position in
@@ -214,7 +215,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ context: AccountContextImpl, _ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ replyMarkup: ReplyMarkupMessageAttribute, _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode)) {
+    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ replyMarkup: ReplyMarkupMessageAttribute, _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode)) {
         let currentButtonLayouts = maybeNode?.buttonNodes.map { ChatMessageActionButtonNode.asyncLayout($0) } ?? []
         
         return { context, theme, strings, replyMarkup, message, constrainedWidth in

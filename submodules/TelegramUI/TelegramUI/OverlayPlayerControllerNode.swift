@@ -7,11 +7,12 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
-final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestureRecognizerDelegate {
     let ready = Promise<Bool>()
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let peerId: PeerId
     private var presentationData: PresentationData
     private let type: MediaManagerPlayerType
@@ -37,7 +38,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
     private var presentationDataDisposable: Disposable?
     private let replacementHistoryNodeReadyDisposable = MetaDisposable()
     
-    init(context: AccountContextImpl, peerId: PeerId, type: MediaManagerPlayerType,  initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
+    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType,  initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
         self.context = context
         self.peerId = peerId
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -194,7 +195,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         openMessageImpl = { [weak self] id in
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.historyNode.messageInCurrentHistoryView(id) {
-                return openChatMessage(context: strongSelf.context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _ in }, enqueueMessage: { _ in }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
+                return strongSelf.context.sharedContext.openChatMessage(OpenChatMessageParams(context: strongSelf.context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _ in }, enqueueMessage: { _ in }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }))
             }
             return false
         }

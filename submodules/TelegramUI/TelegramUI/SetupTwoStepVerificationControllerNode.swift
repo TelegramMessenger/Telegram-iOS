@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ActivityIndicator
+import AccountContext
 
 enum SetupTwoStepVerificationInitialState {
     case automatic
@@ -137,7 +138,7 @@ enum SetupTwoStepVerificationStateUpdate {
 }
 
 final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let updateBackAction: (Bool) -> Void
     private let updateNextAction: (SetupTwoStepVerificationNextAction) -> Void
@@ -150,7 +151,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
     private var contentNode: SetupTwoStepVerificationContentNode?
     private let actionDisposable = MetaDisposable()
     
-    init(context: AccountContextImpl, updateBackAction: @escaping (Bool) -> Void, updateNextAction: @escaping (SetupTwoStepVerificationNextAction) -> Void, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, initialState: SetupTwoStepVerificationInitialState) {
+    init(context: AccountContext, updateBackAction: @escaping (Bool) -> Void, updateNextAction: @escaping (SetupTwoStepVerificationNextAction) -> Void, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, initialState: SetupTwoStepVerificationInitialState) {
         self.context = context
         self.updateBackAction = updateBackAction
         self.updateNextAction = updateNextAction

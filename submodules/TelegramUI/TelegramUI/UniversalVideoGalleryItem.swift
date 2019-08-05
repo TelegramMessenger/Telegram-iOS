@@ -7,6 +7,7 @@ import Display
 import Postbox
 import TelegramPresentationData
 import UniversalMediaPlayer
+import AccountContext
 
 enum UniversalVideoGalleryItemContentInfo {
     case message(Message)
@@ -14,7 +15,7 @@ enum UniversalVideoGalleryItemContentInfo {
 }
 
 class UniversalVideoGalleryItem: GalleryItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let presentationData: PresentationData
     let content: UniversalVideoContent
     let originData: GalleryItemOriginData?
@@ -30,7 +31,7 @@ class UniversalVideoGalleryItem: GalleryItem {
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(context: AccountContextImpl, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -142,7 +143,7 @@ private struct FetchControls {
 }
 
 final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let presentationData: PresentationData
     
     fileprivate let _ready = Promise<Void>()
@@ -185,7 +186,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     var playbackCompleted: (() -> Void)?
     
-    init(context: AccountContextImpl, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.scrubberView = ChatVideoGalleryItemScrubberView()

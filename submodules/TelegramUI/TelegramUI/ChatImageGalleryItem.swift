@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)
@@ -71,14 +72,14 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class ChatImageGalleryItem: GalleryItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(context: AccountContextImpl, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
@@ -146,7 +147,7 @@ class ChatImageGalleryItem: GalleryItem {
 }
 
 final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var message: Message?
     
     private let imageNode: TransformImageNode
@@ -156,13 +157,13 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
     
-    private var contextAndMedia: (AccountContextImpl, AnyMediaReference)?
+    private var contextAndMedia: (AccountContext, AnyMediaReference)?
     
     private var fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContextImpl, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         
         self.imageNode = TransformImageNode()
@@ -230,7 +231,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.contextAndMedia = (self.context, imageReference.abstract)
     }
     
-    func setFile(context: AccountContextImpl, fileReference: FileMediaReference) {
+    func setFile(context: AccountContext, fileReference: FileMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
             if var largestSize = fileReference.media.dimensions {
                 var displaySize = largestSize.dividedByScreenScale()

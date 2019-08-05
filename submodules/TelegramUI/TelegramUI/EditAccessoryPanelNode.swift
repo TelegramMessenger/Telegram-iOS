@@ -8,6 +8,7 @@ import Display
 import TelegramPresentationData
 import TelegramUIPreferences
 import ActivityIndicator
+import AccountContext
 
 final class EditAccessoryPanelNode: AccessoryPanelNode {
     let messageId: MessageId
@@ -54,12 +55,12 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     var theme: PresentationTheme
     var strings: PresentationStrings
     var nameDisplayOrder: PresentationPersonNameOrder
     
-    init(context: AccountContextImpl, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
         self.context = context
         self.messageId = messageId
         self.theme = theme

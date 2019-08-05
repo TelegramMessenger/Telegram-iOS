@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import OverlayStatusController
+import AccountContext
 
 private final class DataPrivacyControllerArguments {
     let account: Account
@@ -279,7 +281,7 @@ private func dataPrivacyControllerEntries(presentationData: PresentationData, st
     return entries
 }
 
-public func dataPrivacyController(context: AccountContextImpl) -> ViewController {
+public func dataPrivacyController(context: AccountContext) -> ViewController {
     let statePromise = ValuePromise(DataPrivacyControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: DataPrivacyControllerState())
     let updateState: ((DataPrivacyControllerState) -> DataPrivacyControllerState) -> Void = { f in

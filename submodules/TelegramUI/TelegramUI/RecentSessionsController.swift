@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AccountContext
 
 private final class RecentSessionsControllerArguments {
     let account: Account
@@ -410,7 +411,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
     return entries
 }
 
-public func recentSessionsController(context: AccountContextImpl, activeSessionsContext: ActiveSessionsContext) -> ViewController {
+public func recentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController {
     let statePromise = ValuePromise(RecentSessionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: RecentSessionsControllerState())
     let updateState: ((RecentSessionsControllerState) -> RecentSessionsControllerState) -> Void = { f in

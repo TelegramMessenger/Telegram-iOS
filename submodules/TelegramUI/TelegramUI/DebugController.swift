@@ -13,15 +13,17 @@ import MessageUI
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import OverlayStatusController
+import AccountContext
 
 private final class DebugControllerArguments {
-    let sharedContext: SharedAccountContextImpl
-    let context: AccountContextImpl?
+    let sharedContext: SharedAccountContext
+    let context: AccountContext?
     let presentController: (ViewController, ViewControllerPresentationArguments?) -> Void
     let pushController: (ViewController) -> Void
     let getRootController: () -> UIViewController?
     
-    init(sharedContext: SharedAccountContextImpl, context: AccountContextImpl?, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void, getRootController: @escaping () -> UIViewController?) {
+    init(sharedContext: SharedAccountContext, context: AccountContext?, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void, getRootController: @escaping () -> UIViewController?) {
         self.sharedContext = sharedContext
         self.context = context
         self.presentController = presentController
@@ -557,7 +559,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     return entries
 }
 
-public func debugController(sharedContext: SharedAccountContextImpl, context: AccountContextImpl?, modal: Bool = false) -> ViewController {
+public func debugController(sharedContext: SharedAccountContext, context: AccountContext?, modal: Bool = false) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?

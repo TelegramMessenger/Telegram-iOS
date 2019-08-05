@@ -6,6 +6,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 import TelegramPresentationData
+import TelegramStringFormatting
 
 final class ShareControllerInteraction {
     var foundPeers: [RenderedPeer] = []

@@ -7,6 +7,7 @@ import SwiftSignalKit
 import Display
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 private let cancelFont = Font.regular(17.0)
 private let subtitleFont = Font.regular(12.0)
@@ -165,7 +166,7 @@ private func preparedRecentEntryTransition(account: Account, from fromEntries: [
 }
 
 final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
-    private let sharedContext: SharedAccountContextImpl
+    private let sharedContext: SharedAccountContext
     private let account: Account
     private let strings: PresentationStrings
     private let controllerInteraction: ShareControllerInteraction
@@ -196,7 +197,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let searchQuery = ValuePromise<String>("", ignoreRepeated: true)
     private let searchDisposable = MetaDisposable()
     
-    init(sharedContext: SharedAccountContextImpl, account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers recentPeerList: [RenderedPeer]) {
+    init(sharedContext: SharedAccountContext, account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers recentPeerList: [RenderedPeer]) {
         self.sharedContext = sharedContext
         self.account = account
         self.strings = strings

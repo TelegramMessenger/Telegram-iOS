@@ -7,9 +7,11 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import AvatarNode
+import AccountContext
 
 public final class ChatMessageNotificationItem: NotificationItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let strings: PresentationStrings
     let nameDisplayOrder: PresentationPersonNameOrder
     let messages: [Message]
@@ -20,7 +22,7 @@ public final class ChatMessageNotificationItem: NotificationItem {
         return messages.first?.id.peerId
     }
     
-    public init(context: AccountContextImpl, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
+    public init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
         self.context = context
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder

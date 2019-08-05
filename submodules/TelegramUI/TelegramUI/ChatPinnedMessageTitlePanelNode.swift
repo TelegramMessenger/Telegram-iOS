@@ -7,9 +7,10 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let tapButton: HighlightTrackingButtonNode
     private let closeButton: HighlightableButtonNode
     private let lineNode: ASImageNode
@@ -27,7 +28,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
 
     private let queue = Queue()
     
-    init(context: AccountContextImpl) {
+    init(context: AccountContext) {
         self.context = context
         
         self.tapButton = HighlightTrackingButtonNode()

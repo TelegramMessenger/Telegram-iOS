@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import TelegramVoip
 import TelegramCallsUI
 import TelegramAudio
+import AccountContext
 
 public final class CallController: ViewController {
     private var controllerNode: CallControllerNode {
@@ -21,7 +22,7 @@ public final class CallController: ViewController {
         return self._ready
     }
     
-    private let sharedContext: SharedAccountContextImpl
+    private let sharedContext: SharedAccountContext
     private let account: Account
     public let call: PresentationCall
     
@@ -41,7 +42,7 @@ public final class CallController: ViewController {
     private var audioOutputStateDisposable: Disposable?
     private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
     
-    public init(sharedContext: SharedAccountContextImpl, account: Account, call: PresentationCall) {
+    public init(sharedContext: SharedAccountContext, account: Account, call: PresentationCall) {
         self.sharedContext = sharedContext
         self.account = account
         self.call = call

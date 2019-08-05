@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import OverlayStatusController
+import AccountContext
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
     let account: Account
@@ -198,7 +200,7 @@ private struct ChannelDiscussionGroupSetupControllerState: Equatable {
     var searching: Bool = false
 }
 
-public func channelDiscussionGroupSetupController(context: AccountContextImpl, peerId: PeerId) -> ViewController {
+public func channelDiscussionGroupSetupController(context: AccountContext, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(ChannelDiscussionGroupSetupControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelDiscussionGroupSetupControllerState())
     let updateState: ((ChannelDiscussionGroupSetupControllerState) -> ChannelDiscussionGroupSetupControllerState) -> Void = { f in

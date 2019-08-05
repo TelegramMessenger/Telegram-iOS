@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramUIPreferences
+import AccountContext
 
 enum StickerPackPreviewControllerMode {
     case `default`
@@ -20,7 +21,7 @@ final class StickerPackPreviewController: ViewController {
     private var animatedIn = false
     private var dismissed = false
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let mode: StickerPackPreviewControllerMode
     private weak var parentNavigationController: NavigationController?
     
@@ -57,7 +58,7 @@ final class StickerPackPreviewController: ViewController {
         }
     }
     
-    init(context: AccountContextImpl, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?) {
+    init(context: AccountContext, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?) {
         self.context = context
         self.mode = mode
         self.parentNavigationController = parentNavigationController

@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 public final class NotificationContainerController: ViewController {
     private var controllerNode: NotificationContainerControllerNode {
@@ -14,7 +15,7 @@ public final class NotificationContainerController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    public init(context: AccountContextImpl) {
+    public init(context: AccountContext) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)

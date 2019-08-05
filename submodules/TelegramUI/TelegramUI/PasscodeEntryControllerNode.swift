@@ -6,13 +6,14 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 private let titleFont = Font.regular(20.0)
 private let subtitleFont = Font.regular(15.0)
 private let buttonFont = Font.regular(17.0)
 
 final class PasscodeEntryControllerNode: ASDisplayNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var wallpaper: TelegramWallpaper
@@ -44,7 +45,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     var checkPasscode: ((String) -> Void)?
     var requestBiometrics: (() -> Void)?
     
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, statusBar: StatusBar) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, statusBar: StatusBar) {
         self.context = context
         self.theme = theme
         self.strings = strings

@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
+import AccountContext
 
 public enum CallListControllerMode {
     case tab
@@ -23,7 +24,7 @@ public final class CallListController: ViewController {
         return self._ready
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let mode: CallListControllerMode
     
     private var presentationData: PresentationData
@@ -38,7 +39,7 @@ public final class CallListController: ViewController {
     
     private let createActionDisposable = MetaDisposable()
     
-    public init(context: AccountContextImpl, mode: CallListControllerMode) {
+    public init(context: AccountContext, mode: CallListControllerMode) {
         self.context = context
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }

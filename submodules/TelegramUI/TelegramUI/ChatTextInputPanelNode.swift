@@ -7,6 +7,7 @@ import TelegramCore
 import MobileCoreServices
 import TelegramPresentationData
 import TextFormat
+import AccountContext
 
 private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
@@ -261,7 +262,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
-    override var context: AccountContextImpl? {
+    override var context: AccountContext? {
         didSet {
             self.actionButtons.micButton.account = self.context?.account
         }

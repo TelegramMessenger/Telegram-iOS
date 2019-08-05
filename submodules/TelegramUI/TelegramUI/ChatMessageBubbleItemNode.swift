@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
+import AccountContext
+import TemporaryCachedPeerDataManager
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
@@ -372,9 +374,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode),
-        replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContextImpl, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
-        actionButtonsLayout: (AccountContextImpl, ChatPresentationThemeData, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
-        mosaicStatusLayout: (AccountContextImpl, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
+        replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
+        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
+        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
         currentShareButtonNode: HighlightableButtonNode?,
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,

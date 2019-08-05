@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bool) -> Void)?) -> Signal<[FileMediaReference]?, NoError> {
     let delayRequest = true
@@ -98,7 +99,7 @@ func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bo
 }
 
 final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
     
@@ -122,7 +123,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     var deactivateSearchBar: (() -> Void)?
     var updateActivity: ((Bool) -> Void)?
     
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingPromise: Promise<[FileMediaReference]?>) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingPromise: Promise<[FileMediaReference]?>) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.inputNodeInteraction = inputNodeInteraction

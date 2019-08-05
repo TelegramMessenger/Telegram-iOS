@@ -10,6 +10,7 @@ import MtProtoKitDynamic
 #endif
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 enum ParsedInternalPeerUrlParameter {
     case botStart(String)

@@ -9,7 +9,7 @@ import MtProtoKitDynamic
 #endif
 import Display
 import TelegramUIPrivateModule
-
+import AccountContext
 import LegacyComponents
 
 enum UnpreparedShareItemContent {

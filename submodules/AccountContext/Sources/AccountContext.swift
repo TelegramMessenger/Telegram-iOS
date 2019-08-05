@@ -5,6 +5,8 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import SwiftSignalKit
 import Display
+import DeviceLocationManager
+import TemporaryCachedPeerDataManager
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -85,26 +87,83 @@ public enum TextLinkItem {
     case hashtag(String?, String)
 }
 
+public final class AccountWithInfo: Equatable {
+    public let account: Account
+    public let peer: Peer
+    
+    public init(account: Account, peer: Peer) {
+        self.account = account
+        self.peer = peer
+    }
+    
+    public static func ==(lhs: AccountWithInfo, rhs: AccountWithInfo) -> Bool {
+        if lhs.account !== rhs.account {
+            return false
+        }
+        if !arePeersEqual(lhs.peer, rhs.peer) {
+            return false
+        }
+        return true
+    }
+}
+
 public protocol SharedAccountContext: class {
+    var basePath: String { get }
+    var mainWindow: Window1? { get }
     var accountManager: AccountManager { get }
+    
     var currentPresentationData: Atomic<PresentationData> { get }
     var presentationData: Signal<PresentationData, NoError> { get }
+    
+    var currentAutomaticMediaDownloadSettings: Atomic<MediaAutoDownloadSettings> { get }
+    var automaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> { get }
+    var immediateExperimentalUISettings: ExperimentalUISettings { get }
+    var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
+    var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
+    
     var applicationBindings: TelegramApplicationBindings { get }
     
+    var mediaManager: MediaManager { get }
+    var locationManager: DeviceLocationManager? { get }
+    var callManager: PresentationCallManager? { get }
+    var contactDataManager: DeviceContactDataManager? { get }
+    
+    var activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account, Int32)], currentAuth: UnauthorizedAccount?), NoError> { get }
+    var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> { get }
+    
+    var presentGlobalController: (ViewController, Any?) -> Void { get }
+    
+    func makeTempAccountContext(account: Account) -> AccountContext
+    
+    func updateNotificationTokensRegistration()
+    func setAccountUserInterfaceInUse(_ id: AccountRecordId) -> Disposable
     func handleTextLinkAction(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem)
+    func navigateToChat(accountId: AccountRecordId, peerId: PeerId, messageId: MessageId?)
+    func openChatMessage(_ params: OpenChatMessageParams) -> Bool
+    func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError>
+    func makeOverlayAudioPlayerController(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController
+    
+    func navigateToCurrentCall()
+    var hasOngoingCall: ValuePromise<Bool> { get }
+    var immediateHasOngoingCall: Bool { get }
+    
+    func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController?, withChatListController chatListController: ViewController?)
+    func beginNewAuth(testingEnvironment: Bool)
 }
 
 public protocol AccountContext: class {
-    var genericSharedContext: SharedAccountContext { get }
+    var sharedContext: SharedAccountContext { get }
     var account: Account { get }
-}
-
-public final class TempAccountContext: AccountContext {
-    public let genericSharedContext: SharedAccountContext
-    public let account: Account
     
-    init(genericSharedContext: SharedAccountContext, account: Account) {
-        self.genericSharedContext = genericSharedContext
-        self.account = account
-    }
+    var liveLocationManager: LiveLocationManager? { get }
+    var fetchManager: FetchManager { get }
+    var downloadedMediaStoreManager: DownloadedMediaStoreManager { get }
+    var peerChannelMemberCategoriesContextsManager: PeerChannelMemberCategoriesContextsManager { get }
+    var wallpaperUploadManager: WallpaperUploadManager? { get }
+    var watchManager: WatchManager? { get }
+    
+    var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
+    
+    func storeSecureIdPassword(password: String)
+    func getStoredSecureIdPassword() -> String?
 }

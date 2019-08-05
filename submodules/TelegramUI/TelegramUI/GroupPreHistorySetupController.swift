@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import AccountContext
 
 private final class GroupPreHistorySetupArguments {
     let toggle: (Bool) -> Void
@@ -113,7 +114,7 @@ private func groupPreHistorySetupEntries(isSupergroup: Bool, presentationData: P
     return entries
 }
 
-public func groupPreHistorySetupController(context: AccountContextImpl, peerId: PeerId, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
+public func groupPreHistorySetupController(context: AccountContext, peerId: PeerId, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
     let statePromise = ValuePromise(GroupPreHistorySetupState(), ignoreRepeated: true)
     let stateValue = Atomic(value: GroupPreHistorySetupState())
     let updateState: ((GroupPreHistorySetupState) -> GroupPreHistorySetupState) -> Void = { f in

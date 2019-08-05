@@ -4,8 +4,9 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
+import AccountContext
 
-public final class OverlayMediaController: ViewController {
+public final class OverlayMediaControllerImpl: ViewController, OverlayMediaController {
     private var controllerNode: OverlayMediaControllerNode {
         return self.displayNode as! OverlayMediaControllerNode
     }
@@ -25,15 +26,15 @@ public final class OverlayMediaController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    var hasNodes: Bool {
+    public var hasNodes: Bool {
         return self.controllerNode.hasNodes
     }
     
-    func addNode(_ node: OverlayMediaItemNode, customTransition: Bool = false) {
+    public func addNode(_ node: OverlayMediaItemNode, customTransition: Bool) {
         self.controllerNode.addNode(node, customTransition: customTransition)
     }
     
-    func removeNode(_ node: OverlayMediaItemNode, customTransition: Bool = false) {
+    public func removeNode(_ node: OverlayMediaItemNode, customTransition: Bool) {
         self.controllerNode.removeNode(node, customTransition: customTransition)
     }
     

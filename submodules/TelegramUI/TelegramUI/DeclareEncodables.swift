@@ -1,5 +1,5 @@
 import Postbox
-
+import TemporaryCachedPeerDataManager
 import TelegramUIPreferences
 
 private var telegramUIDeclaredEncodables: Void = {

@@ -6,6 +6,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramStringFormatting
 
 enum HorizontalPeerItemMode {
     case list

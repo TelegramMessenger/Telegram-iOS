@@ -7,6 +7,8 @@ import SwiftSignalKit
 import Display
 import TelegramPresentationData
 import MergeLists
+import AvatarNode
+import AccountContext
 
 private let subtitleFont = Font.regular(12.0)
 
@@ -67,7 +69,7 @@ private func preparedGridEntryTransition(account: Account, from fromEntries: [Sh
 }
 
 final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
-    private let sharedContext: SharedAccountContextImpl
+    private let sharedContext: SharedAccountContext
     private let account: Account
     private let theme: PresentationTheme
     private let strings: PresentationStrings
@@ -100,7 +102,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     let peersValue = Promise<[(RenderedPeer, PeerPresence?)]>()
     
-    init(sharedContext: SharedAccountContextImpl, account: Account, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, account: Account, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.account = account
         self.theme = theme

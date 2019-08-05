@@ -6,6 +6,7 @@ import TelegramCore
 import Display
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 private struct CommandChatInputContextPanelEntryStableId: Hashable {
     let command: PeerCommand
@@ -60,7 +61,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true

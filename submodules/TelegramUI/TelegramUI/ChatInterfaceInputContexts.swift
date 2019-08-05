@@ -3,6 +3,7 @@ import UIKit
 import TelegramCore
 import Postbox
 import Display
+import AccountContext
 
 struct PossibleContextQueryTypes: OptionSet {
     var rawValue: Int32
@@ -197,7 +198,7 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
     return result
 }
 
-func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContextImpl) -> ChatTextInputPanelState {
+func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext) -> ChatTextInputPanelState {
     var contextPlaceholder: NSAttributedString?
     loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
         if case let .contextRequestResult(peer, _) = result, let botUser = peer as? TelegramUser, let botInfo = botUser.botInfo, let inlinePlaceholder = botInfo.inlinePlaceholder {

@@ -6,9 +6,10 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 final class PeerSelectionControllerNode: ASDisplayNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let present: (ViewController, Any?) -> Void
     private let dismiss: () -> Void
     private let filter: ChatListNodePeersFilter
@@ -51,7 +52,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return self.readyValue.get()
     }
     
-    init(context: AccountContextImpl, filter: ChatListNodePeersFilter, hasContactSelector: Bool, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, filter: ChatListNodePeersFilter, hasContactSelector: Bool, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
         self.dismiss = dismiss

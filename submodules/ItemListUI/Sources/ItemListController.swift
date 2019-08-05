@@ -212,7 +212,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     public var didDisappear: ((Bool) -> Void)?
     
     convenience public init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
-        self.init(sharedContext: context.genericSharedContext, state: state, tabBarItem: tabBarItem)
+        self.init(sharedContext: context.sharedContext, state: state, tabBarItem: tabBarItem)
     }
     
     convenience public init(sharedContext: SharedAccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {

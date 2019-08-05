@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import OverlayStatusController
+import AccountContext
 
 private final class ChannelVisibilityControllerArguments {
     let account: Account
@@ -795,7 +797,7 @@ public enum ChannelVisibilityControllerMode {
     case privateLink
 }
 
-public func channelVisibilityController(context: AccountContextImpl, peerId: PeerId, mode: ChannelVisibilityControllerMode, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
+public func channelVisibilityController(context: AccountContext, peerId: PeerId, mode: ChannelVisibilityControllerMode, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
     let statePromise = ValuePromise(ChannelVisibilityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelVisibilityControllerState())
     let updateState: ((ChannelVisibilityControllerState) -> ChannelVisibilityControllerState) -> Void = { f in

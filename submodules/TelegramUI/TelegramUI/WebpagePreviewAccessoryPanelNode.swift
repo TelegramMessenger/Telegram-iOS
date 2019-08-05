@@ -6,6 +6,7 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
+import AccountContext
 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()
@@ -24,7 +25,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     var theme: PresentationTheme
     var strings: PresentationStrings
     
-    init(context: AccountContextImpl, url: String, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, url: String, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
         self.url = url
         self.webpage = webpage
         self.theme = theme

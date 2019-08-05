@@ -7,6 +7,9 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
+import AccountContext
+import TelegramStringFormatting
+import AccountContext
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 
@@ -170,7 +173,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     private let progressNode: RadialProgressNode
     private var playbackOverlayNode: ListMessagePlaybackOverlayNode?
     
-    private var context: AccountContextImpl?
+    private var context: AccountContext?
     private (set) var message: Message?
     
     private var appliedItem: ListMessageItem?
@@ -862,7 +865,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }
                 case .playbackStatus:
                     if let context = self.context {
-                        context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause))
+                        context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: nil)
                     }
             }
         }

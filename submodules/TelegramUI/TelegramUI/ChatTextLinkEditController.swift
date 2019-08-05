@@ -6,6 +6,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     private var theme: PresentationTheme
@@ -380,7 +381,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     }
 }
 
-func chatTextLinkEditController(sharedContext: SharedAccountContextImpl, account: Account, text: String, link: String?, apply: @escaping (String?) -> Void) -> AlertController {
+func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Account, text: String, link: String?, apply: @escaping (String?) -> Void) -> AlertController {
     let presentationData = sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: ((Bool) -> Void)?

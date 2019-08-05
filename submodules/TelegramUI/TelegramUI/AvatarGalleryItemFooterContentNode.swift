@@ -8,6 +8,8 @@ import SwiftSignalKit
 import Photos
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramStringFormatting
+import AccountContext
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
@@ -16,7 +18,7 @@ private let nameFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
 
 final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
     
@@ -36,7 +38,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     var share: ((GalleryControllerInteraction) -> Void)?
     
-    init(context: AccountContextImpl, presentationData: PresentationData) {
+    init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat

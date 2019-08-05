@@ -6,6 +6,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramStringFormatting
+import AccountContext
 
 private enum SecureIdDocumentFormTextField {
     case identifier
@@ -2126,7 +2128,7 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
 }
 
 struct SecureIdDocumentFormControllerNodeInitParams {
-    let context: AccountContextImpl
+    let context: AccountContext
     let secureIdContext: SecureIdAccessContext
 }
 
@@ -2139,7 +2141,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let secureIdContext: SecureIdAccessContext
     
     private let uploadContext: SecureIdVerificationDocumentsContext

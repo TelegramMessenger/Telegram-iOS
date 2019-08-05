@@ -8,6 +8,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
 import TextFormat
+import AccountContext
 
 private final class InstalledStickerPacksControllerArguments {
     let account: Account
@@ -444,7 +445,7 @@ public enum InstalledStickerPacksControllerMode {
     case masks
 }
 
-public func installedStickerPacksController(context: AccountContextImpl, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil) -> ViewController {
+public func installedStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil) -> ViewController {
     let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)

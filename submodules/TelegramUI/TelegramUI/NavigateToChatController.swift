@@ -3,6 +3,7 @@ import UIKit
 import Display
 import TelegramCore
 import Postbox
+import AccountContext
 
 public enum NavigateToChatKeepStack {
     case `default`
@@ -10,7 +11,7 @@ public enum NavigateToChatKeepStack {
     case never
 }
 
-public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContextImpl, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping () -> Void = {}) {
+public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping () -> Void = {}) {
     var found = false
     var isFirst = true
     for controller in navigationController.viewControllers.reversed() {

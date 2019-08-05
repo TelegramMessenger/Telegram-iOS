@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import AvatarNode
 
 public class ActionSheetPeerItem: ActionSheetItem {
     public let account: Account

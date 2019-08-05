@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import TelegramCore
 import LegacyComponents
 import TelegramUIPreferences
+import AccountContext
 
 func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
     return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset)
@@ -105,7 +106,7 @@ private func selectionChangedSignal(selectionState: TGMediaSelectionContext) -> 
 final class WebSearchController: ViewController {
     private var validLayout: ContainerViewLayout?
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let mode: WebSearchControllerMode
     private let peer: Peer?
     private let configuration: SearchBotsConfiguration
@@ -131,7 +132,7 @@ final class WebSearchController: ViewController {
     
     private var navigationContentNode: WebSearchNavigationContentNode?
     
-    init(context: AccountContextImpl, peer: Peer?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
+    init(context: AccountContext, peer: Peer?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode
         self.peer = peer

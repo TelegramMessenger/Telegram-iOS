@@ -6,13 +6,14 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ProgressNavigationButtonNode
+import AccountContext
 
 final class ChangePhoneNumberController: ViewController {
     private var controllerNode: ChangePhoneNumberControllerNode {
         return self.displayNode as! ChangePhoneNumberControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private var currentData: (Int32, String?, String)?
     private let requestDisposable = MetaDisposable()
@@ -34,7 +35,7 @@ final class ChangePhoneNumberController: ViewController {
     
     private var presentationData: PresentationData
     
-    init(context: AccountContextImpl) {
+    init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

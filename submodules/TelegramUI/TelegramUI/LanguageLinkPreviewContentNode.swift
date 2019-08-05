@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TextFormat
+import AccountContext
 
 final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainerNode {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
@@ -13,7 +14,7 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     
-    init(context: AccountContextImpl, localizationInfo: LocalizationInfo, theme: PresentationTheme, strings: PresentationStrings, openTranslationUrl: @escaping (String) -> Void) {
+    init(context: AccountContext, localizationInfo: LocalizationInfo, theme: PresentationTheme, strings: PresentationStrings, openTranslationUrl: @escaping (String) -> Void) {
         self.titleNode = ImmediateTextNode()
         self.titleNode.textAlignment = .center
         

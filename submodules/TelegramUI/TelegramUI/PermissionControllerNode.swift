@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 public struct PermissionControllerCustomIcon: Equatable {
     let light: UIImage?
@@ -60,7 +61,7 @@ private func localizedString(for key: String, strings: PresentationStrings, fall
 }
 
 final class PermissionControllerNode: ASDisplayNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let splitTest: PermissionUISplitTest?
     
@@ -72,7 +73,7 @@ final class PermissionControllerNode: ASDisplayNode {
     var openPrivacyPolicy: (() -> Void)?
     var dismiss: (() -> Void)?
     
-    init(context: AccountContextImpl, splitTest: PermissionUISplitTest?) {
+    init(context: AccountContext, splitTest: PermissionUISplitTest?) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.splitTest = splitTest

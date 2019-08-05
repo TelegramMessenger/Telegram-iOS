@@ -7,14 +7,15 @@ import SwiftSignalKit
 import WebKit
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 class ChatExternalFileGalleryItem: GalleryItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
     
-    init(context: AccountContextImpl, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
+    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
@@ -67,7 +68,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
     private let actionTitleNode: ImmediateTextNode
     private let actionButtonNode: HighlightableButtonNode
     
-    private var contextAndFile: (AccountContextImpl, FileMediaReference)?
+    private var contextAndFile: (AccountContext, FileMediaReference)?
     private let dataDisposable = MetaDisposable()
     
     private var itemIsVisible = false
@@ -80,7 +81,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContextImpl, presentationData: PresentationData) {
+    init(context: AccountContext, presentationData: PresentationData) {
         self.containerNode = ASDisplayNode()
         self.containerNode.backgroundColor = .white
         
@@ -167,7 +168,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         return .single(.dark)
     }
     
-    func setFile(context: AccountContextImpl, fileReference: FileMediaReference) {
+    func setFile(context: AccountContext, fileReference: FileMediaReference) {
         let updateFile = self.contextAndFile?.1.media != fileReference.media
         self.contextAndFile = (context, fileReference)
         if updateFile {
@@ -176,7 +177,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         }
     }
     
-    private func setupStatus(context: AccountContextImpl, resource: MediaResource) {
+    private func setupStatus(context: AccountContext, resource: MediaResource) {
         self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(resource)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let strongSelf = self {

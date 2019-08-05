@@ -6,6 +6,7 @@ import TelegramCore
 import LegacyComponents
 import WatchCommon
 import TelegramPresentationData
+import AvatarNode
 
 let allWatchRequestHandlers: [AnyClass] = [
     WatchChatListHandler.self,

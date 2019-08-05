@@ -8,6 +8,8 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
+import AccountContext
+import TemporaryCachedPeerDataManager
 
 private final class ChannelMembersSearchInteraction {
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void
@@ -87,7 +89,7 @@ private func preparedTransition(from fromEntries: [ChannelMembersSearchEntry]?, 
 }
 
 class ChannelMembersSearchControllerNode: ASDisplayNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let peerId: PeerId
     private let mode: ChannelMembersSearchControllerMode
     private let filters: [ChannelMembersSearchFilter]
@@ -110,7 +112,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     private var disposable: Disposable?
     private var listControl: PeerChannelMemberCategoryControl?
     
-    init(context: AccountContextImpl, presentationData: PresentationData, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
+    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
         self.context = context
         self.listNode = ListView()
         self.peerId = peerId

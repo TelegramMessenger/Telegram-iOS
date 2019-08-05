@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
+import AccountContext
 
 func preloadedChatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags?, additionalData: [AdditionalMessageHistoryViewData], orderStatistics: MessageHistoryViewOrderStatistics = []) -> Signal<ChatHistoryViewUpdate, NoError> {
     return chatHistoryViewForLocation(location, account: account, chatLocation: chatLocation, fixedCombinedReadStates: fixedCombinedReadStates, tagMask: tagMask, additionalData: additionalData, orderStatistics: orderStatistics)

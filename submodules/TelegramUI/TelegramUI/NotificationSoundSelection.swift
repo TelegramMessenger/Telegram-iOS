@@ -7,6 +7,7 @@ import TelegramCore
 import AVFoundation
 import TelegramPresentationData
 import ItemListUI
+import AccountContext
 
 private struct NotificationSoundSelectionArguments {
     let account: Account
@@ -212,7 +213,7 @@ public func fileNameForNotificationSound(_ sound: PeerMessageSound, defaultSound
     }
 }
 
-func playSound(context: AccountContextImpl, sound: PeerMessageSound, defaultSound: PeerMessageSound?) -> Signal<Void, NoError> {
+func playSound(context: AccountContext, sound: PeerMessageSound, defaultSound: PeerMessageSound?) -> Signal<Void, NoError> {
     if case .none = sound {
         return .complete()
     } else {
@@ -253,7 +254,7 @@ func playSound(context: AccountContextImpl, sound: PeerMessageSound, defaultSoun
     }
 }
 
-public func notificationSoundSelectionController(context: AccountContextImpl, isModal: Bool, currentSound: PeerMessageSound, defaultSound: PeerMessageSound?, completion: @escaping (PeerMessageSound) -> Void) -> ViewController {
+public func notificationSoundSelectionController(context: AccountContext, isModal: Bool, currentSound: PeerMessageSound, defaultSound: PeerMessageSound?, completion: @escaping (PeerMessageSound) -> Void) -> ViewController {
     let statePromise = ValuePromise(NotificationSoundSelectionState(selectedSound: currentSound), ignoreRepeated: true)
     let stateValue = Atomic(value: NotificationSoundSelectionState(selectedSound: currentSound))
     let updateState: ((NotificationSoundSelectionState) -> NotificationSoundSelectionState) -> Void = { f in
@@ -278,21 +279,21 @@ public func notificationSoundSelectionController(context: AccountContextImpl, is
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<NotificationSoundSelectionEntry>, NotificationSoundSelectionEntry.ItemGenerationArguments)) in
-            
-            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                arguments.cancel()
-            })
-            
-            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                arguments.complete()
-            })
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Notifications_TextTone), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: notificationsAndSoundsEntries(presentationData: presentationData, defaultSound: defaultSound, state: state), style: .blocks)
-            
-            return (controllerState, (listState, arguments))
-        }
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<NotificationSoundSelectionEntry>, NotificationSoundSelectionEntry.ItemGenerationArguments)) in
+        
+        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            arguments.cancel()
+        })
+        
+        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+            arguments.complete()
+        })
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Notifications_TextTone), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: notificationsAndSoundsEntries(presentationData: presentationData, defaultSound: defaultSound, state: state), style: .blocks)
+        
+        return (controllerState, (listState, arguments))
+    }
     
     let controller = ItemListController(context: context, state: signal |> afterDisposed {
         playSoundDisposable.dispose()

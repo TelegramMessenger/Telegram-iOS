@@ -10,6 +10,8 @@ import TelegramPresentationData
 import ItemListUI
 import AccountContext
 import TextFormat
+import OverlayStatusController
+import TelegramStringFormatting
 
 private final class ChannelInfoControllerArguments {
     let account: Account
@@ -627,7 +629,7 @@ private func valuesRequiringUpdate(state: ChannelInfoState, view: PeerView) -> (
     }
 }
 
-public func channelInfoController(context: AccountContextImpl, peerId: PeerId) -> ViewController {
+public func channelInfoController(context: AccountContext, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(ChannelInfoState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelInfoState())
     let updateState: ((ChannelInfoState) -> ChannelInfoState) -> Void = { f in

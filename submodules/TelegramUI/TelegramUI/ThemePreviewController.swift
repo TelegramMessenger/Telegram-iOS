@@ -7,9 +7,10 @@ import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 final class ThemePreviewController: ViewController {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let previewTheme: PresentationTheme
     private let media: AnyMediaReference
     
@@ -22,7 +23,7 @@ final class ThemePreviewController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
 
-    init(context: AccountContextImpl, previewTheme: PresentationTheme, media: AnyMediaReference) {
+    init(context: AccountContext, previewTheme: PresentationTheme, media: AnyMediaReference) {
         self.context = context
         self.previewTheme = previewTheme
         self.media = media

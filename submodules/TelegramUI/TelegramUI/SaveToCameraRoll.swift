@@ -7,13 +7,14 @@ import Photos
 import Display
 import MobileCoreServices
 import DeviceAccess
+import AccountContext
 
 private enum SaveToCameraRollState {
     case progress(Float)
     case data(MediaResourceData)
 }
 
-private func fetchMediaData(context: AccountContextImpl, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<(SaveToCameraRollState, Bool), NoError> {
+private func fetchMediaData(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<(SaveToCameraRollState, Bool), NoError> {
     var resource: MediaResource?
     var isImage = true
     var fileExtension: String?
@@ -76,7 +77,7 @@ private func fetchMediaData(context: AccountContextImpl, postbox: Postbox, media
     }
 }
 
-func saveToCameraRoll(context: AccountContextImpl, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Float, NoError> {
+func saveToCameraRoll(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Float, NoError> {
     return fetchMediaData(context: context, postbox: postbox, mediaReference: mediaReference)
     |> mapToSignal { state, isImage -> Signal<Float, NoError> in
         switch state {
@@ -130,7 +131,7 @@ func saveToCameraRoll(context: AccountContextImpl, postbox: Postbox, mediaRefere
     }
 }
 
-func copyToPasteboard(context: AccountContextImpl, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Void, NoError> {
+func copyToPasteboard(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Void, NoError> {
     return fetchMediaData(context: context, postbox: postbox, mediaReference: mediaReference)
     |> mapToSignal { state, isImage -> Signal<Void, NoError> in
         if case let .data(data) = state, data.complete {

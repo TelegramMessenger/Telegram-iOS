@@ -8,6 +8,8 @@ import UIKit
 import SwiftSignalKit
 import TelegramPresentationData
 import ActivityIndicator
+import OverlayStatusController
+import AccountContext
 
 public final class ProxyServerActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
@@ -19,7 +21,7 @@ public final class ProxyServerActionSheetController: ActionSheetController {
     
     private var isDismissed: Bool = false
     
-    convenience init(context: AccountContextImpl, server: ProxyServerSettings) {
+    convenience init(context: AccountContext, server: ProxyServerSettings) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.init(theme: presentationData.theme, strings: presentationData.strings, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, server: server, presentationData: context.sharedContext.presentationData)
     }

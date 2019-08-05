@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
 import ItemListUI
+import AccountContext
 
 private struct CreateChannelArguments {
     let account: Account
@@ -187,7 +188,7 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     return entries
 }
 
-public func createChannelController(context: AccountContextImpl) -> ViewController {
+public func createChannelController(context: AccountContext) -> ViewController {
     let initialState = CreateChannelState(creating: false, editingName: ItemListAvatarAndNameInfoItemName.title(title: "", type: .channel), editingDescriptionText: "", avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)

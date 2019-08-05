@@ -8,9 +8,10 @@ import Display
 import SafariServices
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var settings: InstantPagePresentationSettings?
     private var themeSettings: PresentationThemeSettings?
     private var presentationTheme: PresentationTheme
@@ -80,7 +81,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return InstantPageStoredState(contentOffset: Double(self.scrollNode.view.contentOffset.y), details: details)
     }
     
-    init(context: AccountContextImpl, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType,  getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType,  getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
         self.context = context
         self.presentationTheme = presentationTheme
         self.dateTimeFormat = dateTimeFormat
@@ -1268,7 +1269,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
             }
-            self.context.sharedContext.mediaManager.setPlaylist((self.context.account, InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex)), type: file.isVoice ? .voice : .music)
+            self.context.sharedContext.mediaManager.setPlaylist((self.context.account, InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex)), type: file.isVoice ? .voice : .music, control: .playback(.play))
             return
         }
         

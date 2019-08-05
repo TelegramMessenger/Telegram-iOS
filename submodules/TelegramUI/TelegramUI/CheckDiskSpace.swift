@@ -1,6 +1,7 @@
 import Foundation
 import Display
 import TelegramCore
+import AccountContext
 
 func totalDiskSpace() -> Int64 {
     do {
@@ -20,7 +21,7 @@ func freeDiskSpace() -> Int64 {
     }
 }
 
-func checkAvailableDiskSpace(context: AccountContextImpl, threshold: Int64 = 100 * 1024 * 1024, present: @escaping (ViewController, Any?) -> Void) -> Bool {
+func checkAvailableDiskSpace(context: AccountContext, threshold: Int64 = 100 * 1024 * 1024, present: @escaping (ViewController, Any?) -> Void) -> Bool {
     guard freeDiskSpace() < threshold else {
         return true
     }

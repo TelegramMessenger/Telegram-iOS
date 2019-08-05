@@ -14,7 +14,7 @@ private enum NotificationContentAuthorizationError {
     case unauthorized
 }
 
-private var sharedAccountContext: SharedAccountContextImpl?
+private var sharedAccountContext: SharedAccountContext?
 
 private var installedSharedLogger = false
 

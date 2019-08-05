@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import AccountContext
 
 enum PeerReportSubject {
     case peer(PeerId)
@@ -21,7 +22,7 @@ private enum PeerReportOption {
     case other
 }
 
-func peerReportOptionsController(context: AccountContextImpl, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void) -> ViewController {
+func peerReportOptionsController(context: AccountContext, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme))
     
@@ -186,7 +187,7 @@ private func peerReportControllerEntries(presentationData: PresentationData, sta
     return entries
 }
 
-private func peerReportController(context: AccountContextImpl, subject: PeerReportSubject) -> ViewController {
+private func peerReportController(context: AccountContext, subject: PeerReportSubject) -> ViewController {
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     

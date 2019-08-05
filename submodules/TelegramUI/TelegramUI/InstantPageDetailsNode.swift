@@ -6,12 +6,13 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 private let detailsInset: CGFloat = 17.0
 private let titleInset: CGFloat = 22.0
 
 final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let strings: PresentationStrings
     private let theme: InstantPageTheme
     let item: InstantPageDetailsItem
@@ -32,7 +33,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     
     var requestLayoutUpdate: ((Bool) -> Void)?
     
-    init(context: AccountContextImpl, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
         self.context = context
         self.strings = strings
         self.theme = theme

@@ -8,9 +8,10 @@ import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AccountContext
 
 class ForwardPrivacyChatPreviewItem: ListViewItem, ItemListItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let sectionId: ItemListSectionId
@@ -22,7 +23,7 @@ class ForwardPrivacyChatPreviewItem: ListViewItem, ItemListItem {
     let linkEnabled: Bool
     let tooltipText: String
     
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peerName: String, linkEnabled: Bool, tooltipText: String) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peerName: String, linkEnabled: Bool, tooltipText: String) {
         self.context = context
         self.theme = theme
         self.strings = strings

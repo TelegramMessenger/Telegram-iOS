@@ -9,6 +9,7 @@ import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
+import AccountContext
 
 private struct WebSearchContextResultStableId: Hashable {
     let result: ChatContextResult
@@ -120,7 +121,7 @@ private func preparedWebSearchRecentTransition(from fromEntries: [WebSearchRecen
 }
 
 class WebSearchControllerNode: ASDisplayNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let peer: Peer?
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -172,7 +173,7 @@ class WebSearchControllerNode: ASDisplayNode {
     var cancel: (() -> Void)?
     var dismissInput: (() -> Void)?
     
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
         self.context = context
         self.theme = theme
         self.strings = strings

@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 private final class ChatButtonKeyboardInputButtonNode: ASButtonNode {
     var button: ReplyMarkupButton?
@@ -29,7 +30,7 @@ private final class ChatButtonKeyboardInputButtonNode: ASButtonNode {
 }
 
 final class ChatButtonKeyboardInputNode: ChatInputNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction
     
     private let separatorNode: ASDisplayNode
@@ -40,7 +41,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
     
     private var theme: PresentationTheme?
     
-    init(context: AccountContextImpl, controllerInteraction: ChatControllerInteraction) {
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         

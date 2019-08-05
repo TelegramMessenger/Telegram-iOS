@@ -6,6 +6,7 @@ import WatchCommon
 import TelegramUIPrivateModule
 import SSignalKit
 import TelegramUIPreferences
+import AccountContext
 
 final class WatchCommunicationManager {
     private let queue: Queue
@@ -16,7 +17,7 @@ final class WatchCommunicationManager {
     private let contextDisposable = MetaDisposable()
     private let presetsDisposable = MetaDisposable()
     
-    let accountContext = Promise<AccountContextImpl?>(nil)
+    let accountContext = Promise<AccountContext?>(nil)
     private let presets = Promise<WatchPresetSettings?>(nil)
     private let navigateToMessagePipe = ValuePipe<MessageId>()
     

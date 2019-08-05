@@ -6,9 +6,10 @@ import SwiftSignalKit
 import Display
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 final class InstantPageController: ViewController {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var webPage: TelegramMediaWebpage
     private let sourcePeerType: MediaAutoDownloadPeerType
     private let anchor: String?
@@ -31,7 +32,7 @@ final class InstantPageController: ViewController {
     private var settingsDisposable: Disposable?
     private var themeSettings: PresentationThemeSettings?
     
-    init(context: AccountContextImpl, webPage: TelegramMediaWebpage, sourcePeerType: MediaAutoDownloadPeerType, anchor: String? = nil) {
+    init(context: AccountContext, webPage: TelegramMediaWebpage, sourcePeerType: MediaAutoDownloadPeerType, anchor: String? = nil) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
+import AccountContext
 
 private func availableColors() -> [Int32] {
     return [
@@ -61,14 +62,14 @@ final class ThemeColorsGridController: ViewController {
         return self._ready
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
     private var validLayout: ContainerViewLayout?
     
-    init(context: AccountContextImpl) {
+    init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

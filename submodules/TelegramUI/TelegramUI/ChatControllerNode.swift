@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
+import AccountContext
 
 private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider, PreviewingHostView {
     var inputAccessoryHeight: (() -> CGFloat)?
@@ -53,7 +54,7 @@ private struct ChatControllerNodeDerivedLayoutState {
 }
 
 class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    let context: AccountContextImpl
+    let context: AccountContext
     let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
     private weak var controller: ChatController?
@@ -187,7 +188,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }*/
     
-    init(context: AccountContextImpl, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
+    init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
         self.context = context
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction

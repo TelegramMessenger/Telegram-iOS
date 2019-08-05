@@ -6,6 +6,7 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 private let titleFont = Font.medium(14.0)
 private let textFont = Font.regular(14.0)
@@ -41,7 +42,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         self.contentNode.addSubnode(self.lineNode)
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: ChatPresentationData, _ strings: PresentationStrings, _ context: AccountContextImpl, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: ChatPresentationData, _ strings: PresentationStrings, _ context: AccountContext, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
         
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)

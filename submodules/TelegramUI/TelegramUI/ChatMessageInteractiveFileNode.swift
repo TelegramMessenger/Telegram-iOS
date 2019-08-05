@@ -7,6 +7,7 @@ import Display
 import TelegramCore
 import UniversalMediaPlayer
 import TelegramPresentationData
+import AccountContext
 
 private struct FetchControls {
     let fetch: () -> Void
@@ -60,7 +61,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     var activateLocalContent: () -> Void = { }
     var requestUpdateLayout: (Bool) -> Void = { _ in }
     
-    private var context: AccountContextImpl?
+    private var context: AccountContext?
     private var message: Message?
     private var themeAndStrings: (ChatPresentationThemeData, PresentationStrings, String)?
     private var file: TelegramMediaFile?
@@ -184,7 +185,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ context: AccountContextImpl, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))) {
+    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))) {
         let currentFile = self.file
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
@@ -859,12 +860,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.fetchingCompactTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingCompactSize)
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ context: AccountContextImpl, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> ChatMessageInteractiveFileNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> ChatMessageInteractiveFileNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
         return { context, presentationData, message, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, constrainedSize in
             var fileNode: ChatMessageInteractiveFileNode
-            var fileLayout: (_ context: AccountContextImpl, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void)))
+            var fileLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 fileNode = node

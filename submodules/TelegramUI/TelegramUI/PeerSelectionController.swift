@@ -6,9 +6,10 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
+import AccountContext
 
 public final class PeerSelectionController: ViewController {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -49,7 +50,7 @@ public final class PeerSelectionController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContextImpl, filter: ChatListNodePeersFilter = [.onlyWriteable], hasContactSelector: Bool = true, title: String? = nil) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasContactSelector: Bool = true, title: String? = nil) {
         self.context = context
         self.filter = filter
         self.hasContactSelector = hasContactSelector

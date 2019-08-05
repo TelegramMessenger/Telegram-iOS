@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import OverlayStatusController
+import AccountContext
 
 private final class StorageUsageControllerArguments {
     let account: Account
@@ -265,7 +267,7 @@ private func stringForCategory(strings: PresentationStrings, category: PeerCache
     }
 }
 
-func storageUsageController(context: AccountContextImpl, isModal: Bool = false) -> ViewController {
+func storageUsageController(context: AccountContext, isModal: Bool = false) -> ViewController {
     let cacheSettingsPromise = Promise<CacheStorageSettings>()
     cacheSettingsPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])
     |> map { sharedData -> CacheStorageSettings in

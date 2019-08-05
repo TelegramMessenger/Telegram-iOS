@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ProgressNavigationButtonNode
+import AccountContext
 
 enum SecureIdDocumentFormScrollToSubject {
     case selfie
@@ -19,7 +20,7 @@ enum SecureIdDocumentFormRequestedData {
 }
 
 final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormState, SecureIdDocumentFormControllerNodeInitParams, SecureIdDocumentFormControllerNode> {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let updatedValues: ([SecureIdValueWithContext]) -> Void
     
@@ -32,7 +33,7 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
     
     private var doneItem: UIBarButtonItem?
     
-    init(context: AccountContextImpl, secureIdContext: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, requestOptionalData: Bool = false, scrollTo: SecureIdDocumentFormScrollToSubject? = nil, primaryLanguageByCountry: [String: String], values: [SecureIdValueWithContext], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
+    init(context: AccountContext, secureIdContext: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, requestOptionalData: Bool = false, scrollTo: SecureIdDocumentFormScrollToSubject? = nil, primaryLanguageByCountry: [String: String], values: [SecureIdValueWithContext], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.secureIdContext = secureIdContext

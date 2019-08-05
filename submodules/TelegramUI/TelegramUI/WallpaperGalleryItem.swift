@@ -10,6 +10,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import ProgressNavigationButtonNode
 import MediaResources
+import AccountContext
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool
@@ -24,11 +25,11 @@ struct WallpaperGalleryItemArguments {
 }
 
 class WallpaperGalleryItem: GalleryItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let entry: WallpaperGalleryEntry
     let arguments: WallpaperGalleryItemArguments
     
-    init(context: AccountContextImpl, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) {
+    init(context: AccountContext, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) {
         self.context = context
         self.entry = entry
         self.arguments = arguments
@@ -62,7 +63,7 @@ private func reference(for resource: MediaResource, media: Media, message: Messa
 }
 
 final class WallpaperGalleryItemNode: GalleryItemNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     var entry: WallpaperGalleryEntry?
     private var colorPreview: Bool = false
     private var contentSize: CGSize?
@@ -92,7 +93,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private var validLayout: ContainerViewLayout?
     private var validOffset: CGFloat?
     
-    init(context: AccountContextImpl) {
+    init(context: AccountContext) {
         self.context = context
         
         self.wrapperNode = ASDisplayNode()

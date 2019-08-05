@@ -5,6 +5,7 @@ import UIKit
 import Postbox
 import UserNotifications
 import TelegramUIPreferences
+import AccountContext
 
 private final class WakeupManagerTask {
     let nativeId: UIBackgroundTaskIdentifier

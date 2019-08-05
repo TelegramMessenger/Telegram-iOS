@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import AccountContext
 
 final class InstantPageReferenceController: ViewController {
     private var controllerNode: InstantPageReferenceControllerNode {
@@ -13,7 +14,7 @@ final class InstantPageReferenceController: ViewController {
     
     private var animatedIn = false
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let theme: InstantPageTheme
     private let webPage: TelegramMediaWebpage
     private let anchorText: NSAttributedString
@@ -21,7 +22,7 @@ final class InstantPageReferenceController: ViewController {
     private let openUrlIn: (InstantPageUrlItem) -> Void
     private let present: (ViewController, Any?) -> Void
     
-    init(context: AccountContextImpl, theme: InstantPageTheme, webPage: TelegramMediaWebpage, anchorText: NSAttributedString, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, anchorText: NSAttributedString, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.theme = theme
         self.webPage = webPage

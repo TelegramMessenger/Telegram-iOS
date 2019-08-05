@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 enum ShareState {
     case preparing
@@ -23,7 +24,7 @@ func openExternalShare(state: () -> Signal<ShareExternalState, NoError>) {
 }
 
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let sharedContext: SharedAccountContextImpl
+    private let sharedContext: SharedAccountContext
     private var presentationData: PresentationData
     private let externalShare: Bool
     private let immediateExternalShare: Bool
@@ -71,7 +72,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private var hapticFeedback: HapticFeedback?
     
-    init(sharedContext: SharedAccountContextImpl, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
+    init(sharedContext: SharedAccountContext, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.externalShare = externalShare

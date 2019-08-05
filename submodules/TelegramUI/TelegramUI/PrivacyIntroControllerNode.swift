@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 private func generateButtonImage(backgroundColor: UIColor, borderColor: UIColor, highlightColor: UIColor?) -> UIImage? {
     return generateImage(CGSize(width: 1.0, height: 44.0), contextGenerator: { size, context in
@@ -30,7 +31,7 @@ private let textFont = Font.regular(14.0)
 private let buttonFont = Font.regular(17.0)
 
 final class PrivacyIntroControllerNode: ViewControllerTracingNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let mode: PrivacyIntroControllerMode
     private var presentationData: PresentationData?
     private let proceedAction: () -> Void
@@ -46,7 +47,7 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    init(context: AccountContextImpl, mode: PrivacyIntroControllerMode, proceedAction: @escaping () -> Void) {
+    init(context: AccountContext, mode: PrivacyIntroControllerMode, proceedAction: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.proceedAction = proceedAction

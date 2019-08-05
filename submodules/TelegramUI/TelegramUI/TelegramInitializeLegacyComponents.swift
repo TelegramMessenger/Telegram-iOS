@@ -12,6 +12,7 @@ import TelegramPresentationData
 import DeviceAccess
 import TelegramAudio
 import LegacyComponents
+import AccountContext
 
 var legacyComponentsApplication: UIApplication?
 
@@ -28,16 +29,16 @@ func updateLegacyTheme() {
 private var legacyDocumentsStorePath: String?
 private var legacyCanOpenUrl: (URL) -> Bool = { _ in return false }
 private var legacyOpenUrl: (URL) -> Void = { _ in }
-private weak var legacyContext: AccountContextImpl?
+private weak var legacyContext: AccountContext?
 
-func legacyContextGet() -> AccountContextImpl? {
+func legacyContextGet() -> AccountContext? {
     return legacyContext
 }
 
 private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponentsAccessChecker {
-    private weak var context: AccountContextImpl?
+    private weak var context: AccountContext?
     
-    init(context: AccountContextImpl?) {
+    init(context: AccountContext?) {
         self.context = context
     }
     
@@ -357,7 +358,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
 }
 
-public func setupLegacyComponents(context: AccountContextImpl) {
+public func setupLegacyComponents(context: AccountContext) {
     legacyContext = context
 }
 

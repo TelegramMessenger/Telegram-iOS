@@ -9,6 +9,7 @@ import Display
 import LegacyComponents
 import DeviceAccess
 import TelegramUpdateUI
+import AccountContext
 
 func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bool {
     if data.isLockable, let autolockDeadline = data.autolockDeadline, autolockDeadline <= timestamp {
@@ -760,7 +761,7 @@ final class AuthorizedApplicationContext {
                 return
             }
             
-            let watchManager = WatchManager(arguments: arguments)
+            let watchManager = WatchManagerImpl(arguments: arguments)
             strongSelf.context.watchManager = watchManager
             
             strongSelf.watchNavigateToMessageDisposable.set((strongSelf.context.sharedContext.applicationBindings.applicationInForeground |> mapToSignal({ applicationInForeground -> Signal<(Bool, MessageId), NoError> in

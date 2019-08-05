@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
+import AccountContext
 
 private let nameFont = Font.medium(14.0)
 

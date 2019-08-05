@@ -2,8 +2,9 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
+import AccountContext
 
-public func textAlertController(context: AccountContextImpl, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal) -> AlertController {
+public func textAlertController(context: AccountContext, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     
     let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: title, text: text, actions: actions)
@@ -17,7 +18,7 @@ public func textAlertController(context: AccountContextImpl, title: String?, tex
     return controller
 }
 
-public func richTextAlertController(context: AccountContextImpl, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal) -> AlertController {
+public func richTextAlertController(context: AccountContext, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationTheme: presentationData.theme)
     

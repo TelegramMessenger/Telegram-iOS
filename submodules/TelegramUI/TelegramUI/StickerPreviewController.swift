@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import AccountContext
 
 final class StickerPreviewControllerPresentationArguments {
     let transitionNode: (StickerPackItem) -> ASDisplayNode?
@@ -21,10 +22,10 @@ final class StickerPreviewController: ViewController {
     
     private var animatedIn = false
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var item: StickerPackItem
     
-    init(context: AccountContextImpl, item: StickerPackItem) {
+    init(context: AccountContext, item: StickerPackItem) {
         self.context = context
         self.item = item
         

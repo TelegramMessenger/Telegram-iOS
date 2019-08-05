@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import UniversalMediaPlayer
 import LegacyComponents
+import AccountContext
 
 private func setupArrowFrame(size: CGSize, edge: OverlayMediaItemMinimizationEdge, view: TGEmbedPIPPullArrowView) {
     let arrowX: CGFloat

@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 final public class PasscodeEntryControllerPresentationArguments {
     let animated: Bool
@@ -31,7 +32,7 @@ final public class PasscodeEntryController: ViewController {
         return self.displayNode as! PasscodeEntryControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
         
@@ -49,7 +50,7 @@ final public class PasscodeEntryController: ViewController {
     private var inBackground: Bool = false
     private var inBackgroundDisposable: Disposable?
     
-    public init(context: AccountContextImpl, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
+    public init(context: AccountContext, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.challengeData = challengeData

@@ -6,6 +6,7 @@ import Display
 import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
+import AccountContext
 
 private let itemSize = CGSize(width: 88.0, height: 88.0)
 private let inset: CGFloat = 12.0
@@ -27,7 +28,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     
     var patternChanged: ((TelegramWallpaper, Int32?, Bool) -> Void)?
 
-    init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         
         self.backgroundNode = ASDisplayNode()

@@ -3,10 +3,12 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import OverlayStatusController
+import AccountContext
 
 private let maximumNumberOfAccounts = 3
 
-func openEditSettings(context: AccountContextImpl, accountsAndPeers: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError>, focusOnItemTag: EditSettingsEntryTag? = nil, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void) -> Disposable {
+func openEditSettings(context: AccountContext, accountsAndPeers: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError>, focusOnItemTag: EditSettingsEntryTag? = nil, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void) -> Disposable {
     let openEditingDisposable = MetaDisposable()
     var cancelImpl: (() -> Void)?
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }

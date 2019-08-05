@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 private struct SearchResultEntry: Identifiable {
     let index: Int
@@ -29,7 +30,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     let tokenListNode: EditableTokenListNode
     var searchResultsNode: ContactListNode?
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
@@ -46,7 +47,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContextImpl, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
+    init(context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

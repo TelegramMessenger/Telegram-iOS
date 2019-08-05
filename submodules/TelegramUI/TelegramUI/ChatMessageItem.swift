@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 public enum ChatMessageItemContent: Sequence {
     case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes)
@@ -246,7 +247,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
 
 public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let presentationData: ChatPresentationData
-    let context: AccountContextImpl
+    let context: AccountContext
     let chatLocation: ChatLocation
     let associatedData: ChatMessageItemAssociatedData
     let controllerInteraction: ChatControllerInteraction
@@ -276,7 +277,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    public init(presentationData: ChatPresentationData, context: AccountContextImpl, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil) {
+    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil) {
         self.presentationData = presentationData
         self.context = context
         self.chatLocation = chatLocation

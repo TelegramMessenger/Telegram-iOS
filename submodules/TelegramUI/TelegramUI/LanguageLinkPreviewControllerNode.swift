@@ -7,9 +7,10 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ActivityIndicator
+import AccountContext
 
 final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -46,7 +47,7 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
     
     private let disposable = MetaDisposable()
     
-    init(context: AccountContextImpl, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, openUrl: @escaping (String) -> Void) {
+    init(context: AccountContext, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, openUrl: @escaping (String) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

@@ -9,6 +9,7 @@ import LocalAuthentication
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AccountContext
 
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOff: () -> Void
@@ -199,7 +200,7 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
     return entries
 }
 
-func passcodeOptionsController(context: AccountContextImpl) -> ViewController {
+func passcodeOptionsController(context: AccountContext) -> ViewController {
     let initialState = PasscodeOptionsControllerState()
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -383,7 +384,7 @@ func passcodeOptionsController(context: AccountContextImpl) -> ViewController {
     return controller
 }
 
-public func passcodeOptionsAccessController(context: AccountContextImpl, animateIn: Bool = true, pushController: ((ViewController) -> Void)?, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
+public func passcodeOptionsAccessController(context: AccountContext, animateIn: Bool = true, pushController: ((ViewController) -> Void)?, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
     return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
         return transaction.getAccessChallengeData()
     }
@@ -437,7 +438,7 @@ public func passcodeOptionsAccessController(context: AccountContextImpl, animate
     }
 }
 
-public func passcodeEntryController(context: AccountContextImpl, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
+public func passcodeEntryController(context: AccountContext, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
     return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
         return transaction.getAccessChallengeData()
     }

@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import AccountContext
 
 private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult) -> (Int, Bool) {
     switch result {
@@ -23,7 +24,7 @@ private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult
     }
 }
 
-func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContextImpl, currentPanel: ChatInputContextPanelNode?, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
+func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputContextPanelNode?, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
     guard let _ = chatPresentationInterfaceState.renderedPeer?.peer else {
         return nil
     }
@@ -164,7 +165,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
     return nil
 }
 
-func chatOverlayContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContextImpl, currentPanel: ChatInputContextPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
+func chatOverlayContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputContextPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
     guard let searchQuerySuggestionResult = chatPresentationInterfaceState.searchQuerySuggestionResult, let _ = chatPresentationInterfaceState.renderedPeer?.peer else {
         return nil
     }

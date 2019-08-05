@@ -16,11 +16,6 @@ enum SharedMediaPlayerGroup: Int {
     case voiceAndInstantVideo = 1
 }
 
-public enum MediaManagerPlayerType {
-    case voice
-    case music
-}
-
 private let sharedAudioSession: ManagedAudioSession = {
     let audioSession = ManagedAudioSession()
     let _ = (audioSession.headsetConnected() |> deliverOnMainQueue).start(next: { value in
@@ -28,11 +23,6 @@ private let sharedAudioSession: ManagedAudioSession = {
     })
     return audioSession
 }()
-
-enum SharedMediaPlayerItemPlaybackStateOrLoading: Equatable {
-    case state(SharedMediaPlayerItemPlaybackState)
-    case loading
-}
 
 private struct GlobalControlOptions: OptionSet {
     var rawValue: Int32
@@ -49,7 +39,7 @@ private struct GlobalControlOptions: OptionSet {
     static let seek = GlobalControlOptions(rawValue: 1 << 5)
 }
 
-public final class MediaManager: NSObject {
+public final class MediaManagerImpl: NSObject, MediaManager {
     public static var globalAudioSession: ManagedAudioSession {
         return sharedAudioSession
     }
@@ -69,7 +59,7 @@ public final class MediaManager: NSObject {
     private let inForeground: Signal<Bool, NoError>
     
     public let audioSession: ManagedAudioSession
-    public let overlayMediaManager = OverlayMediaManager()
+    public let overlayMediaManager: OverlayMediaManager = OverlayMediaManager()
     let sharedVideoContextManager = SharedVideoContextManager()
     
     private var nextPlayerIndex: Int32 = 0
@@ -124,12 +114,12 @@ public final class MediaManager: NSObject {
         }
     }
     private let musicMediaPlayerStateValue = Promise<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?>(nil)
-    var musicMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError> {
+    public var musicMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError> {
         return self.musicMediaPlayerStateValue.get()
     }
     
     private let globalMediaPlayerStateValue = Promise<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?>()
-    var globalMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> {
+    public var globalMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> {
         return self.globalMediaPlayerStateValue.get()
     }
     public var activeGlobalMediaPlayerAccountId: Signal<(AccountRecordId, Bool)?, NoError> {
@@ -174,9 +164,9 @@ public final class MediaManager: NSObject {
     private let globalControlsStatusDisposable = MetaDisposable()
     private let globalAudioSessionForegroundDisposable = MetaDisposable()
     
-    let universalVideoManager = UniversalVideoContentManager()
+    public let universalVideoManager: UniversalVideoManager = UniversalVideoManagerImpl()
     
-    let galleryHiddenMediaManager = GalleryHiddenMediaManager()
+    public let galleryHiddenMediaManager: GalleryHiddenMediaManager = GalleryHiddenMediaManagerImpl()
     
     init(accountManager: AccountManager, inForeground: Signal<Bool, NoError>) {
         self.accountManager = accountManager
@@ -413,12 +403,12 @@ public final class MediaManager: NSObject {
         self.globalAudioSessionForegroundDisposable.dispose()
     }
     
-    func audioRecorder(beginWithTone: Bool, applicationBindings: TelegramApplicationBindings, beganWithTone: @escaping (Bool) -> Void) -> Signal<ManagedAudioRecorder?, NoError> {
+    public func audioRecorder(beginWithTone: Bool, applicationBindings: TelegramApplicationBindings, beganWithTone: @escaping (Bool) -> Void) -> Signal<ManagedAudioRecorder?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.queue.async {
-                let audioRecorder = ManagedAudioRecorder(mediaManager: self, pushIdleTimerExtension: { [weak applicationBindings] in
+                let audioRecorder = ManagedAudioRecorderImpl(mediaManager: self, pushIdleTimerExtension: { [weak applicationBindings] in
                     return applicationBindings?.pushIdleTimerExtension() ?? EmptyDisposable
                 }, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
                 subscriber.putNext(audioRecorder)
@@ -431,7 +421,7 @@ public final class MediaManager: NSObject {
         }
     }
     
-    func setPlaylist(_ playlist: (Account, SharedMediaPlaylist)?, type: MediaManagerPlayerType, control: SharedMediaPlayerControlAction = .playback(.play)) {
+    public func setPlaylist(_ playlist: (Account, SharedMediaPlaylist)?, type: MediaManagerPlayerType, control: SharedMediaPlayerControlAction) {
         assert(Queue.mainQueue().isCurrent())
         let inputData: Signal<(Account, SharedMediaPlaylist, MusicPlaybackSettings)?, NoError>
         if let (account, playlist) = playlist {
@@ -493,7 +483,7 @@ public final class MediaManager: NSObject {
         }), forKey: type)
     }
     
-    func playlistControl(_ control: SharedMediaPlayerControlAction, type: MediaManagerPlayerType? = nil) {
+    public func playlistControl(_ control: SharedMediaPlayerControlAction, type: MediaManagerPlayerType?) {
         assert(Queue.mainQueue().isCurrent())
         let selectedType: MediaManagerPlayerType
         if let type = type {
@@ -510,7 +500,7 @@ public final class MediaManager: NSObject {
                 if self.voiceMediaPlayer != nil {
                     switch control {
                         case .playback(.play), .playback(.togglePlayPause):
-                            self.setPlaylist(nil, type: .voice)
+                            self.setPlaylist(nil, type: .voice, control: .playback(.pause))
                         default:
                             break
                     }
@@ -519,7 +509,7 @@ public final class MediaManager: NSObject {
         }
     }
     
-    func filteredPlaylistState(accountId: AccountRecordId, playlistId: SharedMediaPlaylistId, itemId: SharedMediaPlaylistItemId, type: MediaManagerPlayerType) -> Signal<SharedMediaPlayerItemPlaybackState?, NoError> {
+    public func filteredPlaylistState(accountId: AccountRecordId, playlistId: SharedMediaPlaylistId, itemId: SharedMediaPlaylistItemId, type: MediaManagerPlayerType) -> Signal<SharedMediaPlayerItemPlaybackState?, NoError> {
         let signal: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError>
         switch type {
             case .voice:
@@ -541,30 +531,30 @@ public final class MediaManager: NSObject {
     }
     
     @objc func playCommandEvent(_ command: AnyObject) {
-        self.playlistControl(.playback(.play))
+        self.playlistControl(.playback(.play), type: nil)
     }
     
     @objc func pauseCommandEvent(_ command: AnyObject) {
-        self.playlistControl(.playback(.pause))
+        self.playlistControl(.playback(.pause), type: nil)
     }
     
     @objc func previousTrackCommandEvent(_ command: AnyObject) {
-        self.playlistControl(.previous)
+        self.playlistControl(.previous, type: nil)
     }
     
     @objc func nextTrackCommandEvent(_ command: AnyObject) {
-        self.playlistControl(.next)
+        self.playlistControl(.next, type: nil)
     }
     
     @objc func togglePlayPauseCommandEvent(_ command: AnyObject) {
-        self.playlistControl(.playback(.togglePlayPause))
+        self.playlistControl(.playback(.togglePlayPause), type: nil)
     }
     
     @objc func changePlaybackPositionCommandEvent(_ event: MPChangePlaybackPositionCommandEvent) {
-        self.playlistControl(.seek(event.positionTime))
+        self.playlistControl(.seek(event.positionTime), type: nil)
     }
     
-    func setOverlayVideoNode(_ node: OverlayMediaItemNode?) {
+    public func setOverlayVideoNode(_ node: OverlayMediaItemNode?) {
         if let currentOverlayVideoNode = self.currentOverlayVideoNode {
             self.overlayMediaManager.controller?.removeNode(currentOverlayVideoNode, customTransition: true)
             self.currentOverlayVideoNode = nil

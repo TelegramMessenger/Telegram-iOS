@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 public final class LanguageLinkPreviewController: ViewController {
     private var controllerNode: LanguageLinkPreviewControllerNode {
@@ -14,14 +15,14 @@ public final class LanguageLinkPreviewController: ViewController {
     
     private var animatedIn = false
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let identifier: String
     private var localizationInfo: LocalizationInfo?
     private var presentationData: PresentationData
     
     private let disposable = MetaDisposable()
     
-    public init(context: AccountContextImpl, identifier: String) {
+    public init(context: AccountContext, identifier: String) {
         self.context = context
         self.identifier = identifier
         

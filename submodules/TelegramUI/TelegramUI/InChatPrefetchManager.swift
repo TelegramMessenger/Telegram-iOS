@@ -3,7 +3,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
-import TelegramUIPreferences
+import AccountContext
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()
@@ -18,7 +18,7 @@ struct InChatPrefetchOptions: Equatable {
 }
 
 final class InChatPrefetchManager {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var settings: MediaAutoDownloadSettings
     private var options: InChatPrefetchOptions?
     
@@ -27,7 +27,7 @@ final class InChatPrefetchManager {
     
     private var contexts: [MediaId: PrefetchMediaContext] = [:]
     
-    init(context: AccountContextImpl) {
+    init(context: AccountContext) {
         self.context = context
         self.settings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
     }

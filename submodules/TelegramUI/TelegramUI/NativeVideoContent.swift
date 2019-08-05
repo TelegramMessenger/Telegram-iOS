@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramAudio
 import UniversalMediaPlayer
+import AccountContext
 
 enum NativeVideoContentId: Hashable {
     case message(UInt32, MediaId)

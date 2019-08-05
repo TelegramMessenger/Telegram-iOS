@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountContext
 
 enum ChatMessageBubbleContentBackgroundHiding {
     case never
@@ -81,14 +82,14 @@ enum ChatMessageBubbleContentTapAction {
 }
 
 final class ChatMessageBubbleContentItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let controllerInteraction: ChatControllerInteraction
     let message: Message
     let read: Bool
     let presentationData: ChatPresentationData
     let associatedData: ChatMessageItemAssociatedData
     
-    init(context: AccountContextImpl, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData) {
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.message = message

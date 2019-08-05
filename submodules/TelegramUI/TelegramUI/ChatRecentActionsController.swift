@@ -5,13 +5,15 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramBaseController
+import AccountContext
 
-final class ChatRecentActionsController: TelegramController {
+final class ChatRecentActionsController: TelegramBaseController {
     private var controllerNode: ChatRecentActionsControllerNode {
         return self.displayNode as! ChatRecentActionsControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let peer: Peer
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -21,7 +23,7 @@ final class ChatRecentActionsController: TelegramController {
     
     private let titleView: ChatRecentActionsTitleView
     
-    init(context: AccountContextImpl, peer: Peer) {
+    init(context: AccountContext, peer: Peer) {
         self.context = context
         self.peer = peer
         

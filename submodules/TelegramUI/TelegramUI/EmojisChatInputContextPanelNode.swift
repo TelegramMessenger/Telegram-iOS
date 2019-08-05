@@ -6,6 +6,7 @@ import TelegramCore
 import Display
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 private struct EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
     let symbol: String
@@ -101,7 +102,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
     private var enqueuedTransitions: [(EmojisChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(context: AccountContextImpl, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false

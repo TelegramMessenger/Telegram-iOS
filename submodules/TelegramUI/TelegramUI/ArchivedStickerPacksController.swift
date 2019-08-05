@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import OverlayStatusController
+import AccountContext
 
 public enum ArchivedStickerPacksControllerMode {
     case stickers
@@ -233,7 +235,7 @@ private func archivedStickerPacksControllerEntries(presentationData: Presentatio
     return entries
 }
 
-public func archivedStickerPacksController(context: AccountContextImpl, mode: ArchivedStickerPacksControllerMode, archived: [ArchivedStickerPackItem]?, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void) -> ViewController {
+public func archivedStickerPacksController(context: AccountContext, mode: ArchivedStickerPacksControllerMode, archived: [ArchivedStickerPackItem]?, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void) -> ViewController {
     let statePromise = ValuePromise(ArchivedStickerPacksControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ArchivedStickerPacksControllerState())
     let updateState: ((ArchivedStickerPacksControllerState) -> ArchivedStickerPacksControllerState) -> Void = { f in

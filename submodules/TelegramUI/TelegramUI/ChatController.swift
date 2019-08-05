@@ -13,6 +13,11 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
 import TextFormat
+import TelegramBaseController
+import AccountContext
+import TelegramStringFormatting
+import OverlayStatusController
+import DeviceLocationManager
 
 public enum ChatControllerPeekActions {
     case standard
@@ -101,7 +106,7 @@ private func calculateSlowmodeActiveUntilTimestamp(account: Account, untilTimest
 
 let ChatControllerCount = Atomic<Int32>(value: 0)
 
-public final class ChatController: TelegramController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
+public final class ChatController: TelegramBaseController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
     weak var parentController: ViewController?
@@ -109,7 +114,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     public var peekActions: ChatControllerPeekActions = .standard
     private var didSetup3dTouch: Bool = false
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     public let chatLocation: ChatLocation
     private let messageId: MessageId?
     private let botStart: ChatControllerInitialBotStart?
@@ -264,7 +269,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
     
     var purposefulAction: (() -> Void)?
     
-    public init(context: AccountContextImpl, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
+    public init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
@@ -372,7 +377,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 }
             }
             
-            return openChatMessage(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
+            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -409,7 +414,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                         if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                             var messageIdAndMedia: [MessageId: [Media]] = [:]
                             
-                            if let entry = entry, entry.index == centralIndex {
+                            if let entry = entry as? InstantPageGalleryEntry, entry.index == centralIndex {
                                 messageIdAndMedia[message.id] = [galleryMedia]
                             }
                             
@@ -471,7 +476,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
                 if let strongSelf = self {
                     strongSelf.controllerInteraction?.addContact(phoneNumber)
                 }
-            }))
+            })))
         }, openPeer: { [weak self] id, navigation, fromMessage in
             self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
         }, openPeerMention: { [weak self] name in
@@ -3824,7 +3829,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
             }
         }
         
-        let shouldBeActive = combineLatest(MediaManager.globalAudioSession.isPlaybackActive() |> deliverOnMainQueue, self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes)
+        let shouldBeActive = combineLatest(self.context.sharedContext.mediaManager.audioSession.isPlaybackActive() |> deliverOnMainQueue, self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes)
         |> mapToSignal { [weak self] isPlaybackActive, hasVisiblePlayableItemNodes -> Signal<Bool, NoError> in
             if hasVisiblePlayableItemNodes && !isPlaybackActive {
                 return Signal<Bool, NoError> { [weak self] subscriber in
@@ -7071,7 +7076,7 @@ public final class ChatController: TelegramController, GalleryHiddenMediaTarget,
         return inputShortcuts + otherShortcuts
     }
     
-    func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> (UIView?, UIView?))? {
+    public func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> (UIView?, UIView?))? {
         var selectedNode: (ASDisplayNode, () -> (UIView?, UIView?))?
         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {

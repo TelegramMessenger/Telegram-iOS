@@ -7,9 +7,10 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ActivityIndicator
+import AccountContext
 
 final class SecureIdAuthControllerNode: ViewControllerTracingNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
     private let interaction: SecureIdAuthControllerInteraction
@@ -32,7 +33,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     
     private let deleteValueDisposable = MetaDisposable()
     
-    init(context: AccountContextImpl, presentationData: PresentationData, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, interaction: SecureIdAuthControllerInteraction) {
+    init(context: AccountContext, presentationData: PresentationData, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, interaction: SecureIdAuthControllerInteraction) {
         self.context = context
         self.presentationData = presentationData
         self.requestLayout = requestLayout

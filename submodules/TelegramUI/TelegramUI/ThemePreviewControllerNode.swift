@@ -7,9 +7,10 @@ import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let previewTheme: PresentationTheme
     private var presentationData: PresentationData
     
@@ -29,7 +30,7 @@ class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var colorDisposable: Disposable?
     
-    init(context: AccountContextImpl, previewTheme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
+    init(context: AccountContext, previewTheme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
         self.context = context
         self.previewTheme = previewTheme
         

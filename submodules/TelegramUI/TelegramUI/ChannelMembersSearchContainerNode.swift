@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
+import AccountContext
+import TemporaryCachedPeerDataManager
 
 enum ChannelMembersSearchMode {
     case searchMembers
@@ -191,7 +193,7 @@ private enum GroupMemberCategory {
     case members
 }
 
-private func categorySignal(context: AccountContextImpl, peerId: PeerId, category: GroupMemberCategory) -> Signal<[RenderedChannelParticipant], NoError> {
+private func categorySignal(context: AccountContext, peerId: PeerId, category: GroupMemberCategory) -> Signal<[RenderedChannelParticipant], NoError> {
     return Signal<[RenderedChannelParticipant], NoError> { subscriber in
         let disposableAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
         func processListState(_ listState: ChannelMemberListState) {
@@ -234,7 +236,7 @@ private struct GroupMembersSearchContextState {
 final class GroupMembersSearchContext {
     fileprivate let state = Promise<GroupMembersSearchContextState>()
     
-    init(context: AccountContextImpl, peerId: PeerId) {
+    init(context: AccountContext, peerId: PeerId) {
         assert(Queue.mainQueue().isCurrent())
         
         let combinedSignal = combineLatest(queue: .mainQueue(), categorySignal(context: context, peerId: peerId, category: .contacts), categorySignal(context: context, peerId: peerId, category: .bots), categorySignal(context: context, peerId: peerId, category: .admins), categorySignal(context: context, peerId: peerId, category: .members))
@@ -268,7 +270,7 @@ private struct ChannelMembersSearchContainerState: Equatable {
 }
 
 final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     private let mode: ChannelMembersSearchMode
     
@@ -290,7 +292,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, PresentationDateTimeFormat)>
     
-    init(context: AccountContextImpl, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.openPeer = openPeer
         self.mode = mode

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import TelegramCore
+import TelegramStringFormatting
 
 final class PeerPresenceStatusManager {
     private let update: () -> Void

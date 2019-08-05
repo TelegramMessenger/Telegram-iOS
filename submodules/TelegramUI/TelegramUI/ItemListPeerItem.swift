@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AvatarNode
+import TelegramStringFormatting
 
 struct ItemListPeerItemEditing: Equatable {
     let editable: Bool

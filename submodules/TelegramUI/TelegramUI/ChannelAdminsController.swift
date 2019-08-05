@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AccountContext
+import TemporaryCachedPeerDataManager
 
 private final class ChannelAdminsControllerArguments {
     let account: Account
@@ -479,7 +481,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func channelAdminsController(context: AccountContextImpl, peerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
+public func channelAdminsController(context: AccountContext, peerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
     let statePromise = ValuePromise(ChannelAdminsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelAdminsControllerState())
     let updateState: ((ChannelAdminsControllerState) -> ChannelAdminsControllerState) -> Void = { f in

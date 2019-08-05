@@ -8,6 +8,8 @@ import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
+import OverlayStatusController
+import AccountContext
 
 final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {
@@ -19,7 +21,7 @@ final class ThemeGridController: ViewController {
         return self._ready
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private var presentationData: PresentationData
     private let presentationDataPromise = Promise<PresentationData>()
@@ -36,7 +38,7 @@ final class ThemeGridController: ViewController {
         return false
     }
     
-    init(context: AccountContextImpl) {
+    init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise.set(.single(self.presentationData))

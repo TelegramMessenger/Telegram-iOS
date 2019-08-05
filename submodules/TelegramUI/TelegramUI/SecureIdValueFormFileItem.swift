@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import TelegramStringFormatting
 
 private let textFont = Font.regular(16.0)
 private let labelFont = Font.regular(13.0)

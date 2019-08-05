@@ -5,19 +5,20 @@ import AsyncDisplayKit
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import AccountContext
 
 final class SecretChatKeyController: ViewController {
     private var controllerNode: SecretChatKeyControllerNode {
         return self.displayNode as! SecretChatKeyControllerNode
     }
     
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private let fingerprint: SecretChatKeyFingerprint
     private let peer: Peer
     
     private var presentationData: PresentationData
     
-    init(context: AccountContextImpl, fingerprint: SecretChatKeyFingerprint, peer: Peer) {
+    init(context: AccountContext, fingerprint: SecretChatKeyFingerprint, peer: Peer) {
         self.context = context
         self.fingerprint = fingerprint
         self.peer = peer

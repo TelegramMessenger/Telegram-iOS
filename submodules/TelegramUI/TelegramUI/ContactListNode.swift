@@ -766,7 +766,7 @@ enum ContactListFilter {
 }
 
 final class ContactListNode: ASDisplayNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     private var presentation: ContactListPresentation?
     private let filters: [ContactListFilter]
     
@@ -833,7 +833,7 @@ final class ContactListNode: ASDisplayNode {
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
     
-    init(context: AccountContextImpl, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false) {
+    init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder

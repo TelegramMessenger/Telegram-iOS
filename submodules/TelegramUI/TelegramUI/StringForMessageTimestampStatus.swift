@@ -3,6 +3,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramStringFormatting
 
 enum MessageTimestampStatusFormat {
     case regular

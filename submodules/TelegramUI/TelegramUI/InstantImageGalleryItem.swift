@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
@@ -31,7 +32,7 @@ private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class InstantImageGalleryItem: GalleryItem {
-    let context: AccountContextImpl
+    let context: AccountContext
     let presentationData: PresentationData
     let imageReference: ImageMediaReference
     let caption: NSAttributedString
@@ -40,7 +41,7 @@ class InstantImageGalleryItem: GalleryItem {
     let openUrl: (InstantPageUrlItem) -> Void
     let openUrlOptions: (InstantPageUrlItem) -> Void
     
-    init(context: AccountContextImpl, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.imageReference = imageReference
@@ -81,18 +82,18 @@ class InstantImageGalleryItem: GalleryItem {
 }
 
 final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let context: AccountContextImpl
+    private let context: AccountContext
     
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
     private let footerContentNode: InstantPageGalleryFooterContentNode
     
-    private var contextAndMedia: (AccountContextImpl, AnyMediaReference)?
+    private var contextAndMedia: (AccountContext, AnyMediaReference)?
     
     private var fetchDisposable = MetaDisposable()
     
-    init(context: AccountContextImpl, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
         self.context = context
         
         self.imageNode = TransformImageNode()
@@ -142,7 +143,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setShareMedia(imageReference.abstract)
     }
     
-    func setFile(context: AccountContextImpl, fileReference: FileMediaReference) {
+    func setFile(context: AccountContext, fileReference: FileMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
             if let largestSize = fileReference.media.dimensions {
                 let displaySize = largestSize.dividedByScreenScale()
