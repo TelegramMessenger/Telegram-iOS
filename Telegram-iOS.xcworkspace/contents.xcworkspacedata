@@ -203,6 +203,9 @@
       <FileRef
          location = "group:submodules/TelegramBaseController/TelegramBaseController_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/ContextUI/ContextUI_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <FileRef
       location = "group:submodules/TelegramAudio/TelegramAudio_Xcode.xcodeproj">
