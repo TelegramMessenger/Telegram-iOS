@@ -118,9 +118,6 @@
             location = "group:submodules/ItemListUI/ItemListUI_Xcode.xcodeproj">
          </FileRef>
          <FileRef
-            location = "group:submodules/UnreadSearchBadge/UnreadSearchBadge_Xcode.xcodeproj">
-         </FileRef>
-         <FileRef
             location = "group:submodules/ListSectionHeaderNode/ListSectionHeaderNode_Xcode.xcodeproj">
          </FileRef>
       </Group>
@@ -202,6 +199,9 @@
       </FileRef>
       <FileRef
          location = "group:submodules/TelegramBaseController/TelegramBaseController_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ContextUI/ContextUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

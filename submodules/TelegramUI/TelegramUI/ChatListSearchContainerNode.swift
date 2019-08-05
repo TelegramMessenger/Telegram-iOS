@@ -212,8 +212,8 @@ enum ChatListSearchEntryStableId: Hashable {
 }
 
 enum ChatListSearchEntry: Comparable, Identifiable {
-    case localPeer(Peer, Peer?, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
-    case globalPeer(FoundPeer, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
+    case localPeer(Peer, Peer?, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
+    case globalPeer(FoundPeer, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
     case message(Message, RenderedPeer, CombinedPeerReadState?, ChatListPresentationData)
     case addContact(String, PresentationTheme, PresentationStrings)
     
@@ -233,13 +233,13 @@ enum ChatListSearchEntry: Comparable, Identifiable {
     static func ==(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
             case let .localPeer(lhsPeer, lhsAssociatedPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder):
-                if case let .localPeer(rhsPeer, rhsAssociatedPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge == rhsUnreadBadge {
+                if case let .localPeer(rhsPeer, rhsAssociatedPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge?.0 == rhsUnreadBadge?.0 && lhsUnreadBadge?.1 == rhsUnreadBadge?.1 {
                     return true
                 } else {
                     return false
                 }
             case let .globalPeer(lhsPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder):
-                if case let .globalPeer(rhsPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge == rhsUnreadBadge {
+                if case let .globalPeer(rhsPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge?.0 == rhsUnreadBadge?.0 && lhsUnreadBadge?.1 == rhsUnreadBadge?.1 {
                     return true
                 } else {
                     return false
@@ -357,7 +357,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 
                 var badge: ContactsPeerItemBadge?
                 if let unreadBadge = unreadBadge {
-                    badge = ContactsPeerItemBadge(count: unreadBadge.count, type: unreadBadge.isMuted ? .inactive : .active)
+                    badge = ContactsPeerItemBadge(count: unreadBadge.0, type: unreadBadge.1 ? .inactive : .active)
                 }
                 
                 let header:ChatListSearchItemHeader?
@@ -401,7 +401,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 
                 var badge: ContactsPeerItemBadge?
                 if let unreadBadge = unreadBadge {
-                    badge = ContactsPeerItemBadge(count: unreadBadge.count, type: unreadBadge.isMuted ? .inactive : .active)
+                    badge = ContactsPeerItemBadge(count: unreadBadge.0, type: unreadBadge.1 ? .inactive : .active)
                 }
                 
                 let header:ChatListSearchItemHeader?
@@ -619,9 +619,9 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     return (views, local)
                 }
             }
-            |> mapToSignal{ viewsAndPeers -> Signal<(peers: [RenderedPeer], unread: [PeerId : UnreadSearchBadge]), NoError> in
+            |> mapToSignal{ viewsAndPeers -> Signal<(peers: [RenderedPeer], unread: [PeerId: (Int32, Bool)]), NoError> in
                 return context.account.postbox.unreadMessageCountsView(items: viewsAndPeers.0.map {.peer($0.peerId)}) |> map { values in
-                    var unread:[PeerId: UnreadSearchBadge] = [:]
+                    var unread: [PeerId: (Int32, Bool)] = [:]
                     for peerView in viewsAndPeers.0 {
                         var isMuted: Bool = false
                         if let nofiticationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
@@ -635,7 +635,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                         
                         let unreadCount = values.count(for: .peer(peerView.peerId))
                         if let unreadCount = unreadCount, unreadCount > 0 {
-                            unread[peerView.peerId] = isMuted ? .muted(unreadCount) : .unmuted(unreadCount)
+                            unread[peerView.peerId] = (unreadCount, isMuted)
                         }
                     }
                     return (peers: viewsAndPeers.1, unread: unread)
