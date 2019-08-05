@@ -835,7 +835,6 @@
 		D0EC6D2A1EB9F58800EBF1C3 /* FetchPhotoLibraryImageResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06E4AC31E84806300627D1D /* FetchPhotoLibraryImageResource.swift */; };
 		D0EC6D2B1EB9F58800EBF1C3 /* FileMediaResourceStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0177B831DFB095000A5083A /* FileMediaResourceStatus.swift */; };
 		D0EC6D2C1EB9F58800EBF1C3 /* TouchDownGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69CFB1D6B87D30046BCD6 /* TouchDownGestureRecognizer.swift */; };
-		D0EC6D2D1EB9F58800EBF1C3 /* TapLongTapOrDoubleTapGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02958011D6F0D5F00360E5E /* TapLongTapOrDoubleTapGestureRecognizer.swift */; };
 		D0EC6D301EB9F58800EBF1C3 /* RadialProgressNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DC41D6B89E10046BCD6 /* RadialProgressNode.swift */; };
 		D0EC6D311EB9F58800EBF1C3 /* RadialTimeoutNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CE51E378FD00080C3D5 /* RadialTimeoutNode.swift */; };
 		D0EC6D321EB9F58800EBF1C3 /* TextNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DC21D6B89DA0046BCD6 /* TextNode.swift */; };
@@ -1534,7 +1533,6 @@
 		D025A4221F79344500563950 /* FetchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchManager.swift; sourceTree = "<group>"; };
 		D025A4251F79428E00563950 /* FetchManagerLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchManagerLocation.swift; sourceTree = "<group>"; };
 		D02660931F34CE5C000E2DC5 /* LegacyLocationVenueIconDataSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyLocationVenueIconDataSource.swift; sourceTree = "<group>"; };
-		D02958011D6F0D5F00360E5E /* TapLongTapOrDoubleTapGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TapLongTapOrDoubleTapGestureRecognizer.swift; sourceTree = "<group>"; };
 		D02B198921F1DA9E0094A764 /* SharedAccountContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAccountContext.swift; sourceTree = "<group>"; };
 		D02B2B9720810DA00062476B /* StickerPaneSearchStickerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerPaneSearchStickerItem.swift; sourceTree = "<group>"; };
 		D02B676220800A00001A864A /* PaneSearchBarPlaceholderItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaneSearchBarPlaceholderItem.swift; sourceTree = "<group>"; };
@@ -4311,7 +4309,6 @@
 			isa = PBXGroup;
 			children = (
 				D0F69CFB1D6B87D30046BCD6 /* TouchDownGestureRecognizer.swift */,
-				D02958011D6F0D5F00360E5E /* TapLongTapOrDoubleTapGestureRecognizer.swift */,
 				D0C44B631FC64D0500227BE0 /* SwipeToDismissGestureRecognizer.swift */,
 				D056CD7B1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift */,
 			);
@@ -5348,7 +5345,6 @@
 				D0EC6D2B1EB9F58800EBF1C3 /* FileMediaResourceStatus.swift in Sources */,
 				D0EC6D2C1EB9F58800EBF1C3 /* TouchDownGestureRecognizer.swift in Sources */,
 				09DD88FA21BFD70B000766BC /* ThemedTextAlertController.swift in Sources */,
-				D0EC6D2D1EB9F58800EBF1C3 /* TapLongTapOrDoubleTapGestureRecognizer.swift in Sources */,
 				D0FA08C020483F9600DD23FC /* ExtractVideoData.swift in Sources */,
 				D025402522E1E00100AC0195 /* ChatSlowmodeHintController.swift in Sources */,
 				D008177D22B46B7E008A895F /* TGContactModel.m in Sources */,

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D038AC5522F8969400320981 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D038AC5422F8969400320981 /* TelegramCore.framework */; };
 		D0879C8422F8751100C4D6B3 /* PeerPresenceStatusManager.h in Headers */ = {isa = PBXBuildFile; fileRef = D0879C8222F8751100C4D6B3 /* PeerPresenceStatusManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0879C8B22F8754300C4D6B3 /* PeerPresenceStatusManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879C8A22F8754300C4D6B3 /* PeerPresenceStatusManager.swift */; };
 		D0879C8E22F8755200C4D6B3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879C8D22F8755200C4D6B3 /* Foundation.framework */; };
@@ -15,6 +16,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D038AC5422F8969400320981 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879C7F22F8751100C4D6B3 /* PeerPresenceStatusManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PeerPresenceStatusManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879C8222F8751100C4D6B3 /* PeerPresenceStatusManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PeerPresenceStatusManager.h; sourceTree = "<group>"; };
 		D0879C8322F8751100C4D6B3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -29,6 +31,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D038AC5522F8969400320981 /* TelegramCore.framework in Frameworks */,
 				D0879C9222F8756200C4D6B3 /* SwiftSignalKit.framework in Frameworks */,
 				D0879C9022F8755A00C4D6B3 /* Postbox.framework in Frameworks */,
 				D0879C8E22F8755200C4D6B3 /* Foundation.framework in Frameworks */,
@@ -68,6 +71,7 @@
 		D0879C8C22F8755200C4D6B3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D038AC5422F8969400320981 /* TelegramCore.framework */,
 				D0879C9122F8756200C4D6B3 /* SwiftSignalKit.framework */,
 				D0879C8F22F8755A00C4D6B3 /* Postbox.framework */,
 				D0879C8D22F8755200C4D6B3 /* Foundation.framework */,
