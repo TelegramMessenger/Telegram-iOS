@@ -52,22 +52,6 @@
  * @ingroup Lottie_Animation
  */
 
-
-/**
- * @brief Enumeration for Lottie Player error code.
- */
-typedef enum
-{
-   //TODO: Coding convention??
-    LOT_ANIMATION_ERROR_NONE = 0,
-    LOT_ANIMATION_ERROR_NOT_PERMITTED,
-    LOT_ANIMATION_ERROR_OUT_OF_MEMORY,
-    LOT_ANIMATION_ERROR_INVALID_PARAMETER,
-    LOT_ANIMATION_ERROR_RESULT_OUT_OF_RANGE,
-    LOT_ANIMATION_ERROR_ALREADY_IN_PROGRESS,
-    LOT_ANIMATION_ERROR_UNKNOWN
-} LOTErrorType;
-
 typedef enum
 {
     BrushSolid = 0,
