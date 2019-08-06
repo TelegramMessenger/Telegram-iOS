@@ -1563,7 +1563,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseStrokeObject()
             obj->mJoinStyle = getLineJoin();
         } else if (0 == strcmp(key, "ml")) {
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
-            obj->mMeterLimit = GetDouble();
+            obj->mMiterLimit = GetDouble();
         } else if (0 == strcmp(key, "d")) {
             parseDashProperty(obj->mDash);
         } else if (0 == strcmp(key, "hd")) {
@@ -1679,7 +1679,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseGStrokeObject()
             obj->mJoinStyle = getLineJoin();
         } else if (0 == strcmp(key, "ml")) {
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
-            obj->mMeterLimit = GetDouble();
+            obj->mMiterLimit = GetDouble();
         } else if (0 == strcmp(key, "d")) {
             parseDashProperty(obj->mDash);
         } else {

@@ -1393,7 +1393,7 @@ void LOTStrokeItem::updateRenderNode()
     float scale =
         getScale(static_cast<LOTContentGroupItem *>(parent())->matrix());
     mDrawable.setStrokeInfo(mModel.capStyle(), mModel.joinStyle(),
-                            mModel.meterLimit(), mWidth * scale);
+                            mModel.miterLimit(), mWidth * scale);
 
     if (!mDashInfo.empty()) {
         for (auto &elm : mDashInfo) elm *= scale;
@@ -1411,7 +1411,7 @@ void LOTGStrokeItem::updateContent(int frameNo)
     mGradient->mMatrix = static_cast<LOTContentGroupItem *>(parent())->matrix();
     mCap = mData->capStyle();
     mJoin = mData->joinStyle();
-    mMiterLimit = mData->meterLimit();
+    mMiterLimit = mData->miterLimit();
     mWidth = mData->width(frameNo);
 
     if (mData->hasDashInfo()) mData->getDashInfo(frameNo, mDashInfo);
@@ -1634,7 +1634,7 @@ void LOTDrawable::sync()
 
     if (mStroke.enable) {
         mCNode->mStroke.width = mStroke.width;
-        mCNode->mStroke.meterLimit = mStroke.meterLimit;
+        mCNode->mStroke.miterLimit = mStroke.miterLimit;
         mCNode->mStroke.enable = 1;
 
         switch (mStroke.cap) {

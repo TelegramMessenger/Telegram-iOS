@@ -141,7 +141,7 @@ typedef struct LOTNode {
         float       width;
         LOTCapStyle  cap;
         LOTJoinStyle join;
-        float       meterLimit;
+        float       miterLimit;
         float    *dashArray;
         int       dashArraySize;
     } mStroke;

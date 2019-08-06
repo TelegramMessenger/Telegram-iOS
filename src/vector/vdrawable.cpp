@@ -29,7 +29,7 @@ void VDrawable::preprocess(const VRect &clip)
                 mPath.clone(dasher.dashed(mPath));
             }
             mRasterizer.rasterize(std::move(mPath), mStroke.cap, mStroke.join,
-                                  mStroke.width, mStroke.meterLimit, clip);
+                                  mStroke.width, mStroke.miterLimit, clip);
         } else {
             mRasterizer.rasterize(std::move(mPath), mFillRule, clip);
         }
@@ -43,18 +43,18 @@ VRle VDrawable::rle()
     return mRasterizer.rle();
 }
 
-void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
+void VDrawable::setStrokeInfo(CapStyle cap, JoinStyle join, float miterLimit,
                               float strokeWidth)
 {
     if ((mStroke.cap == cap) && (mStroke.join == join) &&
-        vCompare(mStroke.meterLimit, meterLimit) &&
+        vCompare(mStroke.miterLimit, miterLimit) &&
         vCompare(mStroke.width, strokeWidth))
         return;
 
     mStroke.enable = true;
     mStroke.cap = cap;
     mStroke.join = join;
-    mStroke.meterLimit = meterLimit;
+    mStroke.miterLimit = miterLimit;
     mStroke.width = strokeWidth;
     mFlag |= DirtyState::Path;
 }

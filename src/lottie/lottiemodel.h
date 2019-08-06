@@ -673,7 +673,7 @@ public:
     float strokeWidth(int frameNo) const {return mWidth.value(frameNo);}
     CapStyle capStyle() const {return mCapStyle;}
     JoinStyle joinStyle() const {return mJoinStyle;}
-    float meterLimit() const{return mMeterLimit;}
+    float miterLimit() const{return mMiterLimit;}
     bool  hasDashInfo() const {return !mDash.empty();}
     void getDashInfo(int frameNo, std::vector<float>& result) const
     {
@@ -685,7 +685,7 @@ public:
     LOTAnimatable<float>              mWidth{0};      /* "w" */
     CapStyle                          mCapStyle{CapStyle::Flat};   /* "lc" */
     JoinStyle                         mJoinStyle{JoinStyle::Miter};  /* "lj" */
-    float                             mMeterLimit{0}; /* "ml" */
+    float                             mMiterLimit{0}; /* "ml" */
     LOTDashProperty                   mDash;
     bool                              mEnabled{true}; /* "fillEnabled" */
 };
@@ -783,7 +783,7 @@ public:
     float width(int frameNo) const {return mWidth.value(frameNo);}
     CapStyle capStyle() const {return mCapStyle;}
     JoinStyle joinStyle() const {return mJoinStyle;}
-    float meterLimit() const{return mMeterLimit;}
+    float miterLimit() const{return mMiterLimit;}
     bool  hasDashInfo() const {return !mDash.empty();}
     void getDashInfo(int frameNo, std::vector<float>& result) const
     {
@@ -793,7 +793,7 @@ public:
     LOTAnimatable<float>           mWidth;       /* "w" */
     CapStyle                       mCapStyle{CapStyle::Flat};    /* "lc" */
     JoinStyle                      mJoinStyle{JoinStyle::Miter};   /* "lj" */
-    float                          mMeterLimit{0};  /* "ml" */
+    float                          mMiterLimit{0};  /* "ml" */
     LOTDashProperty                mDash;
 };
 

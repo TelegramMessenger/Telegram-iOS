@@ -41,7 +41,7 @@ public:
     void setPath(const VPath &path);
     void setFillRule(FillRule rule) { mFillRule = rule; }
     void setBrush(const VBrush &brush) { mBrush = brush; }
-    void setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
+    void setStrokeInfo(CapStyle cap, JoinStyle join, float miterLimit,
                        float strokeWidth);
     void setDashInfo(std::vector<float> &dashInfo);
     void preprocess(const VRect &clip);
@@ -51,7 +51,7 @@ public:
     struct StrokeInfo {
         std::vector<float> mDash;
         float              width{0.0};
-        float              meterLimit{10};
+        float              miterLimit{10};
         bool               enable{false};
         CapStyle           cap{CapStyle::Flat};
         JoinStyle          join{JoinStyle::Bevel};

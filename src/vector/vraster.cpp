@@ -72,7 +72,7 @@ public:
     SW_FT_Stroker_LineCap   ftCap;
     SW_FT_Stroker_LineJoin  ftJoin;
     SW_FT_Fixed             ftWidth;
-    SW_FT_Fixed             ftMeterLimit;
+    SW_FT_Fixed             ftMiterLimit;
     dyn_array<SW_FT_Vector> mPointMemory{100};
     dyn_array<char>         mTagMemory{100};
     dyn_array<short>        mContourMemory{10};
@@ -130,7 +130,7 @@ void FTOutline::convert(const VPath &path)
 }
 
 void FTOutline::convert(CapStyle cap, JoinStyle join, float width,
-                        float meterLimit)
+                        float miterLimit)
 {
     // map strokeWidth to freetype. It uses as the radius of the pen not the
     // diameter
@@ -139,7 +139,7 @@ void FTOutline::convert(CapStyle cap, JoinStyle join, float width,
     // IMP: stroker takes radius in 26.6 co-ordinate
     ftWidth = SW_FT_Fixed(width * (1 << 6));
     // IMP: stroker takes meterlimit in 16.16 co-ordinate
-    ftMeterLimit = SW_FT_Fixed(meterLimit * (1 << 16));
+    ftMiterLimit = SW_FT_Fixed(miterLimit * (1 << 16));
 
     // map to freetype capstyle
     switch (cap) {
@@ -303,7 +303,7 @@ struct VRleTask {
     SharedRle mRle;
     VPath     mPath;
     float     mStrokeWidth;
-    float     mMeterLimit;
+    float     mMiterLimit;
     VRect     mClip;
     FillRule  mFillRule;
     CapStyle  mCap;
@@ -322,14 +322,14 @@ struct VRleTask {
     }
 
     void update(VPath path, CapStyle cap, JoinStyle join, float width,
-                float meterLimit, const VRect &clip)
+                float miterLimit, const VRect &clip)
     {
         mRle.reset();
         mPath = std::move(path);
         mCap = cap;
         mJoin = join;
         mStrokeWidth = width;
-        mMeterLimit = meterLimit;
+        mMiterLimit = miterLimit;
         mClip = clip;
         mGenerateStroke = true;
     }
@@ -366,12 +366,12 @@ struct VRleTask {
 
         if (mGenerateStroke) {  // Stroke Task
             outRef.convert(mPath);
-            outRef.convert(mCap, mJoin, mStrokeWidth, mMeterLimit);
+            outRef.convert(mCap, mJoin, mStrokeWidth, mMiterLimit);
 
             uint points, contors;
 
             SW_FT_Stroker_Set(stroker, outRef.ftWidth, outRef.ftCap,
-                              outRef.ftJoin, outRef.ftMeterLimit);
+                              outRef.ftJoin, outRef.ftMiterLimit);
             SW_FT_Stroker_ParseOutline(stroker, &outRef.ft);
             SW_FT_Stroker_GetCounts(stroker, &points, &contors);
 
@@ -537,14 +537,14 @@ void VRasterizer::rasterize(VPath path, FillRule fillRule, const VRect &clip)
 }
 
 void VRasterizer::rasterize(VPath path, CapStyle cap, JoinStyle join,
-                            float width, float meterLimit, const VRect &clip)
+                            float width, float miterLimit, const VRect &clip)
 {
     init();
     if (path.empty() || vIsZero(width)) {
         d->rle().reset();
         return;
     }
-    d->task().update(std::move(path), cap, join, width, meterLimit, clip);
+    d->task().update(std::move(path), cap, join, width, miterLimit, clip);
     updateRequest();
 }
 

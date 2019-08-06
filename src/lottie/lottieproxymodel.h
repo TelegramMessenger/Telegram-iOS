@@ -294,7 +294,7 @@ public:
         }
         return _modelData->strokeWidth(frame);
     }
-    float meterLimit() const {return _modelData->meterLimit();}
+    float miterLimit() const {return _modelData->miterLimit();}
     CapStyle capStyle() const {return _modelData->capStyle();}
     JoinStyle joinStyle() const {return _modelData->joinStyle();}
     bool hasDashInfo() const { return _modelData->hasDashInfo();}

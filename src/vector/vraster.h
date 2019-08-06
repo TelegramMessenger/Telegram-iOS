@@ -32,7 +32,7 @@ class VRasterizer
 public:
     void rasterize(VPath path, FillRule fillRule = FillRule::Winding, const VRect &clip = VRect());
     void rasterize(VPath path, CapStyle cap, JoinStyle join, float width,
-                   float meterLimit, const VRect &clip = VRect());
+                   float miterLimit, const VRect &clip = VRect());
     VRle rle();
 private:
     struct VRasterizerImpl;
