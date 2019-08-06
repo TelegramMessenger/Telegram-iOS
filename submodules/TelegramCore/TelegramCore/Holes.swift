@@ -379,7 +379,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             let messageRange = ids.min()! ... ids.max()!
                             switch direction {
                                 case let .aroundId(aroundId):
-                                    filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.lowerBound)
+                                    filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound)
                                 case let .range(start, end):
                                     if start.id <= end.id {
                                         let minBound = start.id
