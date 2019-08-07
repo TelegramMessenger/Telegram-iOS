@@ -334,7 +334,6 @@
 		D0383EE4207D292800C45548 /* EmojisChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0383EE3207D292800C45548 /* EmojisChatInputContextPanelNode.swift */; };
 		D0383EE6207D299600C45548 /* EmojisChatInputPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0383EE5207D299600C45548 /* EmojisChatInputPanelItem.swift */; };
 		D038AC5322F88A3600320981 /* ImageBlur.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D038AC5222F88A3600320981 /* ImageBlur.framework */; };
-		D038ACD722F8BE9700320981 /* UnreadSearchBadge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D038ACD622F8BE9700320981 /* UnreadSearchBadge.framework */; };
 		D039FB1921711B5D00BD1BAD /* PlatformVideoContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D039FB1821711B5D00BD1BAD /* PlatformVideoContent.swift */; };
 		D03AA4DF202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4DE202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift */; };
 		D03AA4E5202DF8840056C405 /* StickerPreviewPeekContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4E4202DF8840056C405 /* StickerPreviewPeekContent.swift */; };
@@ -2399,7 +2398,6 @@
 				D09E779122FA5CA600B9CCA7 /* TelegramAudio.framework in Frameworks */,
 				D09E778B22F988C000B9CCA7 /* MediaResources.framework in Frameworks */,
 				D09E778722F8E9ED00B9CCA7 /* ContextUI.framework in Frameworks */,
-				D038ACD722F8BE9700320981 /* UnreadSearchBadge.framework in Frameworks */,
 				D038AC5322F88A3600320981 /* ImageBlur.framework in Frameworks */,
 				D0879CCC22F876DD00C4D6B3 /* ChatListSearchRecentPeersNode.framework in Frameworks */,
 				D0879C9622F875C000C4D6B3 /* PeerPresenceStatusManager.framework in Frameworks */,
