@@ -4019,6 +4019,8 @@ public extension Api {
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
         case updatePeerSettings(peer: Api.Peer, settings: Api.PeerSettings)
         case updatePeerLocated(peers: [Api.PeerLocated])
+        case updateNewScheduledMessage(message: Api.Message)
+        case updateDeleteScheduledMessages(peer: Api.Peer, messages: [Int32])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4620,6 +4622,23 @@ public extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+                case .updateNewScheduledMessage(let message):
+                    if boxed {
+                        buffer.appendInt32(967122427)
+                    }
+                    message.serialize(buffer, true)
+                    break
+                case .updateDeleteScheduledMessages(let peer, let messages):
+                    if boxed {
+                        buffer.appendInt32(-1870238482)
+                    }
+                    peer.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
     }
     }
     
@@ -4767,6 +4786,10 @@ public extension Api {
                 return ("updatePeerSettings", [("peer", peer), ("settings", settings)])
                 case .updatePeerLocated(let peers):
                 return ("updatePeerLocated", [("peers", peers)])
+                case .updateNewScheduledMessage(let message):
+                return ("updateNewScheduledMessage", [("message", message)])
+                case .updateDeleteScheduledMessages(let peer, let messages):
+                return ("updateDeleteScheduledMessages", [("peer", peer), ("messages", messages)])
     }
     }
     
@@ -5976,6 +5999,37 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.Update.updatePeerLocated(peers: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateNewScheduledMessage(_ reader: BufferReader) -> Update? {
+            var _1: Api.Message?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateNewScheduledMessage(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateDeleteScheduledMessages(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: [Int32]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateDeleteScheduledMessages(peer: _1!, messages: _2!)
             }
             else {
                 return nil

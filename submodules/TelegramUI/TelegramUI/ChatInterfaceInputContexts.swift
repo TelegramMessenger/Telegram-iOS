@@ -177,7 +177,7 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
     for (possibleQueryRange, possibleTypes, additionalStringRange) in textInputStateContextQueryRangeAndType(inputState) {
         let query = inputString.substring(with: possibleQueryRange)
         if possibleTypes == [.emoji] {
-            result.append(.emoji(query.basicEmoji))
+            result.append(.emoji(query.basicEmoji.0))
         } else if possibleTypes == [.hashtag] {
             result.append(.hashtag(query))
         } else if possibleTypes == [.mention] {
@@ -258,6 +258,10 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     }
                 }
                 if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
+                    if chatPresentationInterfaceState.hasScheduledMessages {
+                        accessoryItems.append(.scheduledMessages)
+                    }
+                    
                     var stickersEnabled = true
                     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                         if case .broadcast = peer.info, canSendMessagesToPeer(peer) {

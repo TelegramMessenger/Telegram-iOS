@@ -108,6 +108,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: {
+        }, openScheduledMessages: {
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView

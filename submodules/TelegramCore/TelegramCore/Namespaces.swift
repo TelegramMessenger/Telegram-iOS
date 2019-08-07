@@ -10,6 +10,7 @@ public struct Namespaces {
         public static let Cloud: Int32 = 0
         public static let Local: Int32 = 1
         public static let SecretIncoming: Int32 = 2
+        public static let CloudScheduled: Int32 = 3
     }
     
     public struct Media {
@@ -135,9 +136,9 @@ public struct OperationLogTags {
 }
 
 public extension PeerSummaryCounterTags {
-    public static let regularChatsAndPrivateGroups = PeerSummaryCounterTags(rawValue: 1 << 0)
-    public static let publicGroups = PeerSummaryCounterTags(rawValue: 1 << 1)
-    public static let channels = PeerSummaryCounterTags(rawValue: 1 << 2)
+    static let regularChatsAndPrivateGroups = PeerSummaryCounterTags(rawValue: 1 << 0)
+    static let publicGroups = PeerSummaryCounterTags(rawValue: 1 << 1)
+    static let channels = PeerSummaryCounterTags(rawValue: 1 << 2)
 }
 
 private enum PreferencesKeyValues: Int32 {

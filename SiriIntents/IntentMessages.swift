@@ -31,7 +31,7 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
                 }
                 
                 if !isMuted && hasUnread {
-                    signals.append(account.postbox.aroundMessageHistoryViewForLocation(.peer(index.messageIndex.id.peerId), anchor: .upperBound, count: 10, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: Set(), tagMask: nil, orderStatistics: .combinedLocation)
+                    signals.append(account.postbox.aroundMessageHistoryViewForLocation(.peer(index.messageIndex.id.peerId), anchor: .upperBound, count: 10, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: Set(), tagMask: nil, excludeNamespaces: [Namespaces.Message.CloudScheduled], orderStatistics: .combinedLocation)
                     |> take(1)
                     |> map { view -> [INMessage] in
                         var messages: [INMessage] = []

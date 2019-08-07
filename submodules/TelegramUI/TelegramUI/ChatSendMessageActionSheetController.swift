@@ -67,6 +67,9 @@ final class ChatSendMessageActionSheetController: ViewController {
         }, sendSilently: { [weak self] in
             self?.controllerInteraction?.sendCurrentMessage(true)
             self?.dismiss(cancel: false)
+        }, schedule: { [weak self] in
+            self?.controllerInteraction?.scheduleCurrentMessage()
+            self?.dismiss(cancel: false)
         }, cancel: { [weak self] in
             self?.dismiss(cancel: true)
         })

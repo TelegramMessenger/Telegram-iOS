@@ -240,19 +240,50 @@ public final class CachedEmojiRepresentation: CachedMediaResourceRepresentation 
     }
 }
 
+public enum EmojiFitzModifier: Int32, Equatable {
+    case type12
+    case type3
+    case type4
+    case type5
+    case type6
+    
+    public init?(emoji: String) {
+        switch emoji.unicodeScalars.first?.value {
+            case 0x1f3fb:
+                self = .type12
+            case 0x1f3fc:
+                self = .type3
+            case 0x1f3fd:
+                self = .type4
+            case 0x1f3fe:
+                self = .type5
+            case 0x1f3ff:
+                self = .type6
+            default:
+                return nil
+        }
+    }
+}
+
 public final class CachedAnimatedStickerFirstFrameRepresentation: CachedMediaResourceRepresentation {
     public let keepDuration: CachedMediaRepresentationKeepDuration = .general
     
     public let width: Int32
     public let height: Int32
+    public let fitzModifier: EmojiFitzModifier?
     
-    public init(width: Int32, height: Int32) {
+    public init(width: Int32, height: Int32, fitzModifier: EmojiFitzModifier? = nil) {
         self.width = width
         self.height = height
+        self.fitzModifier = fitzModifier
     }
     
     public var uniqueId: String {
-        return "animated-sticker-first-frame-\(self.width)x\(self.height)-v1"
+        if let fitzModifier = self.fitzModifier {
+            return "animated-sticker-first-frame-\(self.width)x\(self.height)-fitz\(fitzModifier.rawValue)-v1"
+        } else {
+            return "animated-sticker-first-frame-\(self.width)x\(self.height)-v1"
+        }
     }
     
     public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
@@ -261,6 +292,9 @@ public final class CachedAnimatedStickerFirstFrameRepresentation: CachedMediaRes
                 return false
             }
             if other.height != self.height {
+                return false
+            }
+            if other.fitzModifier != self.fitzModifier {
                 return false
             }
             return true
@@ -275,14 +309,21 @@ public final class CachedAnimatedStickerRepresentation: CachedMediaResourceRepre
     
     public let width: Int32
     public let height: Int32
+    public let fitzModifier: EmojiFitzModifier?
     
     public var uniqueId: String {
-        return "animated-sticker-\(self.width)x\(self.height)-v8"
+        let version: Int = 8
+        if let fitzModifier = self.fitzModifier {
+            return "animated-sticker-\(self.width)x\(self.height)-fitz\(fitzModifier.rawValue)-v\(version)"
+        } else {
+            return "animated-sticker-\(self.width)x\(self.height)-v\(version)"
+        }
     }
     
-    public init(width: Int32, height: Int32) {
+    public init(width: Int32, height: Int32, fitzModifier: EmojiFitzModifier? = nil) {
         self.width = width
         self.height = height
+        self.fitzModifier = fitzModifier
     }
     
     public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
@@ -291,6 +332,9 @@ public final class CachedAnimatedStickerRepresentation: CachedMediaResourceRepre
                 return false
             }
             if other.height != self.height {
+                return false
+            }
+            if other.fitzModifier != self.fitzModifier {
                 return false
             }
             return true

@@ -275,7 +275,7 @@ private func peerIdsRequiringLocalChatStateFromDifference(_ difference: Api.upda
     switch difference {
         case let .difference(newMessages, _, otherUpdates, _, _, _):
             for message in newMessages {
-                if let messageId = message.id {
+                if let messageId = message.id() {
                     peerIds.insert(messageId.peerId)
                 }
             }
@@ -296,7 +296,7 @@ private func peerIdsRequiringLocalChatStateFromDifference(_ difference: Api.upda
             break
         case let .differenceSlice(newMessages, _, otherUpdates, _, _, _):
             for message in newMessages {
-                if let messageId = message.id {
+                if let messageId = message.id() {
                     peerIds.insert(messageId.peerId)
                 }
             }
@@ -1299,6 +1299,12 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     peersNearby.append(PeerNearby(id: peer.peerId, expires: expires, distance: distance))
                 }
                 updatedState.updatePeersNearby(peersNearby)
+            case let .updateDeleteScheduledMessages(peer, messages):
+                var messageIds: [MessageId] = []
+                for message in messages {
+                    messageIds.append(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.CloudScheduled, id: message))
+                }
+                updatedState.deleteMessages(messageIds)
             default:
                 break
         }

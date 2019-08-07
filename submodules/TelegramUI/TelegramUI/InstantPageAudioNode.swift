@@ -227,12 +227,8 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
                 
                 self.titleNode.attributedText = titleString(media: self.media, theme: theme)
                 
-                var backgroundAlpha: CGFloat = 0.1
                 var brightness: CGFloat = 0.0
                 theme.textCategories.paragraph.color.getHue(nil, saturation: nil, brightness: &brightness, alpha: nil)
-                if brightness > 0.5 {
-                    backgroundAlpha = 0.4
-                }
                 
                 self.setNeedsLayout()
             }

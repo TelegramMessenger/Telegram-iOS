@@ -150,7 +150,7 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
                     flags |= Int32(1 << 14)
                 }
                 
-                return account.network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities))
+                return account.network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, scheduleDate: nil))
                     |> map { result -> Api.Updates? in
                         return result
                     }
@@ -173,7 +173,7 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
                         if let result = result {
                             return account.postbox.transaction { transaction -> RequestEditMessageResult in
                                 var toMedia: Media?
-                                if let message = result.messages.first.flatMap(StoreMessage.init(apiMessage:)) {
+                                if let message = result.messages.first.flatMap({ StoreMessage(apiMessage: $0) }) {
                                     toMedia = message.media.first
                                 }
                                 
@@ -223,7 +223,7 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
         } else {
             inputMedia = .inputMediaGeoLive(flags: 1 << 0, geoPoint: .inputGeoPoint(lat: media.latitude, long: media.longitude), period: nil)
         }
-        return network.request(Api.functions.messages.editMessage(flags: 1 << 14, peer: inputPeer, id: messageId.id, message: nil, media: inputMedia, replyMarkup: nil, entities: nil))
+        return network.request(Api.functions.messages.editMessage(flags: 1 << 14, peer: inputPeer, id: messageId.id, message: nil, media: inputMedia, replyMarkup: nil, entities: nil, scheduleDate: nil))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

@@ -60,7 +60,7 @@ public func navigateToChatController(navigationController: NavigationController,
                 }
             }
         } else {
-            controller = ChatController(context: context, chatLocation: chatLocation, messageId: messageId, botStart: botStart)
+            controller = ChatController(context: context, chatLocation: chatLocation, subject: messageId.flatMap({ .message($0) }), botStart: botStart)
         }
         controller.purposefulAction = purposefulAction
         let resolvedKeepStack: Bool

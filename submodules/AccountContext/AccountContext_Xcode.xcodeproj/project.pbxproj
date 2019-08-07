@@ -12,7 +12,7 @@
 		D0879A4A22F6584B00C4D6B3 /* SharedMediaPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879A4922F6584B00C4D6B3 /* SharedMediaPlayer.swift */; };
 		D0879A4C22F65A7A00C4D6B3 /* UniversalMediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879A4B22F65A7A00C4D6B3 /* UniversalMediaPlayer.framework */; };
 		D0879A4E22F65B2A00C4D6B3 /* MediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879A4D22F65B2A00C4D6B3 /* MediaManager.swift */; };
-		D0879A5022F65D4D00C4D6B3 /* ChatHistroyLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879A4F22F65D4D00C4D6B3 /* ChatHistroyLocation.swift */; };
+		D0879A5022F65D4D00C4D6B3 /* ChatHistoryLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879A4F22F65D4D00C4D6B3 /* ChatHistoryLocation.swift */; };
 		D0879AA222F6FEC800C4D6B3 /* OverlayAudioPlayerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879AA122F6FEC800C4D6B3 /* OverlayAudioPlayerController.swift */; };
 		D0879B1922F70C7400C4D6B3 /* OpenChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B1822F70C7400C4D6B3 /* OpenChatMessage.swift */; };
 		D0879B1B22F70CF400C4D6B3 /* ChatController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B1A22F70CF400C4D6B3 /* ChatController.swift */; };
@@ -47,7 +47,7 @@
 		D0879A4922F6584B00C4D6B3 /* SharedMediaPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMediaPlayer.swift; sourceTree = "<group>"; };
 		D0879A4B22F65A7A00C4D6B3 /* UniversalMediaPlayer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UniversalMediaPlayer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879A4D22F65B2A00C4D6B3 /* MediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
-		D0879A4F22F65D4D00C4D6B3 /* ChatHistroyLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistroyLocation.swift; sourceTree = "<group>"; };
+		D0879A4F22F65D4D00C4D6B3 /* ChatHistoryLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistoryLocation.swift; sourceTree = "<group>"; };
 		D0879AA122F6FEC800C4D6B3 /* OverlayAudioPlayerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayAudioPlayerController.swift; sourceTree = "<group>"; };
 		D0879B1822F70C7400C4D6B3 /* OpenChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenChatMessage.swift; sourceTree = "<group>"; };
 		D0879B1A22F70CF400C4D6B3 /* ChatController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatController.swift; sourceTree = "<group>"; };
@@ -128,7 +128,7 @@
 				D0879B6422F7AC8700C4D6B3 /* OverlayMediaManager.swift */,
 				D0879B6022F7A7A600C4D6B3 /* UniversalVideoNode.swift */,
 				D0879B6222F7A97F00C4D6B3 /* OverlayMediaItemNode.swift */,
-				D0879A4F22F65D4D00C4D6B3 /* ChatHistroyLocation.swift */,
+				D0879A4F22F65D4D00C4D6B3 /* ChatHistoryLocation.swift */,
 				D0879AA122F6FEC800C4D6B3 /* OverlayAudioPlayerController.swift */,
 				D0879B1822F70C7400C4D6B3 /* OpenChatMessage.swift */,
 				D0879B1A22F70CF400C4D6B3 /* ChatController.swift */,
@@ -258,7 +258,7 @@
 				D0879B1922F70C7400C4D6B3 /* OpenChatMessage.swift in Sources */,
 				D0879B1D22F7112E00C4D6B3 /* GalleryController.swift in Sources */,
 				D0879B1B22F70CF400C4D6B3 /* ChatController.swift in Sources */,
-				D0879A5022F65D4D00C4D6B3 /* ChatHistroyLocation.swift in Sources */,
+				D0879A5022F65D4D00C4D6B3 /* ChatHistoryLocation.swift in Sources */,
 				D0879A4622F651D400C4D6B3 /* LiveLocationManager.swift in Sources */,
 				D0879AA222F6FEC800C4D6B3 /* OverlayAudioPlayerController.swift in Sources */,
 				D0D3285F22F335B000D07EE2 /* AccountContext.swift in Sources */,

@@ -227,6 +227,7 @@ public enum HistoryViewInputAnchor: Equatable {
 final class MutableMessageHistoryView {
     private(set) var peerIds: MessageHistoryViewPeerIds
     let tag: MessageTags?
+    let excludeNamespaces: [MessageId.Namespace]
     private let orderStatistics: MessageHistoryViewOrderStatistics
     private let anchor: HistoryViewInputAnchor
     
@@ -241,7 +242,7 @@ final class MutableMessageHistoryView {
     
     fileprivate(set) var sampledState: HistoryViewSample
     
-    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
+    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, excludeNamespaces: [MessageId.Namespace], count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
         self.anchor = inputAnchor
         
         self.orderStatistics = orderStatistics
@@ -249,16 +250,17 @@ final class MutableMessageHistoryView {
         self.combinedReadStates = combinedReadStates
         self.transientReadStates = transientReadStates
         self.tag = tag
+        self.excludeNamespaces = excludeNamespaces
         self.fillCount = count
         self.topTaggedMessages = topTaggedMessages
         self.additionalDatas = additionalDatas
         
-        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds)
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, excludeNamespaces: excludeNamespaces, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds)
         if case let .loading(loadingState) = self.state {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, excludeNamespaces: excludeNamespaces, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds, postbox: postbox, holes: holes))
                     self.sampledState = self.state.sample(postbox: postbox)
                 case .loadHole:
                     break
@@ -270,12 +272,12 @@ final class MutableMessageHistoryView {
     }
     
     private func reset(postbox: Postbox) {
-        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds)
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, excludeNamespaces: self.excludeNamespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds)
         if case let .loading(loadingState) = self.state {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, excludeNamespaces: self.excludeNamespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
                 case .loadHole:
                     break
             }
@@ -284,7 +286,7 @@ final class MutableMessageHistoryView {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, excludeNamespaces: self.excludeNamespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
                 case .loadHole:
                     break
             }
@@ -470,7 +472,7 @@ final class MutableMessageHistoryView {
                 let sampledState = loadingState.checkAndSample(postbox: postbox)
                 switch sampledState {
                     case let .ready(anchor, holes):
-                        self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
+                        self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, excludeNamespaces: self.excludeNamespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
                     case .loadHole:
                         break
                 }
@@ -712,19 +714,23 @@ public final class MessageHistoryView {
                 entries = []
                 if let transientReadStates = mutableView.transientReadStates, case let .peer(states) = transientReadStates {
                     for entry in state.entries {
-                        let read: Bool
-                        if entry.message.flags.contains(.Incoming) {
-                            read = false
-                        } else if let readState = states[entry.message.id.peerId] {
-                            read = readState.isOutgoingMessageIndexRead(entry.message.index)
-                        } else {
-                            read = false
+                        if !mutableView.excludeNamespaces.contains(entry.message.id.namespace) {
+                            let read: Bool
+                            if entry.message.flags.contains(.Incoming) {
+                                read = false
+                            } else if let readState = states[entry.message.id.peerId] {
+                                read = readState.isOutgoingMessageIndexRead(entry.message.index)
+                            } else {
+                                read = false
+                            }
+                            entries.append(MessageHistoryEntry(message: entry.message, isRead: read, location: entry.location, monthLocation: entry.monthLocation, attributes: entry.attributes))
                         }
-                        entries.append(MessageHistoryEntry(message: entry.message, isRead: read, location: entry.location, monthLocation: entry.monthLocation, attributes: entry.attributes))
                     }
                 } else {
                     for entry in state.entries {
-                        entries.append(MessageHistoryEntry(message: entry.message, isRead: false, location: entry.location, monthLocation: entry.monthLocation, attributes: entry.attributes))
+                        if !mutableView.excludeNamespaces.contains(entry.message.id.namespace) {
+                            entries.append(MessageHistoryEntry(message: entry.message, isRead: false, location: entry.location, monthLocation: entry.monthLocation, attributes: entry.attributes))
+                        }
                     }
                 }
                 assert(Set(entries.map({ $0.message.stableId })).count == entries.count)

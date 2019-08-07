@@ -24,11 +24,11 @@ func managedAppChangelog(postbox: Postbox, network: Network, stateManager: Accou
         }
         |> mapToSignal { appChangelogState -> Signal<Void, NoError> in
             let appChangelogState = appChangelogState
-            if appChangelogState.checkedVersion == appVersion {
-                return .complete()
-            }
+//            if appChangelogState.checkedVersion == appVersion {
+//                return .complete()
+//            }
             let previousVersion = appChangelogState.previousVersion
-            return network.request(Api.functions.help.getAppChangelog(prevAppVersion: previousVersion))
+            return network.request(Api.functions.help.getAppChangelog(prevAppVersion: "5.9")) //previousVersion))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                 return .single(nil)

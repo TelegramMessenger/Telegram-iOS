@@ -39,7 +39,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.segmentedControl.selectedSegmentIndex = 0
         
         if let peer = peer {
-            self.chatController = ChatController(context: context, chatLocation: .peer(peer.id), messageId: nil, botStart: nil, mode: .inline)
+            self.chatController = ChatController(context: context, chatLocation: .peer(peer.id), botStart: nil, mode: .inline)
         } else {
             self.chatController = nil
         }

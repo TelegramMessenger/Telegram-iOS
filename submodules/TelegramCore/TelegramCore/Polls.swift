@@ -60,7 +60,7 @@ public func requestClosePoll(postbox: Postbox, network: Network, stateManager: A
         }
         var flags: Int32 = 0
         flags |= 1 << 14
-        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(poll: .poll(id: poll.pollId.id, flags: 1 << 0, question: poll.text, answers: poll.options.map({ $0.apiOption }))), replyMarkup: nil, entities: nil))
+        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(poll: .poll(id: poll.pollId.id, flags: 1 << 0, question: poll.text, answers: poll.options.map({ $0.apiOption }))), replyMarkup: nil, entities: nil, scheduleDate: nil))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

@@ -1121,13 +1121,13 @@ final class SharedApplicationContext {
             Logger.shared.log("App \(self.episodeId)", "isActive = \(value)")
         })
         
-        /*if let url = launchOptions?[.url] {
-            if let url = url as? URL, url.scheme == "tg" {
+        if let url = launchOptions?[.url] {
+            if let url = url as? URL, url.scheme == "tg" || url.scheme == buildConfig.appSpecificUrlScheme {
                 self.openUrlWhenReady(url: url.absoluteString)
-            } else if let url = url as? String, url.lowercased().hasPrefix("tg://") {
+            } else if let url = url as? String, url.lowercased().hasPrefix("tg:") || url.lowercased().hasPrefix("\(buildConfig.appSpecificUrlScheme):") {
                 self.openUrlWhenReady(url: url)
             }
-        }*/
+        }
         
         if application.applicationState == .active {
             self.isInForegroundValue = true

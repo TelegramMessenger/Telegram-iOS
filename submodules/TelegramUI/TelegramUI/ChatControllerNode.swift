@@ -188,7 +188,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }*/
     
-    init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
+    init(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
         self.context = context
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
@@ -203,7 +203,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.titleAccessoryPanelContainer.clipsToBounds = true
         
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, tagMask: nil, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
         self.historyNode.rotated = true
         self.historyNodeContainer = ASDisplayNode()
         self.historyNodeContainer.addSubnode(self.historyNode)
@@ -284,7 +284,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.textInputPanelNode?.sendMessage = { [weak self] in
             if let strongSelf = self {
-                strongSelf.sendCurrentMessage()
+                if strongSelf.chatPresentationInterfaceState.isScheduledMessages {
+                    strongSelf.controllerInteraction.scheduleCurrentMessage()
+                } else {
+                    strongSelf.sendCurrentMessage()
+                }
             }
         }
         
@@ -2003,7 +2007,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func sendCurrentMessage(silentPosting: Bool? = nil) {
+    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil) {
         if let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             if textInputPanelNode.textInputNode?.isFirstResponder() ?? false {
                 Keyboard.applyAutocorrection()
@@ -2045,8 +2049,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         var webpage: TelegramMediaWebpage?
                         if self.chatPresentationInterfaceState.interfaceState.composeDisableUrlPreview != nil {
-                            attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews]))
+                            attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews], scheduleTime: scheduleTime))
                         } else {
+                            if let scheduleTime = scheduleTime {
+                                attributes.append(OutgoingContentInfoMessageAttribute(flags: [], scheduleTime: scheduleTime))
+                            }
                             webpage = self.chatPresentationInterfaceState.urlPreview?.1
                         }
                         messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))

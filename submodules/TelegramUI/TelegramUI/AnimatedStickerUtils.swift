@@ -4,68 +4,69 @@ import SwiftSignalKit
 import Postbox
 import Display
 import TelegramCore
-import AVFoundation
-import Lottie
 import TelegramUIPrivateModule
 import Compression
 import GZip
 import RLottie
+import MediaResources
 import MobileCoreServices
 
-public struct LocalBundleResourceId: MediaResourceId {
-    public let name: String
-    public let ext: String
-    
-    public var uniqueId: String {
-        return "local-bundle-\(self.name)-\(self.ext)"
-    }
-    
-    public var hashValue: Int {
-        return self.name.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? LocalBundleResourceId {
-            return self.name == to.name && self.ext == to.ext
-        } else {
-            return false
+private func transformedWithFitzModifier(data: Data, fitzModifier: EmojiFitzModifier?) -> Data {
+    if let fitzModifier = fitzModifier, var string = String(data: data, encoding: .utf8) {
+        let color1: UIColor
+        let color2: UIColor
+        let color3: UIColor
+        let color4: UIColor
+        switch fitzModifier {
+            case .type12:
+                color1 = UIColor(rgb: 0xca907a)
+                color2 = UIColor(rgb: 0xedc5a5)
+                color3 = UIColor(rgb: 0xf7e3c3)
+                color4 = UIColor(rgb: 0xfbefd6)
+            case .type3:
+                color1 = UIColor(rgb: 0xaa7c60)
+                color2 = UIColor(rgb: 0xc8a987)
+                color3 = UIColor(rgb: 0xddc89f)
+                color4 = UIColor(rgb: 0xe6d6b2)
+            case .type4:
+                color1 = UIColor(rgb: 0x8c6148)
+                color2 = UIColor(rgb: 0xad8562)
+                color3 = UIColor(rgb: 0xc49e76)
+                color4 = UIColor(rgb: 0xd4b188)
+            case .type5:
+                color1 = UIColor(rgb: 0x6e3c2c)
+                color2 = UIColor(rgb: 0x925a34)
+                color3 = UIColor(rgb: 0xa16e46)
+                color4 = UIColor(rgb: 0xac7a52)
+            case .type6:
+                color1 = UIColor(rgb: 0x291c12)
+                color2 = UIColor(rgb: 0x472a22)
+                color3 = UIColor(rgb: 0x573b30)
+                color4 = UIColor(rgb: 0x68493c)
         }
+        
+        func colorToString(_ color: UIColor) -> String {
+            var r: CGFloat = 0.0
+            var g: CGFloat = 0.0
+            var b: CGFloat = 0.0
+            if color.getRed(&r, green: &g, blue: &b, alpha: nil) {
+                return "\(r),\(g),\(b)"
+            }
+            return ""
+        }
+        
+        string = string.replacingOccurrences(of: "0.96862745285,0.494117647409,0.254901975393", with: colorToString(color1))
+        string = string.replacingOccurrences(of: "1,0.694117665291,0.223529413342", with: colorToString(color2))
+        string = string.replacingOccurrences(of: "1,0.819607853889,0.250980407", with: colorToString(color3))
+        string = string.replacingOccurrences(of: "1,0.874509811401,0.474509805441", with: colorToString(color4))
+        
+        return string.data(using: .utf8) ?? data
+    } else {
+        return data
     }
 }
 
-public class LocalBundleResource: TelegramMediaResource {
-    public let name: String
-    public let ext: String
-    
-    public init(name: String, ext: String) {
-        self.name = name
-        self.ext = ext
-    }
-    
-    public required init(decoder: PostboxDecoder) {
-        self.name = decoder.decodeStringForKey("n", orElse: "")
-        self.ext = decoder.decodeStringForKey("e", orElse: "")
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.name, forKey: "n")
-        encoder.encodeString(self.ext, forKey: "e")
-    }
-    
-    public var id: MediaResourceId {
-        return LocalBundleResourceId(name: self.name, ext: self.ext)
-    }
-    
-    public func isEqual(to: MediaResource) -> Bool {
-        if let to = to as? LocalBundleResource {
-            return self.name == to.name && self.ext == to.ext
-        } else {
-            return false
-        }
-    }
-}
-
-func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: String) -> Signal<TempBoxFile, NoError> {
+func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil, cacheKey: String) -> Signal<TempBoxFile, NoError> {
     return Signal({ subscriber in
         let queue = Queue()
         
@@ -77,72 +78,75 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
             }
             
             let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
-            if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
-                if cancelled.with({ $0 }) {
-                    return
-                }
-                
-                let context = DrawingContext(size: size, scale: 1.0, clear: true)
-                player.renderFrame(with: 0, into: context.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height), bytesPerRow: Int32(context.bytesPerRow))
-                
-                let yuvaPixelsPerAlphaRow = (Int(size.width) + 1) & (~1)
-                assert(yuvaPixelsPerAlphaRow % 2 == 0)
-                
-                let yuvaLength = Int(size.width) * Int(size.height) * 2 + yuvaPixelsPerAlphaRow * Int(size.height) / 2
-                var yuvaFrameData = malloc(yuvaLength)!
-                memset(yuvaFrameData, 0, yuvaLength)
-                
-                defer {
-                    free(yuvaFrameData)
-                }
-                
-                encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
-                decodeYUVAToRGBA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
-                
-                if let colorSourceImage = context.generateImage(), let alphaImage = generateGrayscaleAlphaMaskImage(image: colorSourceImage) {
-                    let colorContext = DrawingContext(size: size, scale: 1.0, clear: false)
-                    colorContext.withFlippedContext { c in
-                        c.setFillColor(UIColor.black.cgColor)
-                        c.fill(CGRect(origin: CGPoint(), size: size))
-                        c.draw(colorSourceImage.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                    }
-                    guard let colorImage = colorContext.generateImage() else {
+            if let decompressedData = decompressedData {
+                let decompressedData = transformedWithFitzModifier(data: decompressedData, fitzModifier: fitzModifier)
+                if let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
+                    if cancelled.with({ $0 }) {
                         return
                     }
                     
-                    let colorData = NSMutableData()
-                    let alphaData = NSMutableData()
+                    let context = DrawingContext(size: size, scale: 1.0, clear: true)
+                    player.renderFrame(with: 0, into: context.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height), bytesPerRow: Int32(context.bytesPerRow))
                     
-                    if let colorDestination = CGImageDestinationCreateWithData(colorData as CFMutableData, kUTTypeJPEG, 1, nil), let alphaDestination = CGImageDestinationCreateWithData(alphaData as CFMutableData, kUTTypeJPEG, 1, nil) {
-                        CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
-                        CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
+                    let yuvaPixelsPerAlphaRow = (Int(size.width) + 1) & (~1)
+                    assert(yuvaPixelsPerAlphaRow % 2 == 0)
+                    
+                    let yuvaLength = Int(size.width) * Int(size.height) * 2 + yuvaPixelsPerAlphaRow * Int(size.height) / 2
+                    var yuvaFrameData = malloc(yuvaLength)!
+                    memset(yuvaFrameData, 0, yuvaLength)
+                    
+                    defer {
+                        free(yuvaFrameData)
+                    }
+                    
+                    encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
+                    decodeYUVAToRGBA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
+                    
+                    if let colorSourceImage = context.generateImage(), let alphaImage = generateGrayscaleAlphaMaskImage(image: colorSourceImage) {
+                        let colorContext = DrawingContext(size: size, scale: 1.0, clear: false)
+                        colorContext.withFlippedContext { c in
+                            c.setFillColor(UIColor.black.cgColor)
+                            c.fill(CGRect(origin: CGPoint(), size: size))
+                            c.draw(colorSourceImage.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                        }
+                        guard let colorImage = colorContext.generateImage() else {
+                            return
+                        }
                         
-                        let colorQuality: Float
-                        let alphaQuality: Float
-                        colorQuality = 0.5
-                        alphaQuality = 0.4
+                        let colorData = NSMutableData()
+                        let alphaData = NSMutableData()
                         
-                        let options = NSMutableDictionary()
-                        options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
-                        
-                        let optionsAlpha = NSMutableDictionary()
-                        optionsAlpha.setObject(alphaQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
-                        
-                        CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
-                        CGImageDestinationAddImage(alphaDestination, alphaImage.cgImage!, optionsAlpha as CFDictionary)
-                        if CGImageDestinationFinalize(colorDestination) && CGImageDestinationFinalize(alphaDestination) {
-                            let finalData = NSMutableData()
-                            var colorSize: Int32 = Int32(colorData.length)
-                            finalData.append(&colorSize, length: 4)
-                            finalData.append(colorData as Data)
-                            var alphaSize: Int32 = Int32(alphaData.length)
-                            finalData.append(&alphaSize, length: 4)
-                            finalData.append(alphaData as Data)
+                        if let colorDestination = CGImageDestinationCreateWithData(colorData as CFMutableData, kUTTypeJPEG, 1, nil), let alphaDestination = CGImageDestinationCreateWithData(alphaData as CFMutableData, kUTTypeJPEG, 1, nil) {
+                            CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
+                            CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
                             
-                            let tempFile = TempBox.shared.tempFile(fileName: "image.ajpg")
-                            let _ = try? finalData.write(to: URL(fileURLWithPath: tempFile.path), options: [])
-                            subscriber.putNext(tempFile)
-                            subscriber.putCompletion()
+                            let colorQuality: Float
+                            let alphaQuality: Float
+                            colorQuality = 0.5
+                            alphaQuality = 0.4
+                            
+                            let options = NSMutableDictionary()
+                            options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
+                            
+                            let optionsAlpha = NSMutableDictionary()
+                            optionsAlpha.setObject(alphaQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
+                            
+                            CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
+                            CGImageDestinationAddImage(alphaDestination, alphaImage.cgImage!, optionsAlpha as CFDictionary)
+                            if CGImageDestinationFinalize(colorDestination) && CGImageDestinationFinalize(alphaDestination) {
+                                let finalData = NSMutableData()
+                                var colorSize: Int32 = Int32(colorData.length)
+                                finalData.append(&colorSize, length: 4)
+                                finalData.append(colorData as Data)
+                                var alphaSize: Int32 = Int32(alphaData.length)
+                                finalData.append(&alphaSize, length: 4)
+                                finalData.append(alphaData as Data)
+                                
+                                let tempFile = TempBox.shared.tempFile(fileName: "image.ajpg")
+                                let _ = try? finalData.write(to: URL(fileURLWithPath: tempFile.path), options: [])
+                                subscriber.putNext(tempFile)
+                                subscriber.putCompletion()
+                            }
                         }
                     }
                 }
@@ -159,7 +163,7 @@ private let threadPool: ThreadPool = {
 }()
 
 @available(iOS 9.0, *)
-func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, cacheKey: String) -> Signal<String, NoError> {
+func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil, cacheKey: String) -> Signal<String, NoError> {
     return Signal({ subscriber in
         let cancelled = Atomic<Bool>(value: false)
         
@@ -176,154 +180,132 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
             var compressionTime: Double = 0
             
             let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
-            if let decompressedData = decompressedData, let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
-                let endFrame = Int(player.frameCount)
-                
-                if cancelled.with({ $0 }) {
-                    //print("cancelled 2")
-                    return
-                }
-                
-                var randomId: Int64 = 0
-                arc4random_buf(&randomId, 8)
-                let path = NSTemporaryDirectory() + "\(randomId).lz4v"
-                guard let fileContext = ManagedFile(queue: nil, path: path, mode: .readwrite) else {
-                    return
-                }
-                
-                let bytesPerRow = (4 * Int(size.width) + 15) & (~15)
-                
-                var currentFrame: Int32 = 0
-                
-                var fps: Int32 = player.frameRate
-                var frameCount: Int32 = player.frameCount
-                let _ = fileContext.write(&fps, count: 4)
-                let _ = fileContext.write(&frameCount, count: 4)
-                var widthValue: Int32 = Int32(size.width)
-                var heightValue: Int32 = Int32(size.height)
-                var bytesPerRowValue: Int32 = Int32(bytesPerRow)
-                let _ = fileContext.write(&widthValue, count: 4)
-                let _ = fileContext.write(&heightValue, count: 4)
-                let _ = fileContext.write(&bytesPerRowValue, count: 4)
-                
-                let frameLength = bytesPerRow * Int(size.height)
-                assert(frameLength % 16 == 0)
-                
-                let currentFrameData = malloc(frameLength)!
-                memset(currentFrameData, 0, frameLength)
-                
-                let yuvaPixelsPerAlphaRow = (Int(size.width) + 1) & (~1)
-                assert(yuvaPixelsPerAlphaRow % 2 == 0)
-                
-                let yuvaLength = Int(size.width) * Int(size.height) * 2 + yuvaPixelsPerAlphaRow * Int(size.height) / 2
-                var yuvaFrameData = malloc(yuvaLength)!
-                memset(yuvaFrameData, 0, yuvaLength)
-                
-                var previousYuvaFrameData = malloc(yuvaLength)!
-                memset(previousYuvaFrameData, 0, yuvaLength)
-                
-                defer {
-                    free(currentFrameData)
-                    free(previousYuvaFrameData)
-                    free(yuvaFrameData)
-                }
-                
-                var compressedFrameData = Data(count: frameLength)
-                let compressedFrameDataLength = compressedFrameData.count
-                
-                let scratchData = malloc(compression_encode_scratch_buffer_size(COMPRESSION_LZFSE))!
-                defer {
-                    free(scratchData)
-                }
-                
-                while currentFrame < endFrame {
+            if let decompressedData = decompressedData {
+                let decompressedData = transformedWithFitzModifier(data: decompressedData, fitzModifier: fitzModifier)
+                if let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
+                    let endFrame = Int(player.frameCount)
+                    
                     if cancelled.with({ $0 }) {
-                        //print("cancelled 3")
+                        //print("cancelled 2")
                         return
                     }
                     
-                    let drawStartTime = CACurrentMediaTime()
+                    var randomId: Int64 = 0
+                    arc4random_buf(&randomId, 8)
+                    let path = NSTemporaryDirectory() + "\(randomId).lz4v"
+                    guard let fileContext = ManagedFile(queue: nil, path: path, mode: .readwrite) else {
+                        return
+                    }
+                    
+                    let bytesPerRow = (4 * Int(size.width) + 15) & (~15)
+                    
+                    var currentFrame: Int32 = 0
+                    
+                    var fps: Int32 = player.frameRate
+                    var frameCount: Int32 = player.frameCount
+                    let _ = fileContext.write(&fps, count: 4)
+                    let _ = fileContext.write(&frameCount, count: 4)
+                    var widthValue: Int32 = Int32(size.width)
+                    var heightValue: Int32 = Int32(size.height)
+                    var bytesPerRowValue: Int32 = Int32(bytesPerRow)
+                    let _ = fileContext.write(&widthValue, count: 4)
+                    let _ = fileContext.write(&heightValue, count: 4)
+                    let _ = fileContext.write(&bytesPerRowValue, count: 4)
+                    
+                    let frameLength = bytesPerRow * Int(size.height)
+                    assert(frameLength % 16 == 0)
+                    
+                    let currentFrameData = malloc(frameLength)!
                     memset(currentFrameData, 0, frameLength)
-                    player.renderFrame(with: Int32(currentFrame), into: currentFrameData.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height), bytesPerRow: Int32(bytesPerRow))
-                    drawingTime += CACurrentMediaTime() - drawStartTime
                     
-                    let appendStartTime = CACurrentMediaTime()
+                    let yuvaPixelsPerAlphaRow = (Int(size.width) + 1) & (~1)
+                    assert(yuvaPixelsPerAlphaRow % 2 == 0)
                     
-                    encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), currentFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(bytesPerRow))
+                    let yuvaLength = Int(size.width) * Int(size.height) * 2 + yuvaPixelsPerAlphaRow * Int(size.height) / 2
+                    var yuvaFrameData = malloc(yuvaLength)!
+                    memset(yuvaFrameData, 0, yuvaLength)
                     
-                    appendingTime += CACurrentMediaTime() - appendStartTime
+                    var previousYuvaFrameData = malloc(yuvaLength)!
+                    memset(previousYuvaFrameData, 0, yuvaLength)
                     
-                    let deltaStartTime = CACurrentMediaTime()
-                    var lhs = previousYuvaFrameData.assumingMemoryBound(to: UInt64.self)
-                    var rhs = yuvaFrameData.assumingMemoryBound(to: UInt64.self)
-                    for _ in 0 ..< yuvaLength / 8 {
-                        lhs.pointee = rhs.pointee ^ lhs.pointee
-                        lhs = lhs.advanced(by: 1)
-                        rhs = rhs.advanced(by: 1)
-                    }
-                    var lhsRest = previousYuvaFrameData.assumingMemoryBound(to: UInt8.self).advanced(by: (yuvaLength / 8) * 8)
-                    var rhsRest = yuvaFrameData.assumingMemoryBound(to: UInt8.self).advanced(by: (yuvaLength / 8) * 8)
-                    for _ in (yuvaLength / 8) * 8 ..< yuvaLength {
-                        lhsRest.pointee = rhsRest.pointee ^ lhsRest.pointee
-                        lhsRest = lhsRest.advanced(by: 1)
-                        rhsRest = rhsRest.advanced(by: 1)
-                    }
-                    deltaTime += CACurrentMediaTime() - deltaStartTime
-                    
-                    let compressionStartTime = CACurrentMediaTime()
-                    compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                        let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousYuvaFrameData.assumingMemoryBound(to: UInt8.self), yuvaLength, scratchData, COMPRESSION_LZFSE)
-                        var frameLengthValue: Int32 = Int32(length)
-                        let _ = fileContext.write(&frameLengthValue, count: 4)
-                        let _ = fileContext.write(bytes, count: length)
+                    defer {
+                        free(currentFrameData)
+                        free(previousYuvaFrameData)
+                        free(yuvaFrameData)
                     }
                     
-                    let tmp = previousYuvaFrameData
-                    previousYuvaFrameData = yuvaFrameData
-                    yuvaFrameData = tmp
+                    var compressedFrameData = Data(count: frameLength)
+                    let compressedFrameDataLength = compressedFrameData.count
                     
-                    compressionTime += CACurrentMediaTime() - compressionStartTime
+                    let scratchData = malloc(compression_encode_scratch_buffer_size(COMPRESSION_LZFSE))!
+                    defer {
+                        free(scratchData)
+                    }
                     
-                    currentFrame += 1
+                    while currentFrame < endFrame {
+                        if cancelled.with({ $0 }) {
+                            //print("cancelled 3")
+                            return
+                        }
+                        
+                        let drawStartTime = CACurrentMediaTime()
+                        memset(currentFrameData, 0, frameLength)
+                        player.renderFrame(with: Int32(currentFrame), into: currentFrameData.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height), bytesPerRow: Int32(bytesPerRow))
+                        drawingTime += CACurrentMediaTime() - drawStartTime
+                        
+                        let appendStartTime = CACurrentMediaTime()
+                        
+                        encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), currentFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(bytesPerRow))
+                        
+                        appendingTime += CACurrentMediaTime() - appendStartTime
+                        
+                        let deltaStartTime = CACurrentMediaTime()
+                        var lhs = previousYuvaFrameData.assumingMemoryBound(to: UInt64.self)
+                        var rhs = yuvaFrameData.assumingMemoryBound(to: UInt64.self)
+                        for _ in 0 ..< yuvaLength / 8 {
+                            lhs.pointee = rhs.pointee ^ lhs.pointee
+                            lhs = lhs.advanced(by: 1)
+                            rhs = rhs.advanced(by: 1)
+                        }
+                        var lhsRest = previousYuvaFrameData.assumingMemoryBound(to: UInt8.self).advanced(by: (yuvaLength / 8) * 8)
+                        var rhsRest = yuvaFrameData.assumingMemoryBound(to: UInt8.self).advanced(by: (yuvaLength / 8) * 8)
+                        for _ in (yuvaLength / 8) * 8 ..< yuvaLength {
+                            lhsRest.pointee = rhsRest.pointee ^ lhsRest.pointee
+                            lhsRest = lhsRest.advanced(by: 1)
+                            rhsRest = rhsRest.advanced(by: 1)
+                        }
+                        deltaTime += CACurrentMediaTime() - deltaStartTime
+                        
+                        let compressionStartTime = CACurrentMediaTime()
+                        compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                            let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousYuvaFrameData.assumingMemoryBound(to: UInt8.self), yuvaLength, scratchData, COMPRESSION_LZFSE)
+                            var frameLengthValue: Int32 = Int32(length)
+                            let _ = fileContext.write(&frameLengthValue, count: 4)
+                            let _ = fileContext.write(bytes, count: length)
+                        }
+                        
+                        let tmp = previousYuvaFrameData
+                        previousYuvaFrameData = yuvaFrameData
+                        yuvaFrameData = tmp
+                        
+                        compressionTime += CACurrentMediaTime() - compressionStartTime
+                        
+                        currentFrame += 1
+                    }
+                    
+                    subscriber.putNext(path)
+                    subscriber.putCompletion()
+                    print("animation render time \(CACurrentMediaTime() - startTime)")
+                    print("of which drawing time \(drawingTime)")
+                    print("of which appending time \(appendingTime)")
+                    print("of which delta time \(deltaTime)")
+                    
+                    print("of which compression time \(compressionTime)")
                 }
-                
-                subscriber.putNext(path)
-                subscriber.putCompletion()
-                print("animation render time \(CACurrentMediaTime() - startTime)")
-                print("of which drawing time \(drawingTime)")
-                print("of which appending time \(appendingTime)")
-                print("of which delta time \(deltaTime)")
-                
-                print("of which compression time \(compressionTime)")
             }
         }))
         return ActionDisposable {
             let _ = cancelled.swap(true)
         }
     })
-}
-
-private final class LocalBundleResourceCopyFile : MediaResourceDataFetchCopyLocalItem {
-    let path: String
-    init(path: String) {
-        self.path = path
-    }
-    func copyTo(url: URL) -> Bool {
-        do {
-            try FileManager.default.copyItem(at: URL(fileURLWithPath: self.path), to: url)
-            return true
-        } catch {
-            return false
-        }
-    }
-}
-
-func fetchLocalBundleResource(postbox: Postbox, resource: LocalBundleResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
-    return Signal { subscriber in
-        if let path = frameworkBundle.path(forResource: resource.name, ofType: resource.ext), let _ = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-            subscriber.putNext(.copyLocalItem(LocalBundleResourceCopyFile(path: path)))
-            subscriber.putCompletion()
-        }
-        return EmptyDisposable
-    }
 }

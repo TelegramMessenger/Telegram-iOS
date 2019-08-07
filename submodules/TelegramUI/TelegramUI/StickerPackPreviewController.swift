@@ -127,7 +127,7 @@ final class StickerPackPreviewController: ViewController {
                 }
                 if let peer = peer {
                     strongSelf.dismiss()
-                    strongSelf.parentNavigationController?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peer.id), messageId: nil))
+                    strongSelf.parentNavigationController?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peer.id)))
                 }
             }))
         })

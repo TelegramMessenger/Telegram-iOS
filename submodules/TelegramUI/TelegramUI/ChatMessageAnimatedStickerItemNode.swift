@@ -10,6 +10,7 @@ import TelegramPresentationData
 import Compression
 import TextFormat
 import AccountContext
+import MediaResources
 import StickerResources
 
 private let nameFont = Font.medium(14.0)
@@ -233,12 +234,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 break
             }
         }
-    
-        if self.telegramFile == nil, let emojiFile = item.associatedData.animatedEmojiStickers[item.message.text.trimmedEmoji]?.file {
+     
+        let (emoji, fitz) = item.message.text.basicEmoji
+        if self.telegramFile == nil, let emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.file {
             if self.emojiFile?.id != emojiFile.id {
                 self.emojiFile = emojiFile
                 let dimensions = emojiFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)), thumbnail: false))
+                var fitzModifier: EmojiFitzModifier?
+                if let fitz = fitz {
+                    fitzModifier = EmojiFitzModifier(emoji: fitz)
+                }
+                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false))
                 self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: emojiFile)).start())
                 self.updateVisibility()
             }
@@ -272,6 +278,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 var file: TelegramMediaFile?
                 var playbackMode: AnimatedStickerPlaybackMode = .loop
                 var isEmoji = false
+                var fitzModifier: EmojiFitzModifier?
                 
                 if let telegramFile = self.telegramFile {
                     file = telegramFile
@@ -282,12 +289,16 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     isEmoji = true
                     file = emojiFile
                     playbackMode = .once
+                    let (_, fitz) = item.message.text.basicEmoji
+                    if let fitz = fitz {
+                        fitzModifier = EmojiFitzModifier(emoji: fitz)
+                    }
                 }
                 
                 if let file = file {
                     let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
                     let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                    self.animationNode.setup(account: item.context.account, resource: file.resource, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
+                    self.animationNode.setup(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 }
             }
         }

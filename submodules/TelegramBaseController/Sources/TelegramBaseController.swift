@@ -169,7 +169,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             })
         }
         
-        if let liveLocationManager = context.liveLocationManager {
+        if false, let liveLocationManager = context.liveLocationManager {
             switch locationBroadcastPanelSource {
                 case .none:
                     self.locationBroadcastMode = nil
