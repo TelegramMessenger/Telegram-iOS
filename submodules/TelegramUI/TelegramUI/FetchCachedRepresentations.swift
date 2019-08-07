@@ -112,19 +112,7 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
     } else if let representation = representation as? CachedEmojiRepresentation {
         return fetchEmojiRepresentation(account: account, resource: resource, representation: representation)
     } else if let representation = representation as? CachedAnimatedStickerRepresentation {
-        let data: Signal<MediaResourceData, NoError>
-//        if let resource = resource as? LocalBundleResource {
-//            data = Signal { subscriber in
-//                if let path = frameworkBundle.path(forResource: resource.name, ofType: resource.ext), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-//                    subscriber.putNext(MediaResourceData(path: path, offset: 0, size: data.count, complete: true))
-//                    subscriber.putCompletion()
-//                }
-//                return EmptyDisposable
-//            }
-//        } else {
-            data = account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-//        }
-        return data
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             if !data.complete {
                 return .complete()
@@ -908,7 +896,7 @@ private func fetchEmojiRepresentation(account: Account, resource: MediaResource,
 private func fetchAnimatedStickerFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedAnimatedStickerFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            return fetchCompressedLottieFirstFrameAJpeg(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { file in
+            return fetchCompressedLottieFirstFrameAJpeg(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { file in
                 subscriber.putNext(.tempFile(file))
                 subscriber.putCompletion()
             })
@@ -923,7 +911,7 @@ private func fetchAnimatedStickerRepresentation(account: Account, resource: Medi
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if #available(iOS 9.0, *) {
-                return experimentalConvertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { path in
+                return experimentalConvertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { path in
                     subscriber.putNext(.temporaryPath(path))
                     subscriber.putCompletion()
                 })

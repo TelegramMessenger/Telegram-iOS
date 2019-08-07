@@ -269,8 +269,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if query.isSingleEmoji {
-                    signals = .single([searchStickers(account: account, query: text.trimmedEmoji)
-                    //|> take(1)
+                    signals = .single([searchStickers(account: account, query: text.basicEmoji.0)
                     |> map { (nil, $0) }])
                 } else if query.count > 1, let languageCode = languageCode, !languageCode.isEmpty && languageCode != "emoji" {
                     var signal = searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
@@ -292,7 +291,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                         var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                         let emoticons = keywords.flatMap { $0.emoticons }
                         for emoji in emoticons {
-                            signals.append(searchStickers(account: self.context.account, query: emoji.trimmedEmoji)
+                            signals.append(searchStickers(account: self.context.account, query: emoji.basicEmoji.0)
                             |> take(1)
                             |> map { (emoji, $0) })
                         }

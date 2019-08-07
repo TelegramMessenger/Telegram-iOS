@@ -134,6 +134,9 @@ public final class PrincipalThemeEssentialGraphics {
         let emptyImage = UIImage()
         if preview {
             self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none)
+            self.chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none)
+            self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.message.outgoingCheckColor)!
+            self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.message.outgoingCheckColor)!
             self.chatMessageBackgroundIncomingHighlightedImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopHighlightedImage = emptyImage
@@ -145,7 +148,6 @@ public final class PrincipalThemeEssentialGraphics {
             self.chatMessageBackgroundIncomingMergedBothHighlightedImage = emptyImage
             self.chatMessageBackgroundIncomingMergedSideImage = emptyImage
             self.chatMessageBackgroundIncomingMergedSideHighlightedImage = emptyImage
-            self.chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none)
             self.chatMessageBackgroundOutgoingHighlightedImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopHighlightedImage = emptyImage
@@ -157,8 +159,6 @@ public final class PrincipalThemeEssentialGraphics {
             self.chatMessageBackgroundOutgoingMergedBothHighlightedImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedSideImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedSideHighlightedImage = emptyImage
-            self.checkBubbleFullImage = emptyImage
-            self.checkBubblePartialImage = emptyImage
             self.checkMediaFullImage = emptyImage
             self.checkMediaPartialImage = emptyImage
             self.checkFreeFullImage = emptyImage

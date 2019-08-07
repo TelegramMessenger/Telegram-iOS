@@ -545,7 +545,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     var animatedEmojiStickers: [String: StickerPackItem] = [:]
                     for case let item as StickerPackItem in items {
                         if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                            animatedEmojiStickers[emoji.trimmedEmoji] = item
+                            animatedEmojiStickers[emoji.basicEmoji.0] = item
                         }
                     }
                     return animatedEmojiStickers

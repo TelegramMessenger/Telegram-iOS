@@ -924,8 +924,11 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     }
                     updatedState.addMessages([message], location: .UpperHistoryBlock)
                 }
-            case let .updateServiceNotification(_, date, type, text, media, entities):
-                if let date = date {
+            case let .updateServiceNotification(flags, date, type, text, media, entities):
+                let popup = (flags & (1 << 0)) != 0
+                if popup {
+                    updatedState.addDisplayAlert(text, isDropAuth: type.hasPrefix("AUTH_KEY_DROP_"))
+                } else if let date = date {
                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000)
                     
                     if updatedState.peers[peerId] == nil {
@@ -969,8 +972,6 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: medias)
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                     }
-                } else {
-                    updatedState.addDisplayAlert(text, isDropAuth: type.hasPrefix("AUTH_KEY_DROP_"))
                 }
             case let .updateReadChannelInbox(_, folderId, channelId, maxId, stillUnreadCount, pts):
                 updatedState.resetIncomingReadState(groupId: PeerGroupId(rawValue: folderId ?? 0), peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, maxIncomingReadId: maxId, count: stillUnreadCount, pts: pts)
