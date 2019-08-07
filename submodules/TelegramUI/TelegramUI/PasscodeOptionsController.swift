@@ -8,6 +8,8 @@ import LegacyComponents
 import LocalAuthentication
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import AccountContext
 
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOff: () -> Void

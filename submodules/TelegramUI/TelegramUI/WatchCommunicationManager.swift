@@ -6,6 +6,7 @@ import WatchCommon
 import TelegramUIPrivateModule
 import SSignalKit
 import TelegramUIPreferences
+import AccountContext
 
 final class WatchCommunicationManager {
     private let queue: Queue

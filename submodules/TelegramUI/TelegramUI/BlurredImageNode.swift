@@ -47,7 +47,7 @@ private class BlurLayer: CALayer {
     func draw(_ image: UIImage) {
         self.contents = image.cgImage
         self.contentsScale = image.scale
-        self.contentsGravity = kCAGravityResizeAspectFill
+        self.contentsGravity = .resizeAspectFill
     }
     
     func render(in context: CGContext, for layer: CALayer) {

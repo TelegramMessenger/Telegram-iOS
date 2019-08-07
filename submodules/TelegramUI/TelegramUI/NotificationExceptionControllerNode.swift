@@ -7,6 +7,9 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import MergeLists
+import AccountContext
 
 private final class NotificationExceptionState : Equatable {
     let mode:NotificationExceptionMode

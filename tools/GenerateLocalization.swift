@@ -186,12 +186,10 @@ final class WriteBuffer {
     }
     
     func append(_ value: Int32) {
-        let ptr = self.data.count
-        self.data.count += 4
-        self.data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
-            var value = value
-            memcpy(bytes.advanced(by: ptr), &value, 4)
-        }
+        var value = value
+        withUnsafePointer(to: &value, { (pointer: UnsafePointer<Int32>) -> Void in
+            self.data.append(UnsafeRawPointer(pointer).assumingMemoryBound(to: UInt8.self), count: 4)
+        })
     }
     
     func append(_ string: String) {

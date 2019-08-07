@@ -5,6 +5,7 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import ListSectionHeaderNode
 
 class ChatListArchiveInfoItem: ListViewItem {
     let theme: PresentationTheme

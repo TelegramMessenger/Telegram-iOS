@@ -10,6 +10,8 @@ import TelegramUIPrivateModule
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramAudio
+import AccountContext
+import LocalizedPeerData
 
 final class CallControllerNode: ASDisplayNode {
     private let sharedContext: SharedAccountContext
@@ -237,7 +239,7 @@ final class CallControllerNode: ASDisplayNode {
                     let text = stringForEmojiHashOfData(keyVisualHash, 4)!
                     self.keyTextData = (keyVisualHash, text)
                     
-                    self.keyButtonNode.setAttributedTitle(NSAttributedString(string: text, attributes: [NSAttributedStringKey.font: Font.regular(22.0), NSAttributedStringKey.kern: 2.5 as NSNumber]), for: [])
+                    self.keyButtonNode.setAttributedTitle(NSAttributedString(string: text, attributes: [NSAttributedString.Key.font: Font.regular(22.0), NSAttributedString.Key.kern: 2.5 as NSNumber]), for: [])
                     
                     let keyTextSize = self.keyButtonNode.measure(CGSize(width: 200.0, height: 200.0))
                     self.keyButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
@@ -525,7 +527,7 @@ final class CallControllerNode: ASDisplayNode {
                     let previous = bounds
                     bounds.origin = CGPoint(x: 0.0, y: velocity > 0.0 ? -bounds.height: bounds.height)
                     self.bounds = bounds
-                    self.layer.animateBounds(from: previous, to: bounds, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseOut, completion: { [weak self] _ in
+                    self.layer.animateBounds(from: previous, to: bounds, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { [weak self] _ in
                         self?.dismissedInteractively?()
                     })
                 }

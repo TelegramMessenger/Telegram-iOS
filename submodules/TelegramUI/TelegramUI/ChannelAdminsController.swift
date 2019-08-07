@@ -6,6 +6,9 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import AccountContext
+import TemporaryCachedPeerDataManager
 
 private final class ChannelAdminsControllerArguments {
     let account: Account

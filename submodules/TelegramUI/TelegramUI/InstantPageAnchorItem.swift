@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 import TelegramPresentationData
+import AccountContext
 
 final class InstantPageAnchorItem: InstantPageItem {
     let wantsNode: Bool = false

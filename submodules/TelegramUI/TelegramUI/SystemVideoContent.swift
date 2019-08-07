@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramAudio
 import LegacyComponents
 import UniversalMediaPlayer
+import AccountContext
 
 final class SystemVideoContent: UniversalVideoContent {
     let id: AnyHashable
@@ -124,7 +125,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         self._bufferingStatus.set(.single(nil))
         self._status.set(self.statusValue)
         
-        self.timeObserver = self.player.addPeriodicTimeObserver(forInterval: CMTimeMake(1, 10), queue: DispatchQueue.main) { [weak self] time in
+        self.timeObserver = self.player.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 10), queue: DispatchQueue.main) { [weak self] time in
             guard let strongSelf = self else {
                 return
             }
@@ -253,7 +254,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     func seek(_ timestamp: Double) {
         assert(Queue.mainQueue().isCurrent())
-        self.playerItem.seek(to: CMTimeMake(Int64(timestamp) * 1000, 1000))
+        self.playerItem.seek(to: CMTimeMake(value: Int64(timestamp) * 1000, timescale: 1000))
     }
     
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {

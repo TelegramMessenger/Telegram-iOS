@@ -4,6 +4,7 @@ import TelegramCore
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import AccountContext
 
 private final class InstantPageSlideshowItemNode: ASDisplayNode {
     private var _index: Int?

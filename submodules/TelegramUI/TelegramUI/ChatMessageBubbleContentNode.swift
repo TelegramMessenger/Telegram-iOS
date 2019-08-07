@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountContext
 
 enum ChatMessageBubbleContentBackgroundHiding {
     case never

@@ -7,6 +7,8 @@ import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
+import ShareController
 
 final class ThemePreviewController: ViewController {
     private let context: AccountContext

@@ -6,6 +6,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramStringFormatting
+import AccountContext
 
 private enum SecureIdDocumentFormTextField {
     case identifier

@@ -8,6 +8,9 @@ import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
+import OverlayStatusController
+import AccountContext
+import ShareController
 
 final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {

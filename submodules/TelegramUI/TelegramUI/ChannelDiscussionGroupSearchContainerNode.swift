@@ -7,6 +7,8 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import MergeLists
+import AccountContext
 
 private enum ChannelDiscussionGroupSearchContent: Equatable {
     case peer(Peer)

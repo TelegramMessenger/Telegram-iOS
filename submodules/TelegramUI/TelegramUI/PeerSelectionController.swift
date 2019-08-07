@@ -5,6 +5,8 @@ import Display
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import ProgressNavigationButtonNode
+import AccountContext
 
 public final class PeerSelectionController: ViewController {
     private let context: AccountContext

@@ -8,6 +8,7 @@ import SSignalKit
 import UIKit
 import Display
 import TelegramPresentationData
+import AccountContext
 
 class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem {
     var isVideo: Bool {

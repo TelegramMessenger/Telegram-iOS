@@ -6,6 +6,9 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramUIPreferences
+import AccountContext
+import ShareController
+import StickerResources
 
 enum StickerPackPreviewControllerMode {
     case `default`

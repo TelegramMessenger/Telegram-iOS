@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
+import StickerResources
 
 func stickerFromLegacyDocument(_ documentAttachment: TGDocumentMediaAttachment) -> TelegramMediaFile? {
     if documentAttachment.isSticker() {

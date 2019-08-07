@@ -7,6 +7,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 struct SecureIdDocumentGalleryEntryLocation: Equatable {
     let position: Int32

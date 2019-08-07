@@ -6,6 +6,7 @@ import Display
 import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
+import AccountContext
 
 private let itemSize = CGSize(width: 88.0, height: 88.0)
 private let inset: CGFloat = 12.0

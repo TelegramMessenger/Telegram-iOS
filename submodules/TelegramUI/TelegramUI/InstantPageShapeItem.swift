@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 import TelegramPresentationData
+import AccountContext
 
 enum InstantPageShape {
     case rect

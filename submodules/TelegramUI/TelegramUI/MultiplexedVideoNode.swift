@@ -77,8 +77,8 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
         self.trackingNode.isLayerBacked = true
         
         var timebase: CMTimebase?
-        CMTimebaseCreateWithMasterClock(nil, CMClockGetHostTimeClock(), &timebase)
-        CMTimebaseSetRate(timebase!, 0.0)
+        CMTimebaseCreateWithMasterClock(allocator: nil, masterClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
+        CMTimebaseSetRate(timebase!, rate: 0.0)
         self.timebase = timebase!
         
         super.init()
@@ -102,7 +102,7 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
         }
         
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-        self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+        self.displayLink.add(to: RunLoop.main, forMode: .common)
         if #available(iOS 10.0, *) {
             self.displayLink.preferredFramesPerSecond = 25
         } else {
@@ -113,9 +113,9 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
         self.trackingNode.inHierarchyUpdated = { [weak self] value in
             if let strongSelf = self {
                 if !value {
-                    CMTimebaseSetRate(strongSelf.timebase, 0.0)
+                    CMTimebaseSetRate(strongSelf.timebase, rate: 0.0)
                 } else {
-                    CMTimebaseSetRate(strongSelf.timebase, 1.0)
+                    CMTimebaseSetRate(strongSelf.timebase, rate: 1.0)
                 }
                 strongSelf.displayLink.isPaused = !value
                 if value && !strongSelf.enableVideoNodes {

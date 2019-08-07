@@ -5,6 +5,8 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import ActivityIndicator
+import AccountContext
 
 struct LanguageSuggestionControllerStrings {
     let ChooseLanguage: String

@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import AccountContext
 
 private struct PeerSpecificPackData {
     let peer: Peer

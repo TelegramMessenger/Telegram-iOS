@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 class SecureIdDocumentGalleryItem: GalleryItem {
     let context: AccountContext

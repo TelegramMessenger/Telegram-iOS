@@ -13,7 +13,7 @@ class ChatTitleActivityIndicatorNode: ASDisplayNode {
     }
     
     var timingFunction: CAMediaTimingFunction {
-        return CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        return CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
     }
     
     var color: UIColor? {

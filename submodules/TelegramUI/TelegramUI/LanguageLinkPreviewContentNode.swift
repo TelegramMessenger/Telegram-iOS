@@ -5,6 +5,9 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TextFormat
+import AccountContext
+import ShareController
 
 final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainerNode {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
@@ -47,14 +50,14 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
         self.textNode.attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
         self.textNode.linkHighlightColor = theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
         self.textNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
             } else {
                 return nil
             }
         }
         self.textNode.tapAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                 let url: String
                 if localizationInfo.platformUrl.isEmpty {
                     url = localizationInfo.platformUrl

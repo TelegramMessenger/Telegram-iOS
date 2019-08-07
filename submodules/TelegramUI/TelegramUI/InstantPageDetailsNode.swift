@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 private let detailsInset: CGFloat = 17.0
 private let titleInset: CGFloat = 22.0
@@ -238,7 +239,7 @@ final class InstantPageDetailsArrowNode : ASDisplayNode {
         
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         self.displayLink?.isPaused = true
-        self.displayLink?.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+        self.displayLink?.add(to: RunLoop.main, forMode: .common)
     }
     
     deinit {

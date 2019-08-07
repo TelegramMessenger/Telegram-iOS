@@ -5,6 +5,8 @@ import Display
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import ProgressNavigationButtonNode
+import AccountContext
 
 enum BotCheckoutInfoControllerAddressFocus {
     case street1
@@ -151,7 +153,7 @@ final class BotCheckoutInfoController: ViewController {
         self.controllerNode.verify()
     }
     
-    override open func dismiss(completion: (() -> Void)? = nil) {
+    override public func dismiss(completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
         self.controllerNode.animateOut(completion: completion)
     }

@@ -5,6 +5,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import OverlayStatusController
+import AccountContext
 
 private final class ChangePhoneNumberCodeControllerArguments {
     let updateEntryText: (String) -> Void
@@ -40,7 +43,7 @@ private enum ChangePhoneNumberCodeTag: ItemListItemTag {
 }
 
 private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
-    case codeEntry(PresentationTheme, String, String)
+    case codeEntry(PresentationTheme, PresentationStrings, String, String)
     case codeInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -58,8 +61,8 @@ private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
     
     static func ==(lhs: ChangePhoneNumberCodeEntry, rhs: ChangePhoneNumberCodeEntry) -> Bool {
         switch lhs {
-            case let .codeEntry(lhsTheme, lhsTitle, lhsText):
-                if case let .codeEntry(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
+            case let .codeEntry(lhsTheme, lhsStrings, lhsTitle, lhsText):
+                if case let .codeEntry(rhsTheme, rhsStrings, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsTitle == rhsTitle, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -79,8 +82,8 @@ private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
     
     func item(_ arguments: ChangePhoneNumberCodeControllerArguments) -> ListViewItem {
         switch self {
-            case let .codeEntry(theme, title, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ChangePhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .codeEntry(theme, strings, title, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ChangePhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
@@ -131,7 +134,7 @@ private struct ChangePhoneNumberCodeControllerState: Equatable {
 private func changePhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ChangePhoneNumberCodeControllerState, codeData: ChangeAccountPhoneNumberData, timeout: Int32?, strings: PresentationStrings) -> [ChangePhoneNumberCodeEntry] {
     var entries: [ChangePhoneNumberCodeEntry] = []
     
-    entries.append(.codeEntry(presentationData.theme, presentationData.strings.ChangePhoneNumberCode_CodePlaceholder, state.codeText))
+    entries.append(.codeEntry(presentationData.theme, presentationData.strings, presentationData.strings.ChangePhoneNumberCode_CodePlaceholder, state.codeText))
     var text = authorizationCurrentOptionText(codeData.type, strings: presentationData.strings, primaryColor: presentationData.theme.list.itemPrimaryTextColor, accentColor: presentationData.theme.list.itemAccentColor).string
     if let nextType = codeData.nextType {
         text += "\n\n" + authorizationNextOptionText(currentType: codeData.type, nextType: nextType, timeout: timeout, strings: presentationData.strings, primaryColor: .black, accentColor: .black).0.string

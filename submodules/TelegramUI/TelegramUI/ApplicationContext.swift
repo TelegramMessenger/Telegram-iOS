@@ -8,6 +8,8 @@ import TelegramCore
 import Display
 import LegacyComponents
 import DeviceAccess
+import TelegramUpdateUI
+import AccountContext
 
 func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bool {
     if data.isLockable, let autolockDeadline = data.autolockDeadline, autolockDeadline <= timestamp {
@@ -18,14 +20,14 @@ func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bo
 }
 
 final class UnauthorizedApplicationContext {
-    let sharedContext: SharedAccountContext
+    let sharedContext: SharedAccountContextImpl
     let account: UnauthorizedAccount
     
     let rootController: AuthorizationSequenceController
     
     let isReady = Promise<Bool>()
     
-    init(apiId: Int32, apiHash: String, sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])) {
+    init(apiId: Int32, apiHash: String, sharedContext: SharedAccountContextImpl, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])) {
         self.sharedContext = sharedContext
         self.account = account
         let presentationData = sharedContext.currentPresentationData.with { $0 }
@@ -56,7 +58,7 @@ final class AuthorizedApplicationContext {
     let mainWindow: Window1
     let lockedCoveringView: LockedWindowCoveringView
     
-    let context: AccountContext
+    let context: AccountContextImpl
     
     let rootController: TelegramRootController
     let notificationController: NotificationContainerController
@@ -109,7 +111,7 @@ final class AuthorizedApplicationContext {
     private var showCallsTabDisposable: Disposable?
     private var enablePostboxTransactionsDiposable: Disposable?
     
-    init(sharedApplicationContext: SharedApplicationContext, mainWindow: Window1, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContext, accountManager: AccountManager, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
+    init(sharedApplicationContext: SharedApplicationContext, mainWindow: Window1, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContextImpl, accountManager: AccountManager, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
         self.sharedApplicationContext = sharedApplicationContext
         
         setupLegacyComponents(context: context)
@@ -759,7 +761,7 @@ final class AuthorizedApplicationContext {
                 return
             }
             
-            let watchManager = WatchManager(arguments: arguments)
+            let watchManager = WatchManagerImpl(arguments: arguments)
             strongSelf.context.watchManager = watchManager
             
             strongSelf.watchNavigateToMessageDisposable.set((strongSelf.context.sharedContext.applicationBindings.applicationInForeground |> mapToSignal({ applicationInForeground -> Signal<(Bool, MessageId), NoError> in

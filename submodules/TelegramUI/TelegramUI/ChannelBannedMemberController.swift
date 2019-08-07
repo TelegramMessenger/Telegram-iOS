@@ -5,6 +5,10 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import TelegramStringFormatting
+import OverlayStatusController
+import AccountContext
 
 private final class ChannelBannedMemberControllerArguments {
     let account: Account

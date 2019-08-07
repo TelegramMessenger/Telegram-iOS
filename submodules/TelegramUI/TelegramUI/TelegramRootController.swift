@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPrivateModule
+import AccountContext
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
@@ -32,7 +33,7 @@ public final class TelegramRootController: NavigationController {
             let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationData.theme.chatList.messageTextColor.withAlphaComponent(0.2))
             navigationDetailsBackgroundMode = image != nil ? .image(image!) : nil
         default:
-            let image = chatControllerBackgroundImage(wallpaper: presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox)
+            let image = chatControllerBackgroundImage(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
             navigationDetailsBackgroundMode = image != nil ? .wallpaper(image!) : nil
         }
         
@@ -49,7 +50,7 @@ public final class TelegramRootController: NavigationController {
                         let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationData.theme.chatList.messageTextColor.withAlphaComponent(0.2))
                         navigationDetailsBackgroundMode = image != nil ? .image(image!) : nil
                     default:
-                        let image = chatControllerBackgroundImage(wallpaper: presentationData.chatWallpaper, mediaBox: strongSelf.context.account.postbox.mediaBox)
+                        let image = chatControllerBackgroundImage(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, mediaBox: strongSelf.context.account.postbox.mediaBox, knockoutMode: strongSelf.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
                         navigationDetailsBackgroundMode = image != nil ? .wallpaper(image!) : nil
                     }
                     strongSelf.updateBackgroundDetailsMode(navigationDetailsBackgroundMode, transition: .immediate)
@@ -81,7 +82,9 @@ public final class TelegramRootController: NavigationController {
     public func addRootControllers(showCallsTab: Bool) {
         let tabBarController = TabBarController(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
         let chatListController = ChatListController(context: self.context, groupId: .root, controlsHistoryPreload: true)
-        chatListController.tabBarItem.badgeValue = self.context.sharedContext.switchingData.chatListBadge
+        if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
+            chatListController.tabBarItem.badgeValue = sharedContext.switchingData.chatListBadge
+        }
         let callListController = CallListController(context: self.context, mode: .tab)
         
         var controllers: [ViewController] = []
@@ -97,9 +100,14 @@ public final class TelegramRootController: NavigationController {
         }
         controllers.append(chatListController)
         
-        let restoreSettignsController = self.context.sharedContext.switchingData.settingsController
+        var restoreSettignsController: (ViewController & SettingsController)?
+        if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
+            restoreSettignsController = sharedContext.switchingData.settingsController
+        }
         restoreSettignsController?.updateContext(context: self.context)
-        self.context.sharedContext.switchingData = (nil, nil, nil)
+        if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
+            sharedContext.switchingData = (nil, nil, nil)
+        }
         
         let accountSettingsController = restoreSettignsController ?? settingsController(context: self.context, accountManager: context.sharedContext.accountManager)
         controllers.append(accountSettingsController)

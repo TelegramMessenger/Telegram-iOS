@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import StickerResources
 
 class MediaInputPaneTrendingItem: ListViewItem {
     let account: Account

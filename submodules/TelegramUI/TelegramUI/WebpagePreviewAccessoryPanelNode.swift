@@ -6,6 +6,7 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
+import AccountContext
 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()
@@ -32,7 +33,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         
         self.closeButton = ASButtonNode()
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
         self.lineNode = ASImageNode()

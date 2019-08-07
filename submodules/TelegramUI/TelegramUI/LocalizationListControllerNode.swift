@@ -6,6 +6,10 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import ItemListUI
+import AccountContext
+import ShareController
 
 private enum LanguageListSection: ItemListSectionId {
     case official

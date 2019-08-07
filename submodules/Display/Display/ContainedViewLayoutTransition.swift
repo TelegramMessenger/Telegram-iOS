@@ -16,11 +16,11 @@ public extension ContainedViewLayoutTransitionCurve {
     var timingFunction: String {
         switch self {
             case .easeInOut:
-                return kCAMediaTimingFunctionEaseInEaseOut
+                return CAMediaTimingFunctionName.easeInEaseOut.rawValue
             case .spring:
                 return kCAMediaTimingFunctionSpring
             case .custom:
-                return kCAMediaTimingFunctionEaseInEaseOut
+                return CAMediaTimingFunctionName.easeInEaseOut.rawValue
         }
     }
     
@@ -36,12 +36,12 @@ public extension ContainedViewLayoutTransitionCurve {
     }
     
     #if os(iOS)
-    var viewAnimationOptions: UIViewAnimationOptions {
+    var viewAnimationOptions: UIView.AnimationOptions {
         switch self {
             case .easeInOut:
                 return [.curveEaseInOut]
             case .spring:
-                return UIViewAnimationOptions(rawValue: 7 << 16)
+                return UIView.AnimationOptions(rawValue: 7 << 16)
             case .custom:
                 return []
         }

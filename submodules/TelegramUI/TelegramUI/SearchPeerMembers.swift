@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import AccountContext
 
 func searchPeerMembers(context: AccountContext, peerId: PeerId, query: String) -> Signal<[Peer], NoError> {
     if peerId.namespace == Namespaces.Peer.CloudChannel {

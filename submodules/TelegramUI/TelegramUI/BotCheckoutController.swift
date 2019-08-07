@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import AccountContext
 
 final class BotCheckoutController: ViewController {
     private var controllerNode: BotCheckoutControllerNode {

@@ -394,7 +394,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         [[_presentation view] addSubview:_innerIconWrapperView];
         
         _stopButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 38.0f)];
-        _stopButton.accessibilityLabel = @"Stop and preview";
+        _stopButton.accessibilityLabel = TGLocalized(@"VoiceOver.Recording.StopAndPreview");
         _stopButton.adjustsImageWhenHighlighted = false;
         _stopButton.exclusiveTouch = true;
         [_stopButton setImage:[self stopButtonImage] forState:UIControlStateNormal];

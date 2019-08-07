@@ -8,6 +8,10 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import UniversalMediaPlayer
+import TextFormat
+import AccountContext
+import RadialStatusNode
+import StickerResources
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -1305,7 +1309,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         if let videoNode = self.videoNode, let context = self.context, (self.automaticPlayback ?? false) && !isAnimated {
             return ({ timecode in
                 if let timecode = timecode {
-                    context.sharedContext.mediaManager.playlistControl(.playback(.pause))
+                    context.sharedContext.mediaManager.playlistControl(.playback(.pause), type: nil)
                     videoNode.playOnceWithSound(playAndRecord: false, seek: .timecode(timecode), actionAtEnd: actionAtEnd)
                 } else {
                     let _ = (context.sharedContext.mediaManager.globalMediaPlayerState

@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -116,7 +117,7 @@ class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }
@@ -246,6 +247,7 @@ class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             for itemNode in messageNodes {
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset - itemNode.frame.height), size: itemNode.frame.size))
                 bottomOffset -= itemNode.frame.height
+                itemNode.updateFrame(itemNode.frame, within: layout.size)
             }
         }
     }

@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import MergeLists
+import AccountContext
 
 enum WallpaperSearchColor: CaseIterable {
     case blue

@@ -52,7 +52,7 @@ private func screenRecordingActive() -> Signal<Bool, NoError> {
 
 func screenCaptureEvents() -> Signal<ScreenCaptureEvent, NoError> {
     return Signal { subscriber in
-        let observer = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationUserDidTakeScreenshot, object: nil, queue: .main, using: { _ in
+        let observer = NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object: nil, queue: .main, using: { _ in
             subscriber.putNext(.still)
         })
         

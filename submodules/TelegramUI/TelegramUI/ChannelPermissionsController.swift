@@ -6,6 +6,10 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import OverlayStatusController
+import AccountContext
+import TemporaryCachedPeerDataManager
 
 private final class ChannelPermissionsControllerArguments {
     let account: Account

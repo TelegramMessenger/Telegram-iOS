@@ -6,6 +6,8 @@ import TelegramCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import AccountContext
 
 final class HorizontalStickersChatContextPanelInteraction {
     var previewedStickerItem: StickerPackItem?

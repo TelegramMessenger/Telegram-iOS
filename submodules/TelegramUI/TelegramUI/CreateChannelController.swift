@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
+import ItemListUI
+import AccountContext
 
 private struct CreateChannelArguments {
     let account: Account
@@ -300,7 +302,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
             presentControllerImpl?(legacyController, nil)
             
             let completedImpl: (UIImage) -> Void = { image in
-                if let data = UIImageJPEGRepresentation(image, 0.6) {
+                if let data = image.jpegData(compressionQuality: 0.6) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)

@@ -49,7 +49,7 @@ final class ChatOverlayNavigationBar: ASDisplayNode {
         self.titleNode.isUserInteractionEnabled = false
         
         self.closeButton = HighlightableButtonNode()
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
        
         let closeImage = generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in

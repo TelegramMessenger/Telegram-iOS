@@ -5,6 +5,7 @@ import TelegramCore
 import Postbox
 import Display
 import TelegramPresentationData
+import AccountContext
 
 private struct TableSide: OptionSet {
     var rawValue: Int32 = 0
@@ -93,7 +94,7 @@ private struct InstantPageTableCellItem {
     }
 }
 
-private let tableCellInsets = UIEdgeInsetsMake(14.0, 12.0, 14.0, 12.0)
+private let tableCellInsets = UIEdgeInsets(top: 14.0, left: 12.0, bottom: 14.0, right: 12.0)
 private let tableBorderWidth: CGFloat = 1.0
 private let tableCornerRadius: CGFloat = 5.0
 

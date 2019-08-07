@@ -7,6 +7,8 @@ import Display
 import Postbox
 import TelegramPresentationData
 import UniversalMediaPlayer
+import AccountContext
+import RadialStatusNode
 
 enum UniversalVideoGalleryItemContentInfo {
     case message(Message)
@@ -883,7 +885,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let previousFrame = videoNode.frame
             let previousSuperview = videoNode.view.superview
             addToTransitionSurface(videoNode.view)
-            videoNode.view.superview?.bringSubview(toFront: videoNode.view)
+            videoNode.view.superview?.bringSubviewToFront(videoNode.view)
             
             if let previousSuperview = previousSuperview {
                 videoNode.frame = previousSuperview.convert(previousFrame, to: videoNode.view.superview)
@@ -925,7 +927,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let previousFrame = videoNode.frame
             let previousSuperview = videoNode.view.superview
             addToTransitionSurface(videoNode.view)
-            videoNode.view.superview?.bringSubview(toFront: videoNode.view)
+            videoNode.view.superview?.bringSubviewToFront(videoNode.view)
             
             if let previousSuperview = previousSuperview {
                 videoNode.frame = previousSuperview.convert(previousFrame, to: videoNode.view.superview)

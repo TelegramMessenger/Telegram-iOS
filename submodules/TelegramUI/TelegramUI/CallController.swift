@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import TelegramVoip
 import TelegramCallsUI
 import TelegramAudio
+import AccountContext
 
 public final class CallController: ViewController {
     private var controllerNode: CallControllerNode {
@@ -49,6 +50,8 @@ public final class CallController: ViewController {
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
+        
+        self.isOpaqueWhenInOverlay = true
         
         self.statusBar.statusBarStyle = .White
         self.statusBar.ignoreInCall = true

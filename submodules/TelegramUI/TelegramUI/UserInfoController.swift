@@ -7,6 +7,13 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
+import TextFormat
+import OverlayStatusController
+import TelegramStringFormatting
+import AccountContext
+import ShareController
 
 private final class UserInfoControllerArguments {
     let account: Account
@@ -1448,9 +1455,9 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
             }
         }
     }
-    aboutLinkActionImpl = { [weak controller] action, itemLink in
-        if let controller = controller {
-            handleTextLinkAction(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+    aboutLinkActionImpl = { [weak context, weak controller] action, itemLink in
+        if let controller = controller, let context = context {
+            context.sharedContext.handleTextLinkAction(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
         }
     }
     displayAboutContextMenuImpl = { [weak controller] text in

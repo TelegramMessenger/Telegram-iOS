@@ -6,8 +6,7 @@ import Contacts
 import AddressBook
 import TelegramUIPreferences
 import DeviceAccess
-
-public typealias DeviceContactStableId = String
+import AccountContext
 
 private protocol DeviceContactDataContext {
     func personNameDisplayOrder() -> PresentationPersonNameOrder
@@ -473,7 +472,7 @@ private final class BasicDataForNormalizedNumberContext {
     }
 }
 
-private final class DeviceContactDataManagerImpl {
+private final class DeviceContactDataManagerPrivateImpl {
     private let queue: Queue
     
     private var accessInitialized = false
@@ -760,14 +759,14 @@ private final class DeviceContactDataManagerImpl {
     }
 }
 
-public final class DeviceContactDataManager {
+public final class DeviceContactDataManagerImpl: DeviceContactDataManager {
     private let queue = Queue()
-    private let impl: QueueLocalObject<DeviceContactDataManagerImpl>
+    private let impl: QueueLocalObject<DeviceContactDataManagerPrivateImpl>
     
     init() {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return DeviceContactDataManagerImpl(queue: queue)
+            return DeviceContactDataManagerPrivateImpl(queue: queue)
         })
     }
     
@@ -856,7 +855,7 @@ public final class DeviceContactDataManager {
         }
     }
     
-    func appendContactData(_ contactData: DeviceContactExtendedData, to stableId: DeviceContactStableId) -> Signal<DeviceContactExtendedData?, NoError> {
+    public func appendContactData(_ contactData: DeviceContactExtendedData, to stableId: DeviceContactStableId) -> Signal<DeviceContactExtendedData?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with({ impl in
@@ -869,7 +868,7 @@ public final class DeviceContactDataManager {
         }
     }
     
-    func appendPhoneNumber(_ phoneNumber: DeviceContactPhoneNumberData, to stableId: DeviceContactStableId) -> Signal<DeviceContactExtendedData?, NoError> {
+    public func appendPhoneNumber(_ phoneNumber: DeviceContactPhoneNumberData, to stableId: DeviceContactStableId) -> Signal<DeviceContactExtendedData?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with({ impl in
@@ -882,7 +881,7 @@ public final class DeviceContactDataManager {
         }
     }
     
-    func createContactWithData(_ contactData: DeviceContactExtendedData) -> Signal<(DeviceContactStableId, DeviceContactExtendedData)?, NoError> {
+    public func createContactWithData(_ contactData: DeviceContactExtendedData) -> Signal<(DeviceContactStableId, DeviceContactExtendedData)?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with({ impl in
@@ -895,7 +894,7 @@ public final class DeviceContactDataManager {
         }
     }
     
-    func deleteContactWithAppSpecificReference(peerId: PeerId) -> Signal<Never, NoError> {
+    public func deleteContactWithAppSpecificReference(peerId: PeerId) -> Signal<Never, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with({ impl in

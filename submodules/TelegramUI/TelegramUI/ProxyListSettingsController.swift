@@ -6,6 +6,9 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import MtProtoKitDynamic
+import ItemListUI
+import AccountContext
+import UrlEscaping
 
 private final class ProxySettingsControllerArguments {
     let toggleEnabled: (Bool) -> Void

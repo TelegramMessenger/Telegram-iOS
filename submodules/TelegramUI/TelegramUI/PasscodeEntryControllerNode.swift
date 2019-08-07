@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 private let titleFont = Font.regular(20.0)
 private let subtitleFont = Font.regular(15.0)
@@ -173,7 +174,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         switch self.wallpaper {
             case .image, .file:
-                if let image = chatControllerBackgroundImage(wallpaper: self.wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, composed: false) {
+                if let image = chatControllerBackgroundImage(theme: self.theme, wallpaper: self.wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, composed: false, knockoutMode: false) {
                     self.background = ImageBasedPasscodeBackground(image: image, size: size)
                 } else {
                     self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
@@ -230,7 +231,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     }
     
     func hideBiometrics() {
-        self.biometricButtonNode.layer.animateScale(from: 1.0, to: 0.00001, duration: 0.25, delay: 0.0, timingFunction: kCAMediaTimingFunctionEaseOut, completion: { [weak self] _ in
+        self.biometricButtonNode.layer.animateScale(from: 1.0, to: 0.00001, duration: 0.25, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { [weak self] _ in
             self?.biometricButtonNode.isHidden = true
         })
         self.animateError()
@@ -292,10 +293,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             if case .alphanumeric = self.passcodeType {
                 biometricDelay = 0.0
             } else {
-                self.cancelButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: 0.15, timingFunction: kCAMediaTimingFunctionEaseOut)
-                self.deleteButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: 0.15, timingFunction: kCAMediaTimingFunctionEaseOut)
+                self.cancelButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                self.deleteButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
             }
-            self.biometricButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: biometricDelay, timingFunction: kCAMediaTimingFunctionEaseOut)
+            self.biometricButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: biometricDelay, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
             
             Queue.mainQueue().after(1.5, {
                 self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .crossFade)

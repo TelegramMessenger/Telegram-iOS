@@ -6,6 +6,8 @@ import Display
 import TelegramPresentationData
 import TelegramCallsUI
 import TelegramUIPreferences
+import AccountContext
+import DeviceLocationManager
 
 private enum CallStatusText: Equatable {
     case none
@@ -18,26 +20,6 @@ private final class AccountUserInterfaceInUseContext {
     
     var isEmpty: Bool {
         return self.tokens.isEmpty && self.subscribers.isEmpty
-    }
-}
-
-public final class AccountWithInfo: Equatable {
-    public let account: Account
-    public let peer: Peer
-    
-    init(account: Account, peer: Peer) {
-        self.account = account
-        self.peer = peer
-    }
-    
-    public static func ==(lhs: AccountWithInfo, rhs: AccountWithInfo) -> Bool {
-        if lhs.account !== rhs.account {
-            return false
-        }
-        if !arePeersEqual(lhs.peer, rhs.peer) {
-            return false
-        }
-        return true
     }
 }
 
@@ -73,8 +55,8 @@ private enum AddedAccountsResult {
 
 private var testHasInstance = false
 
-public final class SharedAccountContext {
-    let mainWindow: Window1?
+public final class SharedAccountContextImpl: SharedAccountContext {
+    public let mainWindow: Window1?
     public let applicationBindings: TelegramApplicationBindings
     public let basePath: String
     public let accountManager: AccountManager
@@ -105,7 +87,7 @@ public final class SharedAccountContext {
     
     public let mediaManager: MediaManager
     public let contactDataManager: DeviceContactDataManager?
-    let locationManager: DeviceLocationManager?
+    public let locationManager: DeviceLocationManager?
     public var callManager: PresentationCallManager?
     
     private var callDisposable: Disposable?
@@ -127,7 +109,10 @@ public final class SharedAccountContext {
     
     var switchingData: (settingsController: (SettingsController & ViewController)?, chatListController: ChatListController?, chatListBadge: String?) = (nil, nil, nil)
     
-    public let currentPresentationData: Atomic<PresentationData>
+    private let _currentPresentationData: Atomic<PresentationData>
+    public var currentPresentationData: Atomic<PresentationData> {
+        return self._currentPresentationData
+    }
     private let _presentationData = Promise<PresentationData>()
     public var presentationData: Signal<PresentationData, NoError> {
         return self._presentationData.get()
@@ -179,17 +164,17 @@ public final class SharedAccountContext {
         self.apsNotificationToken = apsNotificationToken
         self.voipNotificationToken = voipNotificationToken
         
-        self.mediaManager = MediaManager(accountManager: accountManager, inForeground: applicationBindings.applicationInForeground)
+        self.mediaManager = MediaManagerImpl(accountManager: accountManager, inForeground: applicationBindings.applicationInForeground)
         
         if applicationBindings.isMainApp {
             self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
-            self.contactDataManager = DeviceContactDataManager()
+            self.contactDataManager = DeviceContactDataManagerImpl()
         } else {
             self.locationManager = nil
             self.contactDataManager = nil
         }
         
-        self.currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
+        self._currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
@@ -283,7 +268,7 @@ public final class SharedAccountContext {
         let differenceDisposable = MetaDisposable()
         let _ = (accountManager.accountRecords()
         |> map { view -> (AccountRecordId?, [AccountRecordId: AccountAttributes], (AccountRecordId, Bool)?) in
-            print("SharedAccountContext: records appeared in \(CFAbsoluteTimeGetCurrent() - startTime)")
+            print("SharedAccountContextImpl: records appeared in \(CFAbsoluteTimeGetCurrent() - startTime)")
             
             var result: [AccountRecordId: AccountAttributes] = [:]
             for record in view.records {
@@ -401,7 +386,7 @@ public final class SharedAccountContext {
             
             differenceDisposable.set((combineLatest(queue: .mainQueue(), mappedAddedAccounts, addedAuthSignal)
             |> deliverOnMainQueue).start(next: { mappedAddedAccounts, authAccount in
-                print("SharedAccountContext: accounts processed in \(CFAbsoluteTimeGetCurrent() - startTime)")
+                print("SharedAccountContextImpl: accounts processed in \(CFAbsoluteTimeGetCurrent() - startTime)")
                 
                 var addedAccounts: [(AccountRecordId, Account?, Int32)] = []
                 switch mappedAddedAccounts {
@@ -527,7 +512,7 @@ public final class SharedAccountContext {
         })
         
         if let mainWindow = mainWindow, applicationBindings.isMainApp {
-            let callManager = PresentationCallManager(accountManager: self.accountManager, getDeviceAccessData: {
+            let callManager = PresentationCallManagerImpl(accountManager: self.accountManager, getDeviceAccessData: {
                 return (self.currentPresentationData.with { $0 }, { [weak self] c, a in
                     self?.presentGlobalController(c, a)
                 }, {
@@ -632,7 +617,7 @@ public final class SharedAccountContext {
     }
     
     deinit {
-        assertionFailure("SharedAccountContext is not supposed to be deallocated")
+        assertionFailure("SharedAccountContextImpl is not supposed to be deallocated")
         self.registeredNotificationTokensDisposable.dispose()
         self.presentationDataDisposable.dispose()
         self.automaticMediaDownloadSettingsDisposable.dispose()
@@ -771,7 +756,7 @@ public final class SharedAccountContext {
         }).start()
     }
     
-    public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: (SettingsController & ViewController)? = nil, withChatListController chatListController: ChatListController? = nil) {
+    public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController? = nil, withChatListController chatListController: ViewController? = nil) {
         if self.activeAccountsValue?.primary?.id == id {
             return
         }
@@ -795,7 +780,7 @@ public final class SharedAccountContext {
                 }
             }
         }
-        self.switchingData = (settingsController, chatListController, chatsBadge)
+        self.switchingData = (settingsController as? (ViewController & SettingsController), chatListController as? ChatListController, chatsBadge)
         
         let _ = self.accountManager.transaction({ transaction -> Bool in
             if transaction.getCurrent()?.0 != id {
@@ -813,6 +798,39 @@ public final class SharedAccountContext {
     
     public func navigateToChat(accountId: AccountRecordId, peerId: PeerId, messageId: MessageId?) {
         self.navigateToChatImpl(accountId, peerId, messageId)
+    }
+    
+    public func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError> {
+        let historyView = preloadedChatHistoryViewForLocation(location, account: account, chatLocation: chatLocation, fixedCombinedReadStates: nil, tagMask: tagMask, additionalData: [])
+        return historyView
+        |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
+            switch historyView {
+            case .Loading:
+                return .single((nil, true))
+            case let .HistoryView(view, _, _, _, _, _, _):
+                for entry in view.entries {
+                    if entry.message.id == id {
+                        return .single((entry.message.index, false))
+                    }
+                }
+                return .single((nil, false))
+            }
+        }
+        |> take(until: { index in
+            return SignalTakeAction(passthrough: true, complete: !index.1)
+        })
+    }
+    
+    public func makeOverlayAudioPlayerController(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController {
+        return OverlayAudioPlayerControllerImpl(context: context, peerId: peerId, type: type, initialMessageId: initialMessageId, initialOrder: initialOrder, parentNavigationController: parentNavigationController)
+    }
+    
+    public func makeTempAccountContext(account: Account) -> AccountContext {
+        return AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: .defaultValue)
+    }
+    
+    public func openChatMessage(_ params: OpenChatMessageParams) -> Bool {
+        return openChatMessageImpl(params)
     }
     
     private func updateStatusBarText() {
@@ -911,5 +929,9 @@ public final class SharedAccountContext {
                 }
             }
         }
+    }
+    
+    public func handleTextLinkAction(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
+        handleTextLinkActionImpl(context: context as! AccountContext, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
     }
 }

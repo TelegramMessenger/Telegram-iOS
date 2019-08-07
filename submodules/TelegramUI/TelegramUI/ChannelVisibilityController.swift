@@ -6,6 +6,10 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import OverlayStatusController
+import AccountContext
+import ShareController
 
 private final class ChannelVisibilityControllerArguments {
     let account: Account
@@ -63,7 +67,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     case publicLinkHeader(PresentationTheme, String)
     case publicLinkAvailability(PresentationTheme, String, Bool)
     case privateLink(PresentationTheme, String, String?)
-    case editablePublicLink(PresentationTheme, String, String)
+    case editablePublicLink(PresentationTheme, PresentationStrings, String, String)
     case privateLinkInfo(PresentationTheme, String)
     case privateLinkCopy(PresentationTheme, String)
     case privateLinkRevoke(PresentationTheme, String)
@@ -168,8 +172,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .editablePublicLink(lhsTheme, lhsPlaceholder, lhsCurrentText):
-                if case let .editablePublicLink(rhsTheme, rhsPlaceholder, rhsCurrentText) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsCurrentText == rhsCurrentText {
+            case let .editablePublicLink(lhsTheme, lhsStrings, lhsPlaceholder, lhsCurrentText):
+                if case let .editablePublicLink(rhsTheme, rhsStrings, rhsPlaceholder, rhsCurrentText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPlaceholder == rhsPlaceholder, lhsCurrentText == rhsCurrentText {
                     return true
                 } else {
                     return false
@@ -279,8 +283,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                         arguments.displayPrivateLinkMenu(value)
                     }
                 }, tag: ChannelVisibilityEntryTag.privateLink)
-            case let .editablePublicLink(theme, placeholder, currentText):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), clearButton: true, tag: ChannelVisibilityEntryTag.publicLink, sectionId: self.section, textUpdated: { updatedText in
+            case let .editablePublicLink(theme, strings, placeholder, currentText):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), clearButton: true, tag: ChannelVisibilityEntryTag.publicLink, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
                 }, updatedFocus: { focus in
                     if focus {
@@ -526,7 +530,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp, true))
                     }
                 } else {
-                    entries.append(.editablePublicLink(presentationData.theme, presentationData.strings.Group_PublicLink_Placeholder, currentAddressName))
+                    entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, presentationData.strings.Group_PublicLink_Placeholder, currentAddressName))
                     if let status = state.addressNameValidationStatus {
                         let text: String
                         switch status {
@@ -668,7 +672,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                 entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp, true))
                             }
                         } else {
-                            entries.append(.editablePublicLink(presentationData.theme, "", currentAddressName))
+                            entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, "", currentAddressName))
                             if let status = state.addressNameValidationStatus {
                                 let text: String
                                 switch status {

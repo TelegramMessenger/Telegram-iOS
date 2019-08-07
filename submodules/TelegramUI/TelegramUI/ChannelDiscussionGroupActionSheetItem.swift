@@ -6,6 +6,8 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AvatarNode
+import AccountContext
 
 final class ChannelDiscussionGroupActionSheetItem: ActionSheetItem {
     let context: AccountContext

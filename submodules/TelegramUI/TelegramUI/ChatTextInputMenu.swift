@@ -44,7 +44,7 @@ final class ChatTextInputMenu {
     private var observer: NSObjectProtocol?
     
     init() {
-        self.observer = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIMenuControllerDidHideMenu, object: nil, queue: nil, using: { [weak self] _ in
+        self.observer = NotificationCenter.default.addObserver(forName: UIMenuController.didHideMenuNotification, object: nil, queue: nil, using: { [weak self] _ in
             self?.back()
         })
     }

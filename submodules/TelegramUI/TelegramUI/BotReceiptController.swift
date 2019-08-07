@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import AccountContext
 
 final class BotReceiptController: ViewController {
     private var controllerNode: BotReceiptControllerNode {

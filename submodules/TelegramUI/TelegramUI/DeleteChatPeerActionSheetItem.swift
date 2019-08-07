@@ -4,6 +4,8 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AvatarNode
+import AccountContext
 
 enum DeleteChatPeerAction {
     case delete
@@ -42,20 +44,28 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
     private let avatarNode: AvatarNode
     private let textNode: ImmediateTextNode
     
+    private let accessibilityArea: AccessibilityAreaNode
+    
     init(theme: ActionSheetControllerTheme, strings: PresentationStrings, context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction) {
         self.theme = theme
         self.strings = strings
         
         self.avatarNode = AvatarNode(font: avatarFont)
+        self.avatarNode.isAccessibilityElement = false
+        
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
         self.textNode.textAlignment = .center
+        self.textNode.isAccessibilityElement = false
+        
+        self.accessibilityArea = AccessibilityAreaNode()
         
         super.init(theme: theme)
         
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.accessibilityArea)
         
         if chatPeer.id == context.account.peerId {
             self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .savedMessagesIcon)
@@ -88,6 +98,9 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         }
         
         self.textNode.attributedText = attributedText
+        
+        self.accessibilityArea.accessibilityLabel = attributedText.string
+        self.accessibilityArea.accessibilityTraits = .staticText
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -101,7 +114,10 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.avatarNode.frame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - avatarSize) / 2.0), y: topInset), size: CGSize(width: avatarSize, height: avatarSize))
         self.textNode.frame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - textSize.width) / 2.0), y: topInset + avatarSize + textSpacing), size: textSize)
         
-        return CGSize(width: constrainedSize.width, height: topInset + avatarSize + textSpacing + textSize.height + bottomInset)
+        let size = CGSize(width: constrainedSize.width, height: topInset + avatarSize + textSpacing + textSize.height + bottomInset)
+        self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
+        
+        return size
     }
     
     override func layout() {

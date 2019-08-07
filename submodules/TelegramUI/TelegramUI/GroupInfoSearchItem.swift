@@ -5,6 +5,8 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import ItemListUI
+import AccountContext
 
 final class ChannelMembersSearchItem: ItemListControllerSearch {
     let context: AccountContext

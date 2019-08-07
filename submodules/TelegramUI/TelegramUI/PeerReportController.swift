@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
 
 enum PeerReportSubject {
     case peer(PeerId)

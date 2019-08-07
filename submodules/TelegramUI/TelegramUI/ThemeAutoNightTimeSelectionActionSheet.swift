@@ -5,6 +5,8 @@ import UIKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import TelegramStringFormatting
+import AccountContext
 
 final class ThemeAutoNightTimeSelectionActionSheet: ActionSheetController {
     private var presentationDisposable: Disposable?

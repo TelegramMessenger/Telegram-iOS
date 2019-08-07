@@ -6,6 +6,8 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ActivityIndicator
+import AccountContext
 
 private enum JoinState: Equatable {
     case none

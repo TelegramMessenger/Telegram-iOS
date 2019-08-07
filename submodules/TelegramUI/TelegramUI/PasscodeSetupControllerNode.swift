@@ -111,6 +111,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         switch self.mode {
             case .entry:
                 self.modeButtonNode.isHidden = true
+                self.modeButtonNode.isAccessibilityElement = false
                 text = self.presentationData.strings.EnterPasscode_EnterPasscode
             case let .setup(change, _):
                 if change {
@@ -219,6 +220,9 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                             self.subtitleNode.isHidden = false
                             self.subtitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.PasscodeSettings_DoNotMatch, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
                             self.modeButtonNode.isHidden = false
+                            self.modeButtonNode.isAccessibilityElement = true
+                            
+                            UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: self.presentationData.strings.PasscodeSettings_DoNotMatch)
                             
                             if let validLayout = self.validLayout {
                                 self.containerLayoutUpdated(validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
@@ -240,6 +244,9 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                         self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_RepeatNewPasscode, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
                         self.subtitleNode.isHidden = true
                         self.modeButtonNode.isHidden = true
+                        self.modeButtonNode.isAccessibilityElement = false
+                        
+                        UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: self.presentationData.strings.EnterPasscode_RepeatNewPasscode)
                         
                         if let validLayout = self.validLayout {
                             self.containerLayoutUpdated(validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
@@ -251,6 +258,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     
     func activateInput() {
         self.inputFieldNode.activateInput()
+        
+        UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: self.titleNode.attributedText?.string)
     }
     
     func animateError() {

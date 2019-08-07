@@ -5,8 +5,9 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
-
+import MediaResources
 import LegacyComponents
+import AccountContext
 
 final class InstantVideoControllerRecordingStatus {
     let micLevel: Signal<Float, NoError>
@@ -133,7 +134,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                     let resource = LocalFileMediaResource(fileId: arc4random64())
                     let thumbnailSize = finalDimensions.aspectFitted(CGSize(width: 320.0, height: 320.0))
                     let thumbnailImage = TGScaleImageToPixelSize(previewImage, thumbnailSize)!
-                    if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
+                    if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
                         previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
                     }

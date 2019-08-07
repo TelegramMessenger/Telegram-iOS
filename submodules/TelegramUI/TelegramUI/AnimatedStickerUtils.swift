@@ -99,19 +99,21 @@ func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, cacheKey: St
                 encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
                 decodeYUVAToRGBA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
                 
-                if let colorImage = context.generateImage() {
+                if let colorSourceImage = context.generateImage(), let alphaImage = generateGrayscaleAlphaMaskImage(image: colorSourceImage) {
+                    let colorContext = DrawingContext(size: size, scale: 1.0, clear: false)
+                    colorContext.withFlippedContext { c in
+                        c.setFillColor(UIColor.black.cgColor)
+                        c.fill(CGRect(origin: CGPoint(), size: size))
+                        c.draw(colorSourceImage.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                    }
+                    guard let colorImage = colorContext.generateImage() else {
+                        return
+                    }
+                    
                     let colorData = NSMutableData()
                     let alphaData = NSMutableData()
                     
-                    let alphaImage = generateImage(size, contextGenerator: { size, context in
-                        context.setFillColor(UIColor.white.cgColor)
-                        context.fill(CGRect(origin: CGPoint(), size: size))
-                        context.clip(to: CGRect(origin: CGPoint(), size: size), mask: colorImage.cgImage!)
-                        context.setFillColor(UIColor.black.cgColor)
-                        context.fill(CGRect(origin: CGPoint(), size: size))
-                    }, scale: 1.0)
-                    
-                    if let alphaImage = alphaImage, let colorDestination = CGImageDestinationCreateWithData(colorData as CFMutableData, kUTTypeJPEG, 1, nil), let alphaDestination = CGImageDestinationCreateWithData(alphaData as CFMutableData, kUTTypeJPEG, 1, nil) {
+                    if let colorDestination = CGImageDestinationCreateWithData(colorData as CFMutableData, kUTTypeJPEG, 1, nil), let alphaDestination = CGImageDestinationCreateWithData(alphaData as CFMutableData, kUTTypeJPEG, 1, nil) {
                         CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
                         CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
                         
@@ -194,7 +196,9 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 var currentFrame: Int32 = 0
                 
                 var fps: Int32 = player.frameRate
+                var frameCount: Int32 = player.frameCount
                 let _ = fileContext.write(&fps, count: 4)
+                let _ = fileContext.write(&frameCount, count: 4)
                 var widthValue: Int32 = Int32(size.width)
                 var heightValue: Int32 = Int32(size.height)
                 var bytesPerRowValue: Int32 = Int32(bytesPerRow)
@@ -257,8 +261,12 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                         lhs = lhs.advanced(by: 1)
                         rhs = rhs.advanced(by: 1)
                     }
-                    for i in (yuvaLength / 8) * 8 ..< yuvaLength {
-                        
+                    var lhsRest = previousYuvaFrameData.assumingMemoryBound(to: UInt8.self).advanced(by: (yuvaLength / 8) * 8)
+                    var rhsRest = yuvaFrameData.assumingMemoryBound(to: UInt8.self).advanced(by: (yuvaLength / 8) * 8)
+                    for _ in (yuvaLength / 8) * 8 ..< yuvaLength {
+                        lhsRest.pointee = rhsRest.pointee ^ lhsRest.pointee
+                        lhsRest = lhsRest.advanced(by: 1)
+                        rhsRest = rhsRest.advanced(by: 1)
                     }
                     deltaTime += CACurrentMediaTime() - deltaStartTime
                     

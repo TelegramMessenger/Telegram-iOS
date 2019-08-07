@@ -6,6 +6,8 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ProgressNavigationButtonNode
+import AccountContext
 
 class SetupTwoStepVerificationController: ViewController {
     private let context: AccountContext

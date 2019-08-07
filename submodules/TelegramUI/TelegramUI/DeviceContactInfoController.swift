@@ -6,6 +6,9 @@ import Postbox
 import TelegramCore
 import MessageUI
 import TelegramPresentationData
+import ItemListUI
+import TelegramStringFormatting
+import AccountContext
 
 private enum DeviceContactInfoAction {
     case sendMessage

@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import TelegramCallsUI
+import OverlayStatusController
+import AccountContext
 
 private let maximumNumberOfAccounts = 3
 

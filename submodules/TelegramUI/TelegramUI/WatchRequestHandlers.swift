@@ -6,6 +6,8 @@ import TelegramCore
 import LegacyComponents
 import WatchCommon
 import TelegramPresentationData
+import AvatarNode
+import StickerResources
 
 let allWatchRequestHandlers: [AnyClass] = [
     WatchChatListHandler.self,
@@ -420,7 +422,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                 })
                 
                 let disposable = signal.start(next: { image in
-                    if let image = image, let imageData = UIImageJPEGRepresentation(image, compressionRate) {
+                    if let image = image, let imageData = image.jpegData(compressionQuality: compressionRate) {
                         sendData(manager: manager, data: imageData, key: key, ext: ".jpg", type: TGBridgeIncomingFileTypeImage)
                     }
                     subscriber?.putNext(key)
@@ -487,7 +489,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                 })
                 
                 let disposable = signal.start(next: { image in
-                    if let image = image, let imageData = UIImageJPEGRepresentation(image, 0.2) {
+                    if let image = image, let imageData = image.jpegData(compressionQuality: 0.2) {
                         sendData(manager: manager, data: imageData, key: key, ext: ".jpg", type: TGBridgeIncomingFileTypeImage, forceAsData: args.notification)
                     }
                     subscriber?.putNext(key)
@@ -561,7 +563,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                         } |> map{ f -> UIImage? in
                             var insets = UIEdgeInsets()
                             if roundVideo {
-                                insets = UIEdgeInsetsMake(-2, -2, -2, -2)
+                                insets = UIEdgeInsets(top: -2, left: -2, bottom: -2, right: -2)
                             }
                             let context = f(TransformImageArguments(corners: ImageCorners(), imageSize: args.size, boundingSize: args.size, intrinsicInsets: insets, scale: 2.0))
                             return context?.generateImage()
@@ -572,7 +574,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                 })
                 
                 let disposable = signal.start(next: { image in
-                    if let image = image, let imageData = UIImageJPEGRepresentation(image, 0.5) {
+                    if let image = image, let imageData = image.jpegData(compressionQuality: 0.5) {
                         sendData(manager: manager, data: imageData, key: key, ext: ".jpg", type: TGBridgeIncomingFileTypeImage, forceAsData: args.notification)
                     }
                     subscriber?.putNext(key)

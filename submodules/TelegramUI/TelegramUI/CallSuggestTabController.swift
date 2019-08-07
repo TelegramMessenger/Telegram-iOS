@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 private func generateIconImage(theme: AlertControllerTheme) -> UIImage? {
     return UIImage(bundleImageName: "Call List/AlertIcon")

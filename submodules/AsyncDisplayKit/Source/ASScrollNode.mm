@@ -33,6 +33,13 @@
   return (ASScrollNode *)ASViewToDisplayNode(self);
 }
 
+- (BOOL)touchesShouldCancelInContentView:(UIView *)view {
+  if ([[self scrollNode] canCancelAllTouchesInViews]) {
+    return true;
+  }
+  return [super touchesShouldCancelInContentView:view];
+}
+
 #pragma mark - _ASDisplayView behavior substitutions
 // Need these to drive interfaceState so we know when we are visible, if not nested in another range-managing element.
 // Because our superclass is a true UIKit class, we cannot also subclass _ASDisplayView.

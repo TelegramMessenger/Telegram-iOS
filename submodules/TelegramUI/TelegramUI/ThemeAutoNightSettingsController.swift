@@ -7,6 +7,10 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramUIPrivateModule
+import ItemListUI
+import TelegramStringFormatting
+import AccountContext
+import DeviceLocationManager
 
 private enum TriggerMode {
     case none

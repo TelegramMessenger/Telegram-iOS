@@ -7,6 +7,9 @@ import AsyncDisplayKit
 import UIKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ActivityIndicator
+import OverlayStatusController
+import AccountContext
 
 public final class ProxyServerActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?

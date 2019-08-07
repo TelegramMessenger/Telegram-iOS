@@ -45,6 +45,8 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property ASScrollDirection scrollableDirections;
 
+@property BOOL canCancelAllTouchesInViews;
+
 @end
 
 NS_ASSUME_NONNULL_END

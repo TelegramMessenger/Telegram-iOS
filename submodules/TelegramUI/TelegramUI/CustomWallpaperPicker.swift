@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 import TelegramUIPreferences
+import MediaResources
+import AccountContext
 
 func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (ViewController) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -123,7 +125,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
         let thumbnailDimensions = finalCropRect.size.fitted(CGSize(width: 320.0, height: 320.0))
         let thumbnailImage = generateScaledImage(image: croppedImage, size: thumbnailDimensions, scale: 1.0)
         
-        if let data = UIImageJPEGRepresentation(croppedImage, 0.8), let thumbnailImage = thumbnailImage, let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
+        if let data = croppedImage.jpegData(compressionQuality: 0.8), let thumbnailImage = thumbnailImage, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
             let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
             context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
             context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)

@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import AccountContext
 
 private final class GroupsInCommonControllerArguments {
     let account: Account
@@ -24,24 +26,6 @@ private enum GroupsInCommonSection: Int32 {
 
 private enum GroupsInCommonEntryStableId: Hashable {
     case peer(PeerId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .peer(peerId):
-                return peerId.hashValue
-        }
-    }
-    
-    static func ==(lhs: GroupsInCommonEntryStableId, rhs: GroupsInCommonEntryStableId) -> Bool {
-        switch lhs {
-            case let .peer(peerId):
-                if case .peer(peerId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private enum GroupsInCommonEntry: ItemListNodeEntry {

@@ -4,6 +4,7 @@ import TelegramCore
 import Postbox
 import Photos
 import TelegramUIPreferences
+import AccountContext
 
 private func appSpecificAssetCollection() -> Signal<PHAssetCollection, NoError> {
     return Signal { subscriber in
@@ -138,7 +139,7 @@ private final class DownloadedMediaStoreContext {
     }
 }
 
-private final class DownloadedMediaStoreManagerImpl {
+private final class DownloadedMediaStoreManagerPrivateImpl {
     private let queue: Queue
     private let postbox: Postbox
     
@@ -194,14 +195,14 @@ private final class DownloadedMediaStoreManagerImpl {
     }
 }
 
-final class DownloadedMediaStoreManager {
+final class DownloadedMediaStoreManagerImpl: DownloadedMediaStoreManager {
     private let queue = Queue()
-    private let impl: QueueLocalObject<DownloadedMediaStoreManagerImpl>
+    private let impl: QueueLocalObject<DownloadedMediaStoreManagerPrivateImpl>
     
     init(postbox: Postbox, accountManager: AccountManager) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return DownloadedMediaStoreManagerImpl(queue: queue, postbox: postbox, accountManager: accountManager)
+            return DownloadedMediaStoreManagerPrivateImpl(queue: queue, postbox: postbox, accountManager: accountManager)
         })
     }
     
@@ -209,17 +210,5 @@ final class DownloadedMediaStoreManager {
         self.impl.with { impl in
             impl.store(media, timestamp: timestamp, peerType: peerType)
         }
-    }
-}
-
-func storeDownloadedMedia(storeManager: DownloadedMediaStoreManager?, media: AnyMediaReference, peerType: MediaAutoDownloadPeerType) -> Signal<Never, NoError> {
-    guard case let .message(message, _) = media, let timestamp = message.timestamp, let incoming = message.isIncoming, incoming, let secret = message.isSecret, !secret else {
-        return .complete()
-    }
-    
-    return Signal { [weak storeManager] subscriber in
-        storeManager?.store(media, timestamp: timestamp, peerType: peerType)
-        subscriber.putCompletion()
-        return EmptyDisposable
     }
 }

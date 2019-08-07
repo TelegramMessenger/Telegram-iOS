@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ActivityIndicator
 
 struct NetworkStatusTitle: Equatable {
     let text: String
@@ -67,8 +68,11 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         }
     }
     
-    init(theme: PresentationTheme) {
+    var strings: PresentationStrings
+    
+    init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
+        self.strings = strings
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
@@ -90,13 +94,13 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         
         self.buttonView = HighlightTrackingButton()
         self.buttonView.isAccessibilityElement = true
-        self.buttonView.accessibilityTraits = UIAccessibilityTraitHeader
+        self.buttonView.accessibilityTraits = .header
         
         self.proxyButton = HighlightTrackingButton()
         self.proxyButton.isHidden = true
         self.proxyButton.isAccessibilityElement = true
-        self.proxyButton.accessibilityLabel = "Proxy Settings"
-        self.proxyButton.accessibilityTraits = UIAccessibilityTraitButton
+        self.proxyButton.accessibilityLabel = self.strings.VoiceOver_Navigation_ProxySettings
+        self.proxyButton.accessibilityTraits = .button
         
         super.init(frame: CGRect())
         
@@ -212,7 +216,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
     }
     
     func makeTransitionMirrorNode() -> ASDisplayNode {
-        let view = ChatListTitleView(theme: self.theme)
+        let view = ChatListTitleView(theme: self.theme, strings: self.strings)
         view.title = self.title
         
         return ASDisplayNode(viewBlock: {

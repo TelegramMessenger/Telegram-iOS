@@ -6,6 +6,8 @@ import UIKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import TelegramStringFormatting
+import AccountContext
 
 final class PeerBanTimeoutController: ActionSheetController {
     private var presentationDisposable: Disposable?

@@ -6,6 +6,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 import TelegramPresentationData
+import StickerResources
 
 enum ChatMediaInputStickerGridSectionAccessory {
     case none

@@ -7,6 +7,9 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import MergeLists
+import ActivityIndicator
+import AccountContext
 
 private enum InviteContactsEntryId: Hashable {
     case option(index: Int)

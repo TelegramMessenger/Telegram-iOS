@@ -4,6 +4,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
+import TextFormat
 
 enum InfoListItemText {
     case plain(String)
@@ -160,10 +162,10 @@ class InfoItemNode: ListViewItemNode {
         self.textNode.isUserInteractionEnabled = false
         
         self.activateArea = AccessibilityAreaNode()
-        self.activateArea.accessibilityTraits = UIAccessibilityTraitStaticText
+        self.activateArea.accessibilityTraits = .staticText
         
         self.closeButton = HighlightableButtonNode()
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -361,7 +363,7 @@ class InfoItemNode: ListViewItemNode {
                             let titleFrame = self.textNode.frame
                             if let item = self.item, titleFrame.contains(location) {
                                 if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
-                                    if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+                                    if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                                         item.linkAction?(.tap(url))
                                     }
                                 }
@@ -389,7 +391,7 @@ class InfoItemNode: ListViewItemNode {
                         TelegramTextAttributes.Hashtag
                     ]
                     for name in possibleNames {
-                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
+                        if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
                             rects = self.textNode.attributeRects(name: name, at: index)
                             break
                         }

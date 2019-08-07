@@ -7,6 +7,8 @@ import SwiftSignalKit
 import TelegramCore
 import MessageUI
 import TelegramPresentationData
+import AccountContext
+import ShareController
 
 public class InviteContactsController: ViewController, MFMessageComposeViewControllerDelegate, UINavigationControllerDelegate {
     private let context: AccountContext

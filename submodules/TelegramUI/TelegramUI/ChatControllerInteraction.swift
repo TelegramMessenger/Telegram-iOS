@@ -5,23 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import Display
 import TelegramUIPreferences
-
-public enum ChatControllerInitialBotStartBehavior {
-    case interactive
-    case automatic(returnToPeerId: PeerId)
-}
-
-public struct ChatControllerInitialBotStart {
-    let payload: String
-    let behavior: ChatControllerInitialBotStartBehavior
-}
-
-public enum ChatControllerInteractionNavigateToPeer {
-    case `default`
-    case chat(textInputState: ChatTextInputState?, messageId: MessageId?)
-    case info
-    case withBotStartPayload(ChatControllerInitialBotStart)
-}
+import AccountContext
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
@@ -54,15 +38,6 @@ public enum ChatControllerInteractionLongTapAction {
     case command(String)
     case hashtag(String)
     case timecode(Double, String)
-}
-
-public enum ChatControllerInteractionOpenMessageMode {
-    case `default`
-    case stream
-    case automaticPlayback
-    case landscape
-    case timecode(Double)
-    case link
 }
 
 struct ChatInterfacePollActionState: Equatable {
@@ -123,6 +98,7 @@ public final class ChatControllerInteraction {
     var pollActionState: ChatInterfacePollActionState
     var stickerSettings: ChatInterfaceStickerSettings
     var searchTextHighightState: String?
+    var seenOneTimeAnimatedMedia = Set<MessageId>()
     
     init(openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, sendCurrentMessage: @escaping (Bool) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool, sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, requestMessageActionUrlAuth: @escaping (String, MessageId, Int32) -> Void, activateSwitchInline: @escaping (PeerId?, String) -> Void, openUrl: @escaping (String, Bool, Bool?) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void, openWallpaper: @escaping (Message) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, callPeer: @escaping (PeerId) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void, openCheckoutOrReceipt: @escaping (MessageId) -> Void, openSearch: @escaping () -> Void, setupReply: @escaping (MessageId) -> Void, canSetupReply: @escaping (Message) -> Bool, navigateToFirstDateMessage: @escaping(Int32) ->Void, requestRedeliveryOfFailedMessages: @escaping (MessageId) -> Void, addContact: @escaping (String) -> Void, rateCall: @escaping (Message, CallId) -> Void, requestSelectMessagePollOption: @escaping (MessageId, Data) -> Void, openAppStorePage: @escaping () -> Void, displayMessageTooltip: @escaping (MessageId, String, ASDisplayNode?, CGRect?) -> Void, seekToTimecode: @escaping (Message, Double, Bool) -> Void, requestMessageUpdate: @escaping (MessageId) -> Void, cancelInteractiveKeyboardGestures: @escaping () -> Void, automaticMediaDownloadSettings: MediaAutoDownloadSettings, pollActionState: ChatInterfacePollActionState, stickerSettings: ChatInterfaceStickerSettings) {
         self.openMessage = openMessage

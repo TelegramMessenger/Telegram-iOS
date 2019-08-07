@@ -5,6 +5,7 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
 
 private let searchBarFont = Font.regular(14.0)
 

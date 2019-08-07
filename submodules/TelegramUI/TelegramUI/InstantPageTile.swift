@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 final class InstantPageTile {
     let frame: CGRect
@@ -78,4 +79,18 @@ func instantPageTilesFromLayout(_ layout: InstantPageLayout, boundingWidth: CGFl
     return finalTiles.sorted(by: { lhs, rhs in
         return lhs.frame.minY < rhs.frame.minY
     })
+}
+
+func instantPageAccessibilityAreasFromLayout(_ layout: InstantPageLayout, boundingWidth: CGFloat) -> [AccessibilityAreaNode] {
+    var result: [AccessibilityAreaNode] = []
+    for item in layout.items {
+        if let item = item as? InstantPageTextItem {
+            let itemNode = AccessibilityAreaNode()
+            itemNode.frame = item.frame
+            itemNode.accessibilityTraits = .staticText
+            itemNode.accessibilityLabel = item.attributedString.string
+            result.append(itemNode)
+        }
+    }
+    return result
 }

@@ -32,7 +32,7 @@ final class CallControllerKeyPreviewNode: ASDisplayNode {
         
         super.init()
         
-        self.keyTextNode.attributedText = NSAttributedString(string: keyText, attributes: [NSAttributedStringKey.font: Font.regular(58.0), NSAttributedStringKey.kern: 9.0 as NSNumber])
+        self.keyTextNode.attributedText = NSAttributedString(string: keyText, attributes: [NSAttributedString.Key.font: Font.regular(58.0), NSAttributedString.Key.kern: 9.0 as NSNumber])
         
         self.infoTextNode.attributedText = NSAttributedString(string: infoText, font: Font.regular(14.0), textColor: UIColor.white, paragraphAlignment: .center)
         

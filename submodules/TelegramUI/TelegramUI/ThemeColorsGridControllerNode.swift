@@ -6,6 +6,9 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import ItemListUI
+import AccountContext
 
 final class ThemeColorsGridControllerInteraction {
     let openWallpaper: (TelegramWallpaper) -> Void

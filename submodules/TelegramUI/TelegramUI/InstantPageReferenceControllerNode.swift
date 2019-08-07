@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SafariServices
 import TelegramPresentationData
+import AccountContext
+import ShareController
 
 class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext

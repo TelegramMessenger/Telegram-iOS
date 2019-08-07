@@ -6,6 +6,8 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ProgressNavigationButtonNode
+import AccountContext
 
 class ContactSelectionController: ViewController, PresentableController {
     private let context: AccountContext

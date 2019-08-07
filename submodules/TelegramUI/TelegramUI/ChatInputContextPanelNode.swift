@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 enum ChatInputContextPanelPlacement {
     case overPanels

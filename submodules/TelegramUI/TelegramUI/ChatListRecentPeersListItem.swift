@@ -6,6 +6,7 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ChatListSearchRecentPeersNode
 
 class ChatListRecentPeersListItem: ListViewItem {
     let theme: PresentationTheme
@@ -160,9 +161,5 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
             }
         }
         return nil
-    }
-    
-    func removePeer(_ peerId: PeerId) {
-        self.peersNode?.removePeer(peerId)
     }
 }

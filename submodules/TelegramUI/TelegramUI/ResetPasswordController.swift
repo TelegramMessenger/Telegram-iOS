@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
 
 private final class ResetPasswordControllerArguments {
     let updateCodeText: (String) -> Void
@@ -34,7 +36,7 @@ private enum ResetPasswordEntryTag: ItemListItemTag {
 }
 
 private enum ResetPasswordEntry: ItemListNodeEntry, Equatable {
-    case code(PresentationTheme, String, String)
+    case code(PresentationTheme, PresentationStrings, String, String)
     case codeInfo(PresentationTheme, String)
     case helpInfo(PresentationTheme, String)
     
@@ -64,8 +66,8 @@ private enum ResetPasswordEntry: ItemListNodeEntry, Equatable {
     
     func item(_ arguments: ResetPasswordControllerArguments) -> ListViewItem {
         switch self {
-            case let .code(theme, text, value):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: text), text: value, placeholder: "", type: .number, spacing: 10.0, tag: ResetPasswordEntryTag.code, sectionId: self.section, textUpdated: { updatedText in
+            case let .code(theme, strings, text, value):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: text), text: value, placeholder: "", type: .number, spacing: 10.0, tag: ResetPasswordEntryTag.code, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateCodeText(updatedText)
                 }, action: {
                 })
@@ -89,7 +91,7 @@ private struct ResetPasswordControllerState: Equatable {
 private func resetPasswordControllerEntries(presentationData: PresentationData, state: ResetPasswordControllerState, pattern: String) -> [ResetPasswordEntry] {
     var entries: [ResetPasswordEntry] = []
     
-    entries.append(.code(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCode, state.code))
+    entries.append(.code(presentationData.theme, presentationData.strings, presentationData.strings.TwoStepAuth_RecoveryCode, state.code))
     entries.append(.codeInfo(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCodeHelp))
     
     let stringData = presentationData.strings.TwoStepAuth_RecoveryEmailUnavailable(pattern)

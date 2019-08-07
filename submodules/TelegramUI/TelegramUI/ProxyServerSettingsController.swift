@@ -10,6 +10,9 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
+import UrlEscaping
 
 private func shareLink(for server: ProxyServerSettings) -> String {
     var link: String
@@ -53,13 +56,13 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     case modeMtp(PresentationTheme, String, Bool)
     
     case connectionHeader(PresentationTheme, String)
-    case connectionServer(PresentationTheme, String, String)
-    case connectionPort(PresentationTheme, String, String)
+    case connectionServer(PresentationTheme, PresentationStrings, String, String)
+    case connectionPort(PresentationTheme, PresentationStrings, String, String)
     
     case credentialsHeader(PresentationTheme, String)
-    case credentialsUsername(PresentationTheme, String, String)
-    case credentialsPassword(PresentationTheme, String, String)
-    case credentialsSecret(PresentationTheme, String, String)
+    case credentialsUsername(PresentationTheme, PresentationStrings, String, String)
+    case credentialsPassword(PresentationTheme, PresentationStrings, String, String)
+    case credentialsSecret(PresentationTheme, PresentationStrings, String, String)
     
     case share(PresentationTheme, String, Bool)
     
@@ -137,16 +140,16 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                 })
             case let .connectionHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .connectionServer(theme, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), sectionId: self.section, textUpdated: { value in
+            case let .connectionServer(theme, strings, placeholder, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.host = value
                         return state
                     }
                 }, action: {})
-            case let .connectionPort(theme, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: text, placeholder: placeholder, type: .number, sectionId: self.section, textUpdated: { value in
+            case let .connectionPort(theme, strings, placeholder, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: text, placeholder: placeholder, type: .number, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.port = value
@@ -155,24 +158,24 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                 }, action: {})
             case let .credentialsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .credentialsUsername(theme, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: text, placeholder: placeholder, sectionId: self.section, textUpdated: { value in
+            case let .credentialsUsername(theme, strings, placeholder, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: text, placeholder: placeholder, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.username = value
                         return state
                     }
                 }, action: {})
-            case let .credentialsPassword(theme, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: text, placeholder: placeholder, type: .password, sectionId: self.section, textUpdated: { value in
+            case let .credentialsPassword(theme, strings, placeholder, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: text, placeholder: placeholder, type: .password, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.password = value
                         return state
                     }
                 }, action: {})
-            case let .credentialsSecret(theme, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), sectionId: self.section, textUpdated: { value in
+            case let .credentialsSecret(theme, strings, placeholder, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.secret = value
@@ -228,17 +231,17 @@ private func proxyServerSettingsControllerEntries(presentationData: (theme: Pres
     entries.append(.modeMtp(presentationData.theme, presentationData.strings.SocksProxySetup_ProxyTelegram, state.mode == .mtp))
     
     entries.append(.connectionHeader(presentationData.theme, presentationData.strings.SocksProxySetup_Connection.uppercased()))
-    entries.append(.connectionServer(presentationData.theme, presentationData.strings.SocksProxySetup_Hostname, state.host))
-    entries.append(.connectionPort(presentationData.theme, presentationData.strings.SocksProxySetup_Port, state.port))
+    entries.append(.connectionServer(presentationData.theme, presentationData.strings, presentationData.strings.SocksProxySetup_Hostname, state.host))
+    entries.append(.connectionPort(presentationData.theme, presentationData.strings, presentationData.strings.SocksProxySetup_Port, state.port))
     
     switch state.mode {
         case .socks5:
             entries.append(.credentialsHeader(presentationData.theme, presentationData.strings.SocksProxySetup_Credentials))
-            entries.append(.credentialsUsername(presentationData.theme, presentationData.strings.SocksProxySetup_Username, state.username))
-            entries.append(.credentialsPassword(presentationData.theme, presentationData.strings.SocksProxySetup_Password, state.password))
+            entries.append(.credentialsUsername(presentationData.theme, presentationData.strings, presentationData.strings.SocksProxySetup_Username, state.username))
+            entries.append(.credentialsPassword(presentationData.theme, presentationData.strings, presentationData.strings.SocksProxySetup_Password, state.password))
         case .mtp:
             entries.append(.credentialsHeader(presentationData.theme, presentationData.strings.SocksProxySetup_RequiredCredentials))
-            entries.append(.credentialsSecret(presentationData.theme, presentationData.strings.SocksProxySetup_SecretPlaceholder, state.secret))
+            entries.append(.credentialsSecret(presentationData.theme, presentationData.strings, presentationData.strings.SocksProxySetup_SecretPlaceholder, state.secret))
     }
     
     entries.append(.share(presentationData.theme, presentationData.strings.Conversation_ContextMenuShare, state.isComplete))

@@ -12,6 +12,7 @@ import TelegramPresentationData
 import DeviceAccess
 import TelegramAudio
 import LegacyComponents
+import AccountContext
 
 var legacyComponentsApplication: UIApplication?
 

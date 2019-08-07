@@ -6,6 +6,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ActivityIndicator
+import AccountContext
+import ShareController
 
 final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -194,8 +197,8 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
                     self.contentContainerNode.insertSubnode(contentNode, at: 0)
                     
                     contentNode.alpha = 1.0
-                    let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.35)
-                    animation.fillMode = kCAFillModeBoth
+                    let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.35)
+                    animation.fillMode = .both
                     if !fastOut {
                         animation.beginTime = CACurrentMediaTime() + 0.1
                     }

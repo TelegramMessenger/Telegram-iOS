@@ -226,11 +226,11 @@ final class WallpaperColorPickerNode: ASDisplayNode {
     
     init(strings: PresentationStrings) {
         self.brightnessNode = WallpaperColorBrightnessNode()
-        self.brightnessNode.hitTestSlop = UIEdgeInsetsMake(-16.0, -16.0, -16.0, -16.0)
+        self.brightnessNode.hitTestSlop = UIEdgeInsets(top: -16.0, left: -16.0, bottom: -16.0, right: -16.0)
         self.brightnessKnobNode = ASImageNode()
         self.brightnessKnobNode.image = pointerImage
         self.colorNode = WallpaperColorHueSaturationNode()
-        self.colorNode.hitTestSlop = UIEdgeInsetsMake(-16.0, -16.0, -16.0, -16.0)
+        self.colorNode.hitTestSlop = UIEdgeInsets(top: -16.0, left: -16.0, bottom: -16.0, right: -16.0)
         self.colorKnobNode = WallpaperColorKnobNode()
         
         super.init()

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import TelegramStringFormatting
 
 private func loadCountryCodes() -> [(String, Int)] {
     guard let filePath = frameworkBundle.path(forResource: "PhoneCountries", ofType: "txt") else {
@@ -109,7 +110,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         }
         self.sections = sections
         var sectionTitles = sections.map { $0.0 }
-        sectionTitles.insert(UITableViewIndexSearch, at: 0)
+        sectionTitles.insert(UITableView.indexSearch, at: 0)
         self.sectionTitles = sectionTitles
         
         super.init()
@@ -154,7 +155,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     }
     
     func animateOut(completion: @escaping () -> Void) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion()
         })
     }

@@ -9,7 +9,7 @@ import MtProtoKitDynamic
 #endif
 import Display
 import TelegramUIPrivateModule
-
+import AccountContext
 import LegacyComponents
 
 enum UnpreparedShareItemContent {
@@ -68,7 +68,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
     } else if let image = value["image"] as? UIImage {
         let nativeImageSize = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
         let dimensions = nativeImageSize.fitted(CGSize(width: 1280.0, height: 1280.0))
-        if let scaledImage = scalePhotoImage(image, dimensions: dimensions), let imageData = UIImageJPEGRepresentation(scaledImage, 0.52) {
+        if let scaledImage = scalePhotoImage(image, dimensions: dimensions), let imageData = scaledImage.jpegData(compressionQuality: 0.52) {
             return .single(.preparing)
                 |> then(standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: dimensions)
                 |> mapError { _ -> Void in
@@ -165,7 +165,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 }
             } else {
                 let scaledImage = TGScaleImageToPixelSize(image, CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale).fitted(CGSize(width: 1280.0, height: 1280.0)))!
-                let imageData = UIImageJPEGRepresentation(scaledImage, 0.54)!
+                let imageData = scaledImage.jpegData(compressionQuality: 0.54)!
                 return standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: scaledImage.size)
                 |> mapError { _ -> Void in return Void() }
                 |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
@@ -179,7 +179,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             }
         } else {
             var thumbnailData: Data?
-            if mimeType == "application/pdf", let image = generatePdfPreviewImage(data: data, size: CGSize(width: 256.0, height: 256.0)), let jpegData = UIImageJPEGRepresentation(image, 0.5) {
+            if mimeType == "application/pdf", let image = generatePdfPreviewImage(data: data, size: CGSize(width: 256.0, height: 256.0)), let jpegData = image.jpegData(compressionQuality: 0.5) {
                 thumbnailData = jpegData
             }
             

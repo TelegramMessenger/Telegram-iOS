@@ -3,7 +3,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
-import TelegramUIPreferences
+import AccountContext
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()

@@ -6,6 +6,8 @@ import TelegramCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import AccountContext
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult

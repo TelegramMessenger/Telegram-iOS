@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 import TelegramPresentationData
+import AccountContext
 
 final class InstantPagePeerReferenceItem: InstantPageItem {
     var frame: CGRect

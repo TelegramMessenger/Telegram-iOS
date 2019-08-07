@@ -10,16 +10,7 @@ import TelegramUIPreferences
 import TelegramPresentationData
 import DeviceAccess
 import UniversalMediaPlayer
-
-public enum PresentationCallState: Equatable {
-    case waiting
-    case ringing
-    case requesting(Bool)
-    case connecting(Data?)
-    case active(Double, Int32?, Data)
-    case terminating
-    case terminated(CallId?, CallSessionTerminationReason?, Bool)
-}
+import AccountContext
 
 private final class PresentationCallToneRenderer {
     let queue: Queue
@@ -159,7 +150,7 @@ private final class PresentationCallToneRenderer {
     }
 }
 
-public final class PresentationCall {
+public final class PresentationCallImpl: PresentationCall {
     public let account: Account
     private let audioSession: ManagedAudioSession
     private let callSessionManager: CallSessionManager
@@ -208,7 +199,7 @@ public final class PresentationCall {
     
     private let canBeRemovedPromise = Promise<Bool>(false)
     private var didSetCanBeRemoved = false
-    var canBeRemoved: Signal<Bool, NoError> {
+    public var canBeRemoved: Signal<Bool, NoError> {
         return self.canBeRemovedPromise.get()
     }
     

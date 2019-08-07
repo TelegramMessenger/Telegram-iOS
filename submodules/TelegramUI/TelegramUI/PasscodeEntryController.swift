@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 final public class PasscodeEntryControllerPresentationArguments {
     let animated: Bool

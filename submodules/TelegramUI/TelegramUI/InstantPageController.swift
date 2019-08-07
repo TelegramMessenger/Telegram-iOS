@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Display
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
 
 final class InstantPageController: ViewController {
     private let context: AccountContext

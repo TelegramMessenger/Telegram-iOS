@@ -5,6 +5,7 @@ import TelegramCore
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import AccountContext
 
 final class InstantPageDetailsItem: InstantPageItem {
     var frame: CGRect

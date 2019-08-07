@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ProgressNavigationButtonNode
+import AccountContext
 
 enum SecureIdDocumentFormScrollToSubject {
     case selfie

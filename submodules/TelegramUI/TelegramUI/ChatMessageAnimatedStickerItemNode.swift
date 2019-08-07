@@ -8,12 +8,103 @@ import TelegramCore
 import CoreImage
 import TelegramPresentationData
 import Compression
+import TextFormat
+import AccountContext
+import StickerResources
+import ContextUI
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
+private class ChatMessageHeartbeatHaptic {
+    private var hapticFeedback = HapticFeedback()
+    var timer: SwiftSignalKit.Timer?
+    var time: Double = 0
+    var enabled = false {
+        didSet {
+            if !self.enabled {
+                self.reset()
+            }
+        }
+    }
+    
+    var active: Bool {
+        return self.timer != nil
+    }
+    
+    private func reset() {
+        if let timer = self.timer {
+            self.time = 0.0
+            timer.invalidate()
+            self.timer = nil
+        }
+    }
+    
+    private func beat(time: Double) {
+        let epsilon = 0.1
+        if fabs(0.0 - time) < epsilon || fabs(1.0 - time) < epsilon || fabs(2.0 - time) < epsilon {
+            self.hapticFeedback.impact(.medium)
+        } else if fabs(0.2 - time) < epsilon || fabs(1.2 - time) < epsilon || fabs(2.2 - time) < epsilon {
+            self.hapticFeedback.impact(.light)
+        }
+    }
+    
+    func start(time: Double) {
+        self.hapticFeedback.prepareImpact()
+        
+        if time > 2.0 {
+            return
+        }
+    
+        var startTime: Double = 0.0
+        var delay: Double = 0.0
+        
+        if time > 0.0 {
+            if time <= 1.0 {
+                startTime = 1.0
+            } else if time <= 2.0 {
+                startTime = 2.0
+            }
+        }
+        
+        delay = max(0.0, startTime - time)
+        
+        let block = { [weak self] in
+            guard let strongSelf = self, strongSelf.enabled else {
+                return
+            }
+            
+            strongSelf.time = startTime
+            strongSelf.beat(time: startTime)
+            strongSelf.timer = SwiftSignalKit.Timer(timeout: 0.2, repeat: true, completion: { [weak self] in
+                guard let strongSelf = self, strongSelf.enabled else {
+                    return
+                }
+                strongSelf.time += 0.2
+                strongSelf.beat(time: strongSelf.time)
+                
+                if strongSelf.time > 2.2 {
+                    strongSelf.reset()
+                    strongSelf.time = 0.0
+                    strongSelf.timer?.invalidate()
+                    strongSelf.timer = nil
+                }
+                
+                }, queue: Queue.mainQueue())
+            strongSelf.timer?.start()
+        }
+        
+        if delay > 0.0 {
+            Queue.mainQueue().after(delay, block)
+        } else {
+            block()
+        }
+    }
+}
+
 class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
+    private let contextSourceNode: ContextContentContainingNode
     let imageNode: TransformImageNode
     private let animationNode: AnimatedStickerNode
     private var didSetUpAnimationNode = false
@@ -39,11 +130,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     private var highlightedState: Bool = false
     
-    private var hapticFeedback: HapticFeedback?
+    private var heartbeatHaptic: ChatMessageHeartbeatHaptic?
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     required init() {
+        self.contextSourceNode = ContextContentContainingNode()
         self.imageNode = TransformImageNode()
         self.animationNode = AnimatedStickerNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
@@ -51,13 +143,22 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         super.init(layerBacked: false)
         
         self.animationNode.started = { [weak self] in
-            self?.imageNode.alpha = 0.0
+            if let strongSelf = self {
+                strongSelf.imageNode.alpha = 0.0
+                
+                if let item = strongSelf.item {
+                    if let _ = strongSelf.emojiFile {
+                        item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+                    }
+                }
+            }
         }
         
         self.imageNode.displaysAsynchronously = false
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.animationNode)
-        self.addSubnode(self.dateAndStatusNode)
+        self.addSubnode(self.contextSourceNode)
+        self.contextSourceNode.contentNode.addSubnode(self.imageNode)
+        self.contextSourceNode.contentNode.addSubnode(self.animationNode)
+        self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
     }
     
     deinit {
@@ -116,6 +217,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         didSet {
             if self.visibilityStatus != oldValue {
                 self.updateVisibility()
+                self.heartbeatHaptic?.enabled = self.visibilityStatus
             }
         }
     }
@@ -155,7 +257,19 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let isPlaying = self.visibilityStatus
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
-            self.animationNode.visibility = isPlaying
+            
+            var alreadySeen = false
+            if isPlaying, let _ = self.emojiFile {
+                if item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                    alreadySeen = true
+                }
+            }
+            
+            self.animationNode.visibility = isPlaying && !alreadySeen
+            if self.didSetUpAnimationNode && alreadySeen {
+                self.animationNode.seekToStart()
+            }
+            
             if self.isPlaying && !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
                 
@@ -171,9 +285,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if let emojiFile = self.emojiFile {
                     isEmoji = true
                     file = emojiFile
-                    if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
-                        playbackMode = .once
-                    }
+                    playbackMode = .once
                 }
                 
                 if let file = file {
@@ -219,7 +331,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 let displaySize = CGSize(width: floor(displaySize.width * item.presentationData.animatedEmojiScale), height: floor(displaySize.height * item.presentationData.animatedEmojiScale))
                 if let dimensions = emojiFile.dimensions {
-                    imageSize = dimensions.aspectFilled(displaySize)
+                    imageSize = CGSize(width: displaySize.width * dimensions.width / 512.0, height: displaySize.height * dimensions.height / 512.0)
                 } else if let thumbnailSize = emojiFile.previewRepresentations.first?.dimensions {
                     imageSize = thumbnailSize.aspectFitted(displaySize)
                 }
@@ -306,11 +418,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let displayLeftInset = params.leftInset + layoutConstants.bubble.edgeInset + avatarInset
             
             let imageInset: CGFloat = 10.0
-            let innerImageSize = imageSize
+            var innerImageSize = imageSize
             imageSize = CGSize(width: imageSize.width + imageInset * 2.0, height: imageSize.height + imageInset * 2.0)
-            var imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
+            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
             if isEmoji {
-                imageFrame = imageFrame.offsetBy(dx: incoming ? -imageInset : imageInset, dy: 0.0)
+                innerImageSize = imageSize
             }
             
             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: innerImageSize, boundingSize: innerImageSize, intrinsicInsets: UIEdgeInsets(top: imageInset, left: imageInset, bottom: imageInset, right: imageInset))
@@ -339,7 +451,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .minimal)
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData, false, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, false, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
@@ -449,17 +561,26 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
+                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration) = animation {
                         transition = .animated(duration: duration, curve: .spring)
                     }
                     
                     let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
+                    var updatedContentFrame = updatedImageFrame
+                    if isEmoji {
+                        updatedContentFrame = updatedContentFrame.insetBy(dx: -imageInset, dy: -imageInset)
+                    }
                     
-                    strongSelf.imageNode.frame = updatedImageFrame
-                    strongSelf.animationNode.frame = updatedImageFrame.insetBy(dx: imageInset, dy: imageInset)
-                    strongSelf.animationNode.updateLayout(size: updatedImageFrame.insetBy(dx: imageInset, dy: imageInset).size)
+                    strongSelf.imageNode.frame = updatedContentFrame
+                    strongSelf.animationNode.frame = updatedContentFrame.insetBy(dx: imageInset, dy: imageInset)
+                    strongSelf.animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
                     imageApply()
+                    
+                    strongSelf.contextSourceNode.contentRect = strongSelf.imageNode.frame
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {
@@ -661,35 +782,34 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 if self.telegramFile != nil {
                                     let _ = item.controllerInteraction.openMessage(item.message, .default)
                                 } else if let _ = self.emojiFile {
-                                    if item.context.sharedContext.immediateExperimentalUISettings.playAnimatedEmojiOnce {
-                                        self.animationNode.playIfNeeded()
+                                    var startTime: Signal<Double, NoError>
+                                    if self.animationNode.playIfNeeded() {
+                                        startTime = .single(0.0)
+                                    } else {
+                                        startTime = self.animationNode.status
+                                        |> map { $0.timestamp }
+                                        |> take(1)
+                                        |> deliverOnMainQueue
                                     }
                                     
                                     if self.item?.message.text == "❤️" {
-                                        let hapticFeedback: HapticFeedback
-                                        if let currentHapticFeedback = self.hapticFeedback {
-                                            hapticFeedback = currentHapticFeedback
-                                        } else {
-                                            hapticFeedback = HapticFeedback()
-                                            self.hapticFeedback = hapticFeedback
-                                        }
-                                        hapticFeedback.prepareImpact()
-                                        hapticFeedback.impact(.heavy)
-                                        Queue.mainQueue().after(0.2) {
-                                            hapticFeedback.impact(.medium)
-                                            Queue.mainQueue().after(0.74) {
-                                                hapticFeedback.impact(.medium)
-                                                Queue.mainQueue().after(0.2) {
-                                                    hapticFeedback.impact(.medium)
-                                                    Queue.mainQueue().after(0.74) {
-                                                        hapticFeedback.impact(.medium)
-                                                        Queue.mainQueue().after(0.2) {
-                                                            hapticFeedback.impact(.medium)
-                                                        }
-                                                    }
-                                                }
+                                        let _ = startTime.start(next: { [weak self] time in
+                                            guard let strongSelf = self else {
+                                                return
                                             }
-                                        }
+                                            
+                                            let heartbeatHaptic: ChatMessageHeartbeatHaptic
+                                            if let current = strongSelf.heartbeatHaptic {
+                                                heartbeatHaptic = current
+                                            } else {
+                                                heartbeatHaptic = ChatMessageHeartbeatHaptic()
+                                                heartbeatHaptic.enabled = true
+                                                strongSelf.heartbeatHaptic = heartbeatHaptic
+                                            }
+                                            if !heartbeatHaptic.active {
+                                                heartbeatHaptic.start(time: time)
+                                            }
+                                        })
                                     }
                                 }
                                 return
@@ -896,5 +1016,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         super.animateAdded(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+    
+    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+        return self.contextSourceNode
+    }
+    
+    override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+        self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
 }

@@ -7,6 +7,10 @@ import TelegramCore
 import MapKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import OverlayStatusController
+import DeviceLocationManager
+import AccountContext
 
 private struct PeerNearbyEntry {
     let peer: (Peer, CachedPeerData?)

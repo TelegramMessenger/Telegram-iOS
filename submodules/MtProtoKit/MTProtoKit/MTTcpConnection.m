@@ -1209,6 +1209,7 @@ struct ctr_state {
 }
 
 - (void)requestReadDataWithLength:(int)length tag:(int)tag {
+    assert(length > 0);
     assert(_pendingReceiveData == nil);
     _pendingReceiveData = [[MTTcpReceiveData alloc] initWithTag:tag length:length];
     if (![_mtpSecret isKindOfClass:[MTProxySecretType2 class]]) {

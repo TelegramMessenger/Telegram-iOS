@@ -6,6 +6,9 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import TextFormat
+import AccountContext
 
 private final class InstalledStickerPacksControllerArguments {
     let account: Account
@@ -42,7 +45,7 @@ private enum InstalledStickerPacksSection: Int32 {
 public enum InstalledStickerPacksEntryTag: ItemListItemTag {
     case suggestOptions
     
-    func isEqual(to other: ItemListItemTag) -> Bool {
+    public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? InstalledStickerPacksEntryTag, self == other {
             return true
         } else {

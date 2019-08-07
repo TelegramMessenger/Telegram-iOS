@@ -8,6 +8,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SafariServices
 import TelegramPresentationData
+import AccountContext
 
 struct InstantPageGalleryEntryLocation: Equatable {
     let position: Int32

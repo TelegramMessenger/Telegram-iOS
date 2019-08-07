@@ -6,6 +6,9 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import OverlayStatusController
+import AccountContext
 
 final class TrendingPaneInteraction {
     let installPack: (ItemCollectionInfo) -> Void

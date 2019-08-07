@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import TelegramCore
 import Postbox
+import AccountContext
 
 func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, inputMediaNode: ChatMediaInputNode?, controllerInteraction: ChatControllerInteraction, inputPanelNode: ChatInputPanelNode?) -> ChatInputNode? {
     if !(inputPanelNode is ChatTextInputPanelNode) {

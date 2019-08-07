@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 final class HashtagSearchControllerNode: ASDisplayNode {
     private let toolbarBackgroundNode: ASDisplayNode

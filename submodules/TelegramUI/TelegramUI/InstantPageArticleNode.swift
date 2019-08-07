@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
     let item: InstantPageArticleItem

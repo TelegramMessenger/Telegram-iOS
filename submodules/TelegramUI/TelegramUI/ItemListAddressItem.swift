@@ -4,6 +4,9 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
+import TextFormat
 
 final class ItemListAddressItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

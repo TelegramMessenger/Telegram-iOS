@@ -3,6 +3,8 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import OverlayStatusController
+import AccountContext
 
 private let maximumNumberOfAccounts = 3
 

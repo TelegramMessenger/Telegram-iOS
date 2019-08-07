@@ -4,6 +4,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramUIPreferences
+import MediaResources
 
 private enum LegacyPreferencesKeyValues: Int32 {
     case cacheStorageSettings = 1

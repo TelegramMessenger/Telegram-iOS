@@ -1,0 +1,645 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D038AC4F22F8883700320981 /* SaveToCameraRoll.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D038AC4E22F8883700320981 /* SaveToCameraRoll.framework */; };
+		D0879B9822F8537800C4D6B3 /* ShareController.h in Headers */ = {isa = PBXBuildFile; fileRef = D0879B9622F8537800C4D6B3 /* ShareController.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0879BA822F854C700C4D6B3 /* ShareControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BA222F854C600C4D6B3 /* ShareControllerNode.swift */; };
+		D0879BA922F854C700C4D6B3 /* ShareController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BA322F854C600C4D6B3 /* ShareController.swift */; };
+		D0879BAA22F854C700C4D6B3 /* ShareContentContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BA422F854C700C4D6B3 /* ShareContentContainerNode.swift */; };
+		D0879BAB22F854C700C4D6B3 /* ShareActionButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BA522F854C700C4D6B3 /* ShareActionButtonNode.swift */; };
+		D0879BAC22F854C700C4D6B3 /* ShareControllerRecentPeersGridItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BA622F854C700C4D6B3 /* ShareControllerRecentPeersGridItem.swift */; };
+		D0879BAD22F854C700C4D6B3 /* ShareControllerPeerGridItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BA722F854C700C4D6B3 /* ShareControllerPeerGridItem.swift */; };
+		D0879BB022F854D200C4D6B3 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879BAF22F854D200C4D6B3 /* SwiftSignalKit.framework */; };
+		D0879BB222F854D700C4D6B3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879BB122F854D700C4D6B3 /* Foundation.framework */; };
+		D0879BB422F854DC00C4D6B3 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879BB322F854DC00C4D6B3 /* TelegramCore.framework */; };
+		D0879BB622F854E000C4D6B3 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879BB522F854E000C4D6B3 /* Postbox.framework */; };
+		D0879BB822F854E400C4D6B3 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879BB722F854E400C4D6B3 /* Display.framework */; };
+		D0879BBA22F854E900C4D6B3 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879BB922F854E900C4D6B3 /* AsyncDisplayKit.framework */; };
+		D0879BC222F857E600C4D6B3 /* SharePeersContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BBD22F857E600C4D6B3 /* SharePeersContainerNode.swift */; };
+		D0879BC322F857E600C4D6B3 /* ShareLoadingContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BBE22F857E600C4D6B3 /* ShareLoadingContainerNode.swift */; };
+		D0879BC422F857E600C4D6B3 /* ShareInputFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BBF22F857E600C4D6B3 /* ShareInputFieldNode.swift */; };
+		D0879BC522F857E600C4D6B3 /* ShareSearchContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BC022F857E600C4D6B3 /* ShareSearchContainerNode.swift */; };
+		D0879BC622F857E600C4D6B3 /* ShareSearchBarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BC122F857E600C4D6B3 /* ShareSearchBarNode.swift */; };
+		D0879BEC22F85F8500C4D6B3 /* RadialStatusNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879BEB22F85F8500C4D6B3 /* RadialStatusNode.framework */; };
+		D0879C0722F8636500C4D6B3 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879C0622F8636500C4D6B3 /* FrameworkBundle.swift */; };
+		D0879C3722F8733500C4D6B3 /* SelectablePeerNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879C3622F8733500C4D6B3 /* SelectablePeerNode.framework */; };
+		D0879C9422F875B900C4D6B3 /* PeerPresenceStatusManager.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879C9322F875B900C4D6B3 /* PeerPresenceStatusManager.framework */; };
+		D0879CCA22F876D700C4D6B3 /* ChatListSearchRecentPeersNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879CC922F876D700C4D6B3 /* ChatListSearchRecentPeersNode.framework */; };
+		D0879D7522F87D6100C4D6B3 /* ActionSheetPeerItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879D7422F87D6100C4D6B3 /* ActionSheetPeerItem.framework */; };
+		D0879D9D22F87E7F00C4D6B3 /* LocalizedPeerData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879D9C22F87E7F00C4D6B3 /* LocalizedPeerData.framework */; };
+		D0879DBB22F87F2700C4D6B3 /* UrlEscaping.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879DBA22F87F2700C4D6B3 /* UrlEscaping.framework */; };
+		D0879DE822F8819E00C4D6B3 /* StickerResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879DE722F8819E00C4D6B3 /* StickerResources.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		D038AC4E22F8883700320981 /* SaveToCameraRoll.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SaveToCameraRoll.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D038AC5022F889E600320981 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		D0879B9322F8537800C4D6B3 /* ShareController.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ShareController.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879B9622F8537800C4D6B3 /* ShareController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShareController.h; sourceTree = "<group>"; };
+		D0879B9722F8537800C4D6B3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0879BA222F854C600C4D6B3 /* ShareControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareControllerNode.swift; sourceTree = "<group>"; };
+		D0879BA322F854C600C4D6B3 /* ShareController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareController.swift; sourceTree = "<group>"; };
+		D0879BA422F854C700C4D6B3 /* ShareContentContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareContentContainerNode.swift; sourceTree = "<group>"; };
+		D0879BA522F854C700C4D6B3 /* ShareActionButtonNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareActionButtonNode.swift; sourceTree = "<group>"; };
+		D0879BA622F854C700C4D6B3 /* ShareControllerRecentPeersGridItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareControllerRecentPeersGridItem.swift; sourceTree = "<group>"; };
+		D0879BA722F854C700C4D6B3 /* ShareControllerPeerGridItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareControllerPeerGridItem.swift; sourceTree = "<group>"; };
+		D0879BAF22F854D200C4D6B3 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879BB122F854D700C4D6B3 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D0879BB322F854DC00C4D6B3 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879BB522F854E000C4D6B3 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879BB722F854E400C4D6B3 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879BB922F854E900C4D6B3 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879BBD22F857E600C4D6B3 /* SharePeersContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SharePeersContainerNode.swift; sourceTree = "<group>"; };
+		D0879BBE22F857E600C4D6B3 /* ShareLoadingContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareLoadingContainerNode.swift; sourceTree = "<group>"; };
+		D0879BBF22F857E600C4D6B3 /* ShareInputFieldNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareInputFieldNode.swift; sourceTree = "<group>"; };
+		D0879BC022F857E600C4D6B3 /* ShareSearchContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareSearchContainerNode.swift; sourceTree = "<group>"; };
+		D0879BC122F857E600C4D6B3 /* ShareSearchBarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareSearchBarNode.swift; sourceTree = "<group>"; };
+		D0879BEB22F85F8500C4D6B3 /* RadialStatusNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RadialStatusNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879C0622F8636500C4D6B3 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0879C3622F8733500C4D6B3 /* SelectablePeerNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SelectablePeerNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879C9322F875B900C4D6B3 /* PeerPresenceStatusManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeerPresenceStatusManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879CC922F876D700C4D6B3 /* ChatListSearchRecentPeersNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ChatListSearchRecentPeersNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879D7422F87D6100C4D6B3 /* ActionSheetPeerItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ActionSheetPeerItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879D9C22F87E7F00C4D6B3 /* LocalizedPeerData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalizedPeerData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879DBA22F87F2700C4D6B3 /* UrlEscaping.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UrlEscaping.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0879DE722F8819E00C4D6B3 /* StickerResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = StickerResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D0879B9022F8537800C4D6B3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D038AC4F22F8883700320981 /* SaveToCameraRoll.framework in Frameworks */,
+				D0879DE822F8819E00C4D6B3 /* StickerResources.framework in Frameworks */,
+				D0879DBB22F87F2700C4D6B3 /* UrlEscaping.framework in Frameworks */,
+				D0879D9D22F87E7F00C4D6B3 /* LocalizedPeerData.framework in Frameworks */,
+				D0879D7522F87D6100C4D6B3 /* ActionSheetPeerItem.framework in Frameworks */,
+				D0879CCA22F876D700C4D6B3 /* ChatListSearchRecentPeersNode.framework in Frameworks */,
+				D0879C9422F875B900C4D6B3 /* PeerPresenceStatusManager.framework in Frameworks */,
+				D0879C3722F8733500C4D6B3 /* SelectablePeerNode.framework in Frameworks */,
+				D0879BEC22F85F8500C4D6B3 /* RadialStatusNode.framework in Frameworks */,
+				D0879BBA22F854E900C4D6B3 /* AsyncDisplayKit.framework in Frameworks */,
+				D0879BB822F854E400C4D6B3 /* Display.framework in Frameworks */,
+				D0879BB622F854E000C4D6B3 /* Postbox.framework in Frameworks */,
+				D0879BB422F854DC00C4D6B3 /* TelegramCore.framework in Frameworks */,
+				D0879BB222F854D700C4D6B3 /* Foundation.framework in Frameworks */,
+				D0879BB022F854D200C4D6B3 /* SwiftSignalKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D0879B8922F8537800C4D6B3 = {
+			isa = PBXGroup;
+			children = (
+				D0879B9722F8537800C4D6B3 /* Info.plist */,
+				D0879B9522F8537800C4D6B3 /* Sources */,
+				D0879B9422F8537800C4D6B3 /* Products */,
+				D0879BAE22F854D200C4D6B3 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		D0879B9422F8537800C4D6B3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D0879B9322F8537800C4D6B3 /* ShareController.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D0879B9522F8537800C4D6B3 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				D0879BBF22F857E600C4D6B3 /* ShareInputFieldNode.swift */,
+				D0879BBE22F857E600C4D6B3 /* ShareLoadingContainerNode.swift */,
+				D0879BBD22F857E600C4D6B3 /* SharePeersContainerNode.swift */,
+				D0879BC122F857E600C4D6B3 /* ShareSearchBarNode.swift */,
+				D0879BC022F857E600C4D6B3 /* ShareSearchContainerNode.swift */,
+				D0879BA522F854C700C4D6B3 /* ShareActionButtonNode.swift */,
+				D0879BA422F854C700C4D6B3 /* ShareContentContainerNode.swift */,
+				D0879BA322F854C600C4D6B3 /* ShareController.swift */,
+				D0879BA222F854C600C4D6B3 /* ShareControllerNode.swift */,
+				D0879BA722F854C700C4D6B3 /* ShareControllerPeerGridItem.swift */,
+				D0879BA622F854C700C4D6B3 /* ShareControllerRecentPeersGridItem.swift */,
+				D0879C0622F8636500C4D6B3 /* FrameworkBundle.swift */,
+				D0879B9622F8537800C4D6B3 /* ShareController.h */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		D0879BAE22F854D200C4D6B3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D038AC5022F889E600320981 /* libc++.tbd */,
+				D038AC4E22F8883700320981 /* SaveToCameraRoll.framework */,
+				D0879DE722F8819E00C4D6B3 /* StickerResources.framework */,
+				D0879DBA22F87F2700C4D6B3 /* UrlEscaping.framework */,
+				D0879D9C22F87E7F00C4D6B3 /* LocalizedPeerData.framework */,
+				D0879D7422F87D6100C4D6B3 /* ActionSheetPeerItem.framework */,
+				D0879CC922F876D700C4D6B3 /* ChatListSearchRecentPeersNode.framework */,
+				D0879C9322F875B900C4D6B3 /* PeerPresenceStatusManager.framework */,
+				D0879C3622F8733500C4D6B3 /* SelectablePeerNode.framework */,
+				D0879BEB22F85F8500C4D6B3 /* RadialStatusNode.framework */,
+				D0879BB922F854E900C4D6B3 /* AsyncDisplayKit.framework */,
+				D0879BB722F854E400C4D6B3 /* Display.framework */,
+				D0879BB522F854E000C4D6B3 /* Postbox.framework */,
+				D0879BB322F854DC00C4D6B3 /* TelegramCore.framework */,
+				D0879BB122F854D700C4D6B3 /* Foundation.framework */,
+				D0879BAF22F854D200C4D6B3 /* SwiftSignalKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D0879B8E22F8537800C4D6B3 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0879B9822F8537800C4D6B3 /* ShareController.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D0879B9222F8537800C4D6B3 /* ShareController */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0879B9B22F8537800C4D6B3 /* Build configuration list for PBXNativeTarget "ShareController" */;
+			buildPhases = (
+				D0879B8E22F8537800C4D6B3 /* Headers */,
+				D0879B8F22F8537800C4D6B3 /* Sources */,
+				D0879B9022F8537800C4D6B3 /* Frameworks */,
+				D0879B9122F8537800C4D6B3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShareController;
+			productName = ShareController;
+			productReference = D0879B9322F8537800C4D6B3 /* ShareController.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D0879B8A22F8537800C4D6B3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				DefaultBuildSystemTypeForWorkspace = Latest;
+				LastUpgradeCheck = 1030;
+				ORGANIZATIONNAME = "Telegram Messenger LLP";
+				TargetAttributes = {
+					D0879B9222F8537800C4D6B3 = {
+						CreatedOnToolsVersion = 10.3;
+						LastSwiftMigration = 1030;
+					};
+				};
+			};
+			buildConfigurationList = D0879B8D22F8537800C4D6B3 /* Build configuration list for PBXProject "ShareController_Xcode" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D0879B8922F8537800C4D6B3;
+			productRefGroup = D0879B9422F8537800C4D6B3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D0879B9222F8537800C4D6B3 /* ShareController */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D0879B9122F8537800C4D6B3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D0879B8F22F8537800C4D6B3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0879BA822F854C700C4D6B3 /* ShareControllerNode.swift in Sources */,
+				D0879BAB22F854C700C4D6B3 /* ShareActionButtonNode.swift in Sources */,
+				D0879BAC22F854C700C4D6B3 /* ShareControllerRecentPeersGridItem.swift in Sources */,
+				D0879BC222F857E600C4D6B3 /* SharePeersContainerNode.swift in Sources */,
+				D0879BC422F857E600C4D6B3 /* ShareInputFieldNode.swift in Sources */,
+				D0879BC522F857E600C4D6B3 /* ShareSearchContainerNode.swift in Sources */,
+				D0879BC622F857E600C4D6B3 /* ShareSearchBarNode.swift in Sources */,
+				D0879BC322F857E600C4D6B3 /* ShareLoadingContainerNode.swift in Sources */,
+				D0879C0722F8636500C4D6B3 /* FrameworkBundle.swift in Sources */,
+				D0879BA922F854C700C4D6B3 /* ShareController.swift in Sources */,
+				D0879BAD22F854C700C4D6B3 /* ShareControllerPeerGridItem.swift in Sources */,
+				D0879BAA22F854C700C4D6B3 /* ShareContentContainerNode.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D0879B9922F8537800C4D6B3 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0879B9A22F8537800C4D6B3 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0879B9C22F8537800C4D6B3 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ShareController;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0879B9D22F8537800C4D6B3 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ShareController;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0879B9E22F8541700C4D6B3 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugHockeyapp;
+		};
+		D0879B9F22F8541700C4D6B3 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ShareController;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugHockeyapp;
+		};
+		D0879BA022F8542400C4D6B3 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+		D0879BA122F8542400C4D6B3 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ShareController;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D0879B8D22F8537800C4D6B3 /* Build configuration list for PBXProject "ShareController_Xcode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0879B9922F8537800C4D6B3 /* DebugAppStoreLLC */,
+				D0879B9E22F8541700C4D6B3 /* DebugHockeyapp */,
+				D0879B9A22F8537800C4D6B3 /* ReleaseAppStoreLLC */,
+				D0879BA022F8542400C4D6B3 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+		D0879B9B22F8537800C4D6B3 /* Build configuration list for PBXNativeTarget "ShareController" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0879B9C22F8537800C4D6B3 /* DebugAppStoreLLC */,
+				D0879B9F22F8541700C4D6B3 /* DebugHockeyapp */,
+				D0879B9D22F8537800C4D6B3 /* ReleaseAppStoreLLC */,
+				D0879BA122F8542400C4D6B3 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D0879B8A22F8537800C4D6B3 /* Project object */;
+}

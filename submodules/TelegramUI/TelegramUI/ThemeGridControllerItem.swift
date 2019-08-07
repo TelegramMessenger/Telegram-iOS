@@ -5,6 +5,7 @@ import TelegramCore
 import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
+import AccountContext
 
 final class ThemeGridControllerItem: GridItem {
     let context: AccountContext

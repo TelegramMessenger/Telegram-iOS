@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
 import TelegramUIPrivateModule
+import MergeLists
+import AccountContext
 
 final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void

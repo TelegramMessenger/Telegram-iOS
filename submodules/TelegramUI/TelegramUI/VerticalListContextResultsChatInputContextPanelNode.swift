@@ -5,6 +5,8 @@ import Postbox
 import TelegramCore
 import Display
 import TelegramPresentationData
+import MergeLists
+import AccountContext
 
 private enum VerticalChatContextResultsEntryStableId: Hashable {
     case action

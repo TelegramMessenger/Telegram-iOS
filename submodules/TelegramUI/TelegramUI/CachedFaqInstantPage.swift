@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import AccountContext
 
 private func extractAnchor(string: String) -> (String, String?) {
     var anchorValue: String?

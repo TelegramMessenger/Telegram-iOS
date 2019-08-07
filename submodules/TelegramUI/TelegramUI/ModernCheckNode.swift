@@ -74,7 +74,7 @@ class ModernCheckNode: ASDisplayNode {
             }) as! POPAnimatableProperty)
             animation.fromValue = 0.0 as NSNumber
             animation.toValue = 1.0 as NSNumber
-            animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+            animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
             animation.duration = 0.21
             self.pop_add(animation, forKey: "progress")
         } else {

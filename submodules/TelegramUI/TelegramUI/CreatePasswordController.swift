@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
 
 private enum CreatePasswordField {
     case password
@@ -51,16 +53,16 @@ private enum CreatePasswordEntryTag: ItemListItemTag {
 
 private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
     case passwordHeader(PresentationTheme, String)
-    case password(PresentationTheme, String, String)
-    case passwordConfirmation(PresentationTheme, String, String)
+    case password(PresentationTheme, PresentationStrings, String, String)
+    case passwordConfirmation(PresentationTheme, PresentationStrings, String, String)
     case passwordInfo(PresentationTheme, String)
     
     case hintHeader(PresentationTheme, String)
-    case hint(PresentationTheme, String, String, Bool)
+    case hint(PresentationTheme, PresentationStrings, String, String, Bool)
     case hintInfo(PresentationTheme, String)
     
     case emailHeader(PresentationTheme, String)
-    case email(PresentationTheme, String, String)
+    case email(PresentationTheme, PresentationStrings, String, String)
     case emailInfo(PresentationTheme, String)
     
     case emailConfirmation(PresentationTheme, String)
@@ -116,14 +118,14 @@ private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
         switch self {
             case let .passwordHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .password(theme, text, value):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: value, placeholder: text, type: .password, returnKeyType: .next, spacing: 0.0, tag: CreatePasswordEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
+            case let .password(theme, strings, text, value):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: value, placeholder: text, type: .password, returnKeyType: .next, spacing: 0.0, tag: CreatePasswordEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateFieldText(.password, updatedText)
                 }, action: {
                     arguments.selectNextInputItem(CreatePasswordEntryTag.password)
                 })
-            case let .passwordConfirmation(theme, text, value):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: value, placeholder: text, type: .password, returnKeyType: .next, spacing: 0.0, tag: CreatePasswordEntryTag.passwordConfirmation, sectionId: self.section, textUpdated: { updatedText in
+            case let .passwordConfirmation(theme, strings, text, value):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: value, placeholder: text, type: .password, returnKeyType: .next, spacing: 0.0, tag: CreatePasswordEntryTag.passwordConfirmation, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateFieldText(.passwordConfirmation, updatedText)
                 }, action: {
                     arguments.selectNextInputItem(CreatePasswordEntryTag.passwordConfirmation)
@@ -132,8 +134,8 @@ private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .hintHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .hint(theme, text, value, last):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: value, placeholder: text, type: .regular(capitalization: true, autocorrection: false), returnKeyType: last ? .done : .next, spacing: 0.0, tag: CreatePasswordEntryTag.hint, sectionId: self.section, textUpdated: { updatedText in
+            case let .hint(theme, strings, text, value, last):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: value, placeholder: text, type: .regular(capitalization: true, autocorrection: false), returnKeyType: last ? .done : .next, spacing: 0.0, tag: CreatePasswordEntryTag.hint, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateFieldText(.hint, updatedText)
                 }, action: {
                     if last {
@@ -146,8 +148,8 @@ private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .emailHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .email(theme, text, value):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(), text: value, placeholder: text, type: .email, returnKeyType: .done, spacing: 0.0, tag: CreatePasswordEntryTag.email, sectionId: self.section, textUpdated: { updatedText in
+            case let .email(theme, strings, text, value):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: value, placeholder: text, type: .email, returnKeyType: .done, spacing: 0.0, tag: CreatePasswordEntryTag.email, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateFieldText(.email, updatedText)
                 }, action: {
                     arguments.save()
@@ -183,8 +185,8 @@ private func createPasswordControllerEntries(presentationData: PresentationData,
     switch state.state {
         case let .setup(currentPassword):
             entries.append(.passwordHeader(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordSection))
-            entries.append(.password(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordPlaceholder, state.passwordText))
-            entries.append(.passwordConfirmation(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordConfirmationPlaceholder, state.passwordConfirmationText))
+            entries.append(.password(presentationData.theme, presentationData.strings, presentationData.strings.FastTwoStepSetup_PasswordPlaceholder, state.passwordText))
+            entries.append(.passwordConfirmation(presentationData.theme, presentationData.strings, presentationData.strings.FastTwoStepSetup_PasswordConfirmationPlaceholder, state.passwordConfirmationText))
            
             if case .paymentInfo = context {
                 entries.append(.passwordInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_PasswordHelp))
@@ -193,12 +195,12 @@ private func createPasswordControllerEntries(presentationData: PresentationData,
             let showEmail = currentPassword == nil
             
             entries.append(.hintHeader(presentationData.theme, presentationData.strings.FastTwoStepSetup_HintSection))
-            entries.append(.hint(presentationData.theme, presentationData.strings.FastTwoStepSetup_HintPlaceholder, state.hintText, !showEmail))
+            entries.append(.hint(presentationData.theme, presentationData.strings, presentationData.strings.FastTwoStepSetup_HintPlaceholder, state.hintText, !showEmail))
             entries.append(.hintInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_HintHelp))
             
             if showEmail {
                 entries.append(.emailHeader(presentationData.theme, presentationData.strings.FastTwoStepSetup_EmailSection))
-                entries.append(.email(presentationData.theme, presentationData.strings.FastTwoStepSetup_EmailPlaceholder, state.emailText))
+                entries.append(.email(presentationData.theme, presentationData.strings, presentationData.strings.FastTwoStepSetup_EmailPlaceholder, state.emailText))
                 entries.append(.emailInfo(presentationData.theme, presentationData.strings.FastTwoStepSetup_EmailHelp))
             }
         case let .pendingVerification(emailPattern):

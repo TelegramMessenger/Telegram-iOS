@@ -9,6 +9,12 @@ import LegacyComponents
 import TelegramPresentationData
 import SafariServices
 import TelegramUIPreferences
+import ItemListUI
+import TextFormat
+import AccountContext
+import TelegramStringFormatting
+import TemporaryCachedPeerDataManager
+import ShareController
 
 private final class GroupInfoArguments {
     let context: AccountContext
@@ -1382,7 +1388,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     }
                     
                     let completedImpl: (UIImage) -> Void = { image in
-                        if let data = UIImageJPEGRepresentation(image, 0.6) {
+                        if let data = image.jpegData(compressionQuality: 0.6) {
                             let resource = LocalFileMediaResource(fileId: arc4random64())
                             context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                             let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
@@ -2359,12 +2365,12 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
         }
     }
     
-    aboutLinkActionImpl = { [weak controller] action, itemLink in
+    aboutLinkActionImpl = { [weak context, weak controller] action, itemLink in
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerView in
-            if let controller = controller {
-                handleTextLinkAction(context: context, peerId: peerView.peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+            if let controller = controller, let context = context {
+                context.sharedContext.handleTextLinkAction(context: context, peerId: peerView.peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
             }
         })
     }

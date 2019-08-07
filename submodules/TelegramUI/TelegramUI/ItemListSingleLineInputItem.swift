@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
 
 enum ItemListSingleLineInputItemType: Equatable {
     case regular(capitalization: Bool, autocorrection: Bool)
@@ -15,6 +16,7 @@ enum ItemListSingleLineInputItemType: Equatable {
 
 class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let title: NSAttributedString
     let text: String
     let placeholder: String
@@ -31,8 +33,9 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let updatedFocus: ((Bool) -> Void)?
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
         self.theme = theme
+        self.strings = strings
         self.title = title
         self.text = text
         self.placeholder = placeholder
@@ -122,7 +125,6 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         self.clearIconNode.displaysAsynchronously = false
         
         self.clearButtonNode = HighlightableButtonNode()
-        self.clearButtonNode.accessibilityLabel = "Clear Text"
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -148,7 +150,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     override func didLoad() {
         super.didLoad()
         
-        self.textNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0)]
+        self.textNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(17.0)]
         self.textNode.textField.font = Font.regular(17.0)
         if let item = self.item {
             self.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
@@ -183,8 +185,8 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
             }
             
             let titleString = NSMutableAttributedString(attributedString: item.title)
-            titleString.removeAttribute(NSAttributedStringKey.font, range: NSMakeRange(0, titleString.length))
-            titleString.addAttributes([NSAttributedStringKey.font: Font.regular(17.0)], range: NSMakeRange(0, titleString.length))
+            titleString.removeAttribute(NSAttributedString.Key.font, range: NSMakeRange(0, titleString.length))
+            titleString.addAttributes([NSAttributedString.Key.font: Font.regular(17.0)], range: NSMakeRange(0, titleString.length))
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -320,6 +322,8 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                     
                     strongSelf.textNode.isUserInteractionEnabled = item.enabled
                     strongSelf.textNode.alpha = item.enabled ? 1.0 : 0.4
+                    
+                    strongSelf.clearButtonNode.accessibilityLabel = item.strings.VoiceOver_Editing_ClearText
                 }
             })
         }

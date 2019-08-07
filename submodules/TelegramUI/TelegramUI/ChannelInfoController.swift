@@ -7,6 +7,12 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
+import TextFormat
+import OverlayStatusController
+import TelegramStringFormatting
+import ShareController
 
 private final class ChannelInfoControllerArguments {
     let account: Account
@@ -711,7 +717,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 }
                 
                 let completedImpl: (UIImage) -> Void = { image in
-                    if let data = UIImageJPEGRepresentation(image, 0.6) {
+                    if let data = image.jpegData(compressionQuality: 0.6) {
                         let resource = LocalFileMediaResource(fileId: arc4random64())
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                         let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
@@ -1155,9 +1161,9 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             }
         }
     }
-    aboutLinkActionImpl = { [weak controller] action, itemLink in
-        if let controller = controller {
-            handleTextLinkAction(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+    aboutLinkActionImpl = { [weak context, weak controller] action, itemLink in
+        if let controller = controller, let context = context {
+            context.sharedContext.handleTextLinkAction(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
         }
     }
     endEditingImpl = {

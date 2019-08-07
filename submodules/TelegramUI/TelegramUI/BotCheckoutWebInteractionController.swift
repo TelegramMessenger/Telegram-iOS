@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import AccountContext
 
 enum BotCheckoutWebInteractionControllerIntent {
     case addPaymentMethod((BotCheckoutPaymentWebToken) -> Void)

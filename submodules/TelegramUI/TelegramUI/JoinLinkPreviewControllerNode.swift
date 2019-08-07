@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
+import ShareController
 
 struct JoinLinkPreviewData {
     let isGroup: Bool
@@ -192,8 +194,8 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
                     self.contentContainerNode.insertSubnode(contentNode, at: 0)
                     
                     contentNode.alpha = 1.0
-                    let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.35)
-                    animation.fillMode = kCAFillModeBoth
+                    let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.35)
+                    animation.fillMode = .both
                     if !fastOut {
                         animation.beginTime = CACurrentMediaTime() + 0.1
                     }

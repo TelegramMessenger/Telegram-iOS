@@ -6,6 +6,7 @@ import AVFoundation
 import TelegramCore
 import TelegramAudio
 import UniversalMediaPlayer
+import AccountContext
 
 private let kOutputBus: UInt32 = 0
 private let kInputBus: UInt32 = 1
@@ -133,12 +134,6 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
     return noErr
 }
 
-struct RecordedAudioData {
-    let compressedData: Data
-    let duration: Double
-    let waveform: Data?
-}
-
 private let beginToneData: TonePlayerData? = {
     guard let url = Bundle.main.url(forResource: "begin_record", withExtension: "caf") else {
         return nil
@@ -241,7 +236,7 @@ final class ManagedAudioRecorderContext {
                     toneData.withUnsafeBytes { (dataBytes: UnsafePointer<UInt8>) -> Void in
                         memcpy(bytes, dataBytes.advanced(by: takeRange.lowerBound), takeRange.count)
                     }
-                    let status = CMBlockBufferCreateWithMemoryBlock(nil, bytes, takeRange.count, nil, nil, 0, takeRange.count, 0, &blockBuffer)
+                    let status = CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: bytes, blockLength: takeRange.count, blockAllocator: nil, customBlockSource: nil, offsetToData: 0, dataLength: takeRange.count, flags: 0, blockBufferOut: &blockBuffer)
                     if status != noErr {
                         return .finished
                     }
@@ -252,7 +247,7 @@ final class ManagedAudioRecorderContext {
                     var timingInfo = CMSampleTimingInfo(duration: CMTime(value: Int64(sampleCount), timescale: 44100), presentationTimeStamp: pts, decodeTimeStamp: pts)
                     var sampleBuffer: CMSampleBuffer?
                     var sampleSize = takeRange.count
-                    guard CMSampleBufferCreate(nil, blockBuffer, true, nil, nil, nil, 1, 1, &timingInfo, 1, &sampleSize, &sampleBuffer) == noErr else {
+                    guard CMSampleBufferCreate(allocator: nil, dataBuffer: blockBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: nil, sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleSizeEntryCount: 1, sampleSizeArray: &sampleSize, sampleBufferOut: &sampleBuffer) == noErr else {
                         return .finished
                     }
                     
@@ -557,7 +552,7 @@ final class ManagedAudioRecorderContext {
             self.currentPeak = max(Int64(sample), self.currentPeak)
             self.currentPeakCount += 1
             if self.currentPeakCount == self.peakCompressionFactor {
-                var compressedPeak = self.currentPeak//Int16(Float(self.currentPeak) / Float(self.peakCompressionFactor))
+                var compressedPeak = self.currentPeak
                 withUnsafeBytes(of: &compressedPeak, { buffer in
                     self.compressedWaveformSamples.append(buffer.bindMemory(to: UInt8.self))
                 })
@@ -592,67 +587,57 @@ final class ManagedAudioRecorderContext {
     }
     
     func takeData() -> RecordedAudioData? {
-        if self.oggWriter.writeFrame(nil, frameByteCount: 0) {
-            var scaledSamplesMemory = malloc(100 * 2)!
-            var scaledSamples: UnsafeMutablePointer<Int16> = scaledSamplesMemory.assumingMemoryBound(to: Int16.self)
-            defer {
-                free(scaledSamplesMemory)
-            }
-            memset(scaledSamples, 0, 100 * 2);
-            var waveform: Data?
-            
-            let count = self.compressedWaveformSamples.count / 2
-            self.compressedWaveformSamples.withUnsafeMutableBytes { (samples: UnsafeMutablePointer<Int16>) -> Void in
-                for i in 0 ..< count {
-                    let sample = samples[i]
-                    let index = i * 100 / count
-                    if (scaledSamples[index] < sample) {
-                        scaledSamples[index] = sample;
-                    }
-                }
-                
-                var peak: Int16 = 0
-                var sumSamples: Int64 = 0
-                for i in 0 ..< 100 {
-                    let sample = scaledSamples[i]
-                    if peak < sample {
-                        peak = sample
-                    }
-                    sumSamples += Int64(sample)
-                }
-                var calculatedPeak: UInt16 = 0
-                calculatedPeak = UInt16((Double(sumSamples) * 1.8 / 100.0))
-                
-                if calculatedPeak < 2500 {
-                    calculatedPeak = 2500
-                }
-                
-                for i in 0 ..< 100 {
-                    let sample: UInt16 = UInt16(Int64(scaledSamples[i]))
-                    let minPeak = min(Int64(sample), Int64(calculatedPeak))
-                    let resultPeak = minPeak * 31 / Int64(calculatedPeak)
-                    scaledSamples[i] = Int16(clamping: min(31, resultPeak))
-                }
-                
-                let resultWaveform = AudioWaveform(samples: Data(bytes: scaledSamplesMemory, count: 100 * 2), peak: 31)
-                let bitstream = resultWaveform.makeBitstream()
-                waveform = AudioWaveform(bitstream: bitstream, bitsPerSample: 5).makeBitstream()
-            }
-            
-            return RecordedAudioData(compressedData: self.dataItem.data(), duration: self.oggWriter.encodedDuration(), waveform: waveform)
-        } else {
-            return nil
+        var scaledSamplesMemory = malloc(100 * 2)!
+        var scaledSamples: UnsafeMutablePointer<Int16> = scaledSamplesMemory.assumingMemoryBound(to: Int16.self)
+        defer {
+            free(scaledSamplesMemory)
         }
+        memset(scaledSamples, 0, 100 * 2);
+        var waveform: Data?
+        
+        let count = self.compressedWaveformSamples.count / 2
+        self.compressedWaveformSamples.withUnsafeMutableBytes { (samples: UnsafeMutablePointer<Int16>) -> Void in
+            for i in 0 ..< count {
+                let sample = samples[i]
+                let index = i * 100 / count
+                if (scaledSamples[index] < sample) {
+                    scaledSamples[index] = sample;
+                }
+            }
+            
+            var peak: Int16 = 0
+            var sumSamples: Int64 = 0
+            for i in 0 ..< 100 {
+                let sample = scaledSamples[i]
+                if peak < sample {
+                    peak = sample
+                }
+                sumSamples += Int64(sample)
+            }
+            var calculatedPeak: UInt16 = 0
+            calculatedPeak = UInt16((Double(sumSamples) * 1.8 / 100.0))
+            
+            if calculatedPeak < 2500 {
+                calculatedPeak = 2500
+            }
+            
+            for i in 0 ..< 100 {
+                let sample: UInt16 = UInt16(Int64(scaledSamples[i]))
+                let minPeak = min(Int64(sample), Int64(calculatedPeak))
+                let resultPeak = minPeak * 31 / Int64(calculatedPeak)
+                scaledSamples[i] = Int16(clamping: min(31, resultPeak))
+            }
+            
+            let resultWaveform = AudioWaveform(samples: Data(bytes: scaledSamplesMemory, count: 100 * 2), peak: 31)
+            let bitstream = resultWaveform.makeBitstream()
+            waveform = AudioWaveform(bitstream: bitstream, bitsPerSample: 5).makeBitstream()
+        }
+        
+        return RecordedAudioData(compressedData: self.dataItem.data(), duration: self.oggWriter.encodedDuration(), waveform: waveform)
     }
 }
 
-enum AudioRecordingState: Equatable {
-    case paused(duration: Double)
-    case recording(duration: Double, durationMediaTimestamp: Double)
-    case stopped
-}
-
-final class ManagedAudioRecorder {
+final class ManagedAudioRecorderImpl: ManagedAudioRecorder {
     private let queue = Queue()
     private var contextRef: Unmanaged<ManagedAudioRecorderContext>?
     private let micLevelValue = ValuePromise<Float>(0.0)

@@ -3,6 +3,7 @@ import SwiftSignalKit
 import TelegramCore
 import Display
 import DeviceAccess
+import AccountContext
 
 func openAddContact(context: AccountContext, firstName: String = "", lastName: String = "", phoneNumber: String, label: String = "_$!<Mobile>!$_", present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void = {}) {
     let _ = (DeviceAccess.authorizationStatus(subject: .contacts)

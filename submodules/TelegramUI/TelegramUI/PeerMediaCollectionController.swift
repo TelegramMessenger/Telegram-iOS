@@ -8,8 +8,12 @@ import TelegramCore
 import SafariServices
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramBaseController
+import OverlayStatusController
+import AccountContext
+import ShareController
 
-public class PeerMediaCollectionController: TelegramController {
+public class PeerMediaCollectionController: TelegramBaseController {
     private var validLayout: ContainerViewLayout?
     
     private let context: AccountContext
@@ -87,7 +91,7 @@ public class PeerMediaCollectionController: TelegramController {
                     return false
                 }
                 strongSelf.mediaCollectionDisplayNode.view.endEditing(true)
-                return openChatMessage(context: context, message: galleryMessage.message, standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: {
+                return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, message: galleryMessage.message, standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: {
                     self?.mediaCollectionDisplayNode.view.endEditing(true)
                 }, present: { c, a in
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -107,7 +111,7 @@ public class PeerMediaCollectionController: TelegramController {
                 }, callPeer: { peerId in
                     self?.controllerInteraction?.callPeer(peerId)
                 }, enqueueMessage: { _ in
-                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
+                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }))
             }
             return false
             }, openPeer: { [weak self] id, navigation, _ in
@@ -293,7 +297,8 @@ public class PeerMediaCollectionController: TelegramController {
                 }), in: .window(.root))
             }
         }, reportMessages: { _ in
-        }, deleteMessages: { _ in
+        }, deleteMessages: { _, _, f in
+            f(.default)
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let forwardMessageIdsSet = strongSelf.interfaceState.selectionState?.selectedIds {

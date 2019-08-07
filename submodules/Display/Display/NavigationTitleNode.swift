@@ -39,9 +39,9 @@ public class NavigationTitleNode: ASDisplayNode {
     }
     
     private func setText(_ text: NSString) {
-        var titleAttributes = [NSAttributedStringKey : AnyObject]()
-        titleAttributes[NSAttributedStringKey.font] = UIFont.boldSystemFont(ofSize: 17.0)
-        titleAttributes[NSAttributedStringKey.foregroundColor] = self.color
+        var titleAttributes = [NSAttributedString.Key : AnyObject]()
+        titleAttributes[NSAttributedString.Key.font] = UIFont.boldSystemFont(ofSize: 17.0)
+        titleAttributes[NSAttributedString.Key.foregroundColor] = self.color
         let titleString = NSAttributedString(string: text as String, attributes: titleAttributes)
         self.label.attributedText = titleString
         self.invalidateCalculatedLayout()

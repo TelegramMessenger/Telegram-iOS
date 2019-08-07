@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
 
 class PeersNearbyHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

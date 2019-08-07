@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import MergeLists
 
 protocol FormControllerEntry: Identifiable {
     associatedtype ItemParams

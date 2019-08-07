@@ -6,6 +6,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TextFormat
+import ProgressNavigationButtonNode
+import AccountContext
 
 public enum SecureIdRequestResult: String {
     case success = "success"

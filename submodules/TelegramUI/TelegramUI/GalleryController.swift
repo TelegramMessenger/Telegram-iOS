@@ -8,6 +8,8 @@ import AsyncDisplayKit
 import TelegramCore
 import SafariServices
 import TelegramPresentationData
+import TextFormat
+import AccountContext
 
 private func tagsForMessage(_ message: Message) -> MessageTags? {
     for media in message.media {
@@ -265,26 +267,6 @@ enum GalleryControllerInteractionTapAction {
 
 public enum GalleryControllerItemNodeAction {
     case timecode(Double)
-}
-
-final class GalleryControllerActionInteraction {
-    let openUrl: (String, Bool) -> Void
-    let openUrlIn: (String) -> Void
-    let openPeerMention: (String) -> Void
-    let openPeer: (PeerId) -> Void
-    let openHashtag: (String?, String) -> Void
-    let openBotCommand: (String) -> Void
-    let addContact: (String) -> Void
-
-    init(openUrl: @escaping (String, Bool) -> Void, openUrlIn: @escaping (String) -> Void, openPeerMention: @escaping (String) -> Void, openPeer: @escaping (PeerId) -> Void, openHashtag: @escaping (String?, String) -> Void, openBotCommand: @escaping (String) -> Void, addContact: @escaping (String) -> Void) {
-        self.openUrl = openUrl
-        self.openUrlIn = openUrlIn
-        self.openPeerMention = openPeerMention
-        self.openPeer = openPeer
-        self.openHashtag = openHashtag
-        self.openBotCommand = openBotCommand
-        self.addContact = addContact
-    }
 }
 
 class GalleryController: ViewController {
@@ -860,7 +842,7 @@ class GalleryController: ViewController {
             if entry.message.stableId == self.centralEntryStableId {
                 isCentral = true
             }
-            if let item = galleryItemForEntry(context: context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, performAction: self.performAction, openActionOptions: self.openActionOptions) {
+            if let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, performAction: self.performAction, openActionOptions: self.openActionOptions) {
                 if isCentral {
                     centralItemIndex = items.count
                 }

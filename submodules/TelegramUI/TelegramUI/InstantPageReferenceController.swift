@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import AccountContext
 
 final class InstantPageReferenceController: ViewController {
     private var controllerNode: InstantPageReferenceControllerNode {

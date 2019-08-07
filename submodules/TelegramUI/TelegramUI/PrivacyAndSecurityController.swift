@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramCallsUI
+import ItemListUI
+import AccountContext
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account
@@ -50,7 +52,7 @@ private enum PrivacyAndSecuritySection: Int32 {
 public enum PrivacyAndSecurityEntryTag: ItemListItemTag {
     case accountTimeout
     
-    func isEqual(to other: ItemListItemTag) -> Bool {
+    public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? PrivacyAndSecurityEntryTag, self == other {
             return true
         } else {

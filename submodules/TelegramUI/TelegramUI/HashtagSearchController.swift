@@ -5,8 +5,10 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramBaseController
+import AccountContext
 
-final class HashtagSearchController: TelegramController {
+final class HashtagSearchController: TelegramBaseController {
     private let queue = Queue()
     
     private let context: AccountContext

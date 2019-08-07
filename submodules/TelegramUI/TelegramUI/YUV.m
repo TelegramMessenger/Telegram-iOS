@@ -22,12 +22,16 @@ void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height,
     
     error = vImageUnpremultiplyData_ARGB8888(&src, &src, kvImageDoNotTile);
     
-    uint8_t *buf = (uint8_t *)argb;
-    uint8_t *alpha = yuva + (width * height * 1 + width * height * 1);
-    for (int i = 0; i < width * height; i += 2) {
-        uint8_t a0 = (buf[i * 4 + 0] >> 4) << 4;
-        uint8_t a1 = (buf[(i + 1) * 4 + 0] >> 4) << 4;
-        alpha[i / 2] = (a0 & (0xf0U)) | ((a1 & (0xf0U)) >> 4);
+    uint8_t *alpha = yuva + width * height * 2;
+    int i = 0;
+    for (int y = 0; y < height; y += 1) {
+        uint8_t const *argbRow = argb + y * bytesPerRow;
+        for (int x = 0; x < width; x += 2) {
+            uint8_t a0 = (argbRow[x * 4 + 0] >> 4) << 4;
+            uint8_t a1 = (argbRow[(x + 1) * 4 + 0] >> 4) << 4;
+            alpha[i / 2] = (a0 & (0xf0U)) | ((a1 & (0xf0U)) >> 4);
+            i += 2;
+        }
     }
     
     vImage_Buffer destYp;
@@ -79,12 +83,17 @@ void decodeYUVAToRGBA(uint8_t const *yuva, uint8_t *argb, int width, int height,
     error = vImageConvert_420Yp8_CbCr8ToARGB8888(&srcYp, &srcCbCr, &dest, &info, NULL, 0xff, kvImageDoNotTile);
     
     uint8_t const *alpha = yuva + (width * height * 1 + width * height * 1);
-    for (int i = 0; i < width * height; i += 2) {
-        uint8_t a = alpha[i / 2];
-        uint8_t a1 = (a & (0xf0U));
-        uint8_t a2 = ((a & (0x0fU)) << 4);
-        argb[i * 4 + 0] = a1 | (a1 >> 4);
-        argb[(i + 1) * 4 + 0] = a2 | (a2 >> 4);
+    int i = 0;
+    for (int y = 0; y < height; y += 1) {
+        uint8_t *argbRow = argb + y * bytesPerRow;
+        for (int x = 0; x < width; x += 2) {
+            uint8_t a = alpha[i / 2];
+            uint8_t a1 = (a & (0xf0U));
+            uint8_t a2 = ((a & (0x0fU)) << 4);
+            argbRow[x * 4 + 0] = a1 | (a1 >> 4);
+            argbRow[(x + 1) * 4 + 0] = a2 | (a2 >> 4);
+            i += 2;
+        }
     }
     
     error = vImagePremultiplyData_ARGB8888(&dest, &dest, kvImageDoNotTile);

@@ -8,6 +8,10 @@ import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
+import ProgressNavigationButtonNode
+import MediaResources
+import AccountContext
+import RadialStatusNode
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool
@@ -555,7 +559,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             
             if animated {
                 self.blurredNode.blurView.blurRadius = 0.0
-                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
                     self.blurredNode.blurView.blurRadius = blurRadius
                 }, completion: nil)
             } else {
@@ -564,7 +568,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         } else {
             if self.blurredNode.supernode != nil {
                 if animated {
-                    UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                    UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
                         self.blurredNode.blurView.blurRadius = 0.0
                     }, completion: { finished in
                         if finished {

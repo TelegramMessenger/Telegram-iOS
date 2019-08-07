@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import TelegramStringFormatting
 
 class ItemListCallListItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
@@ -107,6 +109,8 @@ class ItemListCallListItemNode: ListViewItemNode {
     let titleNode: TextNode
     var callNodes: [(TextNode, TextNode)]
     
+    private let accessibilityArea: AccessibilityAreaNode
+    
     private var item: ItemListCallListItem?
     
     override var canBeSelected: Bool {
@@ -126,12 +130,16 @@ class ItemListCallListItemNode: ListViewItemNode {
     
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.isAccessibilityElement = false
         
         self.callNodes = []
+        
+        self.accessibilityArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.accessibilityArea)
     }
     
     func asyncLayout() -> (_ item: ItemListCallListItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -294,6 +302,8 @@ class ItemListCallListItemNode: ListViewItemNode {
                         yOffset += layout.0.size.height + 12.0
                         index += 1
                     }
+                    
+                    strongSelf.accessibilityArea.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                 }
             })
         }

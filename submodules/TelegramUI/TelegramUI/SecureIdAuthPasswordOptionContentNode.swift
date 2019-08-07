@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ActivityIndicator
 
 private let passwordFont = Font.regular(16.0)
 private let buttonFont = Font.regular(17.0)

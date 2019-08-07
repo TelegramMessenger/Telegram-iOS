@@ -153,7 +153,7 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.frame = CGRect(origin: CGPoint(), size: size)
         let centralSpacing: CGFloat = 8.0
         
-        let contentInset = UIEdgeInsetsMake(0.0, size.width / 2.0, 0.0, 0.0)
+        let contentInset = UIEdgeInsets(top: 0.0, left: size.width / 2.0, bottom: 0.0, right: 0.0)
         let contentSize = CGSize(width: size.width - contentInset.left + (itemBaseSize.width + spacing) * CGFloat(self.itemNodes.count - 1), height : size.height)
         
         var updated = false

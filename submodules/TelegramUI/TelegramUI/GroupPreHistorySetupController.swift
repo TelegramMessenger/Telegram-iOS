@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
 
 private final class GroupPreHistorySetupArguments {
     let toggle: (Bool) -> Void

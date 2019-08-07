@@ -50,7 +50,7 @@ class InstantPageSettingsItemNode: ASDisplayNode {
             highlightButtonNode.highligthedChanged = { [weak self] highlighted in
                 if let strongSelf = self, let highlightedBackgroundNode = strongSelf.highlightedBackgroundNode {
                     if highlighted {
-                        strongSelf.supernode?.view.bringSubview(toFront: strongSelf.view)
+                        strongSelf.supernode?.view.bringSubviewToFront(strongSelf.view)
                         highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")
                         highlightedBackgroundNode.alpha = 1.0
                     } else {

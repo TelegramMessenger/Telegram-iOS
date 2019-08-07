@@ -6,6 +6,8 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import ProgressNavigationButtonNode
+import AccountContext
 
 final class ChannelStatsController: ViewController {
     private var controllerNode: ChannelStatsControllerNode {

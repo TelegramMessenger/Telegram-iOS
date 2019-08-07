@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import AccountContext
 
 private final class GroupStickerPackSetupControllerArguments {
     let account: Account
@@ -61,7 +63,7 @@ private enum GroupStickerPackEntryId: Hashable {
 }
 
 private enum GroupStickerPackEntry: ItemListNodeEntry {
-    case search(PresentationTheme, String, String, String)
+    case search(PresentationTheme, PresentationStrings, String, String, String)
     case currentPack(Int32, PresentationTheme, PresentationStrings, GroupStickerPackCurrentItemContent)
     case searchInfo(PresentationTheme, String)
     case packsTitle(PresentationTheme, String)
@@ -93,8 +95,8 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
     
     static func ==(lhs: GroupStickerPackEntry, rhs: GroupStickerPackEntry) -> Bool {
         switch lhs {
-        case let .search(lhsTheme, lhsPrefix, lhsPlaceholder, lhsValue):
-            if case let .search(rhsTheme, rhsPrefix, rhsPlaceholder, rhsValue) = rhs, lhsTheme === rhsTheme, lhsPrefix == rhsPrefix, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue {
+        case let .search(lhsTheme, lhsStrings, lhsPrefix, lhsPlaceholder, lhsValue):
+            if case let .search(rhsTheme, rhsStrings, rhsPrefix, rhsPlaceholder, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPrefix == rhsPrefix, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue {
                 return true
             } else {
                 return false
@@ -204,8 +206,8 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
     
     func item(_ arguments: GroupStickerPackSetupControllerArguments) -> ListViewItem {
         switch self {
-            case let .search(theme, prefix, placeholder, value):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearButton: true, tag: nil, sectionId: self.section, textUpdated: { value in
+            case let .search(theme, strings, prefix, placeholder, value):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearButton: true, tag: nil, sectionId: self.section, textUpdated: { value in
                     arguments.updateSearchText(value)
                 }, processPaste: { text in
                     if let url = (URL(string: text) ?? URL(string: "http://" + text)), url.host == "t.me" || url.host == "telegram.me" {
@@ -268,7 +270,7 @@ private func groupStickerPackSetupControllerEntries(presentationData: Presentati
     }
     var entries: [GroupStickerPackEntry] = []
     
-    entries.append(.search(presentationData.theme, "t.me/addstickers/", presentationData.strings.Channel_Stickers_Placeholder, searchText))
+    entries.append(.search(presentationData.theme, presentationData.strings, "t.me/addstickers/", presentationData.strings.Channel_Stickers_Placeholder, searchText))
     switch searchState {
         case .none:
             break

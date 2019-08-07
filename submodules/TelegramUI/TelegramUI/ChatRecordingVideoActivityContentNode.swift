@@ -20,7 +20,7 @@ private class ChatRecordingVideoActivityIndicatorNode: ChatTitleActivityIndicato
     }
     
     override var timingFunction: CAMediaTimingFunction {
-        return CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+        return CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {

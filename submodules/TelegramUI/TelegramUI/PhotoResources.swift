@@ -13,6 +13,10 @@ import WebPImage
 import WebP
 #endif
 import TelegramUIPreferences
+import MediaResources
+import AccountContext
+import Tuples
+import ImageBlur
 
 private enum ResourceFileData {
     case data(Data)
@@ -706,7 +710,7 @@ public func chatMessagePhotoInternal(photoData: Signal<Tuple3<Data?, Data?, Bool
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
@@ -951,7 +955,7 @@ public func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMed
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
@@ -1047,7 +1051,7 @@ public func chatMessageVideoThumbnail(account: Account, fileReference: FileMedia
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData?._0 {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
@@ -1311,7 +1315,7 @@ func avatarGalleryThumbnailPhoto(account: Account, representations: [ImageRepres
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
@@ -1395,7 +1399,7 @@ func mediaGridMessagePhoto(account: Account, photoReference: ImageMediaReference
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
@@ -1592,7 +1596,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - drawingSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - drawingSize.height) / 2.0), size: drawingSize)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
@@ -1855,7 +1859,7 @@ public func chatWebpageSnippetFile(account: Account, fileReference: FileMediaRef
     return signal |> map { fullSizeData in
         return { arguments in
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 let options = NSMutableDictionary()
                 if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
@@ -1898,7 +1902,7 @@ func chatWebpageSnippetPhoto(account: Account, photoReference: ImageMediaReferen
     return signal |> map { fullSizeData in
         return { arguments in
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 let options = NSMutableDictionary()
                 if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
@@ -2034,7 +2038,7 @@ func chatSecretMessageVideo(account: Account, videoReference: FileMediaReference
     }
 }
 
-private func orientationFromExif(orientation: Int) -> UIImageOrientation {
+private func orientationFromExif(orientation: Int) -> UIImage.Orientation {
     switch orientation {
         case 1:
             return .up;
@@ -2057,7 +2061,7 @@ private func orientationFromExif(orientation: Int) -> UIImageOrientation {
     }
 }
 
-func imageOrientationFromSource(_ source: CGImageSource) -> UIImageOrientation {
+func imageOrientationFromSource(_ source: CGImageSource) -> UIImage.Orientation {
     if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) {
         let dict = properties as NSDictionary
         if let value = dict.object(forKey: kCGImagePropertyOrientation) as? NSNumber {
@@ -2068,7 +2072,7 @@ func imageOrientationFromSource(_ source: CGImageSource) -> UIImageOrientation {
     return .up
 }
 
-private func rotationFor(_ orientation: UIImageOrientation) -> CGFloat {
+private func rotationFor(_ orientation: UIImage.Orientation) -> CGFloat {
     switch orientation {
         case .left:
             return CGFloat.pi / 2.0
@@ -2081,7 +2085,7 @@ private func rotationFor(_ orientation: UIImageOrientation) -> CGFloat {
     }
 }
 
-func drawImage(context: CGContext, image: CGImage, orientation: UIImageOrientation, in rect: CGRect) {
+func drawImage(context: CGContext, image: CGImage, orientation: UIImage.Orientation, in rect: CGRect) {
     var restore = true
     var drawRect = rect
     switch orientation {
@@ -2145,7 +2149,7 @@ func chatMessageImageFile(account: Account, fileReference: FileMediaReference, t
             }
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizePath = fullSizePath {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
@@ -2267,7 +2271,7 @@ func instantPageImageFile(account: Account, fileReference: FileMediaReference, f
             let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizePath = fullSizePath {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
@@ -2384,7 +2388,7 @@ func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentat
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
@@ -2512,7 +2516,7 @@ func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaResource) 
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 let options = NSMutableDictionary()
                 options[kCGImageSourceShouldCache as NSString] = false as NSNumber
@@ -2579,7 +2583,7 @@ func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Signal<(T
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if fullSizeData.complete {
                 let options = NSMutableDictionary()
                 options[kCGImageSourceShouldCache as NSString] = false as NSNumber
@@ -2898,7 +2902,7 @@ func securePhotoInternal(account: Account, resource: TelegramMediaResource, acce
             return CGSize(width: 128.0, height: 128.0)
         }, { arguments in
             var fullSizeImage: CGImage?
-            var imageOrientation: UIImageOrientation = .up
+            var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 let options = NSMutableDictionary()
                 if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {

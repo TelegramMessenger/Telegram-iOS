@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import DeviceAccess
+import AccountContext
 
 public final class PermissionController : ViewController {
     private let context: AccountContext

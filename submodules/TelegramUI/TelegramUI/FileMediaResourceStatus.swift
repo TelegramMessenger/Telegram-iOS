@@ -4,6 +4,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import UniversalMediaPlayer
+import AccountContext
 
 enum FileMediaResourcePlaybackStatus: Equatable {
     case playing

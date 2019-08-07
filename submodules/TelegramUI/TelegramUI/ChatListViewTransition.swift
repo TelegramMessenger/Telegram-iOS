@@ -3,6 +3,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
+import MergeLists
 
 struct ChatListNodeView {
     let originalView: ChatListView

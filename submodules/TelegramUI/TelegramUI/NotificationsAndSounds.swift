@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
+import ItemListUI
+import AccountContext
 
 private final class NotificationsAndSoundsArguments {
     let context: AccountContext
@@ -111,7 +113,7 @@ public enum NotificationsAndSoundsEntryTag: ItemListItemTag {
     case joinedNotifications
     case reset
     
-    func isEqual(to other: ItemListItemTag) -> Bool {
+    public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? NotificationsAndSoundsEntryTag, self == other {
             return true
         } else {

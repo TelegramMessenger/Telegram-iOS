@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountContext
 
 private enum PeerMessagesMediaPlaylistLoadAnchor {
     case messageId(MessageId)
@@ -25,20 +26,6 @@ struct MessageMediaPlaylistItemStableId: Hashable {
     
     static func ==(lhs: MessageMediaPlaylistItemStableId, rhs: MessageMediaPlaylistItemStableId) -> Bool {
         return lhs.stableId == rhs.stableId
-    }
-}
-
-struct PeerMessagesMediaPlaylistItemId: SharedMediaPlaylistItemId {
-    let messageId: MessageId
-    
-    func isEqual(to: SharedMediaPlaylistItemId) -> Bool {
-        if let to = to as? PeerMessagesMediaPlaylistItemId {
-            if self.messageId != to.messageId {
-                return false
-            }
-            return true
-        }
-        return false
     }
 }
 

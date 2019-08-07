@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramVoip
+import AccountContext
 
 private final class CallRatingAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings

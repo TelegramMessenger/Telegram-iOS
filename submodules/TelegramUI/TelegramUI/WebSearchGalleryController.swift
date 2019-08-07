@@ -8,6 +8,7 @@ import AsyncDisplayKit
 import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
+import AccountContext
 
 final class WebSearchGalleryControllerInteraction {
     let dismiss: (Bool) -> Void

@@ -14,6 +14,10 @@ import MtProtoKitDynamic
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
+import ItemListUI
+import AccountContext
+import OverlayStatusController
+import AvatarNode
 
 private let maximumNumberOfAccounts = 3
 
@@ -920,7 +924,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 }
                 
                 let completedImpl: (UIImage) -> Void = { image in
-                    if let data = UIImageJPEGRepresentation(image, 0.6) {
+                    if let data = image.jpegData(compressionQuality: 0.6) {
                         let resource = LocalFileMediaResource(fileId: arc4random64())
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                         let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
@@ -1348,7 +1352,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
             accountsAndPeers.set(.never())
-            context.sharedContext.switchToAccount(id: id)
+            context.sharedContext.switchToAccount(id: id, fromSettingsController: nil, withChatListController: nil)
         })
     }
     controller.didAppear = { _ in
@@ -1375,7 +1379,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 sharedContext = context.sharedContext
             })
             if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
-                let accountContext = AccountContext(sharedContext: sharedContext, account: selectedAccount, limitsConfiguration: LimitsConfiguration.defaultValue)
+                let accountContext = sharedContext.makeTempAccountContext(account: selectedAccount)
                 let chatListController = ChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true)
                 return chatListController
             }
@@ -1387,7 +1391,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             let _ = (contextValue.get()
             |> deliverOnMainQueue
             |> take(1)).start(next: { context in
-                context.sharedContext.switchToAccount(id: chatListController.context.account.id, withChatListController: chatListController)
+                context.sharedContext.switchToAccount(id: chatListController.context.account.id, fromSettingsController: nil, withChatListController: chatListController)
             })
         }
     }
@@ -1395,7 +1399,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
-            context.sharedContext.switchToAccount(id: id)
+            context.sharedContext.switchToAccount(id: id, fromSettingsController: nil, withChatListController: nil)
         })
     }
     controller.addAccount = {

@@ -4,6 +4,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
+import ActivityIndicator
 
 struct LocalizationListItemEditing: Equatable {
     let editable: Bool

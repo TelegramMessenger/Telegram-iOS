@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
+import AccountContext
 
 private func availableColors() -> [Int32] {
     return [

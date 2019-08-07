@@ -6,6 +6,8 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
 
 final class BotReceiptControllerArguments {
     fileprivate let account: Account

@@ -1,7 +1,8 @@
 import Foundation
 import UIKit
+import TelegramUIPreferences
 
-private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> PresentationTheme {
+private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: PresentationThemeBaseColor?, preview: Bool) -> PresentationTheme {
     let destructiveColor: UIColor = UIColor(rgb: 0xeb5545)
     let constructiveColor: UIColor = UIColor(rgb: 0x08a723)
     let secretColor: UIColor = UIColor(rgb: 0x00b12c)
@@ -309,6 +310,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> P
         name: .builtin(.night),
         author: "Telegram",
         overallDarkAppearance: true,
+        baseColor: baseColor,
         intro: intro,
         passcode: passcode,
         rootController: rootController,
@@ -321,9 +323,9 @@ private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> P
     )
 }
 
-public let defaultDarkPresentationTheme = makeDarkPresentationTheme(accentColor: .white, preview: false)
+public let defaultDarkPresentationTheme = makeDarkPresentationTheme(accentColor: .white, baseColor: .white, preview: false)
 
-public func makeDarkPresentationTheme(accentColor: UIColor?, preview: Bool) -> PresentationTheme {
+public func makeDarkPresentationTheme(accentColor: UIColor?, baseColor: PresentationThemeBaseColor?, preview: Bool) -> PresentationTheme {
     let accentColor = accentColor ?? .white
-    return makeDarkPresentationTheme(accentColor: accentColor, preview: preview)
+    return makeDarkPresentationTheme(accentColor: accentColor, baseColor: baseColor, preview: preview)
 }

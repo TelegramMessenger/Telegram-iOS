@@ -10,10 +10,10 @@ private final class NavigationButtonItemNode: ASTextNode {
         return self.bold ? UIFont.boldSystemFont(ofSize: 17.0) : UIFont.systemFont(ofSize: 17.0)
     }
     
-    private func attributesForCurrentState() -> [NSAttributedStringKey : AnyObject] {
+    private func attributesForCurrentState() -> [NSAttributedString.Key: AnyObject] {
         return [
-            NSAttributedStringKey.font: self.fontForCurrentState(),
-            NSAttributedStringKey.foregroundColor: self.isEnabled ? self.color : self.disabledColor
+            NSAttributedString.Key.font: self.fontForCurrentState(),
+            NSAttributedString.Key.foregroundColor: self.isEnabled ? self.color : self.disabledColor
         ]
     }
     
@@ -144,7 +144,7 @@ private final class NavigationButtonItemNode: ASTextNode {
         self.hitTestSlop = UIEdgeInsets(top: -16.0, left: -10.0, bottom: -16.0, right: -10.0)
         self.displaysAsynchronously = false
         
-        self.accessibilityTraits = UIAccessibilityTraitButton
+        self.accessibilityTraits = .button
     }
     
     func updateLayout(_ constrainedSize: CGSize) -> CGSize {

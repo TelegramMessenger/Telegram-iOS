@@ -8,6 +8,9 @@ import Display
 import SafariServices
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
+import ShareController
+import SaveToCameraRoll
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -53,6 +56,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var currentWebEmbedHeights: [Int : CGFloat] = [:]
     var currentExpandedDetails: [Int : Bool]?
     var currentDetailsItems: [InstantPageDetailsItem] = []
+    
+    var currentAccessibilityAreas: [AccessibilityAreaNode] = []
     
     private var previousContentOffset: CGPoint?
     private var isDeceleratingBecauseOfDragging = false
@@ -338,7 +343,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if self.scrollNode.bounds.size != layout.size || !self.scrollNode.view.contentInset.top.isEqual(to: scrollInsetTop) {
             self.scrollNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
             self.scrollNodeHeader.frame = CGRect(origin: CGPoint(x: 0.0, y: -2000.0), size: CGSize(width: layout.size.width, height: 2000.0))
-            self.scrollNode.view.contentInset = UIEdgeInsetsMake(scrollInsetTop, 0.0, layout.intrinsicInsets.bottom, 0.0)
+            self.scrollNode.view.contentInset = UIEdgeInsets(top: scrollInsetTop, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
             if widthUpdated {
                 self.updateLayout()
             }
@@ -428,11 +433,21 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.currentExpandedDetails = expandedDetails
         }
         
+        let accessibilityAreas = instantPageAccessibilityAreasFromLayout(currentLayout, boundingWidth: containerLayout.size.width)
+        
         self.currentLayout = currentLayout
         self.currentLayoutTiles = currentLayoutTiles
         self.currentLayoutItemsWithNodes = currentLayoutItemsWithNodes
         self.currentDetailsItems = currentDetailsItems
         self.distanceThresholdGroupCount = distanceThresholdGroupCount
+        
+        for areaNode in self.currentAccessibilityAreas {
+            areaNode.removeFromSupernode()
+        }
+        for areaNode in accessibilityAreas {
+            self.scrollNode.addSubnode(areaNode)
+        }
+        self.currentAccessibilityAreas = accessibilityAreas
         
         self.scrollNode.view.contentSize = currentLayout.contentSize
         self.scrollNodeFooter.frame = CGRect(origin: CGPoint(x: 0.0, y: currentLayout.contentSize.height), size: CGSize(width: containerLayout.size.width, height: 2000.0))
@@ -1256,7 +1271,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
             }
-            self.context.sharedContext.mediaManager.setPlaylist((self.context.account, InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex)), type: file.isVoice ? .voice : .music)
+            self.context.sharedContext.mediaManager.setPlaylist((self.context.account, InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex)), type: file.isVoice ? .voice : .music, control: .playback(.play))
             return
         }
         

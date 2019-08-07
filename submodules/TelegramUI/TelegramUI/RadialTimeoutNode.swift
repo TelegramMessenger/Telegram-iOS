@@ -67,7 +67,7 @@ public final class RadialTimeoutNode: ASDisplayNode {
                 self?.setNeedsDisplay()
             }), selector: #selector(RadialTimeoutNodeTimer.event), userInfo: nil, repeats: true)
             self.animationTimer = animationTimer
-            RunLoop.main.add(animationTimer, forMode: RunLoopMode.commonModes)
+            RunLoop.main.add(animationTimer, forMode: .common)
         }
     }
     

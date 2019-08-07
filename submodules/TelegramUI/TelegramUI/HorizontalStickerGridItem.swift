@@ -5,6 +5,7 @@ import TelegramCore
 import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
+import StickerResources
 
 final class HorizontalStickerGridItem: GridItem {
     let account: Account

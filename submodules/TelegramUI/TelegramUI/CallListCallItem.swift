@@ -6,6 +6,9 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import AvatarNode
+import TelegramStringFormatting
 
 private let titleFont = Font.regular(17.0)
 private let statusFont = Font.regular(14.0)
@@ -186,6 +189,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     
     var editableControlNode: ItemListEditableControlNode?
     
+    private let accessibilityArea: AccessibilityAreaNode
+    
     private var avatarState: (Account, Peer?)?
     private var layoutParams: (CallListCallItem, ListViewItemLayoutParams, Bool, Bool, Bool)?
     
@@ -217,6 +222,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         self.infoButtonNode = HighlightableButtonNode()
         self.infoButtonNode.hitTestSlop = UIEdgeInsets(top: -6.0, left: -6.0, bottom: -6.0, right: -10.0)
         
+        self.accessibilityArea = AccessibilityAreaNode()
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.backgroundNode)
@@ -226,8 +233,17 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.statusNode)
         self.addSubnode(self.dateNode)
         self.addSubnode(self.infoButtonNode)
+        self.addSubnode(self.accessibilityArea)
         
         self.infoButtonNode.addTarget(self, action: #selector(self.infoPressed), forControlEvents: .touchUpInside)
+        
+        self.accessibilityArea.activate = { [weak self] in
+            guard let item = self?.layoutParams?.0 else {
+                return false
+            }
+            item.interaction.call(item.topMessage.id.peerId)
+            return true
+        }
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -560,6 +576,15 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             
                             strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                             
+                            strongSelf.accessibilityArea.accessibilityTraits = .button
+                            strongSelf.accessibilityArea.accessibilityLabel = titleAttributedString?.string
+                            strongSelf.accessibilityArea.accessibilityValue = statusAttributedString?.string
+                            strongSelf.accessibilityArea.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
+                            
+                            strongSelf.infoButtonNode.accessibilityLabel = item.strings.Conversation_Info
+                            
+                            strongSelf.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: item.strings.Common_Delete, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)))]
+                            
                             strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                             strongSelf.setRevealOptionsOpened(item.revealed, animated: animated)
                         }
@@ -653,6 +678,12 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()
+        if let item = self.layoutParams?.0 {
+            item.interaction.delete(item.messages.map { $0.id })
+        }
+    }
+    
+    @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) {
         if let item = self.layoutParams?.0 {
             item.interaction.delete(item.messages.map { $0.id })
         }

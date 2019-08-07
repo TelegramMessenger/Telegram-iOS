@@ -6,6 +6,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 enum PrivacyIntroControllerMode {
     case passcode

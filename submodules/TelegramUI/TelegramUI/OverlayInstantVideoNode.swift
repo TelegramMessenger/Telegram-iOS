@@ -9,6 +9,7 @@ import TelegramPresentationData
 import UniversalMediaPlayer
 import TelegramUIPreferences
 import TelegramAudio
+import AccountContext
 
 final class OverlayInstantVideoNode: OverlayMediaItemNode {
     private let content: UniversalVideoContent
@@ -39,7 +40,7 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode {
     
     var playbackEnded: (() -> Void)?
     
-    init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoContentManager, content: UniversalVideoContent, close: @escaping () -> Void) {
+    init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, close: @escaping () -> Void) {
         self.close = close
         self.content = content
         var togglePlayPauseImpl: (() -> Void)?

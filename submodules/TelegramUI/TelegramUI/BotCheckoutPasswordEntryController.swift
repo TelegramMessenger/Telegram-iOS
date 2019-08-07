@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 private struct BotCheckoutPasswordAlertAction {
     public let title: String
@@ -150,7 +151,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.textFieldNode = TextFieldNode()
         self.textFieldNode.textField.textColor = theme.actionSheet.primaryTextColor
         self.textFieldNode.textField.font = Font.regular(12.0)
-        self.textFieldNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(12.0)]
+        self.textFieldNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(12.0)]
         self.textFieldNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
         self.textFieldNode.textField.isSecureTextEntry = true
         

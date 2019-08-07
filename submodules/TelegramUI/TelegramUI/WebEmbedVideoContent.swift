@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramAudio
 import UniversalMediaPlayer
 import LegacyComponents
+import AccountContext
 
 final class WebEmbedVideoContent: UniversalVideoContent {
     let id: AnyHashable

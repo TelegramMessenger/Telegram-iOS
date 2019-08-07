@@ -6,6 +6,13 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import AvatarNode
+import TelegramStringFormatting
+import AccountContext
+import PeerOnlineMarkerNode
+import LocalizedPeerData
+import PeerPresenceStatusManager
 
 enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
@@ -261,6 +268,16 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
     return options
 }
 
+private final class ChatListItemAccessibilityCustomAction: UIAccessibilityCustomAction {
+    let key: Int32
+    
+    init(name: String, target: Any?, selector: Selector, key: Int32) {
+        self.key = key
+        
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 private let separatorHeight = 1.0 / UIScreen.main.scale
 
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
@@ -283,7 +300,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let statusNode: ChatListStatusNode
     let badgeNode: ChatListBadgeNode
     let mentionBadgeNode: ChatListBadgeNode
-    let onlineNode: ChatListOnlineNode
+    let onlineNode: PeerOnlineMarkerNode
     let pinnedIconNode: ASImageNode
     var secretIconNode: ASImageNode?
     var credibilityIconNode: ASImageNode?
@@ -414,7 +431,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.statusNode = ChatListStatusNode()
         self.badgeNode = ChatListBadgeNode()
         self.mentionBadgeNode = ChatListBadgeNode()
-        self.onlineNode = ChatListOnlineNode()
+        self.onlineNode = PeerOnlineMarkerNode()
         
         self.pinnedIconNode = ASImageNode()
         self.pinnedIconNode.isLayerBacked = true
@@ -1077,6 +1094,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let contentImageSize = CGSize(width: 22.0, height: 22.0)
             
+            var customActions: [ChatListItemAccessibilityCustomAction] = []
+            for option in peerLeftRevealOptions {
+                customActions.append(ChatListItemAccessibilityCustomAction(name: option.title, target: nil, selector: #selector(ChatListItemNode.performLocalAccessibilityCustomAction(_:)), key: option.key))
+            }
+            for option in peerRevealOptions {
+                customActions.append(ChatListItemAccessibilityCustomAction(name: option.title, target: nil, selector: #selector(ChatListItemNode.performLocalAccessibilityCustomAction(_:)), key: option.key))
+            }
+            
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params, countersSize)
@@ -1448,6 +1473,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.view.accessibilityLabel = strongSelf.accessibilityLabel
                     strongSelf.view.accessibilityValue = strongSelf.accessibilityValue
+                    
+                    if !customActions.isEmpty {
+                        strongSelf.view.accessibilityCustomActions = customActions.map({ action -> UIAccessibilityCustomAction in
+                            return ChatListItemAccessibilityCustomAction(name: action.name, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)), key: action.key)
+                        })
+                    } else {
+                        strongSelf.view.accessibilityCustomActions = nil
+                    }
                 }
             })
         }
@@ -1679,7 +1712,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             self.highlightedBackgroundNode.alpha = 0.0
         }
         self.highlightedBackgroundNode.layer.removeAllAnimations()
-        self.highlightedBackgroundNode.layer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseOut, duration: 0.3, delay: 0.7, completion: { [weak self] _ in
+        self.highlightedBackgroundNode.layer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.3, delay: 0.7, completion: { [weak self] _ in
             self?.updateIsHighlighted(transition: .immediate)
         })
     }
@@ -1702,6 +1735,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 separatorFrame.origin.y = currentValue - UIScreenPixel
                 self.separatorNode.frame = separatorFrame
             }
+        }
+    }
+    
+    @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) {
+        if let action = action as? ChatListItemAccessibilityCustomAction {
+            self.revealOptionSelected(ItemListRevealOption(key: action.key, title: "", icon: .none, color: .black, textColor: .white), animated: false)
         }
     }
 }

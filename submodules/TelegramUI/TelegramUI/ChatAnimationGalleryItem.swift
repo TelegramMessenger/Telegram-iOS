@@ -7,6 +7,10 @@ import Postbox
 import TelegramCore
 import Lottie
 import TelegramPresentationData
+import AnimationUI
+import AccountContext
+import RadialStatusNode
+import StickerResources
 
 class ChatAnimationGalleryItem: GalleryItem {
     let context: AccountContext
@@ -145,7 +149,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
                 guard let strongSelf = self else {
                     return
                 }
-                if let object = try? JSONSerialization.jsonObject(with: next, options: []) as? [AnyHashable: Any], let json = object {
+                if let json = try? JSONSerialization.jsonObject(with: next, options: []) as? [AnyHashable: Any] {
                     let containerSize = CGSize(width: 640.0, height: 640.0)
                     strongSelf.animationNode.setAnimation(json: json)
                     strongSelf.zoomableContent = (containerSize, strongSelf.containerNode)
@@ -297,7 +301,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
         })
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
+        self.statusNodeContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false)
     }
     
     override func visibilityUpdated(isVisible: Bool) {

@@ -8,6 +8,9 @@ import SwiftSignalKit
 import UniversalMediaPlayer
 import TelegramPresentationData
 import TelegramUIPreferences
+import MergeLists
+import ItemListUI
+import AccountContext
 
 private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpaper) -> Bool {
     switch lhs {

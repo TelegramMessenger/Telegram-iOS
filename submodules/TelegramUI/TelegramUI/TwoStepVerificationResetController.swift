@@ -5,6 +5,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ItemListUI
+import TextFormat
+import AccountContext
 
 private final class TwoStepVerificationResetControllerArguments {
     let updateEntryText: (String) -> Void
@@ -42,7 +45,7 @@ private enum TwoStepVerificationResetTag: ItemListItemTag {
 }
 
 private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
-    case codeEntry(PresentationTheme, String, String)
+    case codeEntry(PresentationTheme, PresentationStrings, String, String)
     case codeInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -60,8 +63,8 @@ private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
     
     static func ==(lhs: TwoStepVerificationResetEntry, rhs: TwoStepVerificationResetEntry) -> Bool {
         switch lhs {
-            case let .codeEntry(lhsTheme, lhsPlaceholder, lhsText):
-                if case let .codeEntry(rhsTheme, rhsPlaceholder, rhsText) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsText == rhsText {
+            case let .codeEntry(lhsTheme, lhsStrings, lhsPlaceholder, lhsText):
+                if case let .codeEntry(rhsTheme, rhsStrings, rhsPlaceholder, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPlaceholder == rhsPlaceholder, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -81,8 +84,8 @@ private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
     
     func item(_ arguments: TwoStepVerificationResetControllerArguments) -> ListViewItem {
         switch self {
-            case let .codeEntry(theme, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: placeholder, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationResetTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .codeEntry(theme, strings, placeholder, text):
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: placeholder, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationResetTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
@@ -125,7 +128,7 @@ private struct TwoStepVerificationResetControllerState: Equatable {
 private func twoStepVerificationResetControllerEntries(presentationData: PresentationData, state: TwoStepVerificationResetControllerState, emailPattern: String) -> [TwoStepVerificationResetEntry] {
     var entries: [TwoStepVerificationResetEntry] = []
 
-    entries.append(.codeEntry(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCode, state.codeText))
+    entries.append(.codeEntry(presentationData.theme, presentationData.strings, presentationData.strings.TwoStepAuth_RecoveryCode, state.codeText))
     entries.append(.codeInfo(presentationData.theme, "\(presentationData.strings.TwoStepAuth_RecoveryCodeHelp)\n\n[\(presentationData.strings.TwoStepAuth_RecoveryEmailUnavailable(escapedPlaintextForMarkdown(emailPattern)).0)]()"))
     
     return entries

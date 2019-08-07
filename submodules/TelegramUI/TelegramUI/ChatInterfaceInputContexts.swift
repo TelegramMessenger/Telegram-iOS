@@ -3,6 +3,7 @@ import UIKit
 import TelegramCore
 import Postbox
 import Display
+import AccountContext
 
 struct PossibleContextQueryTypes: OptionSet {
     var rawValue: Int32

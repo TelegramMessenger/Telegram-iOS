@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import StickerResources
 
 enum StickerPreviewPeekItem: Equatable {
     case pack(StickerPackItem)

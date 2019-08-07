@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import AvatarNode
 
 private let normalFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 private let smallFont = UIFont(name: ".SFCompactRounded-Semibold", size: 12.0)!

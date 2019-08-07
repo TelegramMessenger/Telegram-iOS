@@ -206,7 +206,7 @@ final class NotificationItemContainerNode: ASDisplayNode {
                     var bounds = self.bounds
                     bounds.origin.y = 0.0
                     self.bounds = bounds
-                    self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
+                    self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                     
                     self.willBeExpanded = false
                 }
@@ -217,7 +217,7 @@ final class NotificationItemContainerNode: ASDisplayNode {
                 var bounds = self.bounds
                 bounds.origin.y = 0.0
                 self.bounds = bounds
-                self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
+                self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
             default:
                 break
         }
