@@ -279,7 +279,7 @@ final class ManagedAudioRecorderContext {
                         strongSelf.toneTimer?.invalidate()
                     }
                 }
-            }, queue: queue)
+                }, queue: queue)
             self.toneTimer = toneTimer
             toneTimer.start()
         } else {
@@ -287,25 +287,25 @@ final class ManagedAudioRecorderContext {
         }
         
         /*if beginWithTone, let beginToneData = beginToneData {
-            self.tonePlayer = TonePlayer()
-            self.tonePlayer?.play(data: beginToneData, completed: { [weak self] in
-                queue.async {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let toneTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: false, completion: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.processSamples = true
-                    }, queue: queue)
-                    strongSelf.toneTimer = toneTimer
-                    toneTimer.start()
-                }
-            })
-        } else {
-            self.processSamples = true
-        }*/
+         self.tonePlayer = TonePlayer()
+         self.tonePlayer?.play(data: beginToneData, completed: { [weak self] in
+         queue.async {
+         guard let strongSelf = self else {
+         return
+         }
+         let toneTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: false, completion: { [weak self] in
+         guard let strongSelf = self else {
+         return
+         }
+         strongSelf.processSamples = true
+         }, queue: queue)
+         strongSelf.toneTimer = toneTimer
+         toneTimer.start()
+         }
+         })
+         } else {
+         self.processSamples = true
+         }*/
         
         addAudioRecorderContext(self.id, self)
         addAudioUnitHolder(self.id, queue, self.audioUnit)
@@ -314,7 +314,7 @@ final class ManagedAudioRecorderContext {
         
         self.idleTimerExtensionDisposable = (Signal<Void, NoError> { subscriber in
             return pushIdleTimerExtension()
-        } |> delay(5.0, queue: queue)).start()
+            } |> delay(5.0, queue: queue)).start()
     }
     
     deinit {
@@ -401,19 +401,19 @@ final class ManagedAudioRecorderContext {
                         strongSelf.audioSessionAcquired(headset: state.isHeadsetConnected)
                     }
                 }
-            }, deactivate: { [weak self] in
-                return Signal { subscriber in
-                    queue.async {
-                        if let strongSelf = self {
-                            strongSelf.hasAudioSession = false
-                            strongSelf.stop()
-                            strongSelf.recordingState.set(.stopped)
-                            subscriber.putCompletion()
+                }, deactivate: { [weak self] in
+                    return Signal { subscriber in
+                        queue.async {
+                            if let strongSelf = self {
+                                strongSelf.hasAudioSession = false
+                                strongSelf.stop()
+                                strongSelf.recordingState.set(.stopped)
+                                subscriber.putCompletion()
+                            }
                         }
+                        
+                        return EmptyDisposable
                     }
-                    
-                    return EmptyDisposable
-                }
             })
         }
     }

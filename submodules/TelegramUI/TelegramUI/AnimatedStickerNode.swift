@@ -126,7 +126,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
         self.queue = queue
         self.data = data
         self.scratchBuffer = Data(count: compression_decode_scratch_buffer_size(COMPRESSION_LZFSE))
-
+        
         var offset = 0
         var width = 0
         var height = 0
@@ -403,7 +403,7 @@ final class AnimatedStickerNode: ASDisplayNode {
         self.renderer?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
         self.addSubnode(self.renderer!)
     }
-        
+    
     func setup(account: Account, resource: MediaResource, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
         if width < 2 || height < 2 {
             return
@@ -412,27 +412,27 @@ final class AnimatedStickerNode: ASDisplayNode {
         switch mode {
             case .direct:
                 self.disposable.set((account.postbox.mediaBox.resourceData(resource)
-                |> deliverOnMainQueue).start(next: { [weak self] data in
-                    guard let strongSelf = self, data.complete else {
-                        return
-                    }
-                    if let directData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead]) {
-                        strongSelf.directData = Tuple(directData, data.path, width, height)
-                    }
-                    if strongSelf.isPlaying {
-                        strongSelf.play()
-                    }
-                }))
-            case .cached:
-                self.disposable.set((chatMessageAnimationData(postbox: account.postbox, resource: resource, width: width, height: height, synchronousLoad: false)
-                |> deliverOnMainQueue).start(next: { [weak self] data in
-                    if let strongSelf = self, data.complete {
-                        strongSelf.cachedData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead])
+                    |> deliverOnMainQueue).start(next: { [weak self] data in
+                        guard let strongSelf = self, data.complete else {
+                            return
+                        }
+                        if let directData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead]) {
+                            strongSelf.directData = Tuple(directData, data.path, width, height)
+                        }
                         if strongSelf.isPlaying {
                             strongSelf.play()
                         }
-                    }
-                }))
+                    }))
+            case .cached:
+                self.disposable.set((chatMessageAnimationData(postbox: account.postbox, resource: resource, width: width, height: height, synchronousLoad: false)
+                    |> deliverOnMainQueue).start(next: { [weak self] data in
+                        if let strongSelf = self, data.complete {
+                            strongSelf.cachedData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead])
+                            if strongSelf.isPlaying {
+                                strongSelf.play()
+                            }
+                        }
+                    }))
         }
     }
     
@@ -565,7 +565,7 @@ final class AnimatedStickerNode: ASDisplayNode {
                             strongSelf.started()
                         }
                     })
-
+                    
                     strongSelf.playbackStatus.set(.single(AnimatedStickerStatus(playing: false, duration: duration, timestamp: 0.0)))
                 }
             }
