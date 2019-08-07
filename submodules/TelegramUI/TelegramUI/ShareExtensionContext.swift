@@ -292,7 +292,9 @@ public class ShareRootControllerImpl {
                     }
                     
                     cancelImpl = { [weak shareController] in
-                        shareController?.dismiss()
+                        shareController?.dismiss(completion: { [weak self] in
+                            self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+                        })
                     }
                     
                     if let strongSelf = self {

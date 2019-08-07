@@ -196,7 +196,9 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
                 var currentFrame: Int32 = 0
                 
                 var fps: Int32 = player.frameRate
+                var frameCount: Int32 = player.frameCount
                 let _ = fileContext.write(&fps, count: 4)
+                let _ = fileContext.write(&frameCount, count: 4)
                 var widthValue: Int32 = Int32(size.width)
                 var heightValue: Int32 = Int32(size.height)
                 var bytesPerRowValue: Int32 = Int32(bytesPerRow)
