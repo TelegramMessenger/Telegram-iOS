@@ -10,46 +10,46 @@ public extension TabBarControllerTheme {
 }
 
 public extension NavigationBarTheme {
-    convenience public init(rootControllerTheme: PresentationTheme) {
+    convenience init(rootControllerTheme: PresentationTheme) {
         let theme = rootControllerTheme.rootController.navigationBar
         self.init(buttonColor: theme.buttonColor, disabledButtonColor: theme.disabledButtonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: theme.backgroundColor, separatorColor: theme.separatorColor, badgeBackgroundColor: theme.badgeBackgroundColor, badgeStrokeColor: theme.badgeStrokeColor, badgeTextColor: theme.badgeTextColor)
     }
 }
 
 public extension NavigationBarStrings {
-    convenience public init(presentationStrings: PresentationStrings) {
+    convenience init(presentationStrings: PresentationStrings) {
         self.init(back: presentationStrings.Common_Back, close: presentationStrings.Common_Close)
     }
 }
 
 public extension NavigationBarPresentationData {
-    convenience public init(presentationData: PresentationData) {
+    convenience init(presentationData: PresentationData) {
         self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
     }
 }
 
 public extension ActionSheetControllerTheme {
-    convenience public init(presentationTheme: PresentationTheme) {
+    convenience init(presentationTheme: PresentationTheme) {
         let actionSheet = presentationTheme.actionSheet
         self.init(dimColor: actionSheet.dimColor, backgroundType: actionSheet.backgroundType == .light ? .light : .dark, itemBackgroundColor: actionSheet.itemBackgroundColor, itemHighlightedBackgroundColor: actionSheet.itemHighlightedBackgroundColor, standardActionTextColor: actionSheet.standardActionTextColor, destructiveActionTextColor: actionSheet.destructiveActionTextColor, disabledActionTextColor: actionSheet.disabledActionTextColor, primaryTextColor: actionSheet.primaryTextColor, secondaryTextColor: actionSheet.secondaryTextColor, controlAccentColor: actionSheet.controlAccentColor, controlColor: presentationTheme.list.disclosureArrowColor, switchFrameColor: presentationTheme.list.itemSwitchColors.frameColor, switchContentColor: presentationTheme.list.itemSwitchColors.contentColor, switchHandleColor: presentationTheme.list.itemSwitchColors.handleColor)
     }
 }
 
 public extension ActionSheetController {
-    convenience public init(presentationTheme: PresentationTheme) {
+    convenience init(presentationTheme: PresentationTheme) {
         self.init(theme: ActionSheetControllerTheme(presentationTheme: presentationTheme))
     }
 }
 
 public extension AlertControllerTheme {
-    convenience public init(presentationTheme: PresentationTheme) {
+    convenience init(presentationTheme: PresentationTheme) {
         let actionSheet = presentationTheme.actionSheet
         self.init(backgroundType: actionSheet.backgroundType == .light ? .light : .dark, backgroundColor: actionSheet.itemBackgroundColor, separatorColor: actionSheet.itemHighlightedBackgroundColor, highlightedItemColor: actionSheet.itemHighlightedBackgroundColor, primaryColor: actionSheet.primaryTextColor, secondaryColor: actionSheet.secondaryTextColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor, disabledColor: actionSheet.disabledActionTextColor)
     }
 }
 
 extension PeekControllerTheme {
-    convenience public init(presentationTheme: PresentationTheme) {
+    convenience init(presentationTheme: PresentationTheme) {
         let actionSheet = presentationTheme.actionSheet
         self.init(isDark: actionSheet.backgroundType == .dark, menuBackgroundColor: actionSheet.opaqueItemBackgroundColor, menuItemHighligtedColor: actionSheet.opaqueItemHighlightedBackgroundColor, menuItemSeparatorColor: actionSheet.opaqueItemSeparatorColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor)
     }
