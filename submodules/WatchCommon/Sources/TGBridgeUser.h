@@ -53,10 +53,10 @@ typedef NS_ENUM(NSUInteger, TGBridgeBotKind) {
 
 @interface TGBridgeUserChange : NSObject <NSCoding>
 
-@property (nonatomic, readonly) int32_t userIdentifier;
+@property (nonatomic, readonly) int64_t userIdentifier;
 @property (nonatomic, readonly) NSDictionary *fields;
 
-- (instancetype)initWithUserIdentifier:(int32_t)userIdentifier fields:(NSDictionary *)fields;
+- (instancetype)initWithUserIdentifier:(int64_t)userIdentifier fields:(NSDictionary *)fields;
 
 @end
 
