@@ -291,7 +291,9 @@ public:
      */
     static std::unique_ptr<Animation>
     loadFromData(std::string jsonData, const std::string &key,
-                 const std::string &resourcePath="", bool cachePolicy=true);
+                 const std::string &resourcePath="", bool cachePolicy=true,
+	             const std::vector<std::pair<std::uint32_t, std::uint32_t>>
+				     &colorReplacements = {});
 
     /**
      *  @brief Returns default framerate of the Lottie resource.

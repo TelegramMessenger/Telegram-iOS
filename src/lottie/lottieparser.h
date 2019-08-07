@@ -26,7 +26,9 @@ class LottieParserImpl;
 class LottieParser {
 public:
     ~LottieParser();
-    LottieParser(char* str, const char *dir_path);
+    LottieParser(char *str, const char *dir_path,
+                 const std::vector<std::pair<std::uint32_t, std::uint32_t>>
+                     &colorReplacements = {});
     std::shared_ptr<LOTModel> model();
 private:
    std::unique_ptr<LottieParserImpl>  d;

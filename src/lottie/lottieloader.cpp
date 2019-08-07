@@ -140,8 +140,11 @@ bool LottieLoader::load(const std::string &path, bool cachePolicy)
     return true;
 }
 
-bool LottieLoader::loadFromData(std::string &&jsonData, const std::string &key,
-                                const std::string &resourcePath, bool cachePolicy)
+bool LottieLoader::loadFromData(
+    std::string &&jsonData, const std::string &key,
+    const std::string &resourcePath, bool cachePolicy,
+    const std::vector<std::pair<std::uint32_t, std::uint32_t>>
+        &colorReplacements)
 {
     if (cachePolicy) {
         mModel = LottieModelCache::instance().find(key);
@@ -149,7 +152,7 @@ bool LottieLoader::loadFromData(std::string &&jsonData, const std::string &key,
     }
 
     LottieParser parser(const_cast<char *>(jsonData.c_str()),
-                        resourcePath.c_str());
+                        resourcePath.c_str(), colorReplacements);
     mModel = parser.model();
 
     if (!mModel) return false;

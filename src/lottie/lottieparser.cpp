@@ -169,8 +169,14 @@ protected:
 
 class LottieParserImpl : public LookaheadParserHandler {
 public:
-    LottieParserImpl(char *str, const char *dir_path)
-        : LookaheadParserHandler(str), mDirPath(dir_path) {}
+    LottieParserImpl(char *str, const char *dir_path,
+                     const std::vector<std::pair<std::uint32_t, std::uint32_t>>
+                         &colorReplacements)
+        : LookaheadParserHandler(str),
+          mColorReplacements(colorReplacements),
+          mDirPath(dir_path)
+    {
+    }
     bool VerifyType();
     bool ParseNext();
 public:
@@ -257,10 +263,13 @@ public:
     std::shared_ptr<VInterpolator> interpolator(VPointF, VPointF, std::string);
 
     LottieColor toColor(const char *str);
+    LottieColor applyReplacements(const LottieColor &color);
 
     void resolveLayerRefs();
 
 protected:
+    const std::vector<std::pair<std::uint32_t, std::uint32_t>>
+        &mColorReplacements;
     std::unordered_map<std::string, std::shared_ptr<VInterpolator>>
                                                mInterpolatorCache;
     std::shared_ptr<LOTCompositionData>        mComposition;
@@ -789,6 +798,27 @@ LottieColor LottieParserImpl::toColor(const char *str)
     tmp[1] = str[6];
     color.b = std::strtol(tmp, nullptr, 16) / 255.0f;
 
+    return applyReplacements(color);
+}
+
+LottieColor LottieParserImpl::applyReplacements(const LottieColor &color)
+{
+    if (mColorReplacements.empty()) {
+        return color;
+    }
+    const auto convert = [](float value) {
+        return std::uint32_t(std::round(std::clamp(value, 0.f, 1.f) * 255.));
+    };
+    const auto part = [](std::uint32_t value, int shift) {
+        return float((value >> shift) & 0xFFU) / 255.f;
+	};
+    const auto converted =
+        convert(color.b) | (convert(color.g) << 8) | (convert(color.r) << 16);
+    for (const auto [key, value] : mColorReplacements) {
+        if (key == converted) {
+            return LottieColor(part(value, 16), part(value, 8), part(value, 0));
+        }
+    }
     return color;
 }
 
@@ -1746,9 +1776,7 @@ void LottieParserImpl::getValue(LottieColor &color)
     while (NextArrayValue()) {
         val[i++] = GetDouble();
     }
-    color.r = val[0];
-    color.g = val[1];
-    color.b = val[2];
+    color = applyReplacements(LottieColor(val[0], val[1], val[2]));
 }
 
 void LottieParserImpl::getValue(LottieGradient &grad)
@@ -2254,8 +2282,11 @@ public:
 #endif
 
 LottieParser::~LottieParser() = default;
-LottieParser::LottieParser(char *str, const char *dir_path)
-    : d(std::make_unique<LottieParserImpl>(str, dir_path))
+LottieParser::LottieParser(
+    char *str, const char *dir_path,
+    const std::vector<std::pair<std::uint32_t, std::uint32_t>>
+        &colorReplacements)
+    : d(std::make_unique<LottieParserImpl>(str, dir_path, colorReplacements))
 {
     if (d->VerifyType())
         d->parseComposition();
