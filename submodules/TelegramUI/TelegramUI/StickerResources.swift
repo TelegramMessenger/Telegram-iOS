@@ -496,7 +496,7 @@ public func chatMessageAnimatedSticker(postbox: Postbox, file: TelegramMediaFile
             }
             
             var thumbnailImage: (UIImage, UIImage)?
-            if fullSizeImage == nil, let thumbnailData = thumbnailData {
+            if fullSizeImage == nil, let thumbnailData = thumbnailData, fitzModifier == nil {
                 if let image = imageFromAJpeg(data: thumbnailData) {
                     thumbnailImage = image
                 }
