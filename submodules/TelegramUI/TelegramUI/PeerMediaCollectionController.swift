@@ -297,7 +297,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
                 }), in: .window(.root))
             }
         }, reportMessages: { _ in
-        }, deleteMessages: { _ in
+        }, deleteMessages: { _, _, f in
+            f(.default)
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let forwardMessageIdsSet = strongSelf.interfaceState.selectionState?.selectedIds {

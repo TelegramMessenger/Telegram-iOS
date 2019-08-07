@@ -71,29 +71,41 @@ private func chatBubbleActionButtonImage(fillColor: UIColor, strokeColor: UIColo
 }
 
 public final class PrincipalThemeEssentialGraphics {
+    public let chatMessageBackgroundIncomingMaskImage: UIImage
     public let chatMessageBackgroundIncomingImage: UIImage
     public let chatMessageBackgroundIncomingHighlightedImage: UIImage
+    public let chatMessageBackgroundIncomingMergedTopMaskImage: UIImage
     public let chatMessageBackgroundIncomingMergedTopImage: UIImage
     public let chatMessageBackgroundIncomingMergedTopHighlightedImage: UIImage
+    public let chatMessageBackgroundIncomingMergedTopSideMaskImage: UIImage
     public let chatMessageBackgroundIncomingMergedTopSideImage: UIImage
     public let chatMessageBackgroundIncomingMergedTopSideHighlightedImage: UIImage
+    public let chatMessageBackgroundIncomingMergedBottomMaskImage: UIImage
     public let chatMessageBackgroundIncomingMergedBottomImage: UIImage
     public let chatMessageBackgroundIncomingMergedBottomHighlightedImage: UIImage
+    public let chatMessageBackgroundIncomingMergedBothMaskImage: UIImage
     public let chatMessageBackgroundIncomingMergedBothImage: UIImage
     public let chatMessageBackgroundIncomingMergedBothHighlightedImage: UIImage
+    public let chatMessageBackgroundIncomingMergedSideMaskImage: UIImage
     public let chatMessageBackgroundIncomingMergedSideImage: UIImage
     public let chatMessageBackgroundIncomingMergedSideHighlightedImage: UIImage
     
+    public let chatMessageBackgroundOutgoingMaskImage: UIImage
     public let chatMessageBackgroundOutgoingImage: UIImage
     public let chatMessageBackgroundOutgoingHighlightedImage: UIImage
+    public let chatMessageBackgroundOutgoingMergedTopMaskImage: UIImage
     public let chatMessageBackgroundOutgoingMergedTopImage: UIImage
     public let chatMessageBackgroundOutgoingMergedTopHighlightedImage: UIImage
+    public let chatMessageBackgroundOutgoingMergedTopSideMaskImage: UIImage
     public let chatMessageBackgroundOutgoingMergedTopSideImage: UIImage
     public let chatMessageBackgroundOutgoingMergedTopSideHighlightedImage: UIImage
+    public let chatMessageBackgroundOutgoingMergedBottomMaskImage: UIImage
     public let chatMessageBackgroundOutgoingMergedBottomImage: UIImage
     public let chatMessageBackgroundOutgoingMergedBottomHighlightedImage: UIImage
+    public let chatMessageBackgroundOutgoingMergedBothMaskImage: UIImage
     public let chatMessageBackgroundOutgoingMergedBothImage: UIImage
     public let chatMessageBackgroundOutgoingMergedBothHighlightedImage: UIImage
+    public let chatMessageBackgroundOutgoingMergedSideMaskImage: UIImage
     public let chatMessageBackgroundOutgoingMergedSideImage: UIImage
     public let chatMessageBackgroundOutgoingMergedSideHighlightedImage: UIImage
     
@@ -201,28 +213,40 @@ public final class PrincipalThemeEssentialGraphics {
         
         let emptyImage = UIImage()
         if preview {
+            self.chatMessageBackgroundIncomingMaskImage = messageBubbleImage(incoming: true, fillColor: UIColor.black, strokeColor: UIColor.clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundIncomingHighlightedImage = emptyImage
+            self.chatMessageBackgroundIncomingMergedTopMaskImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopHighlightedImage = emptyImage
+            self.chatMessageBackgroundIncomingMergedTopSideMaskImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopSideImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopSideHighlightedImage = emptyImage
+            self.chatMessageBackgroundIncomingMergedBottomMaskImage = emptyImage
             self.chatMessageBackgroundIncomingMergedBottomImage = emptyImage
             self.chatMessageBackgroundIncomingMergedBottomHighlightedImage = emptyImage
+            self.chatMessageBackgroundIncomingMergedBothMaskImage = emptyImage
             self.chatMessageBackgroundIncomingMergedBothImage = emptyImage
             self.chatMessageBackgroundIncomingMergedBothHighlightedImage = emptyImage
+            self.chatMessageBackgroundIncomingMergedSideMaskImage = emptyImage
             self.chatMessageBackgroundIncomingMergedSideImage = emptyImage
             self.chatMessageBackgroundIncomingMergedSideHighlightedImage = emptyImage
+            self.chatMessageBackgroundOutgoingMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingHighlightedImage = emptyImage
+            self.chatMessageBackgroundOutgoingMergedTopMaskImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopHighlightedImage = emptyImage
+            self.chatMessageBackgroundOutgoingMergedTopSideMaskImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopSideImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopSideHighlightedImage = emptyImage
+            self.chatMessageBackgroundOutgoingMergedBottomMaskImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedBottomImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedBottomHighlightedImage = emptyImage
+            self.chatMessageBackgroundOutgoingMergedBothMaskImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedBothImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedBothHighlightedImage = emptyImage
+            self.chatMessageBackgroundOutgoingMergedSideMaskImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedSideImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedSideHighlightedImage = emptyImage
             self.checkBubbleFullImage = emptyImage
@@ -250,29 +274,41 @@ public final class PrincipalThemeEssentialGraphics {
             self.radialIndicatorFileIconIncoming = emptyImage
             self.radialIndicatorFileIconOutgoing = emptyImage
         } else {
+            self.chatMessageBackgroundIncomingMaskImage = messageBubbleImage(incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundIncomingHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
+            self.chatMessageBackgroundIncomingMergedTopMaskImage = messageBubbleImage(incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .top(side: false), theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingMergedTopImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .top(side: false), theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundIncomingMergedTopHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .top(side: false), theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
+            self.chatMessageBackgroundIncomingMergedTopSideMaskImage = messageBubbleImage(incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .top(side: true), theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingMergedTopSideImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .top(side: true), theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundIncomingMergedTopSideHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .top(side: true), theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
+            self.chatMessageBackgroundIncomingMergedBottomMaskImage = messageBubbleImage(incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .bottom, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingMergedBottomImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .bottom, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundIncomingMergedBottomHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .bottom, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
+            self.chatMessageBackgroundIncomingMergedBothMaskImage = messageBubbleImage(incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .both, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingMergedBothImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .both, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundIncomingMergedBothHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .both, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             
+            self.chatMessageBackgroundOutgoingMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
+            self.chatMessageBackgroundOutgoingMergedTopMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .top(side: false), theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundOutgoingMergedTopImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .top(side: false), theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingMergedTopHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .top(side: false), theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
+            self.chatMessageBackgroundOutgoingMergedTopSideMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .top(side: true), theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundOutgoingMergedTopSideImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .top(side: true), theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingMergedTopSideHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .top(side: true), theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
+            self.chatMessageBackgroundOutgoingMergedBottomMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .white, neighbors: .bottom, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundOutgoingMergedBottomImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .bottom, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingMergedBottomHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .bottom, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
+            self.chatMessageBackgroundOutgoingMergedBothMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .both, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundOutgoingMergedBothImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .both, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingMergedBothHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .both, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
 
+            self.chatMessageBackgroundIncomingMergedSideMaskImage = messageBubbleImage(incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .side, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingMergedSideImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .side, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
+            self.chatMessageBackgroundOutgoingMergedSideMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .side, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundOutgoingMergedSideImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .side, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundIncomingMergedSideHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .side, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingMergedSideHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .side, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)

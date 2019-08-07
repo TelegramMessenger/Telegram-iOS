@@ -506,6 +506,9 @@
 		D09E63AA1F0FC681003444CD /* PictureInPictureVideoControlsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E63A91F0FC681003444CD /* PictureInPictureVideoControlsNode.swift */; };
 		D09E63B01F1010FE003444CD /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D09E63AF1F1010FE003444CD /* Contacts.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D09E63B21F11289A003444CD /* PassKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D09E63B11F11289A003444CD /* PassKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		D09E778722F8E9ED00B9CCA7 /* ContextUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D09E778622F8E9ED00B9CCA7 /* ContextUI.framework */; };
+		D09E778B22F988C000B9CCA7 /* MediaResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D09E778A22F988C000B9CCA7 /* MediaResources.framework */; };
+		D09E778F22FA239B00B9CCA7 /* ChatMessageContextControllerContentSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E778E22FA239A00B9CCA7 /* ChatMessageContextControllerContentSource.swift */; };
 		D09F9DCF20768DAF00DB4DE1 /* SecureIdLocalResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09F9DCE20768DAF00DB4DE1 /* SecureIdLocalResource.swift */; };
 		D0A8998D217A294100759EE6 /* SaveIncomingMediaController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A8998C217A294100759EE6 /* SaveIncomingMediaController.swift */; };
 		D0A8BBA11F61EE83000F03FD /* UniversalVideoGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A8BBA01F61EE83000F03FD /* UniversalVideoGalleryItem.swift */; };
@@ -1832,6 +1835,9 @@
 		D09E63A91F0FC681003444CD /* PictureInPictureVideoControlsNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PictureInPictureVideoControlsNode.swift; sourceTree = "<group>"; };
 		D09E63AF1F1010FE003444CD /* Contacts.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Contacts.framework; path = System/Library/Frameworks/Contacts.framework; sourceTree = SDKROOT; };
 		D09E63B11F11289A003444CD /* PassKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PassKit.framework; path = System/Library/Frameworks/PassKit.framework; sourceTree = SDKROOT; };
+		D09E778622F8E9ED00B9CCA7 /* ContextUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ContextUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D09E778A22F988C000B9CCA7 /* MediaResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MediaResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D09E778E22FA239A00B9CCA7 /* ChatMessageContextControllerContentSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageContextControllerContentSource.swift; sourceTree = "<group>"; };
 		D09F9DCE20768DAF00DB4DE1 /* SecureIdLocalResource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdLocalResource.swift; sourceTree = "<group>"; };
 		D0A11BF91E7836C20081CE03 /* ChangePhoneNumberIntroController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChangePhoneNumberIntroController.swift; sourceTree = "<group>"; };
 		D0A11BFB1E7840750081CE03 /* ChangePhoneNumberController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChangePhoneNumberController.swift; sourceTree = "<group>"; };
@@ -2346,6 +2352,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D09E778B22F988C000B9CCA7 /* MediaResources.framework in Frameworks */,
+				D09E778722F8E9ED00B9CCA7 /* ContextUI.framework in Frameworks */,
 				D038ACD722F8BE9700320981 /* UnreadSearchBadge.framework in Frameworks */,
 				D038AC5322F88A3600320981 /* ImageBlur.framework in Frameworks */,
 				D0879CCC22F876DD00C4D6B3 /* ChatListSearchRecentPeersNode.framework in Frameworks */,
@@ -3430,6 +3438,8 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D09E778A22F988C000B9CCA7 /* MediaResources.framework */,
+				D09E778622F8E9ED00B9CCA7 /* ContextUI.framework */,
 				D038ACD622F8BE9700320981 /* UnreadSearchBadge.framework */,
 				D038AC5222F88A3600320981 /* ImageBlur.framework */,
 				D0879CCB22F876DD00C4D6B3 /* ChatListSearchRecentPeersNode.framework */,
@@ -4488,6 +4498,7 @@
 				D025402622E1F23000AC0195 /* ChatSendButtonRadialStatusNode.swift */,
 				D025402822E1F7F500AC0195 /* ChatTextInputSlowmodePlaceholderNode.swift */,
 				D06018B422F3659900796784 /* ChatTextFormat.swift */,
+				D09E778E22FA239A00B9CCA7 /* ChatMessageContextControllerContentSource.swift */,
 			);
 			name = Chat;
 			sourceTree = "<group>";
@@ -5928,6 +5939,7 @@
 				09F79A0121C8116C00820234 /* WebSearchBadgeNode.swift in Sources */,
 				D0CB27CF20C17A4A001ACF93 /* TermsOfServiceController.swift in Sources */,
 				D00BDA1F1EE5B69200C64C5E /* ChannelAdminController.swift in Sources */,
+				D09E778F22FA239B00B9CCA7 /* ChatMessageContextControllerContentSource.swift in Sources */,
 				D0EC6E501EB9F58900EBF1C3 /* ChannelAdminsController.swift in Sources */,
 				D0EC6E511EB9F58900EBF1C3 /* ChannelBlacklistController.swift in Sources */,
 				D0EC6E521EB9F58900EBF1C3 /* ChannelInfoController.swift in Sources */,

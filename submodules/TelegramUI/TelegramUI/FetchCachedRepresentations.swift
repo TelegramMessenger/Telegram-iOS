@@ -78,7 +78,7 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
                 return .complete()
             }
             return fetchCachedPatternWallpaperRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
-        }
+        } 
     } else if let representation = representation as? CachedAlbumArtworkRepresentation {
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in

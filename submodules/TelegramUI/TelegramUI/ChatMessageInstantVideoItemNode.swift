@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import TextFormat
 import AccountContext
 import LocalizedPeerData
+import ContextUI
 
 private let nameFont = Font.medium(14.0)
 
@@ -17,6 +18,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 class ChatMessageInstantVideoItemNode: ChatMessageItemView {
+    private let contextSourceNode: ContextContentContainingNode
     private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
     private var selectionNode: ChatMessageSelectionNode?
@@ -52,11 +54,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     }
     
     required init() {
+        self.contextSourceNode = ContextContentContainingNode()
         self.interactiveVideoNode = ChatMessageInteractiveInstantVideoNode()
         
         super.init(layerBacked: false)
         
-        self.addSubnode(self.interactiveVideoNode)
+        self.addSubnode(self.contextSourceNode)
+        self.contextSourceNode.contentNode.addSubnode(self.interactiveVideoNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -376,6 +380,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
+                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    
                     strongSelf.appliedItem = item
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     
@@ -393,6 +400,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         videoLayoutData = .constrained(left: max(0.0, availableContentWidth - videoFrame.width), right: 0.0)
                     }
                     videoApply(videoLayoutData, transition)
+                    
+                    strongSelf.contextSourceNode.contentRect = videoFrame
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {
@@ -814,5 +823,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     override func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.interactiveVideoNode.playMediaWithSound()
+    }
+    
+    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+        return self.contextSourceNode
+    }
+    
+    override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+        self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
 }

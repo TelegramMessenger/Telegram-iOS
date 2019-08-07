@@ -20,6 +20,7 @@ import OverlayStatusController
 import DeviceLocationManager
 import ShareController
 import UrlEscaping
+import ContextUI
 
 public enum ChatControllerPeekActions {
     case standard
@@ -501,51 +502,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
                     }
-                    var contextMenuController: ContextMenuController?
-                    var contextActions: [ContextMenuAction] = []
-                    var sheetActions: [ChatMessageContextMenuSheetAction] = []
-                    for action in actions {
-                        switch action {
-                            case let .context(contextAction):
-                                contextActions.append(contextAction)
-                            case let .sheet(sheetAction):
-                                sheetActions.append(sheetAction)
-                        }
-                    }
-                    
-                    var hasActions = false
-                    for media in updatedMessages[0].media {
-                        if media is TelegramMediaAction || media is TelegramMediaExpiredContent {
-                            if let action = media as? TelegramMediaAction, case .phoneCall = action.action {
-                            } else {
-                                hasActions = true
-                            }
-                            break
-                        }
-                    }
-                    
-                    if !contextActions.isEmpty {
-                        contextMenuController = ContextMenuController(actions: contextActions, catchTapsOutside: true, hasHapticFeedback: hasActions)
-                    }
-                    
-                    contextMenuController?.dismissed = {
-                        if let strongSelf = self {
-                            strongSelf.chatDisplayNode.displayMessageActionSheet(stableId: nil, sheetActions: nil, displayContextMenuController: nil)
-                        }
-                    }
-                    
-                    if hasActions {
-                        if let contextMenuController = contextMenuController {
-                            strongSelf.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: {
-                                guard let strongSelf = self else {
-                                    return nil
-                                }
-                                return (node, frame, strongSelf.displayNode, strongSelf.displayNode.bounds)
-                            }))
-                        }
-                    } else {
-                        strongSelf.chatDisplayNode.displayMessageActionSheet(stableId: updatedMessages[0].stableId, sheetActions: sheetActions, displayContextMenuController: contextMenuController.flatMap { ($0, node, frame) })
-                    }
+                    strongSelf.window?.presentInGlobalOverlay(ContextController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions))
                 })
             }
         }, navigateToMessage: { [weak self] fromId, id in
@@ -2651,7 +2608,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                             if let banAuthor = actions.banAuthor {
                                 strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
                             } else {
-                                strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options)
+                                strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options, contextController: nil, completion: { _ in })
                             }
                         }
                     }))
@@ -2670,7 +2627,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                     self?.present(c, in: .window(.root), with: a)
                 }), in: .window(.root))
             }
-        }, deleteMessages: { [weak self] messages in
+        }, deleteMessages: { [weak self] messages, contextController, completion in
             if let strongSelf = self, !messages.isEmpty {
                 let messageIds = Set(messages.map { $0.id })
                 strongSelf.messageContextDisposable.set((chatAvailableMessageActions(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds)
@@ -2678,6 +2635,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                     if let strongSelf = self, !actions.options.isEmpty {
                         if let banAuthor = actions.banAuthor {
                             strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
+                            completion(.default)
                         } else {
                             var isAction = false
                             if messages.count == 1 {
@@ -2689,10 +2647,12 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                             }
                             if isAction && (actions.options == .deleteGlobally || actions.options == .deleteLocally) {
                                 let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: actions.options == .deleteLocally ? .forLocalPeer : .forEveryone).start()
+                                completion(.dismissWithoutContent)
                             } else if (messages.first?.flags.isSending ?? false) {
                                 let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone, deleteAllInGroup: true).start()
+                                completion(.dismissWithoutContent)
                             } else {
-                                strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options)
+                                strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options, contextController: contextController, completion: completion)
                             }
                         }
                     }
@@ -6770,7 +6730,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
         }
     }
     
-    private func presentDeleteMessageOptions(messageIds: Set<MessageId>, options: ChatAvailableMessageActionOptions) {
+    private func presentDeleteMessageOptions(messageIds: Set<MessageId>, options: ChatAvailableMessageActionOptions, contextController: ContextController?, completion: @escaping (ContextMenuActionResult) -> Void) {
         let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
         var items: [ActionSheetItem] = []
         var personalPeerName: String?
@@ -6792,8 +6752,13 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                 }
             }))
         }
+        
+        var contextItems: [ContextMenuItem] = []
+        var canDisplayContextMenu = true
+        
         var unsendPersonalMessages = false
         if options.contains(.unsendPersonal) {
+            canDisplayContextMenu = false
             items.append(ActionSheetTextItem(title: self.presentationData.strings.Chat_UnsendMyMessagesAlertTitle(personalPeerName ?? "").0))
             items.append(ActionSheetSwitchItem(title: self.presentationData.strings.Chat_UnsendMyMessages, isOn: false, action: { value in
                 unsendPersonalMessages = value
@@ -6807,6 +6772,13 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
             } else {
                 globalTitle = self.presentationData.strings.Conversation_DeleteMessagesForEveryone
             }
+            contextItems.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { [weak self] _, f in
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                    let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                    f(.dismissWithoutContent)
+                }
+            })))
             items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
@@ -6826,6 +6798,13 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                     localOptionText = self.presentationData.strings.Conversation_DeleteManyMessages
                 }
             }
+            contextItems.append(.action(ContextMenuActionItem(text: localOptionText, textColor: .destructive, icon: { _ in nil }, action: { [weak self] _, f in
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                    let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).start()
+                    f(.dismissWithoutContent)
+                }
+            })))
             items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
@@ -6834,13 +6813,19 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                 }
             }))
         }
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
-            })
-        ])])
-        self.chatDisplayNode.dismissInput()
-        self.present(actionSheet, in: .window(.root))
+        
+        if canDisplayContextMenu, let contextController = contextController {
+            contextController.setItems(contextItems)
+        } else {
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])])
+            self.chatDisplayNode.dismissInput()
+            self.present(actionSheet, in: .window(.root))
+            completion(.default)
+        }
     }
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
