@@ -22,7 +22,7 @@ private enum PeerReportOption {
     case other
 }
 
-func peerReportOptionsController(context: AccountContext, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void) -> ViewController {
+func peerReportOptionsController(context: AccountContext, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (Bool) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme))
     
@@ -75,15 +75,17 @@ func peerReportOptionsController(context: AccountContext, subject: PeerReportSub
                         let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason)
                         |> deliverOnMainQueue).start(completed: {
                             present(textAlertController(context: context, title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            completion(true)
                         })
                     case let .messages(messageIds):
                         let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason)
                         |> deliverOnMainQueue).start(completed: {
                             present(textAlertController(context: context, title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            completion(true)
                         })
                 }
             } else {
-                controller?.present(peerReportController(context: context, subject: subject), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                controller?.present(peerReportController(context: context, subject: subject, completion: completion), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
             
             controller?.dismissAnimated()
@@ -95,6 +97,7 @@ func peerReportOptionsController(context: AccountContext, subject: PeerReportSub
         ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { [weak controller] in
                 controller?.dismissAnimated()
+                completion(false)
             })
         ])
     ])
@@ -187,7 +190,7 @@ private func peerReportControllerEntries(presentationData: PresentationData, sta
     return entries
 }
 
-private func peerReportController(context: AccountContext, subject: PeerReportSubject) -> ViewController {
+private func peerReportController(context: AccountContext, subject: PeerReportSubject, completion: @escaping (Bool) -> Void) -> ViewController {
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     
@@ -208,50 +211,52 @@ private func peerReportController(context: AccountContext, subject: PeerReportSu
     let reportDisposable = MetaDisposable()
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<PeerReportControllerEntry>, PeerReportControllerEntry.ItemGenerationArguments)) in
-            let rightButton: ItemListNavigationButton
-            if state.isReporting {
-                rightButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-            } else {
-                rightButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: !state.text.isEmpty, action: {
-                    var text: String = ""
-                    updateState { state in
-                        var state = state
-                        if !state.isReporting && !state.text.isEmpty {
-                            text = state.text
-                            state.isReporting = true
-                        }
-                        return state
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<PeerReportControllerEntry>, PeerReportControllerEntry.ItemGenerationArguments)) in
+        let rightButton: ItemListNavigationButton
+        if state.isReporting {
+            rightButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+        } else {
+            rightButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: !state.text.isEmpty, action: {
+                var text: String = ""
+                updateState { state in
+                    var state = state
+                    if !state.isReporting && !state.text.isEmpty {
+                        text = state.text
+                        state.isReporting = true
                     }
-                    
-                    if !text.isEmpty {
-                        let completed: () -> Void = {
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                            dismissImpl?()
-                        }
-                        switch subject {
-                            case let .peer(peerId):
-                                reportDisposable.set((reportPeer(account: context.account, peerId: peerId, reason: .custom(text))
-                                |> deliverOnMainQueue).start(completed: {
-                                    completed()
-                                }))
-                            case let .messages(messageIds):
-                                reportDisposable.set((reportPeerMessages(account: context.account, messageIds: messageIds, reason: .custom(text))
-                                |> deliverOnMainQueue).start(completed: {
-                                    completed()
-                                }))
-                        }
+                    return state
+                }
+                
+                if !text.isEmpty {
+                    let completed: () -> Void = {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                        completion(true)
+                        dismissImpl?()
                     }
-                })
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ReportPeer_ReasonOther_Title), leftNavigationButton: ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                dismissImpl?()
-            }), rightNavigationButton: rightButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: peerReportControllerEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: PeerReportControllerEntryTag.text)
-            
-            return (controllerState, (listState, arguments))
+                    switch subject {
+                    case let .peer(peerId):
+                        reportDisposable.set((reportPeer(account: context.account, peerId: peerId, reason: .custom(text))
+                        |> deliverOnMainQueue).start(completed: {
+                            completed()
+                        }))
+                    case let .messages(messageIds):
+                        reportDisposable.set((reportPeerMessages(account: context.account, messageIds: messageIds, reason: .custom(text))
+                        |> deliverOnMainQueue).start(completed: {
+                            completed()
+                        }))
+                    }
+                }
+            })
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ReportPeer_ReasonOther_Title), leftNavigationButton: ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            dismissImpl?()
+            completion(false)
+        }), rightNavigationButton: rightButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: peerReportControllerEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: PeerReportControllerEntryTag.text)
+        
+        return (controllerState, (listState, arguments))
     }
     |> afterDisposed {
         reportDisposable.dispose()

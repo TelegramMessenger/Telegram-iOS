@@ -2618,14 +2618,14 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
             if let strongSelf = self, let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
                 strongSelf.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), present: { c, a in
                     self?.present(c, in: .window(.root), with: a)
-                }), in: .window(.root))
+                }, completion: { _ in }), in: .window(.root))
             }
         }, reportMessages: { [weak self] messages in
             if let strongSelf = self, !messages.isEmpty {
                 strongSelf.chatDisplayNode.dismissInput()
                 strongSelf.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(messages.map({ $0.id }).sorted()), present: { c, a in
                     self?.present(c, in: .window(.root), with: a)
-                }), in: .window(.root))
+                }, completion: { _ in }), in: .window(.root))
             }
         }, deleteMessages: { [weak self] messages, contextController, completion in
             if let strongSelf = self, !messages.isEmpty {
@@ -6087,6 +6087,12 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
         if let peer = peer as? TelegramChannel, let username = peer.username, !username.isEmpty {
             self.present(peerReportOptionsController(context: self.context, subject: .peer(peer.id), present: { [weak self] c, a in
                 self?.present(c, in: .window(.root))
+            }, completion: { [weak self] success in
+                guard let strongSelf = self, success else {
+                    return
+                }
+                let _ = removePeerChat(account: strongSelf.context.account, peerId: chatPeer.id, reportChatSpam: false).start()
+                (strongSelf.navigationController as? NavigationController)?.filterController(strongSelf, animated: true)
             }), in: .window(.root))
         } else if let _ = peer as? TelegramUser {
             let presentationData = self.presentationData
