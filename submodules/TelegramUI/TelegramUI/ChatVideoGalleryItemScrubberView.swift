@@ -43,6 +43,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     }
     
     var updateScrubbing: (Double?) -> Void = { _ in }
+    var updateScrubbingVisual: (Double?) -> Void = { _ in }
     var updateScrubbingHandlePosition: (CGFloat) -> Void = { _ in }
     var seek: (Double) -> Void = { _ in }
     
@@ -67,6 +68,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         
         self.scrubberNode.update = { [weak self] timestamp, position in
             self?.updateScrubbing(timestamp)
+            self?.updateScrubbingVisual(timestamp)
             self?.updateScrubbingHandlePosition(position)
         }
         

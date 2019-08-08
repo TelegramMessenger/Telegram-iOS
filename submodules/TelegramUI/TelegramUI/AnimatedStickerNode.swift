@@ -8,6 +8,7 @@ import AsyncDisplayKit
 import RLottie
 import GZip
 import Tuples
+import MediaResources
 import StickerResources
 
 private final class AnimationFrameCache {
@@ -404,7 +405,7 @@ final class AnimatedStickerNode: ASDisplayNode {
         self.addSubnode(self.renderer!)
     }
     
-    func setup(account: Account, resource: MediaResource, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
+    func setup(account: Account, resource: MediaResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
         if width < 2 || height < 2 {
             return
         }
@@ -412,27 +413,27 @@ final class AnimatedStickerNode: ASDisplayNode {
         switch mode {
             case .direct:
                 self.disposable.set((account.postbox.mediaBox.resourceData(resource)
-                    |> deliverOnMainQueue).start(next: { [weak self] data in
-                        guard let strongSelf = self, data.complete else {
-                            return
-                        }
-                        if let directData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead]) {
-                            strongSelf.directData = Tuple(directData, data.path, width, height)
-                        }
+                |> deliverOnMainQueue).start(next: { [weak self] data in
+                    guard let strongSelf = self, data.complete else {
+                        return
+                    }
+                    if let directData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead]) {
+                        strongSelf.directData = Tuple(directData, data.path, width, height)
+                    }
+                    if strongSelf.isPlaying {
+                        strongSelf.play()
+                    }
+                }))
+            case .cached:
+                self.disposable.set((chatMessageAnimationData(postbox: account.postbox, resource: resource, fitzModifier: fitzModifier, width: width, height: height, synchronousLoad: false)
+                |> deliverOnMainQueue).start(next: { [weak self] data in
+                    if let strongSelf = self, data.complete {
+                        strongSelf.cachedData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead])
                         if strongSelf.isPlaying {
                             strongSelf.play()
                         }
-                    }))
-            case .cached:
-                self.disposable.set((chatMessageAnimationData(postbox: account.postbox, resource: resource, width: width, height: height, synchronousLoad: false)
-                    |> deliverOnMainQueue).start(next: { [weak self] data in
-                        if let strongSelf = self, data.complete {
-                            strongSelf.cachedData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead])
-                            if strongSelf.isPlaying {
-                                strongSelf.play()
-                            }
-                        }
-                    }))
+                    }
+                }))
         }
     }
     

@@ -215,6 +215,10 @@ public final class PrincipalThemeEssentialGraphics {
         if preview {
             self.chatMessageBackgroundIncomingMaskImage = messageBubbleImage(incoming: true, fillColor: UIColor.black, strokeColor: UIColor.clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
+            self.chatMessageBackgroundOutgoingMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
+            self.chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
+            self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.message.outgoingCheckColor)!
+            self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.message.outgoingCheckColor)!
             self.chatMessageBackgroundIncomingHighlightedImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopMaskImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopImage = emptyImage
@@ -231,8 +235,6 @@ public final class PrincipalThemeEssentialGraphics {
             self.chatMessageBackgroundIncomingMergedSideMaskImage = emptyImage
             self.chatMessageBackgroundIncomingMergedSideImage = emptyImage
             self.chatMessageBackgroundIncomingMergedSideHighlightedImage = emptyImage
-            self.chatMessageBackgroundOutgoingMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
-            self.chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingHighlightedImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopMaskImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopImage = emptyImage
@@ -249,8 +251,6 @@ public final class PrincipalThemeEssentialGraphics {
             self.chatMessageBackgroundOutgoingMergedSideMaskImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedSideImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedSideHighlightedImage = emptyImage
-            self.checkBubbleFullImage = emptyImage
-            self.checkBubblePartialImage = emptyImage
             self.checkMediaFullImage = emptyImage
             self.checkMediaPartialImage = emptyImage
             self.checkFreeFullImage = emptyImage
