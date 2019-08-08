@@ -1164,7 +1164,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     }, report: {
         presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), present: { c, a in
             presentControllerImpl?(c, a)
-        }), nil)
+        }, completion: { _ in }), nil)
     })
         
     let deviceContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData)], NoError> = peerView.get()

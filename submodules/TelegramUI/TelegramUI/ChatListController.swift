@@ -846,6 +846,14 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
             }
         }
         
+        self.chatListDisplayNode.isEmptyUpdated = { [weak self] isEmpty in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let validLayout = strongSelf.validLayout {
+                if isEmpty {
+                    searchContentNode.updateListVisibleContentOffset(.known(0.0))
+                }
+            }
+        }
+        
         self.chatListDisplayNode.toolbarActionSelected = { [weak self] action in
             self?.toolbarActionSelected(action: action)
         }

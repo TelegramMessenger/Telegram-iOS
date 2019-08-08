@@ -388,7 +388,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
         
         if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(self.message) {
-            if let _ = self.associatedData.animatedEmojiStickers[self.message.text.trimmedEmoji] {
+            if let _ = self.associatedData.animatedEmojiStickers[self.message.text.basicEmoji.0] {
                 viewClassName = ChatMessageAnimatedStickerItemNode.self
             } else {
                 viewClassName = ChatMessageStickerItemNode.self

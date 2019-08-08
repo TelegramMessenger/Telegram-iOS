@@ -10,6 +10,7 @@ import TelegramPresentationData
 import Compression
 import TextFormat
 import AccountContext
+import MediaResources
 import StickerResources
 import ContextUI
 
@@ -56,7 +57,7 @@ private class ChatMessageHeartbeatHaptic {
         if time > 2.0 {
             return
         }
-    
+        
         var startTime: Double = 0.0
         var delay: Double = 0.0
         
@@ -201,7 +202,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         self.view.addGestureRecognizer(replyRecognizer)
     }
-
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             let wasVisible = oldValue != .none
@@ -237,13 +238,18 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 break
             }
         }
-    
-        if self.telegramFile == nil, let emojiFile = item.associatedData.animatedEmojiStickers[item.message.text.trimmedEmoji]?.file {
+        
+        let (emoji, fitz) = item.message.text.basicEmoji
+        if self.telegramFile == nil, let emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.file {
             if self.emojiFile?.id != emojiFile.id {
                 self.emojiFile = emojiFile
                 let dimensions = emojiFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)), thumbnail: false))
-                self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: emojiFile)).start())
+                var fitzModifier: EmojiFitzModifier?
+                if let fitz = fitz {
+                    fitzModifier = EmojiFitzModifier(emoji: fitz)
+                }
+                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false))
+                self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
                 self.updateVisibility()
             }
         }
@@ -276,7 +282,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 var file: TelegramMediaFile?
                 var playbackMode: AnimatedStickerPlaybackMode = .loop
                 var isEmoji = false
-                
+                var fitzModifier: EmojiFitzModifier?
+
                 if let telegramFile = self.telegramFile {
                     file = telegramFile
                     if !item.controllerInteraction.stickerSettings.loopAnimatedStickers {
@@ -286,12 +293,16 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     isEmoji = true
                     file = emojiFile
                     playbackMode = .once
+                    let (_, fitz) = item.message.text.basicEmoji
+                    if let fitz = fitz {
+                        fitzModifier = EmojiFitzModifier(emoji: fitz)
+                    }
                 }
                 
                 if let file = file {
                     let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
                     let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                    self.animationNode.setup(account: item.context.account, resource: file.resource, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
+                    self.animationNode.setup(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 }
             }
         }
@@ -341,23 +352,23 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var hasAvatar = false
             
             switch item.chatLocation {
-                case let .peer(peerId):
-                    if peerId != item.context.account.peerId {
-                        if peerId.isGroupOrChannel && item.message.author != nil {
-                            var isBroadcastChannel = false
-                            if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                                isBroadcastChannel = true
-                            }
-                            
-                            if !isBroadcastChannel {
-                                hasAvatar = true
-                            }
+            case let .peer(peerId):
+                if peerId != item.context.account.peerId {
+                    if peerId.isGroupOrChannel && item.message.author != nil {
+                        var isBroadcastChannel = false
+                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                            isBroadcastChannel = true
                         }
-                    } else if incoming {
-                        hasAvatar = true
+                        
+                        if !isBroadcastChannel {
+                            hasAvatar = true
+                        }
                     }
+                } else if incoming {
+                    hasAvatar = true
+                }
                 /*case .group:
-                    hasAvatar = true*/
+                 hasAvatar = true*/
             }
             
             if hasAvatar {
@@ -441,7 +452,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     statusType = .FreeOutgoing(.Sent(read: item.read))
                 }
             }
-        
+            
             var viewCount: Int? = nil
             for attribute in item.message.attributes {
                 if let attribute = attribute as? ViewCountMessageAttribute {
@@ -704,128 +715,128 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
-            case .ended:
-                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
-                    switch gesture {
-                        case .tap:
-                            if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
-                                if let item = self.item, let author = item.content.firstMessage.author {
-                                    var openPeerId = item.effectiveAuthorId ?? author.id
-                                    var navigate: ChatControllerInteractionNavigateToPeer
-                                    
-                                    if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                        navigate = .chat(textInputState: nil, messageId: nil)
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .tap:
+                    if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
+                        if let item = self.item, let author = item.content.firstMessage.author {
+                            var openPeerId = item.effectiveAuthorId ?? author.id
+                            var navigate: ChatControllerInteractionNavigateToPeer
+                            
+                            if item.content.firstMessage.id.peerId == item.context.account.peerId {
+                                navigate = .chat(textInputState: nil, messageId: nil)
+                            } else {
+                                navigate = .info
+                            }
+                            
+                            for attribute in item.content.firstMessage.attributes {
+                                if let attribute = attribute as? SourceReferenceMessageAttribute {
+                                    openPeerId = attribute.messageId.peerId
+                                    navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                }
+                            }
+                            
+                            if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
+                                item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                            } else {
+                                if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
+                                    if case .member = channel.participationStatus {
                                     } else {
-                                        navigate = .info
-                                    }
-                                    
-                                    for attribute in item.content.firstMessage.attributes {
-                                        if let attribute = attribute as? SourceReferenceMessageAttribute {
-                                            openPeerId = attribute.messageId.peerId
-                                            navigate = .chat(textInputState: nil, messageId: attribute.messageId)
-                                        }
-                                    }
-                                    
-                                    if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
-                                        item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
-                                    } else {
-                                        if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
-                                            if case .member = channel.participationStatus {
-                                            } else {
-                                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
-                                                return
-                                            }
-                                        }
-                                        item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
+                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
+                                        return
                                     }
                                 }
-                                return
+                                item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
                             }
-                            
-                            if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(location) {
-                                if let item = self.item {
-                                    for attribute in item.message.attributes {
-                                        if let attribute = attribute as? InlineBotMessageAttribute {
-                                            var botAddressName: String?
-                                            if let peerId = attribute.peerId, let botPeer = item.message.peers[peerId], let addressName = botPeer.addressName {
-                                                botAddressName = addressName
-                                            } else {
-                                                botAddressName = attribute.title
-                                            }
-                                            
-                                            if let botAddressName = botAddressName {
-                                                item.controllerInteraction.updateInputState { textInputState in
-                                                    return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
-                                                }
-                                                item.controllerInteraction.updateInputMode { _ in
-                                                    return .text
-                                                }
-                                            }
-                                            return
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
-                                if let item = self.item {
-                                    for attribute in item.message.attributes {
-                                        if let attribute = attribute as? ReplyMessageAttribute {
-                                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
-                                            return
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            if let item = self.item, self.imageNode.frame.contains(location) {
-                                if self.telegramFile != nil {
-                                    let _ = item.controllerInteraction.openMessage(item.message, .default)
-                                } else if let _ = self.emojiFile {
-                                    var startTime: Signal<Double, NoError>
-                                    if self.animationNode.playIfNeeded() {
-                                        startTime = .single(0.0)
-                                    } else {
-                                        startTime = self.animationNode.status
-                                        |> map { $0.timestamp }
-                                        |> take(1)
-                                        |> deliverOnMainQueue
-                                    }
-                                    
-                                    if self.item?.message.text == "❤️" {
-                                        let _ = startTime.start(next: { [weak self] time in
-                                            guard let strongSelf = self else {
-                                                return
-                                            }
-                                            
-                                            let heartbeatHaptic: ChatMessageHeartbeatHaptic
-                                            if let current = strongSelf.heartbeatHaptic {
-                                                heartbeatHaptic = current
-                                            } else {
-                                                heartbeatHaptic = ChatMessageHeartbeatHaptic()
-                                                heartbeatHaptic.enabled = true
-                                                strongSelf.heartbeatHaptic = heartbeatHaptic
-                                            }
-                                            if !heartbeatHaptic.active {
-                                                heartbeatHaptic.start(time: time)
-                                            }
-                                        })
-                                    }
-                                }
-                                return
-                            }
-                            
-                            self.item?.controllerInteraction.clickThroughMessage()
-                        case .longTap, .doubleTap:
-                            if let item = self.item, self.imageNode.frame.contains(location) {
-                                item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame)
-                            }
-                        case .hold:
-                            break
+                        }
+                        return
                     }
+                    
+                    if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(location) {
+                        if let item = self.item {
+                            for attribute in item.message.attributes {
+                                if let attribute = attribute as? InlineBotMessageAttribute {
+                                    var botAddressName: String?
+                                    if let peerId = attribute.peerId, let botPeer = item.message.peers[peerId], let addressName = botPeer.addressName {
+                                        botAddressName = addressName
+                                    } else {
+                                        botAddressName = attribute.title
+                                    }
+                                    
+                                    if let botAddressName = botAddressName {
+                                        item.controllerInteraction.updateInputState { textInputState in
+                                            return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                        }
+                                        item.controllerInteraction.updateInputMode { _ in
+                                            return .text
+                                        }
+                                    }
+                                    return
+                                }
+                            }
+                        }
+                    }
+                    
+                    if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
+                        if let item = self.item {
+                            for attribute in item.message.attributes {
+                                if let attribute = attribute as? ReplyMessageAttribute {
+                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
+                                    return
+                                }
+                            }
+                        }
+                    }
+                    
+                    if let item = self.item, self.imageNode.frame.contains(location) {
+                        if self.telegramFile != nil {
+                            let _ = item.controllerInteraction.openMessage(item.message, .default)
+                        } else if let _ = self.emojiFile {
+                            var startTime: Signal<Double, NoError>
+                            if self.animationNode.playIfNeeded() {
+                                startTime = .single(0.0)
+                            } else {
+                                startTime = self.animationNode.status
+                                    |> map { $0.timestamp }
+                                    |> take(1)
+                                    |> deliverOnMainQueue
+                            }
+                            
+                            if self.item?.message.text == "❤️" {
+                                let _ = startTime.start(next: { [weak self] time in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    let heartbeatHaptic: ChatMessageHeartbeatHaptic
+                                    if let current = strongSelf.heartbeatHaptic {
+                                        heartbeatHaptic = current
+                                    } else {
+                                        heartbeatHaptic = ChatMessageHeartbeatHaptic()
+                                        heartbeatHaptic.enabled = true
+                                        strongSelf.heartbeatHaptic = heartbeatHaptic
+                                    }
+                                    if !heartbeatHaptic.active {
+                                        heartbeatHaptic.start(time: time)
+                                    }
+                                })
+                            }
+                        }
+                        return
+                    }
+                    
+                    self.item?.controllerInteraction.clickThroughMessage()
+                case .longTap, .doubleTap:
+                    if let item = self.item, self.imageNode.frame.contains(location) {
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame)
+                    }
+                case .hold:
+                    break
                 }
-            default:
-                break
+            }
+        default:
+            break
         }
     }
     

@@ -235,6 +235,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1667805217] = { return Api.Update.parse_updateReadHistoryInbox($0) }
     dict[1786671974] = { return Api.Update.parse_updatePeerSettings($0) }
     dict[-1263546448] = { return Api.Update.parse_updatePeerLocated($0) }
+    dict[967122427] = { return Api.Update.parse_updateNewScheduledMessage($0) }
+    dict[-1870238482] = { return Api.Update.parse_updateDeleteScheduledMessages($0) }
+    dict[357013699] = { return Api.Update.parse_updateMessageReactions($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
@@ -272,6 +275,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[471437699] = { return Api.account.WallPapers.parse_wallPapersNotModified($0) }
     dict[1881892265] = { return Api.account.WallPapers.parse_wallPapers($0) }
     dict[1158290442] = { return Api.messages.FoundGifs.parse_foundGifs($0) }
+    dict[-1199954735] = { return Api.MessageReactions.parse_messageReactions($0) }
     dict[-1132476723] = { return Api.FileLocation.parse_fileLocationToBeDeprecated($0) }
     dict[-716006138] = { return Api.Poll.parse_poll($0) }
     dict[423314455] = { return Api.InputNotifyPeer.parse_inputNotifyUsers($0) }
@@ -416,6 +420,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2128640689] = { return Api.account.SentEmailCode.parse_sentEmailCode($0) }
     dict[-1038136962] = { return Api.EncryptedFile.parse_encryptedFileEmpty($0) }
     dict[1248893260] = { return Api.EncryptedFile.parse_encryptedFile($0) }
+    dict[-557924733] = { return Api.CodeSettings.parse_codeSettings($0) }
     dict[-391902247] = { return Api.SecureValueError.parse_secureValueErrorData($0) }
     dict[12467706] = { return Api.SecureValueError.parse_secureValueErrorFrontSide($0) }
     dict[-2037765467] = { return Api.SecureValueError.parse_secureValueErrorReverseSide($0) }
@@ -547,7 +552,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[773059779] = { return Api.User.parse_user($0) }
     dict[-2082087340] = { return Api.Message.parse_messageEmpty($0) }
     dict[-1642487306] = { return Api.Message.parse_messageService($0) }
-    dict[1157215293] = { return Api.Message.parse_message($0) }
+    dict[-1186706133] = { return Api.Message.parse_message($0) }
     dict[186120336] = { return Api.messages.RecentStickers.parse_recentStickersNotModified($0) }
     dict[586395571] = { return Api.messages.RecentStickers.parse_recentStickers($0) }
     dict[-182231723] = { return Api.InputFileLocation.parse_inputEncryptedFileLocation($0) }
@@ -601,6 +606,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1625153079] = { return Api.InputWebFileLocation.parse_inputWebFileGeoPointLocation($0) }
     dict[-332168592] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
     dict[398898678] = { return Api.help.Support.parse_support($0) }
+    dict[1873957073] = { return Api.ReactionCount.parse_reactionCount($0) }
     dict[1474492012] = { return Api.MessagesFilter.parse_inputMessagesFilterEmpty($0) }
     dict[-1777752804] = { return Api.MessagesFilter.parse_inputMessagesFilterPhotos($0) }
     dict[-1614803355] = { return Api.MessagesFilter.parse_inputMessagesFilterVideo($0) }
@@ -950,6 +956,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FoundGifs:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.MessageReactions:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.FileLocation:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Poll:
@@ -1059,6 +1067,8 @@ public struct Api {
             case let _1 as Api.account.SentEmailCode:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EncryptedFile:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.CodeSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureValueError:
                 _1.serialize(buffer, boxed)
@@ -1235,6 +1245,8 @@ public struct Api {
             case let _1 as Api.MessageFwdHeader:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.Support:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ReactionCount:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessagesFilter:
                 _1.serialize(buffer, boxed)
