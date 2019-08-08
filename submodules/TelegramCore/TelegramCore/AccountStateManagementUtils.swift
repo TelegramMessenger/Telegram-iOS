@@ -2285,7 +2285,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     updateMessageMedia(transaction: transaction, id: pollId, media: updatedPoll)
                 }
             case let .UpdateMessageReactions(messageId, reactions):
-                transaction.updateMessage(messageId, update: {
+                transaction.updateMessage(messageId, update: { currentMessage in
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
