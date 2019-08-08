@@ -2502,34 +2502,6 @@ final class MessageHistoryTable: Table {
         return (result, mediaRefs, count == 0 ? nil : lastIndex)
     }
     
-    func fetchBoundaries(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags?) -> (lower: MessageIndex, upper: MessageIndex)? {
-        if let tag = tag {
-            let latest = self.tagsTable.earlierIndices(tag: tag, peerId: peerId, namespace: namespace, index: nil, includeFrom: false, count: 1)
-            let earliest = self.tagsTable.laterIndices(tag: tag, peerId: peerId, namespace: namespace, index: nil, includeFrom: false, count: 1)
-            if let latestIndex = latest.first, let earliestIndex = earliest.first {
-                return (earliestIndex, latestIndex)
-            } else {
-                return nil
-            }
-        } else {
-            var earliestIndex: MessageIndex?
-            self.valueBox.range(self.table, start: self.lowerBound(peerId: peerId, namespace: namespace), end: self.upperBound(peerId: peerId, namespace: namespace), keys: { key in
-                earliestIndex = extractKey(key)
-                return false
-            }, limit: 1)
-            var latestIndex: MessageIndex?
-            self.valueBox.range(self.table, start: self.upperBound(peerId: peerId, namespace: namespace), end: self.lowerBound(peerId: peerId, namespace: namespace), keys: { key in
-                latestIndex = extractKey(key)
-                return false
-            }, limit: 1)
-            if let latestIndex = latestIndex, let earliestIndex = earliestIndex {
-                return (earliestIndex, latestIndex)
-            } else {
-                return nil
-            }
-        }
-    }
-    
     func fetch(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags?, from fromIndex: MessageIndex, includeFrom: Bool, to toIndex: MessageIndex, limit: Int) -> [IntermediateMessage] {
         precondition(fromIndex.id.peerId == toIndex.id.peerId)
         precondition(fromIndex.id.namespace == toIndex.id.namespace)

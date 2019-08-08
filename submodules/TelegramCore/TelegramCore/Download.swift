@@ -196,7 +196,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                 updatedLength += 1
             }
             
-            let data = Api.functions.upload.getFile(location: location, offset: Int32(offset), limit: Int32(updatedLength))
+            let data = Api.functions.upload.getFile(flags: 0, location: location, offset: Int32(offset), limit: Int32(updatedLength))
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {

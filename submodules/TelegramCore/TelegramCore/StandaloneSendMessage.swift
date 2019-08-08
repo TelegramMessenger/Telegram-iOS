@@ -118,12 +118,12 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             let sendMessageRequest: Signal<Api.Updates, NoError>
             switch content {
                 case let .text(text):
-                    sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities))
+                    sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: nil))
                     |> `catch` { _ -> Signal<Api.Updates, NoError> in
                         return .complete()
                     }
                 case let .media(inputMedia, text):
-                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities))
+                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: nil))
                     |> `catch` { _ -> Signal<Api.Updates, NoError> in
                             return .complete()
                     }
