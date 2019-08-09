@@ -15,26 +15,26 @@ private func traceScrollView(view: UIView, point: CGPoint) -> UIScrollView? {
     return nil
 }
 
-class SwipeToDismissGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+public class SwipeToDismissGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
     private var beginPosition = CGPoint()
     
-    override init(target: Any?, action: Selector?) {
+    override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
         self.delegate = self
     }
     
-    override func reset() {
+    override public func reset() {
         super.reset()
         
         self.state = .possible
     }
     
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
         guard let touch = touches.first, let view = self.view else {
@@ -58,7 +58,7 @@ class SwipeToDismissGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerD
         }
     }
     
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesMoved(touches, with: event)
         
         guard let touch = touches.first, let view = self.view else {
@@ -68,7 +68,7 @@ class SwipeToDismissGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerD
         
         let point = touch.location(in: self.view)
         
-        let translation = point.offsetBy(dx: -self.beginPosition.x, dy: -self.beginPosition.y)
+        let translation = CGPoint(x: point.x - self.beginPosition.x, y: point.y - self.beginPosition.y)
         
         if self.state == .possible {
             if abs(translation.x) > 5.0 {
@@ -96,13 +96,13 @@ class SwipeToDismissGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerD
         }
     }
     
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesEnded(touches, with: event)
         
         self.state = .failed
     }
     
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         if otherGestureRecognizer is UIPanGestureRecognizer {
             return true
         }

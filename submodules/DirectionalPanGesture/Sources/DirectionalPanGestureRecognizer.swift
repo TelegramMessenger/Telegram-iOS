@@ -1,23 +1,23 @@
 import Foundation
 import UIKit
 
-class DirectionalPanGestureRecognizer: UIPanGestureRecognizer {
-    var validatedGesture = false
-    var firstLocation: CGPoint = CGPoint()
+public class DirectionalPanGestureRecognizer: UIPanGestureRecognizer {
+    private var validatedGesture = false
+    private var firstLocation: CGPoint = CGPoint()
     
-    override init(target: Any?, action: Selector?) {
+    override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
         self.maximumNumberOfTouches = 1
     }
     
-    override func reset() {
+    override public func reset() {
         super.reset()
         
         self.validatedGesture = false
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
         let touch = touches.first!
@@ -30,7 +30,7 @@ class DirectionalPanGestureRecognizer: UIPanGestureRecognizer {
         }
     }
     
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         let location = touches.first!.location(in: self.view)
         let translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
         
